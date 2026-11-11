@@ -91,6 +91,7 @@ export function WidgetMapView({
   return (
     <div
       role="region"
+      data-app-part="map"
       aria-label={ariaLabel ?? t('widget.mapView.label', 'Map')}
       className={cn('widget-map-view relative flex min-h-40 flex-1 flex-col w-full rounded-shape-lg overflow-hidden border border-[var(--border-subtle)]', className)}
     >

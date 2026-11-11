@@ -115,10 +115,13 @@ export default function InstallPrompt() {
             role="status"
             aria-live="polite"
             data-testid="install-prompt"
+            data-app-part="feedback"
+            data-app-feedback-kind="notice"
+            data-app-tone={installFailed ? 'danger' : 'info'}
             data-install-capability={capability}
             className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:px-4"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-primary)]">
+            <div data-app-part="feedback-icon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-primary)]">
               {showIosGuide ? (
                 <Share className="h-5 w-5 text-[var(--theme-on-primary)]" aria-hidden="true" />
               ) : (
@@ -126,13 +129,13 @@ export default function InstallPrompt() {
               )}
             </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
+            <div data-app-part="feedback-content" className="flex-1 min-w-0">
+              <p data-app-part="feedback-title" className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
                 {t('installPrompt.title', 'Install TeslaSync')}
               </p>
 
               {installFailed ? (
-                <p role="alert" className="mt-1 text-xs leading-tight text-rose-300">
+                <p data-app-part="error" role="alert" className="mt-1 text-xs leading-tight text-rose-300">
                   {t('installPrompt.failed', 'The install dialog could not open. In Chrome, open the menu and choose Install app.')}
                 </p>
               ) : showIosGuide ? (
@@ -179,6 +182,7 @@ export default function InstallPrompt() {
 
             {showNative && !installFailed && (
               <Button
+                data-app-part="feedback-actions"
                 type="button"
                 onClick={handleInstall}
                 size="sm"
@@ -189,6 +193,7 @@ export default function InstallPrompt() {
               </Button>
             )}
             <Button
+              data-app-part="feedback-dismiss"
               type="button"
               onClick={handleDismiss}
               variant="ghost"

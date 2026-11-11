@@ -14,7 +14,7 @@ export function SignalObservation({ observedAt, source, unknown, stale, retained
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
   return (
-    <div className="min-w-0 break-words">
+    <div data-app-part="status" className="min-w-0 break-words">
       <Caption as="p">
         {unknown ? t('dashboardWidgets.telemetry.signalObservation.unknown', 'Unknown observation')
           : retained ? t('dashboardWidgets.telemetry.signalObservation.retained', 'Retained observation')

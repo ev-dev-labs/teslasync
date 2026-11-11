@@ -23,7 +23,7 @@ export function NormalizationVersionPanel({ normalization, loading, error, onRet
             action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }}
             title={t('admin.dataQuality.versionsEmptyTitle', 'No version evidence')}
             message={t('admin.dataQuality.versionsEmptyMessage', 'No signal rows were persisted in this window, so no normalization version could be observed.')} />
-            : <ul className="space-y-3">{buckets.map((bucket) => {
+            : <ul data-app-part="list" className="space-y-3">{buckets.map((bucket) => {
               const attested = bucket.version != null && !(normalization?.required_version != null && bucket.version < normalization.required_version);
               const label = versionLabel(bucket.version, legacyLabel);
               const share = bucket.share_pct;

@@ -139,7 +139,7 @@ export function Delta({
 
   if (loading) {
     return (
-      <span className={cn('inline-flex items-center', className)} data-testid="delta-skeleton">
+      <span data-app-part="metric-comparison loading" className={cn('inline-flex items-center', className)} data-testid="delta-skeleton">
         <Skeleton width="60px" height={size === 'md' ? 16 : 14} />
       </span>
     );
@@ -152,6 +152,7 @@ export function Delta({
   ) {
     return (
       <span
+        data-app-part="metric-comparison"
         className={cn('inline-flex items-center gap-1 text-[var(--text-muted)]', sizeClass, className)}
         title={t('delta.noComparison', 'No comparison data')}
         data-testid="delta-empty"
@@ -204,6 +205,7 @@ export function Delta({
 
   return (
     <span
+      data-app-part="metric-comparison"
       className={wrapperClass}
       title={t('delta.title', '{{current}} vs {{previous}}', {
         current: formatReading(current),

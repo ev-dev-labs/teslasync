@@ -35,14 +35,15 @@ function BatteryPillComponent({ level, label, className }: BatteryPillProps) {
     <GlassPanel className={cn('flex items-center gap-3 px-4 py-3', className)}>
       <Battery className="h-5 w-5 shrink-0" style={{ color }} aria-hidden="true" />
       <span className="flex min-w-0 flex-col" aria-hidden="true">
-        <Text size="xs" color="secondary" className="truncate">
+        <Text data-app-part="metric-label" size="xs" color="secondary" className="truncate">
           {label}
         </Text>
-        <Text as="span" size="sm" weight="bold" className="tabular-nums" style={{ color }}>
+        <Text data-app-part="metric-reading" as="span" size="sm" weight="bold" className="tabular-nums" style={{ color }}>
           {percentText}
         </Text>
       </span>
       <span
+        data-app-part="metric" data-app-metric="bar" data-metric-track
         role="meter"
         aria-label={label}
         aria-valuenow={clamped}
@@ -54,6 +55,7 @@ function BatteryPillComponent({ level, label, className }: BatteryPillProps) {
         className="ml-auto h-2 w-16 overflow-hidden rounded-full bg-[var(--surface-3)]"
       >
         <span
+          data-metric-fill
           aria-hidden="true"
           className="block h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, backgroundColor: color }}

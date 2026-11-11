@@ -52,6 +52,20 @@ describe('SmallMultiplesChart', () => {
     expect(screen.getByTestId('small-multiples-cell-sigC')).toBeInTheDocument();
   });
 
+  it('keeps headers outside each fixed plot allocation and retains the same height when a source becomes empty', () => {
+    const mounted = render(<SmallMultiplesChart data={sampleData} series={['sigA']} cellHeight={145} />);
+    const cell = screen.getByTestId('small-multiples-cell-sigA');
+    const plot = cell.querySelector('[data-app-part~="chart-plot"]');
+    expect(plot).toHaveStyle({ height: '145px' });
+    expect(plot).not.toContainElement(within(cell).getByText('sigA'));
+    expect(cell.querySelector('[data-app-part~="chart-header"]')).toContainElement(within(cell).getByText('sigA'));
+    mounted.rerender(<SmallMultiplesChart data={[]} series={['sigA']} cellHeight={145} />);
+    expect(cell.querySelector('[data-app-part~="chart-plot"]')).toBe(plot);
+    expect(plot).toHaveStyle({ height: '145px' });
+    expect(plot).toContainElement(within(cell).getByText('No data'));
+    expect(plot?.querySelector('[data-chart-state="empty"]')).toHaveClass('h-full');
+  });
+
   it('shows the series key as the cell label by default', () => {
     render(
       <SmallMultiplesChart data={sampleData} series={['sigA']} />,

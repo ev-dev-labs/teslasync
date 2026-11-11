@@ -7,7 +7,7 @@ export function IdentityFields({ controller }: { controller: AlertRuleEditorCont
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <label className={fieldLabelCls} htmlFor="alert-name">
+        <label data-app-part="field-label" className={fieldLabelCls} htmlFor="alert-name">
           {t('notifications.alertStudio.editor.nameLabel', 'Name')}
         </label>
         <UiInput
@@ -19,7 +19,7 @@ export function IdentityFields({ controller }: { controller: AlertRuleEditorCont
         />
       </div>
       <div>
-        <label className={fieldLabelCls} htmlFor="alert-enabled">
+        <label data-app-part="field-label" className={fieldLabelCls} htmlFor="alert-enabled">
           {t('notifications.alertStudio.editor.enabledLabel', 'Status')}
         </label>
         <UiSelect

@@ -171,7 +171,7 @@ function CurrentPackDetailModal({ entry: currentEntry, open, onClose }: PackDeta
             <Text variant="bodySm" className="font-semibold mb-1">
               {t('intelPacks.detail.contents', 'Manifest contents')}
             </Text>
-            <ul className="text-xs text-[var(--text-secondary)] space-y-0.5">
+            <ul data-app-part="list" className="text-xs text-[var(--text-secondary)] space-y-0.5">
               <li>{t('intelPacks.detail.formulasCount', '{{count}} analytics formulas', { count: manifest.formulas.length })}</li>
               <li>{t('intelPacks.detail.coefficientsCount', '{{count}} bounded coefficients', { count: manifest.coefficients.length })}</li>
               <li>{t('intelPacks.detail.dashboardsCount', '{{count}} dashboard layouts', { count: manifest.dashboards.length })}</li>

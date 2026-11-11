@@ -248,10 +248,13 @@ export function NotificationBurnRatePanel() {
                 return (
                 <div
                   key={severity.severity}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium">
+                  <div data-app-part="record-header" className="mb-2 flex items-center justify-between gap-2">
+                    <Text data-app-part="record-title" variant="body" className="min-w-0 break-words font-medium">
                       {severity.severity}
                     </Text>
                     <Badge
@@ -265,7 +268,7 @@ export function NotificationBurnRatePanel() {
                         : '—'}
                     </Badge>
                   </div>
-                  <Text as="p" variant="caption">
+                  <Text data-app-part="record-body record-context" as="p" variant="caption">
                     {t(
                       'notificationBurnRate.severity.outcomes',
                       '{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending',

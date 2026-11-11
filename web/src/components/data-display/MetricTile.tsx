@@ -59,14 +59,18 @@ export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function M
   return (
     <div
       ref={ref}
+      data-app-part="metric"
+      data-app-metric="tile"
+      data-app-state={hasValue ? 'value' : 'missing'}
       className={cn(
         'flex min-w-0 flex-col gap-1',
         align === 'center' ? 'items-center text-center' : 'items-start',
         className,
       )}
     >
-      <div className="flex items-baseline gap-1">
+      <div data-app-part="metric-reading" className="flex items-baseline gap-1">
         <Text
+          data-app-part="metric-value"
           as="span"
           size="2xl"
           weight="bold"
@@ -75,16 +79,16 @@ export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function M
           {display}
         </Text>
         {unit && hasValue ? (
-          <Text as="span" size="xs" weight="regular" color="muted">
+          <Text data-app-part="metric-unit" as="span" size="xs" weight="regular" color="muted">
             {unit}
           </Text>
         ) : null}
       </div>
-      <Text as="span" size="xs" weight="medium" color="muted">
+      <Text data-app-part="metric-label" as="span" size="xs" weight="medium" color="muted">
         {label}
       </Text>
       {sublabel ? (
-        <Text as="span" size="xs" color="muted">
+        <Text data-app-part="metric-context" as="span" size="xs" color="muted">
           {sublabel}
         </Text>
       ) : null}

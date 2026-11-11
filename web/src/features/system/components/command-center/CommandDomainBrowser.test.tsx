@@ -74,6 +74,11 @@ describe('CommandDomainBrowser ordinary button contract (F10)', () => {
   it('links every domain button to one existing region named by the active button', () => {
     const { props, rerender } = renderBrowser();
     const region = screen.getByRole('region', { name: 'Access & security' });
+    expect(region).toHaveAttribute('data-app-record-kind', 'command-domain');
+    expect(within(region).getByRole('heading')).toHaveAttribute('data-app-record-slot', 'label');
+    expect(region.querySelector('[data-app-record-slot="body"]')).toContainElement(
+      within(region).getByRole('button', { name: /Security & access/ }),
+    );
     const buttons = within(screen.getByRole('group')).getAllByRole('button');
     buttons.forEach((button) => {
       expect(button).toHaveAttribute('aria-controls', region.id);
@@ -86,6 +91,7 @@ describe('CommandDomainBrowser ordinary button contract (F10)', () => {
     const updated = screen.getByRole('region', { name: 'Charging & schedules' });
     expect(updated.id).toBe(region.id);
     expect(updated).toHaveAttribute('aria-labelledby', buttons[2].id);
+    expect(updated).toHaveAttribute('data-app-record-kind', 'command-domain');
     expect(buttons[2]).toHaveAttribute('aria-pressed', 'true');
     expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
   });

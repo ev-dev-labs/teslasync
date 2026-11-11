@@ -247,11 +247,12 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
               onChange={(e) => setSelectedPreset(e.target.value)}
             />
             {selectedPreset && (
-              <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)] p-3">
-                <Text as="p" variant="bodySm" className="mb-1">
+              <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+                className="rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)] p-3">
+                <Text data-app-part="record-header record-title" as="p" variant="bodySm" className="mb-1">
                   {t('energy.tou.previewLabel', 'Preview')}
                 </Text>
-                <Text as="pre" size="xs" color="secondary" mono className="overflow-auto max-h-48">
+                <Text data-app-part="record-body" as="pre" size="xs" color="secondary" mono className="overflow-auto max-h-48">
                   {JSON.stringify(PRESETS.find((p) => p.id === selectedPreset)?.settings, null, 2)}
                 </Text>
               </div>

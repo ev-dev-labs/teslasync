@@ -84,8 +84,9 @@ export function ServiceEvidenceIntegrityPanel({
           />
         )}
         {pack && (
-          <div className="space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+            className="space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <div data-app-part="record-body" className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <Text as="code" variant="code" className="min-w-0 break-all">
                 {pack.integrity.digestHex}
               </Text>
@@ -96,7 +97,7 @@ export function ServiceEvidenceIntegrityPanel({
                 className="min-h-11 min-w-11 max-w-full shrink-0 md:min-h-9 md:min-w-0"
               />
             </div>
-            <Caption className="break-words">
+            <Caption data-app-part="record-context" className="break-words">
               {t('serviceEvidencePack.integrity.meta', 'Schema {{version}} · generated {{when}}', {
                 version: pack.schemaVersion,
                 when: formatDateTime(pack.generatedAt),

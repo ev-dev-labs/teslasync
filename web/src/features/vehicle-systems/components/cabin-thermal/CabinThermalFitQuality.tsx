@@ -5,7 +5,7 @@ import {
   CartesianGrid,
   EmbeddedChart,
   ChartTooltip,
-  Legend,
+  ChartLegend,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -76,7 +76,7 @@ export function CabinThermalFitQuality({
                 <XAxis type="number" dataKey="event" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                 <YAxis type="number" dataKey="quality" domain={[0, 100]} unit="%" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
+                <ChartLegend />
                 <Scatter name={t('cabinThermal.direction.cooling', 'Cooling')} data={cooling} fill={chartTokens.series[0]} />
                 <Scatter name={t('cabinThermal.direction.warming', 'Warming')} data={warming} fill={chartTokens.series[3]} />
               </ScatterChart>

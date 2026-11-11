@@ -60,6 +60,7 @@ export function BatteryDelta({
   if (!hasData) {
     return (
       <span
+        data-app-part="metric-comparison"
         data-testid={testId}
         aria-label={t('battery.delta.unknown', 'Battery delta unknown')}
         className={cn('inline-flex items-center gap-1 text-[var(--text-muted)]', className)}
@@ -90,6 +91,7 @@ export function BatteryDelta({
 
   return (
     <span
+      data-app-part="metric-comparison"
       data-testid={testId}
       aria-label={a11y}
       className={cn('inline-flex items-center gap-1', className)}

@@ -117,14 +117,17 @@ export function PreconditioningHourlyProfile({
             {occupied.map((bucket) => (
               <div
                 key={bucket.hour}
+                data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
                 className="rounded-lg border border-[var(--border-subtle)] p-3"
               >
-                <MetricLabel>
-                  {t('preconditioningEffectiveness.hourly.hourLabel', '{{hour}}:00', {
-                    hour: String(bucket.hour).padStart(2, '0'),
-                  })}
-                </MetricLabel>
-                <Text as="p" variant="bodySm" className="mt-1">
+                <div data-app-part="record-header">
+                  <MetricLabel data-app-part="record-title">
+                    {t('preconditioningEffectiveness.hourly.hourLabel', '{{hour}}:00', {
+                      hour: String(bucket.hour).padStart(2, '0'),
+                    })}
+                  </MetricLabel>
+                </div>
+                <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-1">
                   {t(
                     'preconditioningEffectiveness.hourly.bucketCounts',
                     '{{activeCount}} active · {{controlCount}} control',
@@ -136,7 +139,7 @@ export function PreconditioningHourlyProfile({
                     },
                   )}
                 </Text>
-                <Text as="p" variant="caption">
+                <Text data-app-part="record-context" as="p" variant="caption">
                   {t(
                     'preconditioningEffectiveness.hourly.bucketMeans',
                     'Mean gap {{gap}} · improvement {{improvement}}',

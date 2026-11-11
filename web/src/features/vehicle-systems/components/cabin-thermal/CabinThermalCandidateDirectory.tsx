@@ -58,7 +58,7 @@ export function CabinThermalCandidateDirectory({
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="candidates">
-          <ol className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
+          <ol data-app-part="list" className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
             {directory.items.map((candidate) => (
               <CabinThermalCandidateRow
                 key={candidate.id}

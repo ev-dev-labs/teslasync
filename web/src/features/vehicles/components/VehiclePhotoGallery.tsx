@@ -76,7 +76,7 @@ export function VehiclePhotoGallery({
 
   return (
     <div className={className} data-testid="vehicle-photo-gallery">
-      <ul
+      <ul data-app-part="list"
         aria-label={
           vehicleName
             ? t('vehicles.photos.galleryNamed', '{{name}} photo gallery', {

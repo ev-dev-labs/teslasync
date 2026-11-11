@@ -60,9 +60,9 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
           </Caption>
         </div>
 
-        <div className="flex items-start gap-2 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-          <Text variant="bodySm">
+        <div data-app-part="panel feedback" data-app-feedback-kind="notice" data-app-tone="info" data-surface-variant="standalone" className="flex items-start gap-2 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+          <Info data-app-part="feedback-icon" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+          <Text data-app-part="feedback-content feedback-message" variant="bodySm">
             {t(
               'admin.gdprExport.lookupBlurb',
               'Lookup and Refresh only read artifact metadata; they do not create exports or download bundles. Bundles expire after the configured retention window. A saved manifest does not confirm current download availability or storage support.',

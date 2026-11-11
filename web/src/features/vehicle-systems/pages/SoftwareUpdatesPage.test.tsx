@@ -33,6 +33,12 @@ import { act, render, renderHook, screen, within, waitFor, fireEvent } from '@te
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import userEvent from '@testing-library/user-event';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.unmock('@/lib/timezone');
 
@@ -432,6 +438,55 @@ describe('SoftwareUpdatesPage — KPI derivations', () => {
 });
 
 describe('SoftwareUpdatesPage — update timeline', () => {
+  it.each(['/software-updates', '/vehicle-systems/software'])(
+    'app-design release-note controls retain real link semantics and exact consumers on %s', async route => {
+      const versions = ['2026.40 / beta? #1', `2026.41-${'long-version-'.repeat(12)}`, '2026.42'];
+      api.updates = UPDATES.map((row, index) => ({ ...row, version: versions[index] }));
+      const { container } = renderPage([route]);
+      const timeline = await screen.findByRole('list', { name: 'Update timeline' });
+      const links = within(timeline).getAllByRole('link');
+      const styles = new Map(PACK_IDS.map(pack => {
+        const rules: Rule[] = [];
+        postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+          .walkRules(rule => { rules.push(rule); });
+        return [pack, rules] as const;
+      }));
+      expect(links).toHaveLength(3);
+      for (const [index, link] of links.entries()) {
+        expect(link).toHaveAccessibleName(`Release notes for ${versions[index]}`);
+        expect(link).toHaveAttribute('href', `https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(versions[index])}/release-notes`);
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        expect(link).toHaveClass('h-11', 'w-11', 'shrink-0', 'focus-visible:outline-2');
+        expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+        expect(link).toHaveAttribute('data-app-part', 'button');
+        expect(link).toHaveAttribute('data-app-variant', 'ghost');
+        expect(link).not.toHaveAttribute('data-app-design-owner');
+      }
+      const user = userEvent.setup();
+      links[0].focus();
+      expect(links[0]).toHaveFocus();
+      await user.tab();
+      expect(links[1]).toHaveFocus();
+
+      container.setAttribute('data-app-design-preview', '');
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+        const release = observeAppDesignScopes(container);
+        try {
+          for (const link of links) {
+            expect(styles.get(pack)!.some(rule =>
+              rule.nodes.some(node => node.type === 'decl'
+                && (node.prop === 'border-radius' || node.prop === 'border-start-start-radius'))
+              && rule.selectors.some(selector => selector.includes('[data-app-part~="button"]') && link.matches(selector)),
+            ), `${pack} must paint the real release-note anchor`).toBe(true);
+          }
+        } finally { release(); }
+      }
+      expect(mockRequest.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true);
+    },
+  );
+
   it('renders a card per update with status badge, vehicle name, date lines and a labelled release-notes link', async () => {
     renderPage();
     await screen.findByTestId('cadence-chart');

@@ -9,12 +9,12 @@ export function DriveDnaMethodologyCards() {
   const { t } = useTranslation();
   return (
     <div className="mt-5 grid gap-3 md:grid-cols-2">
-      <div className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
+      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
           <Fingerprint className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.scopeTitle', 'Selection & telemetry scope')}
         </Text>
-        <ul className="mt-3 space-y-2 pl-4">
+        <ul data-app-part="list" className="mt-3 space-y-2 pl-4">
           <Text as="li" variant="bodySm">
             {t(
               'driveDna.method.scopeSelector',
@@ -43,12 +43,12 @@ export function DriveDnaMethodologyCards() {
         </ul>
       </div>
 
-      <div className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
+      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.interpretationTitle', 'Interpretation guardrails')}
         </Text>
-        <ul className="mt-3 space-y-2 pl-4">
+        <ul data-app-part="list" className="mt-3 space-y-2 pl-4">
           <Text as="li" variant="bodySm">
             {t(
               'driveDna.method.changeFeed',

@@ -694,10 +694,13 @@ export default function TariffLabPage() {
             {results.map((row) => (
               <article
                 key={row.tariff_id}
+                data-app-part="card"
+                data-app-card-kind="record"
+                data-surface-variant="standalone"
                 className="min-w-0 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <Text as="h3" variant="subhead">
+                <div data-app-part="record-header" className="flex items-center justify-between gap-3">
+                  <Text data-app-part="record-title" as="h3" variant="subhead">
                     {row.name}
                   </Text>
                   <VerdictBadge
@@ -706,7 +709,7 @@ export default function TariffLabPage() {
                     dot={false}
                   />
                 </div>
-                <div className="mt-3 space-y-2">
+                <div data-app-part="record-body" className="mt-3 space-y-2">
                   {(row.bands ?? []).length > 0 ? (
                     (row.bands ?? []).map((band) => (
                       <div key={`${row.tariff_id}-${band.label}`}>
@@ -717,6 +720,9 @@ export default function TariffLabPage() {
                           </span>
                         </div>
                         <div
+                          data-app-part="metric"
+                          data-app-metric="bar"
+                          data-metric-track
                           role="meter"
                           aria-label={band.label}
                           aria-valuemin={0}
@@ -726,6 +732,7 @@ export default function TariffLabPage() {
                           className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
                         >
                           <div
+                            data-metric-fill
                             className="h-full rounded-full bg-[var(--text-secondary)]"
                             style={{ width: `${Math.min(100, Math.max(0, band.share_pct))}%` }}
                           />
@@ -888,77 +895,82 @@ export default function TariffLabPage() {
                 {draft.rates.map((rate, index) => (
                   <div
                     key={index}
-                    className="grid min-w-0 gap-3 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 md:grid-cols-2 xl:grid-cols-5"
+                    data-app-part="card"
+                    data-app-card-kind="record"
+                    data-surface-variant="standalone"
+                    className="min-w-0 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                   >
-                    <Input
-                      label={t('ownership.tariff.form.bandLabel', 'Label')}
-                      value={rate.label}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          rates: current.rates.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, label: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      type="time"
-                      label={t('ownership.tariff.form.bandStart', 'Starts')}
-                      value={minutesToClock(rate.start_minute)}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          rates: current.rates.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, start_minute: clockToMinutes(event.target.value) }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      type="text"
-                      label={t('ownership.tariff.form.bandEnd', 'Ends')}
-                      required
-                      pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
-                      placeholder="24:00"
-                      value={rate.endClock}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          rates: current.rates.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, endClock: event.target.value }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      type="number"
-                      label={t('ownership.tariff.form.bandPrice', 'Price (minor per Wh)')}
-                      value={rate.price_minor_per_wh}
-                      min={0}
-                      step={0.000001}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          rates: current.rates.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, price_minor_per_wh: Number(event.target.value) }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <div className="flex items-end">
-                      <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() =>
+                    <div data-app-part="record-body" className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                      <Input
+                        label={t('ownership.tariff.form.bandLabel', 'Label')}
+                        value={rate.label}
+                        onChange={(event) =>
                           setDraft((current) => ({
                             ...current,
-                            rates: current.rates.filter((_, itemIndex) => itemIndex !== index),
+                            rates: current.rates.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, label: event.target.value } : item,
+                            ),
                           }))
-                        } disabled={draft.rates.length <= 1} confirm={{ title: t('confirm.removeDraftRate.title', 'Remove this rate?'), message: t('confirm.removeDraftRate.message', 'The rate row is removed from the draft rate plan.') }} />
+                        }
+                      />
+                      <Input
+                        type="time"
+                        label={t('ownership.tariff.form.bandStart', 'Starts')}
+                        value={minutesToClock(rate.start_minute)}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            rates: current.rates.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, start_minute: clockToMinutes(event.target.value) }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <Input
+                        type="text"
+                        label={t('ownership.tariff.form.bandEnd', 'Ends')}
+                        required
+                        pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
+                        placeholder="24:00"
+                        value={rate.endClock}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            rates: current.rates.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, endClock: event.target.value }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <Input
+                        type="number"
+                        label={t('ownership.tariff.form.bandPrice', 'Price (minor per Wh)')}
+                        value={rate.price_minor_per_wh}
+                        min={0}
+                        step={0.000001}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            rates: current.rates.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, price_minor_per_wh: Number(event.target.value) }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <div className="flex items-end">
+                        <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() =>
+                            setDraft((current) => ({
+                              ...current,
+                              rates: current.rates.filter((_, itemIndex) => itemIndex !== index),
+                            }))
+                          } disabled={draft.rates.length <= 1} confirm={{ title: t('confirm.removeDraftRate.title', 'Remove this rate?'), message: t('confirm.removeDraftRate.message', 'The rate row is removed from the draft rate plan.') }} />
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -31,7 +31,7 @@ export function ColdStartSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t('coldStart.loading', 'Loading cold-start analysis')}
         className={cn('py-4', classes)}

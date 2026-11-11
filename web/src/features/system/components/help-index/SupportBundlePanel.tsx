@@ -84,13 +84,14 @@ export function SupportBundlePanel() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/5 p-3">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
-        <div className="min-w-0">
-          <Text as="p" size="sm" weight="medium" color="primary">
+      <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="success"
+        className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/5 p-3">
+        <ShieldCheck data-app-part="feedback-icon" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+        <div data-app-part="feedback-content" className="min-w-0">
+          <Text as="p" size="sm" weight="medium" color="primary" data-app-part="feedback-title">
             {t('supportBundle.neverTitle', 'Never included')}
           </Text>
-          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5" data-testid="support-bundle-never">
+          <ul data-app-part="list feedback-message" className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5" data-testid="support-bundle-never">
             {NEVER_INCLUDED.map((item) => (
               <li key={item.key}>
                 <Text as="span" variant="bodySm" color="muted">
@@ -195,6 +196,8 @@ export function SupportBundlePanel() {
           {t('supportBundle.showJson', 'Show the exact bundle contents')}
         </summary>
         <pre
+          data-app-part="code"
+          data-app-code-kind="support-bundle"
           data-testid="support-bundle-json"
           className="mt-2 max-h-80 overflow-auto rounded-md bg-[var(--surface-2)] p-2 text-2xs text-[var(--text-secondary)]"
         >

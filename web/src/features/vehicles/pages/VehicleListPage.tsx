@@ -186,6 +186,9 @@ function previewTrustSummary(
 function StatChip({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail?: string }) {
   return (
     <span
+      data-app-part="metric"
+      data-app-metric="inline"
+      data-app-metric-kind="vehicle-stat-chip"
       className={cn(
         'inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1',
         typography.size.xs,
@@ -193,9 +196,9 @@ function StatChip({ icon, label, value, detail }: { icon: ReactNode; label: stri
       )}
     >
       {icon}
-      <VisuallyHidden>{label}: </VisuallyHidden>
-      <Text color="primary" className="tabular-nums">{value}</Text>
-      {detail && <Text variant="caption" className="w-full break-words">{detail}</Text>}
+      <VisuallyHidden data-app-part="metric-label">{label}: </VisuallyHidden>
+      <Text data-app-part="metric-reading metric-value" color="primary" className="tabular-nums">{value}</Text>
+      {detail && <Text data-app-part="metric-context" variant="caption" className="w-full break-words">{detail}</Text>}
     </span>
   );
 }
@@ -655,12 +658,12 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
         </div>
 
         {/* Battery */}
-        <div>
+        <div data-app-part="metric" data-app-metric="bar" data-app-metric-kind="vehicle-battery">
           <div className="mb-1.5 flex items-center justify-between">
-            <Text variant="bodySm">
+            <Text data-app-part="metric-label" variant="bodySm">
               {t('vehicles.battery', 'Battery')}
             </Text>
-            <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+            <Text data-app-part="metric-reading metric-value" size="sm" weight="semibold" color="primary" className="tabular-nums">
               {level == null ? (
                 <span aria-label={t('vehicles.statusUnknown', 'Unknown')}>—</span>
               ) : (
@@ -677,7 +680,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             showValue={false}
             fill="solid"
           />
-          {state && battery.detail && <Text variant="caption" as="p" className="mt-2 break-words">{battery.detail}</Text>}
+          {state && battery.detail && <Text data-app-part="metric-context" variant="caption" as="p" className="mt-2 break-words">{battery.detail}</Text>}
         </div>
 
         {/* Stat chips */}
@@ -733,6 +736,8 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
           <PrefetchLink
             to={`/vehicles/${vehicle.id}`}
+            data-app-part="button"
+            data-app-variant="ghost"
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
             className={cn(
               'inline-flex min-h-11 min-w-0 max-w-full items-center gap-1.5 break-words rounded-md px-2 text-[var(--theme-primary)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
@@ -1442,9 +1447,9 @@ export default function VehicleListPage() {
         </FadeIn>
       )}
       {workOrdersState.fatalError && (
-        <details className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)]">
-          <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
-            <span role="status">{t('operations.vehicles.serviceUnavailableTitle', 'Service attention is temporarily unavailable')}</span>
+        <details data-app-part="panel" data-surface-variant="standalone" className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)]">
+          <summary data-app-part="button" data-app-variant="ghost" data-app-control-kind="disclosure" className="min-h-11 cursor-pointer px-4 py-3 text-sm text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
+            <span data-app-part="status" role="status">{t('operations.vehicles.serviceUnavailableTitle', 'Service attention is temporarily unavailable')}</span>
           </summary>
         <DataStateNotice
           state="partial"

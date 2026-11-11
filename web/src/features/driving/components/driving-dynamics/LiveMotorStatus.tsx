@@ -106,7 +106,7 @@ export default function LiveMotorStatus({
   let body: ReactNode;
   if (query.isLoading && !state.hasData) {
     body = (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('dynamics.motorLoading', 'Loading motor telemetry…')}

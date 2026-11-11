@@ -50,6 +50,10 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import type { LocationSnapshot } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
+import { VisuallyHidden } from '@/components/a11y';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 vi.unmock('@/lib/timezone');
 
@@ -641,6 +645,85 @@ describe('NavigationRoutePage — independent source posture', () => {
 });
 
 describe('NavigationRoutePage — ready state', () => {
+  it('uses the canonical hidden label without adding a live region or changing the headline slots', () => {
+    const reference = render(<VisuallyHidden>Canonical hidden label</VisuallyHidden>);
+    const canonical = reference.container.firstElementChild!;
+    h.historyMode = 'pending';
+    const view = renderPage();
+    const metric = screen.getByRole('region', { name: 'Route details' }).querySelector('[data-app-metric="headline"]')!;
+    const label = metric.querySelector('[data-app-part="metric-label"]')!;
+    expect(label).toHaveTextContent(/^Route traffic delay$/);
+    expect(label.tagName).toBe(canonical.tagName);
+    expect(label.className).toBe(canonical.className);
+    expect(label.parentElement).toBe(metric);
+    expect(label).not.toHaveAttribute('aria-hidden');
+    expect(label).not.toHaveAttribute('hidden');
+    expect(label).not.toHaveAttribute('role');
+    expect(label).not.toHaveAttribute('aria-live');
+    expect(label).not.toHaveAttribute('tabindex');
+    expect([...metric.children].map(child => child.getAttribute('data-app-part')))
+      .toEqual(['metric-label', 'metric-reading', 'metric-context']);
+    expect(metric.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('600s');
+    expect(metric.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('600s delay');
+    view.qc.clear();
+  });
+
+  it('leaves the actual delay readout unowned under a widget-only incomplete profile', () => {
+    h.historyMode = 'pending';
+    const view = renderPage();
+    view.container.setAttribute('data-app-design-preview', '');
+    view.container.setAttribute('data-app-design-pack', 'v1');
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const metric = screen.getByRole('region', { name: 'Route details' }).querySelector('[data-app-metric="headline"]')!;
+      expect(metric).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesAppDesignCss(metric)).toHaveLength(0);
+      expect(metric).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-3');
+      expect(metric.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('600s');
+      expect(metric.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('600s delay');
+    } finally { release(); view.qc.clear(); }
+  });
+
+  it.each(PACK_IDS)('%s binds the real traffic-delay headline, reading and badge context without a synthetic gauge', pack => {
+    h.latest = { ...baseLatest(), route_traffic_delay_s: 0 };
+    h.latestError = new Error('retained refresh failure');
+    h.historyMode = 'pending';
+    const view = renderPage();
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) view.container.setAttribute(name, value);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const details = screen.getByRole('region', { name: 'Route details' });
+      const metric = details.querySelector('[data-app-metric="headline"]')!;
+      expectAppDesignDataMode(metric, APPLICATION_DESIGNS[pack].data, '[data-app-metric="headline"]');
+      expect(metric).toHaveAttribute('data-app-state', 'value');
+      expect(metric.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Route traffic delay');
+      const reading = metric.querySelector('[data-app-part="metric-reading"]')!;
+      expectAppDesignDataMode(reading, APPLICATION_DESIGNS[pack].data, '[data-app-metric="headline"]');
+      expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('0s');
+      expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveClass('text-[var(--semantic-success)]');
+      expect(matchesAppDesignCss(reading).some(match => match.declarations['font-variant-numeric'] === 'tabular-nums lining-nums')).toBe(true);
+      const context = metric.querySelector('[data-app-part="metric-context"]')!;
+      expect(context).toHaveTextContent('0s delay');
+      expect(context.querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'success');
+      expect(matchesAppDesignCss(context).some(match => match.declarations['white-space'] === 'normal')).toBe(true);
+      expect(metric.querySelector('[role="progressbar"], [data-metric-track]')).toBeNull();
+      expect(h.latest.route_traffic_delay_s).toBe(0);
+    } finally { release(); view.qc.clear(); }
+  });
+
+  it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY])('keeps %s traffic delay unknown in the actual readout and badge', seconds => {
+    h.latest = { ...baseLatest(), route_traffic_delay_s: seconds as number | undefined };
+    h.historyMode = 'pending';
+    renderPage();
+    const metric = screen.getByRole('region', { name: 'Route details' }).querySelector('[data-app-metric="headline"]')!;
+    expect(metric).toHaveAttribute('data-app-state', 'missing');
+    expect(metric.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('—');
+    expect(metric.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Unknown');
+    expect(metric.querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'neutral');
+    expect(metric.querySelector('[role="progressbar"]')).toBeNull();
+  });
+
   it('opens real mixed-source details while retaining route navigation and history controls', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('72.00 km/h')).toBeInTheDocument());

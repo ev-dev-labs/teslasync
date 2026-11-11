@@ -27,6 +27,7 @@ export interface FilterBarProps {
 export function FilterBar({ children, className, ariaLabel }: FilterBarProps) {
   return (
     <div
+      data-app-part="table-toolbar"
       role={ariaLabel ? 'group' : undefined}
       aria-label={ariaLabel}
       className={cn('flex flex-wrap items-center gap-2', className)}

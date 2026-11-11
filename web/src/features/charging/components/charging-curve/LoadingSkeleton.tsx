@@ -35,7 +35,7 @@ export default function LoadingSkeleton({
   const statTiles = Math.max(0, statCount);
 
   return (
-    <div
+    <div data-app-part="status"
       className={cn('space-y-6', className)}
       role="status"
       aria-busy="true"

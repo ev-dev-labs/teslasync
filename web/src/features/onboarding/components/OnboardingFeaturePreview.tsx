@@ -64,7 +64,7 @@ export function OnboardingFeaturePreview({ className }: { className?: string }) 
   );
 
   return (
-    <div
+    <div data-app-part="list"
       role="list"
       aria-label={t('onboarding.unlock.title', "What you'll unlock")}
       className={cn(

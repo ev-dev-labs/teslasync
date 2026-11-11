@@ -92,6 +92,8 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
     return (
       <div
         ref={ref}
+        data-app-part="chart-plot"
+        data-chart-family="area"
         className={cn('w-full', className)}
         role={ariaLabel ? 'img' : undefined}
         aria-label={ariaLabel}

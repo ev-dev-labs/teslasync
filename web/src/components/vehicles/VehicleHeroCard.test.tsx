@@ -1,10 +1,14 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VehicleHeroCard, type VehicleHeroCardProps } from './VehicleHeroCard';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const units = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F', power: 'kW' as 'W' | 'kW' }));
 
@@ -96,6 +100,8 @@ describe('VehicleHeroCard redesigned contract', () => {
       const reading = screen.getByRole('group', { name: label, exact: true });
       expect(reading).toHaveTextContent(label === 'Range' ? '0km' : '0°C');
       expect(reading).not.toHaveAccessibleDescription('Unknown');
+      expect(reading.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('0');
+      expect(reading.querySelector('[data-app-part~="metric-unit"]')).toHaveTextContent(label === 'Range' ? 'km' : '°C');
     }
   });
 
@@ -110,8 +116,8 @@ describe('VehicleHeroCard redesigned contract', () => {
     expect(screen.getByText('km')).toBeInTheDocument();
     expect(screen.getByText(/Locked/)).toBeInTheDocument();
     expect(screen.getByText(/Sentry On/)).toBeInTheDocument();
-    expect(screen.getByText(/Inside 21°C/)).toBeInTheDocument();
-    expect(screen.getByText(/Outside 18°C/)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent('Inside 21°C');
+    expect(screen.getByRole('group', { name: 'Outside' })).toHaveTextContent('Outside 18°C');
     expect(screen.getByText('3 verified fields')).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(1);
     expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/7');
@@ -122,8 +128,8 @@ describe('VehicleHeroCard redesigned contract', () => {
     units.temperature = '°F';
     renderCard({ vehicleState: makeState({ rated_range: 400_000, inside_temp: 21, outside_temp: 14 }) });
     expect(screen.getByText(String(Math.round(convertDistanceFromSI(400_000, 'mi'))))).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`${Math.round(convertTempFromSI(21, '°F'))}°F`))).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`${Math.round(convertTempFromSI(14, '°F'))}°F`))).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent(`${Math.round(convertTempFromSI(21, '°F'))}°F`);
+    expect(screen.getByRole('group', { name: 'Outside' })).toHaveTextContent(`${Math.round(convertTempFromSI(14, '°F'))}°F`);
   });
 
   it('keeps zero readings and false flags real and missing readings unknown', () => {
@@ -134,10 +140,71 @@ describe('VehicleHeroCard redesigned contract', () => {
       is_locked: false, sentry_mode: false,
     }) });
     expect(screen.getByTestId('gauge')).toHaveAttribute('data-value', '0');
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Range' })).getByText('0')).toBeInTheDocument();
     expect(screen.getByText(/Unlocked/)).toBeInTheDocument();
     expect(screen.getByText(/Sentry Off/)).toBeInTheDocument();
-    expect(screen.queryByText(/0°C/)).not.toBeInTheDocument();
+    for (const label of ['Inside', 'Outside']) {
+      const reading = screen.getByRole('group', { name: label });
+      expect(reading).not.toHaveTextContent('0°C');
+      expect(reading.querySelector('[data-app-part~="metric-unit"]')).toBeNull();
+    }
+  });
+
+  it('binds only actual readouts and status chips without changing unknown/off absence', () => {
+    const { container, rerender } = renderCard({ vehicleState: makeState({
+      rated_range: null, inside_temp: 0, outside_temp: null,
+      is_locked: null, sentry_mode: false, power: 0,
+    }) });
+    const range = screen.getByRole('group', { name: 'Range' });
+    expect(range).toHaveAttribute('data-app-metric', 'headline');
+    expect(range.querySelector('[data-app-part~="metric-label"]')).toHaveTextContent('Range');
+    expect(range.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('—');
+    expect(range.querySelector('[data-app-part~="metric-unit"]')).toBeNull();
+    expect(screen.getByText(/Sentry Off/)).toHaveAttribute('data-app-variant', 'info');
+    expect(screen.getByText('Status')).toHaveAttribute('data-app-part', 'status badge');
+    expect(container.querySelectorAll('[data-app-metric="inline"][data-app-part~="badge"]')).toHaveLength(3);
+    const power = screen.getByText('Power').closest('[data-app-metric="inline"]');
+    expect(power?.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('0.00');
+    expect(power?.querySelector('[data-app-part~="metric-unit"]')).toHaveTextContent('kW');
+    expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('data-app-variant', 'ghost');
+    expect(container.querySelector('[data-app-design-owner]')).toBeNull();
+    rerender(
+      <MemoryRouter>
+        <VehicleHeroCard vehicle={makeVehicle()} vehicleState={makeState({ sentry_mode: null, power: null })} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText(/Sentry Off|Sentry On/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Power')).not.toBeInTheDocument();
+  });
+
+  it('connects real range and chip hosts to existing consumers only inside complete profiles (source-only)', () => {
+    const { container } = renderCard({ vehicleState: makeState({ outside_temp: null, is_locked: null }) });
+    container.setAttribute('data-app-design-preview', '');
+    const range = screen.getByRole('group', { name: 'Range' });
+    const badges = Array.from(container.querySelectorAll('[data-app-part~="badge"]'));
+    const dataRules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { dataRules.push(rule); });
+    const headlines = dataRules.filter(rule => rule.selector.includes('[data-app-metric="headline"]')
+      && rule.nodes.some(node => node.type === 'decl' && node.prop === 'display' && node.value === 'flex'));
+    expect(headlines.some(rule => range.matches(rule.selector))).toBe(false);
+    const packs = Object.keys(APPLICATION_DESIGNS) as Array<Parameters<typeof getAppDesignAttributes>[0]>;
+    for (const pack of packs) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(headlines.some(rule => range.matches(rule.selector)), pack).toBe(true);
+        const rules: postcss.Rule[] = [];
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+          .walkRules(rule => { rules.push(rule); });
+        const badgeRules = rules.filter(rule => rule.selector.includes('[data-app-part~="badge"]')
+          && rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop)));
+        for (const badge of badges) expect(badgeRules.some(rule => badge.matches(rule.selector)), pack).toBe(true);
+        expect(range.querySelector('[data-app-part~="metric-unit"]')).toHaveTextContent('km');
+        expect(screen.getByRole('group', { name: 'Outside' })).toHaveAccessibleDescription('Unknown');
+        expect(screen.queryByRole('meter', { name: 'Range' })).toBeNull();
+      } finally { release(); }
+    }
   });
 
   it('renders an explicit unavailable state and retains identity/actions', () => {

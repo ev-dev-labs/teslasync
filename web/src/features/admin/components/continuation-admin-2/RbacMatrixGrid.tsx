@@ -68,13 +68,13 @@ export function RbacMatrixGrid({ payload, draft, editing, onToggle }: RbacMatrix
   return (
     <div className="min-w-0" data-testid="rbac-matrix-scroll">
       <Table aria-label={t('rbac.matrix.aria', 'Role permission matrix')} data-testid="rbac-matrix-grid">
-        <thead>
-          <tr>
-            <th scope="col" className="sticky start-0 z-[1] min-w-44 bg-[var(--surface-2)]">
+        <thead data-app-part="table-head">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="col" className="sticky start-0 z-[1] min-w-44 bg-[var(--surface-2)]">
               <Text variant="label">{t('rbac.permissionColumn', 'Permission')}</Text>
             </th>
             {roles.map((role: RbacRole) => (
-              <th
+              <th data-app-part="table-cell"
                 key={role.id}
                 scope="col"
                 data-testid={`rbac-col-${role.id}`}
@@ -89,8 +89,8 @@ export function RbacMatrixGrid({ payload, draft, editing, onToggle }: RbacMatrix
           const items = grouped.get(cat) ?? [];
           return (
             <tbody key={`cat-${cat}`}>
-              <tr>
-                <th
+              <tr data-app-part="table-row">
+                <th data-app-part="table-cell"
                   scope="rowgroup"
                   colSpan={roles.length + 1}
                   data-testid={`rbac-category-row-${cat}`}
@@ -100,13 +100,13 @@ export function RbacMatrixGrid({ payload, draft, editing, onToggle }: RbacMatrix
                 </th>
               </tr>
               {items.map((perm) => (
-                <tr key={perm.id} data-testid={`rbac-row-${perm.id}`}>
-                  <th scope="row" className="sticky start-0 z-[1] bg-[var(--surface-2)]">
+                <tr data-app-part="table-row" key={perm.id} data-testid={`rbac-row-${perm.id}`}>
+                  <th data-app-part="table-cell" scope="row" className="sticky start-0 z-[1] bg-[var(--surface-2)]">
                     <Text as="span" variant="body">{perm.name}</Text>
                     <Caption>{perm.id}</Caption>
                   </th>
                   {roles.map((role: RbacRole) => (
-                    <td key={role.id} className="text-center">
+                    <td data-app-part="table-cell" key={role.id} className="text-center">
                       <MatrixCell
                         roleID={role.id}
                         permID={perm.id}

@@ -129,7 +129,8 @@ describe('ArchetypeConfidenceDistribution assignment publication', () => {
       data: rows, exportData: rows, exportable: true,
     }));
     expect(screen.getByTestId('margin-chart')).toBeInTheDocument();
-    expect(screen.getByText(/ambiguity boundary/)).toBeInTheDocument();
+    const ambiguity = screen.getByText(/ambiguity boundary/);
+    expect(ambiguity.closest('[data-app-part~="card"]')).not.toBeNull();
     expect(screen.getByText(/most recently loaded evidence remains visible/)).toBeInTheDocument();
   });
 

@@ -25,6 +25,10 @@
  * `useNavigate`.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -81,6 +85,10 @@ vi.mock('react-i18next', async () => {
 import { ChargingDetailSection } from './ChargingDetailSection';
 import type { FleetAnalyticsQuery } from './constants';
 import { ApiError } from '@/lib/resilience';
+import { CHART_COLORS } from '@/components/charts';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { retainFleetContent } from '../overview-modernization/retainFleetContent';
 
 const STATS = { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 0 };
 
@@ -380,5 +388,90 @@ describe('ChargingDetailSection — null safety', () => {
     // Missing charger type → em-dash label, count "0 (0%)".
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('0 (0%)')).toBeInTheDocument();
+  });
+});
+
+describe('ChargingDetailSection — native quantitative ownership', () => {
+  it('binds original brand-relative and type-share tracks to existing consumers for all complete profiles', () => {
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-metric="bar"][data-metric-track]')) rules.push(rule); });
+    const { container } = renderSection(makeQuery({ data: {
+      charging_analytics: { ...EMPTY_CA,
+        charger_brands: [{ brand: 'Leader', count: 2 }, { brand: 'Other', count: 1 }],
+        charger_types: [{ type: 'DC', count: 2 }, { type: 'AC', count: 1 }],
+      },
+    } as unknown as FleetAnalytics }));
+    container.setAttribute('data-app-design-preview', '');
+    const tracks = [...container.querySelectorAll<HTMLElement>('[data-metric-track]')];
+    expect(tracks).toHaveLength(4);
+    const fills = tracks.map(track => track.firstElementChild as HTMLElement);
+    expect(fills.map(fill => Number.parseFloat(fill.style.width))).toEqual([100, 50, 2 / 3 * 100, 1 / 3 * 100]);
+    expect(screen.getByText('#1 Leader')).toBeInTheDocument();
+    expect(screen.getByText('2 (67%)')).toBeInTheDocument();
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        tracks.forEach((track, index) => {
+          expect(track).toHaveAttribute('data-app-part', 'metric');
+          expect(track).toHaveAttribute('data-app-metric', 'bar');
+          expect(track).toHaveClass(index < 2 ? 'h-2' : 'h-3', 'overflow-hidden', 'rounded-full');
+          expect(track).not.toHaveAttribute('role');
+          expect(fills[index]).toHaveAttribute('data-metric-fill');
+          expect(fills[index]).toHaveClass('h-full', 'rounded-full', 'transition-all', 'duration-slow');
+          expect(rules.some(rule => track.matches(rule.selector)
+            && rule.nodes.some(node => node.type === 'decl' && node.prop === 'outline'))).toBe(true);
+          expect(rules.some(rule => fills[index].matches(rule.selector)
+            && rule.nodes.some(node => node.type === 'decl' && node.prop === 'box-sizing' && node.value === 'border-box'))).toBe(true);
+        });
+      } finally { release(); }
+    }
+    expect(fills[0]).toHaveClass('bg-emerald-500');
+    expect(fills[1]).toHaveClass('bg-emerald-500');
+    expect(fills[2]).toHaveStyle({ backgroundColor: CHART_COLORS[0] });
+    expect(fills[3]).toHaveStyle({ backgroundColor: CHART_COLORS[1] });
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByRole('meter')).toBeNull();
+  });
+
+  it('retains source rows and zero-width fallbacks for known-zero, missing and nonfinite counts after a failed refresh', () => {
+    const counts = [0, undefined, NaN, Infinity, -Infinity];
+    const source = makeQuery({ isError: true, error: new Error('Refresh failed'), data: {
+      charging_analytics: { ...EMPTY_CA,
+        charger_brands: counts.map((count, i) => ({ brand: `Brand ${i}`, count })),
+        charger_types: counts.map((count, i) => ({ type: `Type ${i}`, count })),
+      },
+    } as unknown as FleetAnalytics });
+    const { container } = renderSection(retainFleetContent(source));
+    const fills = [...container.querySelectorAll<HTMLElement>('[data-metric-track] > [data-metric-fill]')];
+    expect(fills).toHaveLength(10);
+    expect(fills.map(fill => fill.style.width)).toEqual(counts.concat(counts).map(() => '0%'));
+    expect(screen.getByText('#1 Brand 0')).toBeInTheDocument();
+    expect(screen.getByText('Type 4')).toBeInTheDocument();
+    expect(source.isError).toBe(true);
+  });
+
+  it('does not silently repair signed or overflowing source arithmetic', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const markup = (brandCounts: number[], typeCounts: number[]) => renderToStaticMarkup(
+      <QueryClientProvider client={client}><MemoryRouter><ToastProvider>
+        <ChargingDetailSection query={makeQuery({ data: {
+          charging_analytics: { ...EMPTY_CA,
+            charger_brands: brandCounts.map((count, i) => ({ brand: `Brand ${i}`, count })),
+            charger_types: typeCounts.map((count, i) => ({ type: `Type ${i}`, count })),
+          },
+        } as unknown as FleetAnalytics })} />
+      </ToastProvider></MemoryRouter></QueryClientProvider>,
+    );
+    try {
+      const signed = markup([Number.MIN_VALUE, -Number.MAX_VALUE], [2, -1]);
+      expect(signed).toContain('width:-Infinity%');
+      expect(signed).toContain('width:200%');
+      expect(signed).toContain('width:-100%');
+      const overflowingTotal = markup([0], [Number.MAX_VALUE, Number.MAX_VALUE]);
+      expect(overflowingTotal.match(/data-metric-fill=/g)).toHaveLength(3);
+      expect(overflowingTotal.match(/width:0%/g)).toHaveLength(3);
+    } finally { client.clear(); }
   });
 });

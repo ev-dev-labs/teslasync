@@ -254,19 +254,22 @@ function InnerSection({
           </div>
           <div
             role="status"
+            data-app-part="feedback"
+            data-app-feedback-kind="insight"
+            data-app-tone="neutral"
             className="rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-primary)]"
           >
-            <div className="font-medium">
+            <div data-app-part="feedback-title" className="font-medium">
               {t(
                 'notifications.alertStudio.aiTemplate.previewLabel',
                 'Proposed template (review before applying):',
               )}
             </div>
-            <p className="mt-1 font-mono text-xs text-[var(--text-secondary)]">
+            <p data-app-part="feedback-message" className="mt-1 font-mono text-xs text-[var(--text-secondary)]">
               {proposal.template}
             </p>
             {proposal.used_placeholders.length > 0 && (
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              <p data-app-part="feedback-detail" className="mt-1 text-xs text-[var(--text-secondary)]">
                 {t(
                   'notifications.alertStudio.aiTemplate.previewPlaceholders',
                   'Placeholders: {{keys}}',

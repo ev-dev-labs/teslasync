@@ -78,6 +78,7 @@ export function KpiOverviewCard({
 }: KpiOverviewCardProps) {
   return (
     <GlassPanel
+      data-app-part="panel section"
       className={cn(compact ? 'space-y-3 p-3 sm:p-4' : 'space-y-4 p-4 sm:p-5', className)}
       data-testid={testId}
       id={id}
@@ -85,6 +86,7 @@ export function KpiOverviewCard({
       <ComparisonHeader {...header} compact={compact} />
 
       <div
+        data-app-part="metric-grid"
         className={cn(
           compact
             ? 'grid gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]'

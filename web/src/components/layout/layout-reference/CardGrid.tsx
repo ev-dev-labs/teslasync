@@ -29,7 +29,7 @@ export function CardGrid({ items, label }: CardGridProps) {
   const safeItems = items ?? [];
   const spans = packCardRows(safeItems.map(item => item.size), width);
   return (
-    <div ref={ref} data-card-grid data-container-band={policy.band} role="group" aria-label={label} className="min-w-0">
+    <div ref={ref} data-card-grid data-app-part="grid" data-container-band={policy.band} role="group" aria-label={label} className="min-w-0">
       {/* Grid owns the actual grid node. Geometry consumers must inspect this
           direct child, not interpret the measurement boundary as a grid. */}
       <Grid cols={columns} gap={policy.gutter} className={cn(gridClasses[policy.columns], 'items-stretch')}>

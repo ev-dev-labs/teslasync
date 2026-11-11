@@ -31,7 +31,7 @@ export function ReferenceRecordDialog({ row, actionDisabled, onClose, onAction }
         <Text as="p" className="mb-3">
           {t('developerReference.mobileGrid.details.notice', 'REFERENCE FIXTURES. Summary-hidden fields remain here; disabled and destructive actions are not hidden.')}
         </Text>
-        <dl className="space-y-3">
+        <dl data-app-part="list" className="space-y-3">
           {(row?.details ?? []).map(field => (
             <div key={field.key} className="min-w-0">
               <dt><Text weight="medium">{field.label}</Text></dt>

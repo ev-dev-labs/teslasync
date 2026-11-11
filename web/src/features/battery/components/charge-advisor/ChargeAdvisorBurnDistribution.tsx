@@ -35,9 +35,9 @@ export function ChargeAdvisorBurnDistribution({ analysis, state }: ChargeAdvisor
     >
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {metrics.map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <Text variant="caption">{label}</Text>
-            <Text className="mt-1 text-lg font-semibold text-theme-accent">
+          <div key={label} data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={value == null ? 'missing' : undefined} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <Text variant="caption" data-app-part="metric-label">{label}</Text>
+            <Text data-app-part="metric-reading metric-value" className="mt-1 text-lg font-semibold text-theme-accent">
               {value == null ? '—' : fmtPercent(value)}
             </Text>
           </div>

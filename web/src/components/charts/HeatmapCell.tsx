@@ -11,6 +11,8 @@ export function HeatmapCell({ level, label, className, ...props }: HeatmapCellPr
   return (
     <div
       {...props}
+      data-app-part="chart-plot"
+      data-chart-family="heatmap"
       role="img"
       aria-label={label}
       title={label}

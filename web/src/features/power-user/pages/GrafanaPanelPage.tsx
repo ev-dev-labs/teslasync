@@ -421,15 +421,18 @@ export default function GrafanaPanelPage() {
                   message={t('powerGrafana.panelTypes.empty', 'No panel types available.')}
                 />
               ) : (
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 3xl:grid-cols-3">
+                <ul data-app-part="list" className="grid grid-cols-1 gap-2 sm:grid-cols-2 3xl:grid-cols-3">
                   {sortedPanelTypes.map((entry) => (
                     <li
                       key={entry.name}
+                      data-app-part="card"
+                      data-app-card-kind="record"
+                      data-app-record-kind="grafana-panel-type"
                       className={cn(CATALOG_ENTRY_CLASS, 'p-3')}
                     >
-                      <div className="flex flex-col gap-1">
-                        <Code className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
-                        <Text as="span" variant="caption">
+                      <div data-app-part="record-body" className="flex flex-col gap-1">
+                        <Code data-app-part="record-title" className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
+                        <Text data-app-part="record-context" as="span" variant="caption">
                           {entry.description}
                         </Text>
                       </div>
@@ -457,21 +460,24 @@ export default function GrafanaPanelPage() {
                   message={t('powerGrafana.datasourceTypes.empty', 'No datasource types available.')}
                 />
               ) : (
-                <ul className="space-y-2">
+                <ul data-app-part="list" className="space-y-2">
                   {sortedDatasourceTypes.map((entry) => (
                     <li
                       key={entry.name}
+                      data-app-part="card"
+                      data-app-card-kind="record"
+                      data-app-record-kind="grafana-datasource"
                       className={cn(CATALOG_ENTRY_CLASS, 'p-3')}
                     >
-                      <div className="flex flex-col gap-1">
-                        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                          <Code className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
+                      <div data-app-part="record-body" className="flex flex-col gap-1">
+                        <span data-app-part="record-header" className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                          <Code data-app-part="record-title" className="break-words [overflow-wrap:anywhere]">{entry.name}</Code>
                           <Text as="span" variant="caption" aria-hidden="true">
                             ·
                           </Text>
-                          <Code className={cn('break-words [overflow-wrap:anywhere]', typography.color.secondary)}>uid={entry.uid}</Code>
+                          <Code data-app-part="record-context" className={cn('break-words [overflow-wrap:anywhere]', typography.color.secondary)}>uid={entry.uid}</Code>
                         </span>
-                        <Text as="span" variant="caption">
+                        <Text data-app-part="record-context" as="span" variant="caption">
                           {entry.description}
                         </Text>
                       </div>
@@ -503,19 +509,22 @@ export default function GrafanaPanelPage() {
                 message={t('powerGrafana.tables.empty', 'No tables available.')}
               />
             ) : (
-              <ul className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
+              <ul data-app-part="list" className="grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
                 {sortedTables.map((table) => (
                   <li
                     key={table.name}
+                    data-app-part="card"
+                    data-app-card-kind="record"
+                    data-app-record-kind="grafana-table"
                     className={cn(CATALOG_ENTRY_CLASS, 'p-4')}
                   >
-                    <div className="flex flex-col gap-1">
-                      <Code className="break-words [overflow-wrap:anywhere]">{table.name}</Code>
-                      <Text as="span" variant="bodySm">
+                    <div data-app-part="record-header" className="flex flex-col gap-1">
+                      <Code data-app-part="record-title" className="break-words [overflow-wrap:anywhere]">{table.name}</Code>
+                      <Text data-app-part="record-context" as="span" variant="bodySm">
                         {table.description}
                       </Text>
                     </div>
-                    <ul className="mt-3 space-y-1.5">
+                    <ul data-app-part="list record-body" className="mt-3 space-y-1.5">
                       {(table.columns ?? []).map((col) => (
                         <li key={col.name} className="flex flex-wrap items-baseline gap-x-1.5">
                           <Code className={cn('break-words [overflow-wrap:anywhere]', typography.color.secondary)}>{col.name}</Code>

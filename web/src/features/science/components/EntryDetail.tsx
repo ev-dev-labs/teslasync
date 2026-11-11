@@ -24,11 +24,11 @@ export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
       <Table aria-label={label}>
         <tbody>
           {rows.map(([k, v]) => (
-            <tr key={k}>
-              <th scope="row" className="font-normal">
+            <tr data-app-part="table-row" key={k}>
+              <th data-app-part="table-cell" scope="row" className="font-normal">
                 <Text size="sm" color="secondary" mono>{k}</Text>
               </th>
-              <td className={typeof v === 'number' ? 'text-right tabular-nums' : undefined}>
+              <td data-app-part="table-cell" className={typeof v === 'number' ? 'text-right tabular-nums' : undefined}>
                 <Text size="sm" color="secondary" mono>
                   {typeof v === 'number' ? fmtScientificNumber(v, 3) : String(v)}
                 </Text>

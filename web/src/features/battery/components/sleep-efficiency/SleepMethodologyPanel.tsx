@@ -30,11 +30,11 @@ export function SleepMethodologyPanel({
           )}
         </Text>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <Text as="h3" variant="body" weight="semibold">
               {t('sleep.methodology.currentTitle', 'Current evidence model')}
             </Text>
-            <ul className="mt-3 list-disc space-y-2 ps-5">
+            <ul data-app-part="list" className="mt-3 list-disc space-y-2 ps-5">
               <li>
                 <Text variant="bodySm">
                   {t(
@@ -69,14 +69,14 @@ export function SleepMethodologyPanel({
               </li>
             </ul>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <Text as="h3" variant="body" weight="semibold">
               {t(
                 'sleep.methodology.contextTitle',
                 'Context and future evidence',
               )}
             </Text>
-            <ul className="mt-3 list-disc space-y-2 ps-5">
+            <ul data-app-part="list" className="mt-3 list-disc space-y-2 ps-5">
               <li>
                 <Text variant="bodySm">
                   {t(

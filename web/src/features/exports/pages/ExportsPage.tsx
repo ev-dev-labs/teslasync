@@ -200,6 +200,9 @@ export default function ExportsPage() {
         render: (j) =>
           j.status === 'ready' ? (
             <a
+              data-app-part="button"
+              data-app-variant="ghost"
+              data-app-size="auto"
               href={exportDownloadUrl(j.id)}
               download
               aria-label={t('exportsList.downloadAria', 'Download export {{id}}', {
@@ -275,7 +278,7 @@ export default function ExportsPage() {
               {deleteFailures.length > 0 && (
                 <AlertBanner variant="warning" role="status"
                   title={t('toast.export.bulkDelete.error', 'Failed to delete exports')}>
-                  <ul className="space-y-1">
+                  <ul data-app-part="list" className="space-y-1">
                     {deleteFailures.map(({ id, reason }) => (
                       <li key={id}><Text variant="bodySm" className="break-words">{id}: {deleteFailureLabel(reason)}</Text></li>
                     ))}

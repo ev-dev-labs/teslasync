@@ -97,30 +97,30 @@ export default function RoadHazardMeshPage() {
                 </div>
                 <Table variant="embedded" aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
                   aria-describedby={`${headingId}-${index}-hazard ${headingId}-${index}-cell`}><tbody>
-                  <tr>
-                    <th scope="row" className={typography.color.secondary}>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.cell', 'Coarse cell')}
                     </th>
-                    <td id={`${headingId}-${index}-cell`} className="font-mono break-all">{cluster.coarse_cell}</td>
+                    <td data-app-part="table-cell" id={`${headingId}-${index}-cell`} className="font-mono break-all">{cluster.coarse_cell}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className={typography.color.secondary}>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.confidence', 'Confidence')}
                     </th>
-                    <td className="text-right">{fmtNumber(cluster.confidence_pct)}%</td>
+                    <td data-app-part="table-cell" className="text-right">{fmtNumber(cluster.confidence_pct)}%</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className={typography.color.secondary}>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className={typography.color.secondary}>
                       {t('advancedIntelligence.hazards.coverage', 'Observations')}
                     </th>
-                    <td className="text-right">{fmtInt(cluster.observation_count)}</td>
+                    <td data-app-part="table-cell" className="text-right">{fmtInt(cluster.observation_count)}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className={typography.color.secondary}>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className={typography.color.secondary}>
                       <Icon icon={Clock3} size="sm" className="me-1 inline-block" />
                       {t('advancedIntelligence.hazards.recency', 'Last seen')}
                     </th>
-                    <td>{formatDateTime(cluster.last_seen)}</td>
+                    <td data-app-part="table-cell">{formatDateTime(cluster.last_seen)}</td>
                   </tr>
                 </tbody></Table>
                 </Card>

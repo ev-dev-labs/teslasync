@@ -55,7 +55,7 @@ export function AdvantageBreakdown({
         icon={<Info className="h-8 w-8" aria-hidden="true" />}
         className="min-h-48"
       >
-        <div className="space-y-2">
+        <div data-app-part="list" data-app-list="definitions" className="space-y-2">
           {FAIR_METRICS.map((metric) => {
             const row = items.find((candidate) => candidate.key === metric.key);
             const complete = row?.a != null && row.b != null;
@@ -80,17 +80,19 @@ export function AdvantageBreakdown({
             return (
               <div
                 key={metric.key}
+                data-app-part="list-row"
                 className="flex min-w-0 flex-col items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:flex-row sm:flex-wrap sm:justify-between"
               >
                 <div className="min-w-0 max-w-full">
-                  <Text as="div" variant="body" className="whitespace-normal break-words">
+                  <Text data-app-part="metric-label" as="div" variant="body" className="whitespace-normal break-words">
                     {t(metric.labelKey, metric.fallback)}
                   </Text>
-                  <Text as="div" variant="caption" className="whitespace-normal break-words">
+                  <Text data-app-part="metric-context" as="div" variant="caption" className="whitespace-normal break-words">
                     {detail}
                   </Text>
                 </div>
                 <Badge
+                  data-app-part="badge metric-value"
                   variant={row?.winner ? 'success' : 'neutral'}
                   className="max-w-full whitespace-normal break-words"
                 >

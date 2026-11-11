@@ -46,7 +46,7 @@ export function RegionAboutPanel() {
 
       <div className="space-y-2">
         <Label id={ZONES_TITLE_ID}>{t('region.about.zonesTitle', 'Fleet API zones')}</Label>
-        <ul className="space-y-2" aria-labelledby={ZONES_TITLE_ID}>
+        <ul data-app-part="list" className="space-y-2" aria-labelledby={ZONES_TITLE_ID}>
           {zones.map((zone) => (
             <li key={zone.key} className="flex items-center gap-2">
               <Badge variant="neutral" size="sm">

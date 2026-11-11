@@ -28,11 +28,13 @@ export function ApiLogsRuntimeCard({
         </div>
         <Caption className="mt-2 block lg:min-h-10">{scope}</Caption>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-t border-[var(--glass-border)] pt-4">
-          <div aria-busy={loading}>
-            {loading ? <Skeleton className="h-9 w-20" /> : (
-              <MetricValue className="tabular-nums">{count}</MetricValue>
-            )}
-            <MetricLabel className="mt-1">{countLabel}</MetricLabel>
+          <div data-app-part="metric" data-app-metric="headline" aria-busy={loading}>
+            <div data-app-part="metric-reading">
+              {loading ? <Skeleton className="h-9 w-20" /> : (
+                <MetricValue data-app-part="metric-value" className="tabular-nums">{count}</MetricValue>
+              )}
+            </div>
+            <MetricLabel data-app-part="metric-label" className="mt-1">{countLabel}</MetricLabel>
           </div>
           <div className="min-w-0">{context}</div>
         </div>

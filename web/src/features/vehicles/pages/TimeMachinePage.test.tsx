@@ -6,6 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TimeMachineField, TimeMachineRange, TimeMachineState } from '@/api/hooks/useTimeMachine';
 import { fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
+import {
+  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
+} from '@/components/ui/app-designs/designs';
+import {
+  expectAppDesignDataMode, matchesAppDesignCss,
+} from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7,
@@ -95,6 +102,48 @@ beforeEach(() => {
 });
 
 describe('TimeMachinePage preservation', () => {
+  it.each(PACK_IDS)('%s connects every actual category record to its selected data composition', pack => {
+    h.reconstruction = { at: latest, count: 6, fields: [
+      ...fields,
+      { field: 'CabinTemperature', value: -12.345, value_kind: 'float', ts: latest, age_seconds: 300 },
+      { field: 'Speed', value: 17, value_kind: 'float', ts: latest, age_seconds: 7200 },
+    ] };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/time-machine']}>
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}><TimeMachinePage /></div>
+    </MemoryRouter></QueryClientProvider>);
+    const host = view.container.firstElementChild!;
+    const release = observeAppDesignScopes(host);
+    try {
+      const lists = host.querySelectorAll('ul[data-app-list="definitions"]');
+      expect(lists).toHaveLength(6);
+      const mode = APPLICATION_DESIGNS[pack].data;
+      const rows = [...lists].flatMap(list => [...list.children]);
+      expect(rows).toHaveLength(6);
+      for (const row of rows) {
+        expectAppDesignDataMode(row, mode, '[data-app-list="definitions"]');
+        const label = row.querySelector(':scope > [data-app-part="metric-label"]')!;
+        const reading = row.querySelector(':scope > [data-app-part="metric-reading"]')!;
+        expectAppDesignDataMode(reading, mode, '[data-app-part~="metric-reading"]');
+        expect(reading.querySelector('[data-app-part="metric-value"]')).not.toBeNull();
+        const technical = label.querySelector('[data-app-part="metric-context"]')!;
+        expect(matchesAppDesignCss(technical, '[data-app-part~="metric-context"]').length).toBeGreaterThan(0);
+        const age = reading.querySelector('[data-app-part="metric-context"] > [data-app-part="badge"]')!;
+        expect(age).toHaveAttribute('aria-label', expect.stringContaining('before the reconstruction instant'));
+      }
+      const zero = screen.getByText('TpmsPressure').closest('li')!;
+      const unknown = screen.getByText('BatteryLevel').closest('li')!;
+      expect(zero.querySelector('[data-app-part="metric-value"]')).toHaveTextContent(fmtScientificNumber(0, 4));
+      expect(unknown.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('—');
+      expect(screen.getByText('No')).toBeInTheDocument();
+      expect(host.querySelector('[role="progressbar"], [data-metric-track]')).toBeNull();
+    } finally {
+      release();
+      view.unmount();
+      client.clear();
+    }
+  });
+
   it('keeps all six categories, every raw field and unknown distinct from real zero', async () => {
     renderPage();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
@@ -109,6 +158,53 @@ describe('TimeMachinePage preservation', () => {
     expect(within(zero).queryByText('—')).not.toBeInTheDocument();
     expect(within(unknown).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('No')).toBeInTheDocument();
+  });
+
+  it('keeps the focused scrubber and retained record identity while data compositions change or turn off', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/time-machine']}>
+      <div data-app-design-preview="" {...getAppDesignAttributes('v1')}><TimeMachinePage /></div>
+    </MemoryRouter></QueryClientProvider>);
+    const host = view.container.firstElementChild!;
+    const release = observeAppDesignScopes(host);
+    try {
+      await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
+      const slider = screen.getByRole('slider');
+      slider.focus();
+      fireEvent.change(slider, { target: { value: '0.5' } });
+      const selectedInstant = '2026-10-01T12:00:00.000Z';
+      await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, selectedInstant));
+      const row = screen.getByText('TpmsPressure').closest('li')!;
+      const reading = row.querySelector(':scope > [data-app-part="metric-reading"]')!;
+      for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) {
+          host.setAttribute(name, value);
+        }
+        await waitFor(() => expect(row).toHaveAttribute(
+          'data-app-design-owner', expect.stringContaining(`pack-${pack}`),
+        ));
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]');
+        expectAppDesignDataMode(reading, APPLICATION_DESIGNS[pack].data, '[data-app-part~="metric-reading"]');
+        expect(screen.getByText('TpmsPressure').closest('li')).toBe(row);
+        expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent(fmtScientificNumber(0, 4));
+        expect(screen.getByText(/The selected instant is pending/)).toBeInTheDocument();
+        expect(screen.getByRole('slider')).toBe(slider);
+        expect(slider).toHaveFocus();
+        expect(slider).toHaveValue('0.5');
+        expect(h.reconstruction?.at).toBe(latest);
+      }
+      for (const name of Object.keys(getAppDesignAttributes('v1'))) host.removeAttribute(name);
+      await waitFor(() => expect(row).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchesAppDesignCss(row)).toEqual([]);
+      expect(matchesAppDesignCss(reading)).toEqual([]);
+      expect(screen.getByText('TpmsPressure').closest('li')).toBe(row);
+      expect(slider).toHaveFocus();
+      expect(h.readState).toHaveBeenLastCalledWith(7, selectedInstant);
+    } finally {
+      release();
+      view.unmount();
+      client.clear();
+    }
   });
 
   it('keeps historical rows and bounds while a reconstruction refresh fails', async () => {

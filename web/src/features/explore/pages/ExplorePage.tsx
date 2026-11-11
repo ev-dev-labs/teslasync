@@ -458,7 +458,7 @@ function SectionBand({
           {entries.length}
         </Badge>
       </div>
-      <ul className={CARD_GRID} data-testid={`explore-section-${slugify(section)}`}>
+      <ul data-app-part="list" className={CARD_GRID} data-testid={`explore-section-${slugify(section)}`}>
         {entries.map((entry) => (
           <FeatureCard
             key={entry.to}
@@ -489,6 +489,10 @@ function FeatureCard({
     <li>
       <a
         href={entry.to}
+        data-app-part="card button"
+        data-surface-variant="standalone"
+        data-app-variant="outline"
+        data-app-size="auto"
         data-testid={`explore-card-${entry.to}`}
         onClick={(e) => {
           if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -667,7 +671,7 @@ function EmptyResult({
           <Text as="p" variant="label" className="mb-2 text-center">
             {t('explore.empty.didYouMean', 'Did you mean')}
           </Text>
-          <ul className="mx-auto flex max-w-md flex-col gap-1">
+          <ul data-app-part="list" className="mx-auto flex max-w-md flex-col gap-1">
             {suggestions.map((s) => (
               <li key={s.path}>
                 <Button

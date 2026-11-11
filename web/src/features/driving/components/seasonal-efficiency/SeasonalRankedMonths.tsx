@@ -38,18 +38,20 @@ export function SeasonalRankedMonths({
           {ranked.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.rankedMonths.empty', 'No local month has an included observation yet.')} />
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div data-app-part="list" data-app-list="ranked" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {ranked.map((month, index) => (
-                <div key={month.month} className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] p-3">
-                  <Text variant="metricValue" className="w-7 text-center text-[var(--text-muted)]">{index + 1}</Text>
-                  <div className="min-w-0 flex-1">
-                    <Text variant="bodySm" as="p">{formatMonthName(month.month, { locale })}</Text>
-                    <Text variant="caption" as="p">{t('seasonalEfficiency.rankedMonths.support', '{{samples}} samples · {{distance}}', {
-                      samples: month.sampleCount,
-                      distance: units.formatDistance(month.distanceM),
-                    })}</Text>
+                <div data-app-part="card list-row" data-surface-variant="standalone" key={month.month} className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] p-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <Text variant="metricValue" className="w-7 shrink-0 text-center text-[var(--text-muted)]">{index + 1}</Text>
+                    <div className="min-w-0">
+                      <Text data-app-part="metric-label" variant="bodySm" as="p">{formatMonthName(month.month, { locale })}</Text>
+                      <Text data-app-part="metric-context" variant="caption" as="p">{t('seasonalEfficiency.rankedMonths.support', '{{samples}} samples · {{distance}}', {
+                        samples: month.sampleCount,
+                        distance: units.formatDistance(month.distanceM),
+                      })}</Text>
+                    </div>
                   </div>
-                  <Text variant="bodySm">{formatIntensityWhPerM(month.observedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
+                  <Text data-app-part="metric-value" variant="bodySm">{formatIntensityWhPerM(month.observedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
                 </div>
               ))}
             </div>

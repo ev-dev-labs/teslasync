@@ -342,7 +342,7 @@ export default function SignalDiffPage() {
         onCategoryChange={setActiveCategory}
         topSlot={
           <div className="grid grid-cols-1 gap-2 sm:max-w-xs">
-            <label className="space-y-1">
+            <label data-app-part="field-label" className="space-y-1">
               <Text as="span" variant="caption" className="mb-1 block">
                 {t('signalDiff.vehicle', 'Vehicle')}
               </Text>

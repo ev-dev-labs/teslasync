@@ -243,7 +243,7 @@ export default function APIKeysPage() {
               actions={<Icon icon={Info} className={typography.color.muted} />}
             >
               <SectionErrorBoundary name="APIKeysGuidance">
-              <ul className="space-y-2">
+              <ul data-app-part="list" className="space-y-2">
                 {guidancePoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <Icon icon={ShieldCheck} size="sm" className={`mt-0.5 ${typography.color.muted}`} />

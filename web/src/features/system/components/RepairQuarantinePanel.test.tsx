@@ -4,6 +4,9 @@ import type { ComponentProps } from 'react';
 import type { RepairQuarantine, RepairQuarantineFilters, RepairSuggestionsResponse } from '@/api/hooks/useDataRepair';
 import { RepairQuarantinePanel } from './RepairQuarantinePanel';
 import { RepairDiagnosticsWorkspace } from './RepairDiagnosticsWorkspace';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const mocks = vi.hoisted(() => ({
   query: {
@@ -348,12 +351,46 @@ describe('RepairQuarantinePanel scope and write authority', () => {
 });
 
 describe('RepairQuarantinePanel complete ledger', () => {
+  it.each(PACK_IDS)('%s activates the real expanded definition rows and preserves every ledger fact and restore guard', pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <RepairQuarantinePanel vehicleId={7} canWrite={false} writeBlockReason="Read-only scope" />
+    </div>);
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row:/ }));
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const list = view.container.querySelector('dl[data-app-list="definitions"]')!;
+      expect(list).not.toBeNull();
+      const rows = [...list.children];
+      expect(rows.map(row => row.querySelector('dt')?.textContent))
+        .toEqual(['Status', 'Reason', 'Quarantined', 'Operator']);
+      for (const row of rows) {
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]');
+        expect(row.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
+      }
+      expect(list).toHaveTextContent('Original recovery reason');
+      expect(list).toHaveTextContent('Synthetic operator');
+      expect(list).toHaveTextContent('Held safely');
+      expect(screen.getAllByRole('table')).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Restore' })).toBeDisabled();
+      expect(mocks.mutation.mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+      view.unmount();
+    }
+  });
+
   it('uses the existing row disclosure for reason, operator, quarantine time and status while retaining actions', () => {
     render(<RepairQuarantinePanel vehicleId={7} canWrite />);
     const expand = screen.getByRole('button', { name: /^Expand row:/ });
     fireEvent.click(expand);
     expect(expand).toHaveAttribute('aria-expanded', 'true');
     const details = document.querySelector('dl')!;
+    expect(details).toHaveAttribute('data-app-list', 'definitions');
+    for (const row of details.children) {
+      expect(row).toHaveAttribute('data-app-part', 'list-row');
+      expect(row.querySelector('dt')).toHaveAttribute('data-app-part', 'metric-label');
+      expect(row.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
+    }
     expect(within(details).getByText('Reason')).toBeInTheDocument();
     expect(within(details).getByText('Original recovery reason')).toBeInTheDocument();
     expect(within(details).getByText('Operator')).toBeInTheDocument();

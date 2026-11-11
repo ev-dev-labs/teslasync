@@ -69,14 +69,14 @@ export function SeasonalResidualDistribution({
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.residual.empty', 'No finite fitted residuals are available.')} />
           ) : (
             <>
-              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <dl data-app-part="metric-grid" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {diagnosticTiles.map(({ key, label, value }) => (
-                  <div key={key} className="rounded-lg border border-[var(--panel-border)] p-3">
-                    <Text variant="metricLabel">{label}</Text>
-                    <Text variant="bodySm" as="p">{formatIntensityWhPerM(value, units.unitPrefs)}</Text>
+                  <div data-app-part="metric" data-app-metric="tile" key={key} className="rounded-lg border border-[var(--panel-border)] p-3">
+                    <Text data-app-part="metric-label" as="dt" variant="metricLabel">{label}</Text>
+                    <dd data-app-part="metric-reading"><Text data-app-part="metric-value" variant="bodySm">{formatIntensityWhPerM(value, units.unitPrefs)}</Text></dd>
                   </div>
                 ))}
-              </div>
+              </dl>
               <ChartContainer
                 title={t('seasonalEfficiency.residual.chartTitle', 'Distance share by residual bin')}
                 ariaLabel={t('seasonalEfficiency.residual.aria', 'Histogram of included distance share by fitted residual bin')}

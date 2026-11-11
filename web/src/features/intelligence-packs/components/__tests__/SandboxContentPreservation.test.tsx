@@ -100,7 +100,8 @@ describe('Sandbox actual-component content preservation', () => {
         .toEqual([['0', '-12.5'], ['1', '0'], ['2', '7.25'], ['3', '15'], ['4', '23.5']]);
     }
     const metric = widget('Currently Below Target');
-    expect(metric.getByText('23.50 flag')).toBeInTheDocument();
+    expect(metric.getByText('23.50', { selector: '[data-app-part~="metric-value"]' })).toBeInTheDocument();
+    expect(metric.getByText('flag', { selector: '[data-app-part~="metric-unit"]' })).toBeInTheDocument();
     expect(metric.getByText('avg 6.65 flag')).toBeInTheDocument();
     expect(screen.getByText('sample -12.50–23.50 %')).toBeInTheDocument();
     expect(within(screen.getByTestId('intelligence-packs-sandbox-run-brief'))
@@ -124,7 +125,8 @@ describe('Sandbox actual-component content preservation', () => {
     runOverride.truncated = true;
     renderWithProviders(<SandboxPreviewPanel />);
 
-    expect(widget('Currently Below Target').getByText('0.00 flag')).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('0.00', { selector: '[data-app-part~="metric-value"]' })).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('flag', { selector: '[data-app-part~="metric-unit"]' })).toBeInTheDocument();
     expect(widget('Currently Below Target').getByText('avg 0.00 flag')).toBeInTheDocument();
     expect(widget('Efficiency Gap vs Target').getByText('No output rows.')).toBeInTheDocument();
     expect(widget('Efficiency Gap vs Target').getByText('Sandbox step budget exceeded')).toBeInTheDocument();
@@ -143,7 +145,8 @@ describe('Sandbox actual-component content preservation', () => {
       setGlobalPrecision(3);
       setGlobalLocale('de-DE');
     });
-    expect(widget('Currently Below Target').getByText('23,500 flag')).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('23,500', { selector: '[data-app-part~="metric-value"]' })).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('flag', { selector: '[data-app-part~="metric-unit"]' })).toBeInTheDocument();
     expect(widget('Currently Below Target').getByText('avg 6,650 flag')).toBeInTheDocument();
     expect(screen.getByText('sample -12,500–23,500 %')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Charge Added — data table' }).textContent).toBe(before);
@@ -238,7 +241,8 @@ describe('Sandbox actual-component content preservation', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(table.textContent).toBe(before);
     expect(select).toHaveValue(manifest.id);
-    expect(widget('Currently Below Target').getByText('23.50 flag')).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('23.50', { selector: '[data-app-part~="metric-value"]' })).toBeInTheDocument();
+    expect(widget('Currently Below Target').getByText('flag', { selector: '[data-app-part~="metric-unit"]' })).toBeInTheDocument();
   });
 
   it('keeps every recommendation field reviewable, in caller order, through trust-confirmation cancellation', async () => {

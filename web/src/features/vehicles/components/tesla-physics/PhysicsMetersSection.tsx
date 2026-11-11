@@ -38,16 +38,16 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
       <Text as="p" variant="caption">{t('teslaOnly.metersRatioNote', 'The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.metersTimeline', 'Observed counter changes and firmware bounds')}>
-      {resets.length ? resets.slice(-8).reverse().map((row) => <div key={`${row.meter}-${row.at}`} className="rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{t('teslaOnly.workbench.resetReading', '{{meter}}: {{before}} → {{after}} at {{at}}', {
+      {resets.length ? resets.slice(-8).reverse().map((row) => <div data-app-part="card" data-app-record-kind="physics-evidence" key={`${row.meter}-${row.at}`} className="rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-record-slot="reading" as="p" variant="bodySm">{t('teslaOnly.workbench.resetReading', '{{meter}}: {{before}} → {{after}} at {{at}}', {
           meter: row.meter, before: distance(row.from_m), after: distance(row.to_m), at: time(row.at, t),
-        })}</Text><Text as="p" variant="caption">{row.cause}{row.unknown ? ` · ${unknown(t)}` : ''}</Text>
+        })}</Text><Text data-app-record-slot="context" as="p" variant="caption">{row.cause}{row.unknown ? ` · ${unknown(t)}` : ''}</Text>
       </div>) : <Text as="p" variant="bodySm">{t('teslaOnly.metersNoDrops', 'No meter drops were returned in this bounded window. That does not establish counter stability between unobserved readings.')}</Text>}
-      {epochs.length ? epochs.map((epoch) => <div key={`${epoch.version}-${epoch.started_at}`} className="rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{t('teslaOnly.metersEpoch', 'Firmware {{version}} observed {{from}} → {{to}}', {
+      {epochs.length ? epochs.map((epoch) => <div data-app-part="card" data-app-record-kind="physics-evidence" key={`${epoch.version}-${epoch.started_at}`} className="rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-record-slot="reading" as="p" variant="bodySm">{t('teslaOnly.metersEpoch', 'Firmware {{version}} observed {{from}} → {{to}}', {
           version: epoch.version, from: time(epoch.started_at, t), to: time(epoch.ended_at, t),
         })}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.metersEpochCounters', 'FSD counter bounds: {{from}} → {{to}}', {
+        <Text data-app-record-slot="context" as="p" variant="caption">{t('teslaOnly.metersEpochCounters', 'FSD counter bounds: {{from}} → {{to}}', {
           from: distance(epoch.fsd_meter_start_m), to: distance(epoch.fsd_meter_end_m),
         })}</Text>
       </div>) : <Text as="p" variant="caption">{t('teslaOnly.metersNoEpochs', 'No firmware counter bounds were returned for cross-checking.')}</Text>}

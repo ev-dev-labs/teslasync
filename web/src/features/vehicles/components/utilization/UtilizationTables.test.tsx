@@ -376,7 +376,7 @@ describe('Shared utilization tables', () => {
     expect(rows[2]).toHaveTextContent('—');
     expect(table.closest('.hidden')).toHaveClass('sm:block');
     const mobile = screen.getByRole('list');
-    expect(mobile).toHaveClass('sm:hidden');
+    expect(mobile.parentElement).toHaveClass('sm:hidden');
     expect(within(mobile).getAllByRole('listitem')).toHaveLength(2);
     expect(within(mobile).getByText('50 km')).toBeInTheDocument();
     expect(display.formatDistance).toHaveBeenCalledWith(50_000);
@@ -415,7 +415,7 @@ describe('Shared utilization tables', () => {
     const badge = screen.getByText(historyCapReached ? '1,000-drive cap reached' : 'Ranged response below API cap');
     const callout = screen.getByText(historyCapReached
       ? 'The request returned 1,000 rows. Results describe that capped ranged response; additional matching drives may exist.'
-      : 'The ranged response returned 3 rows below the 1,000-drive API limit.').parentElement;
+      : 'The ranged response returned 3 rows below the 1,000-drive API limit.').closest('[data-app-feedback-kind="notice"]');
     if (historyCapReached) {
       expect(badge).toHaveClass('text-[var(--semantic-warning)]');
       expect(callout).toHaveClass('border-[var(--semantic-warning-border)]', 'bg-[var(--semantic-warning-bg)]');

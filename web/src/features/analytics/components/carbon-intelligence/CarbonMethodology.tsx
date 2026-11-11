@@ -2,7 +2,7 @@ import { BookOpenCheck, Clock3, Database, FlaskConical, Fuel, ShieldAlert } from
 import { useTranslation } from 'react-i18next';
 
 import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { Card, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { CarbonSectionProps } from './types';
 
@@ -85,16 +85,17 @@ export function CarbonMethodology({
         </Text>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
-            <div
+            <Card
               key={item.title}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+              variant="embedded"
+              className="rounded-xl bg-[var(--surface-2)]"
             >
               <div className="mb-2 flex items-center gap-2 text-[var(--text-muted)]">
                 {item.icon}
                 <Text as="h3" variant="label">{item.title}</Text>
               </div>
               <Text as="p" variant="bodySm">{item.body}</Text>
-            </div>
+            </Card>
           ))}
         </div>
       </LayoutCard>

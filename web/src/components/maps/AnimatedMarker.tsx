@@ -31,13 +31,13 @@ function createCarIcon(color: string, heading: number | undefined, label: string
     iconSize: [24, 24],
     iconAnchor: [12, 12],
     html: `
-      <div role="img" aria-label="${label}" style="width:24px;height:24px;position:relative">
-        <div style="
+      <div data-app-part="map-marker" data-map-marker="playhead" role="img" aria-label="${label}" style="width:24px;height:24px;position:relative">
+        <div class="app-map-marker-halo" style="
           position:absolute;inset:0;border-radius:50%;
           background:${color};opacity:0.3;
           animation:replay-pulse 1.5s ease-in-out infinite;
         "></div>
-        <div style="
+        <div class="app-map-marker-core" style="
           position:absolute;inset:4px;border-radius:50%;
           background:${color};border:2px solid white;
           box-shadow:0 0 8px ${color};

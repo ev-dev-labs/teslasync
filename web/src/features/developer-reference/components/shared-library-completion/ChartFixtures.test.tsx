@@ -1,12 +1,30 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
+import type { ChartTooltipProps } from '@/components/charts';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { ChartFixtures } from './ChartFixtures';
 import { completionCopy as c } from './completionCopy';
 import { completeChartRows, plottedChartRows } from './fixtureData';
 
 const downloadCSV = vi.hoisted(() => vi.fn());
+vi.mock('@/components/charts', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { inertCartesianParts } = await import('@/test/chartTestDoubles');
+  return {
+    ...actual,
+    ...inertCartesianParts,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    LineChart: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Line: () => null,
+    Tooltip: ({ content, formatter }: {
+      content?: ReactNode; formatter?: ChartTooltipProps['formatter'];
+    }) => isValidElement<ChartTooltipProps>(content) ? cloneElement(content, {
+      active: true, label: '2026-08-01', payload: [{ name: 'score', value: 0 }], formatter,
+    }) : null,
+  };
+});
 vi.mock('@/lib/csvExport', async importOriginal => ({
   ...await importOriginal<typeof import('@/lib/csvExport')>(),
   downloadCSV,
@@ -22,6 +40,15 @@ afterEach(() => {
 });
 
 describe('prepared canonical ChartCard fixture', () => {
+  it('uses shared tooltip presentation without losing the fixture formatter or measured zero', async () => {
+    await act(async () => { render(<ThemeProvider><MemoryRouter><ChartFixtures /></MemoryRouter></ThemeProvider>); });
+    const tooltip = screen.getAllByRole('tooltip').find(node => node.dataset.appPart === 'chart-tooltip')!;
+    expect(tooltip).toHaveAttribute('data-app-part', 'chart-tooltip');
+    expect(tooltip.querySelector('[data-chart-tooltip-name]')).toHaveTextContent(c.chartValue);
+    expect(tooltip.querySelector('[data-chart-tooltip-value]')).toHaveTextContent(/^0$/);
+    expect(tooltip).toHaveTextContent('2026-08-01');
+    expect(screen.getByRole('table')).toHaveTextContent(c.unknown);
+  });
   it('retains all 12 observations in the actual alternative while the plot uses four', async () => {
     await act(async () => { render(<ThemeProvider><MemoryRouter><ChartFixtures /></MemoryRouter></ThemeProvider>); });
     expect(completeChartRows).toHaveLength(12);

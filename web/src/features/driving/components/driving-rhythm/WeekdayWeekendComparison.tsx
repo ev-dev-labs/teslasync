@@ -91,6 +91,8 @@ export function WeekdayWeekendComparison({
             {rows.map((row) => (
               <div
                 key={row.key}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
               >
                 <div className="flex items-center justify-between gap-2">

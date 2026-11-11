@@ -52,6 +52,7 @@ describe('shared pack node shapes and unresolved flow', () => {
       ]} arrows={[arrow({ active: true, value: null })]} />
     </PackBoundary>);
     const rendered = container.querySelector('[data-flow-node="a"]');
+    expect(screen.getByRole('img')).toHaveAttribute('data-app-part', 'chart-plot');
     expect(rendered?.tagName.toLowerCase()).toBe(shape);
     expect(rendered?.getAttribute('rx')).toBe(radius);
     expect(container.querySelector('.flow-active')).toBeNull();

@@ -42,25 +42,28 @@ export function BatteryPassportRecommendations({
             </Text>
           </AlertBanner>
           {recommendations.length > 0 ? (
-            <ol className="space-y-2.5">
+            <ol data-app-part="list" data-app-list="records" className="space-y-2.5">
               {recommendations.map((recommendation, index) => (
                 <li
                   key={`${index}:${recommendation}`}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <FileOutput
                     className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                     aria-hidden="true"
                   />
-                  <div>
-                    <Text as="p" variant="caption">
+                  <div data-app-part="record-body">
+                    <Text as="p" variant="caption" data-app-part="record-title">
                       {t(
                         'batteryPassport.recommendations.ruleLabel',
                         'Server rule output {{index}}',
                         { index: index + 1 },
                       )}
                     </Text>
-                    <Text as="p" variant="bodySm" className="mt-1">
+                    <Text as="p" variant="bodySm" data-app-part="record-context" className="mt-1">
                       {t(
                         'batteryPassport.recommendations.ruleValue',
                         '{{output}}',

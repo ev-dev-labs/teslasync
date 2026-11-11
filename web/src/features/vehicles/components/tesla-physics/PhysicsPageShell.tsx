@@ -106,13 +106,13 @@ export function PhysicsPageShell({ physics, children, navigation }: {
         <EmptyState title={title} message={t('teslaOnly.missingSlice', 'This evidence slice was not returned. No measurement is inferred from its absence.')} />
       </GlassPanel> : child)}
     </div> : state.isRefreshBlocked ? <LayoutCard title={title}>
-      <div role="status" aria-live="polite" className="space-y-3">
+      <div data-app-part="status" role="status" aria-live="polite" className="space-y-3">
         <Badge variant="neutral" size="sm">{t('dataSources.status.paused', 'Refresh paused')}</Badge>
         <Text as="p" variant="bodySm" color="secondary">
           {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
         </Text>
       </div>
-    </LayoutCard> : <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading…')} className="space-y-6">
+    </LayoutCard> : <div data-app-part="status" role="status" aria-busy="true" aria-label={t('common.loading', 'Loading…')} className="space-y-6">
       <LayoutCard title={t('teslaOnly.scopeTitle', 'Evidence boundaries')}>
         <div className="grid gap-3 sm:grid-cols-2">
           <Skeleton className="h-24" />

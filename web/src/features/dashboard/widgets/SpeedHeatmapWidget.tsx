@@ -92,7 +92,7 @@ export function lerpColor(a: [number, number, number], b: [number, number, numbe
   return `rgb(${r},${g},${bl})`;
 }
 
-export function speedToColor(speed: number, maxSpeed: number, ink = 'var(--accent)'): string {
+export function speedToColor(speed: number, maxSpeed: number, ink = 'var(--theme-accent)'): string {
   if (!Number.isFinite(speed) || !Number.isFinite(maxSpeed) || speed <= 0 || maxSpeed <= 0) {
     return 'color-mix(in srgb, var(--text-primary) 3%, transparent)';
   }
@@ -190,6 +190,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
         title={t('widget.speedHeatmap.title', 'Speed heatmap')}
         ariaLabel={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
         chartKey="dashboard-speed-heatmap"
+        metadata={{ unitLabel: unitPrefs.speed }}
         className="min-h-36 h-full"
         data={cellData}
         dataColumns={[
@@ -198,6 +199,12 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
           { key: 'avgSpeed', label: `${t('widget.speedHeatmap.averageSpeed', 'Average speed')} (${unitPrefs.speed})`, format: (value) => value == null ? '—' : fmtNumber(Number(value)) },
           { key: 'count', label: t('widget.speedHeatmap.driveCount', 'Drive count'), format: (value) => fmtInt(Number(value)) },
         ]}
+        caption={
+          <div data-app-part="chart-legend" data-chart-scale className="flex flex-wrap justify-between gap-2">
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.noSampleLegend', 'Dim = no sample')}</Caption>
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.higherSpeedLegend', 'Brighter = higher speed')}</Caption>
+          </div>
+        }
       >
         <div className="flex-1 min-h-28">
           <HeatmapGrid
@@ -241,7 +248,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
         </div>}
         instrument={renderHeatmap(packId === 'v7')}
         details={<div className="space-y-3">
-          <dl className="grid grid-cols-2 gap-3">
+          <dl data-app-part="list" data-chart-readout className="grid grid-cols-2 gap-3">
             <div>
               <Caption as="dt">{t('dashboardWidgets.driving.speedHeatmap.rows', 'Rows')}</Caption>
               <Text as="dd" variant="bodySm">{t('dashboardWidgets.driving.speedHeatmap.days', 'Days')}</Text>
@@ -251,10 +258,6 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
               <Text as="dd" variant="bodySm">{t('dashboardWidgets.driving.speedHeatmap.timeOfDay', 'Time of day')}</Text>
             </div>
           </dl>
-          <div className="flex flex-wrap justify-between gap-2">
-            <Caption>{t('dashboardWidgets.driving.speedHeatmap.noSampleLegend', 'Dim = no sample')}</Caption>
-            <Caption>{t('dashboardWidgets.driving.speedHeatmap.higherSpeedLegend', 'Brighter = higher speed')}</Caption>
-          </div>
           <Caption as="p">{t('dashboardWidgets.driving.speedHeatmap.blankCells', 'Blank cells represent periods without samples, not zero speed.')}</Caption>
         </div>}
       >
@@ -302,6 +305,8 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale, 
 
   return (
     <svg
+      data-app-part="chart-plot"
+      data-chart-family="speed-heatmap"
       viewBox={`0 0 ${leftMargin + COLS * 10 + 2} ${topMargin + ROWS * 12 + 2}`}
       className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
@@ -313,6 +318,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale, 
       {hourLabels.map(({ hour, label }) => (
         <text
           key={`h-${hour}`}
+          data-chart-axis="hour"
           x={leftMargin + hour * 10 + 5}
           y={topMargin - 3}
           textAnchor="middle"
@@ -327,6 +333,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale, 
       {dayLabels.map((label, i) => (
         <text
           key={`d-${i}`}
+          data-chart-axis="day"
           x={leftMargin - 2}
           y={topMargin + i * 12 + 8}
           textAnchor="end"

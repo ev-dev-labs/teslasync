@@ -25,7 +25,7 @@
  * ~525k-iteration safety loop.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -56,6 +56,8 @@ vi.mock('../helpers', async () => {
 
 import { describeCron, getNextCronRuns } from '../helpers'
 import { CronParserTool } from './CronParser'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 
 const mockedDescribe = vi.mocked(describeCron)
 const mockedNextRuns = vi.mocked(getNextCronRuns)
@@ -80,6 +82,27 @@ afterEach(() => {
 })
 
 describe('CronParserTool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes real schedule records and the invalid notice without reordering runs', async pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><CronParserTool /></div>)
+    typeExpr('* * * * *')
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      const rows = [...view.container.querySelectorAll('[data-app-list="ranked"] > [data-app-part="list-row"]')]
+      expect(rows).toHaveLength(5)
+      for (const row of rows) expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="ranked"]')
+      expect(rows.map(row => row.querySelector('[data-app-part~="metric-label"]')?.textContent)).toEqual(['1', '2', '3', '4', '5'])
+      const description = view.container.querySelector('[data-app-list="definitions"] > [data-app-part="list-row"]')!
+      expectAppDesignDataMode(description, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]')
+      expect(description).toHaveTextContent('Every minute')
+      typeExpr('1 2')
+      const alert = screen.getByRole('alert')
+      await waitFor(() => expect(matchesAppDesignCss(alert, '[data-app-feedback-kind="notice"]').length).toBeGreaterThan(0))
+      expect(alert).toHaveAttribute('data-app-tone', 'warning')
+      expect(alert).toHaveTextContent(INVALID_MSG)
+      expect(view.container.querySelector('[data-app-list="ranked"]')).toBeNull()
+    } finally { release() }
+  })
+
   it('renders the tool chrome: title, description, labelled input, and every preset button', () => {
     render(<CronParserTool />)
 
@@ -112,6 +135,9 @@ describe('CronParserTool', () => {
     typeExpr('1 2 3')
 
     const alert = screen.getByRole('alert')
+    expect(alert).toHaveAttribute('data-app-feedback-kind', 'notice')
+    expect(alert).toHaveAttribute('data-app-tone', 'warning')
+    expect(alert.querySelector('[data-app-part="feedback-content"] > [data-app-part="feedback-message"]')).toHaveTextContent(INVALID_MSG)
     expect(alert).toHaveTextContent(INVALID_MSG)
     // Invalid input renders neither a description nor a run list…
     expect(screen.queryByText('Description')).toBeNull()
@@ -137,6 +163,12 @@ describe('CronParserTool', () => {
     // Exactly five run rows, badge-numbered 1..5 (clock-independent count).
     expect(screen.getByText('Next runs')).toBeInTheDocument()
     expect(screen.getAllByText(/^[1-5]$/)).toHaveLength(5)
+    const rows = document.querySelectorAll('[data-app-list="ranked"] > [data-app-part="list-row"]')
+    expect(rows).toHaveLength(5)
+    expect([...rows].map(row => row.querySelector('[data-app-part~="metric-label"]')?.textContent)).toEqual(['1', '2', '3', '4', '5'])
+    expect(rows[0].querySelector('[data-app-part="metric-value"]')).not.toBeEmptyDOMElement()
+    expect(document.querySelector('[data-app-list="definitions"] > [data-app-part="list-row"] > [data-app-part="metric-value"]'))
+      .toHaveTextContent('Every minute')
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.queryByText(NO_RUNS_MSG)).toBeNull()

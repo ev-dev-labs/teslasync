@@ -29,9 +29,10 @@ export function MobileReferenceState({ state, callbacks, production = false }: P
       action={callbacks.onClear ? { label: t('developerReference.mobileGrid.actions.clear', 'Clear'), onClick: callbacks.onClear } : undefined} />
   );
   return (
-    <div role="alert" className="mgr-state flex flex-wrap items-center justify-between gap-2 p-3">
-      <Text className="min-w-0 break-words">{state.message}</Text>
-      {callbacks.onRetry && <Button variant="secondary" className="min-h-11 min-w-11" loading={state.retrying} onClick={callbacks.onRetry}>
+    <div role="alert" data-app-part="feedback error" data-app-feedback-kind="notice" data-app-tone="danger"
+      className="mgr-state flex flex-wrap items-center justify-between gap-2 p-3">
+      <Text data-app-part="feedback-content feedback-message" className="min-w-0 break-words">{state.message}</Text>
+      {callbacks.onRetry && <Button data-app-part="button feedback-retry" variant="secondary" className="min-h-11 min-w-11" loading={state.retrying} onClick={callbacks.onRetry}>
         {production ? t('common.retry', 'Retry') : t('developerReference.mobileGrid.actions.retry', 'Retry')}
       </Button>}
     </div>

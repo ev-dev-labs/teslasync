@@ -80,10 +80,10 @@ const ReactMarkdownLazy = lazy(async () => {
             );
           },
           ul({ children }) {
-            return <ul className="list-disc pl-5 my-1 space-y-0.5">{children}</ul>;
+            return <ul data-app-part="list" className="list-disc pl-5 my-1 space-y-0.5">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal pl-5 my-1 space-y-0.5">{children}</ol>;
+            return <ol data-app-part="list" className="list-decimal pl-5 my-1 space-y-0.5">{children}</ol>;
           },
           h1({ children }) {
             return <Heading level="panel" as="h1" className="mt-3 mb-1">{children}</Heading>;
@@ -113,13 +113,13 @@ const ReactMarkdownLazy = lazy(async () => {
           },
           th({ children }) {
             return (
-              <th scope="col">
+              <th data-app-part="table-cell" scope="col">
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td>{children}</td>;
+            return <td data-app-part="table-cell">{children}</td>;
           },
         }}
       >

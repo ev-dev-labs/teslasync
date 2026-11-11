@@ -1,4 +1,7 @@
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,6 +13,13 @@ import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { DateFormatter } from '@/hooks/useDateFormat';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
+
+const controlsRules: Rule[] = [];
+postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+  .walkRules(rule => { controlsRules.push(rule); });
 
 const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -190,6 +200,44 @@ function renderPage(path = '/segments') {
 }
 
 describe('SegmentsPage pagination', () => {
+  it('binds native definition readouts and the pressed order group across all profiles without creating document tabs', () => {
+    state.segments = [segment(0), segment(1)];
+    const { container } = renderPage();
+    const group = screen.getByRole('group', { name: 'Order by' });
+    const card = screen.getByRole('button', { name: 'Open leaderboard for Route 1' });
+    const disabled = screen.getByRole('button', { name: 'Open leaderboard for Route 0' });
+    expect(disabled).toBeDisabled();
+    expect(card.querySelectorAll('button')).toHaveLength(0);
+    expect(card.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"]')).toHaveLength(3);
+    expect([...card.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent)).toEqual(['1000 m', '—', '—']);
+    fireEvent.click(card);
+    expect(card).toHaveAttribute('aria-pressed', 'true');
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const design = APPLICATION_DESIGNS[pack];
+        expect(controlsRules.some(rule => rule.selectors.some(selector =>
+          selector.includes(`[data-app-controls="${design.controls}"]`) && group.matches(selector),
+        )), `${pack}: order group chrome`).toBe(true);
+        for (const reading of card.querySelectorAll('[data-app-part="metric-reading"]')) {
+          expectAppDesignDataMode(reading, design.data, '[data-app-list="definitions"]');
+        }
+        for (const name of ['By efficiency', 'By time']) {
+          const button = within(group).getByRole('button', { name });
+          fireEvent.click(button);
+          expect(button).toHaveAttribute('aria-pressed', 'true');
+          expect(button).toHaveAttribute('type', 'button');
+          expect(button).toHaveClass('min-h-11', 'min-w-11');
+          expect(button).not.toHaveAttribute('role');
+        }
+        expect(screen.queryByRole('tablist')).toBeNull();
+        expect(screen.queryByRole('tab')).toBeNull();
+      } finally { release(); }
+    }
+  });
+
   it('selects segments with native toggle buttons that keep Tab, Enter and Space semantics', () => {
     renderPage();
     const list = screen.getByRole('group', { name: 'Route segments' });

@@ -125,6 +125,9 @@ describe('WidgetChartSummary — null safety (hardening)', () => {
     // A genuine zero is not coalesced away.
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
+    expect(screen.getByText('Missing')).toHaveAttribute('data-app-part', 'metric-label');
+    expect(screen.getByText('—').closest('[data-app-part~="metric"]')).not.toBeNull();
+    expect(screen.getByText('0')).toHaveAttribute('data-app-part', 'metric-value');
   });
 
   it('does not throw and still renders the chart when stats is nullish', () => {
@@ -161,10 +164,13 @@ describe('WidgetChartSummary — axis labels', () => {
 
     const slot = screen.getByTestId('chart').parentElement;
     expect(slot).toHaveClass('min-h-0', 'flex-1');
+    expect(slot).toHaveAttribute('data-app-part', 'chart-plot');
+    expect(slot?.parentElement).toHaveAttribute('data-app-part', 'chart');
     expect(slot?.parentElement).toHaveClass('flex', 'flex-col', 'min-h-0');
     expect(screen.getByText('kW')).toHaveClass('shrink-0');
     expect(screen.getByText('Speed range')).toHaveClass('shrink-0');
     expect(screen.getByRole('list')).toHaveClass('shrink-0');
+    expect(screen.getByRole('list')).toHaveAttribute('data-app-part', 'chart-legend list');
     expect(screen.getByText('Most Common')).toBeInTheDocument();
     expect(screen.getByText('45')).toBeInTheDocument();
   });

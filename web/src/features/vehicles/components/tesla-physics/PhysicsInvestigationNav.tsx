@@ -15,6 +15,7 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
     <div className="flex flex-wrap items-center justify-between gap-3">
       <PanelTitle>{t('teslaOnly.workbench.navigation', 'Tesla physics investigations')}</PanelTitle>
       <Link to="/tesla-physics" aria-current={activeSlug ? undefined : 'page'}
+        data-app-part="button nav-item" data-app-variant="ghost"
         className="rounded-lg px-3 py-2 text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
         {t('teslaOnly.workbench.overview', 'Start here')}
       </Link>
@@ -30,12 +31,13 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
           }))),
         ]} />
     </div>
-    <div className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
+    <div data-app-part="navigation" className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
       {groups.map((group) => <div key={group.key} className="space-y-2">
         <Text as="h3" variant="subhead">{t(`teslaOnly.workbench.${group.key}`, group.title)}</Text>
         <div className="flex flex-col gap-1">
           {features.filter((item) => group.slugs.includes(item.slug)).map((item) =>
             <Link key={item.slug} to={`/tesla-physics/${item.slug}`}
+              data-app-part="button nav-item" data-app-variant="outline"
               aria-current={activeSlug === item.slug ? 'page' : undefined}
               className={`flex min-h-11 items-center rounded-lg border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] ${
                 activeSlug === item.slug

@@ -7,7 +7,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Icon, Pagination, Text } from '@/components/ui';
+import { Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -95,7 +95,8 @@ export default function BehavioralSentinelPage() {
             {findings.length === 0 && <Text as="p" variant="bodySm">{emptyMessage}</Text>}
             {findings.map((finding, index) => {
               return (
-                <article key={`${finding.finding_type}-${index}`} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4 sm:p-5">
+                <article key={`${finding.finding_type}-${index}`} className="min-w-0">
+                  <Card className="rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] shadow-none sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
                       <Icon icon={findingIcon(finding.finding_type)} size="lg" className={typography.color.secondary} />
@@ -115,12 +116,12 @@ export default function BehavioralSentinelPage() {
                   </div>
                   <Text as="p" variant="bodySm" className="mt-4 break-words">{finding.explanation}</Text>
                   <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
-                    <div className="min-w-0 space-y-2 rounded-lg border border-[var(--border-default)] p-3">
+                    <Card variant="embedded" padding="sm" className="min-w-0 space-y-2 bg-transparent">
                       <Text as="p" variant="label">
                         {t('advancedIntelligence.sentinel.evidence.title', 'Finding evidence')}
                       </Text>
                       {(finding.evidence ?? []).length > 0 ? (
-                        <ul className="list-disc space-y-2 ps-4">
+                        <ul data-app-part="list" className="list-disc space-y-2 ps-4">
                           {finding.evidence.map((item, itemIndex) => (
                             <Text as="li" variant="caption" className="break-words" key={`${item.source}-${itemIndex}`}>
                               {item.source}: {item.summary}
@@ -132,13 +133,13 @@ export default function BehavioralSentinelPage() {
                           {t('advancedIntelligence.sentinel.evidence.empty', 'No detailed evidence was returned.')}
                         </Text>
                       )}
-                    </div>
-                    <div className="min-w-0 space-y-2 rounded-lg border border-[var(--border-default)] p-3">
+                    </Card>
+                    <Card variant="embedded" padding="sm" className="min-w-0 space-y-2 bg-transparent">
                       <Text as="p" variant="label">
                         {t('advancedIntelligence.limitations.title', 'Limitations')}
                       </Text>
                       {(finding.limitations ?? []).length > 0 ? (
-                        <ul className="list-disc space-y-2 ps-4">
+                        <ul data-app-part="list" className="list-disc space-y-2 ps-4">
                           {finding.limitations.map((item, itemIndex) => (
                             <Text as="li" variant="caption" className="break-words" key={`${item}-${itemIndex}`}>{item}</Text>
                           ))}
@@ -148,8 +149,9 @@ export default function BehavioralSentinelPage() {
                           {t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.')}
                         </Text>
                       )}
-                    </div>
+                    </Card>
                   </div>
+                  </Card>
                 </article>
               );
             })}

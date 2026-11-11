@@ -191,6 +191,7 @@ describe('WidgetShell — state machine', () => {
     expect(screen.getByText('View details')).toBeInTheDocument();
     expect(screen.getByText('Reading battery')).toBeInTheDocument();
     expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
+    expect(container.firstElementChild).toHaveAttribute('data-app-part', 'section');
     expect(screen.getByRole('heading')).not.toHaveClass('uppercase');
   });
 
@@ -243,6 +244,28 @@ describe('WidgetShell — state machine', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument();
     expect(screen.queryByTestId('query-error')).not.toBeInTheDocument();
+  });
+
+  it('keeps its composition owner through initial failure and retained recovery without adding another panel', () => {
+    const refetch = vi.fn();
+    const { container, rerender } = render(
+      <WidgetShell title="Battery" dataState={deriveDataState({
+        isError: true, error: new Error('offline'), refetch,
+      })}><Child /></WidgetShell>,
+    );
+    const owner = container.firstElementChild;
+    expect(owner).toHaveAttribute('data-app-part', 'section');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry query' }));
+    expect(refetch).toHaveBeenCalledOnce();
+
+    rerender(<WidgetShell title="Battery" dataState={deriveDataState({
+      data: [0], isError: true, error: new Error('offline'), refetch,
+    })}><Child /></WidgetShell>);
+    expect(container.firstElementChild).toBe(owner);
+    expect(screen.getByTestId('child').closest('[data-app-part~="section"]')).toBe(owner);
+    expect(screen.getByTestId('trust-warning')).toHaveTextContent('stale');
+    expect(container.querySelector('[data-app-part~="panel"]')).toBeNull();
+    expect(container.querySelector('[data-app-design-pack]')).toBeNull();
   });
 });
 

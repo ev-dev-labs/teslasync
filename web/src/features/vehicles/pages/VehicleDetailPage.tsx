@@ -251,7 +251,7 @@ export default function VehicleDetailPage() {
         <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
           <FadeIn>
             <div className="min-w-0 max-w-full" data-tour="vehicle-detail-tabs">
-              <fieldset
+              <fieldset data-app-part="field"
                 disabled={wakeBlockReason != null || wakeMutation.isPending}
                 aria-describedby={wakeBlockReason ? 'vehicle-wake-blocked' : undefined}
                 className="m-0 min-w-0 border-0 p-0"

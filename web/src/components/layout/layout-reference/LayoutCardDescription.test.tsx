@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 import { LayoutCard } from './LayoutCard';
 
 const title = 'A complete long heading that must remain readable and must name its description help control';

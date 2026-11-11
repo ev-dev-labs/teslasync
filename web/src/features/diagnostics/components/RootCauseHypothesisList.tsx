@@ -87,12 +87,13 @@ export function RootCauseHypothesisList({
           <Caption className="mb-3">
             {t('diagnostics.brief.effectBasis', 'Existing robust shift effect size; before and after medians retain their source scale.')}
           </Caption>
-          <ol className="space-y-3">
+          <ol data-app-part="list" className="space-y-3">
             {hypotheses.map((h, index) => (
-              <li key={h.signal} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
+              <li key={h.signal} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <div data-app-part="record-header" className="mb-1 flex flex-wrap items-center gap-2">
                   <Caption className="tabular-nums">#{index + 1}</Caption>
-                  <Text variant="body" weight="semibold" className="break-all">
+                  <Text data-app-part="record-title" variant="body" weight="semibold" className="break-all">
                     {h.signal}
                   </Text>
                   <Badge variant={RELATION_VARIANT[h.relation] ?? 'neutral'}>
@@ -107,8 +108,8 @@ export function RootCauseHypothesisList({
                     <Caption>{fmtNumber(h.shift.before.median)} → {fmtNumber(h.shift.after.median)}</Caption>
                   </span>
                 </div>
-                <Text variant="body">{h.rationaleReason ? localizeDiagnosticReason(h.rationaleReason, t) : h.rationale}</Text>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <Text data-app-part="record-body" variant="body">{h.rationaleReason ? localizeDiagnosticReason(h.rationaleReason, t) : h.rationale}</Text>
+                <div data-app-part="record-context" className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                   <Caption>{t('rootCauseIntelligence.hypotheses.score', 'Rank score {{n}}', { n: fmtNumber(h.score) })}</Caption>
                   <Caption>{t('rootCauseIntelligence.hypotheses.effect', 'Effect size {{n}}', { n: fmtNumber(h.shift.effectSize) })}</Caption>
                   <Caption>{t('rootCauseIntelligence.hypotheses.samples', '{{n}} samples', { n: h.sampleCount })}</Caption>

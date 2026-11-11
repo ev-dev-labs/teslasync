@@ -176,20 +176,20 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
         </div>
 
         {isUnsupported ? (
-          <div className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
-            <AlertCircle className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" variant="bodySm" className="break-words">{disabledReason}</Text>
+          <div data-app-part="feedback" data-app-feedback-kind="notice" className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
+            <AlertCircle data-app-part="feedback-icon" className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <Text data-app-part="feedback-content feedback-message" as="p" variant="bodySm" className="break-words">{disabledReason}</Text>
           </div>
         ) : showKeyError ? (
-          <div
+          <div data-app-part="feedback" data-app-feedback-kind="error"
             role="alert"
             className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]"
           >
-            <AlertCircle className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" variant="bodySm" className="break-words">
+            <AlertCircle data-app-part="feedback-icon" className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <Text data-app-part="feedback-message" as="p" variant="bodySm" className="break-words">
               {t('webpush.error.load', "Couldn't check browser push availability.")}
             </Text>
-            <Button wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
+            <Button data-app-part="button feedback-actions" wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
               {t('webpush.retry', 'Retry')}
             </Button>
           </div>
@@ -200,15 +200,15 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
             onRetry={retryBrowserSubscription}
           />
         ) : keyPaused ? (
-          <div role="status" className="flex flex-wrap items-center gap-2">
+          <div data-app-part="status" role="status" className="flex flex-wrap items-center gap-2">
             <Text as="p" variant="bodySm">{t('dataSources.status.paused', 'Refresh paused')}</Text>
             <Button wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
               {t('webpush.retry', 'Retry')}
             </Button>
           </div>
         ) : showLoading ? (
-          <div role="status" className="flex items-center gap-2" data-testid="webpush-loading">
-            <Loader2 className="h-4 w-4 animate-spin text-[var(--text-secondary)]" aria-hidden="true" />
+          <div data-app-part="status loading" data-app-feedback-kind="spinner" role="status" className="flex items-center gap-2" data-testid="webpush-loading">
+            <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none text-[var(--text-secondary)]" aria-hidden="true" />
             <Text as="p" variant="bodySm">
               {t('webpush.checking', 'Checking browser push availability…')}
             </Text>
@@ -250,8 +250,8 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           </div>
         )}
         {actionFailed && (
-          <div role="alert" className="rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
-            <Text as="p" variant="bodySm">
+          <div data-app-part="feedback" data-app-feedback-kind="error" role="alert" className="rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
+            <Text data-app-part="feedback-message" as="p" variant="bodySm">
               {t('webpush.error.action', 'This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry.')}
             </Text>
           </div>
@@ -262,7 +262,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           <StaleRefreshWarning state={subsState} label={t('webpush.devices.title', 'Registered devices')} />
         {!subsState.hasData && !subsState.fatalError && (
           subsQuery.fetchStatus === 'paused' ? (
-            <div role="status">
+            <div data-app-part="status" role="status">
               <Text as="p" variant="bodySm">{t('dataSources.status.paused', 'Refresh paused')}</Text>
               <Button variant="secondary" size="sm" onClick={() => void subsQuery.refetch()}>{t('webpush.retry', 'Retry')}</Button>
             </div>
@@ -273,7 +273,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
         )}
         {rows.length > 0 && (
           <div className="space-y-2">
-            <ul className="space-y-2">
+            <ul data-app-part="list" className="space-y-2">
               {rows.map((row) => {
                 const isThisDevice = currentEndpoint !== null && currentEndpoint === row.endpoint;
                 const ua = row.user_agent ?? t('webpush.devices.unknownAgent', 'Unknown browser');
@@ -286,6 +286,8 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
                 return (
                   <li
                     key={row.id}
+                    data-app-part="card"
+                    data-surface-variant="standalone"
                     className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-2)] p-2.5 ring-1 ring-[var(--border-subtle)]"
                   >
                     <div className="flex items-start gap-2 min-w-0">

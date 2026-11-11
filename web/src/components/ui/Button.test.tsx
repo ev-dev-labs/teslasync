@@ -14,7 +14,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { createRef } from 'react';
+import { createRef, type FormEvent } from 'react';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { BUTTON_BASE, BUTTON_VARIANTS, Button, type ButtonProps } from './Button';
 
@@ -291,5 +291,37 @@ describe('Button', () => {
     expect(button).toHaveAttribute('formaction', '/save');
     fireEvent.keyDown(button, { key: 'Enter' });
     expect(onKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps design anatomy on the native submitter through loading and variant changes', () => {
+    const ref = createRef<HTMLButtonElement>();
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
+    const content = (loading: boolean, variant: Variant) => (
+      <>
+        <form id="design-form" onSubmit={onSubmit} />
+        <Button ref={ref} form="design-form" type="submit" name="action" value="save"
+          loading={loading} variant={variant}>Save</Button>
+      </>
+    );
+    const view = render(content(false, 'primary'));
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(ref.current).toBe(button);
+    expect(button).toHaveAttribute('data-app-part', 'button');
+    expect(button).toHaveAttribute('data-app-variant', 'primary');
+    fireEvent.click(button);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    view.rerender(content(true, 'secondary'));
+    expect(ref.current).toBe(button);
+    expect(button).toHaveAttribute('data-app-variant', 'secondary');
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    view.rerender(content(false, 'secondary'));
+    expect(button).not.toHaveAttribute('aria-busy');
+    fireEvent.click(button);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 });

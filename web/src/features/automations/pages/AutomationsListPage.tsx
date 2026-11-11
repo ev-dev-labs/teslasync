@@ -356,7 +356,7 @@ export default function AutomationsListPage() {
               <Text variant="bodySm">
                 {t('automations.importRetryFailedOnly', 'Correct and import only the failed entries listed below. Do not re-import successful entries; doing so creates duplicates.')}
               </Text>
-              <ul className="list-disc space-y-1 ps-5">
+              <ul data-app-part="list" className="list-disc space-y-1 ps-5">
                 {importMutation.data.errors.map((failure) => (
                   <li key={failure.index}>
                     <Text variant="bodySm">
@@ -455,6 +455,8 @@ export default function AutomationsListPage() {
         <GlassPanel className="p-4 sm:p-5">
           <details className="group">
             <summary
+              data-app-part="button"
+              data-app-variant="secondary"
               className="flex min-h-11 flex-wrap items-center gap-2 cursor-pointer select-none rounded-shape-sm p-1 transition-colors duration-fast hover:bg-[var(--control-bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none [&::-webkit-details-marker]:hidden [&::marker]:content-none"
               aria-label={t('automations.presets.toggleAria', 'Show or hide quick start templates')}
             >

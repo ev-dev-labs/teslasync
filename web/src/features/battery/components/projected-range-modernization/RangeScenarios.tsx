@@ -28,24 +28,25 @@ export function RangeScenarios({ source, loading }: RangeSectionProps) {
             const samples = knownNumber(scenario.sample_count);
             const extras = safeArray(scenario.extras);
             return (
-              <div key={scenario.name} className="min-w-0 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div key={scenario.name} data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone"
+                className="min-w-0 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+                <div data-app-part="metric-label" className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2 text-[var(--text-secondary)]">
                     {scenarioIcon(scenario)}
                     <Text as="span" size="sm" weight="semibold" color="primary" className="break-words">{scenario.name}</Text>
                   </div>
                   {scenario.is_current && <Badge variant="success" size="sm">{t('range.current', 'Current')}</Badge>}
                 </div>
-                <Text as="p" variant="metricValue" className="tabular-nums">
+                <Text data-app-part="metric-reading metric-value" as="p" variant="metricValue" className="tabular-nums">
                   {range == null ? '—' : formatDistance(range * 1000)}
                 </Text>
-                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
+                <div data-app-part="metric-context" className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
                   <Caption>{speed == null ? '—' : formatSpeed(speed / 3.6)}</Caption>
                   <Caption>{formatTemperature(temperature)}</Caption>
                   <Caption>{efficiency == null ? '—' : `${fmtNumber(convertEfficiencyFromSI(efficiency, unitPrefs.distance))} ${efficiencyUnit}`}</Caption>
                   {samples != null && samples > 0 && <Caption>{t('range.drivesCount', '{{count}} drives', { count: samples, defaultValue_one: '{{count}} drive' })}</Caption>}
                 </div>
-                {extras.length > 0 && <div className="mt-2 flex flex-wrap gap-1">
+                {extras.length > 0 && <div data-app-part="metric-context" className="mt-2 flex flex-wrap gap-1">
                   {extras.map(extra => <Badge key={extra} variant="neutral" size="sm">{extra}</Badge>)}
                 </div>}
               </div>

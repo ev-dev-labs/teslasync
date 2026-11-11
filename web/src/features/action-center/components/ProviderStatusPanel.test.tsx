@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { typography } from '@/lib/tokens';
 import type { ActionCenterProviderStatus } from '@/types/actionCenter';
 import { ProviderStatusPanel } from './ProviderStatusPanel';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const providers: ActionCenterProviderStatus[] = [
   {
@@ -32,6 +36,34 @@ const providers: ActionCenterProviderStatus[] = [
 ];
 
 describe('ProviderStatusPanel presentation', () => {
+  it('owns each real provider record and retained limitation instead of relying on the outer panel', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = render(<ProviderStatusPanel providers={providers.slice(0, 3)} loading={false} />);
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const records = container.querySelectorAll('[data-app-record-kind="action-provider"]');
+      expect(records).toHaveLength(3);
+      for (const [index, record] of Array.from(records).entries()) {
+        expect(record).toHaveAttribute('data-app-part', 'card');
+        expect(record).toHaveAttribute('data-app-card-kind', 'record');
+        expect(record.querySelector('[data-app-part="record-header"] [data-app-part="record-title"]')).toHaveTextContent(providers[index].source_feature.replace(/_/g, ' '));
+        expect(record.querySelector('[data-app-part="record-body"]')).toHaveTextContent(`${providers[index].item_count} findings`);
+        for (const limitation of providers[index].limitations) expect(record.querySelector('[data-app-part="record-body"]')).toHaveTextContent(limitation);
+        const consumers: string[] = [];
+        postcss.parse(feedbackCss).walkRules(rule => {
+          if (rule.selector.includes('[data-app-card-kind="record"]') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'display')) {
+            consumers.push(...rule.selectors.filter(selector => record.matches(selector)));
+          }
+        });
+        expect(consumers.length).toBeGreaterThan(0);
+        record.removeAttribute('data-app-design-owner');
+        expect(consumers.every(selector => !record.matches(selector))).toBe(true);
+      }
+    } finally { release(); }
+  });
+
   it('preserves all nine providers, status meanings, exact counts and every limitation', () => {
     render(<ProviderStatusPanel providers={providers} loading={false} />);
 

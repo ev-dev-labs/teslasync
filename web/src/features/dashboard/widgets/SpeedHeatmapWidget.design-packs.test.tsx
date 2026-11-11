@@ -103,7 +103,7 @@ function expectOriginalGrid(pixel = false, wide = true, unit: SpeedUnitPref = 'k
   expect(cells[24 + 6]).toHaveAttribute('fill', 'var(--surface-2)');
   expect(cells[9].getAttribute('fill')).not.toBe('var(--surface-2)');
   expect(cells[8]).toHaveAttribute('rx', pixel ? '0' : '1.5');
-  expect(cells[8]).toHaveAttribute('fill', `color-mix(in srgb, ${pixel ? 'var(--text-primary)' : 'var(--accent)'} 100%, var(--surface-2))`);
+  expect(cells[8]).toHaveAttribute('fill', `color-mix(in srgb, ${pixel ? 'var(--text-primary)' : 'var(--theme-accent)'} 100%, var(--surface-2))`);
   expect(svg.querySelectorAll('text')).toHaveLength(wide ? 12 : 11);
   expect(within(svg).getByText(wide ? 'Mon' : 'M')).toBeInTheDocument();
   expect(within(svg).getByText(formatHourName(18, { locale: 'en', showMinutes: true }))).toBeInTheDocument();

@@ -493,7 +493,7 @@ export function AISettings() {
         />
       </FadeIn>
 
-      <fieldset
+      <fieldset data-app-part="field"
         aria-label={t('ai.settings.title', 'Helix')}
         disabled={!settingsState.hasData || saveAi.isPending || restorePending}
         aria-busy={saveAi.isPending || restorePending}
@@ -584,7 +584,7 @@ export function AISettings() {
       {/* Restore prompt — explicit re-enable of an archived selection. */}
       {showRestorePanel && (
         <FadeIn delay={0.1}>
-          <fieldset disabled={!providerSupportsMode(provider.provider, mode)} className="min-w-0 border-0 p-0">
+          <fieldset data-app-part="field" disabled={!providerSupportsMode(provider.provider, mode)} className="min-w-0 border-0 p-0">
             <AIRestorePanel
               archived={settings?.ai_features_archived ?? {}}
               onConfirm={handleRestoreConfirm}

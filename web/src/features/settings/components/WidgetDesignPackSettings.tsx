@@ -19,6 +19,7 @@ export default function WidgetDesignPackSettings() {
   const [Preview, setPreview] = useState<ComponentType<WidgetDesignPackPreviewProps> | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const generation = useRef(0);
+  const previewTrigger = useRef<HTMLButtonElement | null>(null);
   const headingId = 'settings-widget-design-packs';
   const previewEntry = PACK_MANIFEST.find(entry => entry.id === previewId);
   const packName = (key: string) => t(key, { ns: 'dashboard' });
@@ -115,7 +116,10 @@ export default function WidgetDesignPackSettings() {
           </div>
           <Text variant="bodySm" className="grow">{packName(entry.descriptionKey)}</Text>
           <div className="mt-auto flex flex-wrap gap-2">
-            <Button size="sm" className="min-h-11" variant="secondary" onClick={() => openPreview(entry.id)}
+            <Button size="sm" className="min-h-11" variant="secondary" onClick={event => {
+              previewTrigger.current = event.currentTarget;
+              openPreview(entry.id);
+            }}
               aria-label={t('theme.widgetDesignPacks.previewNamed', 'Preview {{name}}', { name })}>
               {t('theme.widgetDesignPacks.preview', 'Preview')}
             </Button>
@@ -132,6 +136,7 @@ export default function WidgetDesignPackSettings() {
       })}
     </div>
     <Modal open={previewId != null} onClose={closePreview} size="full"
+      getReturnFocusTarget={() => previewTrigger.current}
       title={t('theme.widgetDesignPacks.previewNamed', 'Preview {{name}}', {
         name: previewEntry ? packName(previewEntry.nameKey) : '',
       })}

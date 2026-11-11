@@ -43,7 +43,8 @@ describe('charging detail source preservation (not mounted/runtime evidence)', (
     expect(page.match(/<EmbeddedChart\b/g)).toHaveLength(4);
     expect(page.match(/<ChartLegend\b/g)).toHaveLength(3);
     expect(page.match(/<ReferenceLine\b/g)).toHaveLength(3);
-    expect(page).toContain('<ChartBrush dataKey="time"');
+    expect(page).toContain("ChartBrush({ dataKey: 'time' })");
+    expect(page).not.toContain('<ChartBrush');
     expect(page).toContain('syncId="charging.session" syncMethod="value"');
     for (const key of ['charging-detail-session-timeline', 'charging-detail-temperature', 'charging-detail-voltage-current'])
       expect(page).toContain(`chartKey="${key}"`);

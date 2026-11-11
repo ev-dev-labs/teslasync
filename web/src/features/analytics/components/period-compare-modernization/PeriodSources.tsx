@@ -51,16 +51,17 @@ export function PeriodSources({ stateA, stateB, retryA, retryB }: PeriodSourcesP
           ];
           return (
             <section key={id} aria-labelledby={`${id}-source-title`} className="min-w-0 space-y-3">
-              <Heading id={`${id}-source-title`} level="panel">{label}</Heading>
+              <Heading data-app-part="metric-context" id={`${id}-source-title`} level="panel">{label}</Heading>
               {data ? (
-                <dl className="space-y-2">
+                <dl data-app-part="list" data-app-list="definitions" className="space-y-2">
                   {rows.map(row => (
-                    <div key={row.key} className="flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">
-                      <Text as="dt" variant="bodySm">{row.label}</Text>
-                      <Text as="dd" variant="bodySm" className="break-words tabular-nums">
-                        {row.value != null
-                          ? `${row.count ? fmtInt(row.value) : fmtNumber(row.value)} ${row.unit}`.trim()
-                          : '—'}
+                    <div data-app-part="list-row" key={row.key} className="flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">
+                      <Text data-app-part="metric-label" as="dt" variant="bodySm">{row.label}</Text>
+                      <Text data-app-part="metric-reading" as="dd" variant="bodySm" className="break-words tabular-nums">
+                        <span data-app-part="metric-value">
+                          {row.value != null ? row.count ? fmtInt(row.value) : fmtNumber(row.value) : '—'}
+                        </span>
+                        {row.value != null && row.unit && <> <span data-app-part="metric-unit">{row.unit}</span></>}
                       </Text>
                     </div>
                   ))}

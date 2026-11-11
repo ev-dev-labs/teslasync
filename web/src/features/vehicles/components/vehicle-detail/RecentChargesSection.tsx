@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BatteryCharging, ChevronRight } from 'lucide-react'
 
-import { DataTable, type Column } from '@/components/ui'
+import { BUTTON_BASE, DataTable, type Column } from '@/components/ui'
 import { LayoutCard } from '@/components/layout'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -95,7 +95,9 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
       icon={<BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
       actions={<Link
           to="/charging"
-          className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-emerald-300"
+          data-app-part="button"
+          data-app-variant="ghost"
+          className={`${BUTTON_BASE} min-h-11 min-w-11 shrink-0 gap-1 px-2 text-xs text-[var(--text-muted)] hover:text-emerald-300`}
         >
           {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
         </Link>}

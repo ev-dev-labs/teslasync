@@ -252,7 +252,10 @@ describe('LocationMapWidget', () => {
     expect(screen.getByText('270°')).toBeInTheDocument();
     expect(screen.getByText('51.48, 0.00')).toBeInTheDocument();
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '270');
-    expect(overlay.querySelector('.truncate')).not.toBeNull();
+    expect(overlay).toHaveAttribute('data-app-part', 'map-legend');
+    expect(overlay).toHaveAttribute('data-map-state', 'stale');
+    expect(overlay).toHaveClass('flex-wrap');
+    expect(overlay.querySelector('.truncate')).toBeNull();
   });
 
   it('renders the map + marker at the vehicle position (medium, live)', () => {

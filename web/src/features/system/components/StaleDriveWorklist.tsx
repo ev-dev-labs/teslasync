@@ -74,7 +74,7 @@ export function StaleDriveWorklist({
           message={t('dataRepair.drives.empty', 'No stale drives found.')}
         />
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {drives.map((drive) => {
             const key = `drive-${drive.id}`;
             const formId = `repair-form-${key}`;

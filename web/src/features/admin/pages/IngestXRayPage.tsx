@@ -136,7 +136,7 @@ export default function IngestXRayPage() {
     >
       {!vehiclesState.hasData && !vehiclesState.fatalError && (
         <LayoutCard title={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}>
-          <div role="status">
+          <div data-app-part="status" role="status">
             <Text color="secondary">
               {vehiclesState.isRefreshBlocked
                 ? t('dataSources.status.paused', 'Refresh paused')

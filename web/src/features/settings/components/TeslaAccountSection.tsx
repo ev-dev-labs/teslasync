@@ -119,6 +119,9 @@ export function TeslaAccountSection() {
           errorRecovery={{ onRetry: () => void authQuery.refetch() }}
         >
         <div
+          data-app-part="status feedback"
+          data-app-feedback-kind="notice"
+          data-app-tone={auth?.authenticated && !pillDisconnected ? 'success' : 'danger'}
           role="status"
           aria-live="polite"
           data-testid="tesla-connection-status"
@@ -126,12 +129,12 @@ export function TeslaAccountSection() {
         >
           {auth?.authenticated && !pillDisconnected ? (
             <>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+              <div data-app-part="feedback-icon" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
                 <CheckCircle className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div data-app-part="feedback-content" className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Text as="p" variant="bodySm" weight="medium" className="text-emerald-300">{t('tesla.connected', 'Connected')}</Text>
+                  <Text data-app-part="feedback-title" as="p" variant="bodySm" weight="medium" className="text-emerald-300">{t('tesla.connected', 'Connected')}</Text>
                   {expiringSoon !== null && (
                     <Badge
                       variant="warning"
@@ -145,7 +148,7 @@ export function TeslaAccountSection() {
                   )}
                 </div>
                 {auth.expires_at && (
-                  <HelperText as="p">
+                  <HelperText data-app-part="feedback-detail" as="p">
                     {t('tesla.tokenExpires', 'Token expires')}{' '}
                     <time dateTime={auth.expires_at}>
                       {formatDateTime(auth.expires_at)}
@@ -156,17 +159,17 @@ export function TeslaAccountSection() {
             </>
           ) : (
             <>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10">
+              <div data-app-part="feedback-icon" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/10">
                 <XCircle className="h-4 w-4 text-rose-300" aria-hidden="true" />
               </div>
-              <div className="flex-1 min-w-0">
-                <Text as="p" variant="bodySm" weight="medium" className="text-rose-300">
+              <div data-app-part="feedback-content" className="flex-1 min-w-0">
+                <Text data-app-part="feedback-title" as="p" variant="bodySm" weight="medium" className="text-rose-300">
                   {pillDisconnected
                     ? t('tesla.disconnected', 'Disconnected')
                     : t('tesla.notConnected', 'Not connected')}
                 </Text>
                 {pillDisconnected && (
-                  <HelperText as="p">
+                  <HelperText data-app-part="feedback-detail" as="p">
                     {t('tesla.reauth.body', 'Reconnect to resume live data and commands.')}
                   </HelperText>
                 )}

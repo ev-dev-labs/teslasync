@@ -36,7 +36,8 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
   const explanation = formatAnomalyExplanation(anomaly, t, formatReading, fmtNumber);
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
+    <li data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+      className="flex flex-col gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
       <div className="flex items-start justify-between gap-2">
         <SeverityBadge severity={anomaly.severity} size="sm">
           {t(`anomaly.severity.${anomaly.severity}`, anomaly.severity)}
@@ -44,11 +45,13 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
         <TimeStamp value={anomaly.detected_at} className={cn(typography.size['2xs'], typography.color.muted)} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Text size="sm" weight="semibold" color="primary" className="truncate">
+      <div data-app-part="record-header" className="flex flex-wrap items-center gap-2">
+        <Text data-app-part="record-title" size="sm" weight="semibold" color="primary" className="truncate">
           {anomaly.signal}
         </Text>
         <Text
+          data-app-part="badge"
+          data-app-variant="neutral"
           as="span"
           size="2xs"
           weight="medium"
@@ -64,22 +67,22 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
         )}
       </div>
 
-      <Text as="p" variant="bodySm">{explanation}</Text>
+      <Text data-app-part="record-body" as="p" variant="bodySm">{explanation}</Text>
 
-      <div className={cn('mt-auto flex flex-wrap gap-x-4 gap-y-1', typography.size['2xs'], typography.color.muted)}>
-        <span>
-          {t('anomaly.value', 'Value')}:{' '}
-          <Text as="span" size="2xs" color="secondary" className="tabular-nums">
+      <dl data-app-part="list" data-app-list="definitions" className={cn('mt-auto flex flex-wrap gap-x-4 gap-y-1', typography.size['2xs'], typography.color.muted)}>
+        <div data-app-part="list-row" className="flex flex-wrap gap-x-1">
+          <Text data-app-part="metric-label" as="dt" size="2xs" color="muted">{t('anomaly.value', 'Value')}:</Text>{' '}
+          <Text data-app-part="metric-value" as="dd" size="2xs" color="secondary" className="tabular-nums">
             {formatReading(anomaly.value)}
           </Text>
-        </span>
-        <span>
-          {t('anomaly.baseline', 'Baseline')}:{' '}
-          <Text as="span" size="2xs" color="secondary" className="tabular-nums">
+        </div>
+        <div data-app-part="list-row" className="flex flex-wrap gap-x-1">
+          <Text data-app-part="metric-label" as="dt" size="2xs" color="muted">{t('anomaly.baseline', 'Baseline')}:</Text>{' '}
+          <Text data-app-part="metric-value" as="dd" size="2xs" color="secondary" className="tabular-nums">
             {formatReading(anomaly.baseline)}
           </Text>
-        </span>
-      </div>
+        </div>
+      </dl>
     </li>
   );
 }

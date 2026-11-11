@@ -46,7 +46,7 @@ export function FsdSectionBody({ state, children, className }: FsdSectionBodyPro
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t('fsd.loading', 'Loading supervised self-driving telemetry')}
         className={cn('py-4', classes)}

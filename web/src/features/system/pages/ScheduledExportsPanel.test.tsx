@@ -32,6 +32,11 @@ import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-q
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 import type { ScheduledExport } from '@/api/hooks/useExports';
 import { ScheduledExportsPanel } from './ScheduledExportsPanel';
@@ -254,6 +259,42 @@ beforeEach(() => {
 
 // ── 1. Data state ─────────────────────────────────────────────────────────────
 describe('Scheduled export responsive callers', () => {
+  it('adopts the real create and edit form frames through every pack while preserving drafts and native fields', () => {
+    setQuery({ data: DATA });
+    const { container } = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'New schedule' }));
+    const form = screen.getByTestId('scheduled-exports-form');
+    expect(form.tagName).toBe('FORM');
+    expect(form).toHaveAttribute('data-app-part', 'card');
+    expect(form).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(form).not.toHaveAttribute('data-app-design-owner');
+    fireEvent.change(within(form).getByRole('textbox', { name: 'Name' }), { target: { value: 'Unsubmitted draft' } });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const rules: postcss.Rule[] = [];
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+          .walkRules(rule => { if (rule.selector.includes('[data-app-part~="card"]')) rules.push(rule); });
+        expect(rules.some(rule => form.matches(rule.selector)), pack).toBe(true);
+        expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('Unsubmitted draft');
+        expect(within(form).getAllByRole('combobox')).toHaveLength(3);
+        expect(within(form).getByRole('button', { name: 'Save schedule' })).toHaveAttribute('type', 'submit');
+        form.removeAttribute('data-app-design-owner');
+        expect(rules.some(rule => form.matches(rule.selector)), `${pack}: final target required`).toBe(false);
+      } finally { release(); }
+    }
+    expect(H.createFn).not.toHaveBeenCalled();
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Edit' }));
+    const editor = screen.getByTestId('scheduled-exports-form');
+    expect(editor).toHaveAttribute('data-app-part', 'card');
+    expect(within(editor).getByRole('textbox', { name: 'Name' })).toHaveValue('Charging weekly');
+    expect(within(editor).getByRole('textbox', { name: /Delivery target/ })).toHaveValue('https://hook.example/x');
+    expect(H.updateFn).not.toHaveBeenCalled();
+  });
+
   it('retains all native fields and keyboard submission with responsive targets', async () => {
     const user = userEvent.setup();
     setQuery({ data: [makeRow()] });
@@ -695,6 +736,11 @@ describe('ScheduledExportsPanel — delete flow', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Delete schedule?')).toBeInTheDocument();
+    const notice = dialog.querySelector('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveAttribute('data-app-part', 'status feedback');
+    expect(notice).toHaveAttribute('data-app-tone', 'danger');
+    expect(notice?.querySelector('[data-app-part~="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(notice?.querySelector('[data-app-part~="feedback-message"]')).toHaveTextContent('Past download artifacts are not affected.');
     // Interpolated confirmation copy.
     expect(
       within(dialog).getByText('This will stop future runs of Charging weekly. Past download artifacts are not affected.'),

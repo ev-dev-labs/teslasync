@@ -438,8 +438,12 @@ export default function MediaPlayerPage() {
                       <Text as="span" variant="caption" className="tabular-nums">
                         {finiteReading(latest.now_playing_elapsed) ? fmtPlayTime(latest.now_playing_elapsed) : '—'}
                       </Text>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]">
+                      <div
+                        data-app-part="metric" data-app-metric="bar" data-metric-track
+                        className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"
+                      >
                         <div
+                          data-metric-fill
                           className="h-full rounded-full bg-[var(--theme-primary)] motion-safe:transition-all duration-slow"
                           style={{ width: `${progress?.percent ?? 0}%` }}
                         />
@@ -640,7 +644,7 @@ export default function MediaPlayerPage() {
                     </ResponsiveContainer>
                   </EmbeddedChart>
                 </div>
-                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <ul data-app-part="list" className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                   {sourceData.map((s) => (
                     <li key={s.name} className="flex items-center gap-1.5">
                       <span

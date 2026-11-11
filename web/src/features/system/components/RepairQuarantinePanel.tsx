@@ -170,7 +170,7 @@ export function RepairQuarantinePanel({
             onRetry={() => query.refetch()}
           />
         ) : !hasData ? (
-          <div role="status">
+          <div data-app-part="status" role="status">
             <Text as="p" variant="bodySm" className="mb-3">
               {state.isRefreshBlocked
                 ? t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
@@ -205,11 +205,11 @@ export function RepairQuarantinePanel({
               expandedKeys={expandedKeys}
               onExpandedChange={setExpandedKeys}
               renderExpanded={(item) => (
-                <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                <dl data-app-part="list" data-app-list="definitions" className="grid min-w-0 gap-3 sm:grid-cols-2">
                   {columns.filter((column) => !['session', 'actions'].includes(column.key)).map((column) => (
-                    <div key={column.key} className="min-w-0 break-words">
-                      <Text as="dt" variant="caption">{column.header}</Text>
-                      <dd className="mt-1">{column.render(item)}</dd>
+                    <div key={column.key} data-app-part="list-row" className="min-w-0 break-words">
+                      <Text as="dt" data-app-part="metric-label" variant="caption">{column.header}</Text>
+                      <dd data-app-part="metric-value" className="mt-1">{column.render(item)}</dd>
                     </div>
                   ))}
                 </dl>

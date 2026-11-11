@@ -19,6 +19,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import userEvent from '@testing-library/user-event';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -120,6 +124,8 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAlertRules, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 import type { NotificationLog, Vehicle, AlertRule } from '@/api/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockRules = vi.mocked(useAlertRules);
@@ -463,5 +469,61 @@ describe('InboxPage — restrained navigation and independent registry trust', (
     expect(mockLogs).toHaveBeenCalledWith({ archived: false });
     expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: RULES });
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+});
+
+describe('InboxPage — qualified native archive navigation', () => {
+  it.each(['/notifications', '/notifications/inbox'])('activates real control consumers and native keyboard navigation on %s', async path => {
+    const user = userEvent.setup();
+    const { container } = renderPage(path);
+    const link = screen.getByRole('link', { name: 'View archived' });
+    const sheetDirectory = resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs');
+    const controls: Rule[] = [];
+    postcss.parse(readFileSync(resolve(sheetDirectory, 'controls.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-controls=')) controls.push(rule); });
+    const matchesControl = () => controls.filter(rule => rule.selectors.some(selector => link.matches(selector)));
+    const releaseNeutral = observeAppDesignScopes(container);
+    try {
+      expect(link).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesControl()).toHaveLength(0);
+    } finally {
+      releaseNeutral();
+    }
+
+    container.setAttribute('data-app-design-preview', '');
+    try {
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+        const release = observeAppDesignScopes(container);
+        try {
+          expect(link.tagName).toBe('A');
+          expect(link).not.toHaveAttribute('role');
+          expect(link).toHaveAttribute('href', '/notifications/archived');
+          expect(link.getAttribute('data-app-design-owner')?.split(' '))
+            .toContain(`controls-${APPLICATION_DESIGNS[pack].controls}`);
+          const matching = matchesControl();
+          expect(matching.length, `${pack}: actual painted archive control`).toBeGreaterThan(0);
+          expect(matching.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-radius'))).toBe(true);
+          const identity: Rule[] = [];
+          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', `${pack}.css`), 'utf8'))
+            .walkRules(rule => {
+              if (rule.selector.includes('[data-app-part~="button"]')
+                && rule.selectors.some(selector => link.matches(selector))) identity.push(rule);
+            });
+          expect(identity.length, `${pack}: actual archive identity consumer`).toBeGreaterThan(0);
+        } finally {
+          release();
+        }
+      }
+    } finally {
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) container.removeAttribute(name);
+      container.removeAttribute('data-app-design-preview');
+    }
+    expect(link).not.toHaveAttribute('data-app-design-owner');
+    expect(matchesControl()).toHaveLength(0);
+    link.focus();
+    expect(link).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('route-state')).toHaveTextContent('/notifications/archived');
   });
 });

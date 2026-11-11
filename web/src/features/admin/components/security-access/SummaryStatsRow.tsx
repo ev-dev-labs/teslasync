@@ -27,7 +27,7 @@ export function SummaryStatsRow({
 
   if (isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         role="status"
         aria-busy="true"

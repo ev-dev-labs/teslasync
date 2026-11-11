@@ -285,9 +285,10 @@ export default function TireDifferentialDriftPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.corners.map((c) => (
-                <div key={c.corner} className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="font-medium">{cornerLabel(c.corner)}</Text>
+                <div key={c.corner} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+                  className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                  <div data-app-part="record-header" className="mb-1 flex flex-wrap items-center gap-2">
+                    <Text data-app-part="record-title" variant="body" className="font-medium">{cornerLabel(c.corner)}</Text>
                     {c.corner === summary.leakCorner ? (
                       <Badge variant="warning">{t('tireDifferentialDrift.suspect', 'Leak suspect')}</Badge>
                     ) : null}
@@ -295,7 +296,7 @@ export default function TireDifferentialDriftPage() {
                       <Badge variant="info">{t('tireDifferentialDrift.offset', 'Most offset')}</Badge>
                     ) : null}
                   </div>
-                  <Text variant="caption" as="p">
+                  <Text data-app-part="record-body record-context" variant="caption" as="p">
                     {t('tireDifferentialDrift.cornerStats', 'slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}', {
                       slope: formatPressure(c.samples >= 2 ? c.slopePaPerDay / 1000 : null),
                       conf: fmtNumber(c.samples >= 2 ? c.confidence : null),

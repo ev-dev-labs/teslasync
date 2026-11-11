@@ -23,6 +23,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { formatDateTime, type FormatOptions } from '@/lib/dateFormat'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 const datePreferences = vi.hoisted(() => ({
   current: { locale: 'en-US', tz: 'UTC' } as FormatOptions,
@@ -172,6 +175,44 @@ beforeEach(() => {
 })
 
 describe('TeslaAccountSection — header + connection status region', () => {
+  it.each(PACK_IDS)('%s owns the real account notice through expiry and recovery without changing actions', async pack => {
+    const expires = new Date(Date.now() + 2.5 * DAY_MS).toISOString()
+    mockedAuthStatus.mockReturnValue(authState({ authenticated: true, expires_at: expires }))
+    const view = render(tree(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <TeslaAccountSection />
+      </div>,
+    ))
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const notice = screen.getByTestId('tesla-connection-status')
+      expect(notice).toHaveAttribute('data-app-tone', 'success')
+      expect(notice).toHaveAttribute('data-app-feedback-kind', 'notice')
+      expect(notice).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+      expect(matchesAppDesignCss(notice, '[data-app-feedback-kind="notice"]')
+        .some(match => match.declarations.display === 'grid')).toBe(true)
+      expect(notice.querySelector('[data-app-part~="feedback-content"]')).toHaveTextContent('Connected')
+      expect(notice.querySelector('time')).toHaveAttribute('datetime', expires)
+      expect(screen.getByTestId('tesla-expiring-soon-pill')).toHaveTextContent('Expires in 3d')
+
+      act(() => document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-expired')))
+      expect(notice).toHaveAttribute('data-app-tone', 'danger')
+      expect(notice.querySelector('[data-app-part~="feedback-title"]')).toHaveTextContent('Disconnected')
+      expect(notice.querySelector('[data-app-part~="feedback-detail"]')).toHaveTextContent('Reconnect to resume live data and commands.')
+      expect(screen.getByRole('button', { name: 'Refresh token' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Disconnect' })).toBeEnabled()
+
+      act(() => document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-recovered')))
+      expect(notice).toHaveAttribute('data-app-tone', 'success')
+      expect(notice).toHaveTextContent('Connected')
+      await waitFor(() => expect(notice.querySelector('[data-app-part~="feedback-icon"]'))
+        .toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)))
+      expect(notice).toHaveAttribute('aria-live', 'polite')
+      expect(mockedRefresh.mock.results[0].value.mutate).not.toHaveBeenCalled()
+      expect(mockedDisconnect.mock.results[0].value.mutate).not.toHaveBeenCalled()
+    } finally { release() }
+  })
+
   it.each([false, true])('keeps account actions touch-sized and wrapping with desktop restoration (connected=%s)', (authenticated) => {
     mockedAuthStatus.mockReturnValue(authState({ authenticated }))
     renderSection()

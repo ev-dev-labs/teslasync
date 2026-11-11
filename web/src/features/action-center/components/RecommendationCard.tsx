@@ -107,20 +107,20 @@ export function RecommendationCard({
             </Text>
           </div>
           <div className="grid min-w-0 grid-cols-2 gap-2 lg:w-48 lg:shrink-0">
-            <div className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
-              <Text as="p" variant="caption">{t('actionCenter.card.rank', 'Rank')}</Text>
-              <Text as="p" size="xl" weight="semibold" color="primary" className="mt-1 break-words tabular-nums">
+            <div data-app-part="metric" data-app-metric="tile" data-app-metric-kind="recommendation-rank" className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
+              <Text data-app-part="metric-label" as="p" variant="caption">{t('actionCenter.card.rank', 'Rank')}</Text>
+              <Text data-app-part="metric-reading metric-value" as="p" size="xl" weight="semibold" color="primary" className="mt-1 break-words tabular-nums">
                 {recommendation.rank.score}
               </Text>
             </div>
-            <div className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
-              <Text as="p" variant="caption">
+            <div data-app-part="metric" data-app-metric="tile" data-app-metric-kind="recommendation-confidence" className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
+              <Text data-app-part="metric-label" as="p" variant="caption">
                 {t('actionCenter.card.confidence', 'Confidence')}
               </Text>
-              <Text as="p" size="xl" weight="semibold" color="secondary" className="mt-1 break-words tabular-nums">
+              <Text data-app-part="metric-reading metric-value" as="p" size="xl" weight="semibold" color="secondary" className="mt-1 break-words tabular-nums">
                 {confidencePct}%
               </Text>
-              <Text as="p" variant="caption" className="break-words">
+              <Text data-app-part="metric-context" as="p" variant="caption" className="break-words">
                 {t(`actionCenter.confidence.${recommendation.confidence.label}`, recommendation.confidence.label)}
               </Text>
             </div>

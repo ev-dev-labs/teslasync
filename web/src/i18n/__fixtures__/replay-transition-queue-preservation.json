@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed parent-owned transition-queued Replay URL write successor; reverse to independently frozen CF bytes before the immutable original Replay repair proof.",
+  "baselineCommit": "737cd60375a1cee64cc4e2c12572d0efd8c193ec",
+  "independentPredecessorProof": {
+    "receipt": "full-design-post-replay-acceptance-source-freeze.json",
+    "manifestSha256": "56a2dd3fad23c186f0aad6d6593187a5f3bcbabf697e92a09b03e1ec88b5f187",
+    "entry": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+    "sha256": "cf0aa3273b1214deeecdf0e0f4eed8e834f03a45cd66391dcbcc3dad12f8de73",
+    "sourceMap": "full-design-runtime-frozen-dist-v5/assets/DKB0vBLg.js.map",
+    "sourceMapSha256": "e1ae33c64212926afecc3de2ee4e8559e98d29f590a96c69338fc7fa0bdfa798",
+    "sourceMapSource": "../../src/features/trips/pages/TripReplayPage.tsx"
+  },
+  "sources": [
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "before": "cf0aa3273b1214deeecdf0e0f4eed8e834f03a45cd66391dcbcc3dad12f8de73",
+      "after": "e0bfa5725a9e559bb63132a898325f4baa11b02dd8f1fabd1bd49b106708dbac",
+      "hunks": [
+        {
+          "start": 0,
+          "old": [
+            "import { useMemo, useEffect, useRef, useCallback, useState } from 'react';"
+          ],
+          "new": [
+            "import { startTransition, useMemo, useEffect, useRef, useCallback, useState } from 'react';"
+          ]
+        },
+        {
+          "start": 279,
+          "old": [
+            "  // Router setters retain their render's query; a queued write must use the latest one.",
+            "  const replayUrlWriterRef = useRef({ id, setSearchParams });",
+            "  replayUrlWriterRef.current = { id, setSearchParams };"
+          ],
+          "new": [
+            "  const [pendingUrlWrite, setPendingUrlWrite] = useState<{",
+            "    id: string;",
+            "    progress: number;",
+            "    playing: boolean;",
+            "  } | null>(null);"
+          ]
+        },
+        {
+          "start": 319,
+          "old": [
+            "      const writer = replayUrlWriterRef.current;",
+            "      if (writer.id !== id) return;",
+            "      writer.setSearchParams(",
+            "        (prev) => {",
+            "          const next = new URLSearchParams(prev);",
+            "          if (snapshotProgress > 0 && snapshotProgress < 1) {",
+            "            next.set('at', snapshotProgress.toFixed(3));",
+            "          } else {",
+            "            next.delete('at');",
+            "          }",
+            "          if (snapshotPlaying) next.set('play', '1');",
+            "          else next.delete('play');",
+            "          return next;",
+            "        },",
+            "        { replace: true },",
+            "      );"
+          ],
+          "new": [
+            "      // Match Router's transitions rather than overtaking a pending navigation.",
+            "      startTransition(() => {",
+            "        setPendingUrlWrite({ id, progress: snapshotProgress, playing: snapshotPlaying });",
+            "      });"
+          ]
+        },
+        {
+          "start": 327,
+          "old": [
+            "  }, [id, replay.progress, replay.isPlaying, positions.length]);"
+          ],
+          "new": [
+            "  }, [id, replay.progress, replay.isPlaying, positions.length, setSearchParams]);",
+            "",
+            "  // Commit pending navigation before merging a due write into the router's query.",
+            "  useEffect(() => {",
+            "    if (!pendingUrlWrite) return;",
+            "    setPendingUrlWrite(null);",
+            "    if (pendingUrlWrite.id !== id || positions.length === 0",
+            "      || pendingUrlWrite.progress !== replay.progress",
+            "      || pendingUrlWrite.playing !== replay.isPlaying) return;",
+            "    setSearchParams(",
+            "      (prev) => {",
+            "        const next = new URLSearchParams(prev);",
+            "        if (pendingUrlWrite.progress > 0 && pendingUrlWrite.progress < 1) {",
+            "          next.set('at', pendingUrlWrite.progress.toFixed(3));",
+            "        } else {",
+            "          next.delete('at');",
+            "        }",
+            "        if (pendingUrlWrite.playing) next.set('play', '1');",
+            "        else next.delete('play');",
+            "        return next;",
+            "      },",
+            "      { replace: true },",
+            "    );",
+            "  }, [pendingUrlWrite, id, positions.length, replay.progress, replay.isPlaying, setSearchParams]);"
+          ]
+        }
+      ],
+      "originalCallCount": 61,
+      "originalCallsSha256": "4b6caa103d11ad1ed7c70ca53a9d9e83b6e0608d4372569bf610524b154c6895"
+    }
+  ]
+}

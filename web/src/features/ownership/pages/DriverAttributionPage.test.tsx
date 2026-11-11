@@ -13,6 +13,10 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parse, type Rule } from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const translations = vi.hoisted(() => new Map<string, string>());
 
@@ -87,6 +91,10 @@ const mockCreate = useCreateDriverProfile as unknown as ReturnType<typeof vi.fn>
 const mockRemove = useDeleteDriverProfile as unknown as ReturnType<typeof vi.fn>;
 const mockGhosts = vi.mocked(useGhostDrives);
 
+const surfaceRules: Rule[] = [];
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'))
+  .walkRules(rule => { surfaceRules.push(rule); });
+
 function makeProfile(overrides: Partial<DriverProfile> = {}): DriverProfile {
   return {
     id: 1,
@@ -145,13 +153,15 @@ function card(title: string): HTMLElement {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const content = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <DriverAttributionPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const view = render(content());
+  return { ...view, rerenderPage: () => view.rerender(content()) };
 }
 
 /** The Remove button in the table row showing the given profile name. */
@@ -294,6 +304,54 @@ describe('DriverAttributionPage — confirm-gated delete', () => {
 });
 
 describe('DriverAttributionPage — preserved attribution presentation', () => {
+  it('owns the actual opened assignment form while retaining IDs, failed-save draft, pending controls and cancel', () => {
+    const report = makeReport();
+    report.fingerprints = [{
+      drive_id: 42, started_at: '2026-01-01T00:00:00Z', distance_m: 0,
+      duration_s: 0, features: [], cluster_id: 0, driver_profile_id: null,
+      driver_name: null, source: 'inferred', confidence_pct: 0,
+      distance_to_own_centroid: 0, distance_to_next_centroid: null, ambiguous: true,
+    }];
+    mockReport.mockReturnValue(makeQuery(report));
+    const mutate = vi.fn();
+    mockAssign.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    fireEvent.click(within(card('Drive fingerprints')).getByRole('button', { name: 'Label' }));
+    const driveId = screen.getByRole('spinbutton', { name: 'Drive ID required' });
+    const form = driveId.closest('form')!;
+    expect(form).toHaveAttribute('data-app-part', 'card');
+    expect(form).not.toHaveAttribute('data-app-design-owner');
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) view.container.setAttribute(name, value);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      expect(surfaceRules.some(rule => rule.selector.includes('[data-app-part~="card"]')
+        && rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === 'border-radius')
+        && Array.from(document.querySelectorAll(rule.selector)).includes(form))).toBe(true);
+      expect(driveId).toHaveValue(42);
+      fireEvent.change(driveId, { target: { value: '44' } });
+      fireEvent.change(within(form).getByRole('combobox', { name: 'Driver' }), { target: { value: '2' } });
+      fireEvent.click(within(form).getByRole('button', { name: 'Confirm label' }));
+      expect(mutate).toHaveBeenCalledWith(
+        { drive_id: 44, driver_profile_id: 2, confirmed: true },
+        { onSuccess: expect.any(Function) },
+      );
+      mockAssign.mockReturnValue(makeMutation({ mutate, error: new Error('assignment failed') }));
+      view.rerenderPage();
+      expect(driveId).toHaveValue(44);
+      expect(form).toHaveTextContent('assignment failed');
+      expect(within(form).getByRole('combobox', { name: 'Driver' })).toHaveValue('2');
+      mockAssign.mockReturnValue(makeMutation({ mutate, isPending: true }));
+      view.rerenderPage();
+      expect(within(form).getByRole('button', { name: 'Confirm label' })).toBeDisabled();
+      fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+      expect(form).not.toBeInTheDocument();
+      expect(mutate).toHaveBeenCalledOnce();
+    } finally {
+      release();
+    }
+  });
+
   it.each([
     ['labelled', 'confirmed'],
     ['inferred', 'inferred'],

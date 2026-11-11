@@ -8,6 +8,8 @@ import { dataRepairKeys, type RepairCase, type RepairCaseDetailResponse } from '
 import { ToastProvider } from '@/components/feedback/Toast';
 import english from '@/i18n/en.json';
 import { RepairCaseDrawer } from './RepairCaseDrawer';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 const transport = vi.hoisted(() => vi.fn());
 vi.mock('@/api/client', () => ({ request: transport }));
@@ -92,6 +94,43 @@ beforeEach(() => {
 });
 
 describe('RepairCaseDrawer confidence semantics', () => {
+  it('keeps actual opened evidence and the resolve confirmation on their invoking complete profile without replacing either overlay', async () => {
+    const root = document.documentElement;
+    const attributes = Object.keys(getAppDesignAttributes('blueprint'));
+    const previous = attributes.map(name => [name, root.getAttribute(name)] as const);
+    for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) root.setAttribute(name, value);
+    const release = observeAppDesignScopes(root);
+    try {
+      renderDrawer('high');
+      const drawer = await screen.findByRole('dialog', { name: 'Case #7' });
+      await within(drawer).findByText('signal_log · gear · D');
+      const observation = within(drawer).getByText('Last in-session observation').closest('[data-app-feedback-kind="notice"]')!;
+      expect(observation.getAttribute('data-app-design-owner')).toContain('pack-blueprint');
+      expect(matchesAppDesignCss(observation, '[data-app-feedback="terminal"]').length).toBeGreaterThan(0);
+      fireEvent.click(within(drawer).getByRole('button', { name: 'Resolve case' }));
+      const dialog = screen.getByRole('dialog', { name: 'Resolve this case?' });
+      const message = within(dialog).getByText('Provide an operator note. This action is recorded in the audit trail.');
+      const notice = message.closest('[data-app-feedback-kind="notice"]')!;
+      await act(async () => {});
+      expect(notice).toHaveAttribute('data-app-tone', 'warning');
+      expect(notice.getAttribute('data-app-design-owner')).toContain('pack-blueprint');
+      expect(matchesAppDesignCss(notice, '[data-app-feedback="terminal"]').length).toBeGreaterThan(0);
+      expect(within(dialog).getByRole('button', { name: 'Resolve case' })).toBeDisabled();
+      fireEvent.change(within(dialog).getByRole('textbox', { name: 'Operator note' }), { target: { value: 'Reviewed evidence, no source mutation.' } });
+      expect(within(dialog).getByRole('button', { name: 'Resolve case' })).toBeEnabled();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('dialog', { name: 'Resolve this case?' })).toBeNull();
+      expect(screen.getByRole('dialog', { name: 'Case #7' })).toBeInTheDocument();
+      expect(transport.mock.calls.every(([, options]) => !(options as RequestInit | undefined)?.method)).toBe(true);
+    } finally {
+      release();
+      for (const [name, value] of previous) {
+        if (value == null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
   it.each(['high', 'medium'] as const)('renders the canonical %s confidence badge once with neutral roles', async (confidence) => {
     const { detail } = renderDrawer(confidence);
     const dialog = await screen.findByRole('dialog', { name: 'Case #7' });
@@ -108,6 +147,12 @@ describe('RepairCaseDrawer confidence semantics', () => {
     expect(within(dialog).getByText(english.dataRepair.cases.actionable)).toHaveClass('text-[var(--semantic-success)]');
     expect(within(dialog).getByText('charging_sessions · energy_used_wh · -1.00123456789')).toBeInTheDocument();
     expect(within(dialog).getByText('signal_log · gear · D')).toBeInTheDocument();
+    const observations = dialog.querySelectorAll('[data-app-feedback-kind="notice"]');
+    expect(observations).toHaveLength(2);
+    expect(observations[0]).toHaveAttribute('data-app-tone', 'neutral');
+    expect(observations[1]).toHaveAttribute('data-app-tone', 'warning');
+    expect(observations[1].querySelector('[data-app-part~="feedback-detail"]')?.textContent)
+      .toBe('charging_sessions · energy_used_wh · -1.00123456789');
     for (const key of ['findingTitle', 'evidenceTitle', 'assignmentTitle', 'activityTitle', 'controlledActions'] as const) {
       expect(within(dialog).getByRole('heading', { name: english.dataRepair.cases[key] })).toBeInTheDocument();
     }

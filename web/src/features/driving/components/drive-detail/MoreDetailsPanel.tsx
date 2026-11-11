@@ -103,16 +103,16 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
         <CardHeader title={t('driveDetail.report.energyEvidence', 'Energy and range evidence')} />
         <CardContent>
         <Table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
-          <thead><tr>
-            <th scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
-            <th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
-            <th scope="col">{t('driveDetail.report.source', 'Source and method')}</th>
+          <thead data-app-part="table-head"><tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
+            <th data-app-part="table-cell" scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
+            <th data-app-part="table-cell" scope="col">{t('driveDetail.report.source', 'Source and method')}</th>
           </tr></thead>
           <tbody>{rows.map((row) => (
-            <tr key={row.id}>
-              <th scope="row">{row.label}</th>
-              <td className="whitespace-nowrap tabular-nums">{row.value}</td>
-              <td className="min-w-48 text-[var(--text-muted)]">{row.source}</td>
+            <tr data-app-part="table-row" key={row.id}>
+              <th data-app-part="table-cell" scope="row">{row.label}</th>
+              <td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{row.value}</td>
+              <td data-app-part="table-cell" className="min-w-48 text-[var(--text-muted)]">{row.source}</td>
             </tr>
           ))}</tbody>
         </Table>

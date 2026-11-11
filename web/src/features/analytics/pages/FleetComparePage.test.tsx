@@ -448,6 +448,35 @@ describe('FleetComparePage evidence preservation', () => {
     expect(screen.queryByText('0%')).toBeNull()
     expect(screen.queryByText('Unlocked')).toBeNull()
     expect(screen.queryByRole('progressbar', { name: 'Battery level' })).toBeNull()
+    expect(document.querySelector('[data-metric-track]')).toBeNull()
+  })
+
+  it.each([
+    { batteryLevel: 0, extent: 0, announced: 0 },
+    { batteryLevel: 25.5, extent: 25.5, announced: 26 },
+    { batteryLevel: -5, extent: 0, announced: 0 },
+    { batteryLevel: 125, extent: 100, announced: 100 },
+  ])('adopts the actual native battery track without changing a $batteryLevel reading or its extent', async ({ batteryLevel, extent, announced }) => {
+    install({ stateResponse: { state: makeState({ battery_level: batteryLevel }), live: false } })
+    renderPage('/vehicle-comparison')
+    const bars = await screen.findAllByRole('progressbar', { name: 'Battery level' })
+    expect(bars).toHaveLength(2)
+    for (const bar of bars) {
+      expect(bar).toHaveAttribute('data-app-part', 'metric')
+      expect(bar).toHaveAttribute('data-app-metric', 'bar')
+      expect(bar).toHaveAttribute('data-metric-track')
+      expect(bar).toHaveClass('h-2', 'w-full', 'rounded-full')
+      expect(bar).toHaveAttribute('aria-valuenow', String(announced))
+      expect(bar).toHaveAttribute('aria-valuemin', '0')
+      expect(bar).toHaveAttribute('aria-valuemax', '100')
+      const fill = bar.querySelector('[data-metric-fill]')
+      expect(fill).toBe(bar.firstElementChild)
+      expect(fill).toHaveStyle({ width: `${extent}%` })
+      expect(fill).toHaveClass('h-full', 'rounded-full', 'motion-reduce:transition-none')
+    }
+    expect(screen.getAllByText(`${batteryLevel}%`).length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByRole('heading', { name: 'Current status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Lifetime statistics' })).toBeInTheDocument()
   })
 
   it.each([
@@ -522,6 +551,25 @@ describe('FleetComparePage evidence preservation', () => {
     const formatA = distanceEvidence().dataColumns?.find(column => column.key === 'distA')?.format
     expect(formatA?.(null)).toBe('—')
     expect(formatA?.(0)).toBe('0.00 km')
+  })
+
+  it('keeps both Recharts tooltip instances stable when monthly source data refreshes', async () => {
+    const { client } = renderPage()
+    await waitFor(() => expect(distanceEvidence().data?.[0]).toMatchObject({ distA: 400 }))
+    const before = chartEvidence.tooltip.mock.calls.slice(-2)
+      .map(([props]) => (props as ComponentProps<typeof Tooltip>).content)
+    expect(before).toHaveLength(2)
+    expect(before.every(content => typeof content === 'function')).toBe(true)
+    await act(async () => {
+      client.setQueryData([...analyticsKeys.monthlyMileage('1'), 'UTC'], monthly(1, [
+        { year_month: '2025-01', total_km: 425, drive_count: 21 },
+      ]))
+    })
+    await waitFor(() => expect(distanceEvidence().data?.[0]).toMatchObject({ distA: 425 }))
+    const after = chartEvidence.tooltip.mock.calls.slice(-2)
+      .map(([props]) => (props as ComponentProps<typeof Tooltip>).content)
+    expect(after[0]).toBe(before[0])
+    expect(after[1]).toBe(before[1])
   })
 
   it.each(['km', 'mi'] as const)('uses saved %s for monthly chart, tooltip and tables without changing source data', async (unit) => {

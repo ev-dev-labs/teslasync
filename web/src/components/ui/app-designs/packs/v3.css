@@ -1,0 +1,252 @@
+/* Precision: aligned ledger rules, baseline readings and low-chrome controls. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--surface-1);
+    border-inline-end: 1px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--surface-1);
+    border-block-end: 1px solid var(--border-strong);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: calc(var(--density-gap) / 2);
+    padding-block: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    border-inline-start: 2px solid transparent;
+    column-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-v3"]) {
+    border-inline-start-color: var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v3"]) {
+    align-items: baseline;
+    gap: var(--density-gap) calc(var(--density-gap) * 2);
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v3"]) {
+    text-wrap: balance;
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
+    align-items: baseline;
+    gap: calc(var(--density-gap) / 2) var(--density-gap);
+    padding-inline-start: var(--density-pad-x);
+    border-inline-start: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-v3"]) {
+    row-gap: calc(var(--density-gap) * 1.5);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="section"]:where([data-app-design-owner~="pack-v3"]) {
+    row-gap: var(--density-gap);
+    padding-block-start: var(--density-pad-y);
+    border-block-start: 1px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-v3"]) {
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    box-shadow: var(--elevation-0);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v3"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: var(--density-gap);
+    align-items: start;
+    border-block: 1px solid var(--border-default);
+    padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+    row-gap: calc(var(--density-gap) / 2);
+    padding-inline-end: var(--density-pad-x);
+    border-inline-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+    font-variant-numeric: tabular-nums slashed-zero;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="field"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: calc(var(--density-gap) / 2);
+    align-content: start;
+    padding-block-end: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="field-label"]:where([data-app-design-owner~="pack-v3"]) {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="field-control"]:not(:where([type="radio"], [type="checkbox"], [type="range"], [type="color"], [role="switch"])):where([data-app-design-owner~="pack-v3"]) {
+    border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="button"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: var(--density-gap);
+    border-block-end: 1px solid var(--border-strong);
+    padding-block-end: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: 0;
+    padding-inline: var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: var(--density-gap);
+    border-block-end: 2px solid var(--border-strong);
+    padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table"]:where([data-app-design-owner~="pack-v3"]) {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--surface-1);
+    font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-row"]:where([data-app-design-owner~="pack-v3"]) {
+    vertical-align: baseline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-end: 1px solid var(--border-default);
+    border-inline-end: 1px solid var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-start: 1px solid var(--border-strong);
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--elevation-3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-end: 2px solid var(--border-strong);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-v3"]) {
+    scroll-padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-start: 1px solid var(--border-strong);
+    gap: var(--density-gap);
+    background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-end: 1px solid var(--border-strong);
+    padding-block-end: var(--density-pad-y);
+    align-items: baseline;
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--surface-1);
+    box-shadow: inset 0 -1px var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: calc(var(--density-gap) / 2) calc(var(--density-gap) * 1.5);
+    padding-block: var(--density-pad-y);
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-tooltip"]:where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    background-color: var(--surface-1);
+    box-shadow: var(--elevation-2);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    box-shadow: var(--elevation-0);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    gap: calc(var(--density-gap) / 2);
+    border-block-end: 1px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-v3"]) {
+    outline: 1px solid var(--surface-1);
+    outline-offset: 1px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map-popup"]:where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    background-color: var(--surface-1);
+    box-shadow: var(--elevation-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-v3"]) {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs);
+    background-color: var(--surface-1);
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)):where([data-app-design-owner~="pack-v3"]) {
+    row-gap: calc(var(--density-gap) / 2);
+    border-block: 1px solid var(--border-default);
+    padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-v3"]) {
+    padding-block: calc(var(--density-pad-y) / 2);
+    row-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    border-inline-start-width: 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block: 1px solid var(--border-default);
+    padding-block: calc(var(--density-pad-y) * 2);
+    row-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="error"]:where([data-app-design-owner~="pack-v3"]) {
+    border-inline-start-width: 2px;
+    row-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: var(--density-gap);
+    border-block-end: 1px solid var(--border-subtle);
+    padding-block-end: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--radius-xs);
+    background-color: var(--skeleton-bg);
+  }
+}
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+    padding-inline-end: 0;
+    border-inline-end: 0;
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-subtle);
+  }
+}

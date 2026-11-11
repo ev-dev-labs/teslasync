@@ -1,10 +1,16 @@
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { TwinLabRequest, TwinLabResponse } from '@/types/advancedIntelligence';
 import { twin } from './advancedIntelligenceClosure.fixtures';
 import TwinLabPage from './TwinLabPage';
@@ -84,6 +90,50 @@ afterEach(() => {
 });
 
 describe('TwinLabPage restrained source adoption', () => {
+  it.each(PACK_IDS)('%s owns the actual sensitivity records without inventing metric graphics or dropping driver context', pack => {
+    state.mutation.data = structuredClone(twin);
+    state.mutation.data.scenarios[0].sensitivity_drivers[0].driver = 'Complete source explanation. '.repeat(12);
+    const original = structuredClone(state.mutation.data);
+    const view = renderPage();
+    const records = screen.getAllByRole('article');
+    expect(records).toHaveLength(2);
+    const before = records.map(record => record.textContent);
+    const rules: string[] = [];
+    postcss.parse(readFileSync(resolve(
+      process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+    ), 'utf8')).walkRules(rule => {
+      if (rule.selector.includes('[data-app-part~="card"]')) rules.push(rule.selector);
+    });
+    for (const record of records) {
+      expect(record).not.toHaveAttribute('data-app-design-owner');
+      expect(rules.some(selector => record.matches(selector))).toBe(false);
+    }
+    view.container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(view.container, pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      for (const record of records) {
+        const selected = rules.filter(selector => record.matches(selector));
+        expect(selected.length).toBeGreaterThan(0);
+        for (const selector of selected) expect(selector).toContain(`[data-app-design-owner~="pack-${pack}"]`);
+        expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+        expect(record).toHaveClass('p-4', 'bg-[var(--surface-2)]', 'rounded-panel');
+        expect(record.querySelector('[data-app-metric], [data-metric-track], [role="progressbar"], svg')).toBeNull();
+      }
+      expect(records.map(record => record.textContent)).toEqual(before);
+      expect(records[0]).toHaveTextContent(original.scenarios[0].sensitivity_drivers[0].driver);
+      expect(records[0]).toHaveTextContent('0.00%');
+      expect(records[0]).toHaveTextContent('-5.00%');
+      expect(records[1]).toHaveTextContent('No supported data is available.');
+      expect(within(chartTable()).getAllByRole('row')).toHaveLength(3);
+      expect(state.mutation.data).toEqual(original);
+      expect(state.mutation.mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+    }
+    for (const record of records) expect(rules.some(selector => record.matches(selector))).toBe(false);
+  });
+
   it('scopes every scenario touch target below md without overriding desktop sizes', () => {
     renderPage();
     for (const name of screen.getAllByLabelText(/Scenario name/)) {
@@ -113,7 +163,9 @@ describe('TwinLabPage restrained source adoption', () => {
       expect(panel).not.toBeNull();
       if (!panel) throw new Error('Missing semantic scenario panel');
       expect(panel).toHaveClass('p-4');
-      expect(panel.className).not.toMatch(/bg-|border-|surface-/);
+      expect(panel).toHaveAttribute('data-app-part', 'panel');
+      expect(panel).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(panel).toHaveClass('bg-[var(--panel-bg)]', 'border-[var(--panel-border)]', 'rounded-panel');
       expect(within(panel).getByRole('heading', { name: `Scenario ${index + 1}` }))
         .toBeInTheDocument();
       expect(name).toHaveAttribute('required');
@@ -168,6 +220,9 @@ describe('TwinLabPage restrained source adoption', () => {
     for (let count = 1; count < 12; count++) fireEvent.click(screen.getByRole('button', { name: 'Add scenario' }));
     expect(screen.getAllByLabelText(/Scenario name/)).toHaveLength(12);
     expect(screen.getByRole('button', { name: 'Add scenario' })).toBeDisabled();
+    for (const name of screen.getAllByLabelText(/Scenario name/)) {
+      expect(name.closest('.glass-panel')).toHaveAttribute('data-app-part', 'panel');
+    }
     fireEvent.click(screen.getByRole('button', { name: 'Run confirmed simulation' }));
     expect(state.mutation.mutate).toHaveBeenCalledExactlyOnceWith({
       vehicle_id: 7, confirmed: true,

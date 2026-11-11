@@ -37,6 +37,9 @@ import type { SelectedVehicleResult } from '@/hooks/useSelectedVehicle';
 import type { AppSettings } from '@/api/types';
 import { deriveDataState } from '@/api/dataState';
 import { chartTokens, typography } from '@/lib/tokens';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
 // options object so assertions can target the rendered English copy. A bare key
@@ -498,6 +501,66 @@ describe('LocationsPage — leaderboards', () => {
 });
 
 describe('LocationsPage — detail list', () => {
+  it('does not activate ranked composition for an incomplete app profile', async () => {
+    const view = renderPage();
+    await screen.findByText('Cafe, Tacoma');
+    view.container.setAttribute('data-app-design-preview', '');
+    view.container.setAttribute('data-app-design-pack', 'v1');
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const list = view.container.querySelector('[data-app-list="ranked"]')!;
+      const row = list.querySelector('[data-app-part="list-row"]')!;
+      expect(row).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesAppDesignCss(row)).toHaveLength(0);
+      expect(list).toHaveClass('grid', 'grid-cols-1', '2xl:grid-cols-2');
+      expect(row.children[0]).toHaveAttribute('data-surface-variant', 'embedded');
+      expect(row.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('20');
+    } finally { release(); view.client.clear(); }
+  });
+
+  it.each(PACK_IDS)('%s composes the actual ranked records, full labels and measured visits without recasting supporting chips', async pack => {
+    const longName = 'Observed complete address with meaningful trailing locality '.repeat(5);
+    const rows = [
+      { ...makeLocations()[0], address_name: longName, visit_count: 0, total_duration_s: 0, last_visited: null },
+      makeLocations()[3],
+    ];
+    const bytes = JSON.stringify(rows);
+    mockRequest.mockResolvedValue(rows);
+    const view = renderPage();
+    await screen.findByRole('button', { name: `Inspect ${longName.trim()}` });
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) view.container.setAttribute(name, value);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const list = view.container.querySelector('[data-app-list="ranked"]')!;
+      const records = list.querySelectorAll<HTMLElement>(':scope > [data-app-part="list-row"]');
+      expect(records).toHaveLength(2);
+      expect(list).toHaveClass('grid', 'grid-cols-1', '2xl:grid-cols-2');
+      for (const [index, record] of [...records].entries()) {
+        expectAppDesignDataMode(record, APPLICATION_DESIGNS[pack].data, '[data-app-list="ranked"]');
+        expect(record.children[0]).toHaveClass('col-span-full', 'flex', 'flex-wrap');
+        expect(record.children[0]).toHaveAttribute('data-surface-variant', 'embedded');
+        const label = record.querySelector('[data-app-part="metric-label"]')!;
+        expect(label.textContent).toBe(rows[index].address_name);
+        const context = record.querySelector('[data-app-part="metric-context"]')!;
+        expect(context).toHaveTextContent(/visits.*total.*avg/);
+        expect(matchesAppDesignCss(label).some(match => match.declarations['white-space'] === 'normal')).toBe(true);
+        expect(matchesAppDesignCss(context).some(match => match.declarations['overflow-wrap'] === 'anywhere')).toBe(true);
+        const reading = record.querySelector('[data-app-part="metric-reading"]')!;
+        expect(reading.querySelector('[data-app-part="metric-value"]')?.textContent).toBe(String(rows[index].visit_count));
+        expect(matchesAppDesignCss(reading).some(match => match.declarations['font-variant-numeric'] === 'tabular-nums lining-nums')).toBe(true);
+        expect(record.querySelector('[data-app-part="metric"]')).toBeNull();
+        expect(within(record).getByText(`#${index + 1}`)).toBeInTheDocument();
+      }
+      expect(records[0].querySelector('[data-app-part="metric-context"]')).not.toHaveTextContent('Last:');
+      expect(records[1].children[1]).toHaveClass('col-span-full');
+      expect(within(records[1]).getByTestId('ai-autoname-4')).toBeInTheDocument();
+      fireEvent.click(within(records[0]).getByRole('button', { name: `Inspect ${longName.trim()}` }));
+      expect(screen.getByRole('dialog', { name: longName.trim() })).toBeInTheDocument();
+      expect(JSON.stringify(rows)).toBe(bytes);
+    } finally { release(); view.client.clear(); }
+  });
+
   it('renders a ranked card per location with #1 assigned to the most-visited', async () => {
     renderPage();
     expect(await screen.findByText('Cafe, Tacoma')).toBeInTheDocument();

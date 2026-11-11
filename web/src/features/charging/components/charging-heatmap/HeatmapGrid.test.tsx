@@ -7,7 +7,7 @@
  * and a boundary `formatEnergy` formatter from the page, so these tests render
  * it directly (no QueryClient / Router) and pin:
  *
- *   - structure + a11y: the whole grid is a single labelled `role="img"`, all
+ *   - structure + a11y: the whole grid is a single labelled group, all
  *     seven weekday rows and all 24 hour-header columns render, and exactly
  *     7×24 = 168 title-bearing cells exist (a cell is never dropped);
  *   - the continuous colour scale: the busiest slot gets the "hot" fill and an
@@ -76,7 +76,7 @@ const cellIndex = (day: number, hour: number) => day * 24 + hour;
 
 /** All 168 heat cells, in DOM order (day 0 hours 0..23, day 1 …). */
 const heatCells = (container: HTMLElement) =>
-  container.querySelectorAll<HTMLElement>('[data-heatmap-grid] div[title]');
+  container.querySelectorAll<HTMLElement>('[data-heatmap-grid] [title]');
 
 /** Normalise rgba serialisation so whitespace differences don't break equality. */
 const norm = (s: string) => s.replace(/\s+/g, '');
@@ -116,6 +116,8 @@ describe('HeatmapGrid — structure & accessibility', () => {
 
     const cells = heatCells(container);
     expect(cells).toHaveLength(168);
+    expect(container.querySelector('[data-heatmap-grid]')).toHaveAttribute('data-app-part', 'chart-plot');
+    expect(container.querySelector('[data-app-design-pack]')).toBeNull();
     // The native title carries weekday + zero-padded hour + the i18n "sessions"
     // word for the populated Monday-09:00 slot.
     expect(cells[cellIndex(1, 9)].getAttribute('title')).toBe('Mon 09:00 — 4 sessions');
@@ -149,6 +151,87 @@ describe('HeatmapGrid — colour scale', () => {
 });
 
 describe('HeatmapGrid — hover detail popover', () => {
+  it('uses one roving keyboard stop and opens the same detail on activation, arrows and touch', () => {
+    const model = emptyModel();
+    model.grid[0][0] = { count: 1, totalEnergyWh: 1250 };
+    model.grid[0][1] = { count: 2, totalEnergyWh: -2500 };
+    const { container } = render(<HeatmapGrid model={model} formatEnergy={makeFormatEnergy()} />);
+    const slots = container.querySelectorAll<HTMLButtonElement>('button[data-heatmap-slot]');
+    vi.spyOn(slots[0], 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 300, 24, 28));
+    vi.spyOn(slots[1], 'getBoundingClientRect').mockReturnValue(new DOMRect(140, 300, 24, 28));
+    expect(slots).toHaveLength(168);
+    expect([...slots].filter(slot => slot.tabIndex === 0)).toHaveLength(1);
+    fireEvent.focus(slots[0]);
+    fireEvent.click(slots[0]);
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 sessions · 1.25 kWh');
+    expect(screen.getByRole('dialog')).toHaveStyle({ left: '112px' });
+    fireEvent.keyDown(slots[0], { key: 'ArrowRight' });
+    expect(slots[1]).toHaveFocus();
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 sessions · -2.50 kWh');
+    expect(screen.getByRole('dialog')).toHaveStyle({ left: '152px' });
+    fireEvent.keyDown(slots[1], { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(slots[1]);
+    fireEvent.mouseLeave(slots[1]);
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 sessions · -2.50 kWh');
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(slots[1]).toHaveFocus();
+  });
+
+  it('keeps detail outside the scrolling plot and dismisses it when focus leaves the grid', () => {
+    const model = emptyModel();
+    model.grid[0][0] = { count: 3, totalEnergyWh: 1000 };
+    const { container } = render(<HeatmapGrid model={model} formatEnergy={makeFormatEnergy()} />);
+    const slot = container.querySelector<HTMLButtonElement>('button[data-heatmap-slot]')!;
+    fireEvent.focus(slot);
+    fireEvent.click(slot);
+    const detail = screen.getByRole('dialog');
+    expect(container.querySelector('[data-heatmap-grid]')).not.toContainElement(detail);
+    expect(detail.querySelector('[data-chart-tooltip-label]')).toHaveTextContent('Sun 00:00');
+    fireEvent.blur(slot, { relatedTarget: document.body });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps keyboard navigation in the measured rows and columns, including empty slots', () => {
+    const formatEnergy = makeFormatEnergy();
+    const { container } = render(<HeatmapGrid model={emptyModel()} formatEnergy={formatEnergy} />);
+    const slots = container.querySelectorAll<HTMLButtonElement>('button[data-heatmap-slot]');
+    fireEvent.keyDown(slots[0], { key: 'ArrowLeft' });
+    expect(slots[0]).toHaveFocus();
+    fireEvent.keyDown(slots[0], { key: 'End' });
+    expect(slots[23]).toHaveFocus();
+    fireEvent.keyDown(slots[23], { key: 'ArrowRight' });
+    expect(slots[23]).toHaveFocus();
+    fireEvent.keyDown(slots[23], { key: 'ArrowDown' });
+    expect(slots[47]).toHaveFocus();
+    fireEvent.keyDown(slots[47], { key: 'Home' });
+    expect(slots[24]).toHaveFocus();
+    fireEvent.keyDown(slots[24], { key: 'End', ctrlKey: true });
+    expect(slots[167]).toHaveFocus();
+    fireEvent.click(slots[167]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(formatEnergy).not.toHaveBeenCalled();
+    expect([...slots].filter(slot => slot.tabIndex === 0)).toEqual([slots[167]]);
+  });
+
+  it('keeps pinned partial detail available for touch dismissal without inventing full coverage', () => {
+    const model = emptyModel();
+    model.grid[0][0] = { count: 3, totalEnergyWh: NaN };
+    const energySlots = [{ energy_wh: 0, recorded_energy_count: 1 }];
+    const formatEnergy = makeFormatEnergy();
+    const { container } = render(<Grid model={model} energySlots={energySlots} formatEnergy={formatEnergy} />);
+    const slot = container.querySelector<HTMLButtonElement>('button[data-heatmap-slot]')!;
+    fireEvent.click(slot);
+    fireEvent.mouseLeave(slot);
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 sessions · 0.00 kWh');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Some returned sessions have no recorded value');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(slot).toHaveFocus();
+    expect(formatEnergy).toHaveBeenCalledWith(0);
+  });
+
   it('reveals weekday/hour + "N sessions · energy" and calls formatEnergy on hover', () => {
     const model = emptyModel();
     model.grid[1][9] = { count: 4, totalEnergyWh: 40_000 };
@@ -166,12 +249,14 @@ describe('HeatmapGrid — hover detail popover', () => {
     // The popover shows the slot header and the session/energy detail line.
     expect(screen.getByText('Mon 09:00')).toBeInTheDocument();
     expect(screen.getByText('4 sessions · 40.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Mon 09:00').closest('[data-app-part~="chart-tooltip"]')).toBeInTheDocument();
     // Energy is formatted from the cell's exact SI watt-hours, never converted here.
     expect(formatEnergy).toHaveBeenCalledWith(40_000);
 
     // Mousing out tears the popover back down.
     fireEvent.mouseLeave(cell);
     expect(screen.queryByText('Mon 09:00')).toBeNull();
+    expect(container.querySelector('[data-app-part~="chart-tooltip"]')).toBeNull();
   });
 
   it('shows no popover and never formats energy when hovering an empty slot', () => {

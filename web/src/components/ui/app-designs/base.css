@@ -1,0 +1,174 @@
+/*
+ * Descriptor-neutral invariants only. Category files own mode compositions;
+ * pack files own identity. Do not reset theme, semantic, chart, font or density
+ * variables here. Role tokens supplement, never replace, data-role/data-surface.
+ * The owner marker is attributed from the nearest complete opt-in profile.
+ * It must qualify the final target, not merely an ancestor, in every sheet.
+ */
+@media screen and (forced-colors: none) {
+  :where(:root)[data-app-design-pack][data-app-design-owner],
+  [data-app-design-preview] {
+    --app-border-width: 1px;
+    --app-rule-style: solid;
+    --app-heading-style: normal;
+    --app-pattern: none;
+    --app-nav-radius: var(--radius-md);
+    --app-shadow: none;
+  }
+
+  /* Reset only app-owned inherited treatments, including neutral widget
+     previews. Fonts, colors, density, semantic roles and palettes stay owned
+     by their existing providers. A local pack may refine these later. */
+  [data-app-design-preview] {
+    --app-feedback-signal: var(--text-secondary);
+    --panel-radius: var(--radius-lg);
+    --panel-shadow: var(--elevation-1);
+    --panel-shadow-hover: var(--elevation-1);
+  }
+
+  [data-app-design-owner]:where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]) {
+    border-width: var(--app-border-width);
+    border-style: var(--app-rule-style);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--panel-shadow);
+  }
+
+  [data-app-design-owner]:where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]) {
+    border-radius: var(--radius-md);
+  }
+}
+
+@media screen {
+  [data-app-design-owner]:where(
+      [data-app-part~="shell-main"], [data-app-part~="workspace-header"],
+      [data-app-part~="navigation"], [data-app-part~="page"],
+      [data-app-part~="page-header"], [data-app-part~="page-title"],
+      [data-app-part~="page-actions"], [data-app-part~="page-content"],
+      [data-app-part~="section"], [data-app-part~="grid"], [data-app-part~="stack"],
+      [data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"],
+      [data-app-part~="metric-grid"], [data-app-part~="list"], [data-app-part~="timeline"],
+      [data-app-part~="field"], [data-app-part~="tabs"], [data-app-part~="table-toolbar"], [data-app-part~="pagination"],
+      [data-app-part~="dialog-header"], [data-app-part~="dialog-body"], [data-app-part~="dialog-footer"],
+      [data-app-part~="feedback"], [data-app-part~="empty"], [data-app-part~="error"],
+      [data-app-part~="loading"], [data-app-part~="skeleton"], [data-app-part~="chart"],
+      [data-app-part~="chart-header"], [data-app-part~="chart-plot"], [data-app-part~="chart-legend"],
+      [data-app-part~="map"], [data-app-part~="map-toolbar"], [data-app-part~="map-legend"]
+    ) {
+    min-inline-size: 0;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="shell"], [data-app-part~="shell-sidebar"], [data-app-part~="shell-main"], [data-app-part~="dialog-body"]) {
+    min-block-size: 0;
+  }
+
+  [data-app-design-owner]:where(
+      [data-app-part~="page-title"], [data-app-part~="metric-label"], [data-app-part~="metric-value"],
+      [data-app-part~="field-label"], [data-app-part~="nav-item"], [data-app-part~="button"],
+      [data-app-part~="tab"], [data-app-part~="table-cell"], [data-app-part~="feedback"],
+      [data-app-part~="empty"], [data-app-part~="error"], [data-app-part~="loading"],
+      [data-app-part~="dialog-header"], [data-app-part~="dialog-body"], [data-app-part~="dialog-footer"],
+      [data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"],
+      [data-app-part~="chart-legend"], [data-app-part~="map-popup"], [data-app-part~="map-legend"]
+    ) {
+    overflow-wrap: anywhere;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="page-actions"], [data-app-part~="table-toolbar"], [data-app-part~="pagination"], [data-app-part~="chart-header"], [data-app-part~="chart-legend"], [data-app-part~="map-toolbar"], [data-app-part~="map-legend"]) {
+    flex-wrap: wrap;
+    column-gap: var(--density-gap);
+    row-gap: var(--density-gap);
+  }
+
+  [data-app-design-owner]:where([data-app-part~="field-control"], [data-app-part~="skeleton"], [data-app-part~="status"], [data-app-part~="badge"]) {
+    max-inline-size: 100%;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="status"], [data-app-part~="badge"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="metric-value"], [data-app-part~="table-cell"]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The existing table scroll wrapper, map renderer and plot sizing remain
+     owners. Never turn a semantic table into cards or resize data coordinates. */
+  [data-app-design-owner]:where([data-app-part~="table"], [data-app-part~="table-head"], [data-app-part~="table-row"], [data-app-part~="map-marker"]) {
+    scroll-margin-block: var(--density-gap);
+  }
+
+  [data-app-design-owner]:where([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]):focus-visible {
+    outline: var(--focus-ring-width, 2px) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset, 2px);
+  }
+
+  [data-app-design-owner]:where([data-app-part~="nav-item"], [data-app-part~="tab"]) {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 2px;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="nav-item"][aria-current="page"], [data-app-part~="tab"][aria-selected="true"]) {
+    text-decoration-line: underline;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"], [data-app-part~="nav-item"]):is(:disabled, [aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="field"], [data-app-part~="field-control"], [data-app-part~="feedback"], [data-app-part~="loading"])[aria-busy="true"] {
+    cursor: progress;
+  }
+
+  [data-app-design-owner][data-app-part~="field-control"][readonly] {
+    cursor: default;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="overlay"], [data-app-part~="dialog"], [data-app-part~="popover"], [data-app-part~="tooltip"]) {
+    /* Positioning, portal layers, focus traps and dismissal stay at their owners. */
+    overflow-wrap: anywhere;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]) {
+    min-block-size: max(44px, var(--density-row-h));
+    min-inline-size: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  [data-app-design-owner][data-app-part],
+  [data-app-design-owner][data-app-part]::before,
+  [data-app-design-owner][data-app-part]::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media screen and (forced-colors: active) {
+  [data-app-design-owner]:where([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="nav-item"][aria-current="page"], [data-app-part~="tab"][aria-selected="true"]) {
+    text-decoration-line: underline;
+    text-decoration-color: LinkText;
+  }
+}
+
+@media print {
+  [data-app-design-owner]:where([data-app-part~="page-content"], [data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="table"]) {
+    max-block-size: none;
+    overflow: visible;
+    box-shadow: none;
+    background-image: none;
+  }
+
+  [data-app-design-owner]:where([data-app-part~="page-title"], [data-app-part~="metric-label"], [data-app-part~="metric-value"], [data-app-part~="table-cell"]) {
+    overflow-wrap: anywhere;
+  }
+}

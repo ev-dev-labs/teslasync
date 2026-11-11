@@ -91,7 +91,7 @@ export function FleetComparisonPanel({
           action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       ) : (
-        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet comparison')}>
+        <ul data-app-part="list" className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet comparison')}>
           {rows.map((r, i) => (
             <li key={r.id}>
               <MetricBar

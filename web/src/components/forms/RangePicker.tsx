@@ -262,6 +262,8 @@ export function RangePicker({
                 <li key={p.id} role="presentation">
                   <button
                     type="button"
+                    data-app-part="button"
+                    data-app-variant={active ? 'primary' : 'ghost'}
                     role="option"
                     aria-selected={active}
                     onClick={() => handlePreset(p.id)}
@@ -310,7 +312,7 @@ export function RangePicker({
                 </Suspense>
               </div>
 
-              <div className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+              <div data-app-part="dialog-footer" className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                 {enableCompare ? (
                   <div className="text-xs text-[var(--text-secondary)]">
                     <Checkbox

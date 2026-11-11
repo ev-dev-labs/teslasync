@@ -93,10 +93,14 @@ export function CachedDataNotice({
       <div
         {...regionProps}
         data-testid="cached-data-notice-empty"
+        data-app-part="feedback"
+        data-app-feedback-kind="notice"
+        data-app-tone="warning"
+        data-app-state="unavailable"
         className={`${SHELL} ${className ?? ''}`}
       >
-        <CloudOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>
+        <CloudOff data-app-part="feedback-icon" className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span data-app-part="feedback-content">
           {t(
             'pwa.cache.offlineNoData',
             "You're offline and nothing is cached for this view.",
@@ -120,13 +124,17 @@ export function CachedDataNotice({
     <div
       {...regionProps}
       data-testid="cached-data-notice"
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-tone="warning"
+      data-app-state="cached"
       data-cached-at={effectiveCachedAt ?? ''}
       data-cached-at-newest={showRange ? newestCachedAt : ''}
       data-scope={perView ? 'view' : 'blanket'}
       className={`${SHELL} ${className ?? ''}`}
     >
-      <Database className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>
+      <Database data-app-part="feedback-icon" className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span data-app-part="feedback-content">
         {/* The offline state is stated explicitly in the visible text so it is
             exposed to every user, not inferred from a wrapper's aria-label. */}
         {!online && <>{t('pwa.offline.title', "You're offline")}. </>}

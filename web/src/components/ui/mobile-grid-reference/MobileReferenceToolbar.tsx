@@ -9,7 +9,7 @@ export function MobileReferenceToolbar({ model, callbacks }: Props) {
   const { t } = useTranslation();
   return (
     <div className="mb-2 space-y-2">
-      <div className="mgr-toolbar flex min-w-0 items-center gap-2">
+      <div data-app-part="table-toolbar" className="mgr-toolbar flex min-w-0 items-center gap-2">
         {showMobileSearch(model.maximumRows) && (
           <div data-grid-search="" className="mgr-search min-w-0 flex-1">
             <Input type="search" value={model.query} onChange={event => callbacks.onSearch(event.target.value)}

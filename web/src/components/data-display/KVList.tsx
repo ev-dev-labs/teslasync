@@ -53,7 +53,7 @@ export function KVList({
 
   if (rows.length === 0 && emptyMessage) {
     return (
-      <p role="status" className="py-2 text-sm text-[var(--text-muted)]">
+      <p data-app-part="feedback empty" role="status" className="py-2 text-sm text-[var(--text-muted)]">
         {emptyMessage}
       </p>
     );
@@ -61,6 +61,8 @@ export function KVList({
 
   return (
     <dl
+      data-app-part="list"
+      data-app-list="definitions"
       className={cn(
         'divide-y divide-gray-200 dark:divide-gray-700',
         columns === 2 && 'grid grid-cols-2 gap-x-6',
@@ -70,6 +72,7 @@ export function KVList({
     >
       {rows.map((item, index) => (
         <div
+          data-app-part="list-row"
           key={item.id != null
             ? `id:${typeof item.id}:${item.id}`
             : typeof item.label === 'string' ? `${item.label}-${index}` : index}
@@ -86,6 +89,7 @@ export function KVList({
           )}
         >
           <Text
+            data-app-part="metric-label"
             as="dt"
             size="sm"
             color="muted"
@@ -103,6 +107,7 @@ export function KVList({
             ) : item.label}
           </Text>
           <Text
+            data-app-part="metric-value"
             as="dd"
             size="sm"
             weight="medium"

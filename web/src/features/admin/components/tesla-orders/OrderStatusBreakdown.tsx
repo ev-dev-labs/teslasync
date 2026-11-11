@@ -59,6 +59,10 @@ export function OrderStatusBreakdown({
       >
         <div className="space-y-4">
           <div
+            data-app-part="metric"
+            data-app-metric="bar"
+            data-app-metric-kind="order-status-distribution"
+            data-metric-track=""
             className="flex h-3 overflow-hidden rounded-full bg-white/[0.05]"
             role="img"
             aria-label={t(
@@ -73,6 +77,8 @@ export function OrderStatusBreakdown({
               return (
                 <div
                   key={bucket}
+                  data-metric-fill=""
+                  data-app-distribution-bucket={bucket}
                   className={cn('h-full', meta.bar)}
                   style={{ width: `${pct}%` }}
                 />
@@ -80,7 +86,7 @@ export function OrderStatusBreakdown({
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          <div data-app-part="metric-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {ORDER_BUCKET_ORDER.map((bucket) => {
               const count = stats.byBucket?.[bucket] ?? 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -88,9 +94,12 @@ export function OrderStatusBreakdown({
               return (
                 <div
                   key={bucket}
+                  data-app-part="card metric"
+                  data-app-metric="tile"
+                  data-app-metric-kind="order-status-count"
                   className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div data-app-part="metric-context" className="flex items-center justify-between gap-2">
                     <span
                       className={cn('h-2.5 w-2.5 rounded-full', meta.dot)}
                       aria-hidden="true"
@@ -98,6 +107,7 @@ export function OrderStatusBreakdown({
                     <Caption className="tabular-nums">{pct}%</Caption>
                   </div>
                   <Text
+                    data-app-part="metric-reading metric-value"
                     as="div"
                     size="xl"
                     weight="bold"
@@ -106,7 +116,7 @@ export function OrderStatusBreakdown({
                   >
                     {count}
                   </Text>
-                  <div className="mt-1">
+                  <div data-app-part="metric-label" className="mt-1">
                     <Badge variant={meta.badge} size="sm">
                       {t(meta.key, meta.fallback)}
                     </Badge>

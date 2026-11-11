@@ -29,7 +29,10 @@
  * interpolation.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { render, screen, fireEvent, cleanup, act, within, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -37,6 +40,11 @@ import ExplorePage from './ExplorePage';
 import { buildFeatureCatalog, filterFeatureCatalog } from '../featureCatalog';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import {
+  APPLICATION_DESIGNS,
+  getAppDesignAttributes,
+  observeAppDesignScopes,
+} from '@/components/ui/app-designs/designs';
 
 // ── Hoisted, per-test controllable gating state ──────────────────────
 const state = vi.hoisted(() => ({
@@ -824,6 +832,10 @@ describe('ExplorePage — keyboard', () => {
         const link = screen.getByTestId(`explore-card-${entry.to}`);
         expect(link.tagName).toBe('A');
         expect(link).not.toHaveAttribute('role', 'button');
+        expect(link).toHaveAttribute('data-app-part', 'card button');
+        expect(link).toHaveAttribute('data-surface-variant', 'standalone');
+        expect(link).toHaveAttribute('data-app-variant', 'outline');
+        expect(link).toHaveAttribute('data-app-size', 'auto');
         expect(link).toHaveTextContent(entry.label);
         const description = within(link).getByText(entry.description);
         expect(description).toHaveClass('break-words');
@@ -1118,6 +1130,84 @@ describe('ExplorePage — keyboard', () => {
 
 
 describe('ExplorePage — restrained discovery adoption', () => {
+  it('connects the actual native catalog card to every existing pack surface and control consumer only while owned', async () => {
+    const { getLocation } = renderPage('/explore?q=powershare&section=charging&context=retained');
+    const card = screen.getByTestId('explore-card-/powershare');
+    const entry = ALL.find(item => item.to === '/powershare')!;
+    const root = document.documentElement;
+    const attributes = Object.keys(getAppDesignAttributes('classic'));
+    const original = attributes.map(name => [name, root.getAttribute(name)] as const);
+    const release = observeAppDesignScopes(root);
+    try {
+      expect(card).not.toHaveAttribute('data-app-design-owner');
+      expect(card).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(card).toHaveAttribute('data-app-size', 'auto');
+      expect(card).toHaveRole('link');
+      expect(card).not.toHaveAttribute('role', 'button');
+      expect(card).toHaveTextContent(entry.description);
+      expect(card).toHaveClass('block', 'h-full', 'p-4');
+      expect(card.querySelectorAll('mark')).not.toHaveLength(0);
+
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+        await act(async () => {
+          for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+        });
+        await waitFor(() => expect(card).toHaveAttribute(
+          'data-app-design-owner', expect.stringContaining(`pack-${pack}`),
+        ));
+        const sheet = postcss.parse(readFileSync(resolve(
+          'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+        ), 'utf8'));
+        const surfaces: Rule[] = [];
+        const buttons: Rule[] = [];
+        sheet.walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="card"]') &&
+            rule.selector.includes('[data-surface-variant=')) surfaces.push(rule);
+          if (rule.selector.includes('[data-app-part~="button"]') &&
+            !rule.selector.includes(':hover') && !rule.selector.includes(':active')) buttons.push(rule);
+        });
+        const matched = (rules: Rule[]) => rules.filter(rule => card.matches(rule.selector));
+        expect(matched(surfaces).some(rule => rule.nodes.some(node =>
+          node.type === 'decl' && /^(?:border(?:-(?:block|inline))?|background(?:-color)?|box-shadow)$/.test(node.prop),
+        )), pack).toBe(true);
+        expect(matched(buttons).length, pack).toBeGreaterThan(0);
+        const controls = buttons.filter(rule => rule.selector.includes('[data-app-variant="outline"]'));
+        expect(matched(controls), pack).toHaveLength(controls.length);
+        card.focus();
+        expect(card).toHaveFocus();
+        card.setAttribute('data-app-part', 'button');
+        expect(matched(surfaces)).toHaveLength(0);
+        card.setAttribute('data-app-part', 'card button');
+        card.removeAttribute('data-app-variant');
+        expect(matched(controls)).toHaveLength(0);
+        card.setAttribute('data-app-variant', 'outline');
+        card.removeAttribute('data-app-design-owner');
+        expect(matched(surfaces)).toHaveLength(0);
+        expect(matched(buttons)).toHaveLength(0);
+        await act(async () => {
+          for (const name of attributes) root.removeAttribute(name);
+        });
+        await waitFor(() => expect(root).not.toHaveAttribute('data-app-design-owner'));
+        expect(card).not.toHaveAttribute('data-app-design-owner');
+      }
+
+      expect(card).toHaveAttribute('href', '/powershare');
+      expect(getLocation()).toEqual({
+        pathname: '/explore', search: '?q=powershare&section=charging&context=retained',
+      });
+      expect(fireEvent.click(card, { ctrlKey: true })).toBe(true);
+      expect(getLocation().pathname).toBe('/explore');
+      fireEvent.click(card, { detail: 0 });
+      expect(getLocation().pathname).toBe('/powershare');
+    } finally {
+      release();
+      for (const [name, value] of original) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
   it('keeps native feature destinations and keyboard navigation on semantic surfaces with shared focus treatment', () => {
     const { getLocation } = renderPage('/explore?section=charging');
     const card = screen.getByTestId('explore-card-/charging');

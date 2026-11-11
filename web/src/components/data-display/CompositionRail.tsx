@@ -55,7 +55,7 @@ export function CompositionRail({
   }
 
   return (
-    <div className={cn('min-w-0 w-full space-y-3', className)}>
+    <div data-app-part="metric" data-app-metric="composition" className={cn('min-w-0 w-full space-y-3', className)}>
       <div
         role="img"
         aria-label={summary}
@@ -79,9 +79,9 @@ export function CompositionRail({
         ))}
       </div>
       {/* eslint-disable-next-line jsx-a11y/no-redundant-roles -- Safari needs an explicit role to preserve unstyled list semantics. */}
-      <ul role="list" className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
+      <ul data-app-part="list" data-app-list="legend" role="list" className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
         {segments.map((segment) => (
-          <li key={segment.id} className="flex min-w-0 max-w-full items-start gap-2">
+          <li data-app-part="list-row" key={segment.id} className="flex min-w-0 max-w-full items-start gap-2">
             <span
               aria-hidden="true"
               className={cn(

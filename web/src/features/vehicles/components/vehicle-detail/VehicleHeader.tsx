@@ -43,6 +43,8 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Link
           to="/vehicles"
+          data-app-part="button"
+          data-app-variant="ghost"
           aria-label={t('common.back', 'Back')}
           className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-shape-sm p-2.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         >

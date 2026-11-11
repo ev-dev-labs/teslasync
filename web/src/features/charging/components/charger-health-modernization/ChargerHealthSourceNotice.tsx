@@ -21,7 +21,7 @@ export function ChargerHealthSourceNotice({ state, includeFatal = true }: Charge
       <QueryError error={state.fatalError} onRetry={state.retry ?? undefined} />
     )}
     {!state.hasData && !state.fatalError && state.isRefreshBlocked && (
-      <div role="status" className="space-y-2">
+      <div data-app-part="status" role="status" className="space-y-2">
         <Text as="p" variant="bodySm">
           {t('chargerHealth.state.paused', 'Charging sessions loading is paused. Connect to resume or retry.')}
         </Text>

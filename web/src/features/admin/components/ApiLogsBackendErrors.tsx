@@ -40,7 +40,7 @@ export function ApiLogsBackendErrors({ data, state, loading, onRetry }: ApiLogsB
     >
       <StaleRefreshWarning state={state} label={title} hideRetry />
       {loading && !data ? (
-        <div role="status" aria-label={t('apiLogs.runtime.backendLoading', 'Loading backend error summary')}>
+        <div data-app-part="status" role="status" aria-label={t('apiLogs.runtime.backendLoading', 'Loading backend error summary')}>
           <Skeleton className="h-16" />
         </div>
       ) : state.fatalError ? (

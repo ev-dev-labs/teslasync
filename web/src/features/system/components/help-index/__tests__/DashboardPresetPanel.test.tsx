@@ -48,8 +48,15 @@ describe('DashboardPresetPanel — chosen vs applied', () => {
     const cards = screen.getAllByTestId('dashboard-preset-card')
     expect(cards).toHaveLength(4)
     for (const card of cards) {
+      expect(card).toHaveAttribute('data-app-record-kind', 'dashboard-preset')
+      for (const slot of ['label', 'context', 'body']) {
+        expect(card.querySelector(`[data-app-record-slot="${slot}"]`)).toBeVisible()
+      }
+      expect(card.querySelectorAll('[data-preset-widget][data-app-part="badge"][data-app-variant="neutral"]').length)
+        .toBeGreaterThan(0)
       expect(card).toHaveAttribute('data-selected', 'false')
       expect(card).toHaveAttribute('data-applied', 'false')
+      expect(card).toHaveAttribute('data-card-state', 'idle')
     }
   })
 
@@ -65,6 +72,8 @@ describe('DashboardPresetPanel — chosen vs applied', () => {
       .find((c) => c.getAttribute('data-preset-role') === 'owner')!
     expect(card).toHaveAttribute('data-selected', 'true')
     expect(card).toHaveAttribute('data-applied', 'false')
+    expect(card).toHaveAttribute('data-app-record-kind', 'dashboard-preset')
+    expect(card).toHaveAttribute('data-card-state', 'queued')
     expect(screen.getByTestId('choose-preset-owner')).toHaveTextContent(/chosen/i)
     expect(screen.getByTestId('preset-pending-note-owner')).toBeInTheDocument()
   })

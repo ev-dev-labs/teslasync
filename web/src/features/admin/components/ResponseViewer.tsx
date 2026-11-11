@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
+import { Badge, GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -167,8 +167,8 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         {t('playground.codeSnippet', 'Code snippet')}
       </UiButton>
       {open && (
-        <div className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
-          <div className="flex items-center gap-1 p-2 border-b border-white/[0.04]">
+        <div data-app-part="panel" data-app-panel-kind="code" className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
+          <div data-app-code-slot="actions" className="flex items-center gap-1 p-2 border-b border-white/[0.04]">
             {SNIPPET_FORMATS.map(f => (
               <UiButton
                 key={f.value}
@@ -197,6 +197,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
             />
           </div>
           <pre
+            data-app-code-slot="body"
             aria-label={t('playground.codeSnippetContent', 'Generated code snippet')}
             className="p-3 text-xs font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre"
           >
@@ -230,7 +231,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         {t('playground.responseHeaders', 'Response headers')} ({entries.length})
       </UiButton>
       {open && (
-        <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-2xs font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
+        <div data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-2xs font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
           {entries.map(([k, v]) => (
             <div key={k}>
               <span className="text-[var(--text-secondary)]">{k}:</span> {v}
@@ -265,7 +266,9 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             className="!h-auto flex-shrink-0 gap-1.5 !rounded-md border border-white/[0.04] !bg-white/[0.03] !px-2 !py-1 font-mono text-2xs hover:!bg-white/[0.06]"
             title={`${h.method} ${h.path} → ${h.status} (${fmtNumber(h.duration)}ms)`}
           >
-            <span
+            <Badge
+              variant={h.method === 'GET' ? 'success' : h.method === 'POST' ? 'info' : h.method === 'DELETE' ? 'danger' : 'warning'}
+              size="sm"
               className={cn(
                 'px-1 py-0.5 rounded text-2xs font-bold',
                 h.method === 'GET' ? 'bg-green-500/20 text-green-400' :
@@ -275,7 +278,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
               )}
             >
               {h.method}
-            </span>
+            </Badge>
             <span className="text-[var(--text-muted)] max-w-[120px] truncate">{h.path}</span>
             <span className={cn('font-bold', statusColor(h.status))}>
               {h.status}
@@ -317,21 +320,28 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
         {!loading && response && (
           <FadeIn>
             {/* Status bar */}
-            <div className={cn(
-              'flex items-center justify-between rounded-lg border px-4 py-2 mb-3',
-              statusBg(response.status),
-            )}>
-              <Text size="sm" weight="bold" mono className={statusColor(response.status)}>
+            <div data-app-part="feedback" data-app-feedback-kind="insight"
+              data-app-tone={response.status >= 200 && response.status < 300 ? 'success'
+                : response.status >= 300 && response.status < 400 ? 'warning'
+                  : response.status === 0 || (response.status >= 400 && response.status < 600) ? 'danger' : 'neutral'}
+              className={cn(
+                'flex items-center justify-between rounded-lg border px-4 py-2 mb-3',
+                statusBg(response.status),
+              )}>
+              <Text data-app-part="feedback-content" size="sm" weight="bold" mono className={statusColor(response.status)}>
                 {Number.isInteger(response.status) && response.status >= 100 && response.status < 600
                   ? `${response.status} ${response.statusText}` : response.statusText || '—'}
               </Text>
-              <Text variant="caption">
+              <Text data-app-part="feedback-detail" variant="caption">
                 {response.status === 0 || !Number.isFinite(response.duration) || response.duration < 0 ? '—' : `${fmtNumber(response.duration)}ms`} · {response.status === 0 ? '—' : formatBytes(response.size)}
               </Text>
             </div>
 
             {/* Body */}
             <pre
+              data-app-part="panel"
+              data-app-panel-kind="code"
+              data-app-code-slot="body"
               role="region"
               aria-label={t('playground.responseBody', 'Response body')}
               className="text-xs font-mono text-[var(--text-secondary)] overflow-auto max-h-[500px] bg-[var(--surface-overlay)] rounded-lg p-3 border border-white/[0.04]"

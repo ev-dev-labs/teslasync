@@ -33,6 +33,9 @@ import {
   assertOperationalMetricUnavailable,
 } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -40,6 +43,8 @@ import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type {
   ConnectionPool,
   DBStats,
@@ -221,6 +226,69 @@ afterEach(() => {
 });
 
 describe('DBHealthPage — row chart context and count preferences', () => {
+  it('composes the real migration and pool facts across all profiles while preserving recent-five order and source units', () => {
+    const history = Array.from({ length: 7 }, (_, index) => ({
+      version: String(180 + index),
+      name: `full_migration_name_${index}`,
+      ...(index !== 6 ? { appliedAt: `2026-01-0${index + 1}T00:00:00Z` } : {}),
+    }));
+    mockUseMigrations.mockReturnValue(makeQuery({ data: migration({ dirty: true, pending: 3, migrations: history }) }));
+    mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool({ inUse: 0, waitDurationMs: 120.5 }) }));
+    const { container } = renderPage();
+    const migrationPanel = screen.getByText('Current version').closest('[data-print-card]')!;
+    const poolPanel = screen.getByText('Max open').closest('[data-print-card]')!;
+    const definitions = [...container.querySelectorAll('dl[data-app-list="definitions"] > [data-app-part="list-row"]')];
+    expect(definitions).toHaveLength(9);
+    const recent = migrationPanel.querySelector('[data-app-list="ranked"]')!;
+    const recentRows = [...recent.querySelectorAll('[data-app-part="list-row"]')];
+    const names = recentRows.map(row => row.querySelector('[data-app-part="metric-label"]')?.textContent);
+    expect(names).toEqual(history.slice(-5).reverse().map(item => `v${item.version} ${item.name}`));
+    expect(recentRows[0].querySelector('[data-app-part~="metric-reading"]')).toBeNull();
+    expect(recentRows.slice(1).every(row => row.querySelector('[data-app-part~="metric-reading"]'))).toBe(true);
+    const usage = poolPanel.querySelector('[data-app-metric="inline"]')!;
+    const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'));
+    const consumes = (element: Element, contract: string) => {
+      const matches: string[] = [];
+      sheet.walkRules(rule => {
+        for (const selector of rule.selectors) {
+          if (selector.includes(contract) && element.matches(selector)) matches.push(selector);
+        }
+      });
+      return matches;
+    };
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
+      const release = observeAppDesignScopes(container);
+      try {
+        for (const row of [...definitions, ...recentRows]) {
+          expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+          expect(consumes(row, `[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`), `${pack}: actual fact/history row`).not.toHaveLength(0);
+          expect(consumes(row.querySelector('[data-app-part="metric-label"]')!, '[data-app-part~="metric-label"]')).not.toHaveLength(0);
+          const reading = row.querySelector('[data-app-part~="metric-reading"]');
+          if (reading) expect(consumes(reading, '[data-app-part~="metric-reading"]')).not.toHaveLength(0);
+        }
+        expect(consumes(usage, '[data-app-metric="inline"]')).not.toHaveLength(0);
+        expect(usage.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('0.00%');
+        expect(poolPanel).toHaveTextContent('120.50ms');
+        expect(migrationPanel).toHaveTextContent('Dirty');
+        expect(recentRows.map(row => row.querySelector('[data-app-part="metric-label"]')?.textContent)).toEqual(names);
+        expect(within(poolPanel as HTMLElement).getByRole('progressbar', { name: 'Pool usage' })).toHaveAttribute('aria-valuenow', '0');
+      } finally {
+        release();
+      }
+    }
+    container.removeAttribute('data-app-data');
+    const release = observeAppDesignScopes(container);
+    try {
+      expect(definitions.every(row => !row.hasAttribute('data-app-design-owner'))).toBe(true);
+      expect(consumes(definitions[0], '[data-app-list="definitions"]')).toHaveLength(0);
+      expect(usage).toHaveTextContent('0.00%');
+    } finally {
+      release();
+    }
+  });
+
   it('renders measured numeric bytes and labels catalog row estimates throughout the page', () => {
     mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ databaseSize: 360 * MB, rowCountsEstimated: true }) }));
     renderPage();

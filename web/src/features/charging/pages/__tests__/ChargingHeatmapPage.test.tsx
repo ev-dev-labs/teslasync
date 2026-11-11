@@ -14,7 +14,7 @@
  *      is gated away or left blank.
  *   4. Deterministic grid / insight derivations surfaced in the hero + side panel.
  *   5. Shared header vehicle scope + page refresh wiring and a11y
- *      (labelled regions, an icon-only refresh button, the heatmap `img`).
+ *      (labelled regions, an icon-only refresh button, the heatmap group).
  *
  * Strategy mirrors PeriodComparePage: render the REAL page + REAL shared subtree
  * (PageLayout, StatStrip, MetricBar, HeatmapGrid, QueryError, charts). Only
@@ -34,7 +34,7 @@ import { chartTokens } from '@/lib/tokens';
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return { ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart };
 });
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>, <MetricBar>, and the
@@ -612,7 +612,7 @@ describe('ChargingHeatmapPage — precise server range contract', () => {
     vi.spyOn(Date, 'now').mockReturnValue(now);
     installRequest();
     const { client } = renderPage('/charging-heatmap?time_scope=24h');
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     const start = '2026-10-13T17:45:50.694Z';
     const end = '2026-10-14T17:45:50.694Z';
@@ -628,11 +628,11 @@ describe('ChargingHeatmapPage — precise server range contract', () => {
     savedZone.tz = 'America/Los_Angeles';
     installRequest();
     renderPage('/charging-heatmap?from=2026-03-08&to=2026-03-09&time_scope=custom');
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     expect(bounds(chargingCalls()[0]).get('start')).toBe('2026-03-08T08:00:00.000Z');
     expect(bounds(chargingCalls()[0]).get('end')).toBe('2026-03-10T07:00:00.000Z');
-    const grid = screen.getByRole('img', { name: GRID_ARIA });
+    const grid = screen.getByRole('group', { name: GRID_ARIA });
     const slots = Array.from(grid.querySelectorAll<HTMLElement>('[title]'));
     expect(slots).toHaveLength(168);
     expect(slots[0].title).toMatch(/^Sun /);
@@ -681,12 +681,12 @@ describe('ChargingHeatmapPage — precise server range contract', () => {
 });
 
 describe('ChargingHeatmapPage — happy path', () => {
-  it('renders the page shell, every section/panel heading, and the heatmap image', async () => {
+  it('renders the page shell, every section/panel heading, and the interactive heatmap group', async () => {
     installRequest();
     renderPage();
 
-    // The heatmap image only mounts once sessions resolve — a reliable "loaded" signal.
-    await screen.findByRole('img', { name: GRID_ARIA });
+    // The heatmap group only mounts once sessions resolve — a reliable "loaded" signal.
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Charging Patterns' }),
@@ -705,14 +705,16 @@ describe('ChargingHeatmapPage — happy path', () => {
       'Top Charging Locations',
       'Sessions by Day of Week',
     ]) {
-      expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
+      // Real embedded charts also provide their own accessible headings.
+      expect(screen.getAllByRole('heading', { level: 3, name })
+        .filter(heading => !heading.closest('[data-chart-variant]'))).toHaveLength(1);
     }
   });
 
   it('derives the KPI band from the sessions (count, SI-Wh→kWh energy, cost)', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     // 6 sessions, 55,000 Wh → 55 kWh, $4×5 + $5 = $25.00.
     expect(kpiValue('Total Sessions')).toBe('6');
@@ -723,7 +725,7 @@ describe('ChargingHeatmapPage — happy path', () => {
   it('renders the insights side panel with favorite slot + busiest day/hour', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     // Busiest slot = Monday 10:00 with 3 sessions (DAYS[1] === 'Mon').
     expect(screen.getByText('Monday at 10:00 AM')).toBeInTheDocument();
@@ -736,7 +738,7 @@ describe('ChargingHeatmapPage — happy path', () => {
   it('preserves populated insight readings with solid function-valued theme colors', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     for (const [label, series, value] of [
       ['Busiest Day', 5, 3],
@@ -758,7 +760,7 @@ describe('ChargingHeatmapPage — happy path', () => {
     setGlobalLocale('de-DE');
     installRequest({ settings: { ...SETTINGS, locale: 'de-DE' } });
     renderPage();
-    await screen.findAllByRole('img', { name: GRID_ARIA });
+    await screen.findAllByRole('group', { name: GRID_ARIA });
     await waitFor(() => expect(screen.getByText('Um 10:00 am Montag')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /data table/ }));
     const rows = within(screen.getByRole('region', { name: GRID_ARIA })).getAllByRole('row');
@@ -774,7 +776,7 @@ describe('ChargingHeatmapPage — happy path', () => {
   it('shows the real breakdown charts (not their empty states) when data exists', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     expect(screen.queryByText('No repeat charging locations yet')).toBeNull();
     expect(screen.queryByText('No charging sessions in this range')).toBeNull();
@@ -787,7 +789,7 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     // The pre-fix bug divided the 6h total by ALL six sessions → a diluted 1.0h.
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     const avg = parseFloat(kpiValue('Avg Duration'));
     expect(avg).toBe(2);
@@ -801,7 +803,7 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     ];
     installRequest({ sessions: openOnly });
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Charging summary' }), 'Avg Duration');
     expect(screen.getByRole('region', { name: 'Charging summary' }).textContent).not.toContain('NaN');
@@ -831,7 +833,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(chargingCalls()).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
     resolveFleet(TWO_VEHICLES);
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
     expect(screen.getAllByRole('button', { name: 'Refresh' }).find((el) => el.tagName === 'BUTTON')).toBeEnabled();
     expect(chargingCalls().every((url) => new URL(url, 'http://localhost').searchParams.get('vehicle_id') === '10')).toBe(true);
   });
@@ -848,7 +850,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
     fleetFailed = false;
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
     expect(chargingCalls().every((url) => /vehicle_id=10\b/.test(url))).toBe(true);
   });
 
@@ -863,19 +865,19 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     }
     onlineManager.setOnline(true);
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
     expect(kpiValue('Total Sessions')).toBe('6');
   });
 
   it('retains history through refresh failure and recovers without requiring a healthy fleet refresh', async () => {
     installRequest();
     const { client } = renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
     installRequest({ chargingMode: 'reject', chargingError: new ApiError('history down', 500) });
     onlineManager.setOnline(true);
     await client.refetchQueries({ queryKey: ['charging'] });
     await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['charging', 10], exact: false })?.state.status).toBe('error'));
-    expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: GRID_ARIA })).toBeInTheDocument();
     expect(kpiValue('Total Energy')).toMatch(/^55(?:\.0+)?\s*kWh$/);
 
     installRequest({ sessions: [SESSIONS[0]] });
@@ -887,7 +889,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(refresh).toBeEnabled();
     fireEvent.click(refresh);
     await waitFor(() => expect(kpiValue('Total Sessions')).toBe('1'));
-    expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: GRID_ARIA })).toBeInTheDocument();
     expect(client.getQueryCache().find({ queryKey: ['charging', 10], exact: false })?.state.status).toBe('success');
   });
 
@@ -920,8 +922,8 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(within(screen.getByRole('region', { name: 'Charging summary' }))
       .getByText('Total Sessions').closest('[data-operational-metric]')
       ?.querySelector('[data-operational-value]')).toBeNull();
-    // The heatmap image is not rendered while loading.
-    expect(screen.queryByRole('img', { name: GRID_ARIA })).toBeNull();
+    // The interactive heatmap group is not rendered while loading.
+    expect(screen.queryByRole('group', { name: GRID_ARIA })).toBeNull();
   });
 
   it('renders per-section QueryError with a Retry that refetches the feed', async () => {
@@ -963,8 +965,8 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
       screen.getByText('Insights appear once you have charging history'),
     ).toBeInTheDocument();
     expect(screen.getByText('No repeat charging locations yet')).toBeInTheDocument();
-    // No heatmap image in the empty branch.
-    expect(screen.queryByRole('img', { name: GRID_ARIA })).toBeNull();
+    // No heatmap group in the empty branch.
+    expect(screen.queryByRole('group', { name: GRID_ARIA })).toBeNull();
   });
 });
 
@@ -972,7 +974,7 @@ describe('ChargingHeatmapPage — data contract & toolbar', () => {
   it('requests /charging with snake_case vehicle_id + limit=2000 and no /api/v1 prefix', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     const calls = chargingCalls();
     expect(calls.length).toBeGreaterThan(0);
@@ -986,7 +988,7 @@ describe('ChargingHeatmapPage — data contract & toolbar', () => {
   it('refetches the feed when the refresh control is pressed', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     // PageContainer's freshness chip also exposes a "Refresh" control; the
     // page's own toolbar button renders last.
@@ -999,7 +1001,7 @@ describe('ChargingHeatmapPage — data contract & toolbar', () => {
   it('re-scopes the feed to the newly selected vehicle', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     expect(chargingCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(false);
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
@@ -1014,7 +1016,7 @@ describe('ChargingHeatmapPage — a11y & edge cases', () => {
   it('exposes an icon-only refresh control with an accessible name', async () => {
     installRequest();
     renderPage();
-    await screen.findByRole('img', { name: GRID_ARIA });
+    await screen.findByRole('group', { name: GRID_ARIA });
 
     // The page's toolbar control is a real <button> (the freshness chip is a
     // role="button" span); target the former specifically.

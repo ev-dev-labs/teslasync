@@ -27,6 +27,8 @@ import { createRef, type ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { Button } from '../ui/Button'
 import userEvent from '@testing-library/user-event'
+import { Tooltip } from '../ui/Tooltip'
+import { getAppDesignAttributes } from '../ui/app-designs/designs'
 
 // i18n stub — return the caller-supplied default string so CopyLinkButton's
 // labels/toasts resolve to their English fallbacks without booting i18next.
@@ -345,5 +347,39 @@ describe('PageHeader', () => {
       .toHaveAttribute('aria-describedby', drivesTooltip.id)
     expect(document.getElementById(drivesTooltip.id))
       .toHaveTextContent('Updated driving history')
+  })
+
+  it('portals title and trailing action help with their nearest complete design, never an outer preview', async () => {
+    const { container, unmount } = renderHeader(
+      <section data-app-design-preview="" {...getAppDesignAttributes('v4')}>
+        <PageHeader title="Outer" subtitle="Outer help" />
+        <section data-testid="inner-preview" data-app-design-preview="" {...getAppDesignAttributes('editorial')}>
+          <PageHeader title="Inner" subtitle="Full inner help"
+            metadataActions={<Tooltip content="Full trailing help"><Button>Refresh reading</Button></Tooltip>} />
+        </section>
+      </section>,
+    )
+    const tips = screen.getAllByRole('tooltip')
+    expect(tips).toHaveLength(3)
+    for (const tip of tips) {
+      expect(container).not.toContainElement(tip)
+      expect(tip.closest('[data-app-design-portal]')?.parentElement).toBe(document.body)
+      const pack = tip.textContent === 'Outer help' ? 'v4' : 'editorial'
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) {
+        expect(tip.closest('[data-app-design-preview]')).toHaveAttribute(name, value)
+      }
+      expect(tip).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+    }
+    const inner = screen.getByTestId('inner-preview')
+    inner.setAttribute('data-app-controls', 'filled')
+    await waitFor(() => {
+      for (const tip of tips.slice(1)) {
+        expect(tip.closest('[data-app-design-preview]')).not.toHaveAttribute('data-app-design-pack')
+        expect(tip).not.toHaveAttribute('data-app-design-owner')
+      }
+    })
+    expect(tips[0]).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-v4'))
+    unmount()
+    expect(document.querySelector('[data-app-design-portal]')).toBeNull()
   })
 })

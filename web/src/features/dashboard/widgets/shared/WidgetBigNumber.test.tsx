@@ -33,6 +33,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { WidgetBigNumber } from './WidgetBigNumber';
+import { WidgetTitleContext } from '../WidgetTitleContext';
 
 vi.mock('@/components/data-display', () => ({
   AnimatedNumber: ({ value, className }: { value: number; className?: string }) => (
@@ -276,5 +277,40 @@ describe('WidgetBigNumber — valueColor', () => {
     const plain = screen.getByText('7');
     expect(plain).toHaveClass('text-emerald-300');
     expect(plain).toHaveClass('tabular-nums');
+  });
+});
+
+describe('WidgetBigNumber — native headline composition', () => {
+  it('separates the real reading, unit, comparison and source context, including measured zero', () => {
+    const { container, rerender } = render(<WidgetBigNumber value={0} unit="km"
+      label="Distance" subtitle="Observed this week" delta={{ text: '−4%', tone: 'neutral' }} />);
+    const metric = container.querySelector('[data-app-metric="headline"]')!;
+    const reading = metric.querySelector('[data-app-part="metric-reading"]')!;
+    expect(metric).toHaveClass('widget-big-number');
+    expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('0');
+    expect(reading.querySelector('[data-app-part="metric-value"]')).not.toHaveTextContent('km');
+    expect(reading.querySelector('[data-app-part="metric-unit"]')).toHaveTextContent('km');
+    expect(metric.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Distance');
+    expect(metric.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Observed this week');
+    expect(metric.querySelector('[data-app-part="metric-comparison"]')).toHaveTextContent('−4%');
+    expect(reading).not.toHaveTextContent('Observed this week');
+
+    rerender(<WidgetBigNumber value={null} unit="km" subtitle="Observed this week"
+      delta={{ text: '−4%' }} />);
+    expect(metric.querySelector('[data-app-part="metric-value"]')).toHaveTextContent(DASH);
+    expect(metric.querySelector('[data-app-part="metric-unit"]')).toBeNull();
+    expect(metric.querySelector('[data-app-part="metric-comparison"]')).toBeNull();
+    expect(metric.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Observed this week');
+  });
+
+  it('keeps secondary formatted headlines and title suppression without relabelling them as cards', () => {
+    const { container } = render(<WidgetTitleContext.Provider value="Distance">
+      <WidgetBigNumber value="1.234,5" unit="km" label="Distance" size="secondary" animated={false} />
+    </WidgetTitleContext.Provider>);
+    const metric = container.querySelector('[data-app-metric="headline"]')!;
+    expect(metric.querySelector('[data-app-part="metric-label"]')).toBeNull();
+    expect(metric.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('1.234,5');
+    expect(screen.getByText('1.234,5')).toHaveClass('text-lg');
+    expect(container.querySelector('[data-app-metric="tile"], [data-app-metric="card"]')).toBeNull();
   });
 });

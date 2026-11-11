@@ -2,6 +2,15 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+
+const ownershipRules: Rule[] = [];
+postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+  .walkRules(rule => { ownershipRules.push(rule); });
 
 const UPDATED_AT = Date.UTC(2026, 7, 8, 12);
 const START_INSTANT = '2026-04-18T07:00:00.000Z';
@@ -374,6 +383,54 @@ beforeEach(() => {
 });
 
 describe('CarbonIntelligencePage', () => {
+  it('connects each real source, method, score and accounting record to all 27 design consumers', () => {
+    const { container } = renderPage();
+    const ledger = within(screen.getByTestId('carbon-source-scope'));
+    const sourceCards = [
+      'Grid intensity model', 'Selected-period summary', 'Lifetime summary', 'Green-window scenario',
+    ].map(name => ledger.getByText(name).closest('[data-app-part~="card"]')!);
+    expect(new Set(sourceCards).size).toBe(4);
+    const methods = screen.getByTestId('carbon-methodology').querySelectorAll('h3:not([data-card-title])');
+    expect(methods).toHaveLength(6);
+    const methodCards = [...methods].map(title => title.closest('[data-app-part~="card"]')!);
+    expect(new Set(methodCards).size).toBe(6);
+    const scoreCard = within(screen.getByTestId('carbon-green-timing-score'))
+      .getByRole('meter', { name: 'Lifetime green score' }).closest('[data-app-part~="card"]')!;
+    expect(scoreCard).not.toBeNull();
+    const accounting = screen.getByTestId('carbon-accounting-identities');
+    const records = accounting.querySelectorAll('[data-app-list="records"] > li[data-app-card-kind="record"]');
+    expect(records.length).toBeGreaterThan(0);
+    const values = [...accounting.querySelectorAll('table')].map(table => table.textContent);
+    for (const record of records) {
+      expect(record.querySelector('[data-app-part~="record-header"] [data-app-part~="record-title"]')).not.toBeNull();
+      expect(record.querySelector('[data-app-part~="record-body"] table')).not.toBeNull();
+    }
+
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const packRules: Rule[] = [];
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+          .walkRules(rule => { packRules.push(rule); });
+        for (const card of [...sourceCards, ...methodCards, scoreCard]) {
+          expect(packRules.some(rule => rule.selectors.some(selector =>
+            selector.includes('[data-app-part~="card"]') && card.matches(selector))),
+            `${pack}: independent card frame`).toBe(true);
+        }
+        for (const node of [records[0]!, records[0]!.querySelector('[data-app-part~="record-body"]')!]) {
+          expect(ownershipRules.some(rule => rule.selectors.some(selector =>
+            selector.includes('[data-app-card-kind="record"]')
+            && selector.includes(`[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`)
+            && node.matches(selector))), `${pack}: qualified accounting record/body`).toBe(true);
+        }
+      } finally { release(); }
+    }
+    expect([...accounting.querySelectorAll('table')].map(table => table.textContent)).toEqual(values);
+    expectEverySection();
+  });
+
   it('renders all thirteen persistent section shells', () => {
     renderPage();
 

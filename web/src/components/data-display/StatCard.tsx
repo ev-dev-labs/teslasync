@@ -56,6 +56,9 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
   if (loading) {
     return (
       <Card
+        data-app-part="metric loading"
+        data-app-metric="stat-card"
+        data-app-state="loading"
         className={className}
         style={style}
         role="status"
@@ -82,11 +85,12 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
         : t('statCard.trend.unchanged', 'no change');
 
   return (
-    <Card className={cn('flex min-h-28 flex-col gap-2 p-5', className)} style={style}>
-      <div className="flex items-center justify-between gap-3">
-        {label && <Text as="span" size="sm" weight="medium" color="secondary">{label}</Text>}
+    <Card data-app-part="metric" data-app-metric="stat-card" data-app-state={valueIsPresent ? 'value' : 'missing'} className={cn('flex min-h-28 flex-col gap-2 p-5', className)} style={style}>
+      <div data-app-part="metric-heading" className="flex items-center justify-between gap-3">
+        {label && <Text data-app-part="metric-label" as="span" size="sm" weight="medium" color="secondary">{label}</Text>}
         {icon ? (
           <span
+            data-app-part="metric-icon"
             aria-hidden="true"
             className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-2 text-[var(--text-muted)]"
           >
@@ -94,14 +98,15 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
           </span>
         ) : null}
       </div>
-      <div className="flex items-baseline gap-1">
-        <MetricValue>{displayValue}</MetricValue>
+      <div data-app-part="metric-reading" className="flex items-baseline gap-1">
+        <MetricValue data-app-part="metric-value">{displayValue}</MetricValue>
         {unit && valueIsPresent ? (
-          <Text as="span" size="sm" color="muted">{unit}</Text>
+          <Text data-app-part="metric-unit" as="span" size="sm" color="muted">{unit}</Text>
         ) : null}
       </div>
       {trend ? (
         <Text
+          data-app-part="metric-comparison"
           as="div"
           size="xs"
           weight="medium"
@@ -119,7 +124,7 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
           <span>{trend.value ?? ''}</span>
         </Text>
       ) : null}
-      {sublabel ? <Text as="span" variant="caption">{sublabel}</Text> : null}
+      {sublabel ? <Text data-app-part="metric-context" as="span" variant="caption">{sublabel}</Text> : null}
     </Card>
   );
 }

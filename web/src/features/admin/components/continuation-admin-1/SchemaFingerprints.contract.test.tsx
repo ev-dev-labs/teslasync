@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { SchemaFingerprints } from './SchemaFingerprints';
 import type { SchemaSectionState } from './schemaPresentation';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -57,6 +59,23 @@ afterEach(() => {
 });
 
 describe('SchemaFingerprints copy and responsive contract', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes all six real statistics without changing hashes or zero counts', pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><SchemaFingerprints state={state} /></div>);
+    const release = observeAppDesignScopes(view.container.firstElementChild!);
+    try {
+      const tiles = [...view.container.querySelectorAll('[data-app-metric="tile"]')];
+      expect(tiles).toHaveLength(6);
+      for (const tile of tiles) expectAppDesignDataMode(tile, APPLICATION_DESIGNS[pack].data, '[data-app-metric="tile"]');
+      expect(tiles.map(tile => tile.querySelector('[data-app-part="metric-label"]')?.textContent))
+        .toEqual(['Tables', 'Columns', 'Indexes', 'Tables', 'Columns', 'Indexes']);
+      expect(tiles.map(tile => tile.querySelector('[data-app-part="metric-value"]')?.textContent))
+        .toEqual(['1,234', '0', '48', '1,231', '0', '49']);
+      expect(screen.getByText(CURRENT_HASH, { selector: 'code' }).textContent).toBe(CURRENT_HASH);
+      expect(screen.getByText(EXPECTED_HASH, { selector: 'code' }).textContent).toBe(EXPECTED_HASH);
+      expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
+    } finally { release(); }
+  });
+
   it.each([
     { name: 'current', index: 0, hash: CURRENT_HASH },
     { name: 'expected', index: 1, hash: EXPECTED_HASH },
@@ -174,6 +193,27 @@ describe('SchemaFingerprints copy and responsive contract', () => {
     fireEvent.click(controls[0]);
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.getByText('—', { selector: 'code' })).toBeInTheDocument();
+  });
+
+  it('owns all six actual count tiles and keeps missing counts distinct from measured zero', () => {
+    if (!state.drift) throw new Error('Expected drift fixture');
+    const { container } = render(<SchemaFingerprints state={{
+      ...state,
+      drift: {
+        ...state.drift,
+        current: { ...state.drift.current, table_count: undefined as unknown as number },
+      },
+    }} />);
+    const tiles = container.querySelectorAll('[data-app-metric="tile"]');
+    expect(tiles).toHaveLength(6);
+    expect([...tiles].map(tile => tile.querySelector('[data-app-part="metric-label"]')?.textContent))
+      .toEqual(['Tables', 'Columns', 'Indexes', 'Tables', 'Columns', 'Indexes']);
+    expect(tiles[0]).toHaveAttribute('data-app-state', 'missing');
+    expect(tiles[0].querySelector('[data-app-part="metric-reading"] [data-app-part="metric-value"]')?.textContent).toBe('—');
+    expect(tiles[1]).toHaveAttribute('data-app-state', 'value');
+    expect(tiles[1].querySelector('[data-app-part="metric-value"]')?.textContent).toBe('0');
+    expect(screen.getByText(CURRENT_HASH, { selector: 'code' }).textContent).toBe(CURRENT_HASH);
+    expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
   });
 
   it('preserves the section shell through loading, empty refresh and query-error recovery', () => {

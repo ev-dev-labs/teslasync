@@ -40,10 +40,11 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
       <div className="flex flex-wrap gap-2">
         {windowS != null && total > windowS && <Badge variant="warning" size="sm">{t('teslaOnly.lifeOverlap', 'Intervals sum beyond the window; no coverage percentage is inferred')}</Badge>}
       </div>
-      <div className="space-y-2">{states.map(([name, item]) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
-        <div className="flex justify-between gap-2"><Text as="span" variant="bodySm">{name}</Text>
-          <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
-        <Text as="p" variant="caption">{t('teslaOnly.lifeIntervals', '{{count}} returned intervals', { count: item.count })}</Text>
+      <div data-app-part="metric-grid" className="space-y-2">{states.map(([name, item]) => <div data-app-part="card metric" data-app-metric="card" key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
+        <div data-app-part="metric-body" className="flex flex-wrap justify-between gap-2"><Text data-app-part="metric-label" as="span" variant="bodySm">{name}</Text>
+          <Badge data-app-part="badge metric-value metric-reading" variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total)}%` : t('teslaOnly.unknown', 'unknown')}</Badge>
+        <Text data-app-part="metric-context" as="p" variant="caption" className="basis-full">{t('teslaOnly.lifeIntervals', '{{count}} returned intervals', { count: item.count })}</Text>
+        </div>
       </div>)}</div>
       <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed park; gaps stay unknown.')}</Text>
     </Evidence>

@@ -396,7 +396,7 @@ export default function DiskForecastPage() {
                 </ResponsiveContainer>
               </EmbeddedChart>
               {!isLoading && !showError && severitySlices.length > 0 && (
-                <ul className="space-y-1.5">
+                <ul data-app-part="list" className="space-y-1.5">
                   {SEVERITY_ORDER.map((key) => (
                     <li key={key} className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
@@ -470,7 +470,7 @@ export default function DiskForecastPage() {
                 )}
               />
             ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
+              <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]">
                 {quotaWatch.map((r) => (
                   <li key={r.hypertable_name} className="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
                     <div className="min-w-0">
@@ -524,7 +524,7 @@ export default function DiskForecastPage() {
                   expandedKeys={expandedKeys}
                   onExpandedChange={setExpandedKeys}
                   renderExpanded={(row) => (
-                    <dl className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <dl data-app-part="list" className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                       {columns.map((column) => (
                         <div key={column.key} className="min-w-0 break-words">
                           <Caption as="dt">{column.header}</Caption>

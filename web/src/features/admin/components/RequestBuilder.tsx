@@ -104,7 +104,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* URL bar */}
       <div className="flex items-center gap-2">
         <MethodBadge method={endpoint.method} className="text-xs !w-14 !py-1" />
-        <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2 font-mono text-sm text-[var(--text-primary)]">
+        <code data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" data-surface-variant="standalone" className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2 font-mono text-sm text-[var(--text-primary)]">
           /api/v1{buildUrl()}
         </code>
         <UiButton
@@ -120,22 +120,26 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* Destructive action confirmation */}
       {confirmOpen && (
-        <div role="alert" className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" aria-hidden="true" />
-          <Text size="xs" className="flex-1 text-amber-300">
-            {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
-          </Text>
-          <UiButton type="button" onClick={handleSend} className="!text-xs !px-3 !py-1">
-            {t('playground.confirmYes', 'Yes, send')}
-          </UiButton>
-          <UiButton
-            type="button"
-            variant="ghost"
-            onClick={handleCancel}
-            className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
-          >
-            {t('playground.cancel', 'Cancel')}
-          </UiButton>
+        <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="warning" role="alert" className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+          <AlertTriangle data-app-part="feedback-icon" className="h-4 w-4 text-amber-400 shrink-0" aria-hidden="true" />
+          <div data-app-part="feedback-content" className="flex-1">
+            <Text data-app-part="feedback-message" size="xs" className="text-amber-300">
+              {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
+            </Text>
+          </div>
+          <div data-app-part="feedback-actions" className="flex items-center gap-3">
+            <UiButton type="button" onClick={handleSend} className="!text-xs !px-3 !py-1">
+              {t('playground.confirmYes', 'Yes, send')}
+            </UiButton>
+            <UiButton
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+              className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
+            >
+              {t('playground.cancel', 'Cancel')}
+            </UiButton>
+          </div>
         </div>
       )}
 
@@ -155,7 +159,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           </Text>
           {pathParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label htmlFor={`req-path-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
+              <label data-app-part="field-label" htmlFor={`req-path-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name} <span className="text-red-400">*</span>
               </label>
               <UiInput
@@ -181,7 +185,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           </Text>
           {queryParams.map(p => (
             <div key={p.name} className="flex items-center gap-3">
-              <label htmlFor={`req-query-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
+              <label data-app-part="field-label" htmlFor={`req-query-${p.name}`} className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">
                 {p.name}
                 {p.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
@@ -230,7 +234,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           {t('playground.authHeader', 'Authentication (optional)')}
         </Text>
         <div className="flex items-center gap-3">
-          <label htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
+          <label data-app-part="field-label" htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
           <UiInput
             id="api-key-input"
             value={apiKey}

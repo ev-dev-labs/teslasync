@@ -50,6 +50,8 @@ vi.mock('react-i18next', async () => {
 })
 
 import { ColorConverterTool } from './ColorConverter'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils'
 
 const writeText = vi.fn(() => Promise.resolve())
 
@@ -66,6 +68,23 @@ function setHex(value: string) {
 }
 
 describe('ColorConverterTool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s frames only the actual conversion outputs, not the quantitative swatch', pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><ColorConverterTool /></div>)
+    setHex('#000000')
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      const bodies = [...view.container.querySelectorAll('[data-app-code-slot="body"]')]
+      expect(bodies.map(body => body.textContent)).toEqual(['rgb(0, 0, 0)', 'hsl(0, 0%, 0%)', '#000000'])
+      for (const body of bodies) {
+        expectAppDesignDataMode(body, APPLICATION_DESIGNS[pack].data, '[data-app-code-slot="body"]')
+        expect(body).toHaveClass('font-mono', 'text-[var(--text-primary)]')
+      }
+      expect(screen.getByRole('img')).toHaveStyle({ backgroundColor: '#000000' })
+      expect(screen.getByRole('img')).not.toHaveAttribute('data-app-part')
+      expect(screen.getAllByRole('button', { name: 'Copy' })).toHaveLength(3)
+    } finally { release() }
+  })
+
   it('renders RGB, HSL and HEX conversions for the default seed color', () => {
     render(<ColorConverterTool />)
 
@@ -76,6 +95,13 @@ describe('ColorConverterTool', () => {
 
     // One copy affordance per conversion cell.
     expect(screen.getAllByRole('button', { name: 'Copy' })).toHaveLength(3)
+    for (const label of ['RGB', 'HSL', 'HEX']) {
+      const cell = screen.getByText(label).closest('[data-app-panel-kind="code"]')!
+      expect(cell).toHaveAttribute('data-app-part', 'panel')
+      expect(cell.querySelector('[data-app-code-slot="heading"]')?.textContent).toBe(label)
+      expect(cell.querySelector('[data-app-code-slot="body"]')).toHaveClass('font-mono')
+    }
+    expect(screen.getByRole('img')).not.toHaveAttribute('data-app-part')
     // No guidance status while the value is valid.
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })

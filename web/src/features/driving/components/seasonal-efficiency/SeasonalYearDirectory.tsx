@@ -31,21 +31,21 @@ export function SeasonalYearDirectory({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {analysis.years.map((year) => (
-                <div key={year.year} className="rounded-lg border border-[var(--panel-border)] p-3">
+                <div data-app-part="card" data-surface-variant="standalone" key={year.year} className="rounded-lg border border-[var(--panel-border)] p-3">
                   <div className="flex items-center justify-between">
                     <Text variant="subhead">{year.year}</Text>
                     <Text variant="caption">{t('seasonalEfficiency.yearDirectory.samples', '{{count}} samples', { count: year.sampleCount })}</Text>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div>
-                      <Text variant="caption">{t('seasonalEfficiency.yearDirectory.observed', 'Observed')}</Text>
-                      <Text variant="bodySm" as="p">{formatIntensityWhPerM(year.observedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
+                  <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid grid-cols-2 gap-2">
+                    <div data-app-part="list-row">
+                      <Text data-app-part="metric-label" variant="caption" as="dt">{t('seasonalEfficiency.yearDirectory.observed', 'Observed')}</Text>
+                      <Text data-app-part="metric-reading" variant="bodySm" as="dd"><span data-app-part="metric-value">{formatIntensityWhPerM(year.observedEnergyIntensityWhPerM, units.unitPrefs)}</span></Text>
                     </div>
-                    <div>
-                      <Text variant="caption">{t('seasonalEfficiency.yearDirectory.adjusted', 'Deseasonalized')}</Text>
-                      <Text variant="bodySm" as="p">{formatIntensityWhPerM(year.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
+                    <div data-app-part="list-row">
+                      <Text data-app-part="metric-label" variant="caption" as="dt">{t('seasonalEfficiency.yearDirectory.adjusted', 'Deseasonalized')}</Text>
+                      <Text data-app-part="metric-reading" variant="bodySm" as="dd"><span data-app-part="metric-value">{formatIntensityWhPerM(year.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs)}</span></Text>
                     </div>
-                  </div>
+                  </dl>
                   <Text variant="caption" as="p" className="mt-2">
                     {t('seasonalEfficiency.yearDirectory.distance', '{{distance}} observed distance', {
                       distance: units.formatDistance(year.distanceM),

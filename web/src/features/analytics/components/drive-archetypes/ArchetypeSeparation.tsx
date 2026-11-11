@@ -34,7 +34,7 @@ export function ArchetypeSeparation({
           )}
         </Text>
         <ArchetypeSectionBody summary={summary} state={state}>
-          <ul className="grid gap-3 lg:grid-cols-2">
+          <ul data-app-part="list" data-app-list="records" className="grid gap-3 lg:grid-cols-2">
             {summary.clusters.map((cluster) => {
               const nearest = summary.clusters.find(
                 (candidate) => candidate.index === cluster.nearestClusterIndex,
@@ -48,14 +48,17 @@ export function ArchetypeSeparation({
               return (
                 <li
                   key={cluster.index}
+                  data-app-part="card list-row"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <Text as="h4" variant="label">
+                      <Text data-app-part="record-title" as="h4" variant="label">
                         {archetypeIdentity(t, cluster.index, cluster.label)}
                       </Text>
-                      <Text as="p" variant="caption" className="mt-1">
+                      <Text data-app-part="record-context" as="p" variant="caption" className="mt-1">
                         {nearest
                           ? t(
                               'archetypes.separation.nearest',
@@ -79,16 +82,18 @@ export function ArchetypeSeparation({
                       )}
                     </Badge>
                   </div>
+                  <div data-app-part="record-body">
                   <Table className="mt-4" aria-label={archetypeIdentity(t, cluster.index, cluster.label)}>
                     <tbody>
                     {metrics.map(([label, value]) => (
-                      <tr key={label}>
-                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
-                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      <tr data-app-part="table-row" key={label}>
+                        <th data-app-part="table-cell" scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td data-app-part="table-cell" className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
                       </tr>
                     ))}
                     </tbody>
                   </Table>
+                  </div>
                 </li>
               );
             })}

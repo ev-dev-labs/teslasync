@@ -46,6 +46,11 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 import { OptimizerSection } from './OptimizerSection';
 import { gaugeColor } from '@/test/gaugeTestUtils';
@@ -364,6 +369,45 @@ describe('OptimizerSection — cost heatmap (always-on panel)', () => {
 });
 
 describe('OptimizerSection — recommendations', () => {
+  it('activates the existing painted card and badge consumers for every complete design without rewriting recommendations', () => {
+    const surfaceSelectors: string[] = [];
+    const badgeSelectors: string[] = [];
+    postcss.parse(readFileSync(resolve(process.cwd(),
+      'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8')).walkRules(rule => {
+      if (rule.selector.includes('[data-app-part~="card"]')
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-width')) {
+        surfaceSelectors.push(...rule.selectors);
+      }
+      if (rule.selector.includes('[data-app-part~="badge"]')
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'overflow-wrap')) {
+        badgeSelectors.push(...rule.selectors);
+      }
+    });
+    const optimizer = makeOptimizer();
+    const original = structuredClone(optimizer);
+    const { container } = render(<OptimizerSection optimizer={optimizer} />);
+    container.setAttribute('data-app-design-preview', '');
+    const records = baseRecs.map(rec => screen.getByText(rec.title).closest('[data-app-part="card"]')!);
+    const chips = records.flatMap(record => Array.from(record.querySelectorAll('[data-app-part="badge"]')));
+    expect(chips).toHaveLength(4);
+    expect(records.every(record => !surfaceSelectors.some(selector => record.matches(selector)))).toBe(true);
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        records.forEach((record, index) => {
+          expect(surfaceSelectors.some(selector => record.matches(selector)), pack).toBe(true);
+          expect(record).toHaveTextContent(baseRecs[index].title);
+          expect(record).toHaveTextContent(baseRecs[index].detail);
+        });
+        chips.forEach(chip => expect(badgeSelectors.some(selector => chip.matches(selector)), pack).toBe(true));
+        expect(screen.getByText('Monthly savings: ~24.00')).toHaveAttribute('title',
+          'Recorded cost; the source does not supply a currency denomination. No currency conversion is applied.');
+      } finally { release(); }
+    }
+    expect(optimizer).toEqual(original);
+  });
+
   it('lists each recommendation with its title, priority and conditional savings chip', () => {
     renderSection();
 
@@ -385,6 +429,13 @@ describe('OptimizerSection — recommendations', () => {
     // Only the positive source estimate receives a savings chip.
     expect(screen.getByText('Monthly savings: ~24.00')).toBeInTheDocument();
     expect(screen.queryByText('Monthly savings: ~0.00')).toBeNull();
+    for (const rec of baseRecs) {
+      const record = screen.getByText(rec.title).closest('[data-app-part="card"]');
+      expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(record).toHaveTextContent(rec.detail);
+      expect(within(record as HTMLElement).getByText(rec.priority)).toHaveAttribute('data-app-part', 'badge');
+    }
+    expect(screen.getByText('Monthly savings: ~24.00')).toHaveAttribute('data-app-part', 'badge');
   });
 
   it('renders the labelled empty state (never a blank panel) when there are none', () => {

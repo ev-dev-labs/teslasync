@@ -108,14 +108,16 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
             period={period}
             retained={Boolean(state.refreshError)}
           />
-          <div className="space-y-1">
+          <dl data-app-part="list" data-app-list="definitions" className="space-y-1">
             {driveCategories.map(([category, count]) => (
-              <div key={category} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                <Text variant="caption">{categoryLabel(category)}</Text>
-                <Badge variant={category === 'included' ? 'success' : 'neutral'}>{fmtInt(count)}</Badge>
+              <div key={category} data-app-part="card list-row" data-surface-variant="standalone" className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                <Text as="dt" variant="caption" data-app-part="metric-label">{categoryLabel(category)}</Text>
+                <dd data-app-part="metric-reading metric-value">
+                  <Badge variant={category === 'included' ? 'success' : 'neutral'}>{fmtInt(count)}</Badge>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </ChargeAdvisorSection>
         <ChargeAdvisorSection
           title={t('chargeAdvisor.accounting.charging', 'Charging rows')}
@@ -134,14 +136,16 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
             period={period}
             retained={Boolean(state.refreshError)}
           />
-          <div className="space-y-1">
+          <dl data-app-part="list" data-app-list="definitions" className="space-y-1">
             {chargingCategories.map(([category, count]) => (
-              <div key={category} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                <Text variant="caption">{categoryLabel(category)}</Text>
-                <Badge variant={category === 'included' ? 'success' : 'neutral'}>{fmtInt(count)}</Badge>
+              <div key={category} data-app-part="card list-row" data-surface-variant="standalone" className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                <Text as="dt" variant="caption" data-app-part="metric-label">{categoryLabel(category)}</Text>
+                <dd data-app-part="metric-reading metric-value">
+                  <Badge variant={category === 'included' ? 'success' : 'neutral'}>{fmtInt(count)}</Badge>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </ChargeAdvisorSection>
       </div>
       <Text as="p" variant="caption" className="mt-4">

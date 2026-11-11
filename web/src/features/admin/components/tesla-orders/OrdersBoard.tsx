@@ -28,7 +28,7 @@ export function OrdersBoard({ orders }: OrdersBoardProps) {
   const items = orders ?? [];
 
   return (
-    <ul
+    <ul data-app-part="list"
       aria-label={t('admin.teslaOrders.board.aria', 'Orders board')}
       className="m-0 grid gap-3 p-0 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]"
     >

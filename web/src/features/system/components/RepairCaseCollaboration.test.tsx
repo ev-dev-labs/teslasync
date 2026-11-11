@@ -85,6 +85,10 @@ describe('RepairCaseCollaboration visible assignee label', () => {
     expect(screen.getByRole('heading', { name: catalog.dataRepair.cases.assignmentTitle })).toBeVisible();
     expect(screen.getByRole('heading', { name: catalog.dataRepair.cases.activityTitle })).toBeVisible();
     expect(screen.getByText('Evidence reviewer')).toBeVisible();
+    expect(screen.getByText('Evidence reviewer')).toHaveAttribute('data-app-record-slot', 'label');
+    const record = screen.getByText('Evidence reviewer').closest('[data-app-record-kind="repair-note"]');
+    expect(record?.querySelector('[data-app-record-slot="context"]')).toBeVisible();
+    expect(record?.querySelector('[data-app-record-slot="body"]')?.textContent).toBe(comments[0].body);
     expect(screen.getByText(/Original full note/).textContent).toBe(comments[0].body);
     expect(transport).not.toHaveBeenCalled();
   });

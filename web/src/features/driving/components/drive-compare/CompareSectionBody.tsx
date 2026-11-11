@@ -66,7 +66,7 @@ export function CompareSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t('driveCompare.loading', 'Loading drive comparison')}
         className={cn('py-4', classes)}

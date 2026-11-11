@@ -43,7 +43,7 @@ export function WorkerJobsDrawer({ worker, displayName, open, onClose }: {
           fatalMessage={<Text variant="error">{t('queueStatus.drawer.error', 'Could not load recent jobs. Check API logs and try again.')}</Text>}
           loadingContent={<ListSkeleton rows={4} label={t('queueStatus.drawer.loading', 'Loading recent jobs…')} testId="queue-job-drawer-loading" />}>
           {jobs.length === 0 ? <Text variant="bodySm" data-testid="queue-job-drawer-empty">{t('queueStatus.drawer.empty', 'No recent jobs to show. New jobs will appear here as the worker processes them.')}</Text>
-            : <ul className="space-y-3" data-testid="queue-job-drawer-list">{jobs.map((job) => {
+            : <ul data-app-part="list" className="space-y-3" data-testid="queue-job-drawer-list">{jobs.map((job) => {
               const duration = durationMs(job);
               return <li key={job.id} className="min-w-0 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] p-3" data-testid={`queue-job-row-${job.id}`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">

@@ -99,13 +99,14 @@ export function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCap
               ) : null)}
             </div>}
             {showTou && (
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+                className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <div data-app-part="record-header" className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <Text as="p" variant="caption" className="mb-0.5 inline-flex items-center gap-1">
+                    <Text data-app-part="record-title" as="p" variant="caption" className="mb-0.5 inline-flex items-center gap-1">
                       <Clock className="h-3 w-3" aria-hidden="true" />{t('energy.tou.sectionTitle', 'Rate Plan')}
                     </Text>
-                    <Text as="p" variant="body" className="break-words font-medium">
+                    <Text data-app-part="record-context" as="p" variant="body" className="break-words font-medium">
                       {tariffName ?? t('energy.tou.noPlan', 'No rate plan configured')}
                     </Text>
                   </div>

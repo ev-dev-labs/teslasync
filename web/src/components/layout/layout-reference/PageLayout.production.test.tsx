@@ -3,9 +3,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import type { FreshnessQuery } from '@/components/data-display/FreshnessDot';
 import { Button } from '@/components/ui/Button';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { getAppDesignAttributes } from '@/components/ui/app-designs/designs';
 import { PageLayout, type PageLayoutProps } from './PageLayout';
+import { Section } from './Section';
+import { Grid } from '../Grid';
 
 function renderPage(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -28,6 +33,87 @@ function query(overrides: Partial<FreshnessQuery> = {}): FreshnessQuery {
 }
 
 describe('PageLayout production composition', () => {
+  it.each(['classic', 'v4'] as const)(
+    'portals actual title, freshness and copy-link help only inside the %s PageLayout header',
+    async pack => {
+      const user = userEvent.setup();
+      const { container, unmount } = renderPage(
+        <section data-app-design-preview="" {...getAppDesignAttributes(pack)} dir="rtl" lang="ar">
+          <PageLayout title="Energy flow" subtitle="Power distribution and energy analysis"
+            query={[query(), query()]} copyLink>
+            <Tooltip content="Retained body explanation"><Button>Body control</Button></Tooltip>
+          </PageLayout>
+        </section>,
+      );
+      const heading = screen.getByRole('heading', { name: 'Energy flow', level: 1 });
+      const header = heading.closest('header')!;
+      const triggers = [
+        within(header).getByRole('button', { name: 'More info: Energy flow', exact: true }),
+        within(header).getByRole('button', { name: /^Refresh data ·/ }),
+        within(header).getByRole('button', { name: 'Copy link to this view', exact: true }),
+      ];
+      expect(screen.getAllByRole('tooltip')).toHaveLength(4);
+      for (const trigger of triggers) {
+        const tooltip = document.getElementById(trigger.getAttribute('aria-describedby')!)!;
+        expect(tooltip).toHaveAttribute('role', 'tooltip');
+        expect(tooltip).toHaveClass('fixed', 'opacity-0');
+        expect(container).not.toContainElement(tooltip);
+        const boundary = tooltip.closest('[data-app-design-portal]');
+        expect(boundary?.parentElement).toBe(document.body);
+        expect(boundary).toHaveAttribute('dir', 'rtl');
+        expect(boundary).toHaveAttribute('lang', 'ar');
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) {
+          expect(boundary).toHaveAttribute(name, value);
+        }
+        expect(tooltip).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        const fullCopy = tooltip.textContent;
+        await user.hover(trigger);
+        expect(tooltip).toHaveClass('opacity-100');
+        await user.unhover(trigger);
+        expect(tooltip).toHaveClass('opacity-0');
+        await user.tab();
+        expect(trigger).toHaveFocus();
+        expect(tooltip).toHaveClass('opacity-100');
+        expect(tooltip.textContent).toBe(fullCopy);
+        await user.keyboard('{Escape}');
+        expect(trigger).toHaveFocus();
+        expect(tooltip).toHaveClass('!opacity-0');
+      }
+      const bodyTrigger = screen.getByRole('button', { name: 'Body control' });
+      const bodyTooltip = document.getElementById(bodyTrigger.getAttribute('aria-describedby')!)!;
+      expect(container).toContainElement(bodyTooltip);
+      expect(bodyTooltip).toHaveClass('absolute');
+      expect(bodyTooltip.closest('[data-app-design-portal]')).toBeNull();
+      expect(bodyTooltip).toHaveTextContent('Retained body explanation');
+      unmount();
+      expect(document.querySelector('[data-app-design-portal]')).toBeNull();
+    },
+  );
+
+  it('marks the real reference section and grid without introducing a layout around arbitrary page children', () => {
+    const { container } = renderPage(
+      <PageLayout title="Drive report">
+        <Section id="measured" title="Measured evidence" description="Source and period">
+          <Grid cols={{ default: 1, md: 2 }} className="md:grid-cols-3">
+            <div>Measured chart</div><div>Retained details</div>
+          </Grid>
+        </Section>
+        <aside aria-label="Independent workflow">Independent workflow</aside>
+      </PageLayout>,
+    );
+    const content = container.querySelector('[data-layout-reference]')!;
+    expect(content).toHaveAttribute('data-app-part', 'page-content stack');
+    const section = screen.getByRole('region', { name: 'Measured evidence' });
+    expect(section).toHaveAttribute('data-app-part', 'section');
+    expect(section.parentElement).toBe(content);
+    expect(Array.from(content.children)).toEqual([section, screen.getByRole('complementary', { name: 'Independent workflow' })]);
+    const grid = section.querySelector('[data-card-layout="grid"]');
+    expect(grid).toHaveAttribute('data-app-part', 'grid');
+    expect(grid).toHaveClass('md:grid-cols-3');
+    expect(grid).not.toHaveClass('md:grid-cols-2');
+    expect(Array.from(grid?.children ?? []).map(child => child.textContent)).toEqual(['Measured chart', 'Retained details']);
+  });
+
   it('keeps one canonical header and all ordered content inside the full-width container', () => {
     const { container } = renderPage(
       <PageLayout title="Drive report" className="w-full print:block">

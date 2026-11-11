@@ -65,27 +65,31 @@ export function CronParserTool() {
         )}
 
         {trimmed !== '' && !isValid && (
-          <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-            <p className="text-sm text-amber-300">
-              {t('devtools.utils.cronInvalid', 'Invalid cron expression')}.{' '}
-              {t('devtools.utils.cronFieldsHint', 'Enter all 5 cron fields: minute, hour, day, month, weekday')}
-            </p>
+          <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="warning" role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+            <div data-app-part="feedback-content">
+              <p data-app-part="feedback-message" className="text-sm text-amber-300">
+                {t('devtools.utils.cronInvalid', 'Invalid cron expression')}.{' '}
+                {t('devtools.utils.cronFieldsHint', 'Enter all 5 cron fields: minute, hour, day, month, weekday')}
+              </p>
+            </div>
           </div>
         )}
 
         {isValid && (
           <>
-            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronDescription', 'Description')}</span>
-              <p className="text-sm text-emerald-300">{description || '—'}</p>
+            <div data-app-part="list" data-app-list="definitions">
+              <div data-app-part="list-row" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+                <span data-app-part="metric-label" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronDescription', 'Description')}</span>
+                <p data-app-part="metric-value" className="text-sm text-emerald-300">{description || '—'}</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next runs')}</span>
+            <div data-app-part="list" data-app-list="ranked" className="space-y-1">
+              <span data-app-part="list-heading" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next runs')}</span>
               {nextRuns.length > 0 ? (
                 nextRuns.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
-                    <Badge variant="info" size="sm">{fmtInt(i + 1)}</Badge>
-                    <span className="text-xs font-mono text-[var(--text-secondary)]">{formatDateTime(d)}</span>
+                  <div data-app-part="list-row" key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
+                    <Badge data-app-part="badge metric-label" variant="info" size="sm">{fmtInt(i + 1)}</Badge>
+                    <span data-app-part="metric-value" className="text-xs font-mono text-[var(--text-secondary)]">{formatDateTime(d)}</span>
                   </div>
                 ))
               ) : (

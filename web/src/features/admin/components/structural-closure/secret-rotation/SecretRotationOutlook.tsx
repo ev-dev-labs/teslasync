@@ -82,7 +82,7 @@ export function SecretRotationOutlook({ controller }: Props) {
                 )}
               />
             ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
+              <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]">
                 {expiryWatch.map((r) => (
                   <li key={rowKey(r)} className="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
                     <div className="min-w-0">

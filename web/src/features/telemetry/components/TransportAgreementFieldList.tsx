@@ -43,7 +43,7 @@ export function TransportAgreementFieldList({ fields }: TransportAgreementFieldL
           className="py-8"
         />
       ) : (
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2" role="list">
+        <div data-app-part="list" className="grid grid-cols-1 gap-2 lg:grid-cols-2" role="list">
           {visibleFields.map((field) => (
             <div
               key={field.field}

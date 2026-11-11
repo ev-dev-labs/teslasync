@@ -87,6 +87,34 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   const needsCssDarkening = tiles === freeTiles && t === tiles.dark
   useEffect(() => {
     const container = map.getContainer()
+    const parts = (container.getAttribute('data-app-part') ?? '').split(/\s+/).filter(Boolean)
+    if (parts.includes('map')) return
+    container.setAttribute('data-app-part', [...parts, 'map'].join(' '))
+    return () => {
+      const remaining = (container.getAttribute('data-app-part') ?? '')
+        .split(/\s+/).filter(part => part && part !== 'map')
+      if (remaining.length) container.setAttribute('data-app-part', remaining.join(' '))
+      else container.removeAttribute('data-app-part')
+    }
+  }, [map])
+  useEffect(() => {
+    const container = map.getContainer()
+    // Popup remains a native export; annotate the DOM Leaflet actually opens
+    // so pack identity rules can reach it without replacing the overlay.
+    const markPopups = () => {
+      container.querySelectorAll('.leaflet-popup-content-wrapper').forEach(popup => {
+        const parts = (popup.getAttribute('data-app-part') ?? '').split(/\s+/).filter(Boolean)
+        if (!parts.includes('map-popup')) {
+          popup.setAttribute('data-app-part', [...parts, 'map-popup'].join(' '))
+        }
+      })
+    }
+    markPopups()
+    map.on('popupopen', markPopups)
+    return () => { map.off('popupopen', markPopups) }
+  }, [map])
+  useEffect(() => {
+    const container = map.getContainer()
     container.classList.toggle('map-style-dark', needsCssDarkening)
     return () => {
       container.classList.remove('map-style-dark')
@@ -108,24 +136,7 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   )
 }
 
-/** Forces Leaflet to recalculate tile positions after the container mounts or resizes. */
-export function MapInvalidator() {
-  const map = useMap()
-  useEffect(() => {
-    const invalidate = () => map.invalidateSize({ animate: false })
-    const timer = setTimeout(invalidate, 100)
-    const container = map.getContainer()
-    const observer = container && typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(invalidate)
-      : undefined
-    if (container && observer) observer.observe(container)
-    return () => {
-      clearTimeout(timer)
-      observer?.disconnect()
-    }
-  }, [map])
-  return null
-}
+export { MapInvalidator } from './MapInvalidator'
 
 /**
  * Fullscreen overlay for leaflet maps.
@@ -194,6 +205,8 @@ export function MapFullscreenControl({
 
   return createPortal(
     <div
+      data-app-part="map-toolbar"
+      data-map-control="fullscreen"
       // Sits above the leaflet panes (z-400 is above marker
       // shadows = 600… leaflet's own controls live at 800; we use
       // 800 here so the button stays clickable above marker

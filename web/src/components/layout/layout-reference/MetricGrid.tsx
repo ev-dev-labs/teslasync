@@ -18,6 +18,7 @@ export function MetricGrid({ children, label, className }: MetricGridProps) {
   return (
     <div
       data-metric-grid
+      data-app-part="grid"
       role={label ? 'group' : undefined}
       aria-label={label}
       className={cn(

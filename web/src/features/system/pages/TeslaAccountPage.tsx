@@ -177,14 +177,14 @@ export default function TeslaAccountPage() {
               {t('teslaAccount.sync.title', 'Sync')}
             </Heading>
             <div className="space-y-4">
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-                <Label>{t('teslaAccount.sync.lastSynced', 'Last synced')}</Label>
+              <div data-app-part="metric" data-app-metric="tile" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+                <Label data-app-part="metric-label">{t('teslaAccount.sync.lastSynced', 'Last synced')}</Label>
                 {isLoading ? (
                   <Skeleton className="mt-2 h-10 w-full" />
                 ) : (
-                <div className="mt-1 flex items-center gap-2">
+                <div data-app-part="metric-reading" className="mt-1 flex items-center gap-2">
                   <Icon icon={Clock} className="text-[var(--text-muted)]" />
-                  <Text as="span" variant="body">
+                  <Text as="span" variant="body" data-app-part="metric-value">
                     {syncStatus === 'synced' ? formatRelative(fetchedAt)
                       : isError ? t('common.unavailable', 'Unavailable')
                       : syncStatus === 'never-synced' ? t('teslaAccount.neverSyncedShort', 'Not synced yet')
@@ -192,7 +192,7 @@ export default function TeslaAccountPage() {
                   </Text>
                 </div>
                 )}
-                {syncStatus === 'synced' && <Caption className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
+                {syncStatus === 'synced' && <Caption data-app-part="metric-context" className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
               </div>
               <IconButton icon={<Icon icon={RefreshCw} />} label={t('teslaAccount.refresh', 'Refresh from Tesla')} onClick={refresh} busy={refreshMutation.isPending} disabled={!canWrite} />
               <HelperText>

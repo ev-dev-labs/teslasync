@@ -636,19 +636,13 @@
   "draft": {
     "recovery": {
       "close": "Close",
-      "discard": "Discard",
       "dismiss": "Dismiss",
-      "empty": "No drafts to restore.",
-      "fallbackLabel": "Unsaved draft",
-      "modalBody": "These drafts were saved in your browser before this session. Resume to continue editing or discard to clear them.",
       "modalTitle": "Restore unsaved drafts",
       "promptBody": "You have {{count}} unsaved drafts from a previous session.",
       "promptBody_one": "You have {{count}} unsaved draft from a previous session.",
       "promptBody_other": "You have {{count}} unsaved drafts from a previous session.",
       "promptTitle": "Unsaved drafts restored",
-      "resume": "Resume",
-      "review": "Review",
-      "savedAt": "Saved {{when}}"
+      "review": "Review"
     }
   },
   "editableText": {
@@ -715,7 +709,9 @@
       "title": "Waiting for upstream"
     }
   },
-  "errorBoundary": {},
+  "errorBoundary": {
+    "inlineTitle": "Component failed to load"
+  },
   "errorHelp": {
     "title": "Where to look next"
   },
@@ -819,21 +815,15 @@
       "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
       "soh": "State of health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%."
     },
-    "feedback": "Open feedback / bug report form",
-    "feedbackLabel": "Report a problem",
     "lifetime": {
       "avgEfficiency": "Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers."
     },
-    "shortcuts": "Open keyboard shortcuts",
-    "shortcutsLabel": "Keyboard shortcuts",
     "signal": {
       "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up."
     },
     "tooltip": {
       "iconLabel": "More info"
     },
-    "tour": "Open tour launcher",
-    "tourLabel": "Take a tour",
     "vampireDrain": {
       "body": "Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows."
     }
@@ -2048,7 +2038,6 @@
       "open": "Open Helix chat"
     },
     "help": {
-      "about": "About TeslaSync",
       "buildNews": "Update or release notes available",
       "open": "Open help and about",
       "short": "Help",
@@ -2093,20 +2082,7 @@
       "tooltip": "Recently viewed pages"
     },
     "version": {
-      "appVersion": "App version",
-      "aria": "TeslaSync version",
-      "changelog": "Release notes",
-      "chart": "Helm chart",
-      "close": "Close",
-      "commit": "Commit",
-      "go": "Go runtime",
-      "modalTitle": "About this build",
-      "platform": "Platform",
-      "tooltip": "TeslaSync version",
-      "updateAvailable": "Update available",
-      "updateBanner": "A newer release is available",
-      "uptime": "up {{uptime}}",
-      "uptimeLabel": "Server uptime"
+      "modalTitle": "About this build"
     }
   },
   "table": {

@@ -41,6 +41,7 @@ export function OperationalModeBadge({
   return (
     <Tooltip content={operationalMode.description} multiline>
       <Badge
+        data-app-part="status badge"
         variant={config.variant}
         role="status"
         aria-label={operationalMode.description}

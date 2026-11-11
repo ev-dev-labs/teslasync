@@ -79,6 +79,8 @@ export function ToggleCommandTile({ def, state, stateTrust, onExecute, onRequest
 
   return (
     <GlassPanel
+      data-app-part="panel button"
+      data-app-variant="secondary"
       role="button"
       tabIndex={loading || disabled || isOn === null ? -1 : 0}
       aria-label={label}

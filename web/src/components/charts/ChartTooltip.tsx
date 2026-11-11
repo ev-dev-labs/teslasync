@@ -138,11 +138,12 @@ export function ChartTooltipBase({
 
   return (
     <div
+      data-app-part="chart-tooltip"
       role="tooltip"
       aria-live="polite"
       className="min-w-0 max-w-tooltip-viewport rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 shadow-e2"
     >
-      <Text as="p" size="xs" weight="medium" color="secondary" className="mb-2 break-words">
+      <Text as="p" size="xs" weight="medium" color="secondary" className="mb-2 break-words" data-chart-tooltip-label>
         {displayLabel}
       </Text>
       {payload.map((p, i) => {
@@ -165,14 +166,15 @@ export function ChartTooltipBase({
         }
 
         return (
-          <div key={`${defaultName}-${i}`} className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5">
+          <div key={`${defaultName}-${i}`} data-chart-tooltip-row className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5">
             <span
+              data-chart-tooltip-swatch
               aria-hidden="true"
               className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: p.color || p.fill }}
             />
-            <Text size="xs" color="secondary" className="min-w-0 break-words">{displayName}:</Text>
-            <Text size="xs" weight="medium" color="primary" mono className="min-w-0 break-words tabular-nums">
+            <Text size="xs" color="secondary" className="min-w-0 break-words" data-chart-tooltip-name>{displayName}:</Text>
+            <Text size="xs" weight="medium" color="primary" mono className="min-w-0 break-words tabular-nums" data-chart-tooltip-value>
               {displayValue}
             </Text>
           </div>

@@ -193,10 +193,39 @@ describe('VehicleMultiSelect', () => {
       onChange={onChange} disabled errorKey="notifications.alertStudio.editor.vehiclesSummaryNone" />);
     const trigger = screen.getByRole('button');
     expect(trigger).toHaveAttribute('id', 'recipient-scope');
+    expect(trigger).toHaveAttribute('data-invalid', 'true');
     expect(trigger).toHaveAttribute('aria-describedby', 'recipient-scope-error');
     expect(trigger).toBeDisabled();
     expect(trigger.parentElement).toHaveClass('recipient-picker');
     expect(screen.getByRole('alert')).toHaveAttribute('id', 'recipient-scope-error');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, ''])('clears invalid metadata with errorKey=%s without changing selection or focus', (errorKey) => {
+    const onChange = vi.fn();
+    const value: VehicleSelection = { kind: 'specific', vehicle_ids: [2, 99] };
+    const props = { id: 'validation-scope', value, vehicles: VEHICLES, onChange };
+    const { rerender } = render(<VehicleMultiSelect {...props}
+      errorKey="notifications.alertStudio.editor.vehiclesSummaryNone" />);
+    const trigger = screen.getByRole('button');
+    expect(trigger).toHaveAttribute('data-invalid', 'true');
+    expect(trigger).toHaveAttribute('aria-describedby', 'validation-scope-error');
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'validation-scope-error');
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    const sentinel = screen.getByTestId('vehicle-multiselect-option-all_sticky_sentinel');
+    expect(sentinel).toHaveFocus();
+
+    rerender(<VehicleMultiSelect {...props} errorKey={errorKey} />);
+
+    expect(trigger).not.toHaveAttribute('data-invalid');
+    expect(trigger).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('group')).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-multiselect-option-2')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('vehicle-multiselect-option-unknown-99')).toHaveAttribute('aria-checked', 'true');
+    expect(sentinel).toHaveFocus();
+    fireEvent.keyDown(sentinel, { key: 'Escape' });
+    expect(trigger).toHaveFocus();
     expect(onChange).not.toHaveBeenCalled();
   });
 

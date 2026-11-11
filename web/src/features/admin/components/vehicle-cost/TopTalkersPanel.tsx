@@ -55,7 +55,7 @@ export function TopTalkersPanel({
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : loading && items.length === 0 ? (
-        <div
+        <div data-app-part="status"
           className="space-y-3"
           role="status"
           aria-busy="true"
@@ -72,7 +72,7 @@ export function TopTalkersPanel({
           action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
         />
       ) : (
-        <ul
+        <ul data-app-part="list"
           className="space-y-3"
           aria-label={t(
             'admin.vehicleCost.topTalkersListLabel',

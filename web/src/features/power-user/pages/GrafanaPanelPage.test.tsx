@@ -37,6 +37,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 // Canonical localStorage key the page persists the editor draft under.
 // Kept in sync with GRAFANA_PANEL_DRAFT_KEY in the source module (the
@@ -152,6 +156,43 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('GrafanaPanelPage', () => {
+  it('activates each real catalog family and leaves nested schema descriptions and editor payload intact', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = renderPage();
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      for (const [kind, count] of [['grafana-panel-type', 8], ['grafana-datasource', 2], ['grafana-table', 5]] as const) {
+        const records = container.querySelectorAll(`[data-app-record-kind="${kind}"]`);
+        expect(records).toHaveLength(count);
+        for (const record of records) {
+          expect(record.tagName).toBe('LI');
+          expect(record).toHaveAttribute('data-app-card-kind', 'record');
+          expect(record.querySelector('[data-app-part~="record-title"]')).not.toBeNull();
+          expect(record.querySelector('[data-app-part~="record-body"]')).not.toBeNull();
+          const matches: string[] = [];
+          postcss.parse(feedbackCss).walkRules(rule => {
+            if (rule.selector.includes('[data-app-card-kind="record"]') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'display')) {
+              matches.push(...rule.selectors.filter(selector => record.matches(selector)));
+            }
+          });
+          expect(matches.length).toBeGreaterThan(0);
+          record.removeAttribute('data-app-design-owner');
+          expect(matches.every(selector => !record.matches(selector))).toBe(true);
+        }
+      }
+      expect(container.querySelectorAll('[data-app-record-kind="grafana-table"] > ul > li')).toHaveLength(33);
+      expect(container.querySelectorAll('[data-app-record-kind="grafana-table"] > ul > li[data-app-record-kind]')).toHaveLength(0);
+      const draft = '  {"title":"No import or live connection inferred"}  ';
+      fireEvent.change(getEditor(), { target: { value: draft } });
+      expect(getEditor()).toHaveValue(draft);
+      expect(screen.getByText('uid=tesla-postgres')).toBeVisible();
+      expect(screen.getByText('uid=tesla-prometheus')).toBeVisible();
+      expect(clipboardWriteText).not.toHaveBeenCalled();
+    } finally { release(); }
+  });
+
   it('associates the visible editor label and manual-copy guidance across draft edits', () => {
     renderPage();
     const editor = getEditor();

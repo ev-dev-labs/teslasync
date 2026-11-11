@@ -46,6 +46,15 @@ describe('FSMStateDiagram', () => {
       <FSMStateDiagram fsmType="vehicle" transitions={[mk({ to_state: 'driving' })]} />,
     );
     const current = screen.getByTestId('fsm-node-driving');
+    const chart = current.closest('[data-chart-family="state-machine"]');
+    expect(chart).toHaveAttribute('data-app-part', 'panel chart');
+    expect(chart?.querySelector('[data-app-part="chart-header"]')).toContainElement(
+      screen.getByRole('heading', { name: 'State diagram' }),
+    );
+    expect(current).toHaveAttribute('data-chart-readout', 'state');
+    expect(within(current).getByText('driving')).toHaveAttribute('data-app-part', 'metric-label');
+    expect(current.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('1');
+    expect(chart?.querySelector('[data-chart-readout="edge"] [data-app-part~="metric-reading"]')).toHaveTextContent(`${MUL}1`);
     expect(current).toHaveAttribute('aria-current', 'true');
     expect(current).toHaveClass('border-[var(--text-secondary)]', 'bg-[var(--surface-2)]');
     expect(within(current).getByText('current state')).not.toHaveClass('sr-only');
@@ -58,6 +67,7 @@ describe('FSMStateDiagram', () => {
     rerender(<FSMStateDiagram fsmType="vehicle" transitions={[]} />);
     expect(screen.queryByText('current state')).toBeNull();
     expect(current).not.toHaveAttribute('aria-current');
+    expect(current.querySelector('[data-app-part~="metric-reading"]')).not.toBeInTheDocument();
     expect(screen.queryByTestId('fsm-edge-summary')).not.toBeInTheDocument();
   });
 

@@ -43,7 +43,7 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
       ) : physics ? (
         <>
           <Text as="p" variant="caption">{physics.honesty}</Text>
-          <ol className="flex flex-wrap gap-2">
+          <ol data-app-part="list" className="flex flex-wrap gap-2">
             {(physics.story ?? []).map((phase) => (
               <li key={`${phase.state}-${phase.started_at}`}>
                 <Badge variant={phase.at_limit ? 'success' : 'neutral'} size="sm">

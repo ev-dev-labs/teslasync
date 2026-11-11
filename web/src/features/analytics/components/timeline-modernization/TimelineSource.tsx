@@ -40,7 +40,7 @@ export function TimelineSource({ source, label, children }: TimelineSourceProps)
       return <EmptyState message={t('timeline.source.paused', '{{section}} is paused while the connection is unavailable', { section: label })} />;
     }
     if (source.loading) {
-      return <div role="status" aria-label={t('timeline.source.loading', 'Loading {{section}}', { section: label })}>
+      return <div data-app-part="status" role="status" aria-label={t('timeline.source.loading', 'Loading {{section}}', { section: label })}>
         <Skeleton className="h-24 w-full" />
       </div>;
     }

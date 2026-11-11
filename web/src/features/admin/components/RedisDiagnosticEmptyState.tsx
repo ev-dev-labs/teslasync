@@ -265,6 +265,9 @@ function DiagnosticBanner({
           {meta && <DiagnosticMetaList meta={meta} />}
           {cta && ctaHref && (
             <a
+              data-app-part="button"
+              data-app-variant="secondary"
+              data-app-size="sm"
               href={ctaHref}
               target="_blank"
               rel="noreferrer"
@@ -366,7 +369,7 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
   const { formatDateTime } = useDateFormat()
   const { fmtInt } = useNumberFormatting()
   return (
-    <dl className={cn('grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2', typography.size.xs, typography.color.secondary)}>
+    <dl data-app-part="list" className={cn('grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2', typography.size.xs, typography.color.secondary)}>
       <Row label={t('redis.diagnostic.meta.mode', 'Live store mode')}>
         <Badge size="sm" variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}>
           {meta.live_signal_store_mode}

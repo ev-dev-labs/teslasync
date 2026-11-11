@@ -364,7 +364,7 @@ function FormatInfoCards() {
         <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
         </Text>
-        <div className={previewClass}>
+        <div data-app-part="card" data-app-card-kind="code-example" data-surface-variant="standalone" className={previewClass}>
           <p>date,distance_m,efficiency_wh_per_m</p>
           <p>2025-01-15,45200,0.152</p>
           <p>2025-01-16,32800,0.148</p>
@@ -379,7 +379,7 @@ function FormatInfoCards() {
         <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')}
         </Text>
-        <div className={previewClass}>
+        <div data-app-part="card" data-app-card-kind="code-example" data-surface-variant="standalone" className={previewClass}>
           <p>{`[{ "date": "2025-01-15",`}</p>
           <p>{`   "distance_m": 45200,`}</p>
           <p>{`   "efficiency": 152 }]`}</p>
@@ -521,7 +521,7 @@ interface VehicleTargetProps {
 function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }: VehicleTargetProps & { unknownTarget?: string }) {
   const { t } = useTranslation();
   return (
-    <div role="status">
+    <div data-app-part="status" role="status">
       <StaleRefreshWarning state={vehiclesState} label={t('dataExport.vehicle', 'Vehicle')} />
       {vehiclesState.fatalError ? (
         <QueryError error={vehiclesState.fatalError} onRetry={onRetryVehicles} />
@@ -654,7 +654,7 @@ function ExportWizard({
         <Label className="mb-2 block">{t('dataExport.wizard.step1', 'STEP 1 — select data type')}</Label>
         <ExportTypeSelector selected={exportType} onChange={handleExportTypeChange} />
         {jobType === null && (
-          <div role="status" className="mt-3">
+          <div data-app-part="status" role="status" className="mt-3">
             <Text>{t('error.unsupported.title', 'Feature not supported')}</Text>
             <HelperText>
               {t('error.unsupported.message', 'This feature is not available with the current server or deployment configuration.')}
@@ -865,7 +865,12 @@ function ColumnPickerSection({
     <div className="mb-5" data-testid="export-column-picker">
       <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
       <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', "STEP 2½ — Columns")} />
-      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+      <div
+        data-app-part="panel"
+        data-surface-variant="standalone"
+        data-app-field-surface="export-columns"
+        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+      >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <HelperText className="max-w-prose">
             {t(
@@ -909,6 +914,9 @@ function ColumnPickerSection({
               <div
                 key={col.name}
                 data-testid={`export-column-row-${col.name}`}
+                data-app-part="card"
+                data-app-choice-surface="export-column"
+                data-surface-variant="standalone"
                 className={cn(
                   'flex min-w-0 min-h-11 flex-wrap items-center gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2 md:min-h-0',
                   !required && 'hover:bg-[var(--surface-2)]',

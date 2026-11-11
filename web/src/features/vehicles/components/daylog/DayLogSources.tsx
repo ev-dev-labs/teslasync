@@ -33,7 +33,7 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
       <PanelTitle>{t('dayLog.sources.title', 'Sources')}</PanelTitle>
       <div className="mt-4">
         {isLoading ? (
-          <div role="status" aria-label={t('dayLog.sources.loading', 'Loading sources')}>
+          <div data-app-part="status" role="status" aria-label={t('dayLog.sources.loading', 'Loading sources')}>
             <Skeleton lines={5} />
           </div>
         ) : error ? (
@@ -58,11 +58,11 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
             <Table variant="embedded" tabIndex={0} aria-label={t('dayLog.sources.title', 'Sources')}>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.source}>
-                    <th scope="row" className="min-w-0 font-normal">
+                  <tr data-app-part="table-row" key={row.source}>
+                    <th data-app-part="table-cell" scope="row" className="min-w-0 font-normal">
                       <Text size="sm" weight="medium" color="primary">{t(`dayLog.sources.names.${row.source}`, row.source)}</Text>
                     </th>
-                    <td>
+                    <td data-app-part="table-cell">
                       {row.status === 'unavailable' ? (
                         <Text variant="caption">
                           {t(`dayLog.sources.reasons.${row.source}`, row.reason ?? t('dayLog.sources.noReason', 'Not available'))}
@@ -73,7 +73,7 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
                         </Text>
                       )}
                     </td>
-                    <td className="text-right">
+                    <td data-app-part="table-cell" className="text-right">
                       <Badge variant={STATUS_VARIANT[row.status] ?? 'neutral'}>
                         {t(`dayLog.sources.status.${row.status}`, DAY_LOG_SOURCE_STATUS[row.status] ?? row.status)}
                       </Badge>

@@ -108,7 +108,7 @@ export function SnapshotInspector({
       );
     }
     return (
-      <div role="status" className="space-y-2 text-sm text-[var(--text-secondary)]">
+      <div data-app-part="status" role="status" className="space-y-2 text-sm text-[var(--text-secondary)]">
         <Caption>{label}</Caption>
         <div>{fetching && !state.isRefreshBlocked
           ? t('debugger.inspector.loading', 'Loading…')
@@ -283,12 +283,17 @@ export function SnapshotInspector({
         ) : rows.length === 0 ? (
           <div
             data-testid="snapshot-inspector-no-signals"
+            data-app-part="feedback empty"
+            data-app-feedback-kind="empty"
+            role="status"
             className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
           >
-            {t('debugger.inspector.noSignals', 'No signals captured for this transition')}
+            <span data-app-part="feedback-message">
+              {t('debugger.inspector.noSignals', 'No signals captured for this transition')}
+            </span>
           </div>
         ) : (
-          <ul
+          <ul data-app-part="list"
             aria-label={t('debugger.inspector.signalsTitle', 'Signals at transition')}
             className="max-h-[480px] space-y-1 overflow-y-auto pr-1"
           >

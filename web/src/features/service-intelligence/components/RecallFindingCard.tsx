@@ -35,11 +35,11 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
         : t('serviceIntelligence.applicability.unlikely', 'Unlikely');
 
   return (
-    <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <li data-app-part="card" data-app-card-kind="record" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4">
+      <div data-app-part="record-header" className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <Heading level="panel">{finding.title}</Heading>
-          <Caption className="mt-1 block">{finding.component || '—'}</Caption>
+          <Heading data-app-part="record-title" level="panel">{finding.title}</Heading>
+          <Caption data-app-part="record-context" className="mt-1 block">{finding.component || '—'}</Caption>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={applicabilityVariant(finding.applicability)}>
@@ -73,11 +73,11 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
         </div>
       )}
 
-      <div className="mt-3 space-y-3">
+      <div data-app-part="record-body" className="mt-3 space-y-3">
         <Text as="p" variant="bodySm">{finding.summary}</Text>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption className="mb-1 block">{t('serviceIntelligence.recall.hypothesis', 'Applicability hypothesis')}</Caption>
-          <Text as="p" variant="bodySm">{finding.hypothesis}</Text>
+        <div data-app-part="card" data-app-card-kind="record" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="record-header record-title" className="mb-1 block">{t('serviceIntelligence.recall.hypothesis', 'Applicability hypothesis')}</Caption>
+          <Text data-app-part="record-body" as="p" variant="bodySm">{finding.hypothesis}</Text>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
@@ -122,6 +122,9 @@ export function RecallFindingCard({ finding }: RecallFindingCardProps) {
           <DateTime value={finding.report_received_at} variant="day" />
         </Caption>
         <a
+          data-app-part="button"
+          data-app-variant="ghost"
+          data-app-size="sm"
           href={finding.source_document_url}
           target="_blank"
           rel="noopener noreferrer"

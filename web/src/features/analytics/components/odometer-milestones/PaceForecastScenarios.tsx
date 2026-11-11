@@ -164,13 +164,13 @@ export function PaceForecastScenarios({
                               : '—',
                       },
                     ].map((item) => (
-                      <tr
+                      <tr data-app-part="table-row"
                         key={item.key}
                       >
-                        <th scope="row"><Text variant="caption">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">
                           {item.label}
                         </Text></th>
-                        <td className="text-right">
+                        <td data-app-part="table-cell" className="text-right">
                         <Text
                           size="xs"
                           weight="medium"

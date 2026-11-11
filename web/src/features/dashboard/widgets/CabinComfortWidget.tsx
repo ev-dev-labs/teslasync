@@ -141,7 +141,7 @@ export default function CabinComfortWidget({ vehicleId, config, size }: WidgetPr
     </section>
   </div>;
   const context = <div className="min-w-0 space-y-2">
-    {loading && <div role="status"><Skeleton className="h-6 w-2/3" /><Caption>{t('dashboardWidgets.climate.cabinComfort.loading', 'Loading cabin observations…')}</Caption></div>}
+    {loading && <div data-app-part="status" role="status"><Skeleton className="h-6 w-2/3" /><Caption>{t('dashboardWidgets.climate.cabinComfort.loading', 'Loading cabin observations…')}</Caption></div>}
     {sourceState.fatalError && <QueryError error={sourceState.fatalError} onRetry={refresh} />}
     <StaleRefreshWarning state={sourceState} />
     {!loading && !sourceState.fatalError && (!id || !hasCabinSignals) && <Text as="p" variant="bodySm">

@@ -217,7 +217,7 @@ export default function SignalExplorerWidget({ vehicleId, size, config }: Widget
         errorMessage={t('dashboardWidgets.driving.signalExplorer.liveError', 'Live signal evidence could not be loaded.')}
         emptyMessage={t('dashboardWidgets.driving.signalExplorer.observationEmpty', 'Choose a field; unobserved compound children require the routing inventory.')}
         errorRecovery={{ onRetry: () => { void liveQuery.refetch(); } }}>
-        <ul aria-label={liveLabel} className={cn('min-w-0 overflow-y-auto', compact ? 'max-h-56' : 'max-h-80', appearance?.feed)}>
+        <ul data-app-part="list" aria-label={liveLabel} className={cn('min-w-0 overflow-y-auto', compact ? 'max-h-56' : 'max-h-80', appearance?.feed)}>
           {childNames.map(name => {
             const reading = observation(signals[name]);
             const rowDropped = routes.get(name)?.destination === 'drop';

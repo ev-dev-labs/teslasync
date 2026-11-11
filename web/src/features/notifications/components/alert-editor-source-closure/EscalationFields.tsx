@@ -32,7 +32,7 @@ export function EscalationFields({ controller }: { controller: AlertRuleEditorCo
       {editor.escalation_enabled && (
         <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={fieldLabelCls} htmlFor="alert-escalation-after">
+            <label data-app-part="field-label" className={fieldLabelCls} htmlFor="alert-escalation-after">
               {t('notifications.alertStudio.editor.escalationAfterLabel', 'Escalate after (minutes)')}
             </label>
             <UiInput
@@ -47,7 +47,7 @@ export function EscalationFields({ controller }: { controller: AlertRuleEditorCo
             />
           </div>
           <div>
-            <label className={fieldLabelCls} htmlFor="alert-escalation-severity">
+            <label data-app-part="field-label" className={fieldLabelCls} htmlFor="alert-escalation-severity">
               {t('notifications.alertStudio.editor.escalationSeverityLabel', 'Escalated severity')}
             </label>
             <UiSelect

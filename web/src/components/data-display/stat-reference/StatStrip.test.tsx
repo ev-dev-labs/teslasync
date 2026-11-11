@@ -1,10 +1,15 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getFormatterPreferences, setGlobalPrecision } from '@/lib/numberFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { StatGroup, StatStrip } from './index';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (_key: string, fallback: string) => fallback,
@@ -25,6 +30,66 @@ const initialPrecision = getFormatterPreferences().precision;
 afterEach(() => { cleanup(); setGlobalPrecision(initialPrecision); });
 
 describe('single StatStrip renderer contract', () => {
+  it.each(PACK_IDS)('activates the %s standalone frame consumer without adding embedded chrome or changing metric banks', packId => {
+    const sourceMetrics = Array.from({ length: 6 }, (_, index) => ({
+      metricId: 'count' as const, rawValue: index, label: `Source ${index}`,
+    }));
+    const { container } = render(<div data-app-design-preview="" {...getAppDesignAttributes(packId)}>
+      <StatStrip id="standalone" metrics={sourceMetrics} period={period} secondary="Source context" footer="Source footer" />
+      <StatStrip id="embedded" variant="embedded" metrics={sourceMetrics} period={period} />
+      <div data-app-design-preview=""><StatStrip id="unowned" metrics={sourceMetrics} period={period} /></div>
+    </div>);
+    const release = observeAppDesignScopes(container);
+    try {
+      const standalone = container.querySelector('#standalone');
+      const embedded = container.querySelector('#embedded');
+      const unowned = container.querySelector('#unowned');
+      if (!standalone || !embedded || !unowned) throw new Error('Missing stat strip');
+      const surfaceSelectors: string[] = [];
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+        .walkRules(rule => {
+          surfaceSelectors.push(...rule.selectors.filter(selector => selector.includes('[data-app-part~="panel"]')));
+        });
+      expect(surfaceSelectors.some(selector => standalone.matches(selector))).toBe(true);
+      expect(surfaceSelectors.some(selector => embedded.matches(selector))).toBe(false);
+      expect(surfaceSelectors.some(selector => unowned.matches(selector))).toBe(false);
+      expect([...standalone.querySelectorAll('[data-stat-bank]')].map(bank => bank.children.length)).toEqual([3, 3]);
+      expect(standalone.querySelector('[data-stat-secondary]')).toHaveTextContent('Source context');
+      expect(standalone.querySelector('[data-stat-footer]')).toHaveTextContent('Source footer');
+      expect(standalone.querySelector('[data-state="value"] [data-stat-value]')).toHaveTextContent('0');
+      expect(embedded.querySelectorAll('[data-state="value"]')).toHaveLength(6);
+      expect(sourceMetrics.map(metric => metric.rawValue)).toEqual([0, 1, 2, 3, 4, 5]);
+    } finally {
+      release();
+    }
+  });
+  it('owns only the standalone frame while preserving embedded content and neutral previews', () => {
+    const { container, rerender } = render(<div data-app-design-preview="" {...getAppDesignAttributes('terminal')}>
+      <StatStrip id="owned-strip" metrics={metrics} period={period} retained error="Retained failure" footer="Existing footer" />
+      <div data-app-design-preview=""><StatStrip id="neutral-strip" metrics={metrics} period={period} /></div>
+    </div>);
+    const release = observeAppDesignScopes(container);
+    try {
+      const strip = container.querySelector('#owned-strip');
+      expect(strip?.tagName).toBe('SECTION');
+      expect(strip).toHaveAttribute('data-app-part', 'section panel');
+      expect(strip).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(strip?.getAttribute('data-app-design-owner')).toContain('pack-terminal');
+      expect(container.querySelector('#neutral-strip')).not.toHaveAttribute('data-app-design-owner');
+      expect(strip?.querySelectorAll('[data-stat]')).toHaveLength(2);
+      expect(strip?.querySelector('[data-stat-footer]')).toHaveTextContent('Existing footer');
+      expect(screen.getByRole('alert')).toHaveTextContent('Retained failure');
+      rerender(<StatStrip id="owned-strip" variant="embedded" metrics={metrics} period={period}
+        retained error="Retained failure" footer="Existing footer" />);
+      const embedded = container.querySelector('#owned-strip');
+      expect(embedded).toHaveAttribute('data-surface-variant', 'embedded');
+      expect(embedded).not.toHaveClass('border', 'bg-[var(--surface-1)]');
+      expect(embedded?.querySelectorAll('[data-state="value"]')).toHaveLength(2);
+      expect(embedded?.querySelector('[data-stat-footer]')).toHaveTextContent('Existing footer');
+    } finally {
+      release();
+    }
+  });
   it('renders label above value, period, missing reason and meaningful zero', () => {
     const { container } = render(<StatStrip metrics={[
       { metricId: 'energy', rawValue: 0 }, { metricId: 'duration', rawValue: null, missingReason: 'No completed records' },

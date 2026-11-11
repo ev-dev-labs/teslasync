@@ -117,6 +117,7 @@ function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {
       onRename={props.onRename ?? handlers.onRename}
       onDelete={props.onDelete ?? handlers.onDelete}
       isLoading={props.isLoading}
+      source={props.source}
     />,
   );
   return { ...utils, ...handlers };
@@ -153,6 +154,48 @@ describe('SessionList', () => {
     expect(screen.getByText('Existing chat')).toBeInTheDocument();
     // The loading placeholder is reserved for the initial empty load only.
     expect(screen.queryByText('Loading...')).toBeNull();
+  });
+
+  it('retains cached sessions and their rename draft on a refresh failure, with an independent retry', async () => {
+    const retry = vi.fn();
+    const cached = [makeSession({ title: 'Cached chat' })];
+    const view = renderList({ sessions: cached, source: { data: cached } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    const editor = screen.getByRole('textbox', { name: 'Rename conversation' });
+    fireEvent.change(editor, { target: { value: '  recoverable name  ' } });
+    view.rerender(
+      <SessionList sessions={cached} activeSessionId=""
+        onSelect={view.onSelect} onNewChat={view.onNewChat} onRename={view.onRename} onDelete={view.onDelete}
+        source={{ data: cached, isError: true, refetch: retry }} />,
+    );
+    expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(editor).toHaveValue('  recoverable name  ');
+    await userEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Sessions' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    // Leaving the editor still follows the existing rename-on-blur contract.
+    expect(view.onRename).toHaveBeenCalledWith('s1', 'recoverable name');
+  });
+
+  it.each([
+    { isError: true, fetchStatus: 'idle' as const, label: 'Failed' },
+    { isPending: true, fetchStatus: 'paused' as const, label: 'Refresh paused' },
+  ])('does not call an unavailable session source empty ($label)', ({ label, ...source }) => {
+    renderList({ sessions: [], source: { ...source, refetch: vi.fn() } });
+    expect(screen.queryByText('No conversations yet')).toBeNull();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeEnabled();
+  });
+
+  it('does not commit or cancel a session name while an IME is composing', () => {
+    const { onRename } = renderList();
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    const editor = screen.getByRole('textbox', { name: 'Rename conversation' });
+    fireEvent.change(editor, { target: { value: '会話' } });
+    fireEvent.keyDown(editor, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(editor, { key: 'Enter', keyCode: 229 });
+    fireEvent.keyDown(editor, { key: 'Escape', isComposing: true });
+    expect(onRename).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('会話');
   });
 
   it("renders a row's title, relative time and message count", () => {

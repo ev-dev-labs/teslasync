@@ -51,6 +51,9 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
           return (
             <div
               key={sub.type}
+              data-app-part="card"
+              data-app-record-kind="fsm-session"
+              data-surface-variant="standalone"
               className="flex items-center gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
             >
               <div className="p-2 rounded-lg bg-[var(--surface-2)]">
@@ -61,7 +64,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Text variant="bodySm">{label}</Text>
+                  <Text variant="bodySm" data-app-record-slot="label">{label}</Text>
                   {isActive && (
                     <>
                       <span
@@ -72,7 +75,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div data-app-record-slot="context" className="flex items-center gap-2 mt-1">
                   <StateBadge state={sub.state} fsmType={sub.type === 'drive' ? 'drive_session' : 'charge_session'} />
                   <TimeStamp value={sub.start_time} className="text-2xs text-[var(--text-muted)]" />
                 </div>

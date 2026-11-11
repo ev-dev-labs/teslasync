@@ -52,24 +52,24 @@ export function ColorConverterTool() {
         </div>
         {parsed ? (
           <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <span className="text-xs text-[var(--text-secondary)]">RGB</span>
-              <p className="font-mono text-sm text-[var(--text-primary)]">{parsed.rgb}</p>
+            <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span data-app-code-slot="heading" className="text-xs text-[var(--text-secondary)]">RGB</span>
+              <p data-app-code-slot="body" className="font-mono text-sm text-[var(--text-primary)]">{parsed.rgb}</p>
               <CopyButton text={parsed.rgb} />
             </div>
-            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <span className="text-xs text-[var(--text-secondary)]">HSL</span>
-              <p className="font-mono text-sm text-[var(--text-primary)]">{parsed.hsl}</p>
+            <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span data-app-code-slot="heading" className="text-xs text-[var(--text-secondary)]">HSL</span>
+              <p data-app-code-slot="body" className="font-mono text-sm text-[var(--text-primary)]">{parsed.hsl}</p>
               <CopyButton text={parsed.hsl} />
             </div>
-            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <span className="text-xs text-[var(--text-secondary)]">HEX</span>
-              <p className="font-mono text-sm text-[var(--text-primary)]">{hex}</p>
+            <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span data-app-code-slot="heading" className="text-xs text-[var(--text-secondary)]">HEX</span>
+              <p data-app-code-slot="body" className="font-mono text-sm text-[var(--text-primary)]">{hex}</p>
               <CopyButton text={hex} />
             </div>
           </div>
         ) : (
-          <p role="status" className="text-xs text-[var(--text-muted)]">
+          <p data-app-part="status" role="status" className="text-xs text-[var(--text-muted)]">
             {t('devtools.utils.colorInvalidHex', 'Enter a valid 6-digit hex color, e.g. #3b82f6')}
           </p>
         )}

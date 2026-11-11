@@ -22,25 +22,33 @@ interface ArrivalReliabilitySectionBodyProps {
 
 function PassiveState({
   message,
+  sourceState,
   className,
 }: {
   message: string;
+  sourceState: 'no-vehicle' | 'unavailable' | 'paused' | 'pending' | 'empty' | 'no-qualified' | 'unsupported-routes' | 'unsupported-windows';
   className?: string;
 }) {
   return (
     <div
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-source-state={sourceState}
       className={cn(
         'flex min-h-44 flex-col items-center justify-center py-10 text-center',
         className,
       )}
     >
       <Clock3
+        data-app-part="feedback-icon"
         className="mb-3 h-8 w-8 text-[var(--text-muted)]"
         aria-hidden="true"
       />
-      <Text as="p" variant="bodySm" className="max-w-xl">
-        {message}
-      </Text>
+      <div data-app-part="feedback-content">
+        <Text data-app-part="feedback-message" as="p" variant="bodySm" className="max-w-xl">
+          {message}
+        </Text>
+      </div>
     </div>
   );
 }
@@ -59,6 +67,7 @@ export function ArrivalReliabilitySectionBody({
   if (!state.vehicleSelected) {
     return (
       <PassiveState
+        sourceState="no-vehicle"
         className={className}
         message={t(
           'arrivalReliability.states.noVehiclePassive',
@@ -83,6 +92,7 @@ export function ArrivalReliabilitySectionBody({
   if (state.error) {
     return (
       <PassiveState
+        sourceState="unavailable"
         className={className}
         message={t(
           'arrivalReliability.states.errorPassive',
@@ -94,6 +104,7 @@ export function ArrivalReliabilitySectionBody({
   if (!state.isResolved) {
     return (
       <PassiveState
+        sourceState={state.isRefreshBlocked ? 'paused' : 'pending'}
         className={className}
         message={state.isRefreshBlocked ? t(
           'chargingPlaces.workspace.initialPaused',
@@ -112,6 +123,7 @@ export function ArrivalReliabilitySectionBody({
   ) {
     return (
       <PassiveState
+        sourceState={analysis.accounting.returnedRows === 0 ? 'empty' : 'no-qualified'}
         className={className}
         message={
           analysis.accounting.returnedRows === 0
@@ -133,6 +145,7 @@ export function ArrivalReliabilitySectionBody({
   ) {
     return (
       <PassiveState
+        sourceState="unsupported-routes"
         className={className}
         message={t(
           'arrivalReliability.states.insufficientRoutesPassive',
@@ -147,6 +160,7 @@ export function ArrivalReliabilitySectionBody({
   ) {
     return (
       <PassiveState
+        sourceState="unsupported-windows"
         className={className}
         message={t(
           'arrivalReliability.states.insufficientWindowsPassive',

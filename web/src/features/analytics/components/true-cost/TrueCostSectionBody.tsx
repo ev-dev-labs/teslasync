@@ -42,7 +42,7 @@ export function TrueCostSectionBody({
   }
   if (!state.hasData && state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         className={cn('min-h-28', className)}
         role="status"
         aria-label={t('tco.states.loadingLabel', 'Loading operating-cost evidence')}

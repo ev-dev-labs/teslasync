@@ -41,25 +41,25 @@ export function ParkLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
       </div>
       <Table aria-label={t('physicsLedger.park.title', 'Park / vampire physics')}>
         <tbody>
-          <tr>
-            <th scope="row" className="font-normal">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row" className="font-normal">
               <Text as="span" size="sm">
                 {t('physicsLedger.park.avgWatts', 'Average drain')}
               </Text>
             </th>
-            <td className="text-right tabular-nums">
+            <td data-app-part="table-cell" className="text-right tabular-nums">
               <Text as="span" size="sm">
                 {p.avg_watts_w != null ? formatPower(p.avg_watts_w) : unknownLabel(t)}
               </Text>
             </td>
           </tr>
-          <tr>
-            <th scope="row" className="font-normal">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row" className="font-normal">
               <Text as="span" size="sm">
                 {t('physicsLedger.park.energy', 'Park energy')}
               </Text>
             </th>
-            <td className="text-right tabular-nums">
+            <td data-app-part="table-cell" className="text-right tabular-nums">
               <Text as="span" size="sm">
                 {p.energy_wh != null ? formatEnergy(p.energy_wh) : unknownLabel(t)}
               </Text>

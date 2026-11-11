@@ -59,11 +59,11 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
           <Navigation className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" /> {t('driveDetail.journeyDetails', 'Journey details')}
         </PanelTitle>
         <Table variant="embedded" className="table-fixed [&_td]:break-words [&_td]:[overflow-wrap:anywhere]" aria-label={t('driveDetail.timeline.label', 'Drive timeline')}>
-          <thead><tr>
-            <th scope="col"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" aria-hidden="true" />{t('driveDetail.start', 'Start')}</span></th>
-            <th scope="col"><span className="inline-flex items-center gap-2"><Flag className="h-4 w-4" aria-hidden="true" />{t('driveDetail.destination', 'Destination')}</span></th>
+          <thead data-app-part="table-head"><tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="col"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" aria-hidden="true" />{t('driveDetail.start', 'Start')}</span></th>
+            <th data-app-part="table-cell" scope="col"><span className="inline-flex items-center gap-2"><Flag className="h-4 w-4" aria-hidden="true" />{t('driveDetail.destination', 'Destination')}</span></th>
           </tr></thead>
-          <tbody><tr><td className="align-top">
+          <tbody><tr data-app-part="table-row"><td data-app-part="table-cell" className="align-top">
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.startAddress
                 ? drive.startAddress
@@ -76,7 +76,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             </p>
             {drive.startAddress && startCoords ? <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{startCoords}</p> : null}
             <p className="mt-2 text-xs text-[var(--text-secondary)]">{t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct != null ? `${fmtNumber(drive.startBatteryPct)}%` : '—'}</p>
-          </td><td className="align-top">
+          </td><td data-app-part="table-cell" className="align-top">
             <p className="font-bold text-[var(--text-primary)] text-sm">
               {drive.endAddress
                 ? drive.endAddress

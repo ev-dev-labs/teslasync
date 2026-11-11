@@ -41,31 +41,32 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
           {days.map((day) => (
             <article
               key={day.localDate}
+              data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
-              <div className="flex items-center justify-between gap-2">
-                <Text className="font-medium">{formatDayKey(day.localDate)}</Text>
+              <div data-app-part="record-header" className="flex items-center justify-between gap-2">
+                <Text data-app-part="record-title" className="font-medium">{formatDayKey(day.localDate)}</Text>
                 <Badge variant="neutral">{t(
                   `chargeAdvisor.day.${day.weekday}`,
                   ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.weekday] ?? 'Day',
                 )}</Badge>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div>
-                  <Text variant="caption">{t('chargeAdvisor.directory.mean', 'Mean use')}</Text>
-                  <Text className="font-semibold">{fmtPercent(day.meanBurnPct)}</Text>
+              <div data-app-part="record-body" className="mt-3 grid grid-cols-2 gap-2">
+                <div data-app-part="metric" data-app-metric="headline">
+                  <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.directory.mean', 'Mean use')}</Text>
+                  <Text data-app-part="metric-reading metric-value" className="font-semibold">{fmtPercent(day.meanBurnPct)}</Text>
                 </div>
-                <div>
-                  <Text variant="caption">{t('chargeAdvisor.directory.p75', 'Calendar-day p75')}</Text>
-                  <Text className="font-semibold">{fmtPercent(day.p75BurnPct)}</Text>
+                <div data-app-part="metric" data-app-metric="headline">
+                  <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.directory.p75', 'Calendar-day p75')}</Text>
+                  <Text data-app-part="metric-reading metric-value" className="font-semibold">{fmtPercent(day.p75BurnPct)}</Text>
                 </div>
-                <div>
-                  <Text variant="caption">{t('chargeAdvisor.directory.meanEnd', 'Mean end SoC')}</Text>
-                  <Text className="font-semibold text-theme-accent">{fmtPercent(day.meanEndSocPct)}</Text>
+                <div data-app-part="metric" data-app-metric="headline">
+                  <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.directory.meanEnd', 'Mean end SoC')}</Text>
+                  <Text data-app-part="metric-reading metric-value" className="font-semibold text-theme-accent">{fmtPercent(day.meanEndSocPct)}</Text>
                 </div>
-                <div>
-                  <Text variant="caption">{t('chargeAdvisor.directory.p75End', 'Calendar-day p75 end SoC')}</Text>
-                  <Text className="font-semibold text-amber-300">{fmtPercent(day.p75EndSocPct)}</Text>
+                <div data-app-part="metric" data-app-metric="headline">
+                  <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.directory.p75End', 'Calendar-day p75 end SoC')}</Text>
+                  <Text data-app-part="metric-reading metric-value" className="font-semibold text-amber-300">{fmtPercent(day.p75EndSocPct)}</Text>
                 </div>
               </div>
             </article>

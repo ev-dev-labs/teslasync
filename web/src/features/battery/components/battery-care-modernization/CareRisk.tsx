@@ -44,16 +44,22 @@ export function CareRisk({ care, state }: { care: CareScore; state: CareSectionS
       }
     >
       <div className="grid min-w-0 gap-4 @xl:grid-cols-[0.7fr_1.3fr]">
-        <div className="min-w-0 rounded-xl bg-[var(--surface-2)] p-4">
-          <MetricValue>{care.score != null ? fmtInt(care.score) : '—'}</MetricValue>
-          <MetricLabel>{t('batteryCare.risk.indexLabel', 'Observed care index / 100')}</MetricLabel>
-          <Text as="p" variant="bodySm" className="mt-3">
+        <div
+          data-app-part="card metric"
+          data-app-metric="tile"
+          data-surface-variant="standalone"
+          data-app-state={care.score == null ? 'missing' : undefined}
+          className="min-w-0 rounded-xl bg-[var(--surface-2)] p-4"
+        >
+          <MetricValue data-app-part="metric-reading metric-value">{care.score != null ? fmtInt(care.score) : '—'}</MetricValue>
+          <MetricLabel data-app-part="metric-label">{t('batteryCare.risk.indexLabel', 'Observed care index / 100')}</MetricLabel>
+          <Text as="p" variant="bodySm" data-app-part="metric-context" className="mt-3">
             {t('batteryCare.risk.componentsReady', '{{ready}} of {{total}} components calibrated', {
               ready: readyCount,
               total: care.riskComponents.length,
             })}
           </Text>
-          <Text as="p" variant="caption" className="mt-3">
+          <Text as="p" variant="caption" data-app-part="metric-context" className="mt-3">
             {t('batteryCare.risk.disclaimer', 'This descriptive habit index is not a battery-health measurement or a degradation estimate.')}
           </Text>
         </div>

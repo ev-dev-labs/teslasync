@@ -23,21 +23,23 @@ export function FormSection({ title, description, children, className, 'aria-inv
 
   return (
     <fieldset
+      data-app-part="panel"
+      data-app-form-section
       data-surface-variant="standalone"
       aria-labelledby={headingId}
       aria-describedby={[hasDescription ? descriptionId : undefined, describedBy].filter(Boolean).join(' ') || undefined}
       aria-invalid={invalid}
       className={cn('glass-panel min-w-0 overflow-visible p-4 sm:p-6 space-y-4', className)}
     >
-      <div>
+      <div data-app-form-heading>
         <PanelTitle id={headingId} className="break-words">{title}</PanelTitle>
         {hasDescription && (
-          <HelperText id={descriptionId} className="mt-1 break-words">
+          <HelperText data-app-part="status" data-app-field-feedback="hint" id={descriptionId} className="mt-1 break-words">
             {description}
           </HelperText>
         )}
       </div>
-      <div className="space-y-4">
+      <div data-app-form-body className="space-y-4">
         {children}
       </div>
     </fieldset>

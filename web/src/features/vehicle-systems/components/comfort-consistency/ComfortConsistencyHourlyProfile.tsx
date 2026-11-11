@@ -105,21 +105,26 @@ export function ComfortConsistencyHourlyProfile({
           <Text as="h4" variant="label" className="mb-3 mt-4">
             {t('comfortConsistency.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+          <div data-app-part="metric-grid" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
             {summary.hourlyProfile.map((bucket) => (
               <div
                 key={bucket.hour}
+                data-app-part="metric"
+                data-app-metric="tile"
+                data-surface-variant="standalone"
                 className="rounded-lg border border-[var(--border-subtle)] p-2"
               >
-                <MetricLabel>
+                <MetricLabel data-app-part="metric-label">
                   {String(bucket.hour).padStart(2, '0')}:00
                 </MetricLabel>
-                <Text as="p" variant="bodySm" className="mt-1">
-                  {bucket.withinBandShare != null
-                    ? fmtPercent(bucket.withinBandShare * 100)
-                    : '—'}
-                </Text>
-                <Text as="p" variant="caption">
+                <div data-app-part="metric-reading" className="mt-1">
+                  <Text data-app-part="metric-value" as="p" variant="bodySm">
+                    {bucket.withinBandShare != null
+                      ? fmtPercent(bucket.withinBandShare * 100)
+                      : '—'}
+                  </Text>
+                </div>
+                <Text data-app-part="metric-context" as="p" variant="caption">
                   {formatDuration(bucket.observedS)}
                 </Text>
               </div>

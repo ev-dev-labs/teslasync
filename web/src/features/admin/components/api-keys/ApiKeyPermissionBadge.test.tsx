@@ -21,6 +21,11 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // Deterministic i18n: `t(key, fallback)` returns the English fallback so the
 // visible-label assertions don't depend on translation-file contents. Mirrors
@@ -51,6 +56,31 @@ function renderBadge(perm: string, className?: string) {
 }
 
 describe('ApiKeyPermissionBadge', () => {
+  it.each(PACK_IDS)('%s applies its actual badge consumer without replacing permission hues or labels', pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      {['read', 'read-write', 'admin', 'unknown'].map(perm => <ApiKeyPermissionBadge key={perm} perm={perm} />)}
+    </div>);
+    const release = observeAppDesignScopes(view.container.firstElementChild!);
+    try {
+      const chips = [...view.container.querySelectorAll('[data-app-part="badge"]')];
+      expect(chips.map(chip => chip.textContent)).toEqual(['Read', 'Read-write', 'Admin', 'Read']);
+      const css = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+      for (const chip of chips) {
+        const selectors: string[] = [];
+        css.walkRules(rule => {
+          for (const selector of rule.selectors) {
+            if (selector.includes('[data-app-part~="badge"]') && [...document.querySelectorAll(selector)].includes(chip)) selectors.push(selector);
+          }
+        });
+        expect(selectors.length).toBeGreaterThan(0);
+        for (const selector of selectors) expect(selector).toContain(`[data-app-design-owner~="pack-${pack}"]`);
+      }
+      expect(chips[0]).toHaveClass('bg-[var(--semantic-success-bg)]', 'text-[var(--semantic-success)]');
+      expect(chips[1]).toHaveClass('bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]');
+      expect(chips[2]).toHaveClass('bg-[var(--semantic-purple-bg)]', 'text-[var(--semantic-purple)]');
+    } finally { release(); }
+  });
+
   it('renders the read permission with emerald text on a neon-green chip', () => {
     const { chip, svg } = renderBadge('read');
     expect(chip).not.toBeNull();
@@ -144,5 +174,13 @@ describe('ApiKeyPermissionBadge', () => {
     expect(spans).toHaveLength(1);
     expect(spans[0].tagName).toBe('SPAN');
     expect(container.querySelectorAll('svg')).toHaveLength(1);
+  });
+
+  it.each(['read', 'read-write', 'admin', '', 'unknown'])('owns the actual %s permission chip without replacing its source hue', perm => {
+    const { chip } = renderBadge(perm);
+    expect(chip).toHaveAttribute('data-app-part', 'badge');
+    expect(chip).toHaveClass('ring-1', 'border-0', 'text-2xs', 'font-semibold');
+    expect(chip?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(chip?.textContent?.trim()).toBe(perm === 'admin' ? 'Admin' : perm === 'read-write' ? 'Read-write' : 'Read');
   });
 });

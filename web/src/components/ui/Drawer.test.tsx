@@ -102,7 +102,7 @@ describe('<Drawer>', () => {
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     // Portaled out of the render container onto document.body.
-    expect(container).toBeEmptyDOMElement();
+    expect(container.querySelector(':not(template)')).toBeNull();
     expect(document.body.contains(dialog)).toBe(true);
     // Title renders as a level-3 heading wired to the dialog via labelledby.
     const heading = screen.getByRole('heading', { level: 3, name: 'Filters' });
@@ -146,6 +146,10 @@ describe('<Drawer>', () => {
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-footer')).toBeInTheDocument();
     const footer = screen.getByRole('dialog').querySelector('[data-drawer-footer]');
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-app-part', 'overlay');
+    expect(getPanel()).toHaveAttribute('data-app-part', 'dialog');
+    expect(getPanel()).toHaveAttribute('data-app-dialog-kind', 'drawer');
+    expect(footer).toHaveAttribute('data-app-part', 'dialog-footer');
     expect(footer).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
     expect(footer).not.toHaveClass('bg-[var(--surface-overlay)]');
 
@@ -158,6 +162,7 @@ describe('<Drawer>', () => {
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.queryByTestId('drawer-footer')).not.toBeInTheDocument();
     expect(screen.getByText('Drawer body content').closest('[data-drawer-body]')).not.toBeNull();
+    expect(screen.getByText('Drawer body content').closest('[data-drawer-body]')).toHaveAttribute('data-app-part', 'dialog-body');
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
 
     // Explicit null is the escape hatch for a panel that genuinely has no
@@ -168,6 +173,7 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     expect(screen.getByRole('dialog').querySelector('[data-drawer-footer]')).toBeNull();
+    expect(getPanel().querySelector('[data-app-part="dialog-footer"]')).toBeNull();
   });
 
   it('exposes an accessible, non-submitting Close control that calls onClose', () => {

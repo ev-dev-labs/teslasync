@@ -66,7 +66,7 @@ export function CohortEligibilityPanel({
         errorRecovery={{ onRetry: (participationSource?.fatalError ? participationSource.retry : source?.retry) ?? undefined }}
       >
       {loading && !release ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('benchmarks.cohort.loading', 'Loading cohort eligibility…')}
@@ -96,29 +96,29 @@ export function CohortEligibilityPanel({
       ) : release ? (
         <div className="space-y-3">
           <Table aria-label={t('benchmarks.cohort.title', 'Cohort eligibility')}><tbody>
-            <tr>
-              <th scope="row" className="text-[var(--text-muted)]">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.model', 'Model family')}
               </th>
-              <td className="font-medium text-[var(--text-primary)]">
+              <td data-app-part="table-cell" className="font-medium text-[var(--text-primary)]">
                 {modelFamily}
               </td>
             </tr>
-            <tr>
-              <th scope="row" className="text-[var(--text-muted)]">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.year', 'Model-year bucket')}
               </th>
-              <td className="font-medium text-[var(--text-primary)] text-right">
+              <td data-app-part="table-cell" className="font-medium text-[var(--text-primary)] text-right">
                 {release.model_year_bucket > 0
                   ? `${release.model_year_bucket}–${release.model_year_bucket + 4}`
                   : t('benchmarks.cohort.unknownYear', 'Unknown')}
               </td>
             </tr>
-            <tr>
-              <th scope="row" className="text-[var(--text-muted)]">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.minimum', 'Release threshold')}
               </th>
-              <td className="font-medium text-[var(--text-primary)]">
+              <td data-app-part="table-cell" className="font-medium text-[var(--text-primary)]">
                 {t('benchmarks.cohort.minimumValue', 'At least {{count}} vehicles', {
                   count: release.minimum_cohort_size,
                 })}

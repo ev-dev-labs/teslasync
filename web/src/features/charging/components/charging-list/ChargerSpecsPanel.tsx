@@ -87,7 +87,7 @@ function SpecColumn({ icon, label, items, emptyMsg, showAvgPower }: SpecColumnPr
       <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
         {icon} {label}
       </p>
-      <div className="space-y-2">
+      <dl data-app-part="list" data-app-list="definitions" className="space-y-2">
         {list.map((v) => {
           const sessions = t('charging.specs.sessionCount', '{{count}} sessions', { count: v.count ?? 0 });
           const detail =
@@ -95,13 +95,13 @@ function SpecColumn({ icon, label, items, emptyMsg, showAvgPower }: SpecColumnPr
               ? t('charging.specs.kwAvg', '{{value}} kW avg', { value: fmtInt(v.avgPower) })
               : fmtWithUnit(v.energy ?? 0, 'kWh');
           return (
-            <div key={v.name} className="flex justify-between items-center text-xs">
-              <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-              <span className="text-[var(--text-muted)]">{`${sessions} · ${detail}`}</span>
+            <div data-app-part="list-row" key={v.name} className="flex justify-between items-center text-xs">
+              <dt data-app-part="metric-label" className="text-[var(--text-primary)] font-medium">{v.name}</dt>
+              <dd data-app-part="metric-value" className="text-[var(--text-muted)]">{`${sessions} · ${detail}`}</dd>
             </div>
           );
         })}
-      </div>
+      </dl>
     </div>
   );
 }

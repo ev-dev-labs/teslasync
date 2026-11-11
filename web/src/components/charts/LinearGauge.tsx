@@ -190,6 +190,8 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     return (
       <div
         ref={ref}
+        data-app-part="chart"
+        data-chart-family="linear-gauge"
         role={hasMeter ? 'meter' : 'group'}
         aria-label={ariaLabel || label || undefined}
         aria-valuenow={hasMeter ? clamped : undefined}
@@ -207,7 +209,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         {summary && (
           <VisuallyHidden id={summaryId}>{summary}</VisuallyHidden>
         )}
-        <div className="flex items-baseline gap-1">
+        <div data-chart-readout className="flex items-baseline gap-1">
           <Text as="span" size={valueSize} weight="bold" color="primary" className="tabular-nums">
             {display}
           </Text>
@@ -218,9 +220,10 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           )}
         </div>
 
-        <div className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
+        <div data-chart-gauge-track className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
           {hasReading && (!preserveReadingAndScale || validScale) && (
             <div
+              data-chart-gauge-fill
               className="h-full rounded-full transition-[width] duration-slow ease-out"
               style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
             />
@@ -228,6 +231,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           {markerRatio !== null && (
             <span
               data-testid="gauge-marker"
+              data-chart-gauge-marker
               title={markerLabel}
               className="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 rounded-full bg-[var(--text-primary)]/70"
               style={{ left: `${markerRatio * 100}%` }}
@@ -235,7 +239,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           )}
         </div>
 
-        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <div data-chart-scale className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           <Text as="span" size="xs" weight="medium" color="muted" className="min-w-0 truncate">
             {label}
           </Text>

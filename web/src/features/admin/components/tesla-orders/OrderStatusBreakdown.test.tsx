@@ -27,6 +27,9 @@
  * `<QueryError>` reaches for `useNavigate`.
  */
 import '@/i18n';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -38,6 +41,10 @@ import type {
   OrderStatusBucket,
   OrderBucketCount,
 } from './teslaOrderStats';
+import { ORDER_BUCKET_META, ORDER_BUCKET_ORDER } from './teslaOrderStats';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 function makeStats(overrides: Partial<OrderStats> = {}): OrderStats {
   const byBucket: Record<OrderStatusBucket, number> = {
@@ -184,6 +191,62 @@ describe('OrderStatusBreakdown — empty', () => {
 });
 
 describe('OrderStatusBreakdown — ready (populated)', () => {
+  it('activates count tiles and the native multi-fill visual bar without scalar-progress semantics or changed geometry/paint', () => {
+    const stats = makeStats();
+    const { container } = renderPanel({ stats });
+    const bar = getBar();
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(bar).toHaveAttribute('data-app-metric', 'bar');
+        expect(bar).toHaveAttribute('data-app-metric-kind', 'order-status-distribution');
+        expect(bar).toHaveAttribute('role', 'img');
+        expect(bar).not.toHaveAttribute('aria-valuenow');
+        expect(bar).not.toHaveAttribute('aria-valuemax');
+        expect(bar).toHaveClass('flex', 'h-3', 'overflow-hidden', 'rounded-full', 'bg-white/[0.05]');
+        const distributionRules = matchesAppDesignCss(bar, '[data-app-metric="bar"][data-metric-track]');
+        expect(distributionRules.some(rule => 'outline' in rule.declarations)).toBe(true);
+        for (const rule of distributionRules) {
+          expect(Object.keys(rule.declarations).every(property => ['outline', 'outline-offset'].includes(property))).toBe(true);
+        }
+        const packRules = postcss.parse(readFileSync(
+          resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8',
+        ));
+        packRules.walkRules(rule => {
+          for (const selector of rule.selectors.filter(candidate => candidate.includes('[data-app-part~="metric"]'))) {
+            const matches = [...container.ownerDocument.querySelectorAll(selector)];
+            expect([bar, ...bar.children].some(node => matches.includes(node)), `${pack}: ${selector}`).toBe(false);
+          }
+        });
+        expect([...bar.children].map(node => (node as HTMLElement).style.width)).toEqual(['40%', '20%', '30%', '10%']);
+        for (const [index, node] of [...bar.children].entries()) {
+          const bucket = stats.buckets[index].bucket;
+          expect(node).toHaveAttribute('data-metric-fill', '');
+          expect(node).toHaveAttribute('data-app-distribution-bucket', bucket);
+          expect(node).toHaveClass('h-full', ORDER_BUCKET_META[bucket].bar);
+          expect(matchesAppDesignCss(node, '[data-metric-fill]')
+            .some(rule => rule.declarations['box-sizing'] === 'border-box'
+              && rule.declarations['min-inline-size'] === '0')).toBe(true);
+        }
+        const tiles = container.querySelectorAll('[data-app-metric="tile"]');
+        expect(tiles).toHaveLength(5);
+        for (const [index, tile] of [...tiles].entries()) {
+          const bucket = ORDER_BUCKET_ORDER[index];
+          expectAppDesignDataMode(tile, container.getAttribute('data-app-data')!, '[data-app-metric="tile"]');
+          expect(tile.querySelector(':scope > [data-app-part~="metric-label"]')).toHaveTextContent(ORDER_BUCKET_META[bucket].fallback);
+          expect(tile.querySelector(':scope > [data-app-part~="metric-reading"]')?.textContent).toBe(String(stats.byBucket[bucket]));
+          expect(tile.querySelector(':scope > [data-app-part~="metric-context"]')).toHaveTextContent(`${Math.round(stats.byBucket[bucket] / 10 * 100)}%`);
+        }
+      } finally {
+        release();
+      }
+    }
+    expect(stats.total).toBe(10);
+    expect(stats.buckets.map(bucket => bucket.count)).toEqual([4, 2, 3, 1]);
+  });
+
   it('draws one proportion segment per non-empty bucket with share-proportional widths', () => {
     renderPanel();
 

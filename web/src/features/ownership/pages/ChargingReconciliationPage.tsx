@@ -517,13 +517,19 @@ export default function ChargingReconciliationPage() {
       align: 'right',
       render: (row) => (
         <div className="min-w-28">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div
+            data-app-part="metric"
+            data-app-metric="bar"
+            data-metric-track
+            className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+          >
             <div
+              data-metric-fill
               className={cn('h-full rounded-full', severityTokens.warn.dot)}
               style={{ width: `${Math.min(100, Math.max(0, row.share_pct))}%` }}
             />
           </div>
-          <Text as="span" variant="caption" className="tabular-nums">
+          <Text data-app-part="metric-reading" as="span" variant="caption" className="tabular-nums">
             {formatPct(row.share_pct)}
           </Text>
         </div>
@@ -742,86 +748,92 @@ export default function ChargingReconciliationPage() {
                 {draft.lines.map((line, index) => (
                   <div
                     key={index}
-                    className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 md:grid-cols-2 xl:grid-cols-5"
+                    data-app-part="card"
+                    data-app-card-kind="record"
+                    data-app-record-kind="invoice-line-editor"
+                    data-surface-variant="standalone"
+                    className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
                   >
-                    <Input
-                      label={t('ownership.reconcile.form.lineRef', 'Line reference')}
-                      value={line.line_ref}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          lines: current.lines.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, line_ref: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      type="datetime-local"
-                      label={t('ownership.reconcile.form.lineWhen', 'Occurred at')}
-                      value={isoUtcToLocalDatetimeInput(line.occurred_at)}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          lines: current.lines.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? {
-                                  ...item,
-                                  // Cleared/invalid input keeps the previous instant (never throws).
-                                  occurred_at: localDatetimeInputToIso(event.target.value) ?? item.occurred_at,
-                                }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      label={t('ownership.reconcile.form.lineLocation', 'Location')}
-                      value={line.location}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          lines: current.lines.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, location: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <Input
-                      type="number"
-                      label={t('ownership.reconcile.form.lineEnergy', 'Billed energy (Wh)')}
-                      value={line.billed_energy_wh}
-                      min={0}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          lines: current.lines.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, billed_energy_wh: Number(event.target.value) }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
-                    <MoneyInput
-                      label={t('ownership.reconcile.form.lineTotal', 'Line total')}
-                      value={line.billed_total_minor}
-                      currency={draft.currency}
-                      locale={units.unitPrefs.locale}
-                      onChange={(value) =>
-                        setDraft((current) => ({
-                          ...current,
-                          lines: current.lines.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? {
-                                  ...item,
-                                  billed_total_minor: value ?? 0,
-                                }
-                              : item,
-                          ),
-                        }))
-                      }
-                    />
+                    <div data-app-part="record-body" data-app-record-slot="body" className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                      <Input
+                        label={t('ownership.reconcile.form.lineRef', 'Line reference')}
+                        value={line.line_ref}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lines: current.lines.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, line_ref: event.target.value } : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <Input
+                        type="datetime-local"
+                        label={t('ownership.reconcile.form.lineWhen', 'Occurred at')}
+                        value={isoUtcToLocalDatetimeInput(line.occurred_at)}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lines: current.lines.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    // Cleared/invalid input keeps the previous instant (never throws).
+                                    occurred_at: localDatetimeInputToIso(event.target.value) ?? item.occurred_at,
+                                  }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <Input
+                        label={t('ownership.reconcile.form.lineLocation', 'Location')}
+                        value={line.location}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lines: current.lines.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, location: event.target.value } : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <Input
+                        type="number"
+                        label={t('ownership.reconcile.form.lineEnergy', 'Billed energy (Wh)')}
+                        value={line.billed_energy_wh}
+                        min={0}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lines: current.lines.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, billed_energy_wh: Number(event.target.value) }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                      <MoneyInput
+                        label={t('ownership.reconcile.form.lineTotal', 'Line total')}
+                        value={line.billed_total_minor}
+                        currency={draft.currency}
+                        locale={units.unitPrefs.locale}
+                        onChange={(value) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lines: current.lines.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    billed_total_minor: value ?? 0,
+                                  }
+                                : item,
+                            ),
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1191,11 +1203,16 @@ export default function ChargingReconciliationPage() {
             </Button>
           }
         >
-          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
-            <Text as="p" variant="caption">
+          <div
+            data-app-part="panel"
+            data-app-panel-kind="code"
+            data-surface-variant="standalone"
+            className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4"
+          >
+            <Text data-app-code-slot="heading" as="p" variant="caption">
               {t('ownership.reconcile.dispute.digest', 'Dispute packet digest')}
             </Text>
-            <Text as="p" variant="code" className="mt-1 break-all">
+            <Text data-app-code-slot="body" as="p" variant="code" className="mt-1 break-all">
               {report?.dispute_packet_digest || '—'}
             </Text>
           </div>
@@ -1248,20 +1265,26 @@ export default function ChargingReconciliationPage() {
             {(report?.disputes ?? []).map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
+                data-app-part="card"
+                data-app-card-kind="record"
+                data-app-record-kind="charging-dispute"
+                data-surface-variant="standalone"
+                className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
               >
-                <div>
-                  <Text as="p" variant="label">
-                    {money(item.claimed_minor)} ·{' '}
-                    {t('ownership.reconcile.dispute.recovered', 'recovered {{value}}', {
-                      value: money(item.recovered_minor),
-                    })}
-                  </Text>
-                  <Text as="p" variant="caption">
-                    {formatDateTime(item.opened_at)} · {item.note || '—'}
-                  </Text>
+                <div data-app-part="record-body" data-app-record-slot="body" className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <Text data-app-part="record-title" data-app-record-slot="label" as="p" variant="label">
+                      {money(item.claimed_minor)} ·{' '}
+                      {t('ownership.reconcile.dispute.recovered', 'recovered {{value}}', {
+                        value: money(item.recovered_minor),
+                      })}
+                    </Text>
+                    <Text data-app-part="record-context" data-app-record-slot="context" as="p" variant="caption">
+                      {formatDateTime(item.opened_at)} · {item.note || '—'}
+                    </Text>
+                  </div>
+                  <VerdictBadge value={item.status} />
                 </div>
-                <VerdictBadge value={item.status} />
               </div>
             ))}
             {(report?.disputes ?? []).length === 0 && report ? (

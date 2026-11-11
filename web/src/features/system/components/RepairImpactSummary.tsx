@@ -90,18 +90,25 @@ export function RepairImpactSummary({ preview }: RepairImpactSummaryProps) {
         emptyMessage={t('dataRepair.preview.noChanges', 'No database fields would change.')}
       />
 
-      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-        <div className="flex items-center gap-2">
-          <LockKeyhole className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          <Text as="p" variant="bodySm" className="font-medium text-[var(--text-primary)]">
-            {t('dataRepair.preview.preserved', '{{count}} measured fields stay unchanged', {
-              count: preserved.length,
-            })}
-          </Text>
+      <div
+        data-app-part="feedback"
+        data-app-feedback-kind="notice"
+        data-app-tone="neutral"
+        className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
+      >
+        <div data-app-part="feedback-content">
+          <div className="flex items-center gap-2">
+            <LockKeyhole data-app-part="feedback-icon" className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Text as="p" data-app-part="feedback-title" variant="bodySm" className="font-medium text-[var(--text-primary)]">
+              {t('dataRepair.preview.preserved', '{{count}} measured fields stay unchanged', {
+                count: preserved.length,
+              })}
+            </Text>
+          </div>
+          <Caption data-app-part="feedback-message" className="mt-1">
+            {preserved.map((item) => fieldLabel(item.field)).join(', ')}
+          </Caption>
         </div>
-        <Caption className="mt-1">
-          {preserved.map((item) => fieldLabel(item.field)).join(', ')}
-        </Caption>
       </div>
 
       {warnings.map((warning) => (

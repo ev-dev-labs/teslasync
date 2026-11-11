@@ -2,6 +2,7 @@ import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ProgressRing } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
 import {
   HelpTooltip,
@@ -90,7 +91,7 @@ export function MilestoneProgress({
                 { percent: fmtNumber(percent) },
               )}
             />
-            <dl
+            <dl data-app-part="list" data-app-list="definitions"
               data-layout="responsive-columns"
               className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4"
             >
@@ -120,11 +121,13 @@ export function MilestoneProgress({
                 },
               ].map((item) => (
                 <div
+                  data-app-part="list-row"
                   key={item.key}
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <Text as="dt" variant="caption">{item.label}</Text>
+                  <Text data-app-part="metric-label" as="dt" variant="caption">{item.label}</Text>
                   <Text
+                    data-app-part="metric-value"
                     as="dd"
                     size="sm"
                     weight="semibold"
@@ -137,13 +140,13 @@ export function MilestoneProgress({
               ))}
             </dl>
           </div>
-          <div className="mt-5 flex gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
-            <Gauge
-              className="mt-0.5 h-4 w-4 shrink-0 text-amber-300"
-              aria-hidden="true"
-            />
+          <AlertBanner
+            variant="warning"
+            icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+            className="mt-5 gap-2 rounded-xl p-3"
+          >
             <Text variant="bodySm">{evidence}</Text>
-          </div>
+          </AlertBanner>
         </MilestoneSectionBody>
       </LayoutCard>
     </section>

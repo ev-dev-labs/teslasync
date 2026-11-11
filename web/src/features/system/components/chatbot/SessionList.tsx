@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useId, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, ConfirmDialog, GlassPanel, Icon, Input, Text } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, type DataSourceQuery } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChatSessionInfo } from '@/api/types';
@@ -15,6 +15,7 @@ interface SessionListProps {
   onRename: (sessionId: string, title: string) => void;
   onDelete: (sessionId: string) => void;
   isLoading?: boolean;
+  source?: DataSourceQuery;
   className?: string;
 }
 
@@ -37,6 +38,7 @@ export function SessionList({
   onRename,
   onDelete,
   isLoading,
+  source,
   className,
 }: SessionListProps) {
   const { t } = useTranslation();
@@ -84,6 +86,7 @@ export function SessionList({
   };
 
   const handleRenameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       commitRename(true);
@@ -95,8 +98,13 @@ export function SessionList({
 
   return (
     <>
-      <GlassPanel className={cn('w-72 shrink-0 overflow-hidden flex flex-col', className)}>
-        <div className="p-3 border-b border-[var(--glass-border)]">
+      <GlassPanel
+        data-app-part="panel conversation-sessions"
+        role="complementary"
+        aria-label={t('chatbot.history', 'History')}
+        className={cn('w-72 min-h-0 min-w-0 shrink-0 overflow-hidden flex flex-col !p-0', className)}
+      >
+        <div data-app-part="conversation-sessions-header" className="p-d-pad-x border-b border-[var(--glass-border)]">
           <Button
             onClick={onNewChat}
             variant="primary"
@@ -110,7 +118,7 @@ export function SessionList({
         </div>
 
         <Text
-          as="p"
+          as="h2"
           size="xs"
           weight="semibold"
           color="secondary"
@@ -119,17 +127,32 @@ export function SessionList({
           {t('chatbot.sessions', 'Sessions')}
         </Text>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+          {source && (
+            <DataSourceNotice sources={[{
+              id: 'conversation-sessions',
+              label: t('chatbot.sessions', 'Sessions'),
+              query: source,
+            }]} />
+          )}
+          <div
+            data-app-part="list conversation-session-list"
+            data-app-list="sessions"
+            role={sessions.length > 0 ? 'list' : undefined}
+            aria-label={t('chatbot.sessions', 'Sessions')}
+            className="space-y-1"
+          >
           {isLoading && sessions.length === 0 ? (
-            <Text as="p" size="xs" color="muted" className="px-2 py-4 text-center">
+            <Text as="p" role="status" size="xs" color="muted" className="px-2 py-4 text-center">
               {t('common.loading', "Loading...")}
             </Text>
           ) : sessions.length === 0 ? (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            !source?.isError && source?.fetchStatus !== 'paused' && (
+            <EmptyState /* no-action: New chat remains available above the empty history */
               icon={<MessageSquare className="h-6 w-6" />}
               message={t('chatbot.noSessions', 'No conversations yet')}
               className="py-8"
-            />
+            />)
           ) : (
             sessions.map((session) => {
               const isActive = session.id === activeSessionId;
@@ -137,6 +160,9 @@ export function SessionList({
               return (
                 <div
                   key={session.id}
+                  role="listitem"
+                  data-app-part="list-row conversation-session"
+                  data-app-session-state={isRenaming ? 'editing' : isActive ? 'active' : 'idle'}
                   className={cn(
                     'flex min-w-0 items-start rounded-lg border transition-colors',
                     isActive
@@ -146,6 +172,8 @@ export function SessionList({
                 >
                   {isRenaming ? (
                     <div
+                      data-app-part="conversation-session-revision"
+                      data-app-form-section
                       className="min-w-0 w-full p-2 space-y-2"
                       onBlur={(e) => {
                         // Moving to Save/Cancel is still inside this editor.
@@ -218,7 +246,7 @@ export function SessionList({
                   )}
 
                   {!isRenaming && (
-                    <div className="flex shrink-0 gap-1 p-1">
+                    <div data-app-part="conversation-session-actions" className="flex shrink-0 gap-1 p-1">
                       <Button
                         ref={(button) => {
                           if (button) renameButtonsRef.current.set(session.id, button);
@@ -253,6 +281,7 @@ export function SessionList({
               );
             })
           )}
+          </div>
         </div>
       </GlassPanel>
 

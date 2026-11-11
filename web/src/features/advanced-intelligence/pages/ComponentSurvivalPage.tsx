@@ -158,11 +158,12 @@ export default function ComponentSurvivalPage() {
                         sublabel={`${fmtNumber(risk.probability_pct)}%`}
                       />
                     ) : (
-                      <div key={risk.risk} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
-                        <Text as="span" variant="bodySm" className="min-w-0 break-words">
+                      <div key={risk.risk} data-app-part="metric" data-app-metric="tile" data-app-state="missing"
+                        className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
+                        <Text as="span" data-app-part="metric-label" variant="bodySm" className="min-w-0 break-words">
                           {componentLabel(risk.risk)} · {t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}
                         </Text>
-                        <Text as="span" variant="bodySm" color="muted">
+                        <Text as="span" data-app-part="metric-reading" variant="bodySm" color="muted">
                           {t('advancedIntelligence.survival.risks.unsupported', 'Unsupported')}
                         </Text>
                       </div>
@@ -173,16 +174,17 @@ export default function ComponentSurvivalPage() {
                     </Text>
                   )}
                 </div>
-                <div className="mt-5 min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-                  <Text as="p" variant="label">
+                <div data-app-part="metric" data-app-metric="tile"
+                  className="mt-5 min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                  <Text as="p" data-app-part="metric-label" variant="label">
                     {t('advancedIntelligence.survival.intervention', 'Intervention sensitivity')}
                   </Text>
-                  <Text as="p" variant="bodySm">
-                    {interventionLabel(item.intervention_sensitivity.intervention)}: {fmtNumber(
+                  <Text as="p" data-app-part="metric-reading" variant="bodySm">
+                    <span data-app-part="metric-context">{interventionLabel(item.intervention_sensitivity.intervention)}</span>: <span data-app-part="metric-value">{fmtNumber(
                       item.intervention_sensitivity.assumed_hazard_delta_pct,
-                    )}% · {t('advancedIntelligence.survival.adjustedP50', 'adjusted P50 {{value}}', {
+                    )}%</span> · <span data-app-part="metric-context">{t('advancedIntelligence.survival.adjustedP50', 'adjusted P50 {{value}}', {
                       value: units.formatDuration(item.intervention_sensitivity.adjusted_p50_s),
-                    })}
+                    })}</span>
                   </Text>
                 </div>
                 </Card>

@@ -42,6 +42,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={setRef}
+        data-app-part="card"
         // Card and GlassPanel now render the identical panel surface, so they
         // must also print identically. `[data-print-card]` is the print-stylesheet
         // opt-in marker (index.css) that gives a surface a visible border on

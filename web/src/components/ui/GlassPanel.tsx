@@ -56,6 +56,7 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
     return (
     <div
       ref={setRef}
+      data-app-part="panel"
       data-surface-variant={variant}
       data-print-card={variant === 'standalone' ? true : undefined}
       className={cn(

@@ -131,7 +131,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
       className="py-4"
     />
   ) : (
-    <ul className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
+    <ul data-app-part="list" className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
       {categoryEntries.map(([destination, signals]) => (
         <li key={destination} className="min-w-0 border-b border-[var(--border-subtle)] py-2 last:border-b-0">
           <Subhead

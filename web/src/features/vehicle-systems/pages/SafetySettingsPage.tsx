@@ -10,6 +10,7 @@ import { Icons } from '@/lib/icons';
 import {
   Badge,
   Button,
+  BUTTON_BASE,
   DataTable,
   PanelTitle,
   Caption,
@@ -821,7 +822,9 @@ export default function SafetySettingsPage() {
                     per-day trend with explicit data-confidence metadata. */}
                 <PrefetchLink
                   to="/fsd"
-                  className="flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  data-app-part="button"
+                  data-app-variant="secondary"
+                  className={cn(BUTTON_BASE, 'flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 hover:bg-[var(--control-bg-hover)]')}
                 >
                   <Text as="span" size="sm" weight="medium">
                     {t('safety.openFsdInsights', 'Open FSD insights')}

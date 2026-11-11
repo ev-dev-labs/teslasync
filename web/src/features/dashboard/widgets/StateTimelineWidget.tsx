@@ -192,7 +192,7 @@ function TimelineStripe({
           );
         })}
       </div>
-      <ul className={cn('m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0', presentation?.feed)}>
+      <ul data-app-part="list" className={cn('m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0', presentation?.feed)}>
         {legend.map((item) => (
           <li key={item.state} className={cn('flex min-w-0 items-center gap-1.5', presentation?.row)}>
             <span

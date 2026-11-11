@@ -39,6 +39,11 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -604,7 +609,7 @@ describe('EnergyPage', () => {
     expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeInTheDocument()
   })
 
-  it('keeps native investigation links focusable and all charging fields available', async () => {
+  it('binds native investigation and session links to all 27 consumers without changing navigation or charging fields', async () => {
     renderPage()
     const firstLink = await screen.findByRole('link', { name: 'Review temperature impact' })
     firstLink.focus()
@@ -620,6 +625,71 @@ describe('EnergyPage', () => {
     }
     const sessionLink = sessionsTable.querySelector('a[href="/charging/101"]')
     expect(sessionLink).toHaveTextContent(/^[A-Z][a-z]{2} \d{1,2}$/)
+    const links = [
+      ...['Review temperature impact', 'Review speed profile', 'Review route efficiency']
+        .map(name => screen.getByRole('link', { name })),
+      ...within(sessionsTable).getAllByRole('link'),
+    ]
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      '/temperature-impact', '/speed-profile', '/route-efficiency',
+      '/charging/101', '/charging/102', '/charging/103',
+    ])
+    const original = links.map(link => ({ href: link.getAttribute('href'), text: link.textContent, classes: link.className }))
+    const controls = postcss.parse(readFileSync(resolve(
+      process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css',
+    ), 'utf8'))
+    const root = document.documentElement
+    const profileNames = Object.keys(getAppDesignAttributes('classic'))
+    const releaseDefault = observeAppDesignScopes(root)
+    try {
+      links.forEach(link => expect(link).not.toHaveAttribute('data-app-design-owner'))
+    } finally {
+      releaseDefault()
+    }
+    for (const pack of PACK_IDS) {
+      const identity = postcss.parse(readFileSync(resolve(
+        process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+      ), 'utf8'))
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => root.setAttribute(name, value))
+      const release = observeAppDesignScopes(root)
+      try {
+        links.forEach((link, index) => {
+          expect(link.tagName).toBe('A')
+          expect(link).not.toHaveAttribute('role')
+          expect(link).toHaveAttribute('data-app-part', 'button')
+          expect(link).toHaveAttribute('data-app-variant', index < 3 ? 'secondary' : 'ghost')
+          expect(link).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+          const category: string[] = []
+          controls.walkRules(rule => {
+            if (rule.nodes.some(node => node.type === 'decl' && node.prop === 'touch-action')) {
+              category.push(...rule.selectors.filter(selector => link.matches(selector)))
+            }
+          })
+          expect(category.length, `${pack}: native anchor control consumer`).toBeGreaterThan(0)
+          const paint: string[] = []
+          identity.walkRules(rule => {
+            paint.push(...rule.selectors.filter(selector =>
+              selector.includes('[data-app-part~="button"]') && link.matches(selector),
+            ))
+          })
+          expect(paint.length, `${pack}: native anchor identity consumer`).toBeGreaterThan(0)
+        })
+        expect(links.map(link => ({ href: link.getAttribute('href'), text: link.textContent, classes: link.className })))
+          .toEqual(original)
+        expect(firstLink).toHaveFocus()
+      } finally {
+        release()
+        profileNames.forEach(name => root.removeAttribute(name))
+      }
+    }
+    root.setAttribute('data-app-design-pack', 'v1')
+    const releaseIncomplete = observeAppDesignScopes(root)
+    try {
+      links.forEach(link => expect(link).not.toHaveAttribute('data-app-design-owner'))
+    } finally {
+      releaseIncomplete()
+      root.removeAttribute('data-app-design-pack')
+    }
   })
 
   it('retries failed idle evidence without dropping independent charging content', async () => {

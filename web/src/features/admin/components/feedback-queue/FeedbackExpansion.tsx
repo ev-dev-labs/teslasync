@@ -51,13 +51,13 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating, canS
   )
 
   return (
-    <div className="space-y-4 bg-[var(--surface-1)]/40 p-4">
-      <div>
-        <Subhead className="mb-1">{t('feedback.queue.expand.body', 'Report body')}</Subhead>
+    <div data-app-part="panel card" data-app-card-kind="record" data-surface-variant="standalone" className="space-y-4 bg-[var(--surface-1)]/40 p-4">
+      <div data-app-part="record-body">
+        <Subhead data-app-part="record-title" className="mb-1">{t('feedback.queue.expand.body', 'Report body')}</Subhead>
         <Text as="p" variant="body" className="whitespace-pre-wrap">{row.body || '—'}</Text>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div data-app-part="record-context" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ExpandField label={t('feedback.queue.expand.appVersion', 'App version')}>
           <Code>{row.app_version || '—'}</Code>
         </ExpandField>
@@ -87,7 +87,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating, canS
           <Text as="summary" variant="bodySm" className="cursor-pointer">
             {t('feedback.queue.expand.recentErrors', 'Recent frontend errors')}
           </Text>
-          <Text as="pre" variant="code" className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2">
+          <Text data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" data-surface-variant="standalone" as="pre" variant="code" className="mt-2 max-h-64 overflow-auto rounded bg-[var(--surface-2)] p-2">
             {JSON.stringify(row.recent_errors, null, 2)}
           </Text>
         </details>
@@ -98,7 +98,7 @@ export function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating, canS
           <Text as="summary" variant="bodySm" className="cursor-pointer">
             {t('feedback.queue.expand.consoleTail', 'Console tail')}
           </Text>
-          <Text as="pre" variant="code" className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-[var(--surface-2)] p-2">
+          <Text data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" data-surface-variant="standalone" as="pre" variant="code" className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-[var(--surface-2)] p-2">
             {row.console_tail}
           </Text>
         </details>

@@ -37,7 +37,7 @@ export function DigitalTwinPanel({
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading && !hasData ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('common.loading', 'Loading…')}

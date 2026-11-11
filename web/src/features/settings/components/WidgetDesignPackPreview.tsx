@@ -1,7 +1,8 @@
 import { Fan, Lock, ShieldCheck, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Sparkline } from '@/components/charts';
-import { Button, Caption, GlassPanel, Input, MetricValue, PanelTitle, Text } from '@/components/ui';
+import { Button, Caption, GlassPanel, MetricValue, PanelTitle, Text } from '@/components/ui';
+import AppDesignPackPreview from './AppDesignPackPreview';
 import { usePackModule } from '@/features/dashboard/widgets/designPacks/PackBoundary';
 import { batteryGaugePresentations, vehicleHeroPresentations } from '@/features/dashboard/widgets/designPacks/presentationLoaders';
 import ClassicBatteryGauge from '@/features/dashboard/widgets/designPacks/families/ClassicBatteryGauge';
@@ -53,16 +54,8 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
     button: <Button key={id} disabled variant="secondary" icon={<Icon aria-hidden="true" />}>{label}</Button>,
   }));
   const locked = <Text>{t('theme.widgetDesignPacks.sampleLocked', 'Locked')}</Text>;
-  return <div data-widget-pack-preview={packId} data-app-design-preview="" data-app-design-pack={packId} className="space-y-4">
-    <div data-role="workspace-header" className="space-y-3 rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4">
-      <PanelTitle>{t('theme.widgetDesignPacks.appPreview', 'Application preview')}</PanelTitle>
-      <Text variant="bodySm">{t('theme.widgetDesignPacks.appPreviewHelp', 'Shared navigation, headings, controls and panels use this design when applied to the entire application.')}</Text>
-      <nav aria-label={t('theme.widgetDesignPacks.appPreview', 'Application preview')} className="flex flex-wrap gap-2">
-        {['vehicle', 'history', 'status'].map(key =>
-          <Button key={key} disabled variant="secondary">{t(`theme.widgetDesignPacks.${key}`)}</Button>)}
-      </nav>
-      <Input label={t('theme.widgetDesignPacks.sampleVehicle', 'Sample vehicle')} value="Model Y" readOnly />
-    </div>
+  return <AppDesignPackPreview packId={packId}>
+    <div data-widget-pack-preview={packId} className="space-y-4">
     {packId !== 'classic' && (!BatteryPresentation || !VehiclePresentation) && (
       <Text role="status">{t('theme.widgetDesignPacks.loading', 'Loading preview...')}</Text>
     )}
@@ -93,5 +86,6 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
           : <div className="grid grid-cols-3 gap-3">{actions.map(action => action.button)}</div>}
       </GlassPanel>
     </div>
-  </div>;
+    </div>
+  </AppDesignPackPreview>;
 }

@@ -26,6 +26,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
+import type { Legend as NativeLegend } from 'recharts'
 
 // Replace recharts' <Legend> with a prop-capturing double so the real
 // onClick / formatter closures ChartLegend builds can be invoked in isolation
@@ -252,8 +253,57 @@ describe('ChartLegend — recharts wiring', () => {
   it('keeps the content component stable across updates so mounted controls retain focus', () => {
     const mounted = render(<ChartLegend state={makeSource()} />)
     const content = H.legendProps?.content
+    const nativeRef = H.legendProps?.ref
     mounted.rerender(<ChartLegend state={makeSource(['solar'])} />)
     expect(H.legendProps?.content).toBe(content)
+    expect(H.legendProps?.ref).toBe(nativeRef)
+  })
+
+  it('remeasures only the attached native legend on content resize and disconnects on unmount', async () => {
+    const callbacks: ResizeObserverCallback[] = []
+    const observers: ResizeObserver[] = []
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    class LegendResizeObserver {
+      observe = observe
+      unobserve = vi.fn()
+      disconnect = disconnect
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback)
+        observers.push(this)
+      }
+    }
+    vi.stubGlobal('ResizeObserver', LegendResizeObserver)
+    try {
+      render(<ChartLegend />)
+      expect(H.legendProps?.ref).toBeTypeOf('function')
+      const nativeRef = H.legendProps?.ref as (instance: NativeLegend | ReactElement | null) => void
+      const actual = await vi.importActual<typeof import('recharts')>('recharts')
+      const instance = new actual.Legend({})
+      const forceUpdate = vi.spyOn(instance, 'forceUpdate').mockImplementation(() => {})
+      nativeRef(instance)
+      const renderContent = H.legendProps?.content as (props: Record<string, unknown>) => ReactNode
+      const mounted = render(<>{renderContent({ layout: 'horizontal', payload: [] })}</>)
+      expect(observe).toHaveBeenCalledWith(
+        mounted.container.querySelector('[data-app-part="chart-legend"]'),
+        { box: 'border-box' },
+      )
+      callbacks[0]([], observers[0])
+      expect(forceUpdate).toHaveBeenCalledTimes(1)
+      nativeRef(<span />)
+      callbacks[0]([], observers[0])
+      expect(forceUpdate).toHaveBeenCalledTimes(1)
+      nativeRef(instance)
+      callbacks[0]([], observers[0])
+      expect(forceUpdate).toHaveBeenCalledTimes(2)
+      nativeRef(null)
+      callbacks[0]([], observers[0])
+      expect(forceUpdate).toHaveBeenCalledTimes(2)
+      mounted.unmount()
+      expect(disconnect).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('allocates dense horizontal controls in a wrapping grid without dropping labels or toggle state', () => {
@@ -317,6 +367,19 @@ describe('ChartLegend — recharts wiring', () => {
     expect(H.legendProps?.wrapperStyle).toBe(style)
     expect(H.legendProps?.content).toBe(content)
     expect(H.legendProps?.layout).toBe('vertical')
+  })
+
+  it('marks the default vertical content without applying horizontal grid geometry', () => {
+    render(<ChartLegend layout="vertical" />)
+    const Content = H.legendProps?.content as React.ComponentType<React.ComponentPropsWithoutRef<typeof import('recharts').DefaultLegendContent>>
+    const mounted = render(<Content layout="vertical" payload={[
+      { value: 'Signed power', color: '#91b4d2', type: 'line' },
+    ]} />)
+    const wrapper = mounted.container.querySelector('[data-app-part~="chart-legend"]')
+    expect(wrapper).toHaveAttribute('data-chart-legend-layout', 'vertical')
+    expect(wrapper?.className).not.toContain('grid-cols')
+    expect(mounted.getByText('Signed power')).toBeInTheDocument()
+    expect(mounted.container.querySelector('.recharts-default-legend')).toHaveStyle({ textAlign: 'left' })
   })
 
   it('preserves payload series colors, IDs and ordering without imposing a palette', () => {

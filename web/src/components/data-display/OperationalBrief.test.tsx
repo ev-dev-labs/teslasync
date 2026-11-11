@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 import { OperationalBrief } from './OperationalBrief';
 
 vi.mock('react-i18next', () => ({

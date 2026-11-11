@@ -603,6 +603,12 @@ describe('FleetOperationsPage', () => {
     expect(screen.getByRole('heading', { name: 'Charging policy matrix' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Maintenance work-order board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
+    const workOrder = screen.getByText('Rotate tires').closest('article');
+    expect(workOrder).toHaveAttribute('data-app-part', 'card');
+    expect(workOrder?.parentElement).toHaveAttribute('data-app-part', 'list');
+    const workOrderColumn = workOrder?.closest('section');
+    expect(workOrderColumn).toHaveAttribute('data-app-part', 'section');
+    expect(workOrderColumn?.parentElement).toHaveAttribute('data-app-part', 'grid');
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
     const reservation = screen.getByRole('button', { name: 'New reservation' });
     expect(reservation.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');

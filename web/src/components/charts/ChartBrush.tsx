@@ -15,18 +15,17 @@ export interface ChartBrushProps {
 }
 
 /**
- * Themed wrapper around recharts' `<Brush>` for consistent zoom-controls
- * across the app. Pass it as a child of an `<AreaChart>` / `<LineChart>` /
- * `<ComposedChart>` — recharts will render it below the X-axis.
+ * Themed native-element factory for consistent zoom controls. Compose it as
+ * `{ChartBrush({ dataKey: 'time' })}` directly inside the chart. Recharts parses
+ * its children before React renders wrappers: `<ChartBrush />` is not a native
+ * Brush child and cannot supply its geometry or range to that parser.
  *
  * When the parent chart is inside a `<ChartTimeRangeProvider>` AND shares the
  * same dataset+`syncId` as siblings, dragging the brush automatically zooms
  * every synced chart (recharts handles this natively — no extra wiring).
  *
- * Note: this component is intentionally a thin presentational wrapper. The
- * `<Brush>` element MUST be rendered inside a recharts chart container for
- * recharts to wire it up; mounting it standalone is a no-op and a unit-test
- * antipattern.
+ * The returned `<Brush>` must be a direct child of the Recharts chart. Keep
+ * this factory hook-free; adding another React wrapper would lose that identity.
  */
 export function ChartBrush({
   dataKey = 'time',

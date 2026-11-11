@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('react-i18next', () => ({
@@ -92,6 +93,48 @@ describe('AchievementUnlockedToast', () => {
     renderToast(onDismiss)
     fireEvent.click(screen.getByRole('button', { name: /Dismiss achievement notification/i }))
     expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps shared actions keyboard reachable and preserves encoded navigation', async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    const onDismiss = vi.fn()
+    function Destination() {
+      const { pathname, search } = useLocation()
+      return <span data-testid="destination">{pathname}{search}</span>
+    }
+    render(
+      <MemoryRouter>
+        <Destination />
+        <AchievementUnlockedToast
+          event={{ ...sampleEvent, achievement: { ...sampleEvent.achievement, id: 'first drive/1?' } }}
+          onDismiss={onDismiss}
+          durationMs={60_000}
+        />
+      </MemoryRouter>,
+    )
+
+    const view = screen.getByRole('button', { name: /view/i })
+    const dismiss = screen.getByRole('button', { name: /Dismiss achievement notification/i })
+    expect(view).toHaveAttribute('data-app-part', 'button feedback-actions')
+    expect(view).toHaveAttribute('type', 'button')
+    expect(view).toHaveClass('h-auto', 'p-0', 'text-yellow-300', 'hover:bg-transparent')
+    expect(view).not.toHaveClass('h-9', 'px-3')
+    expect(dismiss).toHaveAttribute('data-app-part', 'button feedback-dismiss')
+    expect(dismiss).toHaveAttribute('type', 'button')
+    expect(dismiss).toHaveClass('h-auto', 'p-1.5', 'rounded-lg')
+    expect(dismiss).not.toHaveClass('h-9', 'px-3')
+
+    view.focus()
+    await user.tab()
+    expect(dismiss).toHaveFocus()
+    await user.keyboard(' ')
+    expect(onDismiss).toHaveBeenCalledOnce()
+    await user.tab({ shift: true })
+    expect(view).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onDismiss).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('destination')).toHaveTextContent('/lifetime?achievement=first%20drive%2F1%3F')
   })
 
   it('auto-dismisses after the configured duration', () => {

@@ -56,7 +56,7 @@ export function CabinThermalAcceptedDirectory({
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="accepted">
-          <ol className="max-h-[30rem] space-y-2 overflow-y-auto pr-1">
+          <ol data-app-part="list" className="max-h-[30rem] space-y-2 overflow-y-auto pr-1">
             {events.map((event, index) => (
               <li key={`${event.startTs}-${index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">

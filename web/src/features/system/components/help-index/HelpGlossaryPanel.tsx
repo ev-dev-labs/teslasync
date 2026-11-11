@@ -28,15 +28,15 @@ export function HelpGlossaryPanel() {
         )}
       </Text>
 
-      <dl className="mt-4 space-y-4">
+      <dl data-app-part="list" data-app-list="definitions" className="mt-4 space-y-4">
         {GLOSSARY.map((term) => (
-          <div key={term.id} data-glossary-entry={term.id} className="space-y-1">
-            <dt>
+          <div key={term.id} data-app-part="list-row" data-glossary-entry={term.id} className="space-y-1">
+            <dt data-app-part="metric-label">
               <Text as="span" size="sm" weight="medium" color="primary">
                 {t(term.termKey, term.termFallback)}
               </Text>
             </dt>
-            <dd className="space-y-1">
+            <dd data-app-part="metric-value" className="space-y-1">
               <Text as="p" variant="bodySm">
                 {t(term.definitionKey, term.definitionFallback)}
               </Text>

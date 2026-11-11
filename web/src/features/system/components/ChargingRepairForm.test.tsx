@@ -156,6 +156,9 @@ describe('ChargingRepairForm', () => {
 
     const region = screen.getByRole('region', { name: 'Repair charging session #77' });
     expect(region).toHaveAttribute('id', 'repair-form-charging-77');
+    expect(region).toHaveAttribute('data-app-form-section');
+    expect(region).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(region.querySelector('[data-app-form-body]')).toContainElement(screen.getByLabelText('Energy added (Wh)'));
 
     // ended_at always starts blank, with a machine-parseable placeholder.
     const endedAt = screen.getByLabelText('End date/time (ISO)');

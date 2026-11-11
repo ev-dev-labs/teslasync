@@ -279,7 +279,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
           </div>
         )}
         details={!isCompact && (
-          <dl className="flex min-w-0 flex-wrap justify-between gap-3">
+          <dl data-app-part="list" className="flex min-w-0 flex-wrap justify-between gap-3">
             <div className="min-w-0">
               <Caption as="dt">{t('dashboardWidgets.driving.driveEfficiencyChart.latest', 'Latest')}</Caption>
               <Text as="dd" variant="bodySm">

@@ -74,21 +74,21 @@ export function ArchetypeFeatureEvidence({
         <ArchetypeSectionBody summary={summary} state={state} requirement="eligible">
           <Table className="min-w-[620px]" aria-label={t('archetypes.features.title', 'Feature ranges and temperature-imputation evidence')}>
 
-            <thead><tr>
-              <th scope="col"><MetricLabel>{t('archetypes.features.feature', 'Feature')}</MetricLabel></th>
-              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.minimum', 'Minimum')}</MetricLabel></th>
-              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.median', 'Median')}</MetricLabel></th>
-              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.maximum', 'Maximum')}</MetricLabel></th>
+            <thead data-app-part="table-head"><tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="col"><MetricLabel>{t('archetypes.features.feature', 'Feature')}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.minimum', 'Minimum')}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.median', 'Median')}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.maximum', 'Maximum')}</MetricLabel></th>
             </tr></thead>
             <tbody>
             {rows.map((row) => (
-              <tr
+              <tr data-app-part="table-row"
                 key={row.label}
               >
-                <th scope="row"><Text variant="label">{row.label}</Text></th>
-                <td className="text-right"><Text variant="bodySm">{row.format(row.range.min)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{row.format(row.range.median)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{row.format(row.range.max)}</Text></td>
+                <th data-app-part="table-cell" scope="row"><Text variant="label">{row.label}</Text></th>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.min)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.median)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.max)}</Text></td>
               </tr>
             ))}
             </tbody>

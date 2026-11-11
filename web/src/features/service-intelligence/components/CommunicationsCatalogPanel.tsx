@@ -181,10 +181,10 @@ export function CommunicationsCatalogPanel({
           )}
 
           {latest && (
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <div className="flex flex-wrap items-center gap-2">
+            <div data-app-part="card" data-app-card-kind="record" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="record-header" className="flex flex-wrap items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-                <Text variant="body" weight="semibold">
+                <Text data-app-part="record-title" variant="body" weight="semibold">
                   {artifactFilename(latest.artifact_url)}
                 </Text>
                 {latest.not_modified && (
@@ -193,7 +193,7 @@ export function CommunicationsCatalogPanel({
                   </Badge>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <div data-app-part="record-body" className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                 <Caption>
                   {t('serviceIntelligence.catalog.rowsRead', '{{count}} source rows', {
                     count: latest.total_rows,
@@ -228,20 +228,22 @@ export function CommunicationsCatalogPanel({
                 'Imports are idempotent, restricted to official NHTSA URLs, and may request step-up authentication.',
               )}
             </Text>
-            <ol className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+            <ol data-app-part="list" data-app-list="records" className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
               {OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS.map((artifact) => {
                 const isLatest = latest?.artifact_url === artifact.url;
                 const isImporting = importing && importingArtifactURL === artifact.url;
                 return (
                   <li
                     key={artifact.url}
+                    data-app-part="card"
+                    data-app-card-kind="record"
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                   >
-                    <div>
-                      <Text variant="body" weight="semibold">{artifact.period}</Text>
-                      <Caption className="mt-1 block">{artifactFilename(artifact.url)}</Caption>
+                    <div data-app-part="record-header">
+                      <Text data-app-part="record-title" variant="body" weight="semibold">{artifact.period}</Text>
+                      <Caption data-app-part="record-context" className="mt-1 block">{artifactFilename(artifact.url)}</Caption>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div data-app-part="record-body" className="flex flex-wrap items-center gap-2">
                       {isLatest && (
                         <Badge variant="success">
                           {t('serviceIntelligence.catalog.latest', 'Latest successful')}

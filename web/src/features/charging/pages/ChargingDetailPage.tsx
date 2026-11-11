@@ -951,7 +951,7 @@ export default function ChargingDetailPage() {
                             {/* Brush lets users zoom a portion of the timeline;
                                 recharts propagates the visible window to every
                                 other chart sharing this provider's syncId. */}
-                            <ChartBrush dataKey="time" />
+                            {ChartBrush({ dataKey: 'time' })}
                             </ComposedChart>
                           </ResponsiveContainer>
                         )}

@@ -34,9 +34,9 @@ export function RegionEndpointDetails(props: RegionEndpointPanelProps) {
             <Text size="base" weight="semibold">{props.regionLabel || props.region || t('region.kpi.regionUnknown', 'Not detected')}</Text>
             {props.regionKey && <Badge variant="info" size="sm">{props.regionKey.toUpperCase()}</Badge>}
           </div>
-          <div className="space-y-1.5">
-            <Label>{t('region.fleetApiUrl', 'Fleet API base URL')}</Label>
-            <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <div data-app-part="field" data-app-field-kind="readout" className="space-y-1.5">
+            <Label data-app-part="field-label">{t('region.fleetApiUrl', 'Fleet API base URL')}</Label>
+            <div data-app-field-surface="readout" className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
               <Code className="min-w-0 flex-1 select-text whitespace-pre-wrap break-all">{props.baseUrl || '—'}</Code>
               {props.baseUrl && <CopyButton key={props.baseUrl} text={props.baseUrl} iconOnly
                 className="h-11 min-h-11 min-w-11 shrink-0 md:h-9 md:min-h-9 md:min-w-0"

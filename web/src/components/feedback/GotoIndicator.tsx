@@ -12,6 +12,8 @@ export function GotoIndicator({ visible }: GotoIndicatorProps) {
   return (
     <div
       data-testid="goto-indicator"
+      data-app-part="feedback"
+      data-app-tone="neutral"
       role="status"
       aria-live="polite"
       className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999]

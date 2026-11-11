@@ -38,7 +38,12 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { ApiError } from '@/lib/resilience';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { TeslaEnergyLiveStatus } from '@/types/energy';
 
@@ -435,6 +440,86 @@ describe('PowerFlowDashboardPage — populated (charging / importing)', () => {
     expect(flowChip('500.00 W')).toBeInTheDocument();
   });
 
+  it('binds each real directional flow surface and unchanged formatted readout to all 27 design consumers', () => {
+    renderPage();
+    const flows = Array.from(overviewRegion().querySelectorAll('[data-app-part~="card"][data-app-metric="inline"]'));
+    expect(flows).toHaveLength(4);
+    const original = flows.map(flow => ({
+      text: flow.textContent, classes: flow.className, signed: flow.getAttribute('aria-label'),
+      arrows: Array.from(flow.querySelectorAll('svg'), arrow => arrow.outerHTML),
+    }));
+    expect(flows.map(flow => flow.querySelector('[data-app-part~="metric-label"]')?.textContent))
+      .toEqual(['Solar', 'Battery', 'Grid', 'Grid Services']);
+    expect(flows.map(flow => flow.querySelector('[data-app-part~="metric-context"]')?.textContent))
+      .toEqual(['Home', 'Home', 'Home', 'Grid']);
+    const feedback = postcss.parse(readFileSync(resolve(
+      process.cwd(), 'src', 'components', 'ui', 'app-designs', 'feedback.css',
+    ), 'utf8'));
+    const root = document.documentElement;
+    const profileNames = Object.keys(getAppDesignAttributes('classic'));
+    const releaseDefault = observeAppDesignScopes(root);
+    try {
+      flows.forEach(flow => expect(flow).not.toHaveAttribute('data-app-design-owner'));
+    } finally {
+      releaseDefault();
+    }
+    for (const pack of PACK_IDS) {
+      const identity = postcss.parse(readFileSync(resolve(
+        process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+      ), 'utf8'));
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => root.setAttribute(name, value));
+      const release = observeAppDesignScopes(root);
+      try {
+        for (const flow of flows) {
+          expect(flow).toHaveAttribute('role', 'group');
+          expect(flow).toHaveAttribute('data-app-state', 'value');
+          expect(flow).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+          expect(flow).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2');
+          const surface: string[] = [];
+          identity.walkRules(rule => {
+            surface.push(...rule.selectors.filter(selector =>
+              selector.includes('[data-app-part~="card"]') && flow.matches(selector),
+            ));
+          });
+          expect(surface.length, `${pack}: native flow surface consumer`).toBeGreaterThan(0);
+          for (const slot of ['metric-label', 'metric-context', 'metric-reading']) {
+            const node = flow.querySelector(`[data-app-part~="${slot}"]`)!;
+            expect(node).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+            const selected: string[] = [];
+            feedback.walkRules(rule => {
+              selected.push(...rule.selectors.filter(selector =>
+                selector.includes(`[data-app-part~="${slot}"]`) && node.matches(selector),
+              ));
+            });
+            expect(selected.length, `${pack}: flow ${slot} consumer`).toBeGreaterThan(0);
+          }
+          expect(flow.querySelector('[data-app-part~="metric-reading"]')).toHaveAttribute('aria-hidden', 'true');
+        }
+        expect(flows.map(flow => ({
+          text: flow.textContent, classes: flow.className, signed: flow.getAttribute('aria-label'),
+          arrows: Array.from(flow.querySelectorAll('svg'), arrow => {
+            const copy = arrow.cloneNode(true) as Element;
+            copy.removeAttribute('data-app-design-owner');
+            copy.querySelectorAll('[data-app-design-owner]').forEach(node => node.removeAttribute('data-app-design-owner'));
+            return copy.outerHTML;
+          }),
+        }))).toEqual(original);
+      } finally {
+        release();
+        profileNames.forEach(name => root.removeAttribute(name));
+      }
+    }
+    root.setAttribute('data-app-design-pack', 'v1');
+    const releaseIncomplete = observeAppDesignScopes(root);
+    try {
+      flows.forEach(flow => expect(flow).not.toHaveAttribute('data-app-design-owner'));
+    } finally {
+      releaseIncomplete();
+      root.removeAttribute('data-app-design-pack');
+    }
+    expect(refreshMutate).not.toHaveBeenCalled();
+  });
+
   it('renders the site-details rows and both history charts', () => {
     renderPage();
     const overview = overviewRegion();
@@ -534,6 +619,12 @@ describe('PowerFlowDashboardPage — edge branches', () => {
 
     // Grid-services flow chip is omitted when its reading is zero.
     expect(within(overviewRegion()).queryByText('Grid Services')).toBeNull();
+    const zeroFlows = overviewRegion().querySelectorAll('[data-app-part~="card"][data-app-metric="inline"]');
+    expect(zeroFlows).toHaveLength(3);
+    zeroFlows.forEach(flow => {
+      expect(flow).toHaveAttribute('data-app-state', 'value');
+      expect(flow).toHaveTextContent('0.00 W');
+    });
   });
 
   it('renders an unknown grid status as neutral (not danger) in both panels', () => {
@@ -689,6 +780,7 @@ describe('PowerFlowDashboardPage — interactions', () => {
       const unknownFlows = within(overviewRegion()).getAllByRole('group', { name: '—' });
       expect(unknownFlows).toHaveLength(3);
       unknownFlows.forEach(flow => {
+        expect(flow).toHaveAttribute('data-app-state', 'missing');
         expect(flow.querySelector('svg.lucide-arrow-up')).toBeNull();
         expect(flow.querySelector('svg.lucide-arrow-down')).toBeNull();
       });

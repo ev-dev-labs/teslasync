@@ -41,6 +41,9 @@ import type { TimelineEvent } from './helpers';
 import { neonColorMap } from '@/lib/tokens';
 import { deriveDataState } from '@/api/dataState';
 import type { SecurityEvent } from '@/types/admin';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // Deterministic i18n: t(key, fallback) returns the English fallback so the
 // visible copy we assert on is independent of the translation JSON.
@@ -205,6 +208,38 @@ describe('EventTimeline — state precedence', () => {
 // ── Label + subtitle resolution ──────────────────────────────────────────────
 
 describe('EventTimeline — label + subtitle per (kind, variant)', () => {
+  it('composes actual painted records while retaining source chronology, timestamps and complete detail', () => {
+    const detail = 'Driver front, passenger rear — long source detail remains intact';
+    const events = [
+      makeEvent({ id: 'later', kind: 'door', variant: 'negative', detail, timestamp: '2026-07-04T11:00:00Z' }),
+      makeEvent({ id: 'earlier', kind: 'lock', timestamp: '2026-07-03T10:00:00Z' }),
+    ];
+    const { container } = renderTimeline({ timelineEvents: events });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        const rows = screen.getAllByRole('listitem');
+        expect(rows).toHaveLength(2);
+        expect(rows[0]).toHaveTextContent('Door opened');
+        expect(rows[1]).toHaveTextContent('Vehicle locked');
+        for (const [index, row] of rows.entries()) {
+          expectAppDesignDataMode(row, container.getAttribute('data-app-data')!, '[data-app-card-kind="record"]');
+          const body = row.querySelector(':scope > [data-app-part~="record-body"]')!;
+          expect(matchesAppDesignCss(body, '[data-app-part~="record-body"]')
+            .some(rule => rule.declarations['min-inline-size'] === '0')).toBe(true);
+          expect(within(row).getByTestId('event-timestamp')).toHaveAttribute('data-value', events[index].timestamp);
+        }
+        expect(rows[0].querySelector('[data-app-part~="record-context"]')?.textContent).toBe(detail);
+        expect(screen.getByRole('list', { name: 'Security event timeline' })).toHaveClass('max-h-96', 'overflow-y-auto');
+        expect(firstChip(container)).toHaveClass(neonColorMap.red.bg, neonColorMap.red.text);
+      } finally {
+        release();
+      }
+    }
+  });
+
   it.each([
     ['lock', 'positive', 'Vehicle locked', 'Doors secured'],
     ['lock', 'negative', 'Vehicle unlocked', 'Doors accessible'],

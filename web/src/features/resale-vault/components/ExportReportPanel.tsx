@@ -170,7 +170,7 @@ export function ExportReportPanel({ report, sources = [], retainedExport, onSign
         <div className="space-y-2">
           <InlineCallout variant="warning">
             {t('resaleVault.preview.includedWithWarning', 'Included with warning')}
-            <ul className="list-disc ps-5">
+            <ul data-app-part="list" className="list-disc ps-5">
               {displayPolicy.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
             </ul>
           </InlineCallout>
@@ -193,45 +193,49 @@ export function ExportReportPanel({ report, sources = [], retainedExport, onSign
       </div>
 
       {signed && (
-        <div className="space-y-2 rounded-shape-sm border border-[var(--border-subtle)] p-3">
+        <div data-app-part="card" data-app-card-kind="record" className="space-y-2 rounded-shape-sm border border-[var(--border-subtle)] p-3">
           {signedReadinessKey !== readinessKey && (
             <InlineCallout variant="warning">
               {t('resaleVault.export.olderPreview', 'This signed snapshot belongs to an older preview. Download JSON exports that unchanged snapshot, not the current preview. Sign again to replace it.')}
             </InlineCallout>
           )}
-          <HelperText>{signed.report.report_id}</HelperText>
-          <HelperText>{t('resaleVault.disclosure.profileGroup', 'Disclosure profile')}: {signed.report.disclosure.profileId}</HelperText>
-          <HelperText>{t('resaleVault.disclosure.sections', 'Evidence sections')}: {signed.report.disclosure.sections.join(', ')}</HelperText>
-          <HelperText>{t('resaleVault.disclosure.vinLabel', 'VIN disclosure')}: {signed.report.disclosure.sensitive.vinDisclosure}</HelperText>
-          <HelperText>
-            {t('resaleVault.preview.timeBounds', 'Evidence window: {{earliest}} → {{latest}} ({{precision}} precision).', {
-              earliest: signed.report.time_bounds.earliest_evidence_at ?? '—',
-              latest: signed.report.time_bounds.latest_evidence_at ?? '—',
-              precision: signed.report.time_bounds.precision,
-            })}
-          </HelperText>
-          <div className="flex items-center gap-2">
-            <Badge variant={signed.local_key_status.persisted ? 'success' : 'warning'}>
-              {signed.local_key_status.persisted
-                ? t('resaleVault.export.keyPersisted', 'Signing key persisted')
-                : t('resaleVault.export.keySessionOnly', 'Signing key session-only')}
-            </Badge>
-            {signed.local_key_status.revoked && (
-              <Badge variant="danger">{t('resaleVault.export.keyRevoked', 'Signed with a revoked key')}</Badge>
-            )}
+          <div data-app-part="record-header">
+            <HelperText data-app-part="record-title">{signed.report.report_id}</HelperText>
           </div>
-          <div className="break-all text-[var(--text-secondary)]">
-            <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.digest', 'SHA-256 digest')}:</span>{' '}
-            {signed.digest_sha256_hex}
-          </div>
-          <div className="break-all text-[var(--text-secondary)]">
-            <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.keyId', 'Key ID')}:</span>{' '}
-            {signed.signature.key_id}
-          </div>
-          <div className="text-[var(--text-secondary)]">
-            <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.signedAt', 'Signed at')}:</span>{' '}
-            {/^\d{4}-\d{2}-\d{2}$/.test(signed.signature.signed_at)
-              ? formatDayKey(signed.signature.signed_at, opts) : formatDateTime(signed.signature.signed_at)}
+          <div data-app-part="record-body" className="space-y-2">
+            <HelperText>{t('resaleVault.disclosure.profileGroup', 'Disclosure profile')}: {signed.report.disclosure.profileId}</HelperText>
+            <HelperText>{t('resaleVault.disclosure.sections', 'Evidence sections')}: {signed.report.disclosure.sections.join(', ')}</HelperText>
+            <HelperText>{t('resaleVault.disclosure.vinLabel', 'VIN disclosure')}: {signed.report.disclosure.sensitive.vinDisclosure}</HelperText>
+            <HelperText data-app-part="record-context">
+              {t('resaleVault.preview.timeBounds', 'Evidence window: {{earliest}} → {{latest}} ({{precision}} precision).', {
+                earliest: signed.report.time_bounds.earliest_evidence_at ?? '—',
+                latest: signed.report.time_bounds.latest_evidence_at ?? '—',
+                precision: signed.report.time_bounds.precision,
+              })}
+            </HelperText>
+            <div className="flex items-center gap-2">
+              <Badge variant={signed.local_key_status.persisted ? 'success' : 'warning'}>
+                {signed.local_key_status.persisted
+                  ? t('resaleVault.export.keyPersisted', 'Signing key persisted')
+                  : t('resaleVault.export.keySessionOnly', 'Signing key session-only')}
+              </Badge>
+              {signed.local_key_status.revoked && (
+                <Badge variant="danger">{t('resaleVault.export.keyRevoked', 'Signed with a revoked key')}</Badge>
+              )}
+            </div>
+            <div data-app-part="record-context" className="break-all text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.digest', 'SHA-256 digest')}:</span>{' '}
+              {signed.digest_sha256_hex}
+            </div>
+            <div data-app-part="record-context" className="break-all text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.keyId', 'Key ID')}:</span>{' '}
+              {signed.signature.key_id}
+            </div>
+            <div data-app-part="record-context" className="text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">{t('resaleVault.export.signedAt', 'Signed at')}:</span>{' '}
+              {/^\d{4}-\d{2}-\d{2}$/.test(signed.signature.signed_at)
+                ? formatDayKey(signed.signature.signed_at, opts) : formatDateTime(signed.signature.signed_at)}
+            </div>
           </div>
         </div>
       )}

@@ -14,17 +14,35 @@
 // tests — no i18n setup is required.
 
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { parse, type Rule } from 'postcss'
 import { createInstance } from 'i18next'
 import * as reactI18next from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
+import {
+  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
+} from '@/components/ui/app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 import { AiOutputPanel, type AiOutputPanelProps } from './AiOutputPanel'
 import { AIFeatureCard, type AIFeatureStream } from './AIFeatureCard'
 
 const PANEL = 'ai-output-panel'
 const THINKING = 'ai-thinking-indicator'
+const designRules: Rule[] = []
+for (const sheet of ['base', 'feedback']) {
+  parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', `${sheet}.css`), 'utf8'))
+    .walkRules(rule => { designRules.push(rule) })
+}
+
+function consumes(node: Element, contract: string, property: string) {
+  return designRules.some(rule => rule.selector.includes(contract)
+    && rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === property)
+    && Array.from(node.ownerDocument.querySelectorAll(rule.selector)).includes(node))
+}
 
 function renderPanel(props: Partial<AiOutputPanelProps> = {}) {
   const merged: AiOutputPanelProps = {
@@ -37,6 +55,70 @@ function renderPanel(props: Partial<AiOutputPanelProps> = {}) {
 }
 
 describe('AiOutputPanel', () => {
+  it.each(PACK_IDS)('%s composes real conditional output, pending lines and supplied execution records', async pack => {
+    const activity = [
+      { id: 'one', name: 'query_battery_status', status: 'running' as const },
+      { id: 'two', name: 'query_future', status: 'succeeded' as const, data: 'not-public' },
+      { id: 'three', name: 'query_vehicle_location', status: 'failed' as const },
+    ]
+    const tree = (props: Partial<AiOutputPanelProps>) => (
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <AiOutputPanel text="" state="idle" error={null} {...props} />
+      </div>
+    )
+    const { container, rerender } = render(tree({}))
+    const release = observeAppDesignScopes(container.firstElementChild!)
+    try {
+      expect(screen.queryByTestId(PANEL)).toBeNull()
+      rerender(tree({ state: 'streaming', activity }))
+      const panel = screen.getByTestId(PANEL)
+      const indicator = screen.getByTestId(THINKING)
+      await waitFor(() => expect(indicator).toHaveAttribute('data-app-design-owner'))
+      expect(consumes(panel, '[data-app-part~="card"]', 'border-radius')).toBe(true)
+      expect(indicator).toHaveAttribute('role', 'status')
+      expect(indicator).toHaveAttribute('aria-live', 'polite')
+      const skeletons = indicator.querySelectorAll('[data-app-part~="skeleton"]')
+      expect(skeletons).toHaveLength(3)
+      skeletons.forEach((line, index) => {
+        expect(line).toHaveClass('h-3', ['w-full', 'w-11/12', 'w-9/12'][index])
+        expect(line).toHaveAttribute('aria-hidden', 'true')
+        expect(consumes(line, '[data-app-part~="skeleton"]', 'background-image')).toBe(true)
+      })
+      const trail = screen.getByTestId('helix-evidence-trail')
+      const rows = trail.querySelectorAll('[data-app-list="definitions"] > [data-app-part~="list-row"]')
+      expect(Array.from(rows, row => row.getAttribute('title'))).toEqual(activity.map(item => item.name))
+      expect(rows[0].querySelector('[data-app-part~="metric-label"]')).toHaveTextContent('Battery status')
+      expect(rows[0].querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('Reading')
+      expect(rows[1]).toHaveTextContent('successful')
+      expect(rows[2]).toHaveTextContent('Unavailable')
+      if (APPLICATION_DESIGNS[pack].data === 'instrument') {
+        expect(consumes(rows[0].querySelector('[data-app-part~="metric-reading"]')!,
+          '[data-app-list="definitions"]', 'border-inline-start')).toBe(true)
+      } else {
+        expect(consumes(rows[0], '[data-app-list="definitions"]', 'display')).toBe(true)
+      }
+      expect(trail).not.toHaveTextContent(/not-public|tokens|verified|grounded/i)
+
+      const text = '0\n\n<script>literal retained text</script>'
+      rerender(tree({ state: 'error', text, error: 'stream_incomplete', activity, usage: { in: 1, out: 2 } }))
+      const alert = screen.getByRole('alert')
+      await waitFor(() => expect(alert).toHaveAttribute('data-app-design-owner'))
+      expect(consumes(alert, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`, 'border')).toBe(true)
+      expect(consumes(alert.querySelector('[data-app-part~="feedback-content"]')!,
+        '[data-app-feedback-kind="notice"]', 'grid-column')).toBe(true)
+      expect(panel.querySelectorAll('p')[1].textContent).toBe(text)
+      expect(screen.queryByTestId(THINKING)).toBeNull()
+      expect(trail.querySelector('p')).toBeNull()
+      expect(panel.querySelector('script')).toBeNull()
+
+      rerender(tree({}))
+      expect(screen.queryByTestId(PANEL)).toBeNull()
+      expect(screen.queryByTestId('helix-evidence-trail')).toBeNull()
+    } finally {
+      release()
+    }
+  })
+
   describe('not-started lifecycle', () => {
     it('renders nothing when idle with no accumulated text', () => {
       const { container } = renderPanel({ state: 'idle', text: '' })

@@ -69,11 +69,12 @@ export function ByteSizeConverterTool() {
           <Select label={t('devtools.utils.byteSizeUnit', 'Unit')} options={UNIT_OPTIONS} value={unit} onChange={(e) => setUnit(e.target.value)} />
         </div>
         {conversions ? (
-          <ul className="grid grid-cols-5 gap-2" aria-label={t('devtools.utils.byteSizeResults', 'Converted byte sizes')}>
+          <ul data-app-part="list" data-app-list="definitions" className="grid grid-cols-5 gap-2" aria-label={t('devtools.utils.byteSizeResults', 'Converted byte sizes')}>
             {conversions.map((c) => {
               const isActive = c.unit === unit
               return (
                 <li
+                  data-app-part="list-row"
                   key={c.unit}
                   aria-current={isActive ? 'true' : undefined}
                   className={cn(
@@ -81,8 +82,8 @@ export function ByteSizeConverterTool() {
                     isActive ? 'bg-theme-accent/10 ring-1 ring-theme-accent/30' : 'bg-[var(--surface-overlay)]',
                   )}
                 >
-                  <p className="text-xs text-[var(--text-secondary)]">{c.unit}</p>
-                  <p className="text-sm font-mono text-[var(--text-primary)]">{c.value}</p>
+                  <p data-app-part="metric-label metric-unit" className="text-xs text-[var(--text-secondary)]">{c.unit}</p>
+                  <p data-app-part="metric-value" className="text-sm font-mono text-[var(--text-primary)]">{c.value}</p>
                 </li>
               )
             })}

@@ -155,17 +155,17 @@ function FieldRow({ field }: { field: TimeMachineField }) {
       : t('timeMachine.ageVeryStale', 'Very stale');
 
   return (
-    <li className="flex items-center justify-between gap-3 border-b border-[var(--glass-border)] py-2 last:border-b-0">
-      <div className="min-w-0">
+    <li data-app-part="list-row" className="flex items-center justify-between gap-3 border-b border-[var(--glass-border)] py-2 last:border-b-0">
+      <div data-app-part="metric-label" className="min-w-0">
         <Text as="p" weight="medium" className="break-words">
           {humanizeField(field.field)}
         </Text>
-        <Text as="p" variant="caption" className="break-all font-mono">
+        <Text data-app-part="metric-context" as="p" variant="caption" className="break-all font-mono">
           {field.field}
         </Text>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-end">
-        <Text variant="body" className="break-all tabular-nums">
+      <div data-app-part="metric-reading" className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-end">
+        <Text data-app-part="metric-value" variant="body" className="break-all tabular-nums">
           {isNull ? (
             <Text color="muted">—</Text>
           ) : field.value_kind === 'time' && typeof field.value === 'string' ? (
@@ -174,16 +174,18 @@ function FieldRow({ field }: { field: TimeMachineField }) {
             formatScalar(field, t)
           )}
         </Text>
-        <Badge
-          variant={variant}
-          size="sm"
-          title={t('timeMachine.changedAgo', 'changed {{age}} ago', { age })}
-          aria-label={t('timeMachine.fieldAgeLabel', '{{status}} observation, changed {{age}} before the reconstruction instant', {
-            status: ageLabel, age,
-          })}
-        >
-          {t('timeMachine.fieldAge', '{{status}} · {{age}}', { status: ageLabel, age })}
-        </Badge>
+        <span data-app-part="metric-context" className="inline-flex min-w-0 max-w-full">
+          <Badge
+            variant={variant}
+            size="sm"
+            title={t('timeMachine.changedAgo', 'changed {{age}} ago', { age })}
+            aria-label={t('timeMachine.fieldAgeLabel', '{{status}} observation, changed {{age}} before the reconstruction instant', {
+              status: ageLabel, age,
+            })}
+          >
+            {t('timeMachine.fieldAge', '{{status}} · {{age}}', { status: ageLabel, age })}
+          </Badge>
+        </span>
       </div>
     </li>
   );
@@ -228,7 +230,7 @@ function CategoryCard({ category, fields, isLoading, isError, error, onRetry, un
           message={emptyMessage}
         />}
       >
-        <ul className="flex flex-col">
+        <ul data-app-part="list" data-app-list="definitions" className="flex flex-col">
           {fields.map((f) => (
             <FieldRow key={f.field} field={f} />
           ))}

@@ -56,6 +56,9 @@ export function InputCommandTile({ def, onRequestDialog, loading, disabled = fal
 
   return (
     <GlassPanel
+      data-app-part="panel button"
+      data-app-variant={variant === 'danger' ? 'danger' : 'secondary'}
+      data-app-choice-surface="command-tile"
       role="button"
       tabIndex={loading || disabled ? -1 : 0}
       aria-label={label}

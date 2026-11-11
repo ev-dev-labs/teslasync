@@ -3,7 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { PageLayout, Grid, ChartCard, LayoutCard } from '@/components/layout';
-import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
+import { GlassPanel, Button, Badge, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
 import type { Column, MobileDataTablePresentation } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -168,7 +168,7 @@ export default function StateMachineDebuggerPage() {
   const transInitial = transTrust.status === 'initial';
   const transLoading = transInitial && !transTrust.isRefreshBlocked;
   const transitionPlaceholder = (label: string, height: number, rows = 1) => (
-    <div
+    <div data-app-part="status"
       role="status"
       aria-label={label}
       aria-busy={transLoading}
@@ -1108,9 +1108,9 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
           <Caption className="mb-1 block">{t('fsm.detail.context', "Context snapshot")}</Caption>
           <div className="mt-1 flex flex-wrap gap-2">
             {Object.entries(transition.details).map(([key, val]) => (
-              <Text as="span" size="xs" color="secondary" mono key={key} className="rounded bg-[var(--surface-2)] px-2 py-0.5">
+              <Badge variant="neutral" key={key} className="font-mono">
                 {key}: {String(val)}
-              </Text>
+              </Badge>
             ))}
           </div>
         </div>

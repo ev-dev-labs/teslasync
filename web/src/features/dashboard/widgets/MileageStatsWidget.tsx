@@ -92,6 +92,9 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       </div>
       {progress != null && (
         <div
+          data-app-part="metric"
+          data-app-metric="bar"
+          data-metric-track
           className="h-2 overflow-hidden bg-[var(--surface-2)] rounded-shape-sm"
           role="progressbar"
           aria-label={t('widget.mileageStats.nextMilestone', 'Next milestone')}
@@ -99,7 +102,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
           aria-valuemax={100}
           aria-valuenow={Math.round(progress)}
         >
-          <div className="h-full rounded-shape-sm bg-[var(--accent-primary)] transition-[width] duration-fast motion-reduce:transition-none"
+          <div data-metric-fill className="h-full rounded-shape-sm bg-[var(--accent-primary)] transition-[width] duration-fast motion-reduce:transition-none"
             style={{ width: `${progress}%` }} />
         </div>
       )}

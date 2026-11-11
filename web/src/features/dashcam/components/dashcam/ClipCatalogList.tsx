@@ -47,7 +47,7 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
 
   return (
     <>
-    <ul className="space-y-2" aria-label={t('dashcam.catalog.listAria', 'Imported clips')}>
+    <ul data-app-part="list" className="space-y-2" aria-label={t('dashcam.catalog.listAria', 'Imported clips')}>
       {clips.map((clip) => {
         const selected = clip.id === selectedClipId;
         return (

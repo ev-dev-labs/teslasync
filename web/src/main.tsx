@@ -22,7 +22,6 @@ import { isAndroidShell, isNativeShell, needsServerSetup, restoreServerConnectio
 import App from './App'
 import './i18n'
 import './index.css'
-import './components/ui/appDesignPacks.css'
 
 const NativeConnectPage = React.lazy(() => import('./features/server/ConnectPage'))
 

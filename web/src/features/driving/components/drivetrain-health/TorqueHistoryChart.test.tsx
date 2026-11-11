@@ -74,7 +74,7 @@ vi.mock('@/components/charts', () => {
     Tooltip: Inert,
     CartesianGrid: Inert,
     YAxis: Inert,
-    Legend: Inert,
+    ChartLegend: Inert,
     ChartGradient: (p: { id?: string; color?: string }) => (
       <span
         data-testid="chart-gradient"

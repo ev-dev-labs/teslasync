@@ -359,15 +359,18 @@ function AutoClimateChip({
   t: Translate;
 }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2">
-      <Text variant="bodySm">{t(labelKey, label)}</Text>
-      {value != null ? (
-        <Badge variant={value ? 'success' : 'neutral'} size="sm">
-          {value ? t('climate.page.auto', 'Auto') : t('climate.page.manual', 'Manual')}
-        </Badge>
-      ) : (
-        <Caption>—</Caption>
-      )}
+    <div data-app-part="card" data-app-card-kind="record"
+      className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2">
+      <div data-app-part="record-header" className="flex w-full min-w-0 flex-1 items-center justify-between gap-2">
+        <Text data-app-part="record-title" variant="bodySm">{t(labelKey, label)}</Text>
+        {value != null ? (
+          <Badge variant={value ? 'success' : 'neutral'} size="sm">
+            {value ? t('climate.page.auto', 'Auto') : t('climate.page.manual', 'Manual')}
+          </Badge>
+        ) : (
+          <Caption>—</Caption>
+        )}
+      </div>
     </div>
   );
 }
@@ -902,7 +905,7 @@ export default function ClimateControlPage() {
                   period={latestPeriod}
                   retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
                   footer={
-                    <Caption className="rounded-full bg-[var(--surface-2)] px-3 py-1 font-medium">
+                    <Badge variant="neutral" size="sm" className="px-3 py-1">
                       {tempDelta != null
                         ? Math.abs(tempDelta) <= 1
                           ? t('climate.page.nearTarget', 'Near target')
@@ -910,7 +913,7 @@ export default function ClimateControlPage() {
                             ? t('climate.page.aboveTarget', 'Above target')
                             : t('climate.page.belowTarget', 'Below target')
                         : t('climate.page.notAvailable', 'N/A')}
-                    </Caption>
+                    </Badge>
                   }
                 />
 

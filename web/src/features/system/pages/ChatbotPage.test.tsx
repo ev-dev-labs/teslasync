@@ -43,7 +43,7 @@ import {
   waitFor,
   fireEvent,
 } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -354,7 +354,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/chatbot']}>
         <ToastProvider>
@@ -363,6 +363,7 @@ function renderPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, qc };
 }
 
 function composer(): HTMLElement {
@@ -415,6 +416,112 @@ function deferred<T>() {
 }
 
 describe('ChatbotPage — scoped mutation lifecycle', () => {
+  it('blocks sending while initial history is paused and retains the draft when the connection resumes', async () => {
+    installRequest({
+      sessions: [session('s1')],
+      history: [
+        serverMessage(1, 'user', 'Recorded question'),
+        serverMessage(2, 'assistant', 'Recorded answer'),
+      ],
+    });
+    const { qc } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    await screen.findByRole('button', { name: 'select s1' });
+    fireEvent.change(composer(), { target: { value: '  offline draft  ' } });
+    const wasOnline = onlineManager.isOnline();
+    try {
+      act(() => onlineManager.setOnline(false));
+      fireEvent.click(screen.getByRole('button', { name: 'select s1' }));
+      await screen.findByText('Conversation history is waiting for a connection.');
+      expect(qc.getQueryState(['chat', 'history', 's1'])).toMatchObject({
+        status: 'pending',
+        fetchStatus: 'paused',
+        data: undefined,
+      });
+      expect(screen.getByRole('log', { name: 'Conversation' })).toBeInTheDocument();
+      expect(screen.queryByTestId('chat-welcome')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+      fireEvent.keyDown(composer(), { key: 'Enter', code: 'Enter' });
+      expect(composer()).toHaveValue('  offline draft  ');
+      expect(chatPosts()).toHaveLength(0);
+    } finally {
+      await act(async () => onlineManager.setOnline(wasOnline));
+    }
+    await screen.findByText('Recorded answer');
+    expect(composer()).toHaveValue('  offline draft  ');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+    expect(chatPosts()).toHaveLength(0);
+  });
+
+  it('blocks sending after a fatal initial history failure until that source recovers', async () => {
+    installRequest({
+      sessions: [session('s1')],
+      history: [serverMessage(1, 'assistant', 'Recovered answer')],
+    });
+    const route = mockedRequest.getMockImplementation()!;
+    let historyFailed = true;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      historyFailed && url.startsWith('/chatbot/history')
+        ? Promise.reject(new Error('history unavailable'))
+        : route(url, init));
+    const { qc } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'select s1' }));
+    await screen.findByText('Conversation history could not be loaded.');
+    expect(qc.getQueryState(['chat', 'history', 's1'])).toMatchObject({
+      status: 'error',
+      fetchStatus: 'idle',
+      data: undefined,
+    });
+    fireEvent.change(composer(), { target: { value: '  recovery draft  ' } });
+    expect(screen.getByRole('log', { name: 'Conversation' })).toBeInTheDocument();
+    expect(screen.queryByTestId('chat-welcome')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    fireEvent.keyDown(composer(), { key: 'Enter', code: 'Enter' });
+    expect(chatPosts()).toHaveLength(0);
+    historyFailed = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    await screen.findByText('Recovered answer');
+    expect(composer()).toHaveValue('  recovery draft  ');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+    expect(chatPosts()).toHaveLength(0);
+  });
+
+  it('keeps cached history and a composer draft usable after refresh failure, retrying only history', async () => {
+    installRequest({
+      sessions: [session('s1')],
+      history: [
+        serverMessage(1, 'user', 'Recorded question'),
+        serverMessage(2, 'assistant', 'Recorded answer'),
+      ],
+    });
+    const route = mockedRequest.getMockImplementation()!;
+    let historyFailed = false;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      historyFailed && url.startsWith('/chatbot/history')
+        ? Promise.reject(new Error('history unavailable'))
+        : route(url, init));
+    const { qc } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'select s1' }));
+    await screen.findByText('Recorded answer');
+    fireEvent.change(composer(), { target: { value: '  unsent draft  ' } });
+    historyFailed = true;
+    await act(async () => qc.refetchQueries({ queryKey: ['chat', 'history', 's1'] }));
+    await screen.findByText('Cached · refresh failed');
+    expect(screen.getByText('Recorded answer')).toBeInTheDocument();
+    expect(composer()).toHaveValue('  unsent draft  ');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+    const sessionsReads = reqCalls.filter(({ url }) => url === '/chatbot/sessions').length;
+    historyFailed = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Conversation' }));
+    await waitFor(() => expect(screen.queryByText('Cached · refresh failed')).toBeNull());
+    expect(reqCalls.filter(({ url }) => url === '/chatbot/sessions')).toHaveLength(sessionsReads);
+    expect(screen.getByText('Recorded answer')).toBeInTheDocument();
+    expect(composer()).toHaveValue('  unsent draft  ');
+    expect(chatPosts()).toHaveLength(0);
+  });
+
   it('retains a second composer draft rejected while a baseline request is pending', async () => {
     const response = deferred<{ response: string; session_id: string }>();
     installRequest();
@@ -541,6 +648,7 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
 
     const box = composer();
     expect(box).toHaveAttribute('aria-label', 'Message');
+    expect(box).toHaveAttribute('placeholder', 'Ask Helix to investigate, compare, or explain…');
 
     // Icon-only send button MUST expose an accessible name.
     const send = screen.getByRole('button', { name: 'Send message' });
@@ -559,6 +667,7 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
     // The conversation transcript is an aria-live log region.
     const log = screen.getByRole('log', { name: 'Conversation' });
     expect(log).toHaveAttribute('aria-live', 'polite');
+    expect(log).not.toContainElement(screen.getByRole('form', { name: 'Message' }));
 
     // No messages yet → the welcome hero shows, not a blank panel.
     expect(screen.getByTestId('chat-welcome')).toBeInTheDocument();
@@ -645,6 +754,7 @@ describe('ChatbotPage — AI-off heuristic path', () => {
     await act(async () => {
       fireEvent.keyDown(box, { key: 'Enter', code: 'Enter', shiftKey: true });
     });
+
     expect(chatPosts()).toHaveLength(0);
 
     // Whitespace-only trims to empty → guarded no-op.
@@ -653,6 +763,17 @@ describe('ChatbotPage — AI-off heuristic path', () => {
       fireEvent.keyDown(box, { key: 'Enter', code: 'Enter' });
     });
     expect(chatPosts()).toHaveLength(0);
+  });
+
+  it('keeps the composer draft without sending while an IME owns Enter', async () => {
+    renderPage();
+    fireEvent.change(composer(), { target: { value: '  作成中  ' } });
+    fireEvent.keyDown(composer(), { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(composer(), { key: 'Enter', keyCode: 229 });
+    expect(chatPosts()).toHaveLength(0);
+    expect(composer()).toHaveValue('  作成中  ');
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Send message' })));
+    expect(chatPosts()).toEqual([{ message: '作成中' }]);
   });
 
   it('recalls the last user message into an empty composer on ArrowUp', async () => {
@@ -845,6 +966,8 @@ describe('ChatbotPage — AI-on streaming path', () => {
     });
     await screen.findByText('Test-only partial answer');
     expect(screen.queryByText('Helix is processing your request…')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape', isComposing: true });
+    expect(lastAssistantRow()).toHaveAttribute('data-streaming', 'true');
     await act(async () => {
       if (escape) fireEvent.keyDown(window, { key: 'Escape' });
       else fireEvent.click(stop);

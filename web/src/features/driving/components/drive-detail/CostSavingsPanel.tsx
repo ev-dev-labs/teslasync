@@ -42,9 +42,9 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
         </CardContent>
         <CardContent>
         <Table variant="embedded" aria-label={t('driveDetail.costSavings', 'Cost and savings')}>
-          <thead><tr><th scope="col">{t('driveDetail.report.metric', 'Metric')}</th><th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th></tr></thead>
+          <thead data-app-part="table-head"><tr data-app-part="table-row"><th data-app-part="table-cell" scope="col">{t('driveDetail.report.metric', 'Metric')}</th><th data-app-part="table-cell" scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th></tr></thead>
           <tbody>{rows.map((row) => (
-            <tr key={row.id}><th scope="row">{row.label}</th><td className="whitespace-nowrap tabular-nums">{row.value}</td></tr>
+            <tr data-app-part="table-row" key={row.id}><th data-app-part="table-cell" scope="row">{row.label}</th><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{row.value}</td></tr>
           ))}</tbody>
         </Table>
         <Text as="p" variant="caption">

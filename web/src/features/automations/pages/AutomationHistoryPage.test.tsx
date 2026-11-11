@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { AutomationHistory, AutomationHistoryListResponse } from '@/api/types';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import '../../../i18n';
@@ -360,6 +365,33 @@ describe('Automation History', () => {
       'whitespace-normal', 'focus-visible:outline-2', 'focus-visible:outline-offset-2');
     expect(within(link).getByText('New automation')).toHaveClass('min-w-0', 'break-words');
     expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(link).toHaveAttribute('data-app-part', 'button');
+    expect(link).toHaveAttribute('data-app-variant', 'secondary');
+    expect(link).not.toHaveAttribute('data-app-design-owner');
+    const controls = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    const root = document.documentElement;
+    try {
+      for (const pack of PACK_IDS) {
+        const attributes = getAppDesignAttributes(pack);
+        for (const [name, value] of Object.entries(attributes)) root.setAttribute(name, value);
+        const release = observeAppDesignScopes(root);
+        try {
+          const mode = APPLICATION_DESIGNS[pack].controls;
+          const matches: string[] = [];
+          controls.walkRules(rule => {
+            if (rule.selector.includes(`[data-app-controls="${mode}"]`) && rule.selector.includes('[data-app-part~="button"]')) {
+              matches.push(...rule.selectors.filter(selector => [...document.querySelectorAll(selector)].includes(link)));
+            }
+          });
+          expect(matches, `${pack} navigation control consumer`).not.toHaveLength(0);
+          expect(link).toHaveAttribute('href', '/automations/new');
+          expect(link.tagName).toBe('A');
+        } finally { release(); }
+      }
+    } finally {
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) root.removeAttribute(name);
+    }
+    expect(link).not.toHaveAttribute('data-app-design-owner');
   });
 
   it('allocates filter widths on wrappers and associates visible labels without losing unknown rules', () => {

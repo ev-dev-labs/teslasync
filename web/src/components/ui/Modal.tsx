@@ -1,10 +1,11 @@
 import { forwardRef, useCallback, useId, useRef, type HTMLAttributes, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { useDialogFocus, type UseDialogFocusOptions } from '@/hooks/useDialogFocus';
 import { PanelTitle } from './Typography';
+import { AppDesignPortal } from './AppDesignPortal';
+import type { AppDesignOriginSnapshot } from './appDesignOrigin';
 
 export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
   open: boolean;
@@ -25,6 +26,8 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    */
   ariaLabel?: string;
   getReturnFocusTarget?: UseDialogFocusOptions['getReturnFocusTarget'];
+  /** Preserve an invocation's design/locale across a caller's lazy boundary. */
+  originSnapshot?: AppDesignOriginSnapshot;
 }
 
 /**
@@ -55,7 +58,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, originSnapshot, ...props }, ref) => {
     const { t } = useTranslation();
     const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +99,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     const overlay = (
       // This is the shared <Modal> source of truth. All other interactive
       // dialogs MUST use this component instead of hand-rolling overlays.
-      <div className={cn('fixed inset-0 overflow-y-auto', aboveNotifications ? 'z-[120]' : 'z-overlay')}>
+      <div data-app-part="overlay" className={cn('fixed inset-0 overflow-y-auto', aboveNotifications ? 'z-[120]' : 'z-overlay')}>
         <div
           // Forced-colors mode suppresses
           // box-shadow + background-image, so a glass backdrop with a
@@ -113,6 +116,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         )}>
           <div
             ref={setDialogRef}
+            data-app-part="dialog"
+            data-app-dialog-size={size}
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
@@ -135,10 +140,13 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             {...props}
           >
             {title && (
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-default)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
+              <div data-app-part="dialog-header" className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-default)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
                 <PanelTitle as="h2" id={titleId} className="min-w-0 break-words">{title}</PanelTitle>
                 <button
                   type="button"
+                  data-app-part="button"
+                  data-app-variant="ghost"
+                  data-app-icon-only="true"
                   onClick={onClose}
                   aria-label={t('modal.close', 'Close')}
                   className={cn(
@@ -154,6 +162,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             )}
             <div
               data-modal-scroll-body="true"
+              data-app-part="dialog-body"
               className={fullscreen
                 ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 safe-bottom'
                 : 'min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom'}
@@ -161,7 +170,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
               {children}
             </div>
             {footer && (
-              <div data-modal-footer="true" className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 safe-bottom">
+              <div data-app-part="dialog-footer" data-modal-footer="true" className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 safe-bottom">
                 {footer}
               </div>
             )}
@@ -170,7 +179,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       </div>
     );
 
-    return createPortal(overlay, document.body);
+    return <AppDesignPortal origin={originSnapshot?.origin} originSnapshot={originSnapshot}>{overlay}</AppDesignPortal>;
   },
 );
 Modal.displayName = 'Modal';

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
@@ -30,10 +30,12 @@ function Gate({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-      <Text as="p" variant="caption" className="mt-1">
+    <div data-app-part="metric" data-app-metric="tile" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+      <div data-app-part="metric-reading" className="mt-1">
+        <Text data-app-part="metric-value" as="p" variant="bodySm">{value}</Text>
+      </div>
+      <Text data-app-part="metric-context" as="p" variant="caption" className="mt-1">
         {t('comfortConsistency.thresholds.affected', '{{count}} affected', {
           count: affected,
         })}
@@ -62,7 +64,7 @@ export function ComfortConsistencyThresholdGateMatrix({
           )}
         </Text>
         <ComfortConsistencySectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, xl: 4 }} gap={3}>
+          <div data-app-part="metric-grid" className="grid min-w-0 grid-cols-2 items-stretch gap-3 xl:grid-cols-4 [&>*]:min-w-0">
             <Gate
               label={t('comfortConsistency.thresholds.band', 'Comfort band')}
               value={t('comfortConsistency.thresholds.plusMinus', '+/- {{value}}', {
@@ -118,7 +120,7 @@ export function ComfortConsistencyThresholdGateMatrix({
               value={fmtInt(thresholds.windowDisplayLimit)}
               affected={summary.windowDirectory.omitted}
             />
-          </Grid>
+          </div>
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

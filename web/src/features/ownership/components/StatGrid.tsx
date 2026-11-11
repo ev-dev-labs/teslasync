@@ -1,11 +1,12 @@
 import { type ReactNode } from 'react';
-import { Grid } from '@/components/layout';
 import { Card, MetricValue, Text } from '@/components/ui';
 
 export interface OwnershipStat {
   key: string;
   label: string;
   value: ReactNode;
+  /** Source validity belongs to the caller, never to the formatted node. */
+  state?: 'value' | 'missing' | 'invalid';
   hint?: string;
   tone?: 'default' | 'positive' | 'warning' | 'critical' | 'accent';
 }
@@ -24,9 +25,9 @@ interface StatGridProps {
 }
 
 const gridColumns = {
-  2: { default: 1, sm: 2 },
-  3: { default: 1, sm: 2, lg: 3 },
-  4: { default: 1, sm: 2, lg: 4 },
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
 } as const;
 
 /**
@@ -35,27 +36,31 @@ const gridColumns = {
  */
 export function StatGrid({ stats, columns = 4 }: StatGridProps) {
   return (
-    <Grid cols={gridColumns[columns]} gap={3}>
+    <div data-app-part="metric-grid" className={`grid min-w-0 items-stretch gap-3 [&>*]:min-w-0 ${gridColumns[columns]}`}>
       {stats.map((stat) => (
         <Card
           key={stat.key}
+          data-app-part="card metric"
+          data-app-metric="tile"
+          data-state={stat.state}
           className="min-w-0 space-y-1"
         >
-          <Text as="p" variant="caption">
+          <Text data-app-part="metric-label" as="p" variant="caption">
             {stat.label}
           </Text>
           <MetricValue
+            data-app-part="metric-value"
             className={`break-words tabular-nums ${toneClass[stat.tone ?? 'default']}`}
           >
             {stat.value}
           </MetricValue>
           {stat.hint ? (
-            <Text as="p" variant="caption" className="mt-1">
+            <Text data-app-part="metric-context" as="p" variant="caption" className="mt-1">
               {stat.hint}
             </Text>
           ) : null}
         </Card>
       ))}
-    </Grid>
+    </div>
   );
 }

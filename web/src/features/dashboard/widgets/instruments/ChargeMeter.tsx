@@ -31,6 +31,7 @@ export function ChargeMeter({
 
   return (
     <div
+      data-app-part="chart"
       role={inScale ? 'meter' : 'group'}
       aria-label={label}
       aria-valuenow={inScale ? value : undefined}
@@ -53,7 +54,7 @@ export function ChargeMeter({
           </span>
         </div>
       )}
-      <div className="relative h-3 w-full rounded-full bg-[var(--surface-2)]">
+      <div data-app-part="chart-plot" className="relative h-3 w-full rounded-full bg-[var(--surface-2)]">
         {inScale && <div
           className="absolute inset-y-0 left-0 rounded-full"
           style={{ width: `${value}%`, backgroundColor: color ?? fill }}

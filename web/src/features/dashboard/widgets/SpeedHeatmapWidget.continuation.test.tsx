@@ -14,9 +14,9 @@ vi.mock('@/components/charts', async (original) => {
   const actual = await original<typeof import('@/components/charts')>();
   return {
     ...actual,
-    EmbeddedChart: (props: { data: unknown; children?: ReactNode }) => {
+    EmbeddedChart: (props: { data: unknown; children?: ReactNode; caption?: ReactNode }) => {
       hooks.chart(props);
-      return <div data-testid="heatmap-frame">{props.children}</div>;
+      return <div data-testid="heatmap-frame">{props.children}{props.caption}</div>;
     },
   };
 });
@@ -38,8 +38,12 @@ describe('specialist speed heatmap canonical frame', () => {
     expect(container.querySelectorAll('svg[role="img"] rect title')).toHaveLength(168);
     expect(hooks.chart).toHaveBeenCalledWith(expect.objectContaining({
       chartKey: 'dashboard-speed-heatmap',
+      metadata: expect.objectContaining({ unitLabel: expect.any(String) }),
+      caption: expect.anything(),
     }));
     expect(hooks.chart.mock.calls[0][0].data).toHaveLength(168);
+    expect(screen.getByText('Dim = no sample').closest('[data-chart-scale]')).toBeInTheDocument();
+    expect(container.querySelectorAll('svg[data-chart-family="speed-heatmap"] [data-chart-axis]')).toHaveLength(12);
   });
 
   it('keeps compact mode metric-only rather than injecting a second chart', () => {

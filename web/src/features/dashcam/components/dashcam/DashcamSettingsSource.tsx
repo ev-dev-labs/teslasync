@@ -27,7 +27,7 @@ export function DashcamSettingsSource({ source, isLoading, children }: DashcamSe
         errorMessage={t('error.loadFailed', 'Failed to load data')}
         emptyMessage={t('dataSources.status.pending', 'Pending')}
         emptyContent={
-          <div role="status" className="space-y-2">
+          <div data-app-part="status" role="status" className="space-y-2">
             <Caption>{source.isRefreshBlocked
               ? t('dataSources.status.paused', 'Refresh paused')
               : t('dataSources.status.pending', 'Pending')}</Caption>

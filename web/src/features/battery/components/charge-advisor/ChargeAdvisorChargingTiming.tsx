@@ -37,9 +37,10 @@ export function ChargeAdvisorChargingTiming({ analysis, state }: ChargeAdvisorCo
           <Text variant="caption">{t('chargeAdvisor.timing.weekdayTitle', 'Starts by local weekday')}</Text>
           <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
             {profile.startsByWeekday.map((count, weekday) => (
-              <div key={weekday} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2 text-center">
-                <Text variant="caption">{t(`chargeAdvisor.day.${weekday}`, weekdays[weekday] ?? 'Day')}</Text>
-                <Text className="mt-1 font-semibold">{isFiniteNumber(count) ? fmtInt(count) : '—'}</Text>
+              <div key={weekday} data-app-part="metric" data-app-metric="tile"
+                className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2 text-center">
+                <Text data-app-part="metric-label" variant="caption">{t(`chargeAdvisor.day.${weekday}`, weekdays[weekday] ?? 'Day')}</Text>
+                <Text data-app-part="metric-reading metric-value" className="mt-1 font-semibold">{isFiniteNumber(count) ? fmtInt(count) : '—'}</Text>
               </div>
             ))}
           </div>

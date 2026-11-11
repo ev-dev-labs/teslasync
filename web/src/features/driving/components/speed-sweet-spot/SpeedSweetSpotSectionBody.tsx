@@ -31,7 +31,7 @@ export function SpeedSweetSpotSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t(
           'sweetSpot.loading',

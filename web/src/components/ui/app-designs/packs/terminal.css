@@ -1,0 +1,236 @@
+/* A command ledger, not a forced monospace/green-screen theme. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"]:where([data-app-design-owner~="pack-terminal"]) {
+    --app-rule-style: solid; --app-nav-radius: 0px; --app-shadow: none;
+    --panel-radius: 0px; --panel-shadow: none; --panel-shadow-hover: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-end: 1px solid var(--border-strong); background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end: 2px solid var(--border-strong); background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-terminal"]) {
+    gap: calc(var(--density-gap) / 2); padding-block: var(--density-pad-y);
+    border-block: 1px dashed var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0; border-inline-start: 3px solid transparent;
+    border-block-end: 1px dashed var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start-color: var(--theme-accent);
+    background-color: var(--surface-2); text-decoration-line: underline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-terminal"]) {
+    display: flex; flex-direction: column; align-items: stretch; gap: var(--density-gap);
+    border-block: 2px solid var(--border-strong); padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-terminal"]) {
+    text-wrap: balance; max-inline-size: 40ch;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-terminal"]) {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+    gap: var(--density-gap); padding-block-start: var(--density-pad-y);
+    border-block-start: 1px dashed var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-terminal"]) {
+    row-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="section"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-start: 1px solid var(--border-strong);
+    padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--border-strong); border-radius: 0;
+    box-shadow: none; background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-terminal"]) {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--density-gap); row-gap: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+    gap: var(--density-gap); padding: var(--density-pad-y) var(--density-pad-x);
+    border: 0; border-block-end: 1px dashed var(--border-strong);
+    border-radius: 0; box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-label"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    max-inline-size: 34ch; text-align: start;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-value"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    text-align: end; font-variant-numeric: tabular-nums slashed-zero;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field"]:where(:not([data-app-field-kind="choice"])):where([data-app-design-owner~="pack-terminal"]) {
+    row-gap: calc(var(--density-gap) / 2); padding-block: var(--density-pad-y);
+    border-block-end: 1px dashed var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    text-decoration: underline dotted var(--border-strong); text-underline-offset: .3em;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--control-border); border-radius: 0;
+    background-color: var(--surface-1); box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0; box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--control-border); background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block: 1px solid var(--border-strong); padding-block: calc(var(--density-gap) / 2);
+    gap: var(--density-gap); border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0; border: 1px dashed transparent;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border); background-color: var(--surface-2);
+    text-decoration-line: underline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="table-toolbar"], [data-app-part~="pagination"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-block: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
+    gap: var(--density-gap); border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--surface-2); border-block-end: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end: 1px dashed var(--border-default); border-inline-end: 1px solid var(--border-default);
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-row"][aria-selected="true"]:where([data-app-design-owner~="pack-terminal"]) {
+    outline: 1px dashed var(--control-border); outline-offset: -1px; background-color: var(--surface-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 2px solid var(--border-strong); border-radius: 0;
+    background-color: var(--surface-1); box-shadow: var(--elevation-3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end: 2px solid var(--border-strong); padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-terminal"]) {
+    padding-block: var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-start: 1px dashed var(--border-strong); padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--control-border); border-radius: 0; box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0; border-block-end: 1px dashed var(--border-strong);
+    border-inline-start: 2px solid transparent;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):is([aria-selected="true"], [aria-checked="true"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start-color: var(--theme-accent); text-decoration-line: underline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):focus-visible:where([data-app-design-owner~="pack-terminal"]) {
+    outline: 2px solid var(--focus-ring); outline-offset: -2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--border-strong); border-radius: 0;
+    background-color: var(--surface-1); box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end: 1px solid var(--border-strong); padding-block-end: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-image: repeating-linear-gradient(to bottom, var(--border-strong) 0 3px, transparent 3px 6px), repeating-linear-gradient(to bottom, var(--border-strong) 0 3px, transparent 3px 6px);
+    background-position: left top, right top; background-size: 1px 100%; background-repeat: no-repeat;
+    background-color: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"] .recharts-cartesian-grid line:where([data-app-design-owner~="pack-terminal"]) {
+    stroke: var(--border-strong); stroke-dasharray: 1 4;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"] .recharts-cartesian-axis-tick-value:where([data-app-design-owner~="pack-terminal"]) {
+    fill: var(--text-secondary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-start: 1px dashed var(--border-strong); padding-block-start: var(--density-pad-y);
+    gap: var(--density-gap); justify-content: flex-start;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--border-strong); border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px solid var(--control-border); border-radius: 0;
+    background-color: var(--surface-1); gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-terminal"]) {
+    outline: 2px solid var(--surface-1); outline-offset: 1px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px dashed var(--border-strong); border-radius: 0;
+    background-color: var(--surface-1); padding: var(--density-pad-y); gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-terminal"]) {
+    padding-block: var(--density-pad-y); border-block-end: 1px dashed var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
+    row-gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0; border-style: dashed;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="feedback"], [data-app-part~="empty"]):where([data-app-design-owner~="pack-terminal"]) {
+    border: 1px dashed var(--border-strong); border-inline-start-style: solid;
+    border-inline-start-width: 3px; border-radius: 0;
+    padding: var(--density-pad-y) var(--density-pad-x); text-align: start; align-items: flex-start;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="error"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start: 3px solid var(--semantic-danger); padding-inline-start: var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block: 1px dashed var(--border-strong); padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--skeleton-bg); border: 1px dashed var(--border-strong); border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="error"] [data-app-part~="button"]:where([data-app-design-owner~="pack-terminal"]) {
+    text-decoration-line: underline; text-underline-offset: .3em;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="field-control"], [data-app-part~="nav-item"], [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-terminal"]) {
+    outline: 2px solid var(--focus-ring); outline-offset: 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--semantic-danger); border-inline-start-width: 3px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"], [data-app-part~="nav-item"]):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-style: dotted; box-shadow: none;
+    background-color: var(--surface-2); color: var(--text-secondary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-style: dashed; cursor: progress;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end-width: 2px; background-color: var(--control-bg-hover);
+  }
+}
+@media screen and (forced-colors: none) and (hover: hover) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):not([aria-disabled="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--control-bg-hover); text-decoration-line: underline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="nav-item"], [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--surface-2); text-decoration-line: underline;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border-hover); background-color: var(--control-bg-hover);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border-hover);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-row"]:hover:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--surface-2);
+  }
+}
+@media screen and (forced-colors: none) and (min-width: 1024px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-terminal"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

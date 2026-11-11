@@ -30,6 +30,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types'
 
 const navigateMock = vi.fn()
 
@@ -131,6 +136,42 @@ describe('NotFoundPage — content', () => {
 })
 
 describe('NotFoundPage — route suggestions', () => {
+  it('adopts real suggestion links in every complete profile without changing navigation or neutral standalone rendering', () => {
+    const { container } = renderPage('/vehicless')
+    const link = screen.getByRole('link', { name: /vehicles/i })
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', '/vehicles')
+    expect(link).toHaveAttribute('data-app-part', 'button')
+    expect(link).toHaveAttribute('data-app-variant', 'ghost')
+    expect(link.querySelector('button')).toBeNull()
+    expect(link).not.toHaveAttribute('role', 'button')
+    expect(link).not.toHaveAttribute('data-app-design-owner')
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+
+    container.setAttribute('data-app-design-preview', '')
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value)
+      const release = observeAppDesignScopes(container)
+      try {
+        const rules: postcss.Rule[] = []
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+          .walkRules(rule => { if (rule.selector.includes('[data-app-part~="button"]')) rules.push(rule) })
+        expect(rules.some(rule => link.matches(rule.selector)), pack).toBe(true)
+        expect(link).toHaveAttribute('data-app-design-owner', container.getAttribute('data-app-design-owner'))
+        expect(link).toHaveAttribute('href', '/vehicles')
+        link.removeAttribute('data-app-design-owner')
+        expect(rules.some(rule => link.matches(rule.selector)), `${pack}: final target required`).toBe(false)
+      } finally { release() }
+    }
+
+    container.removeAttribute('data-app-design-preview')
+    container.removeAttribute('data-app-design-pack')
+    const release = observeAppDesignScopes(container)
+    try { expect(link).not.toHaveAttribute('data-app-design-owner') } finally { release() }
+    link.focus()
+    expect(link).toHaveFocus()
+  })
+
   it('surfaces the closest known route inside a labelled navigation landmark', () => {
     // '/vehicless' is one edit away from the real '/vehicles' route.
     renderPage('/vehicless')

@@ -505,12 +505,13 @@ export default function WarrantyCommandPage() {
             {coverage.warranty.provider} · {enumLabel(coverage.warranty.kind, KIND_LABELS, t)}
           </Text>
         </div>
-        <div className="text-end">
-          <Text as="p" variant="caption">
+        <div data-app-part="metric" data-app-metric="headline" className="text-end">
+          <Text data-app-part="metric-label" as="p" variant="caption">
             {t('ownership.warranty.card.readiness', 'Claim readiness')}
           </Text>
           <p
-            className={`tabular-nums text-lg font-semibold ${
+            data-app-part="metric-reading"
+            className={`justify-end tabular-nums text-lg font-semibold ${
               coverage.readiness_score >= 80
                 ? severityTokens.success.fg
                 : coverage.readiness_score >= 50
@@ -518,7 +519,7 @@ export default function WarrantyCommandPage() {
                   : severityTokens.critical.fg
             }`}
           >
-            {fmtNumber(coverage.readiness_score)}/100
+            <span data-app-part="metric-value">{fmtNumber(coverage.readiness_score)}/100</span>
           </p>
         </div>
       </div>
@@ -565,24 +566,28 @@ export default function WarrantyCommandPage() {
 
       {coverage.warranty.kind === 'battery' || coverage.capacity_retention_pct != null ? (
         <Card variant="embedded" padding="sm" className="mt-4 shadow-none">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Text as="span" variant="caption">
-              {t('ownership.warranty.card.capacity', 'Battery retention vs. warranty floor')}
-            </Text>
-            <span className="tabular-nums text-sm text-[var(--text-secondary)]">
-              {coverage.capacity_retention_pct != null
-                ? formatPct(coverage.capacity_retention_pct)
-                : t('common.unknown', 'Unknown')} ·{' '}
-              {t('ownership.warranty.card.headroom', '{{value}} headroom', {
-                value:
-                  coverage.capacity_headroom_pct != null
-                    ? formatPct(coverage.capacity_headroom_pct)
-                    : t('common.unknown', 'Unknown'),
-              })}
-            </span>
-          </div>
+          <dl data-app-part="list" data-app-list="definitions">
+            <div data-app-part="list-row" className="flex flex-wrap items-center justify-between gap-3">
+              <Text data-app-part="metric-label" as="dt" variant="caption">
+                {t('ownership.warranty.card.capacity', 'Battery retention vs. warranty floor')}
+              </Text>
+              <dd data-app-part="metric-reading">
+                <span data-app-part="metric-value" className="tabular-nums text-sm text-[var(--text-secondary)]">
+                  {coverage.capacity_retention_pct != null
+                    ? formatPct(coverage.capacity_retention_pct)
+                    : t('common.unknown', 'Unknown')} ·{' '}
+                  {t('ownership.warranty.card.headroom', '{{value}} headroom', {
+                    value:
+                      coverage.capacity_headroom_pct != null
+                        ? formatPct(coverage.capacity_headroom_pct)
+                        : t('common.unknown', 'Unknown'),
+                  })}
+                </span>
+              </dd>
+            </div>
+          </dl>
           {coverage.capacity_floor_breach_at ? (
-            <Text as="p" variant="caption">
+            <Text data-app-part="metric-context" as="p" variant="caption">
               {t('ownership.warranty.card.breach', 'Projected to reach the floor around {{when}}', {
                 when: formatDateTime(coverage.capacity_floor_breach_at),
               })}
@@ -930,65 +935,70 @@ export default function WarrantyCommandPage() {
         >
           {claimFor != null ? (
             <form
-              className="mb-6 grid gap-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4 md:grid-cols-2"
+              data-app-part="card"
+              data-app-card-kind="record"
+              data-surface-variant="standalone"
+              className="mb-6 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4"
               onSubmit={submitClaim}
             >
-              <Text as="p" variant="caption">{claimTarget?.label} · {claimTarget?.vehicle_id}</Text>
-              {!claimScopeValid && (
-                <AlertBanner variant="warning">
-                  {t('productPreferences.defaultVehicle.unavailable', 'Unavailable vehicle {{id}}', { id: claimTarget?.vehicle_id })}
-                </AlertBanner>
-              )}
-              <Input
-                label={t('ownership.warranty.claimForm.title', 'Claim title')}
-                value={claimDraft.title}
-                required
-                maxLength={200}
-                onChange={(event) =>
-                  setClaimDraft((current) => ({ ...current, title: event.target.value }))
-                }
-              />
-              <Select
-                label={t('ownership.warranty.claimForm.status', 'Status')}
-                value={claimDraft.status}
-                options={CLAIM_STATUSES.map((status) => ({
-                  value: status,
-                  label: CLAIM_STATUS_LABELS[status](t),
-                }))}
-                onChange={(event) =>
-                  setClaimDraft((current) => ({
-                    ...current,
-                    status: event.target.value as ClaimStatus,
-                  }))
-                }
-              />
-              <MoneyInput
-                label={t('ownership.warranty.claimForm.amount', 'Amount')}
-                value={claimDraft.amount_minor}
-                currency={claimTarget?.currency ?? currency}
-                locale={units.unitPrefs.locale}
-                onChange={(value) =>
-                  setClaimDraft((current) => ({ ...current, amount_minor: value ?? 0 }))
-                }
-              />
-              <Textarea
-                label={t('ownership.warranty.claimForm.note', 'Evidence note')}
-                value={claimDraft.evidence_note}
-                rows={2}
-                onChange={(event) =>
-                  setClaimDraft((current) => ({ ...current, evidence_note: event.target.value }))
-                }
-              />
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" loading={createClaim.isPending} disabled={!claimScopeValid || createClaim.isPending}>
-                  {t('ownership.warranty.claimForm.submit', 'Record claim')}
-                </Button>
-                <Button type="button" variant="ghost" onClick={closeClaim}>
-                  {t('ownership.action.cancel', 'Cancel')}
-                </Button>
-              </div>
-              <div className="md:col-span-2">
-                <MutationError error={createClaim.error} />
+              <div data-app-part="record-body" className="grid gap-4 md:grid-cols-2">
+                <Text as="p" variant="caption">{claimTarget?.label} · {claimTarget?.vehicle_id}</Text>
+                {!claimScopeValid && (
+                  <AlertBanner variant="warning">
+                    {t('productPreferences.defaultVehicle.unavailable', 'Unavailable vehicle {{id}}', { id: claimTarget?.vehicle_id })}
+                  </AlertBanner>
+                )}
+                <Input
+                  label={t('ownership.warranty.claimForm.title', 'Claim title')}
+                  value={claimDraft.title}
+                  required
+                  maxLength={200}
+                  onChange={(event) =>
+                    setClaimDraft((current) => ({ ...current, title: event.target.value }))
+                  }
+                />
+                <Select
+                  label={t('ownership.warranty.claimForm.status', 'Status')}
+                  value={claimDraft.status}
+                  options={CLAIM_STATUSES.map((status) => ({
+                    value: status,
+                    label: CLAIM_STATUS_LABELS[status](t),
+                  }))}
+                  onChange={(event) =>
+                    setClaimDraft((current) => ({
+                      ...current,
+                      status: event.target.value as ClaimStatus,
+                    }))
+                  }
+                />
+                <MoneyInput
+                  label={t('ownership.warranty.claimForm.amount', 'Amount')}
+                  value={claimDraft.amount_minor}
+                  currency={claimTarget?.currency ?? currency}
+                  locale={units.unitPrefs.locale}
+                  onChange={(value) =>
+                    setClaimDraft((current) => ({ ...current, amount_minor: value ?? 0 }))
+                  }
+                />
+                <Textarea
+                  label={t('ownership.warranty.claimForm.note', 'Evidence note')}
+                  value={claimDraft.evidence_note}
+                  rows={2}
+                  onChange={(event) =>
+                    setClaimDraft((current) => ({ ...current, evidence_note: event.target.value }))
+                  }
+                />
+                <div className="md:col-span-2 flex gap-2">
+                  <Button type="submit" loading={createClaim.isPending} disabled={!claimScopeValid || createClaim.isPending}>
+                    {t('ownership.warranty.claimForm.submit', 'Record claim')}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={closeClaim}>
+                    {t('ownership.action.cancel', 'Cancel')}
+                  </Button>
+                </div>
+                <div className="md:col-span-2">
+                  <MutationError error={createClaim.error} />
+                </div>
               </div>
             </form>
           ) : null}

@@ -234,6 +234,12 @@ describe('SignalChangePointsPage evidence preservation', () => {
     expect(state.metrics[3]?.rawValue).toBe(5);
     expect(screen.getByText('No alarm detected')).toBeInTheDocument();
     expect(screen.getByText(/This does not establish stability or rule out drift/)).toBeInTheDocument();
+    const interpretation = screen.getByText('No alarm detected').closest('[data-app-part="card"]');
+    const scope = screen.getByText('Scope').closest('[data-app-part="card"]');
+    expect(interpretation).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(scope).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(interpretation).not.toBe(scope);
+    expect(state.chart?.height).toBe(340);
   });
 
   it('explains recurring ramp alarms without claiming an abrupt step or drift immunity', () => {
@@ -248,6 +254,8 @@ describe('SignalChangePointsPage evidence preservation', () => {
     expect(state.metrics[0]?.rawValue).toBe(expected.changePoints.length);
     expect(state.markers).toEqual(expected.changePoints.map((point) => point.ms));
     expect(screen.getByText('Alarm threshold crossed')).toBeInTheDocument();
+    expect(screen.getByText('Alarm threshold crossed').closest('[data-app-part="card"]'))
+      .toHaveTextContent('Abrupt shifts or sustained drift can trigger alarms');
     expect(screen.getByText(/Abrupt shifts or sustained drift can trigger alarms/)).toBeInTheDocument();
     expect(screen.getByText(/including repeated alarms after resets/)).toBeInTheDocument();
     expect(screen.queryByText(/slow ramp, which would show no alarm/)).not.toBeInTheDocument();

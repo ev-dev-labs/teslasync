@@ -53,7 +53,7 @@ export function NormalizationCoverageKpis({
 
   if (loading && !normalization) {
     return (
-      <div className={GRID} role="status" aria-busy="true">
+      <div data-app-part="status" className={GRID} role="status" aria-busy="true">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} height={88} rounded className="rounded-xl" />
         ))}

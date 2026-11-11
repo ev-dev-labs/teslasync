@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { deriveDataState } from '@/api/dataState';
 import type { GasPriceHistory } from '@/api/types';
 import { formatDate } from '@/lib/dateFormat';
@@ -39,8 +39,13 @@ vi.mock('@/components/charts', async (importOriginal) => {
     }) => <span data-testid="tick" data-tick={JSON.stringify(tick)} data-width={width}
       data-domain={JSON.stringify(domain)}>{tickFormatter(3)}</span>,
     CartesianGrid: ({ stroke }: { stroke: string }) => <span data-testid="grid" data-stroke={stroke} />,
-    Legend: ({ wrapperStyle }: { wrapperStyle: unknown }) =>
-      <span data-testid="legend" data-typography={JSON.stringify(wrapperStyle)} />,
+    ChartLegend: (props: ComponentProps<typeof original.ChartLegend>) =>
+      <div data-testid="legend" data-typography={JSON.stringify(props.wrapperStyle)}>
+        <original.ChartLegend {...props} payload={[
+          { value: 'Price/gallon', type: 'line', color: 'var(--text-secondary)' },
+          { value: 'Price/liter', type: 'line', color: 'var(--text-secondary)' },
+        ]} />
+      </div>,
     Tooltip: ({ content }: { content: ReactNode }) => <>{content}</>,
     areaGradient: () => null,
   };
@@ -83,6 +88,10 @@ describe('GasTrendChart', () => {
       top: 8, right: 8, left: 0, bottom: 0,
     });
     expect(screen.getByTestId('grid')).toHaveAttribute('data-stroke', chartTokens.gridStroke);
+    const legend = screen.getByTestId('legend').querySelector('[data-app-part="chart-legend"]');
+    expect(legend).toHaveTextContent('Price/gallon');
+    expect(legend).toHaveTextContent('Price/liter');
+    expect(legend?.querySelector('button')).not.toBeInTheDocument();
   });
 
   it('keeps mixed source denominations in separate, labelled series without converting or joining gaps', () => {

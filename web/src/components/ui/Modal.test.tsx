@@ -23,9 +23,15 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
-import { createRef, useState } from 'react';
+import { render, screen, fireEvent, cleanup, act, within, waitFor } from '@testing-library/react';
+import { createRef, useRef, useState } from 'react';
 import userEvent from '@testing-library/user-event';
+import { getAppDesignAttributes } from './app-designs/designs';
+import { Button } from './Button';
+import { Popover } from './Popover';
+import { Tooltip } from './Tooltip';
+import { Drawer } from './Drawer';
+import { Lightbox } from './Lightbox';
 
 // i18n stub so the Close button's `t('modal.close', 'Close')` resolves to its
 // fallback string without needing a provider. Returns the fallback (2nd arg)
@@ -98,6 +104,22 @@ function getDialog(): HTMLElement {
 }
 
 describe('Modal — visibility', () => {
+  it.each(['modal', 'drawer', 'lightbox'] as const)('isolates an initially open %s preview without guessing from focus', async kind => {
+    const attributes = getAppDesignAttributes('editorial');
+    const content = kind === 'drawer'
+      ? <Drawer open onClose={() => {}} title="Initially open preview"><p>Details</p></Drawer>
+      : kind === 'lightbox'
+        ? <Lightbox open onClose={() => {}} images={[{ src: 'https://example.test/preview.png', alt: 'Preview image' }]} />
+        : <Modal open onClose={() => {}} title="Initially open preview"><p>Details</p></Modal>;
+    render(<section data-app-design-preview="" {...attributes}>{content}</section>);
+    const boundary = screen.getByRole('dialog').closest('[data-app-design-portal]');
+    await waitFor(() => {
+      for (const [name, value] of Object.entries(attributes)) expect(boundary).toHaveAttribute(name, value);
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-editorial'));
+    });
+    expect(boundary?.parentElement).toBe(document.body);
+  });
+
   it('only raises the overlay above notifications when requested', () => {
     const renderModal = (aboveNotifications = false) => (
       <Modal open onClose={vi.fn()} title="Review" aboveNotifications={aboveNotifications}>
@@ -113,8 +135,14 @@ describe('Modal — visibility', () => {
   });
 
   it('keeps footer actions inside the focus trap but outside the scrolling body', () => {
-    render(<Modal open title="Preview" onClose={vi.fn()} footer={<button>Install</button>}><p>Rules</p></Modal>);
+    const { container } = render(<Modal open title="Preview" onClose={vi.fn()} footer={<button>Install</button>}><p>Rules</p></Modal>);
     const action = screen.getByRole('button', { name: 'Install' });
+    expect(container.querySelector(':not(template)')).toBeNull();
+    expect(getDialog()).toHaveAttribute('data-app-part', 'dialog');
+    expect(getDialog().closest('[data-app-part="overlay"]')).not.toBeNull();
+    expect(screen.getByText('Preview').closest('[data-app-part="dialog-header"]')).not.toBeNull();
+    expect(screen.getByText('Rules').closest('[data-app-part="dialog-body"]')).toHaveAttribute('data-modal-scroll-body');
+    expect(action.closest('[data-app-part="dialog-footer"]')).toHaveAttribute('data-modal-footer');
     expect(getDialog()).toContainElement(action);
     expect(action.closest('[data-modal-scroll-body]')).toBeNull();
     expect(action.closest('[data-modal-footer]')).not.toBeNull();
@@ -149,10 +177,84 @@ describe('Modal — visibility', () => {
         <p>Body</p>
       </Modal>,
     );
-    // Nothing renders inline where <Modal> was mounted.
-    expect(container).toBeEmptyDOMElement();
+    // Only the inert, layout-free origin template remains inline.
+    expect(container.querySelector(':not(template)')).toBeNull();
     // The dialog lives under <body> via createPortal.
     expect(document.body.contains(getDialog())).toBe(true);
+  });
+
+  it('keeps a different verified preview on real nested body portals, updates it live, and restores focus', async () => {
+    const user = userEvent.setup();
+    const outer = getAppDesignAttributes('terminal');
+    const previous = Object.keys(outer).map(name => [name, document.documentElement.getAttribute(name)] as const);
+    for (const [name, value] of Object.entries(outer)) document.documentElement.setAttribute(name, value);
+    function Preview({ pack }: { pack: 'editorial' | 'bauhaus' }) {
+      const [open, setOpen] = useState(false);
+      const [menuOpen, setMenuOpen] = useState(false);
+      const anchorRef = useRef<HTMLButtonElement>(null);
+      return <section data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <Button onClick={() => setOpen(true)}>Open preview dialog</Button>
+        <Modal open={open} onClose={() => setOpen(false)} title="Preview dialog"
+          footer={<Button variant="secondary">Keep footer</Button>}>
+          <Button ref={anchorRef} onClick={() => setMenuOpen(true)}>Preview options</Button>
+          <Popover open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={anchorRef}
+            role="menu" ariaLabel="Preview actions">
+            <Tooltip content="Preview explanation"><Button>Preview help</Button></Tooltip>
+          </Popover>
+        </Modal>
+      </section>;
+    }
+    try {
+      const view = render(<Preview pack="editorial" />);
+      const trigger = screen.getByRole('button', { name: 'Open preview dialog' });
+      await user.click(trigger);
+      const dialog = screen.getByRole('dialog', { name: 'Preview dialog' });
+      const boundary = dialog.closest('[data-app-design-portal]');
+      expect(boundary?.parentElement).toBe(document.body);
+      for (const [name, value] of Object.entries(getAppDesignAttributes('editorial'))) {
+        expect(boundary).toHaveAttribute(name, value);
+      }
+      await user.click(screen.getByRole('button', { name: 'Preview options' }));
+      const menu = screen.getByRole('menu', { name: 'Preview actions' });
+      const menuBoundary = menu.closest('[data-app-design-portal]');
+      expect(menuBoundary?.parentElement).toBe(document.body);
+      expect(menuBoundary).not.toBe(boundary);
+      expect(menuBoundary).toHaveAttribute('data-app-design-pack', 'editorial');
+      expect(screen.getByRole('tooltip').closest('[data-app-design-preview]')).toBe(menuBoundary);
+      await waitFor(() => {
+        for (const target of [dialog, menu, screen.getByRole('tooltip')]) {
+          expect(target).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-editorial'));
+          expect(target).toHaveAttribute('data-app-design-owner', expect.stringContaining('controls-underline'));
+          expect(target).not.toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-terminal'));
+        }
+      });
+
+      view.rerender(<Preview pack="bauhaus" />);
+      await waitFor(() => {
+        for (const target of [boundary, menuBoundary]) {
+          for (const [name, value] of Object.entries(getAppDesignAttributes('bauhaus'))) {
+            expect(target).toHaveAttribute(name, value);
+          }
+        }
+        for (const target of [dialog, menu, screen.getByRole('tooltip')]) {
+          expect(target).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-bauhaus'));
+          expect(target).toHaveAttribute('data-app-design-owner', expect.stringContaining('controls-segmented'));
+          expect(target).not.toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-terminal'));
+        }
+      });
+      expect(document.documentElement).toHaveAttribute('data-app-design-pack', 'terminal');
+      expect(screen.getByRole('button', { name: 'Keep footer' }).closest('[data-modal-scroll-body]')).toBeNull();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('menu')).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(trigger).toHaveFocus();
+    } finally {
+      for (const [name, value] of previous) {
+        if (value === null) document.documentElement.removeAttribute(name);
+        else document.documentElement.setAttribute(name, value);
+      }
+    }
   });
 });
 

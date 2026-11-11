@@ -280,14 +280,17 @@ export default function EnergyLedgerPage() {
               message={t('energyLedger.noMonths', 'No complete month has been recorded yet.')}
             />
           ) : (
-            <ul className="grid gap-3 lg:grid-cols-2">
+            <ul data-app-part="list" className="grid gap-3 lg:grid-cols-2">
               {summary.months.map((m) => (
                 <li
                   key={m.month}
+                  data-app-part="card list-row"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="min-w-0 break-words rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="font-medium">{m.month}</Text>
+                  <div data-app-part="record-header" className="mb-2 flex flex-wrap items-center gap-2">
+                    <Text data-app-part="record-title" variant="body" className="font-medium">{m.month}</Text>
                     <Badge
                       variant={
                         m.closureRate >= 0.9
@@ -307,40 +310,48 @@ export default function EnergyLedgerPage() {
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                    <Text variant="caption">
-                      {t('energyLedger.charged', 'Charged')}
-                    </Text>
-                    <Text variant="bodySm" className="min-w-0 break-words">
-                      {t('energyLedger.chargedValue', '{{e}} · {{n}} sessions', {
-                        e: formatEnergy(m.chargedWh),
-                        n: fmtNumber(m.chargeSessions, 0, unitPrefs.locale),
-                      })}
-                    </Text>
-                    <Text variant="caption">
-                      {t('energyLedger.driven', 'Driven')}
-                    </Text>
-                    <Text variant="bodySm" className="min-w-0 break-words">
-                      {t('energyLedger.drivenValue', '{{e}} · {{d}}', {
-                        e: formatEnergy(m.drivenWh),
-                        d: formatDistance(m.distanceM),
-                      })}
-                    </Text>
-                    <Text variant="caption">
-                      {t('energyLedger.standby', 'Standby')}
-                    </Text>
-                    <Text variant="bodySm" className="min-w-0 break-words">
-                      {t('energyLedger.standbyValue', '{{e}} over {{h}} h', {
-                        e: formatEnergy(m.standbyWh),
-                        h: fmtNumber(m.idleHours, 0, unitPrefs.locale),
-                      })}
-                    </Text>
-                    <Text variant="caption">
-                      {t('energyLedger.residual', 'Residual')}
-                    </Text>
-                    <Text variant="bodySm" className="min-w-0 break-words">
-                      {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh))}`}
-                    </Text>
+                  <div data-app-part="record-body list" data-app-list="definitions" className="grid min-w-0 gap-x-4 gap-y-1 sm:grid-cols-2">
+                    <div data-app-part="list-row" className="grid min-w-0 grid-cols-2 gap-x-4">
+                      <Text data-app-part="metric-label" variant="caption">
+                        {t('energyLedger.charged', 'Charged')}
+                      </Text>
+                      <Text data-app-part="metric-reading metric-value" variant="bodySm" className="min-w-0 break-words">
+                        {t('energyLedger.chargedValue', '{{e}} · {{n}} sessions', {
+                          e: formatEnergy(m.chargedWh),
+                          n: fmtNumber(m.chargeSessions, 0, unitPrefs.locale),
+                        })}
+                      </Text>
+                    </div>
+                    <div data-app-part="list-row" className="grid min-w-0 grid-cols-2 gap-x-4">
+                      <Text data-app-part="metric-label" variant="caption">
+                        {t('energyLedger.driven', 'Driven')}
+                      </Text>
+                      <Text data-app-part="metric-reading metric-value" variant="bodySm" className="min-w-0 break-words">
+                        {t('energyLedger.drivenValue', '{{e}} · {{d}}', {
+                          e: formatEnergy(m.drivenWh),
+                          d: formatDistance(m.distanceM),
+                        })}
+                      </Text>
+                    </div>
+                    <div data-app-part="list-row" className="grid min-w-0 grid-cols-2 gap-x-4">
+                      <Text data-app-part="metric-label" variant="caption">
+                        {t('energyLedger.standby', 'Standby')}
+                      </Text>
+                      <Text data-app-part="metric-reading metric-value" variant="bodySm" className="min-w-0 break-words">
+                        {t('energyLedger.standbyValue', '{{e}} over {{h}} h', {
+                          e: formatEnergy(m.standbyWh),
+                          h: fmtNumber(m.idleHours, 0, unitPrefs.locale),
+                        })}
+                      </Text>
+                    </div>
+                    <div data-app-part="list-row" className="grid min-w-0 grid-cols-2 gap-x-4">
+                      <Text data-app-part="metric-label" variant="caption">
+                        {t('energyLedger.residual', 'Residual')}
+                      </Text>
+                      <Text data-app-part="metric-reading metric-value" variant="bodySm" className="min-w-0 break-words">
+                        {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh))}`}
+                      </Text>
+                    </div>
                   </div>
                 </li>
               ))}

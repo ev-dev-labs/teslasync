@@ -10,17 +10,18 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, Info, ChevronRight } from 'lucide-react'
-import { Text } from '@/components/ui'
-import { VisuallyHidden } from '@/components/a11y'
+import { Text } from '@/components/ui/Typography'
+import { Button } from '@/components/ui/Button'
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 
 export type ActionSeverity = 'info' | 'warn' | 'error'
 
-const SEVERITY_CFG: Record<ActionSeverity, { icon: typeof AlertTriangle; text: string; bg: string; ring: string }> = {
-  info:  { icon: Info,           text: 'text-status-info',   bg: 'bg-status-info/10',   ring: 'ring-status-info/20' },
-  warn:  { icon: AlertTriangle,  text: 'text-amber-400', bg: 'bg-amber-500/10', ring: 'ring-amber-400/20' },
-  error: { icon: AlertCircle,    text: 'text-red-400',   bg: 'bg-red-500/10',   ring: 'ring-red-400/20' },
+const SEVERITY_CFG: Record<ActionSeverity, { icon: typeof AlertTriangle; text: string; bg: string; ring: string; tone: 'info' | 'warning' | 'danger' }> = {
+  info:  { icon: Info,           text: 'text-status-info',   bg: 'bg-status-info/10',   ring: 'ring-status-info/20', tone: 'info' },
+  warn:  { icon: AlertTriangle,  text: 'text-amber-400', bg: 'bg-amber-500/10', ring: 'ring-amber-400/20', tone: 'warning' },
+  error: { icon: AlertCircle,    text: 'text-red-400',   bg: 'bg-red-500/10',   ring: 'ring-red-400/20', tone: 'danger' },
 }
 
 export interface ActionItemProps {
@@ -41,23 +42,28 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
 
   return (
     <div
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-tone={cfg.tone}
       className={cn(
         'flex items-start gap-3 rounded-lg p-3 ring-1',
         cfg.bg,
         cfg.ring,
       )}
     >
-      <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', cfg.text)} aria-hidden />
+      <Icon data-app-part="feedback-icon" className={cn('h-5 w-5 shrink-0 mt-0.5', cfg.text)} aria-hidden />
 
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <Text as="div" size="sm" weight="medium" color="primary">{title}</Text>
+      <div data-app-part="feedback-content" className="flex-1 min-w-0 space-y-0.5">
+        <Text data-app-part="feedback-title" as="div" size="sm" weight="medium" color="primary">{title}</Text>
         {description && (
-          <Text as="div" variant="bodySm">{description}</Text>
+          <Text data-app-part="feedback-message" as="div" variant="bodySm">{description}</Text>
         )}
       </div>
 
-      {cta && (
-        <ActionCTA cta={cta} severityText={cfg.text} />
+      {cta && (cta.to || cta.onClick) && (
+        <div data-app-part="feedback-actions" className="min-w-0 max-w-full shrink-0">
+          <ActionCTA cta={cta} severityText={cfg.text} />
+        </div>
       )}
     </div>
   )
@@ -66,7 +72,7 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
 function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['cta']>; severityText: string }) {
   const { t } = useTranslation()
   const baseClasses = cn(
-    'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5',
+    'inline-flex max-w-full items-center gap-1 shrink-0 rounded-md px-3 py-1.5',
     typography.size.xs,
     typography.weight.medium,
     'min-h-[36px] transition-colors hover:bg-[var(--surface-2)]',
@@ -77,7 +83,7 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
   if (cta.to) {
     if (cta.external) {
       return (
-        <a href={cta.to} target="_blank" rel="noopener noreferrer" className={baseClasses}>
+        <a data-app-part="button" data-app-variant="ghost" data-app-size="sm" href={cta.to} target="_blank" rel="noopener noreferrer" className={baseClasses}>
           {cta.label}
           <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           <VisuallyHidden>{t('common.opensInNewTab', '(opens in a new tab)')}</VisuallyHidden>
@@ -85,7 +91,7 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
       )
     }
     return (
-      <Link to={cta.to} className={baseClasses}>
+      <Link data-app-part="button" data-app-variant="ghost" data-app-size="sm" to={cta.to} className={baseClasses}>
         {cta.label}
         <ChevronRight className="h-3.5 w-3.5" aria-hidden />
       </Link>
@@ -94,10 +100,10 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
 
   if (cta.onClick) {
     return (
-      <button type="button" onClick={cta.onClick} className={baseClasses}>
+      <Button type="button" variant="ghost" size="sm" onClick={cta.onClick} className={cn('h-auto', baseClasses)}>
         {cta.label}
         <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-      </button>
+      </Button>
     )
   }
 

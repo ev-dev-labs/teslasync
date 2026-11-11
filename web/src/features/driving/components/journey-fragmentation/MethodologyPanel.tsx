@@ -16,7 +16,7 @@ export function MethodologyPanel({ result }: JourneyFragmentationSectionProps) {
           <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.method.subtitle', 'A frozen, vehicle-local analysis of one returned history window.')}</Text>
         </div>
       </div>
-      <ul className="space-y-2 pl-5 text-sm text-[var(--text-secondary)]">
+      <ul data-app-part="list" className="space-y-2 pl-5 text-sm text-[var(--text-secondary)]">
         <li>{t('journeyFragmentation.method.sequence', 'Records are stably sorted by start time inside source-order segments; an unparseable start creates a local boundary.')}</li>
         <li>{t('journeyFragmentation.method.continuity', 'A linked pair needs adjacent included records, non-overlapping timestamps, matching normalized addresses or GPS within {{meters}} m, and a gap at or below {{minutes}} minutes.', { meters: result.options.gpsToleranceM, minutes: result.options.maxParkingGapMin })}</li>
         <li>{t('journeyFragmentation.method.invariant', 'Each included drive belongs to one observed journey, so journey count equals included drives minus linked pairs.')}</li>

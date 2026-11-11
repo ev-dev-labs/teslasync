@@ -43,7 +43,11 @@ export function RecentPagesPanel({ count, onClear }: RecentPagesPanelProps) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+      <div
+        data-app-part="card"
+        data-surface-variant="standalone"
+        className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
+      >
         <div className="min-w-0">
           <Text
             as="p"

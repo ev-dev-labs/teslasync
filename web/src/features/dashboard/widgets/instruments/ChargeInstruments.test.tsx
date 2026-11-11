@@ -6,12 +6,15 @@ describe('measured charge instruments', () => {
   it('keeps the fixed reading and target while streaming only inside the actual charge fill', () => {
     const { container } = render(<ChargeMeter value={72} label="Battery" marker={80} markerLabel="Limit 80%" active />);
     const meter = screen.getByRole('meter', { name: 'Battery' });
+    expect(meter).toHaveAttribute('data-app-part', 'chart');
     expect(meter).toHaveAttribute('aria-valuenow', '72');
     expect(meter).toHaveAttribute('aria-valuemin', '0');
     expect(meter).toHaveAttribute('aria-valuemax', '100');
     expect(meter).toHaveAttribute('aria-valuetext', '72%, Limit 80%');
     expect(screen.getByTestId('gauge-marker')).toHaveStyle({ left: '80%' });
     expect(screen.getByTestId('gauge-marker')).toHaveAttribute('title', 'Limit 80%');
+    expect(screen.getByTestId('gauge-marker').closest('[data-app-part~="chart-plot"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-app-design-pack]')).toBeNull();
     const movingLayer = container.querySelector('.widget-energy-stream');
     expect(movingLayer).toHaveClass('widget-state-motion');
     const clip = container.querySelector('clipPath rect');
@@ -59,6 +62,8 @@ describe('measured charge instruments', () => {
     expect(screen.queryByTestId('gauge-marker')).toBeNull();
     rerender(<ChargeMeter value={125} label="Battery" marker={80} preserveOutOfScaleMarker />);
     expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Battery' })).toHaveAttribute('data-app-part', 'chart');
+    expect(screen.getByRole('group', { name: 'Battery' })).not.toHaveAttribute('aria-valuenow');
     expect(screen.getByTestId('gauge-marker')).toHaveStyle({ left: '80%' });
   });
 

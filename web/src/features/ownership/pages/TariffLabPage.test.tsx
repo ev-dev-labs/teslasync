@@ -14,6 +14,14 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Children, cloneElement, isValidElement, type ComponentProps, type ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import {
+  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
+} from '@/components/ui/app-designs/designs';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const chartProbe = vi.hoisted(() => ({
   axis: vi.fn(),
@@ -101,7 +109,8 @@ import {
 import TariffLabPage from './TariffLabPage';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { Tariff, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
+import type { Tariff, TariffRate, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
+import { formatPct } from '../formatters';
 
 // These fixtures return partial hook results; preserve the real callable contracts.
 const mockSelected = vi.mocked(useSelectedVehicle, { partial: true, deep: true });
@@ -1163,5 +1172,214 @@ describe('TariffLabPage — localized structure labels', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
     // The first band of a fresh draft carries the catalog default label.
     expect(screen.getByRole('textbox', { name: 'Label' })).toHaveValue('Standard');
+  });
+});
+
+describe('TariffLabPage — native replay and draft record ownership', () => {
+  const feedbackRules: Rule[] = [];
+  postcss.parse(readFileSync(resolve(
+    process.cwd(), 'src', 'components', 'ui', 'app-designs', 'feedback.css',
+  ), 'utf8')).walkRules(rule => {
+    if (rule.selector.includes('[data-app-card-kind="record"]') || rule.selector.includes('[data-metric-track]')) {
+      feedbackRules.push(rule);
+    }
+  });
+  const matchingRules = (node: Element, contract: string) => feedbackRules.filter(rule =>
+    rule.selectors.some(selector => selector.includes(contract) && node.matches(selector)));
+  const expectDataMode = (node: Element, mode: string, contract = '') => {
+    const selectors = feedbackRules.flatMap(rule => rule.selectors.filter(selector =>
+      selector.includes(contract) && selector.includes(`[data-app-data="${mode}"]`) && node.matches(selector)));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      expect(selector).toContain(`[data-app-data="${mode}"]`);
+      expect(selector).toContain(`[data-app-design-owner~="data-${mode}"]`);
+    }
+  };
+
+  it('binds real band records and open rate editors to all 27 profiles without changing replay denomination or geometry', async () => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({ results: [
+        makeResult(),
+        makeResult({
+          tariff_id: 2, name: 'Returned yen plan', currency: 'JPY', rank: 2, bands: [],
+        }),
+      ] }),
+    });
+    const root = document.documentElement;
+    const original = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    for (const [name] of original) root.removeAttribute(name);
+    const view = renderPage();
+    const release = observeAppDesignScopes(root);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'ISO currency code required' }), { target: { value: 'KWD' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add band' }));
+      const form = screen.getByRole('button', { name: 'Save rate plan' }).closest('form')!;
+      const bands = card('Where your energy actually landed');
+      const articles = [...bands.querySelectorAll('article')];
+      const rates = [...form.querySelectorAll('[data-app-card-kind="record"]')];
+      expect(articles).toHaveLength(2);
+      expect(rates).toHaveLength(2);
+      const records = [...articles, ...rates];
+      for (const record of records) expect(record).not.toHaveAttribute('data-app-design-owner');
+      const meter = within(bands).getByRole('meter', { name: 'Observed overnight band' });
+      expect(matchingRules(meter, '[data-metric-track]')).toHaveLength(0);
+      const before = bands.textContent;
+
+      for (const pack of PACK_IDS) {
+        setAppDesignTestProfile(root, pack);
+        await waitFor(() => expect(records[0]).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+        const mode = APPLICATION_DESIGNS[pack].data;
+        const surfaceRules: string[] = [];
+        postcss.parse(readFileSync(resolve(
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+        ), 'utf8')).walkRules(rule => {
+          if (rule.nodes.some(node => node.type === 'decl' && ['background-color', 'border', 'border-radius'].includes(node.prop))) {
+            surfaceRules.push(...rule.selectors.filter(selector =>
+              selector.includes('[data-app-part~="card"]') && selector.includes(`[data-app-design-owner~="pack-${pack}"]`)));
+          }
+        });
+        for (const record of records) {
+          expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+          expect(surfaceRules.some(selector => record.matches(selector))).toBe(true);
+          expectDataMode(record, mode, '[data-app-card-kind="record"]');
+          const body = record.querySelector(':scope > [data-app-part="record-body"]')!;
+          expectDataMode(body, mode, '[data-app-card-kind="record"]');
+          for (const rule of matchingRules(body, '[data-app-part~="record-body"]')) {
+            rule.walkDecls(declaration => {
+              expect(['display', 'grid-template-columns']).not.toContain(declaration.prop);
+            });
+          }
+        }
+        for (const article of articles) {
+          expectDataMode(article.querySelector('[data-app-part="record-header"]')!, mode, '[data-app-part~="record-header"]');
+          expect(article.querySelector('[data-app-part="record-title"]')).toHaveTextContent(
+            article === articles[0] ? 'Replay Nights' : 'Returned yen plan',
+          );
+        }
+        for (const rate of rates) {
+          expect(rate.querySelector('[data-app-part="record-body"]')).toHaveClass('grid', 'md:grid-cols-2', 'xl:grid-cols-5');
+          expect(within(rate as HTMLElement).getByRole('textbox', { name: 'Ends required' })).toHaveValue('24:00');
+          expect(within(rate as HTMLElement).getByRole('button', { name: 'Remove' })).toBeEnabled();
+        }
+        expect(bands.textContent).toBe(before);
+        expect(articles[0]).toHaveTextContent('$123.45');
+        expect(articles[1]).toHaveTextContent('This plan has a single undifferentiated rate.');
+        expect(meter).toHaveAttribute('aria-valuenow', '100');
+        expect(meter.firstElementChild).toHaveStyle({ width: '100%' });
+        expect(meter.firstElementChild).toHaveClass('bg-[var(--text-secondary)]');
+        expectDataMode(meter, mode, '[data-metric-track]');
+        expect(meter).toHaveAttribute('data-app-metric', 'bar');
+        for (const rule of matchingRules(meter, '[data-metric-track]')) {
+          rule.walkDecls(declaration => {
+            expect(['outline', 'outline-offset']).toContain(declaration.prop);
+          });
+        }
+        const fill = meter.querySelector('[data-metric-fill]')!;
+        expect(matchingRules(fill, '[data-metric-fill]')).not.toHaveLength(0);
+        for (const rule of matchingRules(fill, '[data-metric-fill]')) {
+          rule.walkDecls(declaration => {
+            expect(['box-sizing', 'min-inline-size']).toContain(declaration.prop);
+          });
+        }
+      }
+
+      view.container.setAttribute('data-app-design-preview', '');
+      view.container.setAttribute('data-app-design-pack', 'v1');
+      await waitFor(() => expect(records[0]).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchingRules(meter, '[data-metric-track]')).toHaveLength(0);
+      expect(matchingRules(meter.querySelector('[data-metric-fill]')!, '[data-metric-fill]')).toHaveLength(0);
+      for (const record of records) {
+        expect(matchingRules(record, '[data-app-card-kind="record"]')).toHaveLength(0);
+        expect(matchingRules(record.querySelector('[data-app-part="record-body"]')!, '[data-app-part~="record-body"]')).toHaveLength(0);
+      }
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+      view.unmount();
+      for (const [name, value] of original) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  it('keeps native band order, raw share text and bounded visual extents rather than substituting a progress component', () => {
+    const readings = [
+      { share: -5, extent: 0 },
+      { share: 0, extent: 0 },
+      { share: 35, extent: 35 },
+      { share: 125, extent: 100 },
+      { share: Number.NaN, extent: null },
+      { share: Number.POSITIVE_INFINITY, extent: 100 },
+    ];
+    const shares = readings.map(reading => reading.share);
+    const result = makeResult({
+      bands: shares.map((share, index) => ({
+        label: `Measured band ${index}`, energy_wh: index === 1 ? 0 : 12345,
+        share_pct: share, price_minor_per_wh: 0.015, cost_minor: index === 1 ? 0 : -123,
+      })),
+    });
+    mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation({ results: [result] }) });
+    renderPage();
+    const bands = card('Where your energy actually landed');
+    const meters = within(bands).getAllByRole('meter');
+    expect(meters.map(meter => meter.getAttribute('aria-label'))).toEqual(shares.map((_, index) => `Measured band ${index}`));
+    meters.forEach((meter, index) => {
+      const source = shares[index];
+      expect(meter).toHaveAttribute('data-app-part', 'metric');
+      expect(meter).toHaveAttribute('data-app-metric', 'bar');
+      expect(meter).toHaveAttribute('data-metric-track');
+      expect(meter).toHaveAttribute('aria-valuemin', '0');
+      expect(meter).toHaveAttribute('aria-valuemax', '100');
+      expect(meter).toHaveAttribute('aria-valuetext', formatPct(source));
+      const fill = meter.querySelector('[data-metric-fill]')!;
+      expect(fill).toBe(meter.firstElementChild);
+      expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--text-secondary)]');
+      expect(meter).toHaveClass('h-1.5', 'rounded-full', 'bg-[var(--surface-2)]');
+      if (Number.isNaN(source)) {
+        expect(meter).toHaveAttribute('aria-valuenow', 'NaN');
+        expect((fill as HTMLElement).style.width).toBe('');
+      } else {
+        const extent = readings[index].extent;
+        expect(meter).toHaveAttribute('aria-valuenow', String(extent));
+        expect(fill).toHaveStyle({ width: `${extent}%` });
+      }
+    });
+    expect(bands).toHaveTextContent('$0.00');
+    expect(bands).toHaveTextContent('-$1.23');
+    expect(result.bands?.map(band => band.share_pct)).toEqual(shares);
+    expect(within(bands).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('keeps rate field validation, confirmation and submitted order inside the owned editor bodies', async () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Two-band draft' } });
+    const form = screen.getByRole('button', { name: 'Save rate plan' }).closest('form')!;
+    expect(within(form).getByRole('button', { name: 'Remove' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add band' }));
+    const rates = form.querySelectorAll<HTMLElement>('[data-app-card-kind="record"]');
+    const labels = ['Original night rate with complete user-authored context', 'Second rate'];
+    rates.forEach((rate, index) => {
+      fireEvent.change(within(rate).getByRole('textbox', { name: 'Label' }), { target: { value: labels[index] } });
+    });
+    fireEvent.change(within(rates[1]).getByRole('textbox', { name: 'Ends required' }), { target: { value: '24:01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.change(within(rates[1]).getByRole('textbox', { name: 'Ends required' }), { target: { value: '24:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate.mock.calls[0][0].rates.map((rate: TariffRate) => rate.label)).toEqual(labels);
+    fireEvent.click(within(rates[0]).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(form.querySelectorAll('[data-app-card-kind="record"]')).toHaveLength(2);
+    fireEvent.click(within(rates[0]).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(within(form).getByRole('textbox', { name: 'Label' })).toHaveValue('Second rate'));
+    expect(within(form).getByRole('button', { name: 'Remove' })).toBeDisabled();
   });
 });

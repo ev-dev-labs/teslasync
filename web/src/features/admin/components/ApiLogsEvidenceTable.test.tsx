@@ -3,6 +3,11 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { APICallLog } from '@/api/types';
 import { ApiLogsEvidenceTable, type ApiLogsServerFilters } from './ApiLogsEvidenceTable';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -27,7 +32,7 @@ const log: APICallLog = {
 const onFilterChange = vi.fn();
 const onFiltersClear = vi.fn();
 
-function renderTable(filters = emptyFilters, logs = [log]) {
+function renderTable(filters = emptyFilters, logs = [log], pack?: PackId) {
   const props = {
     logs,
     filters,
@@ -42,9 +47,10 @@ function renderTable(filters = emptyFilters, logs = [log]) {
     serviceOptions: [{ value: '', label: 'All services' }, { value: 'notify-generic', label: 'Notifications' }],
   };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const table = <ApiLogsEvidenceTable {...props} />;
   return render(
     <QueryClientProvider client={client}>
-      <ApiLogsEvidenceTable {...props} />
+      {pack ? <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>{table}</div> : table}
     </QueryClientProvider>,
   );
 }
@@ -68,6 +74,31 @@ beforeEach(() => {
 });
 
 describe('ApiLogsEvidenceTable server column filters', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s paints the actual opened record surface while preserving evidence order', pack => {
+    const raw = 'z first\n  a second\n0 is a measured duration';
+    const view = renderTable(emptyFilters, [{ ...log, duration_ms: 0, response_body: raw }], pack);
+    fireEvent.click(screen.getByRole('button', { name: /Expand row/ }));
+    const release = observeAppDesignScopes(view.container.firstElementChild!);
+    try {
+      const surface = view.container.querySelector('[data-expanded-content="true"] > td > [data-app-part="panel"]')!;
+      const selectors: string[] = [];
+      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8')).walkRules(rule => {
+        for (const selector of rule.selectors) {
+          if (selector.includes('[data-surface-variant="standalone"]') &&
+            [...document.querySelectorAll(selector)].includes(surface)) selectors.push(selector);
+        }
+      });
+      expect(selectors.length).toBeGreaterThan(0);
+      for (const selector of selectors) expect(selector).toContain(`[data-app-design-owner~="pack-${pack}"]`);
+      expect([...surface.querySelectorAll('pre code')].at(-1)?.textContent).toBe(raw);
+      expect(surface).toHaveTextContent('Duration: 0ms');
+      expect(surface).toHaveTextContent('App key: tablet (#42)');
+      expect(surface).toHaveTextContent('Missing fields on older records cannot be recovered.');
+      fireEvent.click(screen.getByRole('button', { name: /Collapse row/ }));
+      expect(view.container.querySelector('[data-expanded-content="true"]')).toBeNull();
+    } finally { release(); }
+  });
+
   it.each([
     ['Method', 'method', 'POST'],
     ['Status', 'status', '5xx'],
@@ -116,5 +147,24 @@ describe('ApiLogsEvidenceTable server column filters', () => {
     expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     expect(onFiltersClear).toHaveBeenCalledOnce();
+  });
+
+  it('owns the opened request enclosure without dropping raw diagnostics or metadata', () => {
+    const raw = 'not-json\n  exact diagnostic order: z, a';
+    const { container } = renderTable(emptyFilters, [{ ...log, status_code: 503,
+      duration_ms: 0, error_message: 'first error\nsecond error', response_body: raw }]);
+    fireEvent.click(screen.getByRole('button', { name: /Expand row/ }));
+    const surface = container.querySelector('[data-expanded-content="true"] > td > [data-app-part="panel"]')!;
+    expect(surface).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(surface).toHaveClass('bg-[var(--surface-2)]', 'p-3', 'sm:p-4');
+    expect(surface).toHaveTextContent('App key: tablet (#42)');
+    expect(surface).toHaveTextContent('Duration: 0ms');
+    expect(within(surface as HTMLElement).getByText('first error second error', { exact: false }).textContent)
+      .toBe('first error\nsecond error');
+    expect(surface.querySelector('pre code')?.textContent).toContain('"App-Key-ID": "42"');
+    expect(within(surface as HTMLElement).getByText(/exact diagnostic order/).textContent).toBe(raw);
+    expect(surface).toHaveTextContent('Missing fields on older records cannot be recovered.');
+    fireEvent.click(screen.getByRole('button', { name: /Collapse row/ }));
+    expect(container.querySelector('[data-expanded-content="true"]')).toBeNull();
   });
 });

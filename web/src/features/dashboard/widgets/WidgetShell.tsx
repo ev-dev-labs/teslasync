@@ -129,6 +129,7 @@ export function WidgetShell({
 
   return (
     <div
+      data-app-part="section"
       className={cn(
         dashboardTokens.shell,
         'min-h-0 flex-1',

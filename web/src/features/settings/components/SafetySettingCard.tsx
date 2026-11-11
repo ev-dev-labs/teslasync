@@ -56,6 +56,8 @@ export function SafetySettingCard({
   const c = neonColorMap[accent] ?? neonColorMap.cyan
   return (
     <li
+      data-app-part="card"
+      data-surface-variant="standalone"
       data-testid={`safety-settings-row-${testKey}`}
       className="flex h-full flex-col gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 transition-colors hover:border-[var(--panel-border-hover)]"
     >

@@ -23,7 +23,7 @@ export function DigestSkeleton() {
 
   return (
     <FadeIn>
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('analytics.weeklyDigest.loading', 'Loading weekly digest')}

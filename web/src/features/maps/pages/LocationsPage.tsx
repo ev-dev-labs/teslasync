@@ -354,14 +354,14 @@ export default function LocationsPage() {
             />
           ) : (
             <div className="space-y-4">
-              <ul className="grid list-none grid-cols-1 gap-3 2xl:grid-cols-2">
+              <ul data-app-part="list" data-app-list="ranked" className="grid list-none grid-cols-1 gap-3 2xl:grid-cols-2">
                 {filteredLocations.map((loc, i) => {
                   const visits = loc.visit_count ?? 0;
                   const totalDuration = loc.total_duration_s ?? 0;
                   const avg = visits > 0 ? totalDuration / visits : 0;
                   return (
-                    <li key={loc.id} className="space-y-2">
-                      <GlassPanel variant="embedded" className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
+                    <li key={loc.id} data-app-part="list-row" className="space-y-2">
+                      <GlassPanel variant="embedded" className="col-span-full flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
                         <Text
                           as="div"
                           size="xs"
@@ -374,10 +374,10 @@ export default function LocationsPage() {
                           #{i + 1}
                         </Text>
                         <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
-                          <Text as="p" size="sm" weight="medium" color="primary" className="break-words">
+                          <Text data-app-part="metric-label" as="p" size="sm" weight="medium" color="primary" className="break-words">
                             {loc.address_name ?? '—'}
                           </Text>
-                          <Text as="p" variant="caption" className="mt-0.5">
+                          <Text data-app-part="metric-context" as="p" variant="caption" className="mt-0.5">
                             {visits} {t('locations.visits', 'visits')} · {formatDuration(totalDuration)} {t('locations.total', 'total')} · ~{formatDuration(avg)} {t('locations.avg', 'avg')}
                             {loc.last_visited ? ` · ${t('locations.last', 'Last')}: ${formatDate(loc.last_visited)}` : ''}
                           </Text>
@@ -389,13 +389,14 @@ export default function LocationsPage() {
                           )}
                         </div>
                         <Text
+                          data-app-part="metric-reading"
                           as="div"
                           size="xs"
                           weight="medium"
                           className="ms-auto flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1"
                         >
                           <Hash className="h-3 w-3" aria-hidden="true" />
-                          {visits}
+                          <Text as="span" size="xs" weight="medium" data-app-part="metric-value">{visits}</Text>
                         </Text>
                         <Button
                           type="button"
@@ -413,12 +414,14 @@ export default function LocationsPage() {
                         </Button>
                       </GlassPanel>
                       {isUnnamedLocation(loc.address_name) && (
-                        <AIAutoNameUnnamedLocations
-                          key={sourceScope}
-                          locationId={loc.id}
-                          currentName={loc.address_name}
-                          onApplyName={(name) => setAppliedName({ scope: sourceScope, id: loc.id, name })}
-                        />
+                        <div className="col-span-full">
+                          <AIAutoNameUnnamedLocations
+                            key={sourceScope}
+                            locationId={loc.id}
+                            currentName={loc.address_name}
+                            onApplyName={(name) => setAppliedName({ scope: sourceScope, id: loc.id, name })}
+                          />
+                        </div>
                       )}
                     </li>
                   );

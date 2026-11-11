@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { CarFront, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
+import { Badge, Card, Text } from '@/components/ui';
 import { ProgressRing } from '@/components/data-display';
 import { Grid, LayoutCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
@@ -38,9 +38,11 @@ export function VehicleReadinessPanel({ vehicles, sourceState }: VehicleReadines
       ) : (
         <Grid cols={{ default: 1, sm: 2, lg: 3 }} gap={4}>
           {vehicles.map((v) => (
-            <div
+            <Card
               key={v.vehicleId}
-              className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-[var(--border-subtle)] p-3"
+              variant="embedded"
+              padding="sm"
+              className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg p-3"
             >
               <ProgressRing
                 value={v.finalSocPct}
@@ -83,7 +85,7 @@ export function VehicleReadinessPanel({ vehicles, sourceState }: VehicleReadines
                     : t('homeEnergy.readiness.noDeadline', 'Opportunistic (no deadline)')}
                 </Text>
               </div>
-            </div>
+            </Card>
           ))}
         </Grid>
       )}

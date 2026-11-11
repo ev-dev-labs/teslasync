@@ -97,20 +97,22 @@ export function ChargingPanel({
           ),
         ]}
       />
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-lg bg-[var(--surface-2)] px-4 py-3">
-        <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. last week')}</Caption>
-        <Badge
-          variant={metrics.chargeEnergyAddedWh == null || metrics.prevChargeEnergyWh == null
-            ? 'neutral' : metrics.chargeEnergyAddedWh >= metrics.prevChargeEnergyWh ? 'success' : 'warning'}
-          size="sm"
-        >
-          {metrics.chargeEnergyAddedWh != null && metrics.prevChargeEnergyWh != null && metrics.prevChargeEnergyWh > 0
-            ? `${fmtNumber(pctChange(
-                metrics.chargeEnergyAddedWh ?? 0,
-                metrics.prevChargeEnergyWh ?? 0,
-              ))}%`
-            : '—'}
-        </Badge>
+      <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="min-w-0 rounded-lg bg-[var(--surface-2)] px-4 py-3">
+        <div data-app-part="record-header" className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+          <Caption data-app-part="record-title">{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. last week')}</Caption>
+          <Badge
+            variant={metrics.chargeEnergyAddedWh == null || metrics.prevChargeEnergyWh == null
+              ? 'neutral' : metrics.chargeEnergyAddedWh >= metrics.prevChargeEnergyWh ? 'success' : 'warning'}
+            size="sm"
+          >
+            {metrics.chargeEnergyAddedWh != null && metrics.prevChargeEnergyWh != null && metrics.prevChargeEnergyWh > 0
+              ? `${fmtNumber(pctChange(
+                  metrics.chargeEnergyAddedWh ?? 0,
+                  metrics.prevChargeEnergyWh ?? 0,
+                ))}%`
+              : '—'}
+          </Badge>
+        </div>
       </div>
     </div>
   );

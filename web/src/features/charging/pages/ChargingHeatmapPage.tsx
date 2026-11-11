@@ -266,6 +266,7 @@ export default function ChargingHeatmapPage() {
               ) : (
                 <>
                   <EmbeddedChart
+                    chartKey="charging-weekly-heatmap"
                     title={t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
                     ariaLabel={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
                     ariaDescription={loadedScope}
@@ -300,19 +301,19 @@ export default function ChargingHeatmapPage() {
                         aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
                         className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                       >
-                        <thead>
-                          <tr>
-                            {slotColumns.map((column) => <th key={column.key} scope="col">{column.label}</th>)}
+                        <thead data-app-part="table-head">
+                          <tr data-app-part="table-row">
+                            {slotColumns.map((column) => <th data-app-part="table-cell" key={column.key} scope="col">{column.label}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {slotData.map((slot) => (
-                            <tr key={`${slot.dayIndex}-${slot.hourIndex}`}>
-                              <th scope="row">{slot.day} {slot.hour}</th>
-                              <td>{slot.hour}</td>
-                              <td>{fmtInt(slot.count)}</td>
-                              <td>{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
-                              <td><Text variant="bodySm">{slot.energyStatus}</Text></td>
+                            <tr data-app-part="table-row" key={`${slot.dayIndex}-${slot.hourIndex}`}>
+                              <th data-app-part="table-cell" scope="row">{slot.day} {slot.hour}</th>
+                              <td data-app-part="table-cell">{slot.hour}</td>
+                              <td data-app-part="table-cell">{fmtInt(slot.count)}</td>
+                              <td data-app-part="table-cell">{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
+                              <td data-app-part="table-cell"><Text variant="bodySm">{slot.energyStatus}</Text></td>
                             </tr>
                           ))}
                         </tbody>

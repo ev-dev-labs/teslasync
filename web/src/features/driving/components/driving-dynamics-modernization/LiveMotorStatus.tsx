@@ -62,7 +62,7 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
     <LayoutCard title={t('dynamics.liveMotor', "Live motor status")}>
       <DynamicsPausedNotice state={state} label={t('dynamics.motorResource', 'Motor telemetry')} />
       {query.isLoading && !state.hasData ? (
-        <div role="status" aria-busy="true"
+        <div data-app-part="status" role="status" aria-busy="true"
           aria-label={t('dynamics.motorLoading', 'Loading motor telemetry…')}
           className="grid min-h-[8rem] grid-cols-1 gap-5 py-2 @xl:grid-cols-2">
           <div className="flex items-center justify-center gap-6">

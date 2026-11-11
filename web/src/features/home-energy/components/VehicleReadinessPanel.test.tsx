@@ -35,7 +35,7 @@ function arc(name: string): SVGCircleElement {
 
 describe('VehicleReadinessPanel readiness paint', () => {
   it('uses semantic success and warning paint without changing vehicle readiness output', () => {
-    render(<VehicleReadinessPanel vehicles={[
+    const { container } = render(<VehicleReadinessPanel vehicles={[
       vehicle(),
       vehicle({
         vehicleId: 'shortfall',
@@ -63,6 +63,17 @@ describe('VehicleReadinessPanel readiness paint', () => {
     expect(screen.getByText('Delivered 9.80 kWh of 20.00 kWh needed')).toBeInTheDocument();
     expect(screen.getByText('Departure slot #0')).toBeInTheDocument();
     expect(screen.getByText('Departure slot #4')).toBeInTheDocument();
+    const cards = container.querySelectorAll('[data-app-part="card"][data-surface-variant="standalone"]');
+    expect(cards).toHaveLength(2);
+    expect(cards[0].parentElement).toHaveAttribute('data-app-part', 'grid');
+    expect(cards[0]).toContainElement(readyArc);
+    expect(cards[1]).toContainElement(shortfallArc);
+    expect(within(cards[0] as HTMLElement).getByText('Ready vehicle')).toBeInTheDocument();
+    expect(within(cards[0] as HTMLElement).getByText('Departure slot #0')).toBeInTheDocument();
+    expect(within(cards[1] as HTMLElement).getByText('Shortfall vehicle')).toBeInTheDocument();
+    expect(within(cards[1] as HTMLElement).getByText('Delivered 9.80 kWh of 20.00 kWh needed')).toBeInTheDocument();
+    expect(within(cards[1] as HTMLElement).getByText('Unmet: 10.20 kWh')).toBeInTheDocument();
+    expect(within(cards[1] as HTMLElement).getByText('Departure slot #4')).toBeInTheDocument();
 
     const unmet = screen.getByText('Unmet: 10.20 kWh');
     expect(unmet.tagName).toBe('P');

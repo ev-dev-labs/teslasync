@@ -11,7 +11,7 @@ export function DeliveryBehaviorFields({ controller }: { controller: AlertRuleEd
   return (
     <>
       <div>
-        <label className={fieldLabelRowCls} htmlFor="alert-cooldown">
+        <label data-app-part="field-label" className={fieldLabelRowCls} htmlFor="alert-cooldown">
           {t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
           <HelpIcon i18nKey="help.fields.alertStudio.cooldown" content="Minimum minutes to wait between repeat firings of this rule. Helps prevent notification spam during prolonged threshold breaches." for="alert-cooldown" />
         </label>
@@ -25,7 +25,7 @@ export function DeliveryBehaviorFields({ controller }: { controller: AlertRuleEd
         />
       </div>
       <div data-testid="alert-behavior-block">
-        <label className={fieldLabelRowCls} htmlFor="alert-trigger-mode">
+        <label data-app-part="field-label" className={fieldLabelRowCls} htmlFor="alert-trigger-mode">
           {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert behavior')}
         </label>
         <UiSelect

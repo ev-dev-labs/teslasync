@@ -44,7 +44,7 @@ export function VehicleCostToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <label className="flex items-center gap-2">
+      <label data-app-part="field-label" className="flex items-center gap-2">
         <Caption>{t('admin.vehicleCost.windowLabel', 'Window')}</Caption>
         <Select value={String(windowDays)} onChange={handleWindowChange} options={options} />
       </label>

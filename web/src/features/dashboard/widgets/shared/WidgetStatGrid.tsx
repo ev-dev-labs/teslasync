@@ -51,6 +51,7 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
 
   return (
     <div
+      data-app-part="metric-grid"
       className={cn(
         'grid min-w-0',
         dashboardTokens.statRail,

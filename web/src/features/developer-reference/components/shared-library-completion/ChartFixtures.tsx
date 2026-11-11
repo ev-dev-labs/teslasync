@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, ChartTooltip, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
   useThemeChartPalette,
 } from '@/components/charts';
 import { ChartCard, type SourceState } from '@/components/layout/layout-reference';
@@ -66,7 +66,7 @@ export function ChartFixtures() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="date" tickFormatter={value => String(value).slice(-2)} />
             <YAxis width={40} domain={[0, 12]} tickFormatter={value => fmtNumber(value, 0)} />
-            <Tooltip formatter={value => [score(value), c.chartValue]} />
+            <Tooltip content={<ChartTooltip />} formatter={value => [score(value), c.chartValue]} />
             <Line dataKey="score" name={c.chartValue} stroke={palette.series[0]} strokeWidth={2}
               dot={false} isAnimationActive={false} connectNulls={false} />
           </LineChart>

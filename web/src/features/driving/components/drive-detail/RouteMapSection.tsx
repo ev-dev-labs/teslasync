@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Navigation2 } from 'lucide-react';
-import { GlassPanel, Text } from '@/components/ui';
-import { AlertBanner } from '@/components/feedback';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { AlertBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Polyline, CircleMarker, Popup, useMap,
@@ -154,7 +154,7 @@ export function RouteMapSection({
 
   const body = safeTrail.length > 0 ? (
     <>
-      <div className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode={hasRoute ? 'path' : 'stationary'}>
+      <div data-app-part="map" data-map-kind="drive-route" className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode={hasRoute ? 'path' : 'stationary'}>
         <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
         <MapContainer center={centerPos} zoom={safeTrail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
           <MapTileLayer style={mapStyle} />
@@ -192,7 +192,7 @@ export function RouteMapSection({
           )}
         </MapContainer>
         {!hasRoute && (
-          <div className="pointer-events-none absolute inset-x-3 top-3 z-[400]">
+          <div data-app-part="map-provenance" className="pointer-events-none absolute inset-x-3 top-3 z-[400]">
             <AlertBanner
               variant="info"
               icon={<Navigation2 className="h-4 w-4" />}
@@ -208,22 +208,24 @@ export function RouteMapSection({
         )}
       </div>
       {fsdSegments.length > 0 && (
-        <div className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2 text-xs text-[var(--text-muted)]">
-          <svg width="20" height="2" aria-hidden="true"><path d="M0 1H20" stroke={chartTokens.series[4]} strokeWidth={2} strokeDasharray="4 2" /></svg>
-          {t(
+        <div data-app-part="map-legend" data-map-legend="fsd-evidence" className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2">
+          <svg className="shrink-0" width="20" height="2" aria-hidden="true"><path d="M0 1H20" stroke={chartTokens.series[4]} strokeWidth={2} strokeDasharray="4 2" /></svg>
+          <Text variant="caption" className="min-w-0 flex-1 [overflow-wrap:anywhere]">{t(
             'driveDetail.fsd.mapEvidence',
             'Approximate area where the FSD counter increased - not an exact FSD-active segment.',
-          )}
+          )}</Text>
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs">
         {hasRoute && safeTrail.length > 1 && (
-          <div className="flex flex-wrap items-center gap-3 text-[var(--text-muted)]">
-            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[1]} /></svg> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
-            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[0]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
-            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[2]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
-            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[3]} /></svg> ≥{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
-            <span>{speedUnit}</span>
+          <div data-app-part="map-legend" data-map-legend="speed" className="flex min-w-0 flex-wrap items-center gap-3">
+            <ul aria-label={t('replay.stat.speed', 'Speed')} className="flex min-w-0 flex-wrap items-center gap-3">
+              <li><Text as="span" variant="caption" className="flex items-center gap-1"><svg className="shrink-0" width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[1]} /></svg> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</Text></li>
+              <li><Text as="span" variant="caption" className="flex items-center gap-1"><svg className="shrink-0" width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[0]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</Text></li>
+              <li><Text as="span" variant="caption" className="flex items-center gap-1"><svg className="shrink-0" width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[2]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</Text></li>
+              <li><Text as="span" variant="caption" className="flex items-center gap-1"><svg className="shrink-0" width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[3]} /></svg> ≥{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</Text></li>
+            </ul>
+            <Text as="span" variant="caption">{speedUnit}</Text>
           </div>
         )}
         {!embedded && <a href="#journey" className="text-[var(--text-secondary)] underline underline-offset-4">{t('driveDetail.journeyDetails', 'Journey details')}</a>}
@@ -232,7 +234,7 @@ export function RouteMapSection({
   ) : endpointPins.length > 0 ? (
     // No recorded route path, but start/end coordinates exist: show both
     // pins joined by a dashed straight line, clearly not a driven path.
-    <div className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode="endpoints">
+    <div data-app-part="map" data-map-kind="drive-route" className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode="endpoints">
       <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
       <MapContainer center={endpointPins[0].position} zoom={13} scrollWheelZoom className="h-full w-full">
         <MapTileLayer style={mapStyle} />
@@ -248,30 +250,33 @@ export function RouteMapSection({
           </CircleMarker>
         ))}
       </MapContainer>
-      <div className="pointer-events-none absolute end-3 top-3 z-[400] flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-1 shadow-sm" data-testid="route-not-recorded">
-        <svg width="16" height="2" aria-hidden="true"><path d="M0 1H16" stroke={chartTokens.axisStroke} strokeWidth={2} strokeDasharray="4 3" /></svg>
+      <div data-app-part="feedback map-legend" data-map-legend="endpoints" data-map-state="unavailable" className="pointer-events-none absolute inset-x-3 top-3 z-[400] ms-auto flex w-fit items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-1 shadow-sm" data-testid="route-not-recorded">
+        <svg className="shrink-0" width="16" height="2" aria-hidden="true"><path d="M0 1H16" stroke={chartTokens.axisStroke} strokeWidth={2} strokeDasharray="4 3" /></svg>
         <Text as="span" variant="caption">{t('driveDetail.routeNotRecorded', 'Route path not recorded')}</Text>
       </div>
     </div>
   ) : (
-    <div className={cn(mapHeight, 'flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]')}>
-      <MapPin className="h-10 w-10 opacity-30" />
-      <p className="text-sm">{t('driveDetail.noRouteData', 'No route data available for this drive')}</p>
+    <div data-app-part="map" data-map-kind="drive-route" data-map-state="empty" data-route-mode="empty" role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} className={cn(mapHeight, 'flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]')}>
+      {/* no-action: No trail or valid endpoint fixes are available; this display-only map cannot recover unrecorded GPS coordinates. */}
+      <EmptyState
+        icon={<MapPin className="h-10 w-10 opacity-30" aria-hidden="true" />}
+        message={t('driveDetail.noRouteData', 'No route data available for this drive')}
+      />
     </div>
   );
 
   if (embedded) {
     // h-full: the stretched hero cell gives the map a definite height to fill.
-    return <div className="flex h-full min-w-0 flex-col" data-testid="drive-route-map">{body}</div>;
+    return <div data-app-part="map-stage" className="flex h-full min-w-0 flex-col" data-testid="drive-route-map">{body}</div>;
   }
 
   return (
     <FadeIn>
-      <GlassPanel className="overflow-hidden">
+      <GlassPanel data-app-part="panel map-stage" className="overflow-hidden">
         <div className="p-4 pb-0">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-3">
+          <PanelTitle as="h3" className="flex items-center gap-2 mb-3">
             <MapPin className="h-4 w-4 text-[var(--text-secondary)]" /> {t('driveDetail.route', 'Route')}
-          </h3>
+          </PanelTitle>
         </div>
         {body}
       </GlassPanel>

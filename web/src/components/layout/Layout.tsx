@@ -1234,6 +1234,7 @@ export default function Layout() {
       <BreadcrumbOverridesProvider>
       <WorkspaceScopeProvider scope={workspaceScope}>
       <div
+        data-app-part="shell"
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
         style={{ '--shell-sidebar-width': `${76 + (deckPanelOpen ? 272 : 0)}px` } as React.CSSProperties}
@@ -1243,7 +1244,7 @@ export default function Layout() {
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
 
-      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-role="sidebar" data-tour="sidebar" className="sidenav-host">
+      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part="shell-sidebar navigation" data-role="sidebar" data-tour="sidebar" className="sidenav-host">
         {/* Width-matched placeholder (CLS guard): the loaded deck occupies the
             76px rail plus the 272px docked panel on desktop (see sidenav.css),
             the rail alone on tablet (panel is a modal overlay there), and zero
@@ -1251,7 +1252,7 @@ export default function Layout() {
             squeezes the content column when the deck resolves (Lighthouse CLS
             0.19 on every route). Both sides read the same deckPanelOpen state
             so they cannot disagree. */}
-        <Suspense fallback={deckViewport === 'phone' ? null : <div className="sidenav-loading" style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >
+        <Suspense fallback={deckViewport === 'phone' ? null : <div className="sidenav-loading" data-panel-open={deckPanelOpen} style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
@@ -1310,7 +1311,7 @@ export default function Layout() {
       )}
 
       {/* Main content */}
-      <div className={cn(
+      <div data-app-part="shell-main" className={cn(
         'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip',
         presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
       )}>

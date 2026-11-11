@@ -69,7 +69,7 @@ export function Accordion({
   }, [isControlled, onOpenChange, openProp])
 
   return (
-    <div className={cn('rounded-panel border border-[var(--border-default)] overflow-hidden forced-colors:border-[CanvasText]', className)}>
+    <div data-app-part="panel" className={cn('rounded-panel border border-[var(--border-default)] overflow-hidden forced-colors:border-[CanvasText]', className)}>
       <Button
         variant="ghost"
         type="button"

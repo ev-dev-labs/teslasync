@@ -1,0 +1,1593 @@
+/*
+ * Composition, not state policy: all 27 verified packs select one data mode
+ * and one feedback mode. Pack identity CSS may refine these structures.
+ * Part tokens are additive to existing roles, source states and test hooks.
+ * No reading, status, action, animation or announcement is created by CSS.
+ * Screen-only opt-in leaves print, OS high contrast and unselected UI intact.
+ */
+@media screen and (forced-colors: none) {
+  /* The nearest verified host owns composition, including nested previews. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="metric"], [data-app-part~="metric-grid"],
+    [data-app-part~="list"], [data-app-part~="list-row"],
+    [data-app-part~="timeline"], [data-app-part~="timeline-content"],
+    [data-app-part~="feedback"], [data-app-part~="feedback-content"],
+    [data-app-part~="feedback-copy"], [data-app-part~="feedback-layout"]
+  ):where([data-app-design-owner]) {
+    min-inline-size: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="metric-label"]:not([data-app-metric-kind="vehicle-stat-chip"] [data-app-part~="metric-label"]), [data-app-part~="metric-context"],
+    [data-app-part~="metric-comparison"], [data-app-part~="feedback-title"],
+    [data-app-part~="feedback-message"], [data-app-part~="feedback-detail"]
+  ):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: unset;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="metric-value"], [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    font-variant-numeric: tabular-nums lining-nums;
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-reading"]):where([data-app-design-owner]) {
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.25em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-unit"]):where([data-app-design-owner]) {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-normal);
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    grid-auto-rows: auto;
+    gap: var(--density-gap);
+    background: transparent;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]) > [data-app-part~="metric"]:not(:where([data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"]))):where([data-app-design-owner]) {
+    grid-column: auto;
+    min-inline-size: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-metric="inline"]):where([data-app-design-owner]) {
+    flex-wrap: wrap;
+    row-gap: 0.25em;
+    max-inline-size: 100%;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="badge"]):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="list-row"] > [data-app-part~="metric-context"]):where([data-app-design-owner]) {
+    grid-column: 1 / -1;
+  }
+
+  /* Table: aligned numeric columns, shared rules, compact label/readout cells. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="data-table"]) {
+    gap: 0;
+    border-block: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="card"], [data-app-metric="stat-card"],
+    [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
+  ):where([data-app-design-owner~="data-table"]) {
+    min-block-size: var(--density-row-h);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-radius: 0;
+    border: 0;
+    border-block-end: 1px solid var(--border-default);
+    background: transparent;
+    box-shadow: none;
+    align-items: stretch;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-body"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"],
+    [data-app-metric="tile"], [data-app-metric="stat-card"]
+  ):where([data-app-design-owner~="data-table"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-value"],
+    [data-app-metric="card"] > [data-app-part~="metric-body"] > [data-app-part~="metric-value"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"] > [data-app-part~="metric-value"],
+    [data-app-metric="tile"] > [data-app-part~="metric-reading"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-reading"],
+    [data-app-metric="stat"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-table"]) {
+    align-self: stretch;
+    justify-content: flex-end;
+    text-align: end;
+    margin-block-start: 0.25em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"],
+    [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-table"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--density-gap);
+    padding-block: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-list="definitions"] [data-app-part~="metric-value"],
+    [data-app-list="ranked"] [data-app-part~="metric-value"]
+  ):where([data-app-design-owner~="data-table"]) {
+    text-align: end;
+  }
+
+  /* Ledger: one fact per ruled line; context and comparisons stay below it. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]),
+    [data-app-list="definitions"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="card"], [data-app-metric="stat-card"],
+    [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    min-block-size: var(--density-row-h);
+    border: 0;
+    border-block-end: 1px solid var(--border-default);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: var(--density-pad-y) var(--density-pad-x);
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-body"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"],
+    [data-app-metric="stat-card"], [data-app-metric="tile"],
+    [data-app-metric="stat"], [data-app-metric="brief"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"],
+    [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--density-gap);
+    row-gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="metric-body"] > [data-app-part~="metric-label"],
+    [data-app-metric="tile"] > [data-app-part~="metric-label"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-heading"],
+    [data-app-metric="brief"] > [data-app-part~="metric-label"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    grid-column: 1;
+    grid-row: 1;
+    min-block-size: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="metric-body"] > [data-app-part~="metric-value"],
+    [data-app-metric="tile"] > [data-app-part~="metric-reading"],
+    [data-app-metric="tile"] > [data-app-part~="metric-value"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-reading"],
+    [data-app-metric="stat"] > [data-app-part~="metric-reading"],
+    [data-app-metric="brief"] > [data-app-part~="metric-value"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    grid-column: 2;
+    grid-row: 1;
+    margin-block-start: 0;
+    justify-content: flex-end;
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-context"],
+    [data-app-metric="card"] > [data-app-part~="metric-body"] > [data-app-part~="metric-context"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"] > [data-app-part~="metric-context"],
+    [data-app-metric="card"] > [data-app-part~="metric-comparison"],
+    [data-app-metric="card"] > [data-app-part~="metric-body"] > [data-app-part~="metric-comparison"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"] > [data-app-part~="metric-comparison"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-context"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-comparison"],
+    [data-app-metric="tile"] > [data-app-part~="metric-context"],
+    [data-app-metric="stat"] > [data-app-part~="metric-context"],
+    [data-app-metric="stat"] > [data-app-part~="metric-comparison"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    margin-block-start: 0.25em;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"],
+    [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    min-block-size: var(--density-row-h);
+    padding-block: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="definitions"] [data-app-part~="metric-value"],
+    [data-app-list="ranked"] [data-app-part~="metric-value"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    text-align: end;
+  }
+
+  /* Cards: autonomous, wrapping reading groups, not a reskinned ledger. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="data-cards"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--density-gap);
+    align-items: stretch;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="card"], [data-app-metric="stat-card"],
+    [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-radius: var(--panel-radius);
+    background: var(--surface-1);
+    align-content: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="definitions"], [data-app-list="ranked"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"],
+    [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5em;
+    border: 1px solid var(--border-default);
+    border-radius: var(--panel-radius);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    margin-block: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where([data-app-part~="timeline-content"]):where([data-app-design-owner~="data-cards"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-radius: var(--panel-radius);
+    background: var(--surface-1);
+  }
+
+  /* Instrument: magnitude-first readout, label rail and separated evidence. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="data-instrument"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="card"], [data-app-metric="stat-card"],
+    [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-strong);
+    border-block-start-width: 3px;
+    background: var(--surface-1);
+    text-align: start;
+    align-items: stretch;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-body"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"],
+    [data-app-metric="stat-card"], [data-app-metric="tile"],
+    [data-app-metric="stat"], [data-app-metric="brief"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-value"],
+    [data-app-metric="card"] > [data-app-part~="metric-body"] > [data-app-part~="metric-value"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"] > [data-app-part~="metric-value"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-reading"] > [data-app-part~="metric-value"],
+    [data-app-metric="tile"] > [data-app-part~="metric-value"],
+    [data-app-metric="tile"] > [data-app-part~="metric-reading"],
+    [data-app-metric="stat"] > [data-app-part~="metric-reading"],
+    [data-app-metric="brief"] > [data-app-part~="metric-value"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    margin-block-start: 0;
+    font-size: calc(1.5rem * var(--font-scale));
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="card"] > [data-app-part~="metric-context"],
+    [data-app-metric="card"] > [data-app-part~="metric-body"] > [data-app-part~="metric-context"],
+    [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"] > [data-app-part~="metric-context"],
+    [data-app-metric="stat-card"] > [data-app-part~="metric-context"],
+    [data-app-metric="tile"] > [data-app-part~="metric-context"],
+    [data-app-metric="stat"] > [data-app-part~="metric-context"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    border-block-start: 1px solid var(--border-subtle);
+    padding-block-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where([data-app-part~="timeline-content"]):where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 2px solid var(--border-strong);
+    padding-inline-start: var(--density-pad-x);
+  }
+
+  /* Native headlines retain caller size/alignment, without card chrome. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-metric="headline"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-metric="headline"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-metric="headline"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-metric="headline"]):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"],
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"],
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"],
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"],
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    white-space: normal;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="headline"]
+  ):where([data-app-design-owner~="data-table"]) {
+    row-gap: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-label"],
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-table"]) {
+    padding-block-end: 0.375em;
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="headline"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    row-gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    padding-block-end: 0.375em;
+    border-block-end: 1px dashed var(--border-strong);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-context"],
+    [data-app-metric="headline"] > [data-app-part~="metric-comparison"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    border-inline-start: 1px solid var(--border-default);
+    padding-inline-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="headline"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    row-gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-context"],
+    [data-app-metric="headline"] > [data-app-part~="metric-comparison"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    padding-block-start: 0.375em;
+    border-block-start: 1px solid var(--border-subtle);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="headline"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    row-gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="headline"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    border-block: 1px solid var(--border-strong);
+    padding-block: 0.25em;
+  }
+
+  /* Comparison context stays in its heading; the real Delta remains nested. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div,
+    [data-app-list="ranked"] > [data-app-part~="list-row"] > div
+  ):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div,
+    [data-app-list="ranked"] > [data-app-part~="list-row"] > div
+  ):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div,
+    [data-app-list="ranked"] > [data-app-part~="list-row"] > div
+  ):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div,
+    [data-app-list="ranked"] > [data-app-part~="list-row"] > div
+  ):where([data-app-design-owner~="data-instrument"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    flex-shrink: 1;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div
+  ):where([data-app-design-owner~="data-table"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: end;
+    row-gap: 0.125em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-table"]) {
+    justify-content: flex-end;
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--density-gap);
+    border-block-start: 1px solid var(--border-default);
+    padding-block-start: 0.375em;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    justify-content: flex-end;
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 0.25em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    justify-content: flex-start;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"],
+    [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-value"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    justify-self: end;
+    text-align: end;
+    min-inline-size: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div,
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 2px solid var(--border-strong);
+    padding-inline-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="comparison"] [data-app-part~="metric-reading"],
+    [data-app-list="definitions"] > [data-app-part~="list-row"] > [data-app-part~="metric-reading"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    justify-content: flex-end;
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="comparison"] > [data-app-part~="metric-heading"] + div
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: end;
+    row-gap: 0.375em;
+  }
+
+  /* This existing scrolling widget has native 32px rows, not stat tiles. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    .overflow-y-auto > [data-app-list="ranked"]
+  ):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    .overflow-y-auto > [data-app-list="ranked"]
+  ):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    .overflow-y-auto > [data-app-list="ranked"]
+  ):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    .overflow-y-auto > [data-app-list="ranked"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    .overflow-y-auto > [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    .overflow-y-auto > [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    .overflow-y-auto > [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    .overflow-y-auto > [data-app-list="ranked"] > [data-app-part~="list-row"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.625rem;
+    min-block-size: 2rem;
+    padding-block: 0.5rem;
+    padding-inline: 0;
+  }
+
+  /* Native steps keep their source grid/flex rhythm, indicators and connectors. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack] ol[data-app-part~="list"][data-app-list="steps"].flex:where([data-app-design-owner]) {
+    row-gap: 1.25rem;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] ol[data-app-part~="list"][data-app-list="steps"].grid:where([data-app-design-owner]) {
+    row-gap: 0.75rem;
+  }
+
+  @media (min-width: 40rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack] ol[data-app-part~="list"][data-app-list="steps"].flex:where([data-app-design-owner]) {
+      row-gap: 1.5rem;
+    }
+
+    :is(:root, [data-app-design-preview])[data-app-design-pack] ol[data-app-part~="list"][data-app-list="steps"].grid:where([data-app-design-owner]) {
+      row-gap: 1rem;
+    }
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-list="steps"] > li[data-app-part~="list-row"]:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"])
+  ):where([data-app-design-owner~="data-table"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="steps"] > li[data-app-part~="list-row"]:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"])
+  ):where([data-app-design-owner~="data-ledger"]) {
+    outline: 1px dashed var(--border-strong);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="steps"] > li[data-app-part~="list-row"]:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"])
+  ):where([data-app-design-owner~="data-cards"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-list="steps"] > li[data-app-part~="list-row"]:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"])
+  ):where([data-app-design-owner~="data-instrument"]) {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="inline"] :where(
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"],
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"] > :is([data-app-part~="step-title"], [data-app-part~="step-description"])
+  ):where([data-app-design-owner~="feedback-inline"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"],
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"] > :is([data-app-part~="step-title"], [data-app-part~="step-description"])
+  ):where([data-app-design-owner~="feedback-callout"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="terminal"] :where(
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"],
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"] > :is([data-app-part~="step-title"], [data-app-part~="step-description"])
+  ):where([data-app-design-owner~="feedback-terminal"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="terminal"] :where(
+    [data-app-list="steps"] > li:is([data-app-step-kind="onboarding"], [data-app-step-kind="dashboard-workflow"]) > [data-app-part~="step-body"] > [data-app-part~="step-title"]
+  ):where([data-app-design-owner~="feedback-terminal"]) {
+    font-family: var(--font-mono);
+  }
+
+  /* Intrinsic pending rings are passive statuses, never block-loader frames. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="inline"] :where(
+    span[data-app-part~="loading-indicator"][data-app-feedback-kind="inline-spinner"][role="status"]
+  ):where([data-app-design-owner~="feedback-inline"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="callout"] :where(
+    span[data-app-part~="loading-indicator"][data-app-feedback-kind="inline-spinner"][role="status"]
+  ):where([data-app-design-owner~="feedback-callout"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-feedback="terminal"] :where(
+    span[data-app-part~="loading-indicator"][data-app-feedback-kind="inline-spinner"][role="status"]
+  ):where([data-app-design-owner~="feedback-terminal"]) {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Saved views are actionable records; export jobs are source-owned work. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-list="saved-views"], [data-app-list="export-jobs"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-list="saved-views"], [data-app-list="export-jobs"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-list="saved-views"], [data-app-list="export-jobs"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-list="saved-views"], [data-app-list="export-jobs"]):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    padding-inline-start: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-format"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-error"]
+  ):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-format"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-error"]
+  ):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-format"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-error"]
+  ):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-label"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-format"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"],
+    [data-app-record-kind="export-job"] [data-app-part~="job-error"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"],
+    [data-app-list="export-jobs"] > [data-app-record-kind="export-job"]
+  ):where([data-app-design-owner~="data-table"]) {
+    margin-block-start: 0;
+    border-block-end: 1px solid var(--border-default);
+    padding-block: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-record-kind="export-job"] > [data-app-part~="job-body"]
+  ):where([data-app-design-owner~="data-table"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+    align-items: baseline;
+    gap: 0.375em var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"]
+  ):where([data-app-design-owner~="data-table"]) {
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"],
+    [data-app-list="export-jobs"] > [data-app-record-kind="export-job"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    margin-block-start: 0;
+    border-inline-start: 2px solid var(--border-default);
+    border-block-end: 1px dashed var(--border-strong);
+    padding-block: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    flex-basis: 100%;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-record-kind="export-job"] > [data-app-part~="job-body"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    border-block-start: 1px dashed var(--border-default);
+    padding-block-start: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="saved-views"], [data-app-list="export-jobs"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"],
+    [data-app-list="export-jobs"] > [data-app-record-kind="export-job"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    margin-block-start: 0;
+    border: 1px solid var(--border-default);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    background: var(--surface-field);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    flex-basis: 100%;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-record-kind="export-job"] > [data-app-part~="job-body"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-list="saved-views"] > [data-app-record="saved-view"],
+    [data-app-list="export-jobs"] > [data-app-record-kind="export-job"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    margin-block-start: 0;
+    border-inline-start: 2px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-default);
+    padding-block: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-record-kind="export-job"] > [data-app-part~="job-body"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-record-kind="export-job"] [data-app-part~="job-context"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 1px solid var(--border-strong);
+    padding-inline-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-record-kind="export-job"] [data-app-part~="job-error"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-record-kind="export-job"] [data-app-part~="job-error"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-record-kind="export-job"] [data-app-part~="job-error"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-record-kind="export-job"] [data-app-part~="job-error"]):where([data-app-design-owner~="data-instrument"]) {
+    grid-column: 1 / -1;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-record="saved-view"]:is(:hover, :focus-within), [data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-record="saved-view"]:is(:hover, :focus-within), [data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-record="saved-view"]:is(:hover, :focus-within), [data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-record="saved-view"]:is(:hover, :focus-within), [data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-instrument"]) {
+    outline: 1px solid var(--border-strong);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-record="saved-view"][data-app-record-state="active"]):where([data-app-design-owner~="data-instrument"]) {
+    outline-width: 2px;
+    outline-offset: -2px;
+  }
+
+  @media (max-width: 30rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]):where([data-app-design-owner~="data-table"]),
+    :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]):where([data-app-design-owner~="data-ledger"]),
+    :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]):where([data-app-design-owner~="data-cards"]),
+    :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-list="saved-views"] > [data-app-record="saved-view"] > [data-app-record-slot="label"]):where([data-app-design-owner~="data-instrument"]) {
+      flex-basis: 100%;
+    }
+
+    :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+      [data-app-record-kind="export-job"] > [data-app-part~="job-body"]
+    ):where([data-app-design-owner~="data-table"]) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Full record bodies are never scalar definition cells. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-list="records"], [data-app-part~="card"][data-app-card-kind="record"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-list="records"], [data-app-part~="card"][data-app-card-kind="record"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-list="records"], [data-app-part~="card"][data-app-card-kind="record"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-list="records"], [data-app-part~="card"][data-app-card-kind="record"]):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-card-kind="record"] > [data-app-part~="record-body"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-card-kind="record"] > [data-app-part~="record-body"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-card-kind="record"] > [data-app-part~="record-body"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-card-kind="record"] > [data-app-part~="record-body"]):where([data-app-design-owner~="data-instrument"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    align-self: stretch;
+    grid-column: 1 / -1;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-card-kind="record"] > [data-app-part~="record-header"]):where([data-app-design-owner~="data-table"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.375em var(--density-gap);
+    border-block-end: 1px solid var(--border-default);
+    padding-block-end: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-card-kind="record"] > [data-app-part~="record-header"]):where([data-app-design-owner~="data-ledger"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-card-kind="record"] > [data-app-part~="record-body"]):where([data-app-design-owner~="data-ledger"]) {
+    border-block-start: 1px dashed var(--border-strong);
+    padding-block-start: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-card-kind="record"] > [data-app-part~="record-header"]):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-card-kind="record"] > [data-app-part~="record-header"]):where([data-app-design-owner~="data-instrument"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--density-gap);
+    border-inline-start: 2px solid var(--border-strong);
+    padding-inline-start: 0.5em;
+  }
+
+  /* Native cards keep their icon/control layout and complete reading prose. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"])):where([data-app-design-owner~="data-table"]) {
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"])):where([data-app-design-owner~="data-ledger"]) {
+    border-inline-start: 2px solid var(--border-default);
+    border-block-end-style: dashed;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"])):where([data-app-design-owner~="data-cards"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"])):where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 2px solid var(--border-strong);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"]) [data-app-record-slot], [data-app-card-kind="record"] [data-app-part~="record-title"], [data-app-card-kind="record"] [data-app-part~="record-context"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"]) [data-app-record-slot], [data-app-card-kind="record"] [data-app-part~="record-title"], [data-app-card-kind="record"] [data-app-part~="record-context"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"]) [data-app-record-slot], [data-app-card-kind="record"] [data-app-part~="record-title"], [data-app-card-kind="record"] [data-app-part~="record-context"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-part~="card"]:is([data-app-record-kind="command-domain"], [data-app-record-kind="repair-note"], [data-app-record-kind="release-note"], [data-app-record-kind="dashboard-preset"], [data-app-record-kind="fsm-session"], [data-app-record-kind="help-result"], [data-app-record-kind="physics-evidence"], [data-app-record-kind="physics-interpretation"]) [data-app-record-slot], [data-app-card-kind="record"] [data-app-part~="record-title"], [data-app-card-kind="record"] [data-app-part~="record-context"]):where([data-app-design-owner~="data-instrument"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-record-kind="command-domain"] [data-app-record-slot="context"], [data-app-record-kind="repair-note"] [data-app-record-slot="context"], [data-app-record-kind="release-note"] [data-app-record-slot="context"], [data-app-record-kind="dashboard-preset"] [data-app-record-slot="context"], [data-app-record-kind="fsm-session"] [data-app-record-slot="context"], [data-app-record-kind="help-result"] [data-app-record-slot="context"], [data-app-record-kind="physics-evidence"] > [data-app-record-slot="context"]):where([data-app-design-owner~="data-table"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-record-kind="command-domain"] [data-app-record-slot="context"], [data-app-record-kind="repair-note"] [data-app-record-slot="context"], [data-app-record-kind="release-note"] [data-app-record-slot="context"], [data-app-record-kind="dashboard-preset"] [data-app-record-slot="context"], [data-app-record-kind="fsm-session"] [data-app-record-slot="context"], [data-app-record-kind="help-result"] [data-app-record-slot="context"], [data-app-record-kind="physics-evidence"] > [data-app-record-slot="context"], [data-app-record-kind="physics-interpretation"] > [data-app-record-slot="body"], [data-app-card-kind="record"] [data-app-part~="record-context"]):where([data-app-design-owner~="data-ledger"]) {
+    border-inline-start: 1px solid var(--border-default);
+    padding-inline-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-record-kind="command-domain"] [data-app-record-slot="body"], [data-app-record-kind="repair-note"] [data-app-record-slot="body"], [data-app-record-kind="release-note"] [data-app-record-slot="body"], [data-app-record-kind="dashboard-preset"] [data-app-record-slot="body"], [data-app-record-kind="fsm-session"] [data-app-record-slot="context"], [data-app-record-kind="help-result"] [data-app-record-slot="body"], [data-app-record-kind="physics-evidence"] > [data-app-record-slot="context"], [data-app-record-kind="physics-interpretation"] > [data-app-record-slot="body"]):where([data-app-design-owner~="data-cards"]) {
+    padding-block-start: 0.375em;
+    border-block-start: 1px solid var(--border-subtle);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-record-kind="command-domain"] [data-app-record-slot="context"], [data-app-record-kind="repair-note"] [data-app-record-slot="context"], [data-app-record-kind="release-note"] [data-app-record-slot="context"], [data-app-record-kind="dashboard-preset"] [data-app-record-slot="context"], [data-app-record-kind="fsm-session"] [data-app-record-slot="context"], [data-app-record-kind="help-result"] [data-app-record-slot="context"], [data-app-record-kind="physics-evidence"] > [data-app-record-slot="context"], [data-app-record-kind="physics-evidence"] > [data-app-record-slot="reading"]):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375em;
+    border-inline-start: 1px solid var(--border-strong);
+    padding-inline-start: 0.5em;
+  }
+
+  /* Code frames do not change bytes, typeface, wrapping, scroll or bounds. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-part~="panel"][data-app-panel-kind="code"], [data-app-panel-kind="code"] [data-app-code-slot="body"], pre[data-app-part~="code"][data-app-code-kind="support-bundle"]):where([data-app-design-owner~="data-table"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-part~="panel"][data-app-panel-kind="code"], [data-app-panel-kind="code"] [data-app-code-slot="body"], pre[data-app-part~="code"][data-app-code-kind="support-bundle"]):where([data-app-design-owner~="data-ledger"]) {
+    outline: 1px dashed var(--border-strong);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-part~="panel"][data-app-panel-kind="code"], [data-app-panel-kind="code"] [data-app-code-slot="body"], pre[data-app-part~="code"][data-app-code-kind="support-bundle"]):where([data-app-design-owner~="data-cards"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-part~="panel"][data-app-panel-kind="code"], [data-app-panel-kind="code"] [data-app-code-slot="body"], pre[data-app-part~="code"][data-app-code-kind="support-bundle"]):where([data-app-design-owner~="data-instrument"]) {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-panel-kind="code"] [data-app-code-slot="heading"], [data-app-panel-kind="code"] [data-app-code-slot="context"], [data-app-panel-kind="code"] [data-app-code-slot="actions"]):where([data-app-design-owner~="data-table"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-panel-kind="code"] [data-app-code-slot="heading"], [data-app-panel-kind="code"] [data-app-code-slot="context"], [data-app-panel-kind="code"] [data-app-code-slot="actions"]):where([data-app-design-owner~="data-ledger"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-panel-kind="code"] [data-app-code-slot="heading"], [data-app-panel-kind="code"] [data-app-code-slot="context"], [data-app-panel-kind="code"] [data-app-code-slot="actions"]):where([data-app-design-owner~="data-cards"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-panel-kind="code"] [data-app-code-slot="heading"], [data-app-panel-kind="code"] [data-app-code-slot="context"], [data-app-panel-kind="code"] [data-app-code-slot="actions"]):where([data-app-design-owner~="data-instrument"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* Native inline vehicle readings stay chips, never autonomous metric cards. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]):where([data-app-design-owner~="data-table"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]):where([data-app-design-owner~="data-ledger"]) {
+    outline: 1px dashed var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]):where([data-app-design-owner~="data-cards"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]):where([data-app-design-owner~="data-instrument"]) {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-metric-kind="vehicle-stat-chip"] > [data-app-part~="metric-context"]):where([data-app-design-owner~="data-ledger"]) {
+    border-inline-start: 1px solid var(--border-default);
+    padding-inline-start: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-metric-kind="vehicle-stat-chip"] > [data-app-part~="metric-context"]):where([data-app-design-owner~="data-cards"]) {
+    border-block-start: 1px solid var(--border-subtle);
+    padding-block-start: 0.25em;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-metric-kind="vehicle-stat-chip"] > [data-app-part~="metric-reading"]):where([data-app-design-owner~="data-instrument"]) {
+    border-block-end: 1px solid var(--border-strong);
+  }
+
+  /* Native quantitative tracks keep their measured box and source-owned fill. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-metric="bar"][data-metric-track],
+    [data-app-metric="bar"] > [data-metric-track]
+  ):where([data-app-design-owner~="data-table"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-metric="bar"][data-metric-track],
+    [data-app-metric="bar"] > [data-metric-track]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    outline: 1px dashed var(--border-strong);
+    outline-offset: 1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-metric="bar"][data-metric-track],
+    [data-app-metric="bar"] > [data-metric-track]
+  ):where([data-app-design-owner~="data-cards"]) {
+    outline: 1px solid var(--border-default);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-metric="bar"][data-metric-track],
+    [data-app-metric="bar"] > [data-metric-track]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    outline: 2px solid var(--border-strong);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(
+    [data-app-metric="bar"][data-metric-track] > [data-metric-fill],
+    [data-app-metric="bar"] > [data-metric-track] > [data-metric-fill]
+  ):where([data-app-design-owner]) {
+    box-sizing: border-box;
+    min-inline-size: 0;
+  }
+
+  /*
+   * Sessions are selectable conversations, not table records or transcript
+   * columns. Only these entries compose; rich message/source trees stay intact.
+   */
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(
+    [data-app-part~="conversation-session"] > button > :first-child
+  ):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(
+    [data-app-part~="conversation-session-revision"]
+  ):where([data-app-design-owner]) {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-part~="conversation-session-list"]
+  ):where([data-app-design-owner~="data-table"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-block: 1px solid var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where(
+    [data-app-part~="conversation-session"]
+  ):where([data-app-design-owner~="data-table"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    margin-block: 0;
+    border: 0;
+    border-block-end: 1px solid var(--border-default);
+    border-radius: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="conversation-session-list"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="conversation-session"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    margin-block: 0;
+    border: 0;
+    border-inline-start: 2px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-default);
+    border-radius: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where(
+    [data-app-part~="conversation-session-actions"]
+  ):where([data-app-design-owner~="data-ledger"]) {
+    justify-self: end;
+    padding-block-start: 0;
+    border-block-start: 1px dashed var(--border-subtle);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-part~="conversation-session-list"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where(
+    [data-app-part~="conversation-session"]
+  ):where([data-app-design-owner~="data-cards"]) {
+    display: flex;
+    align-items: start;
+    margin-block: 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--panel-radius);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-part~="conversation-session-list"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-part~="conversation-session"]
+  ):where([data-app-design-owner~="data-instrument"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    margin-block: 0;
+    border: 1px solid var(--border-strong);
+    border-block-start-width: 3px;
+    border-radius: 0;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where(
+    [data-app-part~="conversation-session"] > button > :last-child
+  ):where([data-app-design-owner~="data-instrument"]) {
+    padding-block-start: 0.375em;
+    border-block-start: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(
+    [data-app-part~="conversation-session"][data-app-session-state="active"]
+  ):where([data-app-design-owner]) {
+    border-color: var(--control-border-hover);
+    outline: 1px solid var(--control-border-hover);
+    outline-offset: -1px;
+  }
+
+  /* Keep factual absence neutral. No success color is implied by a frame. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="metric"][data-app-state="missing"],
+    [data-app-part~="metric"][data-state="missing"],
+    [data-app-part~="metric"][data-state="invalid"]
+  ):is([data-app-state="missing"], [data-state="missing"], [data-state="invalid"]):not([data-metric-track]):where([data-app-design-owner]) {
+    border-block-end: 1px dashed var(--border-strong);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="list-heading"]):where([data-app-design-owner]) {
+    flex-wrap: wrap;
+    row-gap: 0.5em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="timeline-row"]):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    padding-block-end: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where([data-app-part~="timeline-content"]):where([data-app-design-owner~="data-ledger"]) {
+    border-block-end: 1px solid var(--border-default);
+    padding-block-end: var(--density-pad-y);
+  }
+
+  /* Tone follows existing source/domain state, never the selected pack hue. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="feedback"]):where([data-app-design-owner]) {
+    --app-feedback-signal: var(--text-secondary);
+    color: var(--text-secondary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-tone="info"]):where([data-app-design-owner]) {
+    --app-feedback-signal: var(--semantic-info);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-tone="success"]):where([data-app-design-owner]) {
+    --app-feedback-signal: var(--semantic-success);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-tone="warning"]):where([data-app-design-owner]) {
+    --app-feedback-signal: var(--semantic-warning);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-tone="danger"]):where([data-app-design-owner]) {
+    --app-feedback-signal: var(--semantic-danger);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-feedback-kind]):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="feedback-title"]):where([data-app-design-owner]) {
+    color: var(--text-primary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="feedback-message"]):where([data-app-design-owner]) {
+    color: var(--text-secondary);
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="feedback-actions"], [data-app-part~="feedback-footer"]
+  ):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-part~="feedback-actions"]:not(a):not(button),
+    [data-app-part~="feedback-footer"]
+  ):where([data-app-design-owner]) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--density-gap);
+  }
+
+  /* Inline: narrow notice rail; recovery stays in flow beside its evidence. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="inline"] :where(
+    [data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"],
+    [data-app-feedback-kind="error"], [data-app-feedback-kind="toast"]
+  ):where([data-app-design-owner~="feedback-inline"]) {
+    border: 0;
+    border-inline-start: 2px solid var(--app-feedback-signal);
+    border-radius: 0;
+    background: var(--surface-1);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="inline"] :where([data-app-feedback-kind="notice"]):where([data-app-design-owner~="feedback-inline"]) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="notice"] > [data-app-part~="feedback-icon"]
+  ):where([data-app-design-owner]) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="notice"] > [data-app-part~="feedback-content"]
+  ):where([data-app-design-owner]) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="notice"] > [data-app-part~="feedback-dismiss"],
+    [data-app-feedback-kind="notice"] > [data-app-part~="feedback-retry"]
+  ):where([data-app-design-owner]) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="notice"] > [data-app-part~="feedback-actions"]
+  ):where([data-app-design-owner]) {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="toast"] > [data-app-part~="feedback-layout"]
+  ):where([data-app-design-owner]) {
+    padding: 0;
+  }
+
+  /* Callout: explanatory panel with heading, full body and its recovery row. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"],
+    [data-app-feedback-kind="error"], [data-app-feedback-kind="toast"]
+  ):where([data-app-design-owner~="feedback-callout"]) {
+    padding: var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-block-start: 3px solid var(--app-feedback-signal);
+    background: var(--surface-1);
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where([data-app-feedback-kind="notice"]):where([data-app-design-owner~="feedback-callout"]) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: var(--density-gap);
+    row-gap: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-feedback-kind="error"] > [data-app-part~="feedback-layout"]
+  ):where([data-app-design-owner~="feedback-callout"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-feedback-kind="error"] [data-app-part~="feedback-content"]
+  ):where([data-app-design-owner~="feedback-callout"]) {
+    flex-basis: auto;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-feedback-kind="error"] [data-app-part~="feedback-actions"]
+  ):where([data-app-design-owner~="feedback-callout"]) {
+    inline-size: 100%;
+    border-block-start: 1px solid var(--border-default);
+    padding-block-start: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where(
+    [data-app-feedback-kind="insight"] > [data-app-part~="feedback-actions"]
+  ):where([data-app-design-owner~="feedback-callout"]) {
+    flex-basis: 100%;
+    border-block-start: 1px solid var(--border-default);
+    padding-block-start: var(--density-pad-y);
+  }
+
+  /* Terminal: diagnostic log layout; prose and semantic statuses remain intact. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where(
+    [data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"],
+    [data-app-feedback-kind="error"], [data-app-feedback-kind="toast"]
+  ):where([data-app-design-owner~="feedback-terminal"]) {
+    border: 1px solid var(--border-strong);
+    border-inline-start: 3px solid var(--app-feedback-signal);
+    border-radius: 0;
+    padding: var(--density-pad-y) var(--density-pad-x);
+    background: var(--surface-1);
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-feedback-kind="notice"]):where([data-app-design-owner~="feedback-terminal"]) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--density-gap);
+    align-items: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-part~="feedback-title"]):where([data-app-design-owner~="feedback-terminal"]) {
+    padding-block-end: 0.375em;
+    border-block-end: 1px solid var(--border-default);
+    font-family: var(--font-mono);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where(
+    [data-app-part~="feedback-footer"], [data-app-list="sources"]:not([data-app-part~="conversation-source-list"])
+  ):where([data-app-design-owner~="feedback-terminal"]) {
+    border-block-start: 1px dashed var(--border-strong);
+    padding-block-start: var(--density-pad-y);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-list="sources"]:not([data-app-part~="conversation-source-list"])):where([data-app-design-owner~="feedback-terminal"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-list="sources"]:not([data-app-part~="conversation-source-list"]) > [data-app-part~="list-row"]):where([data-app-design-owner~="feedback-terminal"]) {
+    border: 0;
+    border-block-end: 1px solid var(--border-default);
+    border-radius: 0;
+    background: transparent;
+    padding: var(--density-pad-y) 0;
+  }
+
+  /* Empty is not loading or successful. Each mode keeps all guidance/CTAs. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="inline"] :where([data-app-feedback-kind="empty"]):where([data-app-design-owner~="feedback-inline"]),:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-feedback-kind="empty"]):where([data-app-design-owner~="feedback-terminal"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--density-gap);
+    padding: var(--density-pad-x);
+    text-align: start;
+    border-inline-start: 2px dashed var(--border-strong);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="callout"] :where([data-app-feedback-kind="empty"]):where([data-app-design-owner~="feedback-callout"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--density-gap);
+    padding: calc(var(--density-pad-x) * 2) var(--density-pad-x);
+    text-align: center;
+    border-block: 1px dashed var(--border-strong);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+    [data-app-feedback-kind="empty"] > [data-app-part~="feedback-icon"],
+    [data-app-feedback-kind="empty"] > [data-app-part~="feedback-title"],
+    [data-app-feedback-kind="empty"] > [data-app-part~="feedback-message"],
+    [data-app-feedback-kind="empty"] > [data-app-part~="feedback-detail"],
+    [data-app-feedback-kind="empty"] > [data-app-part~="feedback-actions"]
+  ):where([data-app-design-owner]) {
+    margin-block: 0;
+    margin-inline: 0;
+  }
+
+  /* Retained and per-source failures stay differentiated, never blanket green. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is(
+    [data-data-state="stale"], [data-data-state="partial"],
+    [data-app-state="cached"], [data-app-state="retained"]
+  ):where([data-app-design-owner]) {
+    border-inline-start: 2px dashed var(--semantic-warning);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is(
+    [data-app-list="sources"] > [data-app-source-state="refreshFailed"],
+    [data-app-list="sources"] > [data-app-source-state="paused"]
+  ):where([data-app-design-owner]) {
+    border-inline-start: 2px dashed var(--semantic-warning);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is(
+    [data-app-list="sources"] > [data-app-source-state="failed"]
+  ):where([data-app-design-owner]) {
+    border-inline-start: 3px solid var(--semantic-danger);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="metric"][data-app-tone="warning"]:not([data-metric-track]):where([data-app-design-owner]) {
+    background: var(--semantic-warning-bg);
+    border-color: var(--semantic-warning-border);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="metric"][data-app-tone="danger"]:not([data-metric-track]):where([data-app-design-owner]) {
+    background: var(--semantic-danger-bg);
+    border-color: var(--semantic-danger-border);
+  }
+
+  /* Skeleton geometry remains caller-owned; its neutral hatch is not a trace. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="skeleton"]:not([data-app-skeleton="lines"])):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    background-color: var(--skeleton-bg, var(--surface-3));
+    background-image: repeating-linear-gradient(
+      135deg, transparent, transparent 0.375rem,
+      var(--border-subtle) 0.375rem, var(--border-subtle) 0.5rem
+    );
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-part~="skeleton"]):where([data-app-design-owner~="feedback-terminal"]) {
+    border-radius: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="inline"] :where([data-app-feedback-kind="spinner"]):where([data-app-design-owner~="feedback-inline"]) {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--density-gap);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-feedback="terminal"] :where([data-app-feedback-kind="spinner"]):where([data-app-design-owner~="feedback-terminal"]) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    border-inline-start: 2px dotted var(--text-secondary);
+    padding-inline-start: var(--density-pad-x);
+    gap: var(--density-gap);
+  }
+
+  @media (max-width: 30rem) {
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+      [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]),
+      [data-app-list="definitions"], [data-app-list="ranked"]
+    ):where([data-app-design-owner]) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+      [data-app-part~="feedback-actions"]:not(a):not(button)
+    ):where([data-app-design-owner]) {
+      justify-content: flex-start;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
+      [data-app-feedback-kind="notice"] > [data-app-part~="feedback-actions"],
+      [data-app-feedback-kind="notice"] > [data-app-part~="feedback-retry"]
+    ):where([data-app-design-owner]) {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      flex-wrap: wrap;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="skeleton"]):where([data-app-design-owner]) {
+      animation: none;
+      transition: none;
+    }
+  }
+}

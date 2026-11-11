@@ -50,7 +50,7 @@ export function OnboardingStatusCard({
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading}>
       {loading ? (
-        <div className="space-y-2" role="status">
+        <div data-app-part="status" className="space-y-2" role="status">
           <VisuallyHidden>
             {t('onboarding.status.loading', 'Loading status…')}
           </VisuallyHidden>

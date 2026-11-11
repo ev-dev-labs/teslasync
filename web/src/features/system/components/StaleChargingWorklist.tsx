@@ -74,7 +74,7 @@ export function StaleChargingWorklist({
           message={t('dataRepair.charging.empty', 'No stale charging sessions found.')}
         />
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {sessions.map((session) => {
             const key = `charging-${session.id}`;
             const formId = `repair-form-${key}`;

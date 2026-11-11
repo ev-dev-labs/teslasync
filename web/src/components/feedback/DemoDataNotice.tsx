@@ -15,6 +15,8 @@ export function DemoDataNotice({ vehicles }: { vehicles: readonly Pick<Vehicle, 
     <div
       role="status"
       data-testid="demo-data-notice"
+      data-app-part="feedback"
+      data-app-tone="warning"
       className="border-b border-amber-500/20 bg-amber-500/[0.08] px-4 text-sm text-[var(--text-secondary)] md:py-2"
     >
       <div className="flex min-h-11 items-center justify-between gap-2 md:hidden">

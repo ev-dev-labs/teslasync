@@ -545,7 +545,7 @@ export default function PeriodComparePage() {
                         message={t('compare.insightsEmpty', 'Insights appear once both periods have data.')}
                       />
                     ) : (
-                      <ul className="space-y-2.5">
+                      <ul data-app-part="list" className="space-y-2.5">
                         {insights.map((line, idx) => (
                           <li key={idx} className="flex gap-2">
                             <span

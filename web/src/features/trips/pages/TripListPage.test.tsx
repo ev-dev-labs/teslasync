@@ -38,6 +38,11 @@
  *     and the "1h 60m" rounding regression are each rendered correctly.
  */
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -404,6 +409,13 @@ function cardByName(name: string): HTMLElement {
   return el;
 }
 
+function tripReading(card: HTMLElement, label: string): HTMLElement {
+  const reading = within(card).getByText(label).closest('[data-app-metric="inline"]')
+    ?.querySelector<HTMLElement>('[data-app-part~="metric-reading"]');
+  if (!reading) throw new Error(`trip reading for "${label}" not found`);
+  return reading;
+}
+
 beforeEach(() => {
   rawBridge.inputs = [];
   chartBridge.rows = [];
@@ -516,7 +528,7 @@ describe('TripListPage — populated (km) trip cards', () => {
     renderPage();
     const card = cardByName('Weekend to Coast');
     const values = [
-      within(card).getByText(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`),
+      tripReading(card, 'Distance'),
       within(card).getByText(libFormatEnergy(54000, makePref('km'))),
       within(card).getByText(`${fmtInt(54000 / 300)} Wh/km`),
       within(card).getByText('$12.50'),
@@ -525,6 +537,7 @@ describe('TripListPage — populated (km) trip cards', () => {
       expect(value).toHaveClass('break-words');
       expect(value).not.toHaveClass('truncate');
     }
+    expect(values[0]).toHaveTextContent(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`);
     expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
   });
@@ -533,7 +546,7 @@ describe('TripListPage — populated (km) trip cards', () => {
     renderPage();
 
     const cardA = cardByName('Weekend to Coast');
-    expect(within(cardA).getByText(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`)).toBeInTheDocument();
+    expect(tripReading(cardA, 'Distance')).toHaveTextContent(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`);
     expect(within(cardA).getByText(libFormatEnergy(54000, makePref('km')))).toBeInTheDocument();
     expect(within(cardA).getByText('$12.50')).toBeInTheDocument();
     // 54000 Wh / 300 km = 180 Wh/km efficiency at the display edge.
@@ -557,6 +570,52 @@ describe('TripListPage — populated (km) trip cards', () => {
     const cardC = cardByName('Airport run');
     expect(within(cardC).getByText('In progress')).toBeInTheDocument();
     expect(within(cardC).getByText('$0.00')).toBeInTheDocument();
+  });
+
+  it('binds the existing three-column footer and complete readings to all 27 profiles without tile chrome', () => {
+    const { container } = renderPage();
+    const card = cardByName('Weekend to Coast');
+    const bank = card.querySelector('[data-app-metric-grid="inline"]')!;
+    const readings = ['Distance', 'Energy', 'Cost'].map(label => tripReading(card, label));
+    const unit = readings[0].querySelector('[data-app-part="metric-unit"]')!;
+    const context = within(card).getByText(`${fmtInt(54000 / 300)} Wh/km`);
+    const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'));
+    expect(bank).toHaveClass('grid', 'grid-cols-3', 'gap-2');
+    expect(bank.children).toHaveLength(3);
+    expect(context).toHaveAttribute('data-app-part', 'metric-context');
+    expect(unit).toHaveTextContent('km');
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        for (const [node, property] of [
+          ...readings.map(reading => [reading, 'font-variant-numeric'] as const),
+          [unit, 'color'], [context, 'overflow-wrap'],
+        ] as const) {
+          let consumed = false;
+          sheet.walkRules(rule => {
+            if (rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === property) &&
+              rule.selectors.some(selector => node.matches(selector))) consumed = true;
+          });
+          expect(consumed, `${pack}:${property}`).toBe(true);
+        }
+        sheet.walkRules(rule => {
+          if (rule.nodes.some(node => node.type === 'decl' && node.prop === 'grid-template-columns')) {
+            expect(rule.selectors.some(selector => bank.matches(selector)), pack).toBe(false);
+          }
+        });
+        for (const metric of bank.children) {
+          expect(metric).toHaveAttribute('data-app-metric', 'inline');
+          expect(metric).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        }
+      } finally {
+        release();
+      }
+    }
+    expect(readings.map(reading => reading.textContent)).toEqual([
+      `${fmtInt(convertDistanceFromSI(300000, 'km'))} km`, libFormatEnergy(54000, makePref('km')), '$12.50',
+    ]);
   });
 });
 
@@ -585,7 +644,7 @@ describe('TripListPage — unit boundary (miles)', () => {
     );
 
     const cardA = cardByName('Weekend to Coast');
-    expect(within(cardA).getByText(`${fmtInt(convertDistanceFromSI(300000, 'mi'))} mi`)).toBeInTheDocument();
+    expect(tripReading(cardA, 'Distance')).toHaveTextContent(`${fmtInt(convertDistanceFromSI(300000, 'mi'))} mi`);
     // Wh/km (180) → Wh/mi via KM_PER_MILE.
     expect(within(cardA).getByText(`${fmtInt((54000 / (300000 / 1000)) * KM_PER_MILE)} Wh/mi`)).toBeInTheDocument();
   });
@@ -815,7 +874,7 @@ describe('TripListPage modernization regressions', () => {
     renderPage();
     expect(rawBridge.inputs.at(-1)?.map(metric => metric.rawValue)).toEqual([null, null, null, 1, null, 2]);
     const card = cardByName('Weekend to Coast');
-    expect(within(card).getByText(`— ${makePref('km').distance}`)).toBeInTheDocument();
+    expect(tripReading(card, 'Distance')).toHaveTextContent(`— ${makePref('km').distance}`);
     expect(within(card).queryByText('$0.00')).not.toBeInTheDocument();
     expect(chartBridge.rows).toEqual([{ name: 'Weekend to Coast', distance: null }]);
   });
@@ -827,9 +886,9 @@ describe('TripListPage modernization regressions', () => {
       makeTrip({ ...TRIP_A, id: 72, name: 'Measured zero', total_distance_m: 0 }),
     ] }));
     renderPage();
-    expect(within(cardByName('Unknown distance')).getByText(`— ${distance}`)).toBeInTheDocument();
-    expect(within(cardByName('Unknown distance')).queryByText(`0 ${distance}`)).not.toBeInTheDocument();
-    expect(within(cardByName('Measured zero')).getByText(`${fmtInt(convertDistanceFromSI(0, distance))} ${distance}`)).toBeInTheDocument();
+    expect(tripReading(cardByName('Unknown distance'), 'Distance')).toHaveTextContent(`— ${distance}`);
+    expect(tripReading(cardByName('Unknown distance'), 'Distance')).not.toHaveTextContent(`0 ${distance}`);
+    expect(tripReading(cardByName('Measured zero'), 'Distance')).toHaveTextContent(`${fmtInt(convertDistanceFromSI(0, distance))} ${distance}`);
     expect(chartBridge.rows).toEqual([
       { name: 'Unknown distance', distance: null },
       { name: 'Measured zero', distance: 0 },

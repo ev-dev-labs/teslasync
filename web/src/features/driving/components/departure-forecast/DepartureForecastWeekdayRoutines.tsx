@@ -44,10 +44,12 @@ export function DepartureForecastWeekdayRoutines({
           )}
         </Text>
         <DepartureForecastSectionBody forecast={forecast} state={state}>
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul data-app-part="list" className="grid gap-2 sm:grid-cols-2">
             {forecast.weekdayProfiles.map((profile) => (
               <li
                 key={profile.weekday}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <div className="flex items-center justify-between gap-2">

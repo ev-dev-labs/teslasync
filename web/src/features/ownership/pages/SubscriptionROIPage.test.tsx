@@ -14,6 +14,9 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const translatedLabels = vi.hoisted(() => new Map<string, string>());
 
@@ -209,6 +212,85 @@ afterEach(() => {
 });
 
 describe('SubscriptionROIPage — confirm-gated delete', () => {
+  it.each(['desktop', 'mobile'])('activates nested quality definition consumers in the real %s verdict renderer for every design', (presentation) => {
+    if (presentation === 'mobile') {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+        .mockImplementation(() => new DOMRect(0, 0, 375, 100));
+    }
+    const data = makeReport([makeROI({
+      quality: { status: 'limited', sample_count: 0, coverage_pct: 0,
+        window_start: '2026-02-01T00:00:00Z', window_end: null,
+        reasons: ['Recorded zero samples, not missing quality.'] },
+    })]);
+    const original = structuredClone(data);
+    mockROI.mockReturnValue(makeQuery(data));
+    const view = renderPage();
+    let target: HTMLElement;
+    if (presentation === 'mobile') {
+      fireEvent.click(within(card('Per-subscription verdict')).getByRole('button', { name: 'Quick view' }));
+      target = screen.getByRole('dialog', { name: 'Measured Connectivity' });
+    } else {
+      target = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr')!;
+    }
+    const list = within(target).getByText('Samples', { selector: 'dt' }).closest('dl')!;
+    expect(list).toHaveAttribute('data-app-list', 'definitions');
+    const rows = [...list.children];
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toHaveAttribute('data-app-part', 'list-row');
+      expect(row.querySelector('dt')).toHaveAttribute('data-app-part', 'metric-label');
+      expect(row.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
+      expect(row).not.toHaveAttribute('data-app-design-owner');
+    }
+    expect(rows[0].querySelector('dd')).toHaveTextContent(/^0$/);
+    expect(rows[1].querySelector('dd')).toHaveTextContent(/^0(?:\.0+)?%$/);
+    expect(rows[2].querySelector('dd')).toHaveTextContent(/ → —$/);
+    expect(target).toHaveTextContent('Limited evidence');
+    expect(target).toHaveTextContent('Recorded zero samples, not missing quality.');
+    const before = list.textContent;
+    const host = presentation === 'mobile' ? target : view.container;
+    host.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(host, pack);
+      const release = observeAppDesignScopes(host);
+      try {
+        const mode = getAppDesignAttributes(pack)['data-app-data'];
+        for (const row of rows) {
+          expectAppDesignDataMode(row, mode, '[data-app-list="definitions"] > [data-app-part~="list-row"]');
+        }
+        expect(list.textContent).toBe(before);
+      } finally {
+        release();
+      }
+    }
+    expect(data).toEqual(original);
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps absent row quality separate from partial and invalid row readings', () => {
+    const absent = makeROI();
+    Reflect.deleteProperty(absent, 'quality');
+    const partial = makeROI({
+      subscription: makeSubscription({ id: 2, name: 'Partial quality subscription' }),
+      quality: { status: 'insufficient', sample_count: NaN, coverage_pct: null,
+        window_start: null, window_end: '2026-02-03T00:00:00Z', reasons: ['Partial observation bounds'] },
+    });
+    mockROI.mockReturnValue(makeQuery(makeReport([absent, partial])));
+    renderPage();
+    const verdict = card('Per-subscription verdict');
+    const absentRow = within(verdict).getByText('Measured Connectivity').closest('tr')!;
+    expect(absentRow).toHaveTextContent('Quality metadata has not been computed yet.');
+    expect(absentRow.querySelector('dl')).toBeNull();
+    const partialRow = within(verdict).getByText('Partial quality subscription').closest('tr')!;
+    const values = partialRow.querySelectorAll('dl > [data-app-part="list-row"] > dd');
+    expect(values).toHaveLength(3);
+    expect(values[0]).toHaveTextContent(/^—$/);
+    expect(values[1]).toHaveTextContent(/^—$/);
+    expect(values[2]).toHaveTextContent(`— → ${formatDateTime('2026-02-03T00:00:00Z', { locale: 'en-US', tz: 'UTC' })}`);
+    expect(partialRow).toHaveTextContent('Partial observation bounds');
+  });
+
   it('keeps the real portfolio brief with source minor-unit money, signed ROI and monthly cancellation basis', () => {
     mockROI.mockReturnValue(makeQuery(makeReport()));
     renderPage();

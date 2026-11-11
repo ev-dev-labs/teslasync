@@ -99,7 +99,7 @@ export function Sparkline({
   // Fluid: width/height stay as the design size (and the viewBox ratio) but
   // the SVG shrinks to fit narrower containers instead of overflowing them.
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="h-auto max-w-full overflow-hidden" role="img" aria-label={label}>
+    <svg data-app-part="chart chart-plot" data-chart-family="sparkline" viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="h-auto max-w-full overflow-hidden" role="img" aria-label={label}>
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.3} />

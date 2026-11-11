@@ -55,7 +55,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
   let body: ReactNode;
   if (isLoading) {
     body = (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('dynamics.pedalLoading', 'Loading pedal telemetry…')}

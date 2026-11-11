@@ -59,7 +59,7 @@ export function SuggestedPrompts({ onPick }: SuggestedPromptsProps) {
   const suggestions = getChatSuggestions();
 
   return (
-    <ul
+    <ul data-app-part="list conversation-suggestions" data-app-list="suggestions"
       className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto list-none p-0 m-0"
       aria-label={t('chatbot.aria.suggestions', 'Suggested prompts')}
     >

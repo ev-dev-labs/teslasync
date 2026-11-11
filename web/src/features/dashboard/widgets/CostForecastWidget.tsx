@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, chartAnimationProps, ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, chartAnimationProps, ChartTooltip, EmbeddedChart, Cell, ChartLegend, useThemeChartPalette, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { Badge, Caption, Icon } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
@@ -219,7 +219,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
           cursor={{ stroke: palette.neutral }}
         />
       )}
-      <Legend payload={[
+      <ChartLegend payload={[
         { value: t('widget.costForecast.actual', 'Actual'), type: asLine ? 'line' : 'square', color: palette.primary },
         { value: t('widget.costForecast.forecast', 'Forecast'), type: asLine ? 'plainline' : 'square',
           color: asLine ? palette.primary : palette.neutral, ...(asLine ? { payload: { strokeDasharray: '6 5' } } : {}) },

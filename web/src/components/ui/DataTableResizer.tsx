@@ -159,6 +159,9 @@ export function DataTableResizer({
     /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
     <div
       role="separator"
+      data-app-part="field-control"
+      data-app-control-kind="separator"
+      data-active={dragging || undefined}
       aria-orientation="vertical"
       aria-label={label ?? t('table.columns.resizeLabel', 'Resize column {{col}}', { col: columnKey })}
       aria-valuenow={width}

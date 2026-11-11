@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { captureAppDesignOrigin } from './appDesignOrigin'
 
 export function loadCommandPalette() {
   return import('./CommandPalette')
@@ -15,11 +16,15 @@ export function CommandPaletteTrigger() {
   return (
     <button
       type="button"
+      data-app-part="button"
+      data-app-variant="secondary"
       onMouseEnter={preload}
       onFocus={preload}
-      onClick={() => {
+      onClick={(event) => {
+        const origin = event.currentTarget
+        const designOrigin = captureAppDesignOrigin(origin)
         preload()
-        window.dispatchEvent(new CustomEvent('toggle-command-palette'))
+        window.dispatchEvent(new CustomEvent('toggle-command-palette', { detail: { origin, designOrigin } }))
       }}
       aria-label={t('palette.placeholder', 'Search pages, commands…')}
       className="flex w-full items-center gap-3 rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 py-2 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"

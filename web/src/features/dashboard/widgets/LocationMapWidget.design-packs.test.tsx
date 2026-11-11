@@ -127,6 +127,9 @@ describe.each(Object.entries(PACK_APPEARANCES))('Location map %s / %s', (packId,
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '270');
     expect(reading('Position')).toHaveTextContent('51.48, 0.00');
     expect(reading('Heading')).toHaveTextContent('270°');
+    expect(reading('Position')).toHaveAttribute('data-app-part', 'metric-value');
+    expect(screen.getByText('Position', { selector: 'dt' }).closest('dl')).toHaveAttribute('data-app-list', 'definitions');
+    expect(screen.getByText('Heading', { selector: 'dt' })).toHaveAttribute('data-app-part', 'metric-label');
     expect(screen.getByTestId('map-tiles')).toHaveAttribute('data-map-style', 'dark');
     expect(container.querySelector('[data-widget-family="map"] .lucide-map-pin')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
@@ -193,6 +196,8 @@ it('preserves Classic medium/expanded/compact bodies and recovers them after eve
   vehicleStateMock.mockReturnValue(stateQuery(FIX, { data: { state: FIX, live: false, freshness: 'stale' } }));
   const view = render(widget('classic', EXPANDED));
   expect(screen.getByRole('group', { name: 'Vehicle location status' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Vehicle location status' })).toHaveAttribute('data-app-part', 'map-legend');
+  expect(screen.getByRole('group', { name: 'Vehicle location status' })).toHaveAttribute('data-map-state', 'stale');
   expect(screen.getByText('270°')).toBeInTheDocument();
   expect(screen.getByText('51.48, 0.00')).toBeInTheDocument();
   expect(screen.getByText('Last known position')).toBeInTheDocument();

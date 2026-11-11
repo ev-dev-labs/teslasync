@@ -153,42 +153,56 @@ export function RepairCaseEvidencePanel({ repairCase }: RepairCaseEvidencePanelP
         </Text>
         <div className="mt-4 space-y-3">
           {repairCase.evidence_last_in_session_ts ? (
-            <div className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-              <Text as="p" size="xs" weight="semibold" color="muted">
-                {t('dataRepair.cases.lastInSession', 'Last in-session observation')}
-              </Text>
-              <Text as="p" size="sm" className="mt-1">
-                {formatDateTime(repairCase.evidence_last_in_session_ts)}
-              </Text>
-              <Text as="p" variant="caption" className="mt-1 break-all">
-                {repairCase.evidence_last_in_session_src ?? '—'} · {repairCase.evidence_last_in_session_field ?? '—'} · {repairCase.evidence_last_in_session_value ?? '—'}
-              </Text>
+            <div
+              data-app-part="feedback"
+              data-app-feedback-kind="notice"
+              data-app-tone="neutral"
+              className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
+            >
+              <div data-app-part="feedback-content">
+                <Text as="p" data-app-part="feedback-title" size="xs" weight="semibold" color="muted">
+                  {t('dataRepair.cases.lastInSession', 'Last in-session observation')}
+                </Text>
+                <Text as="p" data-app-part="feedback-message" size="sm" className="mt-1">
+                  {formatDateTime(repairCase.evidence_last_in_session_ts)}
+                </Text>
+                <Text as="p" data-app-part="feedback-detail" variant="caption" className="mt-1 break-all">
+                  {repairCase.evidence_last_in_session_src ?? '—'} · {repairCase.evidence_last_in_session_field ?? '—'} · {repairCase.evidence_last_in_session_value ?? '—'}
+                </Text>
+              </div>
             </div>
           ) : null}
-          <div className="rounded-shape-md border border-amber-500/20 bg-amber-500/[0.06] p-3">
-            <Text as="p" size="xs" weight="semibold" className="text-amber-700 dark:text-amber-300">
-              {t('dataRepair.cases.contradiction', 'Contradicting observation')}
-            </Text>
-            <Text as="p" size="sm" className="mt-1">
-              {formatDateTime(repairCase.evidence_contradiction_ts)}
-            </Text>
-            {observations.length > 0 ? (
-              <>
-                <KVList items={observations} layout="responsive" />
-                <details className="mt-2">
-                  <Text as="summary" variant="caption" className="cursor-pointer">
-                    {t('dataRepair.correction.technicalDetails', 'Technical details')}
-                  </Text>
-                  <Text as="p" variant="caption" className="mt-1 break-all">
-                    {repairCase.evidence_contradiction_src} · {repairCase.evidence_contradiction_field} · {repairCase.evidence_contradiction_value}
-                  </Text>
-                </details>
-              </>
-            ) : (
-              <Text as="p" variant="caption" className="mt-1 break-all">
-                {repairCase.evidence_contradiction_src} · {repairCase.evidence_contradiction_field} · {repairCase.evidence_contradiction_value}
+          <div
+            data-app-part="feedback"
+            data-app-feedback-kind="notice"
+            data-app-tone="warning"
+            className="rounded-shape-md border border-amber-500/20 bg-amber-500/[0.06] p-3"
+          >
+            <div data-app-part="feedback-content">
+              <Text as="p" data-app-part="feedback-title" size="xs" weight="semibold" className="text-amber-700 dark:text-amber-300">
+                {t('dataRepair.cases.contradiction', 'Contradicting observation')}
               </Text>
-            )}
+              <Text as="p" data-app-part="feedback-message" size="sm" className="mt-1">
+                {formatDateTime(repairCase.evidence_contradiction_ts)}
+              </Text>
+              {observations.length > 0 ? (
+                <>
+                  <KVList items={observations} layout="responsive" />
+                  <details className="mt-2">
+                    <Text as="summary" variant="caption" className="cursor-pointer">
+                      {t('dataRepair.correction.technicalDetails', 'Technical details')}
+                    </Text>
+                    <Text as="p" data-app-part="feedback-detail" variant="caption" className="mt-1 break-all">
+                      {repairCase.evidence_contradiction_src} · {repairCase.evidence_contradiction_field} · {repairCase.evidence_contradiction_value}
+                    </Text>
+                  </details>
+                </>
+              ) : (
+                <Text as="p" data-app-part="feedback-detail" variant="caption" className="mt-1 break-all">
+                  {repairCase.evidence_contradiction_src} · {repairCase.evidence_contradiction_field} · {repairCase.evidence_contradiction_value}
+                </Text>
+              )}
+            </div>
           </div>
         </div>
       </GlassPanel>

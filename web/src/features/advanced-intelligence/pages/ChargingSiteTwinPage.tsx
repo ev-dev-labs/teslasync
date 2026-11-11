@@ -7,7 +7,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Icon, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, Card, Icon, Input, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -298,18 +298,20 @@ export default function ChargingSiteTwinPage() {
               {t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')}
             </Text>}
             {mitigations.map((item) => (
-              <article key={`${item.rank}-${item.mitigation}`} className="min-w-0 break-words rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+              <article key={`${item.rank}-${item.mitigation}`} className="min-w-0 break-words">
+                <Card className="rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-none">
                 <div className="flex items-center gap-3">
                   <Badge variant="neutral">#{item.rank}</Badge>
-                  <Text as="h3" variant="label">{item.mitigation}</Text>
+                  <Text as="h3" data-app-part="metric-label" variant="label">{item.mitigation}</Text>
                 </div>
-                <Text as="p" variant="bodySm" className="mt-2">
+                <Text as="p" data-app-part="metric-reading" variant="bodySm" className="mt-2">
                   {t('advancedIntelligence.site.mitigation.effect', 'Queue {{queue}}% · peak {{peak}}', {
                     queue: item.queue_delta_pct == null ? '—' : fmtNumber(item.queue_delta_pct),
                     peak: units.formatPower(item.peak_delta_w),
                   })}
                 </Text>
-                <Text as="p" variant="caption">{item.assumption}</Text>
+                <Text as="p" data-app-part="metric-context" variant="caption">{item.assumption}</Text>
+                </Card>
               </article>
             ))}
             {assumptions.map((assumption) => (

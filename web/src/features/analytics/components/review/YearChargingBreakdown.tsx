@@ -61,7 +61,7 @@ export function YearChargingBreakdown({ data }: Props) {
         </ResponsiveContainer>
       </div>
 
-      <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+      <ul data-app-part="list" className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
         {slices.map((s) => (
           <li key={s.name} className="flex items-center gap-2">
             <span

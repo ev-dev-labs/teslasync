@@ -195,9 +195,11 @@ export function FreshnessDot({
     : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: accessibleState });
   return (
     <IconButton
+      data-app-part="status"
       icon={(
         <span
           data-role="freshness-dot"
+          data-app-part="status"
           className={cn(
             'relative shrink-0 rounded-full',
             compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
@@ -222,6 +224,7 @@ export function FreshnessDot({
       busy={isFetching && !edgeAligned}
       aria-busy={isFetching || undefined}
       disabled={!onRefresh || isFetching}
+      focusableWhenDisabled={Boolean(onRefresh)}
       className={cn(compact ? '!h-5 !w-5 !min-h-0 !min-w-0 !p-0' : '!h-7 !w-7 !min-h-0 !min-w-0 !p-0', edgeAligned && '!w-2.5')}
     />
   );

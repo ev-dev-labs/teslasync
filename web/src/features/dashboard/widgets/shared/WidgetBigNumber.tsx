@@ -92,31 +92,33 @@ export function WidgetBigNumber({
   const TrendIcon = delta?.trend ? trendGlyph[delta.trend] : null;
 
   return (
-    <div className={cn('widget-big-number flex h-full min-w-0 flex-col justify-center gap-2', align === 'center' ? 'items-center text-center' : 'items-start')}>
+    <div data-app-part="metric" data-app-metric="headline" className={cn('widget-big-number flex h-full min-w-0 flex-col justify-center gap-2', align === 'center' ? 'items-center text-center' : 'items-start')}>
       {label && label !== widgetTitle && (
-        <span className={dashboardTokens.metricLabel}>{label}</span>
+        <span data-app-part="metric-label" className={dashboardTokens.metricLabel}>{label}</span>
       )}
-      <div className="flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1">
-        {hasValue ? (
-          animated && typeof value === 'number' ? (
-            <AnimatedNumber value={value} decimals={decimals} className={cn(metricClass, 'break-all', valueColor)} />
+      <div data-app-part="metric-reading" className="flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1">
+        <span data-app-part="metric-value" className="min-w-0">
+          {hasValue ? (
+            animated && typeof value === 'number' ? (
+              <AnimatedNumber value={value} decimals={decimals} className={cn(metricClass, 'break-all', valueColor)} />
+            ) : (
+              <span className={cn(metricClass, 'min-w-0 break-all', valueColor)}>{value}</span>
+            )
           ) : (
-            <span className={cn(metricClass, 'min-w-0 break-all', valueColor)}>{value}</span>
-          )
-        ) : (
-          <span className={cn(metricClass, 'text-[var(--text-muted)]')}>{nullDisplay}</span>
-        )}
-        {unit && hasValue && <span className={dashboardTokens.unit}>{unit}</span>}
+            <span className={cn(metricClass, 'text-[var(--text-muted)]')}>{nullDisplay}</span>
+          )}
+        </span>
+        {unit && hasValue && <span data-app-part="metric-unit" className={dashboardTokens.unit}>{unit}</span>}
       </div>
 
       {deltaText && hasValue && (
-        <span className={cn('inline-flex items-center gap-1 text-xs font-semibold tabular-nums', deltaToneClass[delta?.tone ?? 'neutral'])}>
+        <span data-app-part="metric-comparison" className={cn('inline-flex items-center gap-1 text-xs font-semibold tabular-nums', deltaToneClass[delta?.tone ?? 'neutral'])}>
           {TrendIcon && <TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />}
           {deltaText}
         </span>
       )}
 
-      {subtitle && <span className={dashboardTokens.metricLabel}>{subtitle}</span>}
+      {subtitle && <span data-app-part="metric-context" className={dashboardTokens.metricLabel}>{subtitle}</span>}
 
       {badge && (
         <Badge variant={badgeVariantMap[badge.variant]} size="sm">

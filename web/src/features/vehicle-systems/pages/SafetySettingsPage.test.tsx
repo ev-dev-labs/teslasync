@@ -43,17 +43,25 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { COLOR } from '@/lib/colors';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
 import type { SecurityEvent } from '@/api/types';
 import { formatDistance, type UnitPref } from '@/lib/unitConversion';
 import type { FormatOptions } from '@/hooks/useUnits';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { NavigationGuardProvider } from '@/components/feedback';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import * as routePrefetch from '@/lib/routePrefetch';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + PageContainer + the
 // FreshnessDot chip's useMotionPreference read it at module load.
@@ -670,5 +678,124 @@ describe('SafetySettingsPage preservation', () => {
     expect(securityRefetch).toHaveBeenCalled();
     expect(latestRefetch).not.toHaveBeenCalled();
     expect(historyRefetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('vehicle systems redesign consumers — safety', () => {
+  const controlRules: Rule[] = [];
+  postcss.parse(readFileSync(resolve(
+    process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css',
+  ), 'utf8')).walkRules(rule => { controlRules.push(rule); });
+  const matchingModes = (link: Element) => controlRules.filter(rule =>
+    rule.selector.includes('[data-app-controls=')
+    && rule.selector.includes('[data-app-part~="button"]')
+    && rule.selectors.some(selector => link.matches(selector)));
+
+  it('binds the actual prefetched FSD anchor to every control mode without dropping either caption', async () => {
+    const root = document.documentElement;
+    const saved = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    for (const [name, value] of Object.entries(getAppDesignAttributes('classic'))) root.setAttribute(name, value);
+    const view = renderPage();
+    const release = observeAppDesignScopes(root);
+    try {
+      const link = screen.getByRole('link', { name: /^Open FSD insights\s*Daily trend & data confidence$/ });
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveAttribute('href', '/fsd');
+      expect(link).not.toHaveAttribute('role');
+      expect(link).toHaveAttribute('data-app-part', 'button');
+      expect(link).toHaveAttribute('data-app-variant', 'secondary');
+      expect(link).toHaveClass('min-h-11', 'min-w-0', 'flex-wrap', 'px-3', 'py-2',
+        'focus-visible:outline-2', 'motion-reduce:transition-none');
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+        await waitFor(() => expect(link.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`));
+        const rules = matchingModes(link);
+        expect(rules.length).toBeGreaterThan(0);
+        for (const rule of rules) {
+          expect(rule.selector).toContain(`[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`);
+          expect(rule.selector).toContain(`[data-app-design-owner~="controls-${APPLICATION_DESIGNS[pack].controls}"]`);
+        }
+        expect(within(link).getByText('Open FSD insights')).toBeInTheDocument();
+        expect(within(link).getByText('Daily trend & data confidence')).toBeInTheDocument();
+      }
+      expect(screen.getByText('12.00 km')).toBeInTheDocument();
+      expect(screen.getByText('3.00 km')).toBeInTheDocument();
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    } finally {
+      release();
+      view.unmount();
+      for (const [name, value] of saved) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  function DirtySafetyPage() {
+    useNavigationGuard(true);
+    const location = useLocation();
+    return <><output data-testid="safety-location">{location.pathname}</output><SafetySettingsPage /></>;
+  }
+
+  it('keeps focus/hover prefetch, native modifier clicks and the real dirty-navigation confirmation', async () => {
+    const prefetch = vi.spyOn(routePrefetch, 'prefetchRoute').mockImplementation(() => {});
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/safety-settings']}>
+        <NavigationGuardProvider><DirtySafetyPage /></NavigationGuardProvider>
+      </MemoryRouter>
+    </QueryClientProvider>);
+    try {
+      const link = screen.getByRole('link', { name: /^Open FSD insights\s*Daily trend & data confidence$/ });
+      act(() => link.focus());
+      expect(link).toHaveFocus();
+      fireEvent.mouseEnter(link);
+      expect(prefetch).toHaveBeenCalledWith('/fsd');
+      const nativeDefaults: boolean[] = [];
+      const preventJsdomNavigation = (event: MouseEvent) => {
+        nativeDefaults.push(event.defaultPrevented);
+        event.preventDefault();
+      };
+      document.addEventListener('click', preventJsdomNavigation);
+      try {
+        for (const modifiers of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+          fireEvent.click(link, modifiers);
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+          expect(screen.getByTestId('safety-location')).toHaveTextContent('/safety-settings');
+        }
+      } finally {
+        document.removeEventListener('click', preventJsdomNavigation);
+      }
+      expect(nativeDefaults).toEqual([false, false, false, false, false]);
+
+      fireEvent.click(link, { detail: 0 });
+      const confirmation = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+      expect(within(confirmation).getByText('You have unsaved changes. Discard them?')).toBeInTheDocument();
+      fireEvent.click(within(confirmation).getByRole('button', { name: 'Keep editing' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByTestId('safety-location')).toHaveTextContent('/safety-settings');
+      fireEvent.click(link, { detail: 0 });
+      fireEvent.click(within(await screen.findByRole('dialog', { name: 'Unsaved changes' }))
+        .getByRole('button', { name: 'Discard changes' }));
+      await waitFor(() => expect(screen.getByTestId('safety-location')).toHaveTextContent('/fsd'));
+    } finally {
+      prefetch.mockRestore();
+      view.unmount();
+      client.clear();
+    }
+  });
+
+  it('does not activate app-control composition without a complete profile', () => {
+    const view = renderPage();
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const link = screen.getByRole('link', { name: /^Open FSD insights\s*Daily trend & data confidence$/ });
+      expect(link).not.toHaveAttribute('data-app-design-owner');
+      expect(matchingModes(link)).toEqual([]);
+      expect(link).toHaveClass('rounded-shape-md', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    } finally {
+      release();
+      view.unmount();
+    }
   });
 });

@@ -70,15 +70,18 @@ export function NewVersionBanner() {
       role="status"
       aria-live="polite"
       data-testid="new-version-banner"
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-tone="info"
       className="fixed bottom-4 right-4 z-[80] flex max-w-sm items-center gap-3 rounded-xl border border-emerald-500/30 bg-[var(--surface-overlay)] px-4 py-3 shadow-lg shadow-emerald-500/10"
     >
-      <div className="rounded-lg bg-emerald-500/10 p-2 shrink-0">
+      <div data-app-part="feedback-icon" className="rounded-lg bg-emerald-500/10 p-2 shrink-0">
         <Sparkles className="h-4 w-4 text-emerald-300" aria-hidden />
       </div>
-      <p className="flex-1 text-sm text-[var(--text-primary)]">
+      <p data-app-part="feedback-content feedback-message" className="flex-1 text-sm text-[var(--text-primary)]">
         {t('app.newVersion.message', 'A new version of TeslaSync is available.')}
       </p>
-      <div className="flex shrink-0 items-center gap-1">
+      <div data-app-part="feedback-actions" className="flex shrink-0 items-center gap-1">
         <Button size="sm" variant="ghost" onClick={handleLater}>
           {t('app.newVersion.later', 'Later')}
         </Button>

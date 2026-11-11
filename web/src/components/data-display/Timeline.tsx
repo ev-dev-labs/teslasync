@@ -62,6 +62,7 @@ export function Timeline({
         as="div"
         variant="bodySm"
         role="status"
+        data-app-part="feedback empty"
         className={cn(
           'flex min-w-0 items-center justify-center break-words py-8 text-center',
           className,
@@ -91,15 +92,16 @@ export function Timeline({
   });
 
   return (
-    <div className={cn('relative min-w-0 space-y-4', className)}>
+    <div data-app-part="timeline" className={cn('relative min-w-0 space-y-4', className)}>
       <VisuallyHidden>{summary}</VisuallyHidden>
       <ol className="relative space-y-4" aria-label={resolvedLabel}>
         {list.map((item, i) => (
-          <li key={i} className="relative flex min-w-0 gap-3 ps-8">
+          <li data-app-part="timeline-row" key={i} className="relative flex min-w-0 gap-3 ps-8">
           {/* connector line — decorative */}
           {i < list.length - 1 && (
             <span
               aria-hidden="true"
+              data-app-part="timeline-connector"
               className="absolute start-3 top-6 h-full w-px bg-[var(--panel-border)]"
             />
           )}
@@ -107,6 +109,7 @@ export function Timeline({
           {/* dot / icon */}
           <span
             aria-hidden={item.icon ? undefined : true}
+            data-app-part="timeline-marker"
             className={cn(
               // The dot sits on top of the connector line, so it must be filled
               // with the surrounding panel surface to punch a clean hole in it.
@@ -124,7 +127,7 @@ export function Timeline({
           </span>
 
           {/* content */}
-          <div className="min-w-0 flex-1 pt-0.5">
+          <div data-app-part="timeline-content" className="min-w-0 flex-1 pt-0.5">
             <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
               <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 basis-48 break-words">
                 {item.title}

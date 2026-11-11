@@ -30,6 +30,8 @@ export function NotificationSoundChannelRow({
   const { t } = useTranslation();
   return (
     <div
+      data-app-part="card"
+      data-surface-variant="standalone"
       className={cn(
         'flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors',
         !master && 'opacity-60',

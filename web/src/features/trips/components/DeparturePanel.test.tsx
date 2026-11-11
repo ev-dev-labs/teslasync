@@ -11,6 +11,11 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { formatTime } from '@/lib/dateFormat';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
@@ -105,6 +110,40 @@ beforeEach(() => {
 });
 
 describe('DeparturePanel', () => {
+  it('activates each native slot surface for all profiles without ranking, reordering or losing warning semantics', () => {
+    const { container } = renderPanel();
+    const list = screen.getByRole('list', { name: 'Departure hours' });
+    const rows = [...list.children];
+    const contents = rows.map(row => row.textContent);
+    expect(rows.every(row => !row.hasAttribute('data-app-design-owner'))).toBe(true);
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        for (const row of rows) {
+          let consumed = false;
+          sheet.walkRules(rule => {
+            if (rule.selector.includes('[data-app-part~="card"]') &&
+              rule.nodes.some(node => node.type === 'decl' && node.prop.startsWith('border')) &&
+              row.matches(rule.selector)) consumed = true;
+          });
+          expect(consumed, pack).toBe(true);
+          expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        }
+        expect(list).not.toHaveAttribute('data-app-list', 'ranked');
+        expect(rows.map(row => row.textContent)).toEqual(contents);
+        expect(rows[0]).toHaveClass('!border-emerald-500/40', '!bg-emerald-500/10');
+        expect(rows[1].querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'danger');
+        expect(rows[2].querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'warning');
+      } finally {
+        release();
+      }
+    }
+    expect(rows.every(row => !row.hasAttribute('data-app-design-owner'))).toBe(true);
+  });
+
   it('formats the recommendation and every slot in the selected locale and timezone', () => {
     Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     renderPanel();
@@ -125,6 +164,17 @@ describe('DeparturePanel', () => {
     expect(screen.getByText(/Leave /)).toBeInTheDocument();
     expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
     expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
+    const rows = [...screen.getByRole('list', { name: 'Departure hours' }).children];
+    expect(rows.map(row => row.getAttribute('title'))).toEqual(advice.slots.map(slot => slot.level));
+    expect(rows.map(row => row.textContent)).toEqual(advice.slots.map(slot => formatTime(slot.depart_at, datePreferences)));
+    for (const row of rows) {
+      expect(row).toHaveAttribute('data-app-part', 'list-row card');
+      expect(row).toHaveAttribute('data-surface-variant', 'standalone');
+    }
+    expect(rows[0]).toHaveClass('!border-emerald-500/40', '!bg-emerald-500/10');
+    expect(rows[1]).not.toHaveClass('!border-emerald-500/40');
+    expect(rows[1].querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'danger');
+    expect(rows[2].querySelector('[data-app-part~="badge"]')).toHaveAttribute('data-app-variant', 'warning');
   });
 
   it('re-queries when the window changes', () => {
@@ -140,6 +190,9 @@ describe('DeparturePanel', () => {
     }));
     renderPanel();
     expect(screen.getByText('Every hour warns — delay if you can')).toBeInTheDocument();
+    for (const row of screen.getByRole('list', { name: 'Departure hours' }).children) {
+      expect(row).not.toHaveClass('!bg-emerald-500/10');
+    }
   });
 
   it('surfaces failures with a retry path', () => {

@@ -107,13 +107,13 @@ export function WeeklyPunchcard({
                     )}
                   </Text>
                 </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className="w-12">
+                <thead data-app-part="table-head">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="col" className="w-12">
                       <Text variant="caption">{t('rhythm.weeklyPunchcard.day', 'Day')}</Text>
                     </th>
                     {Array.from({ length: 24 }, (_, hour) => (
-                      <th key={hour} scope="col">
+                      <th data-app-part="table-cell" key={hour} scope="col">
                         <Text variant="caption" className="text-center tabular-nums">
                           {hourLabel(hour)}
                         </Text>
@@ -123,14 +123,14 @@ export function WeeklyPunchcard({
                 </thead>
                 <tbody>
                   {DAY_ORDER.map((day) => (
-                    <tr key={day}>
-                      <th scope="row">
+                    <tr data-app-part="table-row" key={day}>
+                      <th data-app-part="table-cell" scope="row">
                         <Text variant="caption">{dayLabel(day)}</Text>
                       </th>
                       {Array.from({ length: 24 }, (_, hour) => {
                         const count = summary.matrix[day]![hour]!;
                         return (
-                          <td
+                          <td data-app-part="table-cell"
                             key={hour}
                             aria-label={t(
                               'rhythm.weeklyPunchcard.cell',

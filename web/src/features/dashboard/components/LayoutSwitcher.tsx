@@ -256,6 +256,7 @@ export function LayoutSwitcher({
 
       {open && (
         <div
+          data-app-part="popover"
           role="menu"
           aria-label={t('layout.menuLabel', 'Saved layouts')}
           className={cn(

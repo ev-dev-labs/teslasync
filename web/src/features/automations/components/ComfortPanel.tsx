@@ -181,7 +181,7 @@ export function ComfortPanel() {
               start: 1, end: Math.min(5, runs.length), total: runs.length,
             })}
           </Caption>
-          <ul className="space-y-1.5">
+          <ul data-app-part="list" className="space-y-1.5">
             {runs.slice(0, 5).map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2">
                 <Caption className="min-w-0 break-words">

@@ -70,58 +70,71 @@ export function ChargeAdvisorCurrentState({ analysis, state, provenance }: Charg
       dataTestId="charge-advisor-current"
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption>{t('chargeAdvisor.current.battery', 'Battery SoC')}</Caption>
-          <MetricValue className="mt-1">
+        <div data-app-part="metric" data-app-metric="tile"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="metric-label">{t('chargeAdvisor.current.battery', 'Battery SoC')}</Caption>
+          <MetricValue data-app-part="metric-reading metric-value" className="mt-1">
             {current.batteryPct == null ? '—' : fmtPercent(current.batteryPct)}
           </MetricValue>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption>{t('chargeAdvisor.current.source', 'Source')}</Caption>
-          <Text as="p" variant="bodySm" className="mt-1">{sourceLabel}</Text>
-          <Badge className="mt-2" variant={current.freshness === 'fresh' ? 'success' : 'warning'}>
-            {current.freshness === 'fresh'
-              ? t('chargeAdvisor.current.fresh', 'Fresh')
-              : current.freshness === 'stale'
-                ? t('chargeAdvisor.current.stale', 'Stale')
-                : t('chargeAdvisor.current.unavailable', 'Unavailable')}
-          </Badge>
+        <div data-app-part="metric" data-app-metric="tile"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="metric-label">{t('chargeAdvisor.current.source', 'Source')}</Caption>
+          <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" className="mt-1">{sourceLabel}</Text>
+          <div data-app-part="metric-context">
+            <Badge className="mt-2" variant={current.freshness === 'fresh' ? 'success' : 'warning'}>
+              {current.freshness === 'fresh'
+                ? t('chargeAdvisor.current.fresh', 'Fresh')
+                : current.freshness === 'stale'
+                  ? t('chargeAdvisor.current.stale', 'Stale')
+                  : t('chargeAdvisor.current.unavailable', 'Unavailable')}
+            </Badge>
+          </div>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption>{t('chargeAdvisor.current.observed', 'Observed')}</Caption>
-          <Text as="p" variant="bodySm" className="mt-1">{observed}</Text>
-          <Caption>{age}</Caption>
-          {current.source === 'live' && fieldEvidence('batteryLevel')}
+        <div data-app-part="metric" data-app-metric="tile"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="metric-label">{t('chargeAdvisor.current.observed', 'Observed')}</Caption>
+          <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" className="mt-1">{observed}</Text>
+          <div data-app-part="metric-context">
+            <Caption>{age}</Caption>
+            {current.source === 'live' && fieldEvidence('batteryLevel')}
+          </div>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption>{t('chargeAdvisor.current.state', 'Vehicle state')}</Caption>
-          <Text as="p" variant="bodySm" className="mt-1">
+        <div data-app-part="metric" data-app-metric="tile"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="metric-label">{t('chargeAdvisor.current.state', 'Vehicle state')}</Caption>
+          <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" className="mt-1">
             {current.isCharging === true
               ? t('chargeAdvisor.current.charging', 'Charging now')
               : current.isCharging === false
                 ? t('chargeAdvisor.current.notCharging', 'Not charging')
                 : t('chargeAdvisor.current.unknown', 'Unknown')}
           </Text>
-          {fieldEvidence('isCharging')}
-          <Caption>
-            {current.chargeLimitPct == null
-              ? t('chargeAdvisor.current.noLimit', 'Charge limit —')
-              : t('chargeAdvisor.current.limit', 'Charge limit {{pct}}%', {
-                pct: fmtNumber(current.chargeLimitPct),
-              })}
-          </Caption>
-          {fieldEvidence('chargeLimitSoc')}
+          <div data-app-part="metric-context">
+            {fieldEvidence('isCharging')}
+            <Caption>
+              {current.chargeLimitPct == null
+                ? t('chargeAdvisor.current.noLimit', 'Charge limit —')
+                : t('chargeAdvisor.current.limit', 'Charge limit {{pct}}%', {
+                  pct: fmtNumber(current.chargeLimitPct),
+                })}
+            </Caption>
+            {fieldEvidence('chargeLimitSoc')}
+          </div>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Caption>{t('chargeAdvisor.current.retrieval', 'Signal retrieval')}</Caption>
-          <Text as="p" variant="bodySm" className="mt-1">{retrievalLabel}</Text>
-          <Badge className="mt-2" variant={current.connected === true ? 'success' : 'neutral'}>
+        <div data-app-part="metric" data-app-metric="tile"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Caption data-app-part="metric-label">{t('chargeAdvisor.current.retrieval', 'Signal retrieval')}</Caption>
+          <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" className="mt-1">{retrievalLabel}</Text>
+          <div data-app-part="metric-context">
+            <Badge className="mt-2" variant={current.connected === true ? 'success' : 'neutral'}>
               {current.connected === true
                 ? t('chargeAdvisor.current.connected', 'Connected')
                 : current.connected === false
                   ? t('chargeAdvisor.current.disconnected', 'Disconnected')
                   : t('chargeAdvisor.current.connectionUnknown', 'Unknown')}
-          </Badge>
+            </Badge>
+          </div>
         </div>
       </div>
       <Caption as="p" className="mt-4">

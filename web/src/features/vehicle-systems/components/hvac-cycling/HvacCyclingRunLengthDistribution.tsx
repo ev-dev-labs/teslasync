@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { LayoutCard, Grid } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
@@ -31,9 +31,11 @@ interface HvacCyclingRunLengthDistributionProps {
 
 function Quantile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
+    <div data-app-part="metric" data-app-metric="tile" data-surface-variant="standalone" className="rounded-lg border border-[var(--border-subtle)] p-3">
+      <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+      <div data-app-part="metric-reading" className="mt-1">
+        <Text data-app-part="metric-value" as="p" variant="bodySm">{value}</Text>
+      </div>
     </div>
   );
 }
@@ -128,7 +130,7 @@ export function HvacCyclingRunLengthDistribution({
               </ResponsiveContainer>
             )}
           </EmbeddedChart>
-          <Grid cols={{ default: 2, md: 4 }} gap={2} className="mt-3">
+          <div data-app-part="metric-grid" className="mt-3 grid min-w-0 grid-cols-2 items-stretch gap-2 md:grid-cols-4 [&>*]:min-w-0">
             <Quantile label={t('hvacCycling.distribution.onP25', 'On fragment P25')} value={formatDuration(on.p25S)} />
             <Quantile label={t('hvacCycling.distribution.onMedian', 'On fragment median')} value={formatDuration(on.medianS)} />
             <Quantile label={t('hvacCycling.distribution.onP90', 'On fragment P90')} value={formatDuration(on.p90S)} />
@@ -137,7 +139,7 @@ export function HvacCyclingRunLengthDistribution({
             <Quantile label={t('hvacCycling.distribution.offMedian', 'Off fragment median')} value={formatDuration(off.medianS)} />
             <Quantile label={t('hvacCycling.distribution.offP90', 'Off fragment P90')} value={formatDuration(off.p90S)} />
             <Quantile label={t('hvacCycling.distribution.offMax', 'Longest off fragment')} value={formatDuration(off.maxS)} />
-          </Grid>
+          </div>
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>

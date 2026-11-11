@@ -32,7 +32,9 @@ describe('MapLayerSwitcher', () => {
   it('renders one labelled toggle button per map style inside a "Map style" group', () => {
     render(<MapLayerSwitcher current="dark" onChange={vi.fn()} />);
 
-    expect(screen.getByRole('group', { name: 'Map style' })).toBeInTheDocument();
+    const group = screen.getByRole('group', { name: 'Map style' });
+    expect(group).toHaveAttribute('data-app-part', 'map-toolbar');
+    expect(group).toHaveAttribute('data-map-control', 'layers');
 
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(4);

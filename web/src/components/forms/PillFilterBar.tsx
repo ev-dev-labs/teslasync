@@ -114,6 +114,7 @@ export function PillFilterBar({
   return (
     <div
       role={isTabs ? 'tablist' : 'group'}
+      data-app-part="tabs"
       aria-label={ariaLabel}
       data-testid={testId}
       className={cn(
@@ -141,6 +142,7 @@ export function PillFilterBar({
         return (
           <Button
             key={item.key}
+            data-app-part="button tab"
             id={isTabs ? `${tablistId}-tab-${item.key}` : undefined}
             ref={(el) => {
               if (el) refs.current.set(item.key, el);

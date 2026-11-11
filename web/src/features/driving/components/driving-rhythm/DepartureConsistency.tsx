@@ -75,6 +75,8 @@ export function DepartureConsistency({
               return (
                 <div
                   key={day}
+                  data-app-part="card"
+                  data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-1">

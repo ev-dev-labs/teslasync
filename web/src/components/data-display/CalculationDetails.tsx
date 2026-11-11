@@ -64,6 +64,7 @@ export function CalculationDetails({
 
   return (
     <section
+      data-app-part="card section"
       aria-label={t(
         'calculationDetails.title',
         'How this was calculated',
@@ -84,15 +85,15 @@ export function CalculationDetails({
         </Badge>
       </div>
 
-      <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {rows.map((row) => (
-          <div key={row.label}>
-            <dt>
+          <div data-app-part="list-row" key={row.label}>
+            <dt data-app-part="metric-label">
               <Text as="span" size="xs" weight="semibold" color="primary">
                 {row.label}
               </Text>
             </dt>
-            <dd>
+            <dd data-app-part="metric-value">
               <Text as="span" size="xs" color="muted">
                 {row.value}
               </Text>
@@ -106,7 +107,7 @@ export function CalculationDetails({
           {t('calculationDetails.exclusions', 'Exclusions and limitations')}
         </Text>
         {exclusionList.length > 0 ? (
-          <ul className="mt-1 space-y-1">
+          <ul data-app-part="list" className="mt-1 space-y-1">
             {exclusionList.map((item) => (
               <li key={item}>
                 <Text as="span" size="xs" className={severityTokens.warn.fg}>

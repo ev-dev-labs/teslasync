@@ -184,7 +184,7 @@ export function BatteryPassportMasthead({
             )}
           />
         ) : state.isLoading ? (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-label={t(
               'batteryPassport.states.loadingAria',
@@ -306,12 +306,13 @@ export function BatteryPassportMasthead({
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="flex flex-col gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 sm:flex-row sm:items-center sm:justify-between">
               <Text
                 as="code"
                 mono
                 size="xs"
                 color="secondary"
+                data-app-part="record-body"
                 className="break-all"
               >
                 {passport.provenance_hash || '—'}

@@ -58,13 +58,23 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
 
   return (
     <GlassPanel className="min-w-0 max-w-full p-4 sm:p-6">
-      <PanelTitle as="h3" className="mb-4 flex items-center gap-2">
+      <figure
+        data-app-part="chart"
+        data-chart-family="heatmap"
+        data-chart-variant="embedded"
+        data-chart-state={hasData ? 'ready' : 'empty'}
+        aria-label={chartLabel}
+        className="m-0 min-w-0 max-w-full"
+      >
+      <PanelTitle data-app-part="chart-header" as="h3" className="mb-4 flex items-center gap-2">
         <Clock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
         {title}
       </PanelTitle>
       {hasData ? (
         <>
         <div
+          data-app-part="chart-plot"
+          data-chart-viewport="native"
           role="region"
           aria-label={chartLabel}
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allows keyboard users to scroll the chart region.
@@ -135,12 +145,12 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                   tabIndex={0}
                   className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 >
-                  <thead>
-                    <tr>
-                      <th scope="col">{t('charging.heatmap.day', 'Day')}</th>
-                      <th scope="col">{t('analytics.charging.hour', 'Hour')}</th>
-                      <th scope="col">{t('charging.charts.sessions', 'Sessions')}</th>
-                      <th scope="col">{t('charging.grid.costPerEnergy', 'Cost per kWh')}</th>
+                  <thead data-app-part="table-head">
+                    <tr data-app-part="table-row">
+                      <th data-app-part="table-cell" scope="col">{t('charging.heatmap.day', 'Day')}</th>
+                      <th data-app-part="table-cell" scope="col">{t('analytics.charging.hour', 'Hour')}</th>
+                      <th data-app-part="table-cell" scope="col">{t('charging.charts.sessions', 'Sessions')}</th>
+                      <th data-app-part="table-cell" scope="col">{t('charging.grid.costPerEnergy', 'Cost per kWh')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -149,11 +159,11 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                       const sessions = Math.max(0, safeNumber(entry?.sessions));
                       const cost = Math.max(0, safeNumber(entry?.avg_cost_per_kwh));
                       return (
-                        <tr key={`${dayIdx}-${hourIdx}`}>
-                          <th scope="row">{dayLabel}</th>
-                          <td>{hourIdx}:00</td>
-                          <td>{sessions}</td>
-                          <td>{sessions > 0 ? `${formatCurrency(cost)}/kWh` : '—'}</td>
+                        <tr data-app-part="table-row" key={`${dayIdx}-${hourIdx}`}>
+                          <th data-app-part="table-cell" scope="row">{dayLabel}</th>
+                          <td data-app-part="table-cell">{hourIdx}:00</td>
+                          <td data-app-part="table-cell">{sessions}</td>
+                          <td data-app-part="table-cell">{sessions > 0 ? `${formatCurrency(cost)}/kWh` : '—'}</td>
                         </tr>
                       );
                     }))}
@@ -171,6 +181,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
           )}
         />
       )}
+      </figure>
     </GlassPanel>
   );
 }

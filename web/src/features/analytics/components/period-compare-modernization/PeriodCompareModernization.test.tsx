@@ -164,7 +164,7 @@ describe('period comparison live modernization regressions', () => {
     mount();
     const source = await screen.findByRole('region', { name: 'Period A' });
     await waitFor(() => expect(within(source).getByText('50')).toBeInTheDocument());
-    expect(within(source).getByText('1,000.00 km')).toBeInTheDocument();
+    expect(within(source).getByText('1,000.00').closest('dd')).toHaveTextContent('1,000.00 km');
     const pending = screen.getByRole('region', { name: 'Period B' });
     expect(within(pending).queryByText('0')).not.toBeInTheDocument();
     expect(within(pending).queryByText('Total drives')).not.toBeInTheDocument();

@@ -21,9 +21,9 @@ export function ScoreAchievements({ items, sourceFallback }: {
   return (
     <LayoutCard title={t('driveScore.achievements.title', 'Achievements')}>
       {sourceFallback ?? (
-        <ul className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
+        <ul data-app-part="list" className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
           {items.map((achievement) => (
-            <li key={achievement.id} className={cn(
+            <li key={achievement.id} data-app-part="card" data-surface-variant="standalone" className={cn(
               'flex min-w-0 flex-col items-center rounded-xl border p-4 text-center transition-colors',
               achievement.unlocked
                 ? 'border-amber-500/30 bg-amber-500/10'

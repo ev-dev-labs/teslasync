@@ -154,6 +154,8 @@ export function RangeBufferMethodology({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
             <article
+              data-app-part="card"
+              data-surface-variant="standalone"
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >

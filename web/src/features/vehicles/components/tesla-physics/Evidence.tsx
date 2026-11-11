@@ -23,10 +23,10 @@ export function RawRows<T>({ title, rows, columns, tableId, keyExtractor, mobile
     <DataTable tableId={tableId} columns={columns} mobileColumns={mobileColumns} mobilePresentation={mobilePresentation} data={rows}
       className="[&_button]:max-md:min-h-11 [&_button]:max-md:min-w-11"
       expandable={!mobilePresentation} expandedKeys={expandedKeys} onExpandedChange={setExpandedKeys}
-      renderExpanded={(row) => <dl className="min-w-0 space-y-3">
-        {columns.map((column) => <div key={column.key} className="min-w-0 space-y-1 break-words">
-          <Text as="dt" variant="caption">{column.header}</Text>
-          <Text as="dd" variant="body">{column.render(row) ?? '—'}</Text>
+      renderExpanded={(row) => <dl data-app-part="list" data-app-list="definitions" className="min-w-0 space-y-3">
+        {columns.map((column) => <div data-app-part="list-row" key={column.key} className="min-w-0 space-y-1 break-words">
+          <Text data-app-part="metric-label" as="dt" variant="caption">{column.header}</Text>
+          <Text data-app-part="metric-value" as="dd" variant="body">{column.render(row) ?? '—'}</Text>
         </div>)}
       </dl>}
       keyExtractor={keyExtractor} emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')} pagination={pagination} />

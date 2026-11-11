@@ -147,6 +147,7 @@ export function DepartureForecastHourDistribution({
             </ResponsiveContainer>
           </div>
           <div
+            data-app-part="metric-grid"
             className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
             aria-label={t(
               'departure.hourDistribution.daypartsAria',
@@ -156,13 +157,16 @@ export function DepartureForecastHourDistribution({
             {forecast.daypartDistribution.map((daypart) => (
               <div
                 key={daypart.daypart}
+                data-app-part="metric"
+                data-app-metric="tile"
+                data-surface-variant="embedded"
                 className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2"
               >
-                <Text as="p" variant="caption">
+                <Text data-app-part="metric-label" as="p" variant="caption">
                   {departureDaypartLabel(t, daypart.daypart)}
                 </Text>
-                <Text as="p" variant="bodySm" className="font-medium">
-                  {daypart.share != null
+                <Text data-app-part="metric-reading" as="p" variant="bodySm" className="font-medium">
+                  <span data-app-part="metric-value">{daypart.share != null
                     ? t(
                         'departure.hourDistribution.daypartValue',
                         '{{departures}} · {{share}}%',
@@ -175,7 +179,7 @@ export function DepartureForecastHourDistribution({
                           ),
                         },
                       )
-                    : '—'}
+                    : '—'}</span>
                 </Text>
               </div>
             ))}

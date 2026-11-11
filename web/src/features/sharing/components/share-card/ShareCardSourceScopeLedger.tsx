@@ -24,13 +24,13 @@ export function ShareCardSourceScopeLedger({
           <Table aria-label={t('shareCard.source.title', 'Source, query, and scope ledger')}>
 
             <tbody>
-            <tr>
-              <th scope="row">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row">
                 <Text as="p" variant="label">
                   {t('shareCard.source.endpoint', 'GET /drives')}
                 </Text>
               </th>
-              <td>
+              <td data-app-part="table-cell">
                 <Badge variant={state.cachedRefreshError ? 'warning' : 'success'}>
                   {state.cachedRefreshError
                     ? t('shareCard.source.cached', 'Cached')
@@ -45,25 +45,25 @@ export function ShareCardSourceScopeLedger({
               </Text>
               </td>
             </tr>
-            <tr>
-              <th scope="row">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.calendarScope', 'Selected calendar scope')}
               </Text>
               </th>
-              <td>
+              <td data-app-part="table-cell">
               <Text as="p" variant="caption" className="mt-2">
                 {formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive)}
               </Text>
               </td>
             </tr>
-            <tr>
-              <th scope="row">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.apiWindow', 'Half-open API window')}
               </Text>
               </th>
-              <td>
+              <td data-app-part="table-cell">
               <Text as="p" variant="code" className="mt-2 break-all">
                 {t(
                   'shareCard.source.apiBounds',
@@ -76,13 +76,13 @@ export function ShareCardSourceScopeLedger({
               </Text>
               </td>
             </tr>
-            <tr>
-              <th scope="row">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row">
               <Text as="p" variant="label">
                 {t('shareCard.source.runtimeScope', 'Runtime accounting')}
               </Text>
               </th>
-              <td className="text-right">
+              <td data-app-part="table-cell" className="text-right">
               <Text as="p" variant="caption" className="mt-2">
                 {t(
                   'shareCard.source.runtimeCounts',

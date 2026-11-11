@@ -72,7 +72,7 @@ export function OperationalNarrativeDetails({
       </PanelTitle>
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+        <div data-app-part="card" className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text as="p" size="xs" weight="semibold" color="primary">
             {t('operations.narrative.whatChanged', 'What changed')}
           </Text>
@@ -81,7 +81,7 @@ export function OperationalNarrativeDetails({
           </Text>
         </div>
 
-        <div className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+        <div data-app-part="card" className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text as="p" size="xs" weight="semibold" color="primary">
             {t('operations.narrative.whyItMatters', 'Why it matters')}
           </Text>
@@ -94,7 +94,7 @@ export function OperationalNarrativeDetails({
           </Text>
         </div>
 
-        <div className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+        <div data-app-part="card" className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text as="p" size="xs" weight="semibold" color="primary">
             {t('operations.narrative.likelyCause', 'Likely cause')}
           </Text>
@@ -107,7 +107,7 @@ export function OperationalNarrativeDetails({
           </Text>
         </div>
 
-        <div className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+        <div data-app-part="card" className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text as="p" size="xs" weight="semibold" color="primary">
             {t(
               'operations.narrative.recommendedResponse',
@@ -177,7 +177,7 @@ export function OperationalNarrativeDetails({
         </div>
       </div>
 
-      <div className="mt-4 space-y-2 border-t border-[var(--border-subtle)] pt-4">
+      <div data-app-part="list" data-app-list="sources" className="mt-4 space-y-2 border-t border-[var(--border-subtle)] pt-4">
         <Text as="p" size="xs" weight="semibold" color="primary">
           {t('operations.narrative.evidence', 'Supporting evidence')}
         </Text>
@@ -185,6 +185,7 @@ export function OperationalNarrativeDetails({
           narrative.evidence.map((evidence) => (
             <div
               key={evidence.id}
+              data-app-part="card list-row"
               className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
               <Text as="p" size="sm" color="primary">

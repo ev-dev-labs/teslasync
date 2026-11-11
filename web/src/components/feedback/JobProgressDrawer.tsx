@@ -165,6 +165,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
 
   return (
     <div
+      data-app-part="panel section"
       className={cn(
         positionClass,
         'w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border-default)]',
@@ -181,7 +182,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
             {t('export.jobDrawer.title', 'Export jobs')}
           </span>
           {activeJobs.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium bg-[var(--surface-2)] text-[var(--text-secondary)]">
+            <span data-app-part="badge" data-app-variant="neutral" className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium bg-[var(--surface-2)] text-[var(--text-secondary)]">
               {t('export.jobDrawer.activePill', '{{count}} active', { count: activeJobs.length })}
             </span>
           )}
@@ -224,7 +225,7 @@ export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawe
             )}
           </DataStateNotice>
         ) : !jobsState.hasData ? (
-          <div role="status" className="space-y-2 px-2 py-4 text-center text-xs text-[var(--text-muted)]">
+          <div data-app-part="loading" role="status" className="space-y-2 px-2 py-4 text-center text-xs text-[var(--text-muted)]">
             {t('export.jobDrawer.loading', 'Loading export jobs…')}
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -263,9 +264,9 @@ function DrawerSection({
         {label}
       </p>
       {jobs.length === 0 ? (
-        <p className="px-2 py-2 text-xs text-[var(--text-muted)]">{emptyLabel}</p>
+        <p data-app-part="feedback empty" className="px-2 py-2 text-xs text-[var(--text-muted)]">{emptyLabel}</p>
       ) : (
-        <ul className="space-y-1">
+        <ul data-app-part="list" data-app-list="export-jobs" className="space-y-1">
           {jobs.map((job) => (
             <JobRow key={job.id} job={job} />
           ))}
@@ -282,6 +283,10 @@ function JobRow({ job }: { job: ExportJobSummary }) {
   const typeLabel = prettyType(job.type, t);
   return (
     <li
+      data-app-part="list-row"
+      data-app-record-kind="export-job"
+      data-app-job-status={job.status}
+      data-app-job-bucket={bucket}
       className={cn(
         'flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-xs',
         'border border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--surface-2)]',
@@ -289,16 +294,16 @@ function JobRow({ job }: { job: ExportJobSummary }) {
       )}
     >
       <div className="shrink-0">{statusIcon(job.status)}</div>
-      <div className="min-w-0 flex-1">
+      <div data-app-part="job-body" className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <span className="min-w-0 font-medium text-[var(--text-primary)] break-words">
+          <span data-app-part="job-label" className="min-w-0 font-medium text-[var(--text-primary)] break-words">
             {typeLabel}
           </span>
-          <span className="text-2xs tracking-wider text-[var(--text-muted)]">
+          <span data-app-part="job-format" className="text-2xs tracking-wider text-[var(--text-muted)]">
             {job.format === 'csv' ? 'CSV' : job.format === 'json' ? 'JSON' : job.format}
           </span>
         </div>
-        <div className="text-xs text-[var(--text-muted)] break-words">
+        <div data-app-part="job-context" className="text-xs text-[var(--text-muted)] break-words">
           {bucket === 'active'
             ? t('export.jobDrawer.statusLine', '{{status}} · started {{relative}}', {
                 status: prettyStatus(job.status, t),
@@ -310,7 +315,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
               })}
         </div>
         {job.error_message && (
-          <p className="mt-0.5 text-xs text-[var(--semantic-danger)] break-words" title={job.error_message}>
+          <p data-app-part="job-error" className="mt-0.5 text-xs text-[var(--semantic-danger)] break-words" title={job.error_message}>
             {job.error_message}
           </p>
         )}
@@ -318,6 +323,9 @@ function JobRow({ job }: { job: ExportJobSummary }) {
       {job.status === 'ready' && (
         /* flow-cta: the finished export is this drawer’s result */
         <a
+          data-app-part="button"
+          data-app-variant="outline"
+          data-app-size="sm"
           href={exportDownloadUrl(job.id)}
           target="_blank"
           rel="noreferrer"

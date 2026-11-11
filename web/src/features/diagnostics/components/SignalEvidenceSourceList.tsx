@@ -16,7 +16,7 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
   if (sources.length === 0) return null;
 
   return (
-    <ul aria-label={label} className="grid min-w-0 gap-3 sm:grid-cols-2">
+    <ul data-app-part="list" data-app-list="sources" aria-label={label} className="grid min-w-0 gap-3 sm:grid-cols-2">
       {sources.map(({ signal, state }) => {
         const points = state.data?.data;
         const observationTimes = (Array.isArray(points) ? points : [])
@@ -34,17 +34,28 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
           : state.isRefreshing ? t('dataSources.status.refreshing', 'Refreshing')
           : state.status === 'stale' ? t('freshness.stale', 'Stale')
           : t('dataSources.status.ready', 'Ready');
+        const sourceState = state.fatalError ? 'failed'
+          : state.refreshError ? 'refreshFailed'
+          : state.isRefreshBlocked ? 'paused'
+          : state.status === 'initial' ? 'pending'
+          : state.status === 'unavailable' ? 'unavailable'
+          : state.isRefreshing ? 'refreshing'
+          : state.status === 'stale' ? 'stale'
+          : 'ready';
         return (
           <li key={signal} data-signal-source={signal} data-source-status={state.status}
+            data-app-part="card list-row" data-app-card-kind="record" data-surface-variant="standalone"
+            data-app-source-state={sourceState}
             className="min-w-0 space-y-2 rounded-lg border border-[var(--border-subtle)] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Text variant="label" className="break-all">{signal}</Text>
+            <div data-app-part="record-header" className="flex flex-wrap items-center justify-between gap-2">
+              <Text data-app-part="record-title" variant="label" className="break-all">{signal}</Text>
               <Badge size="sm" variant={state.fatalError ? 'danger'
                 : state.refreshError || state.isRefreshBlocked ? 'warning'
                 : state.status === 'ok' ? 'success' : 'neutral'}>{status}</Badge>
             </div>
+            <div data-app-part="record-body" className="space-y-2">
             {state.status === 'initial' && !state.isRefreshBlocked && (
-              <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: signal })}>
+              <div data-app-part="status" role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: signal })}>
                 <Skeleton className="h-6 w-full" />
               </div>
             )}
@@ -89,6 +100,7 @@ export function SignalEvidenceSourceList({ sources, label }: SignalEvidenceSourc
                 {t('common.retry', 'Retry')}
               </Button>
             )}
+            </div>
           </li>
         );
       })}

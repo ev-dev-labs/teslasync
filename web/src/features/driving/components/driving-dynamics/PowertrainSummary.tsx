@@ -54,7 +54,7 @@ export default function PowertrainSummary({ vehicleId, historyQuery }: Powertrai
         {t('dynamics.powertrain.coverage', 'Up to {{limit}} motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.', { limit: MOTOR_HISTORY_LIMIT })}
       </Text>
       {query.isLoading ? (
-        <div role="status" aria-label={t('dynamics.powertrain.loading', 'Loading selected-drive evidence')}>
+        <div data-app-part="status" role="status" aria-label={t('dynamics.powertrain.loading', 'Loading selected-drive evidence')}>
           <Skeleton className="h-24" />
         </div>
       ) : query.isError ? (

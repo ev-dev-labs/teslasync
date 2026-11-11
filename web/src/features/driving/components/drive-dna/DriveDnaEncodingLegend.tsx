@@ -171,6 +171,8 @@ export function DriveDnaEncodingLegend({
               return (
                 <div
                   key={row.title}
+                  data-app-part="card"
+                  data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="flex items-start justify-between gap-2">

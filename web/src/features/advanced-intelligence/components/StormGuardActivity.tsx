@@ -36,7 +36,7 @@ export function StormGuardActivity({ query }: { query: DataStateSource<Stormguar
             {t('stormguard.events.empty', 'No recent storm activity was returned.')}
           </Text>
         ) : (
-          <ul className="space-y-1.5">
+          <ul data-app-part="list" className="space-y-1.5">
             {events.slice(0, 5).map(event => (
               <li key={event.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">

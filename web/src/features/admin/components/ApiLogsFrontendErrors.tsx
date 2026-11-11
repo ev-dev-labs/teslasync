@@ -42,7 +42,7 @@ export function ApiLogsFrontendErrors() {
     >
       <StaleRefreshWarning state={state} label={title} />
       {isLoading && !data ? (
-        <div role="status" aria-label={t('apiLogs.frontendErrors.loading', 'Loading frontend error summary')}>
+        <div data-app-part="status" role="status" aria-label={t('apiLogs.frontendErrors.loading', 'Loading frontend error summary')}>
           <Skeleton className="h-16" />
         </div>
       ) : state.fatalError ? (

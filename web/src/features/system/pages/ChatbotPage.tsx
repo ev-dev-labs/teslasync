@@ -8,17 +8,17 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Square, History as HistoryIcon } from 'lucide-react';
+import { History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, Drawer, Textarea, Text, Icon, IconBox, IconButton } from '@/components/ui';
+import { GlassPanel, Button, Drawer, Text, Icon, IconBox, IconButton } from '@/components/ui';
+import { AlertBanner, DataSourceNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useIsMobile } from '@/hooks/useMediaQuery';
-import { iconSize, neonColorMap } from '@/lib/tokens';
+import { iconSize } from '@/lib/tokens';
 import {
   useChatSessions,
   useChatHistory,
@@ -37,6 +37,7 @@ import {
 import { SessionList } from '../components/chatbot/SessionList';
 import { extractKnowledgeEvidence, mergeKnowledgeEvidence } from '../components/chatbot/knowledgeEvidence';
 import { ChatWelcome } from '../components/chatbot/ChatWelcome';
+import { ChatComposer } from '../components/chatbot/ChatComposer';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
@@ -153,6 +154,8 @@ export default function ChatbotPage() {
   const sessions = sessionsQuery.data ?? [];
 
   const historyQuery = useChatHistory(sessionId);
+  const historyUnavailable = !!sessionId && !localTranscriptRef.current && historyQuery.data === undefined &&
+    (historyQuery.fetchStatus === 'paused' || historyQuery.isPending || historyQuery.isError);
 
   // Hydrate local messages whenever the loaded history changes (switching
   // sessions or first load). Keeps the typewriter-managed local state as
@@ -472,7 +475,7 @@ export default function ChatbotPage() {
     (text: string, revision?: { prefix: UIChatMessage[]; resolve: (accepted: boolean) => void }) => {
       const msg = text.trim();
       if (!msg || requestRef.current || stream.isActive ||
-          (sessionId && !localTranscriptRef.current && (historyQuery.isPending || historyQuery.isError)) ||
+          historyUnavailable ||
           (deleteMut.isPending && deleteMut.variables?.sessionId === sessionId)) return false;
       if (aiEnabled) {
         // AI-on path: SSE stream against /api/v1/ai/chatbot.
@@ -576,7 +579,7 @@ export default function ChatbotPage() {
       return true;
     },
     [aiEnabled, aiStream.state, pendingAiRequest, sendMut, sessionId, stream,
-      historyQuery.isPending, historyQuery.isError, deleteMut.isPending, deleteMut.variables, sessionsQuery],
+      historyUnavailable, deleteMut.isPending, deleteMut.variables, sessionsQuery],
   );
 
   const handleSend = useCallback(() => {
@@ -585,6 +588,7 @@ export default function ChatbotPage() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
       // Enter submits; Shift+Enter inserts a newline (default behavior).
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -606,7 +610,7 @@ export default function ChatbotPage() {
   // Esc cancels the streaming reveal AND aborts an in-flight SSE.
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !e.defaultPrevented && !e.isComposing && e.keyCode !== 229) {
         if (stream.isActive) stream.stop();
         if (aiStream.state === 'streaming') {
           aiStream.cancel();
@@ -800,12 +804,15 @@ export default function ChatbotPage() {
       }
     >
       <section
+        data-app-part="conversation-workspace"
+        data-app-conversation-state={isWaiting ? 'waiting' : isStreaming ? 'streaming' : 'idle'}
+        data-app-sessions-presentation={showSessions ? isMobile ? 'drawer' : 'dock' : 'closed'}
         aria-label={t('chatbot.aria.workspace', 'Assistant workspace')}
         className="flex flex-1 flex-col gap-4 min-h-0"
       >
         <AIVoiceMode />
 
-        <div className="relative flex min-h-0 gap-4 h-[calc(100dvh_-_12rem)]">
+        <div data-app-part="conversation-layout" className="relative flex min-h-0 gap-d-gap h-[calc(100dvh_-_12rem)]">
           {showSessions &&
             (isMobile ? (
               <Drawer
@@ -829,6 +836,7 @@ export default function ChatbotPage() {
                     onRename={handleRename}
                     onDelete={handleDelete}
                     isLoading={sessionsQuery.isLoading}
+                    source={sessionsQuery}
                     className="h-full w-full"
                   />
               </Drawer>
@@ -842,25 +850,30 @@ export default function ChatbotPage() {
                   onRename={handleRename}
                   onDelete={handleDelete}
                   isLoading={sessionsQuery.isLoading}
+                  source={sessionsQuery}
                   className="h-full"
                 />
               </FadeIn>
             ))}
 
-          <GlassPanel className="flex min-w-0 flex-1 flex-col overflow-hidden !p-0">
+          <GlassPanel data-app-part="panel conversation" className="flex min-w-0 flex-1 flex-col overflow-hidden !p-0">
             <div
               role="log"
+              data-app-part="list conversation-log"
+              data-app-list="conversation"
               aria-live="polite"
               aria-relevant="additions"
               aria-label={t('chatbot.aria.conversation', 'Conversation')}
-              className="flex-1 overflow-y-auto"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             >
-              <div className="flex min-h-full flex-col items-center px-3 py-4 sm:px-4">
-                <div className="flex w-full max-w-3xl flex-1 flex-col space-y-3">
-                  {sessionId && !localTranscriptRef.current && (
-                    historyQuery.isPending || historyQuery.isError || historyQuery.fetchStatus === 'paused'
-                  ) && (
-                    <div role={historyQuery.isError ? 'alert' : 'status'}>
+              <div className="flex min-h-full flex-col items-center px-d-pad-x py-d-pad-y">
+                <div data-app-part="conversation-transcript" className="flex w-full max-w-3xl flex-1 flex-col gap-d-gap">
+                  {historyUnavailable && (
+                    <AlertBanner
+                      data-app-part="feedback conversation-history-state"
+                      variant={historyQuery.isError ? 'danger' : 'info'}
+                      role={historyQuery.isError ? 'alert' : 'status'}
+                    >
                       <Text as="p" variant="bodySm">
                         {historyQuery.isError
                           ? t('chatbot.historyFailed', 'Conversation history could not be loaded.')
@@ -868,12 +881,19 @@ export default function ChatbotPage() {
                             ? t('chatbot.historyPaused', 'Conversation history is waiting for a connection.')
                             : t('chatbot.historyLoading', 'Loading conversation history…')}
                       </Text>
-                      {historyQuery.isError && (
+                      {(historyQuery.isError || historyQuery.fetchStatus === 'paused') && (
                         <Button variant="secondary" size="sm" onClick={() => void historyQuery.refetch()}>
                           {t('common.retry', 'Retry')}
                         </Button>
                       )}
-                    </div>
+                    </AlertBanner>
+                  )}
+                  {sessionId && !localTranscriptRef.current && historyQuery.data !== undefined && (
+                    <DataSourceNotice sources={[{
+                      id: 'conversation-history',
+                      label: t('chatbot.aria.conversation', 'Conversation'),
+                      query: historyQuery,
+                    }]} />
                   )}
                   {deleteMut.variables?.sessionId === sessionId && (deleteMut.isPending || deleteMut.isError) && (
                     <Text as="p" variant="bodySm" role={deleteMut.isError ? 'alert' : 'status'}>
@@ -882,7 +902,7 @@ export default function ChatbotPage() {
                         : t('chatbot.deleteFailed', 'Conversation was not deleted. Your messages and draft are retained; try again from History.')}
                     </Text>
                   )}
-                  {messages.length === 0 && (!sessionId || historyQuery.isSuccess) ? (
+                  {messages.length === 0 && (!sessionId || historyQuery.data !== undefined) ? (
                     <ChatWelcome
                       onPick={(text) => {
                         setInput(text);
@@ -913,7 +933,7 @@ export default function ChatbotPage() {
 
                   {isWaiting && (
                     <FadeIn>
-                      <div className="flex items-start gap-3">
+                      <div data-app-part="conversation-pending" role="status" className="flex items-start gap-3">
                         <IconBox color="neutral" size="sm">
                           <HelixMark className={iconSize.md} aria-hidden="true" />
                         </IconBox>
@@ -931,56 +951,19 @@ export default function ChatbotPage() {
               </div>
             </div>
 
-            <div className={`border-t ${neonColorMap.neutral.border} px-3 py-3 sm:px-4`}>
-              <div className="flex justify-center">
-                <div className="w-full max-w-3xl">
-                  <VisuallyHidden as="label" htmlFor="chatbot-input">
-                    {t('chatbot.inputLabel', 'Message')}
-                  </VisuallyHidden>
-                  <div className="flex items-end gap-2 sm:gap-3">
-                    <div className="min-w-0 flex-1">
-                      <Textarea
-                        ref={inputRef}
-                        id="chatbot-input"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={t(
-                          'chatbot.placeholder',
-                          'Ask Helix to investigate, compare, or explain…',
-                        )}
-                        rows={1}
-                        className="max-h-40 min-h-11 resize-none"
-                        aria-label={t('chatbot.inputLabel', 'Message')}
-                      />
-                    </div>
-                    {isStreaming ? (
-                      <Button
-                        onClick={stopAll}
-                        variant="secondary"
-                        icon={<Icon icon={Square} />}
-                        aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
-                        title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
-                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
-                      >
-                        <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={handleSend}
-                        disabled={!input.trim() || baselinePending || isAiStreaming ||
-                          (deleteMut.isPending && deleteMut.variables?.sessionId === sessionId) ||
-                          (!!sessionId && !localTranscriptRef.current && (historyQuery.isPending || historyQuery.isError))}
-                        variant="primary"
-                        icon={<Icon icon={Send} />}
-                        aria-label={t('chatbot.actions.send', 'Send message')}
-                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ChatComposer
+              inputRef={inputRef}
+              value={input}
+              onChange={setInput}
+              onKeyDown={handleKeyDown}
+              onSend={handleSend}
+              onStop={stopAll}
+              streaming={isStreaming}
+              waiting={isWaiting}
+              sendDisabled={!input.trim() || baselinePending || isAiStreaming ||
+                (deleteMut.isPending && deleteMut.variables?.sessionId === sessionId) ||
+                historyUnavailable}
+            />
           </GlassPanel>
         </div>
       </section>

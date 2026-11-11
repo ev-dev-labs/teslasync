@@ -136,10 +136,14 @@ describe('vehicleIcon', () => {
     const root = host.firstElementChild;
     expect(host.children).toHaveLength(1);
     expect(root?.tagName).toBe('DIV');
+    expect(root).toHaveAttribute('data-app-part', 'map-marker');
+    expect(root).toHaveAttribute('data-map-marker', 'vehicle');
     expect(root?.getAttribute('style')).toBe('width:28px;height:28px;position:relative');
     expect(root?.children).toHaveLength(2);
     const halo = root?.children[0];
     const dot = root?.children[1];
+    expect(halo).toHaveClass('app-map-marker-halo');
+    expect(dot).toHaveClass('app-map-marker-core');
     expect(halo?.tagName).toBe('DIV');
     expect(halo?.getAttribute('style')).toContain('position:absolute;inset:0;border-radius:50%');
     expect(halo?.getAttribute('style')).toContain('background:#abcdef;opacity:0.25');

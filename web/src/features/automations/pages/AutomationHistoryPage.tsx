@@ -103,6 +103,9 @@ export default function AutomationHistoryPage() {
       primaryAction={
         <Link
           to="/automations/new"
+          data-app-part="button"
+          data-app-variant="secondary"
+          data-app-size="sm"
           className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, typography.size.sm,
             'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9 whitespace-normal')}
         >

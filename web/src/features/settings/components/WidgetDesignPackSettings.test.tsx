@@ -1,8 +1,10 @@
 import { createHash, webcrypto } from 'node:crypto';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ToastProvider } from '@/components/feedback';
+import { MockResizeObserver } from '@/test/setup';
 import WidgetDesignPackSettings from './WidgetDesignPackSettings';
 import { PACK_MANIFEST } from '@/features/dashboard/widgets/designPacks/manifest';
 
@@ -49,7 +51,7 @@ vi.mock('react-i18next', async () => {
 
 function renderSettings() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><ToastProvider><WidgetDesignPackSettings /></ToastProvider></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><MemoryRouter><ToastProvider><WidgetDesignPackSettings /></ToastProvider></MemoryRouter></QueryClientProvider>);
 }
 
 async function ready() {
@@ -58,6 +60,7 @@ async function ready() {
 
 beforeEach(() => {
   localStorage.clear();
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, 1024, 300));
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('EventSource', mocks.eventSource);
   mocks.mode.mockReset();
@@ -114,7 +117,26 @@ describe('Widget design pack settings', () => {
     await ready();
   });
 
+  it('restores the preview invoker when pointer activation does not move focus', async () => {
+    renderSettings();
+    await ready();
+    const opener = screen.getByRole('button', { name: 'Preview Classic' });
+    expect(opener).not.toHaveFocus();
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole('dialog', { name: 'Preview Classic' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close preview', exact: true }));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
   it('previews every real presentation without saving, vehicle readers or commands', async () => {
+    const observers: MockResizeObserver[] = [];
+    vi.stubGlobal('ResizeObserver', class extends MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        super(callback);
+        observers.push(this);
+      }
+    });
     renderSettings();
     await ready();
     const write = vi.spyOn(Storage.prototype, 'setItem');
@@ -127,18 +149,54 @@ describe('Widget design pack settings', () => {
       const dialog = await screen.findByRole('dialog', { name: `Preview ${name}` });
       await within(dialog).findByRole('heading', { name: 'Commands' }, { timeout: 10_000 });
       await waitFor(() => expect(within(dialog).queryByText('Loading preview...')).not.toBeInTheDocument());
-      expect(dialog.querySelector('[data-widget-pack-preview]')).toHaveAttribute('data-widget-pack-preview', entry.id);
-      expect(dialog.querySelectorAll(`[data-surface-variant="standalone"][data-widget-pack="${entry.id}"]`)).toHaveLength(5);
-      for (const heading of ['Vehicle', 'Battery', 'History', 'Status']) {
-        expect(within(dialog).getByRole('heading', { name: heading })).toBeInTheDocument();
+      const widgets = dialog.querySelector<HTMLElement>('[data-widget-pack-preview]');
+      if (!widgets) throw new Error(`Missing original widgets for ${entry.id}`);
+      expect(widgets).toHaveAttribute('data-widget-pack-preview', entry.id);
+      expect(widgets.querySelectorAll(`[data-surface-variant="standalone"][data-widget-pack="${entry.id}"]`)).toHaveLength(5);
+      const panels = new Map(['Vehicle', 'Battery', 'History', 'Status', 'Commands'].map(heading => {
+        const title = within(widgets).getByRole('heading', { name: heading, exact: true });
+        const panel = title.closest<HTMLElement>('[data-widget-pack]');
+        if (!panel) throw new Error(`Missing ${heading} widget for ${entry.id}`);
+        return [heading, panel] as const;
+      }));
+      expect(panels.get('Vehicle')).toHaveTextContent('Sample vehicle');
+      expect(panels.get('Battery')).toHaveTextContent('72%');
+      expect(panels.get('Battery')).toHaveTextContent('Sample charge limit: 80%');
+      expect(within(panels.get('History')!).getByRole('img', { name: 'Sample battery history' })).toBeInTheDocument();
+      expect(panels.get('Status')).toHaveTextContent('Locked');
+      expect(panels.get('Status')).toHaveTextContent('Parked');
+      expect(panels.get('Commands')).toHaveTextContent('Preview commands are disabled.');
+      for (const section of ['overview', 'chart', 'map', 'table', 'form', 'feedback', 'widgets']) {
+        expect(dialog.querySelector(`[data-preview-section="${section}"]`)).toBeInTheDocument();
+      }
+      const trace = within(dialog).getByRole('figure', { name: 'Sample battery trace' });
+      expect(within(trace).getByRole('group', { name: 'Sample battery trace' }))
+        .toHaveAttribute('data-chart-viewport', 'bounded');
+      act(() => {
+        for (const observer of observers) {
+          for (const target of observer.observed) observer.trigger(target);
+        }
+      });
+      await waitFor(() => expect(trace.querySelectorAll('.recharts-line-curve'), entry.id).toHaveLength(2),
+        { container: trace });
+      for (const state of ['loading', 'empty', 'stale', 'partial', 'error', 'retained-error']) {
+        expect(dialog.querySelector(`[data-preview-state="${state}"]`)).toBeInTheDocument();
       }
       for (const action of ['Unlock', 'Climate', 'Flash lights']) {
-        const command = within(dialog).getByRole('button', { name: action });
+        const command = within(panels.get('Commands')!).getByRole('button', { name: action, exact: true });
         expect(command).toBeDisabled();
         fireEvent.click(command);
       }
-      expect(dialog.querySelector('[data-vehicle-studio]')).toBeInTheDocument();
-      expect(dialog.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+      const studio = panels.get('Vehicle')?.querySelector('[data-vehicle-studio]');
+      expect(studio).toBeInTheDocument();
+      expect(studio).toHaveAttribute('data-activity', 'static');
+      const image = studio?.querySelector('img');
+      expect(image).toHaveAttribute('src', expect.stringContaining('https://static-assets.tesla.com/configurator/compositor?'));
+      const imageUrl = new URL(image?.getAttribute('src') ?? '');
+      expect(imageUrl.searchParams.get('model')).toBe('my');
+      expect(imageUrl.searchParams.get('view')).toBe('SIDE');
+      expect(within(dialog).getByRole('button', { name: 'Server save disabled' })).toBeDisabled();
+      expect(within(dialog).getByRole('switch', { name: 'Live connection disabled' })).toBeDisabled();
       expect(write).not.toHaveBeenCalled();
       expect(mocks.request.mock.calls.every(([path, options]) =>
         path === '/settings/widget-design-pack' && options?.method !== 'PUT')).toBe(true);

@@ -31,9 +31,11 @@ interface ArrivalReliabilityRouteDirectoryProps {
 
 function RouteMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <MetricLabel>{label}</MetricLabel>
-      <MetricValue className="mt-0.5">{value}</MetricValue>
+    <div data-app-part="list-row">
+      <MetricLabel as="dt" data-app-part="metric-label">{label}</MetricLabel>
+      <MetricValue as="dd" data-app-part="metric-reading" className="mt-0.5">
+        <span data-app-part="metric-value">{value}</span>
+      </MetricValue>
     </div>
   );
 }
@@ -68,6 +70,8 @@ export function ArrivalReliabilityRouteDirectory({
             {analysis.routes.map((route, index) => (
               <article
                 key={route.key}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -97,7 +101,7 @@ export function ArrivalReliabilityRouteDirectory({
                     )}
                   </Text>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+                <dl data-app-part="list" data-app-list="definitions" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
                   <RouteMetric
                     label={t(
                       'arrivalReliability.directory.samples',
@@ -151,7 +155,7 @@ export function ArrivalReliabilityRouteDirectory({
                     )}
                     value={arrivalIndex(route.support.index, locale)}
                   />
-                </div>
+                </dl>
               </article>
             ))}
           </div>

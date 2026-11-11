@@ -1,13 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import {
+  act,
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import '@/i18n';
 import { ComboboxMulti } from '../ComboboxMulti';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '../../ui/app-designs/designs';
 
 interface Item {
   id: string;
@@ -49,6 +56,94 @@ function Harness({ initial = [], maxItems, onChange, disabled }: HarnessProps) {
 }
 
 describe('ComboboxMulti', () => {
+  it('qualifies the original async pending ring for all 27 intrinsic consumers without changing selection or announcements', async () => {
+    let resolveOptions!: (items: readonly Item[]) => void;
+    const options = vi.fn(() => new Promise<readonly Item[]>(resolve => { resolveOptions = resolve; }));
+    const onChange = vi.fn();
+    const rules: Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => {
+        if (rule.selector.includes('[data-app-feedback-kind="inline-spinner"]')) rules.push(rule);
+      });
+    const { container } = render(
+      <section data-app-design-preview="">
+        <ComboboxMulti label="Fruits" value={[ITEMS[0]]} onChange={onChange} options={options}
+          asyncDebounceMs={0} getOptionLabel={item => item.name} getOptionKey={item => item.id} />
+      </section>,
+    );
+    const host = container.firstElementChild as HTMLElement;
+    const input = screen.getByRole('combobox', { name: /fruits/i });
+    const hiddenStatus = document.getElementById(input.getAttribute('aria-describedby') ?? '')!;
+    expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
+    fireEvent.focus(input);
+    const ring = await screen.findByRole('status', { name: 'Loading' });
+    const originalClass = 'h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent';
+    expect(ring.tagName).toBe('SPAN');
+    expect(ring).toHaveAttribute('data-app-part', 'loading-indicator');
+    expect(ring).toHaveAttribute('data-app-feedback-kind', 'inline-spinner');
+    expect(ring).toHaveAttribute('class', originalClass);
+    expect(ring).not.toHaveAttribute('aria-hidden');
+    expect(ring).not.toHaveAttribute('aria-live');
+    expect(hiddenStatus).toHaveTextContent('Loading');
+    expect(hiddenStatus).not.toBe(ring);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'true');
+    const release = observeAppDesignScopes(host);
+    try {
+      expect(rules.some(rule => ring.matches(rule.selector))).toBe(false);
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) host.setAttribute(name, value);
+        await waitFor(() => expect(ring).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+        const matching = rules.filter(rule => ring.matches(rule.selector));
+        expect(matching.length, pack).toBeGreaterThan(0);
+        expect(matching.every(rule => rule.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`))).toBe(true);
+        for (const rule of matching) {
+          expect(rule.nodes.filter(node => node.type === 'decl').map(node => [node.prop, node.value]))
+            .toEqual([['pointer-events', 'none'], ['user-select', 'none']]);
+        }
+        expect(ring).toHaveAttribute('class', originalClass);
+        expect(screen.getAllByRole('status')).toHaveLength(1);
+      }
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) host.removeAttribute(name);
+      host.setAttribute('data-widget-design-pack', 'classic');
+      await waitFor(() => expect(ring).not.toHaveAttribute('data-app-design-owner'));
+      expect(rules.some(rule => ring.matches(rule.selector))).toBe(false);
+      await act(async () => { resolveOptions(ITEMS); });
+      await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull());
+      expect(hiddenStatus).toBeEmptyDOMElement();
+      expect(input).not.toHaveAttribute('aria-busy');
+      expect(screen.getByRole('listbox')).not.toHaveAttribute('aria-busy');
+      expect(screen.queryByRole('option', { name: 'Apple' })).toBeNull();
+      fireEvent.keyDown(input, { key: 'Home' });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(onChange).toHaveBeenLastCalledWith([ITEMS[0], ITEMS[1]]);
+      expect(screen.getByRole('button', { name: /remove apple/i })).toBeInTheDocument();
+    } finally {
+      release();
+    }
+  });
+
+  it('removes only the intrinsic ring when controlled loading ends, retaining the existing hidden status node and field', () => {
+    const props = {
+      label: 'Fruits', value: [ITEMS[0]], onChange: vi.fn(), options: ITEMS,
+      getOptionLabel: (item: Item) => item.name, getOptionKey: (item: Item) => item.id,
+    };
+    const { rerender } = render(<ComboboxMulti {...props} loading />);
+    const input = screen.getByRole('combobox', { name: /fruits/i });
+    const hiddenStatus = document.getElementById(input.getAttribute('aria-describedby') ?? '')!;
+    expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute('data-app-feedback-kind', 'inline-spinner');
+    expect(hiddenStatus).toHaveTextContent('Loading');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    rerender(<ComboboxMulti {...props} loading={false} />);
+    expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: /fruits/i })).toBe(input);
+    expect(document.getElementById(hiddenStatus.id)).toBe(hiddenStatus);
+    expect(hiddenStatus).toBeEmptyDOMElement();
+    expect(input).not.toHaveAttribute('aria-busy');
+    expect(props.onChange).not.toHaveBeenCalled();
+  });
+
   it('keeps native focus and selection with semantic rings at the existing geometry', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -152,7 +247,8 @@ describe('ComboboxMulti', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('maxItems caps the number of selections', () => {
+  it('maxItems exposes disabled options and removal restores native keyboard selection', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<Harness maxItems={2} initial={[ITEMS[0], ITEMS[1]]} onChange={onChange} />);
     const input = screen.getByRole('combobox', { name: /fruits/i });
@@ -161,8 +257,19 @@ describe('ComboboxMulti', () => {
     expect(screen.getByText(/\(2\/2\)/)).toBeInTheDocument();
     // Try to add another.
     const cherry = screen.getByRole('option', { name: 'Cherry' });
+    expect(cherry).toHaveAttribute('aria-disabled', 'true');
+    expect(input.closest('[data-app-field-surface]')).not.toBeNull();
+    expect(screen.getByRole('listbox')).toHaveAttribute('data-app-part', 'popover');
     fireEvent.click(cherry);
     expect(onChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /remove banana/i }));
+    expect(input).toHaveFocus();
+    expect(screen.getByRole('option', { name: 'Cherry' })).not.toHaveAttribute('aria-disabled');
+    await user.keyboard('{Home}');
+    const active = document.getElementById(input.getAttribute('aria-activedescendant') ?? '');
+    expect(active).toHaveAttribute('data-active', 'true');
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith([ITEMS[0], ITEMS[1]]);
   });
 
   it('Escape closes the dropdown without removing chips', () => {

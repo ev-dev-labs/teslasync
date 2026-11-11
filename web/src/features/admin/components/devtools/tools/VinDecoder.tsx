@@ -68,16 +68,16 @@ export function VinDecoderTool() {
           icon={<Car className="h-4 w-4" aria-hidden="true" />}
         />
         {decoded && (
-          <dl
+          <dl data-app-part="list" data-app-list="definitions"
             aria-label={t('devtools.utils.vin_results', 'Decoded VIN')}
             className="grid gap-2 sm:grid-cols-2"
           >
             {VIN_FIELDS.map(({ key, label }) => (
-              <div key={key} className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-                <dt className="text-xs text-[var(--text-secondary)]">
+              <div data-app-part="list-row" key={key} className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+                <dt data-app-part="metric-label" className="text-xs text-[var(--text-secondary)]">
                   {t(`devtools.utils.vin_${key}`, label)}
                 </dt>
-                <dd className="text-sm font-medium text-[var(--text-primary)]">{decoded[key]}</dd>
+                <dd data-app-part="metric-value" className="text-sm font-medium text-[var(--text-primary)]">{decoded[key]}</dd>
               </div>
             ))}
           </dl>

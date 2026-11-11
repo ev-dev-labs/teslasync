@@ -66,29 +66,29 @@ export function EvidencePanel({
             <>
               <VerdictBadge value={quality.status} />
               <Table aria-label={t('ownership.evidence.title', 'Evidence, quality, and limitations')}><tbody>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
+                <tr data-app-part="table-row">
+                  <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.samples', 'Samples')}
                   </th>
-                  <td className="text-right">
+                  <td data-app-part="table-cell" className="text-right">
                     {quality.sample_count != null ? fmtInt(quality.sample_count) : '—'}
                   </td>
                 </tr>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
+                <tr data-app-part="table-row">
+                  <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.coverage', 'Coverage')}
                   </th>
-                  <td className="text-right">
+                  <td data-app-part="table-cell" className="text-right">
                     {quality.coverage_pct != null
                       ? `${fmtNumber(quality.coverage_pct)}%`
                       : '—'}
                   </td>
                 </tr>
-                <tr>
-                  <th scope="row" className="text-[var(--text-muted)]">
+                <tr data-app-part="table-row">
+                  <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.window', 'Observation window')}
                   </th>
-                  <td className="text-right">
+                  <td data-app-part="table-cell" className="text-right">
                     {quality.window_start || quality.window_end
                       ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`
                       : '—'}
@@ -122,6 +122,8 @@ export function EvidencePanel({
             evidenceItems.map((item, index) => (
               <div
                 key={`${item.source}-${index}`}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="min-w-0 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <Text as="p" variant="label">
@@ -170,15 +172,18 @@ export function EvidencePanel({
             </Text>
           )}
           {unsupportedItems.length > 0 ? (
-            <div className="min-w-0 rounded-lg border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] p-3">
-              <Text as="p" variant="label">
-                {t('ownership.unsupported.title', 'Explicitly not computed')}
-              </Text>
-              {unsupportedItems.map((item) => (
-                <Text as="p" variant="caption" key={item}>
-                  • {item}
+            <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="warning"
+              className="min-w-0 rounded-lg border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] p-3">
+              <div data-app-part="feedback-content">
+                <Text data-app-part="feedback-title" as="p" variant="label">
+                  {t('ownership.unsupported.title', 'Explicitly not computed')}
                 </Text>
-              ))}
+                {unsupportedItems.map((item) => (
+                  <Text data-app-part="feedback-message" as="p" variant="caption" key={item}>
+                    • {item}
+                  </Text>
+                ))}
+              </div>
             </div>
           ) : null}
         </section>

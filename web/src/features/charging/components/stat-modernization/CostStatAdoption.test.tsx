@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { settingsKeys } from '@/api/hooks/useSettings';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import type { BillVarianceReport } from '@/types/charging';
 import {
   fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
@@ -215,6 +217,23 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     );
     expect(within(explanation).getByText(`${fmtNumber(coreStats.co2SavedKg)} kg`)).toBeInTheDocument();
     expect(within(explanation).getByText(fmtNumber(coreStats.treeEquiv))).toBeInTheDocument();
+    const callout = explanation.closest('[data-app-feedback-kind="insight"]');
+    expect(callout).toHaveAttribute('data-app-part', 'feedback');
+    expect(callout?.querySelector('[data-app-part="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(explanation).toHaveAttribute('data-app-part', 'feedback-message');
+    container.setAttribute('data-app-design-preview', '');
+    expect(matchesAppDesignCss(callout!)).toEqual([]);
+    for (const pack of ['classic', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(matchesAppDesignCss(callout!, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+          .some(match => match.selector.includes('[data-app-feedback-kind="insight"]'))).toBe(true);
+        expect(explanation).toHaveTextContent(`${fmtNumber(coreStats.co2SavedKg)} kg`);
+        expect(explanation).toHaveTextContent(`${fmtNumber(coreStats.treeEquiv)} trees absorbing carbon for a full year.`);
+        expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+      } finally { release(); }
+    }
   });
   it('keeps calculator inputs/guards/reset callbacks, four metrics and all four comparison facts', () => {
     const price = vi.fn(); const mpg = vi.fn(); const rate = vi.fn();
@@ -328,6 +347,9 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(value(container, 'Avg km/mo')).toBe(`${fmtNumber(forecastData.gas_comparison.avg_km_per_month)} km`);
     expect(tile(container, 'Avg km/mo')).toHaveTextContent('km');
     expect(screen.getByText('Synthetic retained insight')).toBeInTheDocument();
+    expect(screen.getByText('Synthetic retained insight')).toHaveAttribute('data-app-part', 'feedback-message');
+    expect(screen.getByText('Synthetic retained insight').closest('[data-app-feedback-kind="insight"]'))
+      .toHaveAttribute('data-app-part', 'feedback');
     const shares = JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]');
     expect(shares).toEqual([{ name: 'Home', value: 65 }, { name: 'Supercharger', value: 35 }]);
   });
@@ -342,6 +364,37 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Breakdown will appear once charging data is available.')).toBeInTheDocument();
     expect(screen.getByText('Insights will appear as more data is collected.')).toBeInTheDocument();
+  });
+  it('keeps full nonblank insight records through a refresh error, independently from absent forecast slices', () => {
+    const data = { ...forecastData, breakdown: undefined, gas_comparison: undefined,
+      insights: ['  ', 'First exact source insight', '', 'Second long source insight'] } as unknown as typeof forecastData;
+    const retry = vi.fn();
+    const { container } = render(<ForecastDetails forecastData={data} period={period}
+      error={new Error('Synthetic insight refresh failure')} onRetry={retry} />);
+    const records = container.querySelectorAll('[data-app-feedback-kind="insight"]');
+    expect(Array.from(records, record => record.querySelector('[data-app-part="feedback-message"]')?.textContent))
+      .toEqual(['First exact source insight', 'Second long source insight']);
+    expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(3);
+    fireEvent.click(screen.getAllByRole('button', { name: /Retry/i })[2]);
+    expect(retry).toHaveBeenCalledOnce();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    container.setAttribute('data-app-design-preview', '');
+    expect(matchesAppDesignCss(records[0])).toEqual([]);
+    for (const pack of ['classic', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        records.forEach(record => {
+          expect(matchesAppDesignCss(record, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+            .some(match => match.selector.includes('[data-app-feedback-kind="insight"]'))).toBe(true);
+          expect(record.querySelector('[data-app-part="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+        });
+        expect(Array.from(records, record => record.textContent))
+          .toEqual(['First exact source insight', 'Second long source insight']);
+        expect(screen.getAllByRole('alert')).toHaveLength(3);
+      } finally { release(); }
+    }
   });
   it('keeps forecast history/projected bands, gaps, keys and independent scope while preserving cached slices on failure', () => {
     const retry = vi.fn();

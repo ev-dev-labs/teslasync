@@ -83,6 +83,9 @@ export function ErrorState({
 
   return (
     <div
+      data-app-part="feedback error"
+      data-app-feedback-kind="error"
+      data-app-tone={tone}
       role={role}
       aria-live={ariaLiveValue}
       className={cn(
@@ -92,9 +95,10 @@ export function ErrorState({
         className,
       )}
     >
-      <div className={cn('flex flex-wrap items-start', compact ? 'gap-2' : 'gap-3')}>
-        <div className={cn('flex w-full min-w-0 flex-1 basis-full items-start md:basis-64', compact ? 'gap-2' : 'gap-3')}>
+      <div data-app-part="feedback-layout" className={cn('flex flex-wrap items-start', compact ? 'gap-2' : 'gap-3')}>
+        <div data-app-part="feedback-content" className={cn('flex w-full min-w-0 flex-1 basis-full items-start md:basis-64', compact ? 'gap-2' : 'gap-3')}>
           <div
+            data-app-part="feedback-icon"
             className={cn(
               'shrink-0 rounded-shape-sm',
               colors.icon,
@@ -103,22 +107,22 @@ export function ErrorState({
           >
             <StatusIcon icon={Icon} size={compact ? 'sm' : 'md'} />
           </div>
-          <div className="flex-1 min-w-0 break-words">
-            <Text as="p" variant="body" className="font-medium">
+          <div data-app-part="feedback-copy" className="flex-1 min-w-0 break-words">
+            <Text data-app-part="feedback-title" as="p" variant="body" className="font-medium">
               {title}
             </Text>
-            <Text as="p" variant="bodySm" className="mt-1">
+            <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mt-1">
               {message}
             </Text>
           </div>
         </div>
         {action && (
-          <div className="w-full min-w-0 max-w-full break-words md:w-auto [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:py-2 md:[&_button]:min-h-9 md:[&_button]:min-w-0">
+          <div data-app-part="feedback-actions" className="w-full min-w-0 max-w-full break-words md:w-auto [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:py-2 md:[&_button]:min-h-9 md:[&_button]:min-w-0">
             {action}
           </div>
         )}
       </div>
-      {footer && <div className={cn('min-w-0 break-words', compact ? 'mt-2' : 'mt-3')}>{footer}</div>}
+      {footer && <div data-app-part="feedback-footer" className={cn('min-w-0 break-words', compact ? 'mt-2' : 'mt-3')}>{footer}</div>}
     </div>
   )
 }

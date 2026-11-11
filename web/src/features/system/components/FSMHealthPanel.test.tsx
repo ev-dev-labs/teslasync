@@ -130,6 +130,13 @@ describe('FSMHealthPanel', () => {
     expect(screen.getByTestId('fsm-health-panel')).toBeInTheDocument();
     const alert = screen.getByTestId('fsm-health-alert-flap');
     expect(alert).toHaveAttribute('role', 'status');
+    expect(alert).toHaveAttribute('data-app-feedback-kind', 'notice');
+    expect(alert).toHaveAttribute('data-app-tone', 'warning');
+    expect(alert).toHaveAttribute('data-app-metric', 'inline');
+    expect(within(alert).getByText('State flapping')).toHaveAttribute('data-app-part', 'feedback-title metric-label');
+    expect(within(alert).getByText('6')).toHaveAttribute('data-app-part', 'metric-reading metric-value');
+    expect(alert.querySelector('[data-app-part="feedback-content"] [data-app-part="feedback-message"]'))
+      .toHaveTextContent(/6 transitions flagged as state flapping/);
     expect(within(alert).getByText('State flapping')).toBeInTheDocument();
     expect(within(alert).getByText(/6 transitions flagged as state flapping/)).toBeInTheDocument();
     // The big count and the icon are decorative — the message already states the count.

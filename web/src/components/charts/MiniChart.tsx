@@ -53,11 +53,12 @@ export const MiniChart = forwardRef<HTMLDivElement, MiniChartProps>(
     if (!points) return null;
 
     return (
-      <div ref={ref} className={cn('inline-block', className)}>
+      <div ref={ref} data-app-part="chart chart-plot" data-chart-family="mini" className={cn('inline-block max-w-full', className)}>
         <svg
           width={width}
           height={height}
-          className="overflow-visible"
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-auto max-w-full overflow-visible"
           role={label ? 'img' : undefined}
           aria-label={label || undefined}
           aria-hidden={label ? undefined : true}

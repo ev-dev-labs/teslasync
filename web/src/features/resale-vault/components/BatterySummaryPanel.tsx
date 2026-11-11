@@ -66,7 +66,7 @@ export function BatterySummaryPanel({ battery, sources }: BatterySummaryPanelPro
           {battery.recommendations.length > 0 && (
             <div>
               <HelperText className="mb-1">{t('resaleVault.battery.recommendations', 'Recommendations')}</HelperText>
-              <ul className="list-disc ps-5 text-[var(--text-secondary)] space-y-0.5">
+              <ul data-app-part="list" className="list-disc ps-5 text-[var(--text-secondary)] space-y-0.5">
                 {battery.recommendations.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}

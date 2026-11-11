@@ -244,29 +244,33 @@ function InnerSection({
       )}
       {draft && (
         <div
+          data-app-part="feedback"
+          data-app-feedback-kind="insight"
+          data-app-tone="neutral"
           className="min-w-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           data-testid="ai-feature-suggest-new-geofences-draft"
           role="group"
           aria-labelledby={proposalLabelId}
         >
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1 break-words">
+            <div data-app-part="feedback-content" className="min-w-0 flex-1 space-y-1 break-words">
               <Caption
+                data-app-part="feedback-title"
                 as="div"
                 id={proposalLabelId}
               >
                 {t('geofences.aiSuggest.proposalLabel', 'Proposed geofence')}
               </Caption>
-              <Text as="div" size="sm" weight="medium" color="primary">
+              <Text data-app-part="feedback-message" as="div" size="sm" weight="medium" color="primary">
                 {draft.proposed_name ||
                   t('geofences.aiSuggest.unnamed', '(unnamed)')}
               </Text>
-              <Text as="div" variant="bodySm">
+              <Text data-app-part="feedback-detail" as="div" variant="bodySm">
                 {t('geofences.aiSuggest.radiusLabel', 'Radius')}:{' '}
                 {Math.round(draft.radius_m)} m
               </Text>
               {draft.validation_error && (
-                <Text as="div" variant="bodySm">
+                <Text data-app-part="feedback-detail" as="div" variant="bodySm">
                   {draft.validation_error}
                 </Text>
               )}
@@ -279,7 +283,7 @@ function InnerSection({
                 </Text>
               )}
             </div>
-            <div className="flex min-w-0 max-w-full flex-col gap-2">
+            <div data-app-part="feedback-actions" className="flex min-w-0 max-w-full flex-col gap-2">
               <Button
                 variant="outline"
                 size="sm"

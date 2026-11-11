@@ -27,7 +27,11 @@ import type { Vehicle } from '@/types/vehicle'
 import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
 import { StrictMode, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import userEvent from '@testing-library/user-event'
+import { getAppDesignAttributes, observeAppDesignScopes } from '../app-designs/designs'
+import { CommandPaletteTrigger } from '../CommandPaletteTrigger'
+import { captureAppDesignOrigin } from '../appDesignOrigin'
 
 const locale = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
@@ -449,6 +453,141 @@ describe('CommandPalette recent storage', () => {
 // ─── Cmd+K behavior ─────────────────────────────────────────────────────────
 
 describe('CommandPalette frame', () => {
+  it('uses the captured trigger snapshot when its preview unmounts before the palette event listener', async () => {
+    const root = document.documentElement
+    const attributes = getAppDesignAttributes('terminal')
+    const previous = Object.keys(attributes).map(name => [name, root.getAttribute(name)] as const)
+    for (const [name, value] of Object.entries(attributes)) root.setAttribute(name, value)
+    let removePreview = () => {}
+    function Invocation() {
+      const [visible, setVisible] = useState(true)
+      const fallbackRef = useRef<HTMLButtonElement>(null)
+      removePreview = () => setVisible(false)
+      return <>
+        <div dir="rtl" lang="ar">
+          {visible && <section data-app-design-preview="" {...getAppDesignAttributes('editorial')}>
+            <CommandPaletteTrigger />
+          </section>}
+        </div>
+        <button ref={fallbackRef}>Surviving palette invoker</button>
+        <CommandPalette returnFocusFallbackRef={fallbackRef} />
+      </>
+    }
+    const detachFirst = () => flushSync(removePreview)
+    window.addEventListener('toggle-command-palette', detachFirst)
+    const view = render(<Invocation />, { wrapper: makeWrapper(makeVehicles()) })
+    const release = observeAppDesignScopes(root)
+    try {
+      const trigger = screen.getByRole('button', { name: 'Search pages, commands…' })
+      screen.getByRole('button', { name: 'Surviving palette invoker' }).focus()
+      fireEvent.click(trigger)
+      expect(trigger).not.toBeInTheDocument()
+      const dialog = screen.getByRole('dialog')
+      const boundary = dialog.closest('[data-app-design-portal]')
+      for (const [name, value] of Object.entries(getAppDesignAttributes('editorial'))) {
+        expect(boundary).toHaveAttribute(name, value)
+      }
+      expect(boundary).toHaveAttribute('dir', 'rtl')
+      expect(boundary).toHaveAttribute('lang', 'ar')
+      expect(dialog).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-editorial'))
+      await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'battery' } })
+      expect(boundary).toHaveAttribute('data-app-design-pack', 'editorial')
+      fireEvent.keyDown(window, { key: 'Escape' })
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(screen.getByRole('button', { name: 'Surviving palette invoker' })).toHaveFocus()
+    } finally {
+      window.removeEventListener('toggle-command-palette', detachFirst)
+      view.unmount()
+      release()
+      for (const [name, value] of previous) {
+        if (value === null) root.removeAttribute(name)
+        else root.setAttribute(name, value)
+      }
+    }
+  })
+
+  it('keeps the original captured preview live after the invoker moves into a different preview', async () => {
+    const fixture = document.createElement('section')
+    fixture.setAttribute('dir', 'rtl')
+    fixture.setAttribute('lang', 'ar')
+    const preview = document.createElement('section')
+    preview.setAttribute('data-app-design-preview', '')
+    for (const [name, value] of Object.entries(getAppDesignAttributes('editorial'))) preview.setAttribute(name, value)
+    const origin = document.createElement('button')
+    preview.append(origin)
+    const other = document.createElement('section')
+    other.setAttribute('data-app-design-preview', '')
+    for (const [name, value] of Object.entries(getAppDesignAttributes('terminal'))) other.setAttribute(name, value)
+    fixture.append(preview, other)
+    document.body.append(fixture)
+    const release = observeAppDesignScopes(fixture)
+    const snapshot = captureAppDesignOrigin(origin)
+    other.append(origin)
+    const view = render(<CommandPalette initialOpen initialOrigin={origin} initialDesignOrigin={snapshot} />, {
+      wrapper: makeWrapper(makeVehicles()),
+    })
+    try {
+      const dialog = screen.getByRole('dialog')
+      const boundary = dialog.closest('[data-app-design-portal]')
+      expect(boundary).toHaveAttribute('data-app-design-pack', 'editorial')
+      for (const [name, value] of Object.entries(getAppDesignAttributes('bauhaus'))) preview.setAttribute(name, value)
+      fixture.setAttribute('dir', 'ltr')
+      fixture.setAttribute('lang', 'en')
+      await waitFor(() => {
+        expect(boundary).toHaveAttribute('data-app-design-pack', 'bauhaus')
+        expect(boundary).toHaveAttribute('data-app-controls', 'segmented')
+        expect(dialog).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-bauhaus'))
+        expect(boundary).toHaveAttribute('dir', 'ltr')
+        expect(boundary).toHaveAttribute('lang', 'en')
+      })
+      await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+      fireEvent.keyDown(window, { key: 'Escape' })
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    } finally {
+      view.unmount()
+      release()
+      fixture.remove()
+    }
+  })
+
+  it('accepts a preserved first invoker without relying on pointer focus', () => {
+    function InitialInvocation() {
+      const [origin, setOrigin] = useState<HTMLElement | null>(null)
+      return <>
+        <section data-app-design-preview="" {...getAppDesignAttributes('bauhaus')}>
+          <button onClick={event => setOrigin(event.currentTarget)}>Unfocused invocation</button>
+        </section>
+        {origin && <CommandPalette initialOpen initialOrigin={origin} />}
+      </>
+    }
+    render(<InitialInvocation />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.click(screen.getByRole('button', { name: 'Unfocused invocation' }))
+    const boundary = screen.getByRole('dialog').closest('[data-app-design-portal]')
+    for (const [name, value] of Object.entries(getAppDesignAttributes('bauhaus'))) {
+      expect(boundary).toHaveAttribute(name, value)
+    }
+  })
+
+  it('retains the preview invoker design in the existing globally mounted palette and restores focus', async () => {
+    const user = userEvent.setup()
+    const attributes = getAppDesignAttributes('editorial')
+    render(<>
+      <section data-app-design-preview="" {...attributes}><CommandPaletteTrigger /></section>
+      <CommandPalette />
+    </>, { wrapper: makeWrapper(makeVehicles()) })
+    const trigger = screen.getByRole('button', { name: 'Search pages, commands…' })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog')
+    const boundary = dialog.closest('[data-app-design-portal]')
+    for (const [name, value] of Object.entries(attributes)) expect(boundary).toHaveAttribute(name, value)
+    expect(trigger.closest('[data-app-design-preview]')).not.toContainElement(dialog)
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+  })
+
   it.each([false, true])('preserves overlay geometry with reduced motion %s', async (reduce) => {
     motionPreference.reduce = reduce
     render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })

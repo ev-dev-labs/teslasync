@@ -43,6 +43,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { BADGE_VARIANTS } from '@/components/ui';
 import { neonColorMap } from '@/lib/tokens';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings, AutopilotPreview } from '@/types/charging';
 import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
@@ -784,8 +786,9 @@ describe('SmartChargePage — after a successful optimization', () => {
       opts?.onSuccess?.(RESULT),
     );
     mockOptimize.mockReturnValue(optimizeState({ mutate }));
-    renderPage();
+    const view = renderPage();
     fireEvent.click(optimizeButton());
+    return view;
   }
 
   it('fills the KPI band, energy tile, and savings delta from the response', () => {
@@ -815,7 +818,7 @@ describe('SmartChargePage — after a successful optimization', () => {
   });
 
   it('renders the recommended-schedule facts and the alternative windows', () => {
-    optimizeToResult();
+    const { container } = optimizeToResult();
     expect(screen.getAllByText('Current SOC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('35%').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Start time').length).toBeGreaterThan(0);
@@ -823,6 +826,34 @@ describe('SmartChargePage — after a successful optimization', () => {
     expect(screen.getAllByText('SUPER_OFF_PEAK').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.80').length).toBeGreaterThan(0);
+    const facts = document.querySelectorAll('[data-app-metric="headline"]');
+    expect(facts).toHaveLength(4);
+    expect(Array.from(facts, fact => fact.querySelector('[data-app-part="metric-label"]')?.textContent))
+      .toEqual(['Current SOC', 'Target SOC', 'Start time', 'End time']);
+    expect(Array.from(facts, fact => fact.querySelector('[data-app-part="metric-reading"] > [data-app-part="metric-value"]')?.textContent))
+      .toEqual(['35%', '80%', '02:00', '05:00']);
+    const alternatives = document.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"]');
+    expect(alternatives).toHaveLength(2);
+    expect(alternatives[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent('01:00 — 04:00');
+    expect(alternatives[0].querySelector('[data-app-part="metric-context"]')).toHaveTextContent('SUPER_OFF_PEAK');
+    expect(alternatives[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('$4.10');
+    const host = container;
+    host.setAttribute('data-app-design-preview', '');
+    try {
+      expect(matchingAppDesignDataRules(facts[0])).toEqual([]);
+      for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+        setAppDesignTestProfile(host, pack);
+        const release = observeAppDesignScopes(host);
+        try {
+          facts.forEach(fact => expectAppDesignDataMode(fact, APPLICATION_DESIGNS[pack].data, '[data-app-metric="headline"]'));
+          alternatives.forEach(row => expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]'));
+          expect(Array.from(facts, fact => fact.querySelector('[data-app-part="metric-value"]')?.textContent))
+            .toEqual(['35%', '80%', '02:00', '05:00']);
+        } finally { release(); }
+      }
+    } finally {
+      for (const name of host.getAttributeNames().filter(name => name.startsWith('data-app-'))) host.removeAttribute(name);
+    }
   });
 
   it('applies the schedule and confirms with a success badge', () => {
@@ -1501,7 +1532,12 @@ describe('SmartChargePage — plan history', () => {
     const openRow = screen.getByText('charger-1 · #12').closest('li')!;
     const endedRow = screen.getByText('charger-1 · #13').closest('li')!;
     for (const row of [openRow, endedRow]) {
+      expect(row).toHaveAttribute('data-app-part', 'list-row');
+      expect(row.parentElement).toHaveAttribute('data-app-list', 'definitions');
+      expect(row.querySelector('[data-app-part="metric-label"]')).not.toBeNull();
       const reading = within(row).getByLabelText('Energy');
+      expect(reading).toHaveAttribute('data-app-part', 'metric-value');
+      expect(reading.parentElement).toHaveAttribute('data-app-part', 'metric-reading');
       if (energy != null && Number.isFinite(energy)) {
         expect(reading).toHaveTextContent(energy === 0 ? /0.*kWh/ : /42.*kWh/);
       } else {
@@ -1537,12 +1573,32 @@ describe('SmartChargePage — plan history', () => {
       data: [session],
       isError: true, error: new Error('transactions refresh failed'),
     }));
-    renderPage();
+    const { container } = renderPage();
     expect(screen.getByText('Vendor Model')).toBeInTheDocument();
+    const record = screen.getByText('Vendor Model').closest('[data-app-part="list-row"]')!;
+    expect(record.parentElement).toHaveAttribute('data-app-list', 'definitions');
+    expect(record.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Vendor Model');
+    expect(record.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('last seen 2026-01-16');
+    expect(record.querySelector('[data-app-part="metric-reading"]')).toHaveTextContent('#1 Charging1 active');
+    expect(record.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('1 active');
     expect(screen.getByText('#1 Charging')).toBeInTheDocument();
     expect(screen.getByText('charger-1 · #12')).toBeInTheDocument();
     expect(screen.getByText(/42.*kWh/)).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    container.setAttribute('data-app-design-preview', '');
+    const records = container.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"]');
+    expect(records).toHaveLength(2);
+    expect(matchingAppDesignDataRules(records[0])).toEqual([]);
+    const readings = Array.from(records, row => row.textContent);
+    for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        records.forEach(row => expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]'));
+        expect(Array.from(records, row => row.textContent)).toEqual(readings);
+        expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+      } finally { release(); }
+    }
   });
 });

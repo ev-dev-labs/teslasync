@@ -91,15 +91,20 @@ export function ConsentControlPanel({
       </div>
 
       <div
+        data-app-part="status feedback"
+        data-app-feedback-kind="notice"
+        data-app-tone={consent === 'accepted' ? 'success' : consent === 'declined' ? 'warning' : 'neutral'}
         role="status"
         className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
         data-testid="privacy-consent-state"
         data-consent-state={consent}
       >
-        <StatusPill color={cp.dot}>{cp.short}</StatusPill>
-        <Text as="span" variant="caption">
-          {cp.detail}
-        </Text>
+        <div data-app-part="feedback-content" className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <StatusPill color={cp.dot}>{cp.short}</StatusPill>
+          <Text data-app-part="feedback-message" as="span" variant="caption">
+            {cp.detail}
+          </Text>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

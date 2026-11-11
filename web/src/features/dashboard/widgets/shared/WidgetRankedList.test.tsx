@@ -37,7 +37,7 @@
  * a render + query assertion, consistent with the other dashboard tests.
  */
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { WidgetRankedList, type RankedItem } from './WidgetRankedList';
 import { BADGE_VARIANTS } from '@/components/ui';
 
@@ -532,5 +532,36 @@ describe('WidgetRankedList', () => {
     expect(rows[0]).toHaveTextContent('First unknown');
     expect(rows[6]).toHaveTextContent('F');
     expect(screen.queryByText('G')).not.toBeInTheDocument();
+  });
+
+  it('composes two real ranked cells without separating rank/status from their label or inventing bars', () => {
+    const items: readonly RankedItem[] = Object.freeze([
+      { id: 'unknown', label: 'Pending route', value: null, formattedValue: 'Unknown',
+        sublabel: 'Awaiting source', hint: 'Not measured', status: 'neutral',
+        labelContent: <a href="/drives/17">Pending route</a> },
+      { id: 'zero', label: 'Measured route', value: 0, formattedValue: '0 km',
+        badge: { text: 'Recorded', variant: 'neutral' } },
+    ]);
+    const { container, rerender } = render(<WidgetRankedList items={items} order="source" showBars />);
+    expect(screen.getByRole('list')).toHaveAttribute('data-app-list', 'ranked');
+    const row = screen.getAllByRole('listitem')[0];
+    expect(row).toHaveAttribute('data-app-part', 'list-row');
+    expect(row.children).toHaveLength(2);
+    expect(row.children[0].querySelector('.widget-rank-number')).toHaveTextContent('1');
+    expect(within(row.children[0] as HTMLElement).getByRole('link', { name: 'Pending route' }))
+      .toHaveAttribute('href', '/drives/17');
+    expect(row.children[0].querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(row.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Pending route');
+    expect(row.children[0].querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Awaiting source');
+    expect(row.children[1].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('Unknown');
+    expect(row.children[1].querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Not measured');
+    expect(container.querySelector('[role="meter"], [role="progressbar"], [data-chart-gauge-fill]')).toBeNull();
+
+    rerender(<WidgetRankedList items={items} />);
+    const sorted = screen.getAllByRole('listitem');
+    expect(sorted[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('0 km');
+    expect(sorted[0].querySelector('.widget-rank-number')).toHaveTextContent('1');
+    expect(sorted[1].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('Unknown');
+    expect(items[0].id).toBe('unknown');
   });
 });

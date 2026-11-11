@@ -218,6 +218,29 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
   }
 
   describe('ChargingHeatmapPage — complete returned-session alternatives', () => {
+    it('exposes interactive weekly cells through the real shared group viewport', async () => {
+      const user = userEvent.setup();
+      mockSessions.mockReturnValue(makeQuery({ data: [session(1, 8, 1000), session(2, 8, null)] }));
+      renderPage();
+
+      const viewport = screen.getByRole('group', { name: 'Charging sessions by weekday and hour of day' });
+      expect(viewport).toHaveAttribute('data-chart-viewport', 'bounded');
+      expect(viewport.closest('[data-chart-key]')).toHaveAttribute('data-chart-key', 'charging-weekly-heatmap');
+      const cells = within(viewport).getAllByRole('button');
+      expect(cells).toHaveLength(168);
+      for (const cell of cells) expect(cell.closest('[role="img"]')).toBeNull();
+      expect(cells.filter(cell => cell.tabIndex === 0)).toHaveLength(1);
+
+      const measuredSlot = within(viewport).getByRole('button', { name: 'Mon 08:00 — 2 sessions' });
+      measuredSlot.focus();
+      await user.keyboard('{Enter}');
+      expect(screen.getByRole('dialog', { name: 'Mon 08:00' })).toHaveTextContent('2 sessions · 1.00 kWh');
+      expect(screen.getByRole('dialog', { name: 'Mon 08:00' })).toHaveTextContent('recorded values only');
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog', { name: 'Mon 08:00' })).not.toBeInTheDocument();
+      expect(measuredSlot).toHaveFocus();
+    });
+
     it('renders function-valued insight colors as solid fills, including measured-zero bars', () => {
       mockSessions.mockReturnValue(makeQuery({ data: [session(1, 8, 1000), session(2, 8, null)] }));
       renderPage();
@@ -274,7 +297,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
         start: '2026-01-01T08:00:00.000Z',
         end: '2026-03-02T08:00:00.000Z',
       });
-      const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
+      const grid = screen.getByRole('group', { name: 'Charging sessions by weekday and hour of day' });
       expect(grid.querySelectorAll('[title]')).toHaveLength(168);
       expect(grid.parentElement?.parentElement?.querySelectorAll('[aria-hidden="true"] [data-heatmap-level]')).toHaveLength(5);
       const figure = screen.getByRole('figure', { name: 'Weekly Charging Heatmap' });
@@ -325,7 +348,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       }));
       renderPage();
 
-      expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Charging sessions by weekday and hour of day' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /data table/ })).toBeEnabled();
       expect(within(kpiRegion()).getByText('Total Energy')).toBeInTheDocument();
       expect(screen.getAllByText(/This is not a complete-history total/).length).toBeGreaterThan(0);
@@ -341,7 +364,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
         expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
       }
       expect(screen.getByText('Loading is paused. Charging history will appear when the connection resumes.')).toBeInTheDocument();
-      expect(screen.queryByRole('img', { name: 'Charging sessions by weekday and hour of day' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Charging sessions by weekday and hour of day' })).not.toBeInTheDocument();
       expect(within(kpiRegion()).getByText('Total Sessions')).toBeInTheDocument();
     });
   });

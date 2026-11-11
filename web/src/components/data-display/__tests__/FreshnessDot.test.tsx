@@ -99,6 +99,38 @@ describe('FreshnessDot widget variant', () => {
     expect(container.querySelector('svg.lucide-wifi, svg.lucide-wifi-off')).not.toBeInTheDocument()
   })
 
+  it.each([false, true])('retains refresh focus through polling and Escape with edgeAligned=%s', async (edgeAligned) => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn()
+    const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, onRefresh, edgeAligned }
+    const { rerender } = render(<FreshnessDot {...props} />)
+    const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    await user.tab()
+    expect(refresh).toHaveFocus()
+
+    rerender(<FreshnessDot {...props} isFetching />)
+    expect(screen.getByRole('button', { name: /Refresh data/ })).toBe(refresh)
+    expect(refresh).not.toBeDisabled()
+    expect(refresh).toHaveAttribute('aria-disabled', 'true')
+    expect(refresh).toHaveAttribute('aria-busy', 'true')
+    expect(refresh).toHaveAccessibleName(/updating…/)
+    expect(refresh).toHaveFocus()
+    await user.keyboard('{Enter} ')
+    await user.click(refresh)
+    expect(onRefresh).not.toHaveBeenCalled()
+    await user.keyboard('{Escape}')
+    expect(refresh).toHaveFocus()
+
+    rerender(<FreshnessDot {...props} updatedAt={props.updatedAt + 1} />)
+    expect(screen.getByRole('button', { name: /Refresh data/ })).toBe(refresh)
+    expect(refresh).toHaveFocus()
+    expect(refresh).not.toHaveAttribute('aria-disabled')
+    expect(refresh).not.toHaveAttribute('aria-busy')
+    expect(refresh).toHaveAccessibleName(/Up to date/)
+    await user.click(refresh)
+    expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
   it('uses one shared relative-time ticker for multiple indicators', () => {
     vi.useFakeTimers()
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
@@ -345,7 +377,8 @@ describe('FreshnessDot', () => {
       />,
     )
     const refresh = screen.getByRole('button', { name: /Refresh data/ })
-    expect(refresh).toBeDisabled()
+    expect(refresh).not.toBeDisabled()
+    expect(refresh).toHaveAttribute('aria-disabled', 'true')
     expect(refresh).toHaveClass('disabled:bg-transparent')
     fireEvent.click(refresh)
     expect(onRefresh).not.toHaveBeenCalled()
@@ -383,7 +416,8 @@ describe('FreshnessDot', () => {
         onRefresh={vi.fn()}
       />,
     )
-    expect(refresh).toBeDisabled()
+    expect(refresh).not.toBeDisabled()
+    expect(refresh).toHaveAttribute('aria-disabled', 'true')
     expect(refresh).toHaveClass(...(compact ? ['!h-5', '!w-5'] : ['!h-7', '!w-7']))
   })
 
@@ -468,7 +502,7 @@ describe('FreshnessDot', () => {
     expect(failed).toHaveAccessibleDescription(expect.stringContaining('Last updated:'))
   })
 
-  it('keeps error precedence while fetching and the native refresh disabled', () => {
+  it('keeps error precedence and blocks refresh while fetching', () => {
     const onRefresh = vi.fn()
     render(
       <FreshnessDot
@@ -482,7 +516,8 @@ describe('FreshnessDot', () => {
     )
     const refresh = screen.getByRole('button', { name: 'Refresh data · error · 1m ago' })
     expect(refresh).toHaveAttribute('type', 'button')
-    expect(refresh).toBeDisabled()
+    expect(refresh).not.toBeDisabled()
+    expect(refresh).toHaveAttribute('aria-disabled', 'true')
     fireEvent.click(refresh)
     expect(onRefresh).not.toHaveBeenCalled()
   })

@@ -46,25 +46,29 @@ export function TelemetryErrorsPanel({
   const { t } = useTranslation()
   if (!requested) {
     return (
-      <div className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
-        <Caption>{title}</Caption>
-        <HelperText className="mt-1 italic">{idleMessage}</HelperText>
+      <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-state="idle" className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
+        <div data-app-part="feedback-content">
+          <Caption data-app-part="feedback-title">{title}</Caption>
+          <HelperText data-app-part="feedback-message" className="mt-1 italic">{idleMessage}</HelperText>
+        </div>
       </div>
     )
   }
   if (loading) {
     return (
-      <div className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
-        <Caption>{title}</Caption>
-        <div className="mt-2"><Skeleton lines={3} /></div>
+      <div data-app-part="feedback loading" data-app-feedback-kind="notice" data-app-state="loading" aria-busy="true" className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
+        <div data-app-part="feedback-content">
+          <Caption data-app-part="feedback-title">{title}</Caption>
+          <div className="mt-2"><Skeleton lines={3} /></div>
+        </div>
       </div>
     )
   }
   if (error) {
     return (
-      <div className="mt-3 rounded-lg bg-[var(--semantic-danger-bg)] p-3">
-        <Caption>{title}</Caption>
-        <ErrorText className="mt-1">{error}</ErrorText>
+      <div data-app-part="feedback" data-app-feedback-kind="error" data-app-tone="danger" data-app-state="error" className="mt-3 rounded-lg bg-[var(--semantic-danger-bg)] p-3">
+        <Caption data-app-part="feedback-title">{title}</Caption>
+        <ErrorText data-app-part="feedback-message" className="mt-1">{error}</ErrorText>
       </div>
     )
   }
@@ -117,26 +121,28 @@ export function TelemetryErrorsPanel({
   // the operator can debug Tesla's wire-shape drift; if ok=true we
   // simply say the vehicle has no errors (the healthy steady state).
   return (
-    <div className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
-      <div className="flex items-center justify-between">
-        <Caption>{title}</Caption>
-        <Badge variant={ok ? 'success' : 'warning'} size="sm" dot>
-          {ok ? '0' : '?'}
-        </Badge>
+    <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone={ok ? undefined : 'warning'} data-app-state={ok ? 'empty' : 'unknown'} className="mt-3 rounded-lg bg-[var(--surface-2)] p-3">
+      <div data-app-part="feedback-content">
+        <div className="flex items-center justify-between">
+          <Caption data-app-part="feedback-title">{title}</Caption>
+          <Badge variant={ok ? 'success' : 'warning'} size="sm" dot>
+            {ok ? '0' : '?'}
+          </Badge>
+        </div>
+        <HelperText data-app-part="feedback-message" className="mt-1">
+          {ok ? emptyMessage : t('devtools.errorsUnknown', 'Fleet Telemetry error status is unknown: the response format was not recognized.')}
+        </HelperText>
+        {!ok && rawData != null && (
+          <details className="mt-2">
+            <summary className="cursor-pointer">
+              <Caption>{rawDisclosureLabel}</Caption>
+            </summary>
+            <Text data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" as="pre" variant="code" className="mt-1 max-h-64 overflow-auto rounded bg-[var(--surface-1)] p-2">
+              {JSON.stringify(rawData, null, 2)}
+            </Text>
+          </details>
+        )}
       </div>
-      <HelperText className="mt-1">
-        {ok ? emptyMessage : t('devtools.errorsUnknown', 'Fleet Telemetry error status is unknown: the response format was not recognized.')}
-      </HelperText>
-      {!ok && rawData != null && (
-        <details className="mt-2">
-          <summary className="cursor-pointer">
-            <Caption>{rawDisclosureLabel}</Caption>
-          </summary>
-          <Text as="pre" variant="code" className="mt-1 max-h-64 overflow-auto rounded bg-[var(--surface-1)] p-2">
-            {JSON.stringify(rawData, null, 2)}
-          </Text>
-        </details>
-      )}
     </div>
   )
 }

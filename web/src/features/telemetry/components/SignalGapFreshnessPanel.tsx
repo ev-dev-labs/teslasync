@@ -12,7 +12,7 @@ import { AlertTriangle, CheckCircle2, Gauge } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { ProgressRing } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 
 import { GAP_BUCKET_COLORS, formatStaleness } from '../signalGapUtils';
@@ -89,36 +89,43 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
                 // is excluded from `topStale`. Guard against the freshness
                 // gauge reading < 100% while this banner would otherwise
                 // falsely reassure that everything is arriving on time.
-                <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                <AlertBanner
+                  variant="warning"
+                  icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+                  className="items-center gap-2 rounded-lg px-3 py-2"
+                >
                   <Text variant="bodySm">
                     {t('signalGap.neverReported', '{{never}} signals have never reported.', {
                       never: neverCount,
                     })}
                   </Text>
-                </div>
+                </AlertBanner>
               ) : (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                <AlertBanner
+                  variant="success"
+                  icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                  className="items-center gap-2 rounded-lg px-3 py-2"
+                >
                   <Text variant="bodySm">
                     {t('signalGap.allFresh', 'All signals are arriving on time.')}
                   </Text>
-                </div>
+                </AlertBanner>
               )
             ) : (
-              <ul className="space-y-1.5">
+              <ul data-app-part="list" data-app-list="ranked" className="space-y-1.5">
                 {topStale.map((row) => (
                   <li
+                    data-app-part="list-row"
                     key={row.name}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
-                      <Text variant="code" className="min-w-0 break-words">
+                      <Text data-app-part="metric-label" variant="code" className="min-w-0 break-words">
                         {row.name}
                       </Text>
                     </span>
-                    <Text variant="bodySm" className="shrink-0 tabular-nums text-rose-300">
+                    <Text data-app-part="metric-value" variant="bodySm" className="shrink-0 tabular-nums text-rose-300">
                       {formatStaleness(row.staleness)}
                     </Text>
                   </li>

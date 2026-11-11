@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react'
 import { DefaultLegendContent, Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
@@ -107,6 +108,7 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
     },
     'data-series-key': seriesKey,
     'data-series-hidden': dimmed ? 'true' : 'false',
+    'data-chart-legend-label': '',
   } as const
 
   if (interactive) {
@@ -156,11 +158,29 @@ export interface ChartLegendProps
   state?: ChartLegendToggleSource
 }
 
-function HorizontalLegendContent(props: React.ComponentPropsWithoutRef<typeof DefaultLegendContent>) {
+type ChartLegendContentProps = React.ComponentPropsWithoutRef<typeof DefaultLegendContent> & {
+  notifyLayoutChange: () => void
+}
+
+function ChartLegendContent({ notifyLayoutChange, ...props }: ChartLegendContentProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const node = contentRef.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    // Native Legend only measures during React updates, not CSS/font changes.
+    const observer = new ResizeObserver(notifyLayoutChange)
+    observer.observe(node, { box: 'border-box' })
+    return () => observer.disconnect()
+  }, [notifyLayoutChange])
+
   return (
     <div
-      data-chart-legend-layout="horizontal"
-      className="min-w-0 max-w-full [&_.recharts-default-legend]:grid [&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] [&_.recharts-default-legend]:gap-1 [&_.recharts-legend-item]:!m-0 [&_.recharts-legend-item]:!flex [&_.recharts-legend-item]:min-w-0 [&_.recharts-legend-item]:items-center [&_.recharts-legend-item]:justify-center [&_.recharts-legend-item>svg]:shrink-0 [&_.recharts-legend-item-text]:min-w-0"
+      ref={contentRef}
+      data-app-part="chart-legend"
+      data-chart-legend-layout={props.layout ?? 'horizontal'}
+      className={props.layout === 'vertical'
+        ? 'min-w-0 max-w-full'
+        : 'min-w-0 max-w-full [&_.recharts-default-legend]:grid [&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] [&_.recharts-default-legend]:gap-1 [&_.recharts-legend-item]:!m-0 [&_.recharts-legend-item]:!flex [&_.recharts-legend-item]:min-w-0 [&_.recharts-legend-item]:items-center [&_.recharts-legend-item]:justify-center [&_.recharts-legend-item>svg]:shrink-0 [&_.recharts-legend-item-text]:min-w-0'}
     >
       <DefaultLegendContent {...props} />
     </div>
@@ -188,14 +208,27 @@ export function ChartLegend({
 }: ChartLegendProps) {
   const contextState = useChartHiddenSeries()
   const resolved: ChartLegendToggleSource | null = state ?? contextState
+  const legendRef = useRef<Legend>(null)
+  // Recharts also inherits an element-ref prop; only the native class can remeasure.
+  const setLegendRef = useCallback((instance: Legend | React.ReactElement | null) => {
+    legendRef.current = instance && 'forceUpdate' in instance ? instance : null
+  }, [])
+  const remeasureLegend = useCallback(() => legendRef.current?.forceUpdate(), [])
+  const defaultContent = useCallback(
+    (props: React.ComponentPropsWithoutRef<typeof DefaultLegendContent>) => (
+      <ChartLegendContent {...props} notifyLayoutChange={remeasureLegend} />
+    ),
+    [remeasureLegend],
+  )
   return (
     <Legend
+      ref={setLegendRef}
       {...legendProps}
       layout={layout}
       wrapperStyle={layout === 'horizontal'
         ? { left: 0, width: '100%', maxWidth: '100%', ...wrapperStyle }
         : wrapperStyle}
-      content={content ?? (layout === 'horizontal' ? HorizontalLegendContent : undefined)}
+      content={content ?? defaultContent}
       onClick={(data) => toggleFromLegend(resolved, data as LegendPayloadEntry)}
       formatter={(value, entry) => (
         <LegendSeriesLabel

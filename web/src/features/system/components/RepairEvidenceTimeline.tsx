@@ -68,6 +68,8 @@ export function RepairEvidenceTimeline({ suggestion }: RepairEvidenceTimelinePro
 
   return (
     <section
+      data-app-part="panel"
+      data-surface-variant="standalone"
       aria-label={t('dataRepair.card.evidence', 'Evidence timeline')}
       className="rounded-lg bg-[var(--surface-2)] p-3"
     >
