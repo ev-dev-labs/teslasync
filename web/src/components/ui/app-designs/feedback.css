@@ -17,6 +17,12 @@
     min-inline-size: 0;
   }
 
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-metric="card"] > [data-app-part~="metric-frame"]):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(
     [data-app-part~="metric-label"]:not([data-app-metric-kind="vehicle-stat-chip"] [data-app-part~="metric-label"]), [data-app-part~="metric-context"],
     [data-app-part~="metric-comparison"], [data-app-part~="feedback-title"],

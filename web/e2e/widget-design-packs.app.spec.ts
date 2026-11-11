@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
-import { assertContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes } from './widget-design-packs.acceptance';
+import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes } from './widget-design-packs.acceptance';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { inspectSpecializedRoute, specializedReviewRoutes } from './widget-design-packs.specialized';
@@ -433,6 +433,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
             await expect.poll(() => preview.locator('.leaflet-container').evaluate(element => element.clientWidth)).toBeGreaterThan(80);
             await assertContained(dialog, `${packId} ${allocatedWidth} dialog`);
             await assertContained(preview, `${packId} ${allocatedWidth} preview`);
+            await assertNavigationTextContained(preview, `${packId} ${allocatedWidth} preview`);
             await assertPlotAndMap(preview);
             const composition = await compositionGeometry(preview);
             const nested = await inspectNestedDialog(page, preview, allocatedWidth === width
@@ -471,6 +472,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
               await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '2'));
               await assertContained(dialog, `${packId} ${allocatedWidth} RTL 200% ${density}`);
               await assertContained(preview, `${packId} ${allocatedWidth} RTL 200% ${density}`);
+              await assertNavigationTextContained(preview, `${packId} ${allocatedWidth} RTL 200% ${density}`);
               const enlargedFont = await preview.getByRole('textbox', { name: /Sample view name/ })
                 .evaluate(element => parseFloat(getComputedStyle(element).fontSize));
               expect(enlargedFont).toBeGreaterThanOrEqual(normalFont * 1.9);

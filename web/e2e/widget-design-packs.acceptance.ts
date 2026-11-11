@@ -106,6 +106,37 @@ export async function assertContained(host: Locator, description: string) {
     .toEqual({ documentOverflow: false, hostOverflow: false, outsideViewport: false, chartCaptionOverlap: false });
 }
 
+export async function assertNavigationTextContained(host: Locator, description: string) {
+  const overflowing = await host.evaluate(element => {
+    const result: Record<string, unknown>[] = [];
+    for (const item of element.querySelectorAll('[data-app-part~="navigation"] [data-app-part~="nav-item"]')) {
+      const frame = item.getBoundingClientRect();
+      if (!frame.width || !frame.height) continue;
+      if (innerWidth < 768 && frame.height < 43) {
+        result.push({ reason: 'mobile navigation retains its 44px touch target', frame: frame.toJSON() });
+      }
+      const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
+      let text: Node | null;
+      while ((text = walker.nextNode())) {
+        if (!text.nodeValue?.trim() || text.parentElement?.closest('[aria-hidden="true"], .sr-only')) continue;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        for (const glyph of range.getClientRects()) {
+          if (!glyph.width || !glyph.height) continue;
+          if (glyph.left < frame.left - 1 || glyph.right > frame.right + 1
+            || glyph.top < frame.top - 1 || glyph.bottom > frame.bottom + 1) {
+            result.push({
+              text: text.nodeValue, frame: frame.toJSON(), glyph: glyph.toJSON(),
+            });
+          }
+        }
+      }
+    }
+    return result;
+  });
+  expect(overflowing, `${description}: navigation text stays inside its own action`).toEqual([]);
+}
+
 async function assertReadableTextInset(frame: Locator, text: Locator, description: string) {
   const outer = await frame.boundingBox();
   expect(outer).not.toBeNull();

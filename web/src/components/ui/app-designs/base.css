@@ -92,6 +92,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  [data-app-design-owner]:where(button[data-app-part~="nav-item"]) {
+    block-size: auto;
+    min-block-size: max(2.5rem, var(--density-row-h));
+  }
+
   /* The existing table scroll wrapper, map renderer and plot sizing remain
      owners. Never turn a semantic table into cards or resize data coordinates. */
   [data-app-design-owner]:where([data-app-part~="table"], [data-app-part~="table-head"], [data-app-part~="table-row"], [data-app-part~="map-marker"]) {
