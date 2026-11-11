@@ -25,7 +25,9 @@ vehicle commands disabled.
 
 **Apply design to** defaults to **Widgets only**, including for existing saved
 selections. Explicitly choose **Entire application** to extend that same pack
-to navigation, shared panels, form controls, tables, headings and dialogs.
+to navigation, page headers, shared panels, form controls, tables, headings,
+charts, maps, feedback and dialogs. Each pack coordinates these arrangements
+with its widget design instead of changing colors alone.
 Changing the pack then updates widgets and the app together. Returning to
 **Widgets only** keeps the selected pack. The scope choice is saved atomically
 with the pack and syncs across machines too; older clients that save only a
@@ -33,6 +35,12 @@ pack preserve it. Display mode, accent, fonts, text scale, density, semantic
 status/chart colors and reduced-motion preferences stay independent. Print,
 OS high contrast, and standalone public/connect routes retain their existing
 appearance. The preview demonstrates shared app chrome without saving.
+
+Designs change presentation, not vehicle readings or available actions.
+Charts retain their quantitative geometry and status colors, maps retain their
+geographic geometry, and conversations retain chronological message order.
+Loading, partial, empty, error and recovery content remains available inside
+the selected design rather than removing the affected section.
 
 **Use pack** saves the selection to this TeslaSync server for the identity
 verified by the external authentication provider. Another machine using the

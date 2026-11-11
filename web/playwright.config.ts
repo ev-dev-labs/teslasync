@@ -6,6 +6,8 @@ const baseURL = explicitBaseURL ?? 'http://127.0.0.1:4173';
 const storageStatePath = resolveStorageState(process.env);
 const sensitiveRun = isSensitiveRun(process.env);
 const mocksEnabled = process.env.E2E_MOCKS !== '0';
+// Explicit opt-in keeps the normal CI projects/pinned engines unchanged.
+const appDesignCrossBrowser = process.env.E2E_APP_DESIGN_CROSS_BROWSER === '1';
 
 const viewportProjects = [390, 768, 1024, 1440, 1920].flatMap((width) =>
   (['dark', 'light'] as const).map((theme) => ({
@@ -64,6 +66,8 @@ export const baseConfig: PlaywrightTestConfig = {
       testMatch: [
         /\.smoke\.spec\.ts/,
         /widget-design-packs\.app\.spec\.ts$/,
+        /widget-design-packs\.energy\.spec\.ts$/,
+        /widget-design-packs\.native\.spec\.ts$/,
         /operationalbrief-contracts[\\/][^\\/]+\.supported\.spec\.ts$/,
       ],
       testIgnore: [/performance\.perf\.spec\.ts/, /accessibility\.smoke\.spec\.ts/],
@@ -107,6 +111,20 @@ export const baseConfig: PlaywrightTestConfig = {
       name: 'harness-contract',
       testMatch: /harness\.contract\.spec\.ts/,
     },
+    ...(appDesignCrossBrowser ? [
+      {
+        name: 'app-design-firefox',
+        testMatch: /widget-design-packs\.app\.spec\.ts$/,
+        fullyParallel: false,
+        use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
+      },
+      {
+        name: 'app-design-webkit',
+        testMatch: /widget-design-packs\.app\.spec\.ts$/,
+        fullyParallel: false,
+        use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
+      },
+    ] : []),
   ],
 };
 
