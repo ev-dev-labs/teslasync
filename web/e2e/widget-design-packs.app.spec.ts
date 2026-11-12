@@ -111,10 +111,12 @@ async function inspectRetainedAndNativeControls(preview: Locator) {
     const matrix = element.getScreenCTM();
     if (!matrix) throw new Error('Native route projection missing');
     const frame = container.getBoundingClientRect();
-    const bounds = element.getBoundingClientRect();
+    // Measure the projected centerline: Firefox includes the fixed-width stroke in client bounds.
+    const bounds = element.getBBox();
     const length = element.getTotalLength();
     return {
-      width: bounds.width, height: bounds.height,
+      width: Math.abs(matrix.a * bounds.width) + Math.abs(matrix.c * bounds.height),
+      height: Math.abs(matrix.b * bounds.width) + Math.abs(matrix.d * bounds.height),
       points: Array.from({ length: 5 }, (_, index) => {
         const point = element.getPointAtLength(length * index / 4).matrixTransform(matrix);
         return { x: point.x - frame.left, y: point.y - frame.top };
@@ -372,8 +374,14 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       // browser context. Preview must preserve it and still render local SVG.
       await page.addInitScript(() => localStorage.setItem('teslasync:low-bandwidth:v1', 'on'));
       const neutralBefore: Record<string, unknown> = {};
+      // Match the final client-navigation baseline after Layout applies the independent appearance preferences.
+      await page.goto('/settings');
+      await waitForHarnessReady(page, mocks);
       for (const publicPath of publicPaths) {
-        await page.goto(publicPath);
+        await page.evaluate(path => {
+          history.pushState(null, '', path);
+          dispatchEvent(new PopStateEvent('popstate'));
+        }, publicPath);
         await waitForHarnessReady(page, mocks);
         await expectNeutral(page, true);
         neutralBefore[publicPath] = await isolationAppearance(page.locator('body'));
@@ -424,7 +432,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);
             await expectProfile(page, packId);
-            await expect(page.locator('[data-app-part~="workspace-header"]')).toBeVisible();
+            await expect(page.getByRole('banner', {
+              name: width < 1280 ? 'Site header' : 'Workspace command bar', exact: true,
+            })).toBeVisible();
             await expect(page.locator('[data-app-part~="page"]').first()).toBeVisible();
             if (path === '/') {
               await expect(page.locator('[data-vehicle-studio]')).toBeVisible();
