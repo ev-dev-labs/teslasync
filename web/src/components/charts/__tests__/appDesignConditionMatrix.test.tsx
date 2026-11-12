@@ -23,8 +23,9 @@ function selectors(rule: Rule): string[] {
   return selectors(rule.parent).flatMap(parent => rule.selectors.map(selector =>
     selector.includes('&') ? selector.replaceAll('&', parent) : `${parent} ${selector}`));
 }
+const compiledRules = rules.map(rule => ({ rule, selector: selectors(rule).join(',') }));
 function matching(node: Element) {
-  return rules.filter(rule => selectors(rule).some(selector => node.matches(selector)));
+  return compiledRules.filter(({ selector }) => node.matches(selector)).map(({ rule }) => rule);
 }
 function mode(rule: Rule): string | undefined {
   return rule.parent?.type === 'rule' ? rule.parent.selector.match(/\[data-app-chart="([^"]+)"\]/)?.[1] : undefined;
