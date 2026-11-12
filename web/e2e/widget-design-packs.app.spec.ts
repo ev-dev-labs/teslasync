@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test } from './app-design-test';
 import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes } from './widget-design-packs.acceptance';
@@ -157,6 +158,12 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
   await preview.evaluate(element => element.removeAttribute('data-app-data'));
   await expect(preview).not.toHaveAttribute('data-app-design-owner');
   await expect(preview.locator('[data-app-design-owner]')).toHaveCount(0);
+  await expect.poll(() => preview.locator('[data-app-part~="feedback-copy"]').evaluateAll(nodes =>
+    nodes.length > 0 && nodes.every(node => {
+      const parent = node.parentElement;
+      return parent !== null && getComputedStyle(node).color === getComputedStyle(parent).color;
+    })),
+  { message: 'neutral feedback wrappers settle inherited text color after owner removal' }).toBe(true);
   await settlePointer(preview);
   const inline = await isolationAppearance(preview);
   const portals: Record<string, unknown> = {};
