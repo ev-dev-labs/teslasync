@@ -107,6 +107,14 @@ function warnIfHardcodedTextColor(content: ReactNode, callerHint: string): void 
   );
 }
 
+// The build-time branch removes the diagnostic hook itself from production.
+function TooltipTextSentry({ content, tooltipId }: { content: ReactNode; tooltipId: string }) {
+  useEffect(() => {
+    warnIfHardcodedTextColor(content, `tooltip:${tooltipId}`);
+  }, [content, tooltipId]);
+  return null;
+}
+
 const sideClasses = {
   top: 'bottom-full mb-2',
   bottom: 'top-full mt-2',
@@ -280,16 +288,6 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal:
     };
   }, [content, updatePosition, boundaryRef, portal]);
 
-  // Stable per-mount fingerprint for the dev-time warn so we don't
-  // de-duplicate across distinct callsites that happen to share the same
-  // forbidden class.
-  const callerRef = useRef<string>('');
-  if (!callerRef.current) callerRef.current = `tooltip:${tooltipId}`;
-
-  useEffect(() => {
-    warnIfHardcodedTextColor(content, callerRef.current);
-  }, [content]);
-
   // We try to attach `aria-describedby` directly to the trigger element so
   // assistive tech reads the tooltip after the trigger name. This works when
   // children is a single React element (the common case — wrapping one
@@ -318,6 +316,12 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal:
         }) as ReactNode)
       : children;
 
+  const reveal = () => {
+    if (portal) setActive(true);
+    setDismissed(false);
+    updatePosition();
+  };
+
   const bubble = (
       <span
         id={tooltipId}
@@ -326,8 +330,8 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal:
         role="tooltip"
         style={{
           left: horizontalOffset,
-          ...(portal ? { top: verticalOffset } : {}),
-          ...(maxWidth !== undefined ? { maxWidth } : {}),
+          top: portal ? verticalOffset : undefined,
+          maxWidth,
         }}
         className={cn(
           'pointer-events-none z-50 rounded-shape-sm px-2.5 py-1.5',
@@ -365,23 +369,18 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal:
       className="relative inline-flex group/tip"
       onMouseEnter={() => {
         hoveredRef.current = true;
-        if (portal) setActive(true);
-        setDismissed(false);
-        updatePosition();
+        reveal();
       }}
       onMouseLeave={() => {
         hoveredRef.current = false;
         if (portal) setActive(Boolean(triggerRef.current?.contains(document.activeElement)));
       }}
-      onFocus={() => {
-        if (portal) setActive(true);
-        setDismissed(false);
-        updatePosition();
-      }}
+      onFocus={reveal}
       onBlur={event => {
-        if (portal) setActive(hoveredRef.current || Boolean(event.currentTarget.contains(event.relatedTarget)));
+        if (portal) setActive(hoveredRef.current || event.currentTarget.contains(event.relatedTarget));
       }}
     >
+      {import.meta.env.DEV && <TooltipTextSentry content={content} tooltipId={tooltipId} />}
       {enrichedChild}
       {portal ? <AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal> : bubble}
     </span>

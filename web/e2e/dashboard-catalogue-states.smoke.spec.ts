@@ -73,6 +73,23 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(panel.getByRole('status').filter({ hasText: /Previously loaded|Data may be stale/ }).first()).toBeVisible();
         await expect(panel.getByText(/^42\s*km$/)).toBeVisible();
         await expect(panel).not.toContainText('No weekly data yet');
+        const refresh = panel.getByRole('button', { name: /^Refresh data/ });
+        await expect(refresh).toBeFocused();
+        const tooltipId = await refresh.getAttribute('aria-describedby');
+        expect(tooltipId).toBeTruthy();
+        const refreshTooltip = page.locator(`[role="tooltip"][id="${tooltipId}"]`);
+        await expect(refreshTooltip).toContainText('Refresh data');
+        await expect(refreshTooltip).toHaveCSS('opacity', '1');
+        await expect(refreshTooltip).toHaveCSS('position', 'fixed');
+        await expect(refreshTooltip).toBeInViewport({ ratio: 1 });
+        await test.info().attach('retained-error-refresh-tooltip', {
+          body: await refreshTooltip.screenshot(),
+          contentType: 'image/png',
+        });
+        // Busy refresh retains focus; dismiss its tooltip before capturing persistent readings.
+        await refresh.press('Escape');
+        await expect(refresh).toBeFocused();
+        await expect(refreshTooltip).toHaveCSS('opacity', '0');
         await captureCataloguePanel(page, panel, test.info(), `retained-${width}-${theme}.png`);
         mode = 'ok';
         recovered = true;

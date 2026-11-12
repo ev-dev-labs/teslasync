@@ -2,7 +2,7 @@ import { useContext, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { HelpTooltip, PinButton } from '@/components/ui';
+import { HelpTooltip, PinButton, TooltipPortalContext } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import type { DataState } from '@/api/dataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
@@ -147,6 +147,7 @@ export function WidgetShell({
             onRefresh={retry}
           />
         )}
+        <TooltipPortalContext.Provider value>
         <div className={dashboardTokens.header} data-role="widget-shell-header">
           <div className="flex min-w-0 w-full items-center gap-2" data-role="widget-header-line">
           <div className="min-w-0 flex-1">
@@ -187,6 +188,7 @@ export function WidgetShell({
           </div>
           {description && <p className={dashboardTokens.description}>{description}</p>}
         </div>
+        </TooltipPortalContext.Provider>
       <div
         data-testid="widget-body"
         className={cn(

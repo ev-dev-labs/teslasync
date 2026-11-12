@@ -1,9 +1,10 @@
 /** Shared shell state, single header ownership, controls and freshness wiring. */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, render, screen, fireEvent } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { deriveDataState } from '@/api/dataState';
 import { VisuallyHidden } from '@/components/a11y';
+import { TooltipPortalContext } from '@/components/ui';
 
 // ── i18n stub: resolve `t(key, defaultString, opts)` and interpolate {{vars}} ──
 vi.mock('react-i18next', () => ({
@@ -40,7 +41,8 @@ vi.mock('@/components/feedback', () => ({
     state.status === 'ok' ? null : <div data-testid="trust-warning" data-hide-retry={String(hideRetry)}>{state.status}</div>,
 }));
 
-vi.mock('@/components/ui', () => ({
+vi.mock('@/components/ui', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/ui')>(),
   HelpTooltip: (props: { ariaLabel?: string; text?: string; i18nKey?: string }) => (
     <div
       data-testid="help-tooltip"
@@ -140,6 +142,19 @@ afterEach(() => {
 });
 
 describe('WidgetShell — state machine', () => {
+  it('lets header hints escape clipping without changing body tooltip ownership', () => {
+    function PortalMode({ name }: { name: string }) {
+      return <span data-testid={name}>{String(useContext(TooltipPortalContext))}</span>;
+    }
+    render(
+      <WidgetShell title="Battery" actions={<PortalMode name="header-tooltip-mode" />}>
+        <PortalMode name="body-tooltip-mode" />
+      </WidgetShell>,
+    );
+    expect(screen.getByTestId('header-tooltip-mode')).toHaveTextContent('true');
+    expect(screen.getByTestId('body-tooltip-mode')).toHaveTextContent('false');
+  });
+
   it('retains content during a failed refresh even when the legacy error prop is supplied', () => {
     const dataState = deriveDataState({ data: [0], isError: true, error: new Error('offline') });
     render(
