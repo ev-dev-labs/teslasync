@@ -10,6 +10,7 @@ import {
 
 import { PrefetchLink, PageLayout, Section } from '@/components/layout';
 import { VehiclePanelGrid } from '../components/modernization';
+import { FleetSourceStatus } from '../components/FleetSourceStatus';
 import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
@@ -1468,10 +1469,6 @@ export default function VehicleListPage() {
         state={vehiclesState}
         label={t('nav.vehicles', 'Fleet')}
       />}
-      <StaleRefreshWarning
-        state={fleetStateData}
-        label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
-      />
       {fleetStateData.isRefreshBlocked && (
         <DataSourceNotice sources={[{
           id: 'fleet-state',
@@ -1480,17 +1477,19 @@ export default function VehicleListPage() {
         }]} />
       )}
       <StaleRefreshWarning state={workOrdersState} label={t('operations.vehicles.workOrdersSource', 'Fleet work orders')} />
-      <StaleRefreshWarning state={pinsState} label={t('pin.pinned', 'Pinned')} />
-      {!pinsState.hasData && <DataStateNotice state={pinsState.fatalError ? 'unavailable' : 'partial'}
-        role={pinsState.fatalError ? 'alert' : 'status'}
-        aria-live={pinsState.fatalError ? 'assertive' : 'polite'}
-        aria-label={t('pin.pinned', 'Pinned')}
-        title={t('pin.pinned', 'Pinned')}>
-        <Text variant="bodySm">{pinsState.fatalError ? t('common.unavailable', 'Unavailable') : t('common.loading', 'Loading...')}</Text>
-        {pinsState.fatalError && <Button variant="ghost" wrapLabel className="mt-2 min-h-11" onClick={() => pinsQuery.refetch()}>
-          {t('common.retry', 'Retry')}
-        </Button>}
-      </DataStateNotice>}
+      <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+        <FleetSourceStatus
+          state={fleetStateData}
+          label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
+          isFetching={statesQuery.isFetching}
+        />
+        <FleetSourceStatus
+          state={pinsState}
+          label={t('pin.pinned', 'Pinned')}
+          isFetching={pinsQuery.isFetching}
+          reading={pinsState.hasData ? fmtNumber(vehiclePins.length, 0) : undefined}
+        />
+      </div>
 
       {!rosterUnknown && vehicleList.length === 0 && (
         <GlassPanel padding="md">

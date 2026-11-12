@@ -20,6 +20,7 @@ import commandDeckModal from './__fixtures__/command-deck-modal-preservation.jso
 import tableEmptyViewport from './__fixtures__/table-empty-viewport-preservation.json';
 import settingsPreviewInvoker from './__fixtures__/settings-preview-invoker-preservation.json';
 import previewChartQuery from './__fixtures__/preview-chart-query-preservation.json';
+import { nativeRepairPredecessor, restoreNativeSourceRepair } from './verified-native-source-repair-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
@@ -37,7 +38,7 @@ export function restorePreviewChartQuerySource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed current-URL owned-key cleanup').toBe(patch.after);
   for (const dependency of previewChartQuery.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual chart data/palette/render dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual chart data/palette/render dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -70,7 +71,7 @@ export function restoreSettingsPreviewInvokerSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed original preview invoker').toBe(patch.after);
   for (const dependency of settingsPreviewInvoker.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual Settings focus/preview dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual Settings focus/preview dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -100,7 +101,7 @@ export function restoreTableEmptyViewportSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed bounded native empty-cell viewport').toBe(patch.after);
   for (const dependency of tableEmptyViewport.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual table presentation/filter dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual table presentation/filter dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -132,7 +133,7 @@ export function restoreCommandDeckModalSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed local tablet-modal deferral').toBe(patch.after);
   for (const dependency of commandDeckModal.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual navigation/modal dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual navigation/modal dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -166,7 +167,7 @@ export function restorePreviewOverlayHelpInsetSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed inner help inset').toBe(patch.after);
   for (const dependency of previewOverlayHelpInset.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual help UI/focus dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual help UI/focus dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -198,7 +199,7 @@ export function restorePreviewMapControlsSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed native map reset').toBe(patch.after);
   for (const dependency of previewMapReset.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual native map/Button API')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual native map/Button API')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -236,7 +237,7 @@ export function restoreTableNoMatchSource(
       endpoint.file + ': actual caller/API pair').toBe(endpoint.after);
   }
   for (const dependency of tableNoMatch.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual table dependency').toBe(dependency.sha256);
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual table dependency').toBe(dependency.sha256);
   }
   const lines = source.split('\n');
   for (const hunk of [...patch.hunks].reverse()) {
@@ -269,7 +270,7 @@ export function restorePreviewOverlayTooltipSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed overlay tooltip opt-in').toBe(patch.after);
   for (const dependency of previewOverlayTooltip.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual overlay tooltip dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual overlay tooltip dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -303,7 +304,7 @@ export function restorePreviewMapPopupSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed popup layout/title').toBe(patch.after);
   for (const dependency of previewMapPopup.dependencies) {
-    expect(hash(restorePreviewMapControlsSource(dependency.file, readDependency(dependency.file), readDependency)),
+    expect(hash(restorePreviewMapControlsSource(dependency.file, nativeRepairPredecessor(dependency.file, readDependency), readDependency)),
       dependency.file + ': actual popup dependency')
       .toBe(dependency.sha256);
   }
@@ -340,7 +341,7 @@ export function restorePreviewOverlayInvokerSource(
   expect(patch.after, file + ': independently compiled current overlay')
     .toBe(previewOverlayInvoker.compiledCurrentProof.sha256);
   for (const dependency of previewOverlayInvoker.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual overlay dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual overlay dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -372,7 +373,7 @@ export function restorePreviewMapFrameSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed PreviewMap frame').toBe(patch.after);
   for (const dependency of previewMapFrame.dependencies) {
-    expect(hash(restorePreviewMapControlsSource(dependency.file, readDependency(dependency.file), readDependency)),
+    expect(hash(restorePreviewMapControlsSource(dependency.file, nativeRepairPredecessor(dependency.file, readDependency), readDependency)),
       dependency.file + ': actual PreviewMap dependency')
       .toBe(dependency.sha256);
   }
@@ -405,7 +406,7 @@ export function restoreRuntimeV9Source(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed V9 runtime source').toBe(patch.after);
   for (const dependency of runtimeV9.dependencies) {
-    expect(hash(readDependency(dependency.file)), dependency.file + ': actual V9 support dependency')
+    expect(hash(nativeRepairPredecessor(dependency.file, readDependency)), dependency.file + ': actual V9 support dependency')
       .toBe(dependency.sha256);
   }
   const lines = source.split('\n');
@@ -488,7 +489,7 @@ export function restoreHelpColdSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed Help host').toBe(patch.after);
   for (const dependency of helpCold.dependencies) {
-    const currentDependency = readDependency(dependency.file);
+    const currentDependency = nativeRepairPredecessor(dependency.file, readDependency);
     expect(hash(restoreRuntimeV9Source(dependency.file, currentDependency)), dependency.file + ': actual Help dependency')
       .toBe(dependency.sha256);
   }
@@ -504,6 +505,7 @@ export function restoreHelpColdSource(
 }
 
 export function restoreAppDesignSource(file: string, source: string): string {
+  source = restoreNativeSourceRepair(file, source);
   source = restorePreviewChartQuerySource(file, source);
   source = restoreSettingsPreviewInvokerSource(file, source);
   source = restoreRuntimeV9Source(file, source);
@@ -520,7 +522,7 @@ export function restoreAppDesignSource(file: string, source: string): string {
     if (owner !== file) continue;
     const dependency = appDesign.dependencies.find(entry => entry.file === target);
     if (!dependency) throw new Error('Missing reviewed cold body: ' + target);
-    const body = readFileSync(resolve(process.cwd(), '..', target), 'utf8');
+    const body = nativeRepairPredecessor(target);
     expect(hash(body), target + ': complete relocated body').toBe(dependency.sha256);
   }
   const lines = source.split('\n');

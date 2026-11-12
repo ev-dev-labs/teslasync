@@ -24,6 +24,7 @@ import tableEmptyViewport from './__fixtures__/table-empty-viewport-preservation
 import settingsPreviewInvoker from './__fixtures__/settings-preview-invoker-preservation.json';
 import previewChartQuery from './__fixtures__/preview-chart-query-preservation.json';
 import { producerProjection } from './producer-projection';
+import { nativeRepairPredecessor, restoreNativeSourceRepair } from './verified-native-source-repair-contract';
 import {
   catalogBeforeAppDesign, catalogBeforeWidgetImplementation,
   restoreAppDesignSource, restoreHelpColdSource, restoreReplayUrlRaceSource, restoreWidgetImplementationSource,
@@ -46,7 +47,10 @@ describe('additive widget implementation preservation', () => {
   });
 
   const source = (file: string) => readFileSync(resolve(process.cwd(), '..', file), 'utf8');
-  const runtimePredecessor = (file: string) => restoreRuntimeV9Source(file, source(file));
+  // Only historical comparisons consume this independently verified successor
+  // inverse. Actual new-source assertions below continue reading source().
+  const historicalSource = (file: string) => nativeRepairPredecessor(file, source);
+  const runtimePredecessor = (file: string) => restoreRuntimeV9Source(file, historicalSource(file));
   const hash = (value: string) => createHash('sha256').update(value).digest('hex');
   const previewProducerPredecessor = (file: string, text: string) =>
     restorePreviewOverlayInvokerSource(file, restorePreviewOverlayTooltipSource(file,
@@ -77,14 +81,15 @@ describe('additive widget implementation preservation', () => {
     it.each(appDesign.sources)('preserves complete source and every original call in $file', patch => {
       const current = source(patch.file);
       const previous = restoreAppDesignSource(patch.file, current);
+      const designCurrent = restoreNativeSourceRepair(patch.file, current);
       expect(hash(restoreRuntimeV9Source(patch.file,
         restoreTableNoMatchSource(patch.file,
-          restoreCommandDeckModalSource(patch.file, restoreTableEmptyViewportSource(patch.file, current)))))).toBe(patch.after);
+          restoreCommandDeckModalSource(patch.file, restoreTableEmptyViewportSource(patch.file, designCurrent)))))).toBe(patch.after);
       expect(hash(previous)).toBe(patch.before);
       expect(previous).not.toBe(current);
       const moved = appDesign.relocations.filter(([owner]) => owner === patch.file)
-        .map(([, target]) => ({ file: target, text: source(target) }));
-      const actualSources = [{ file: patch.file, text: current }, ...moved];
+        .map(([, target]) => ({ file: target, text: historicalSource(target) }));
+      const actualSources = [{ file: patch.file, text: designCurrent }, ...moved];
       const actualCalls = actualSources.flatMap(entry =>
         translationCalls(entry.file, entry.text).map(signature));
       // Consume occurrences, not a Set: relocation cannot silently drop a
@@ -109,8 +114,8 @@ describe('additive widget implementation preservation', () => {
     it.each(appDesign.relocations)('keeps moved original calls in the actual cold body: %s → %s', (owner, target) => {
       const current = source(owner);
       const previous = restoreAppDesignSource(owner, current);
-      const retained = translationCalls(owner, current).map(signature);
-      const body = translationCalls(target, source(target)).map(signature);
+      const retained = translationCalls(owner, restoreNativeSourceRepair(owner, current)).map(signature);
+      const body = translationCalls(target, historicalSource(target)).map(signature);
       let moved = 0;
       for (const call of translationCalls(owner, previous)) {
         const expected = signature(call);
@@ -731,7 +736,8 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(runtimeV9.sources)('preserves independently compiled complete predecessor and every producer: $file', patch => {
-      const current = source(patch.file);
+      const actual = source(patch.file);
+      const current = restoreNativeSourceRepair(patch.file, actual);
       const previous = restoreRuntimeV9Source(patch.file, current);
       expect(hash(current)).toBe(patch.after);
       expect(hash(previous)).toBe(patch.before);
@@ -744,7 +750,7 @@ describe('additive widget implementation preservation', () => {
         expect(() => restoreRuntimeV9Source(patch.file, stale)).toThrow();
         expect(() => restoreAppDesignSource(patch.file, stale)).toThrow();
       }
-      expect(source(patch.file)).toBe(current);
+      expect(source(patch.file)).toBe(actual);
     });
 
     it('retains the full dbeb → e0 → CF → 00ddb chain and all 61 original Replay calls', () => {
@@ -885,7 +891,7 @@ describe('additive widget implementation preservation', () => {
     it.each(runtimeV9.sources.flatMap(patch =>
       patch.hunks.map(hunk => ({ file: patch.file, ...hunk }))))(
       'rejects missing, edited and duplicate exact region in $file at $start', hunk => {
-      const current = source(hunk.file);
+      const current = historicalSource(hunk.file);
       const lines = current.split('\n');
       expect(lines.slice(hunk.start, hunk.start + hunk.new.length)).toEqual(hunk.new);
       for (const replacement of [[], [...hunk.new, '// drift'], [...hunk.new, ...hunk.new]]) {
@@ -930,8 +936,8 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(runtimeV9.dependencies)('pins real support dependency and rejects drift: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
-      expect(() => restoreRuntimeV9Source(tooltipFile, source(tooltipFile), file =>
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
+      expect(() => restoreRuntimeV9Source(tooltipFile, historicalSource(tooltipFile), file =>
         source(file) + (file === dependency.file ? '\n// changed support dependency\n' : ''))).toThrow();
     });
 
@@ -1278,7 +1284,7 @@ describe('additive widget implementation preservation', () => {
 
     it('uses the unchanged public Modal focus API and shared ref-forwarding Button without a global behavior exemption', () => {
       expect(previewOverlayInvoker.dependencies).toHaveLength(10);
-      for (const dependency of previewOverlayInvoker.dependencies) expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      for (const dependency of previewOverlayInvoker.dependencies) expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(source('web/src/components/ui/index.ts')).toContain("export { Modal, type ModalProps } from './Modal';");
       expect(source('web/src/components/ui/index.ts')).toContain("} from './Button';");
       expect(source('web/src/components/ui/Button.tsx')).toContain('forwardRef<HTMLButtonElement, ButtonProps>');
@@ -1576,7 +1582,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(previewMapPopup.dependencies)('rejects actual geometry/control/typography/import dependency drift: $file', dependency => {
-      expect(hash(restorePreviewMapControlsSource(dependency.file, source(dependency.file)))).toBe(dependency.sha256);
+      expect(hash(restorePreviewMapControlsSource(dependency.file, historicalSource(dependency.file)))).toBe(dependency.sha256);
       expect(() => restorePreviewMapPopupSource(file, source(file), path =>
         source(path) + (path === dependency.file ? '\n// unrelated dependency drift\n' : ''))).toThrow();
       expect(() => restorePreviewMapPopupSource(file, source(file), path => {
@@ -1745,7 +1751,7 @@ describe('additive widget implementation preservation', () => {
       expect(current).toContain('ref={dialogTrigger} onClick={() => setDialog(true)}');
       expect(previewOverlayTooltip.dependencies).toEqual(previewOverlayInvoker.dependencies);
       const tooltipFile = 'web/src/components/ui/Tooltip.tsx';
-      expect(hash(source(tooltipFile))).toBe('63c0fe0e6025030564d73b10fc83a4544d0bdf914ca91a18308b788b36735ca9');
+      expect(hash(historicalSource(tooltipFile))).toBe('63c0fe0e6025030564d73b10fc83a4544d0bdf914ca91a18308b788b36735ca9');
       expect(source(tooltipFile)).toContain('portal?: boolean;');
       expect(source(tooltipFile)).toContain('const portal = portalProp ?? inheritedPortal;');
       expect(source(tooltipFile)).toContain('<AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal>');
@@ -1800,7 +1806,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(previewOverlayTooltip.dependencies)('rejects actual shared UI/focus dependency drift: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restorePreviewOverlayTooltipSource(file, tooltipCurrent, path =>
         source(path) + (path === dependency.file ? '\n// unrelated dependency drift\n' : ''))).toThrow();
       expect(() => restorePreviewOverlayTooltipSource(file, tooltipCurrent, path => {
@@ -2063,7 +2069,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(tableNoMatch.dependencies)('rejects changed/missing actual mobile/filter/SI/barrel dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restoreTableNoMatchSource(caller.file, source(caller.file), path =>
         source(path) + (path === dependency.file ? '\n// dependency drift\n' : ''))).toThrow();
       expect(() => restoreTableNoMatchSource(api.file, noMatchCurrent(api.file), path => {
@@ -2219,7 +2225,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(previewMapReset.dependencies)('requires unchanged actual native map/Button/barrel dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restorePreviewMapControlsSource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// drift\n' : ''))).toThrow();
       expect(() => restorePreviewMapControlsSource(file, current, path => {
@@ -2432,7 +2438,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(previewOverlayHelpInset.dependencies)('requires unchanged actual shared UI/focus dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restorePreviewOverlayHelpInsetSource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// unrelated actual dependency drift\n' : ''))).toThrow();
       expect(() => restorePreviewOverlayHelpInsetSource(file, current, path => {
@@ -2670,7 +2676,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(commandDeckModal.dependencies)('requires unchanged actual navigation/modal/type/style dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restoreCommandDeckModalSource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// unrelated actual dependency drift\n' : ''))).toThrow();
       expect(() => restoreCommandDeckModalSource(file, current, path => {
@@ -2922,7 +2928,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(tableEmptyViewport.dependencies)('requires unchanged actual tokens/content/mobile/filter dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restoreTableEmptyViewportSource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// unrelated actual dependency drift\n' : ''))).toThrow();
       expect(() => restoreTableEmptyViewportSource(file, current, path => {
@@ -3121,7 +3127,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(settingsPreviewInvoker.dependencies)('requires unchanged actual focus/preview/preference dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restoreSettingsPreviewInvokerSource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// unrelated actual Settings dependency drift\n' : ''))).toThrow();
       expect(() => restoreSettingsPreviewInvokerSource(file, current, path => {
@@ -3331,7 +3337,7 @@ describe('additive widget implementation preservation', () => {
     });
 
     it.each(previewChartQuery.dependencies)('requires unchanged actual data/palette/chart dependency: $file', dependency => {
-      expect(hash(source(dependency.file))).toBe(dependency.sha256);
+      expect(hash(historicalSource(dependency.file))).toBe(dependency.sha256);
       expect(() => restorePreviewChartQuerySource(file, current, path =>
         source(path) + (path === dependency.file ? '\n// unrelated actual chart dependency drift\n' : ''))).toThrow();
       expect(() => restorePreviewChartQuerySource(file, current, path => {

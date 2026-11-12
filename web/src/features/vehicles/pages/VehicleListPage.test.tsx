@@ -965,6 +965,35 @@ describe('VehicleListPage — pinned ordering', () => {
 /* ──────────────────── Loading / error / empty branches ───────────────────── */
 
 describe('VehicleListPage — loading, error & empty states', () => {
+  it('retains the live-state and pin source rows as independent loading reads settle', () => {
+    mockFleetStates.mockReturnValue(qr({ isPending: true, isLoading: true, isFetching: true }));
+    mockPinned.mockReturnValue(qr({ isPending: true, isLoading: true, isFetching: true }));
+    const view = renderPage();
+    const liveSource = screen.getByRole('status', { name: 'Live vehicle state' });
+    const pinSource = screen.getByRole('status', { name: 'Pinned' });
+    expect(liveSource).toHaveTextContent('Loading...');
+    expect(pinSource).toHaveTextContent('Loading...');
+    expect(within(liveSource).getByRole('button')).toBeDisabled();
+    expect(within(pinSource).getByRole('button')).toBeDisabled();
+
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, Date.now() - 600_000)],
+    }));
+    mockPinned.mockReturnValue(qr({ data: [] }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/vehicles']}>
+        <QueryClientProvider client={view.client}><VehicleListPage /><LocationProbe /></QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('status', { name: 'Live vehicle state' })).toBe(liveSource);
+    expect(screen.getByRole('status', { name: 'Pinned' })).toBe(pinSource);
+    expect(within(liveSource).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(within(liveSource).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(pinSource).not.toHaveTextContent('Loading...');
+    expect(pinSource).not.toHaveTextContent('Unavailable');
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
+  });
+
   function expectUnknownRosterShells() {
     for (const title of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
@@ -1529,10 +1558,15 @@ describe('VehicleListPage — loading, error & empty states', () => {
     const refetch = vi.fn();
     mockFleetStates.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
     renderPage();
-    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    const retry = screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' });
+    const source = retry.closest('li');
+    if (!source) throw new Error('Missing live-state source status row');
+    expect(source).toHaveAttribute('data-app-source-state', 'paused');
+    expect(within(source).getByText('Live vehicle state')).toBeInTheDocument();
+    expect(within(source).getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.queryByTestId('fleet-battery-skeleton')).toBeNull();
     expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' }));
+    fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledOnce();
     expect(mockVehicles.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
   });
