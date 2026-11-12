@@ -20,6 +20,9 @@ const fleet = 'web/src/features/vehicles/pages/VehicleListPage.tsx';
 const status = 'web/src/features/vehicles/components/FleetSourceStatus.tsx';
 const inbox = 'web/src/features/notifications/components/InboxBody.tsx';
 const sessions = 'web/src/features/system/components/chatbot/SessionList.tsx';
+const preview = 'web/src/features/settings/components/WidgetDesignPackSettings.tsx';
+const mapControls = 'web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx';
+const dialogFocus = 'web/src/hooks/useDialogFocus.ts';
 const tree = (file: string, text: string) =>
   ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 function nodes(text: string): ts.Node[] {
@@ -62,16 +65,18 @@ describe('exact e1fb native source repair successor (not native certification)',
   });
 
   it('links all emitted predecessors to verified V33/V35/V37 receipts, never fabricating an index map', () => {
-    expect(repair.sources).toHaveLength(34);
-    expect(new Set(repair.sources.map(patch => patch.file)).size).toBe(34);
+    expect(repair.sources).toHaveLength(37);
+    expect(new Set(repair.sources.map(patch => patch.file)).size).toBe(37);
     expect(repair.predecessorCommit).toBe('e1fb8a5d04713a92a7fae541432faede536a8e35');
     const emitted = repair.sources.filter(patch => patch.proof.map);
-    expect(emitted).toHaveLength(32);
+    expect(emitted).toHaveLength(35);
     for (const patch of emitted) {
       expect(patch.proof.sha256).toBe(patch.before);
       expect(patch.proof.mapSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(patch.proof.map).toContain(
-        patch.file === sessions ? 'candidate-dist-v37/assets/'
+        patch.file === dialogFocus ? 'candidate-dist-v45/assets/'
+          : [preview, mapControls].includes(patch.file) ? 'candidate-dist-v42/assets/'
+          : patch.file === sessions ? 'candidate-dist-v37/assets/'
           : [fleet, inbox].includes(patch.file) ? 'candidate-dist-v35/assets/' : 'candidate-dist-v33/assets/');
     }
     const index = repair.sources.find(patch => patch.file === barrel)!;

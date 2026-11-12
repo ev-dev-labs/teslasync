@@ -6,7 +6,7 @@ import repair from './__fixtures__/native-source-repair-preservation.json';
 import { producerProjection, projectionDigest } from './producer-projection';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-const fingerprint = 'a9d804f5d8c6603889d1fe468395da3283956f246a968aa90b75bbf5797e3a81';
+const fingerprint = '30d116374897d497132be264332ca654638914e6efecaaf2d957aadb103252f8';
 export const actualRepairSource = (file: string): string =>
   readFileSync(resolve(process.cwd(), '..', file), 'utf8');
 

@@ -136,6 +136,7 @@ export default function WidgetDesignPackSettings() {
       })}
     </div>
     <Modal open={previewId != null} onClose={closePreview} size="full"
+      className="[&_[data-modal-scroll-body]]:[overflow-anchor:none]"
       getReturnFocusTarget={() => previewTrigger.current}
       title={t('theme.widgetDesignPacks.previewNamed', 'Preview {{name}}', {
         name: previewEntry ? packName(previewEntry.nameKey) : '',

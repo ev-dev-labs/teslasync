@@ -49,6 +49,33 @@ afterEach(() => {
 });
 
 describe('Modal — explicit return forwarding', () => {
+  it.each([false, true])('restores the invoker when a nested confirmation and parent close together (explicit=%s)', async (explicit) => {
+    const user = userEvent.setup();
+    function NestedConfirmation() {
+      const [open, setOpen] = useState(false);
+      const [confirming, setConfirming] = useState(false);
+      const trigger = useRef<HTMLButtonElement>(null);
+      return <>
+        <h1 data-route-focus-target tabIndex={-1}>Current route</h1>
+        <Button ref={trigger} onClick={() => setOpen(true)}>Open editor</Button>
+        <Modal open={open} onClose={() => setOpen(false)} title="Editor"
+          getReturnFocusTarget={explicit ? () => trigger.current : undefined}>
+          <Button onClick={() => setConfirming(true)}>Close dirty editor</Button>
+        </Modal>
+        {confirming && <Modal open onClose={() => setConfirming(false)} title="Confirmation">
+          <Button onClick={() => { setOpen(false); setConfirming(false); }}>Discard draft</Button>
+        </Modal>}
+      </>;
+    }
+    render(<NestedConfirmation />);
+    const trigger = screen.getByRole('button', { name: 'Open editor' });
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'Close dirty editor' }));
+    await user.click(screen.getByRole('button', { name: 'Discard draft' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it('forwards the latest getter to the real owner, keeps the exact ref, and never leaks it to DOM', async () => {
     const user = userEvent.setup();
     const ref = createRef<HTMLDivElement>();

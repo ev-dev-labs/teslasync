@@ -158,6 +158,38 @@ async function inspectReviewDetails(page: Page, packId: PackId, testInfo: TestIn
   return geometry;
 }
 
+export async function sampleHeatmapPaint(plot: Locator) {
+  const pixels = await plot.screenshot({ animations: 'disabled' });
+  const paint = await plot.evaluate(async (element, imageData) => {
+    const nodes = element.querySelectorAll('rect');
+    const bounds = element.getBoundingClientRect();
+    const samples = [36, 37, 38, 39].map(index => {
+      const box = nodes[index].getBoundingClientRect();
+      return {
+        fill: getComputedStyle(nodes[index]).fill,
+        x: (box.left + box.width / 2 - bounds.left) / bounds.width,
+        y: (box.top + box.height / 2 - bounds.top) / bounds.height,
+      };
+    });
+    const image = new Image();
+    image.src = `data:image/png;base64,${imageData}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Heatmap paint verification requires a 2D context');
+    context.drawImage(image, 0, 0);
+    return samples.map(sample => {
+      const x = Math.floor(sample.x * canvas.width);
+      const y = Math.floor(sample.y * canvas.height);
+      return { fill: sample.fill, sample: { x, y, width: canvas.width, height: canvas.height },
+        rgba: [...context.getImageData(x, y, 1, 1).data] };
+    });
+  }, pixels.toString('base64'));
+  return { pixels, paint };
+}
+
 /** Actual data-backed feature renderers and local open controls. Metadata is
  * checked separately; distinctness evidence contains only measured geometry. */
 export async function inspectSpecializedRoute(
@@ -181,33 +213,15 @@ export async function inspectSpecializedRoute(
       await expect(plot).toHaveCount(1);
       await plot.scrollIntoViewIfNeeded();
       await expect(plot.locator('rect')).toHaveCount(168);
-      const pixels = await plot.screenshot({ animations: 'disabled' });
-      const paint = await plot.evaluate(async (element, imageData) => {
-        const nodes = element.querySelectorAll('rect');
-        const bounds = element.getBoundingClientRect();
-        const image = new Image();
-        image.src = `data:image/png;base64,${imageData}`;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Heatmap paint verification requires a 2D context');
-        context.drawImage(image, 0, 0);
-        return [36, 37, 38, 39].map(index => {
-          const box = nodes[index].getBoundingClientRect();
-          const x = Math.floor((box.left + box.width / 2 - bounds.left) * canvas.width / bounds.width);
-          const y = Math.floor((box.top + box.height / 2 - bounds.top) * canvas.height / bounds.height);
-          return { fill: getComputedStyle(nodes[index]).fill,
-            rgba: [...context.getImageData(x, y, 1, 1).data] };
-        });
-      }, pixels.toString('base64'));
+      const { pixels, paint } = await sampleHeatmapPaint(plot);
+      await testInfo.attach(`${prefix}-speed-heatmap.png`, { body: pixels, contentType: 'image/png' });
+      await testInfo.attach(`${prefix}-speed-heatmap-paint.json`, { body: JSON.stringify(paint), contentType: 'application/json' });
       const distances = paint.slice(0, 3).map(color => color.rgba.slice(0, 3)
         .reduce((sum, channel, index) => sum + (channel - paint[3].rgba[index]) ** 2, 0));
       expect(distances[0], 'maximum speed has stronger paint than the middle sample').toBeGreaterThan(distances[1]);
       expect(distances[1], 'middle speed has stronger paint than measured zero').toBeGreaterThan(distances[2]);
       expect(distances[2], 'measured zero stays visually distinct from no sample').toBeGreaterThan(0);
-      evidence.speedPaint = paint;
+      evidence.speedPaint = paint.map(({ fill, rgba }) => ({ fill, rgba }));
       await expect(plot).toContainText(sampleSpeed);
       await expect(plot.locator('title')).toHaveCount(168);
       const fallback = heatmap.getByRole('table', { name: 'Speed heatmap — data table', includeHidden: true });

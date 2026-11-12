@@ -55,7 +55,8 @@ describe('additive widget implementation preservation', () => {
   const previewProducerPredecessor = (file: string, text: string) =>
     restorePreviewOverlayInvokerSource(file, restorePreviewOverlayTooltipSource(file,
       restorePreviewOverlayHelpInsetSource(file, restorePreviewMapFrameSource(file, restorePreviewMapPopupSource(file,
-        restorePreviewMapControlsSource(file, restoreTableNoMatchSource(file, restoreTableEmptyViewportSource(file, restorePreviewChartQuerySource(file, text)))))))));
+        restorePreviewMapControlsSource(file, restoreTableNoMatchSource(file, restoreTableEmptyViewportSource(file,
+          restorePreviewChartQuerySource(file, restoreNativeSourceRepair(file, text))))))))));
   function translationCalls(file: string, text: string): ts.CallExpression[] {
     const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const found: ts.CallExpression[] = [];
@@ -1084,7 +1085,7 @@ describe('additive widget implementation preservation', () => {
       expect(hash(source(fixture.file))).toBe(fixture.sha256);
       const controls = previewMapFrame.dependencies.find(dependency => dependency.file.endsWith('/PreviewMapControls.tsx'))!;
       expect(appDesign.catalogProducers.find(producer => producer.file === controls.file)?.sha256).toBe(controls.sha256);
-      expect(hash(restorePreviewMapControlsSource(controls.file, source(controls.file)))).toBe(controls.sha256);
+      expect(hash(restorePreviewMapControlsSource(controls.file, historicalSource(controls.file)))).toBe(controls.sha256);
     });
 
     it.each(patch.hunks)('rejects missing, modified, duplicated or individually reverted region at $start', hunk => {
@@ -2133,7 +2134,7 @@ describe('additive widget implementation preservation', () => {
   describe('exact native map reset successor before original control producer/dependency pins', () => {
     const patch = previewMapReset.sources[0];
     const file = patch.file;
-    const current = source(file);
+    const current = historicalSource(file);
     const original = restorePreviewMapControlsSource(file, current);
     const parse = (text: string) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
@@ -2988,7 +2989,7 @@ describe('additive widget implementation preservation', () => {
   describe('exact original Settings preview invoker successor with unchanged retry and shared focus APIs', () => {
     const file = 'web/src/features/settings/components/WidgetDesignPackSettings.tsx';
     const patch = settingsPreviewInvoker.sources[0];
-    const current = source(file);
+    const current = historicalSource(file);
     const previous = () => restoreSettingsPreviewInvokerSource(file, current);
     const parse = (text: string) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = (text: string) => parse(text).statements.find(ts.isFunctionDeclaration)!;
@@ -3035,8 +3036,8 @@ describe('additive widget implementation preservation', () => {
       const original = previous();
       expect(hash(current)).toBe(patch.after);
       expect(hash(original)).toBe(patch.before);
-      expect(restoreAppDesignSource(file, current)).toBe(original);
-      expect(restoreWidgetImplementationSource(file, current)).toBe(original);
+      expect(restoreAppDesignSource(file, source(file))).toBe(original);
+      expect(restoreWidgetImplementationSource(file, source(file))).toBe(original);
       expect(current.trimEnd().split('\n')).toHaveLength(patch.currentLineCount);
       expect(original.trimEnd().split('\n')).toHaveLength(patch.originalLineCount);
       expect([patch.currentLineCount, patch.originalLineCount]).toEqual([157, 152]);
@@ -3044,7 +3045,7 @@ describe('additive widget implementation preservation', () => {
         expect(() => restoreSettingsPreviewInvokerSource(file, changed)).toThrow();
         expect(() => restoreAppDesignSource(file, changed)).toThrow();
       }
-      expect(source(file)).toBe(current);
+      expect(historicalSource(file)).toBe(current);
     });
 
     it('preserves all38 original ordered calls/defaults/arities/options including dynamic dashboard namespace, bindings and controls', () => {
