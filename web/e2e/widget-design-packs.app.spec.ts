@@ -288,12 +288,66 @@ test('Replay legend restoration survives seek persistence across application des
   await assertMockApiComplete(page, mocks);
 });
 
-// Keep the original four desktop/mobile + light/dark cases, plus saved custom
-// appearance/font/unit preferences. Pack switching is
-// in-place; real pages load once per route, width sweeps reuse each open preview.
+type MainPhase =
+  | { kind: 'route'; label: string; path: string }
+  | { kind: 'interactions' | 'native' | 'accessibility' | 'isolation'; label: string }
+  | { kind: 'responsive'; label: string; allocatedWidth: number };
+
+function mainPhases(width: number): MainPhase[] {
+  const widths = width === 390 ? [320, 375, 390, 430] : [768, 1024, 1280, 1440, 1920, 2560];
+  return [
+    ...['/', '/drives', ...specializedReviewRoutes, '/geofences', '/settings'].map(path => ({
+      kind: 'route' as const, label: `real-route ${path}`, path,
+    })),
+    { kind: 'interactions', label: 'core interactions' },
+    { kind: 'native', label: 'core native-retained-quantitative' },
+    { kind: 'accessibility', label: 'core accessibility-media-screens' },
+    ...widths.map(allocatedWidth => ({
+      kind: 'responsive' as const, label: `responsive ${allocatedWidth}px`, allocatedWidth,
+    })),
+    { kind: 'isolation', label: 'mixed-pack isolation' },
+  ];
+}
+
+// Later phases enter the same selected form/table state through real controls.
+// The exhaustive transitions and their assertions remain in the interaction phase.
+async function prepareMainInteractionState(preview: Locator) {
+  const form = preview.locator('[data-preview-section="form"]');
+  await form.getByRole('textbox', { name: /Sample view name/ }).fill('Local review');
+  await form.getByRole('combobox', { name: 'Sample layout' }).selectOption('detail');
+  for (const choice of [
+    form.getByRole('radio', { name: 'Include partial examples' }),
+    form.getByRole('checkbox', { name: 'Show source quality', exact: true }),
+  ]) {
+    const id = await choice.getAttribute('id');
+    expect(id, 'phase preparation uses the real associated native choice label').toBeTruthy();
+    await preview.page().locator(`label[for=${JSON.stringify(id)}]`).click();
+  }
+  await form.getByRole('switch', { name: 'Show comparison context' }).click();
+  await form.getByRole('button', { name: 'Apply locally' }).click();
+  const distance = preview.getByRole('table', { name: 'Sample journey ledger' })
+    .getByRole('button', { name: 'Distance', exact: true });
+  await distance.click();
+  await distance.click();
+}
+
+async function prepareMainNativeState(preview: Locator) {
+  const form = preview.locator('[data-preview-section="form"]');
+  await form.getByRole('textbox', { name: 'Local review notes' }).fill('Synthetic local notes — not persisted');
+  const slider = form.getByRole('slider', { name: 'Sample review threshold' });
+  await slider.focus();
+  await slider.press('Home');
+  await slider.press('End');
+  await slider.press('ArrowLeft');
+  await preview.locator('[data-preview-section="map"]').getByRole('button', { name: 'Reset map', exact: true }).click();
+}
+
+// A phase owns one complete 27-pack route or allocated-width identity family.
+// Separate core state machines prevent cumulative work from consuming the
+// unchanged 30-minute cap before later packs are reached.
 for (const theme of ['dark', 'light', 'custom'] as const) {
-  for (const width of [1440, 390]) {
-    test(`Application design languages at ${width}px in ${theme}`, async ({ page }, testInfo) => {
+  for (const { width, phase } of [1440, 390].flatMap(width => mainPhases(width).map(phase => ({ width, phase })))) {
+    test(`Application design languages at ${width}px in ${theme} — phase ${phase.label}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 1000 });
       const mode = theme === 'custom' ? 'dark' : theme;
       const reviewUnits = {
@@ -338,9 +392,30 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       }
       await picker.getByRole('combobox', { name: 'Apply design to', exact: true }).selectOption('app');
       await expectProfile(page, 'classic');
+      expect(packIds, 'every Main phase retains all 27 application designs').toHaveLength(27);
+      const profile = `Application design languages at ${width}px in ${theme}`;
+      const scope = {
+        project: testInfo.project.name, profile, theme, profileWidth: width,
+        allocatedWidth: phase.kind === 'responsive' ? phase.allocatedWidth : width,
+        phase: phase.label,
+      };
+      const familyEvidence: {
+        scope: typeof scope & { pack: PackId; family: typeof acceptanceFamilies[number]; route: string; state: string; outerPack?: PackId };
+        status: 'observed-not-certified'; evidence: unknown;
+      }[] = [];
+      const observe = (
+        pack: PackId, family: typeof acceptanceFamilies[number], evidence: unknown,
+        state = 'default', outerPack?: PackId,
+      ) => {
+        familyEvidence.push({
+          scope: { ...scope, pack, family, route: phase.kind === 'route' ? phase.path : '/settings', state,
+            ...(outerPack ? { outerPack } : {}) },
+          status: 'observed-not-certified', evidence,
+        });
+      };
       const routeEvidence: Record<string, unknown> = {};
       const routeCollisions: Record<string, PackId[][]> = {};
-      for (const path of ['/', '/drives', ...specializedReviewRoutes, '/geofences', '/settings']) {
+      for (const path of phase.kind === 'route' ? [phase.path] : []) {
         energySources.setActive(path === energyReviewPath);
         const routeSignatures = new Map<string, PackId[]>();
         await page.goto(path);
@@ -373,6 +448,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
             await assertContained(page.locator('html'), `${packId} ${path}`);
             const geometry = { composition: await compositionGeometry(page.locator('body')), specialized };
             routeEvidence[`${path}:${packId}`] = geometry;
+            observe(packId, 'real-page-adoption', geometry);
+            observe(packId, 'distinct-rendered-identity', geometry);
+            if (path === '/geofences') observe(packId, 'maps-geofences', specialized, 'local-geofence-draft');
             const signature = JSON.stringify(geometry);
             routeSignatures.set(signature, [...(routeSignatures.get(signature) ?? []), packId]);
             await page.screenshot({ path: testInfo.outputPath(`${packId}-${path === '/' ? 'dashboard' : path.slice(1).replace(/\W+/g, '-')}.png`), animations: 'disabled' });
@@ -384,6 +462,11 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         });
         expect.soft(routeSignatures.size, `EXACTLY 27 real ${path} layouts at ${width}px/${theme}`).toBe(27);
       }
+      if (phase.kind === 'route' && phase.path !== '/settings') {
+        energySources.setActive(false);
+        await page.goto('/settings');
+        await waitForHarnessReady(page, mocks);
+      }
       picker = await appearance(page, width);
       // Widget-only mode lets every dialog prove local scoping independently of
       // the document root; selection stays unchanged while previewing all packs.
@@ -394,12 +477,11 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       expect(beforePreview.storage['teslasync:low-bandwidth:v1']).toBe('on');
       const savedBeforePreview = { ...saved };
       const requestStart = mocks.requests.length;
-      const widths = width === 390 ? [320, 375, 390, 430] : [768, 1024, 1280, 1440, 1920, 2560];
+      const widths = phase.kind === 'responsive' ? [phase.allocatedWidth] : [];
       const signatures = new Map<number, Map<string, PackId[]>>(widths.map(value => [value, new Map()]));
       const geometryEvidence: Record<string, unknown> = {};
-      const familyEvidence: Record<string, unknown> = {};
-      for (const packId of packIds) {
-        await test.step(`${packId} full synthetic preview`, async () => {
+      for (const packId of phase.kind === 'route' || phase.kind === 'isolation' ? [] : packIds) {
+        await test.step(`${packId} synthetic preview — ${phase.label}`, async () => {
           await page.setViewportSize({ width, height: 1000 });
           const opener = picker.getByRole('button', { name: `Preview ${packNames[packId]}`, exact: true });
           await opener.click();
@@ -424,9 +506,34 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           for (const action of ['Unlock', 'Climate', 'Flash lights']) {
             await expect(preview.getByRole('button', { name: action, exact: true })).toBeDisabled();
           }
-          await inspectPreviewInteractions(page, preview, testInfo, packId);
-          const nativeAndRetained = await inspectRetainedAndNativeControls(preview);
-          await auditPreview(page, testInfo, `${packId}-axe-preview.json`);
+          if (phase.kind === 'interactions') {
+            await inspectPreviewInteractions(page, preview, testInfo, packId);
+            observe(packId, 'controls-forms', await compositionGeometry(preview.locator('[data-preview-section="form"]')), 'selected-applied');
+            observe(packId, 'tables-lists', await compositionGeometry(preview.locator('[data-preview-section="table"]')), 'sort-page-filter-recovered');
+            observe(packId, 'charts-gauges', await compositionGeometry(preview.locator('[data-preview-section="chart"]')), 'legend-restored-tooltip-checked');
+            observe(packId, 'maps-geofences', await compositionGeometry(preview.locator('[data-preview-section="map"]')), 'popup-route-zoom-reset');
+            observe(packId, 'feedback-all-states', await compositionGeometry(preview.locator('[data-preview-section="feedback"]')), 'retried-error-restored');
+          } else {
+            await prepareMainInteractionState(preview);
+          }
+          if (phase.kind === 'native') {
+            const nativeAndRetained = await inspectRetainedAndNativeControls(preview);
+            observe(packId, 'controls-forms', await compositionGeometry(preview.locator('[data-preview-section="form"]')), 'native-keyboard-endpoints');
+            observe(packId, 'shell-navigation', await compositionGeometry(preview.locator('[data-app-part~="shell"]')), 'activity-review-overview');
+            observe(packId, 'tables-lists', await compositionGeometry(preview.locator('[data-preview-section="table"]')), 'no-match-restored');
+            observe(packId, 'charts-gauges', {
+              composition: await compositionGeometry(preview.locator('[data-preview-section="chart"]')),
+              quantitative: nativeAndRetained.quantitative,
+            }, 'quantitative-gap-fallback');
+            observe(packId, 'maps-geofences', await compositionGeometry(preview.locator('[data-preview-section="map"]')), 'native-projection-zoom-reset');
+            observe(packId, 'feedback-all-states', {
+              composition: await compositionGeometry(preview.locator('[data-preview-section="feedback"]')),
+              retained: nativeAndRetained,
+            }, 'retained-error-recovery-restored');
+          } else if (phase.kind !== 'interactions') {
+            await prepareMainNativeState(preview);
+          }
+          if (phase.kind === 'accessibility') await auditPreview(page, testInfo, `${packId}-axe-preview.json`);
           for (const allocatedWidth of widths) {
             await page.setViewportSize({ width: allocatedWidth, height: 1000 });
             await preview.locator('[data-preview-section="map"]').scrollIntoViewIfNeeded();
@@ -442,6 +549,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
             const cluster = signatures.get(allocatedWidth)!;
             cluster.set(signature, [...(cluster.get(signature) ?? []), packId]);
             geometryEvidence[`${packId}:${allocatedWidth}:default`] = { composition, nested };
+            observe(packId, 'distinct-rendered-identity', { composition, nested });
+            observe(packId, 'dialogs-popovers', { composition, nested });
+            observe(packId, 'responsive-accessibility', { composition, nested });
             const savedTextContext = await page.locator('html').evaluate(element => ({
               scale: element.style.getPropertyValue('--font-scale'),
               dir: element.getAttribute('dir'),
@@ -476,9 +586,14 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
               const enlargedFont = await preview.getByRole('textbox', { name: /Sample view name/ })
                 .evaluate(element => parseFloat(getComputedStyle(element).fontSize));
               expect(enlargedFont).toBeGreaterThanOrEqual(normalFont * 1.9);
-              geometryEvidence[`${packId}:${allocatedWidth}:rtl-200-${density}`] = {
+              const enlarged = {
                 composition: await compositionGeometry(preview), nested: await inspectNestedDialog(page, preview),
               };
+              geometryEvidence[`${packId}:${allocatedWidth}:rtl-200-${density}`] = enlarged;
+              observe(packId, 'responsive-accessibility', {
+                ...enlarged, normalFont, enlargedFont,
+              }, `rtl-200-${density}`);
+              observe(packId, 'dialogs-popovers', enlarged, `rtl-200-${density}`);
               await expect(preview.getByRole('textbox', { name: /Sample view name/ })).toHaveCSS('direction', 'rtl');
               if (allocatedWidth === width && density === 'spacious') {
                 await preview.locator('[data-preview-section="form"]').screenshot({
@@ -512,60 +627,48 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
             }, original);
           }
           await page.setViewportSize({ width, height: 1000 });
-          for (const section of ['overview', 'chart', 'map', 'table', 'form', 'feedback', 'widgets']) {
-            await preview.locator(`[data-preview-section="${section}"]`).screenshot({
-              path: testInfo.outputPath(`${packId}-${section}.png`), animations: 'disabled',
-            });
+          if (phase.kind === 'accessibility') {
+            for (const section of ['overview', 'chart', 'map', 'table', 'form', 'feedback', 'widgets']) {
+              await preview.locator(`[data-preview-section="${section}"]`).screenshot({
+                path: testInfo.outputPath(`${packId}-${section}.png`), animations: 'disabled',
+              });
+            }
+            await page.emulateMedia({ forcedColors: 'active' });
+            const forcedColorsActive = await page.evaluate(() => matchMedia('(forced-colors: active)').matches);
+            expect(forcedColorsActive,
+              'forced-colors evidence requires actual media emulation, not an ignored request').toBe(true);
+            await assertContained(preview, `${packId} forced colors`);
+            const forcedNested = await inspectNestedDialog(page, preview);
+            const forcedTable = preview.locator('[data-preview-section="chart"]')
+              .getByRole('table', { name: 'Sample battery trace — data table' });
+            await expect(forcedTable).toBeVisible();
+            const forcedColors = {
+              active: forcedColorsActive, composition: await compositionGeometry(preview),
+              nested: forcedNested, dataFallback: await compositionGeometry(forcedTable),
+            };
+            await page.emulateMedia({ forcedColors: 'none' });
+            const measured = await compositionGeometry(preview);
+            const measurements = {
+              'shell-navigation': await compositionGeometry(preview.locator('[data-app-part~="shell"]')),
+              'page-composition': measured,
+              'controls-forms': await compositionGeometry(preview.locator('[data-preview-section="form"]')),
+              'tables-lists': {
+                ledger: await compositionGeometry(preview.locator('[data-preview-section="table"]')),
+                definitions: await compositionGeometry(preview.locator('[data-preview-section="overview"] dl')),
+              },
+              'metrics-timelines': await compositionGeometry(preview.locator('[data-preview-section="overview"]')),
+              'charts-gauges': await compositionGeometry(preview.locator('[data-preview-section="chart"]')),
+              'maps-geofences': await compositionGeometry(preview.locator('[data-preview-section="map"]')),
+              'feedback-all-states': await compositionGeometry(preview.locator('[data-preview-section="feedback"]')),
+            };
+            for (const [family, evidence] of Object.entries(measurements)) {
+              observe(packId, family as keyof typeof measurements, evidence, 'selected-native-prepared');
+            }
+            observe(packId, 'responsive-accessibility', {
+              composition: measured, axe: `${packId}-axe-preview.json`, forcedColors,
+            }, 'axe-forced-colors');
+            observe(packId, 'dialogs-popovers', forcedNested, 'forced-colors');
           }
-          await page.emulateMedia({ forcedColors: 'active' });
-          expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches),
-            'forced-colors evidence requires actual media emulation, not an ignored request').toBe(true);
-          await assertContained(preview, `${packId} forced colors`);
-          await inspectNestedDialog(page, preview);
-          const forcedTable = preview.locator('[data-preview-section="chart"]')
-            .getByRole('table', { name: 'Sample battery trace — data table' });
-          await expect(forcedTable).toBeVisible();
-          await page.emulateMedia({ forcedColors: 'none' });
-          const measured = await compositionGeometry(preview);
-          const measurements: Record<typeof acceptanceFamilies[number], unknown> = {
-            'shell-navigation': await compositionGeometry(preview.locator('[data-app-part~="shell"]')),
-            'page-composition': measured,
-            'controls-forms': await compositionGeometry(preview.locator('[data-preview-section="form"]')),
-            'tables-lists': {
-              ledger: await compositionGeometry(preview.locator('[data-preview-section="table"]')),
-              definitions: await compositionGeometry(preview.locator('[data-preview-section="overview"] dl')),
-            },
-            'dialogs-popovers': Object.fromEntries(widths.map(value => [
-              value, geometryEvidence[`${packId}:${value}:default`],
-            ])),
-            'metrics-timelines': await compositionGeometry(preview.locator('[data-preview-section="overview"]')),
-            'charts-gauges': {
-              composition: await compositionGeometry(preview.locator('[data-preview-section="chart"]')),
-              quantitative: nativeAndRetained.quantitative,
-            },
-            'maps-geofences': {
-              composition: await compositionGeometry(preview.locator('[data-preview-section="map"]')),
-              geofenceDraft: routeEvidence[`/geofences:${packId}`],
-            },
-            'feedback-all-states': {
-              composition: await compositionGeometry(preview.locator('[data-preview-section="feedback"]')),
-              retained: nativeAndRetained,
-            },
-            'responsive-accessibility': {
-              widths: Object.fromEntries(Object.entries(geometryEvidence).filter(([key]) => key.startsWith(`${packId}:`))),
-              axe: `${packId}-axe-preview.json`, forcedColors: true,
-            },
-            'real-page-adoption': Object.fromEntries(Object.entries(routeEvidence).filter(([key]) => key.endsWith(`:${packId}`))),
-            'distinct-rendered-identity': Object.fromEntries(widths.map(value => [
-              value, geometryEvidence[`${packId}:${value}:default`],
-            ])),
-          };
-          familyEvidence[packId] = {
-            families: Object.fromEntries(acceptanceFamilies.map(family => [family, {
-              status: 'observed-not-certified',
-              evidence: measurements[family],
-            }])),
-          };
           // Leave real shared legend state active so closing must clean up its temporary URL key.
           const closingChart = preview.locator('[data-preview-section="chart"]');
           const closingReference = closingChart.getByRole('button', { name: 'Sample reference (%)', exact: true });
@@ -587,20 +690,23 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           expect(saved).toEqual(savedBeforePreview);
         });
       }
-      await testInfo.attach('real-page-compositions.json', { body: JSON.stringify(routeEvidence, null, 2), contentType: 'application/json' });
-      await testInfo.attach('preview-compositions.json', { body: JSON.stringify(geometryEvidence, null, 2), contentType: 'application/json' });
-      await testInfo.attach('preview-identity-collisions.json', {
-        body: JSON.stringify(Object.fromEntries([...signatures].map(([value, clusters]) => [
-          value, [...clusters.values()].filter(group => group.length > 1),
-        ])), null, 2), contentType: 'application/json',
-      });
-      await testInfo.attach('acceptance-family-observations.json', {
-        body: JSON.stringify({ claim: 'Measured mocked UI evidence only. Final runner assertions and visual review remain authoritative.',
-          expectedCells: packIds.length * acceptanceFamilies.length, observations: familyEvidence }, null, 2),
-        contentType: 'application/json',
-      });
-      for (const [allocatedWidth, distinct] of signatures) {
-        expect.soft(distinct.size, `EXACTLY 27 rendered layout signatures at ${allocatedWidth}px/${theme}`).toBe(27);
+      if (phase.kind === 'route') {
+        await testInfo.attach('real-page-compositions.json', {
+          body: JSON.stringify({ scope, route: phase.path, observations: routeEvidence }, null, 2), contentType: 'application/json',
+        });
+      }
+      if (phase.kind === 'responsive') {
+        await testInfo.attach('preview-compositions.json', {
+          body: JSON.stringify({ scope, observations: geometryEvidence }, null, 2), contentType: 'application/json',
+        });
+        await testInfo.attach('preview-identity-collisions.json', {
+          body: JSON.stringify(Object.fromEntries([...signatures].map(([value, clusters]) => [
+            value, [...clusters.values()].filter(group => group.length > 1),
+          ])), null, 2), contentType: 'application/json',
+        });
+        for (const [allocatedWidth, distinct] of signatures) {
+          expect.soft(distinct.size, `EXACTLY 27 rendered layout signatures at ${allocatedWidth}px/${theme}`).toBe(27);
+        }
       }
       expect(mocks.requests.slice(requestStart).filter(request => !['GET', 'HEAD', 'OPTIONS'].includes(request.method))).toEqual([]);
       expect(mocks.requests.filter(request => /\/commands?(?:\/|$)/.test(request.path) && request.method !== 'GET')).toEqual([]);
@@ -609,40 +715,49 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       const after = await preservedPreferences(page);
       expect(after.variables).toEqual(preferences.variables);
       expect(after.density).toEqual(preferences.density);
-      const isolated: Record<string, unknown> = {};
-      const incomplete: Record<string, unknown> = {};
-      const outer: Record<string, unknown> = {};
-      for (const outerPack of ['memphis', 'blueprint'] as const) {
-        await selectReviewPack(page, outerPack);
-        await expectProfile(page, outerPack);
-        outer[outerPack] = await isolationAppearance(page.locator('[data-app-part~="workspace-header"]'));
-        const outerBefore = await preservedPreferences(page);
-        await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
-        const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
-        const preview = dialog.locator('[data-preview-synthetic="true"]');
-        await expect(preview).toBeVisible();
-        await assertPlotAndMap(preview);
-        await assertOwnerGuardActivation(preview);
-        await expectProfile(page, outerPack);
-        const inline = await isolationAppearance(preview);
-        const portaled = await inspectPortaledIsolation(page, preview);
-        isolated[outerPack] = { inline, portaled };
-        incomplete[outerPack] = await inspectIncompletePreview(page, preview);
-        await dialog.screenshot({ path: testInfo.outputPath(`quiet-inside-${outerPack}.png`), animations: 'disabled' });
-        await page.keyboard.press('Escape');
-        await expect(dialog).toBeHidden();
-        await expectProfile(page, outerPack);
-        expect(await preservedPreferences(page)).toEqual(outerBefore);
+      if (phase.kind === 'isolation') {
+        const isolated: Record<string, unknown> = {};
+        const incomplete: Record<string, unknown> = {};
+        const outer: Record<string, unknown> = {};
+        for (const outerPack of ['memphis', 'blueprint'] as const) {
+          await selectReviewPack(page, outerPack);
+          await expectProfile(page, outerPack);
+          outer[outerPack] = await isolationAppearance(page.locator('[data-app-part~="workspace-header"]'));
+          const outerBefore = await preservedPreferences(page);
+          await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+          const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
+          const preview = dialog.locator('[data-preview-synthetic="true"]');
+          await expect(preview).toBeVisible();
+          await assertPlotAndMap(preview);
+          await assertOwnerGuardActivation(preview);
+          await expectProfile(page, outerPack);
+          const inline = await isolationAppearance(preview);
+          const portaled = await inspectPortaledIsolation(page, preview);
+          isolated[outerPack] = { inline, portaled };
+          incomplete[outerPack] = await inspectIncompletePreview(page, preview);
+          observe('quiet', 'page-composition', inline, 'mixed-pack-owned-inline', outerPack);
+          observe('quiet', 'dialogs-popovers', portaled, 'mixed-pack-owned-portals', outerPack);
+          observe('quiet', 'dialogs-popovers', incomplete[outerPack], 'mixed-pack-incomplete-neutral', outerPack);
+          observe(outerPack, 'shell-navigation', outer[outerPack], 'outer-profile-retained');
+          await dialog.screenshot({ path: testInfo.outputPath(`quiet-inside-${outerPack}.png`), animations: 'disabled' });
+          await page.keyboard.press('Escape');
+          await expect(dialog).toBeHidden();
+          await expectProfile(page, outerPack);
+          expect(await preservedPreferences(page)).toEqual(outerBefore);
+        }
+        await testInfo.attach('mixed-pack-isolation.json', {
+          body: JSON.stringify({ scope, innerPack: 'quiet', isolated, incomplete, outer }, null, 2), contentType: 'application/json',
+        });
+        expect(isolated.memphis, 'Quiet inline and real open portals are independent of outer application pack')
+          .toEqual(isolated.blueprint);
+        expect(outer.memphis, 'outer shell keeps its own visibly different design').not.toEqual(outer.blueprint);
+        expect(incomplete.memphis, 'an incomplete real preview and its body portals remain neutral under either outer pack')
+          .toEqual(incomplete.blueprint);
       }
-      await testInfo.attach('mixed-pack-isolation.json', { body: JSON.stringify({ isolated, incomplete, outer }, null, 2), contentType: 'application/json' });
-      expect(isolated.memphis, 'Quiet inline and real open portals are independent of outer application pack')
-        .toEqual(isolated.blueprint);
-      expect(outer.memphis, 'outer shell keeps its own visibly different design').not.toEqual(outer.blueprint);
-      expect(incomplete.memphis, 'an incomplete real preview and its body portals remain neutral under either outer pack')
-        .toEqual(incomplete.blueprint);
       await page.reload();
       await waitForHarnessReady(page, mocks);
       await expectProfile(page, saved.pack_id);
+      const neutralAfter: Record<string, unknown> = {};
       for (const publicPath of publicPaths) {
         // Client navigation deliberately retains the already-loaded design CSS.
         await page.evaluate(path => {
@@ -651,13 +766,36 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         }, publicPath);
         await waitForHarnessReady(page, mocks);
         await expectNeutral(page, true);
-        expect(await isolationAppearance(page.locator('body')), `${publicPath} keeps its actual neutral rendering`)
+        neutralAfter[publicPath] = await isolationAppearance(page.locator('body'));
+        expect(neutralAfter[publicPath], `${publicPath} keeps its actual neutral rendering`)
           .toEqual(neutralBefore[publicPath]);
       }
       expect(mocks.requests.filter(request => !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
         && !['/api/v1/settings/widget-design-pack', '/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path))).toEqual([]);
       expect(failures).toEqual([]);
       await assertMockApiComplete(page, mocks);
+      await testInfo.attach('main-phase-invariants.json', {
+        body: JSON.stringify({
+          scope, publicRoutes: { before: neutralBefore, after: neutralAfter },
+          appearance: { before: preferences, after }, dataSaver: beforePreview.storage['teslasync:low-bandwidth:v1'],
+          persistedProfileAfterReload: { ...saved },
+          forbiddenWrites: mocks.requests.filter(request => !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
+            && !['/api/v1/settings/widget-design-pack', '/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path)),
+          pageErrors: failures,
+        }, null, 2), contentType: 'application/json',
+      });
+      await testInfo.attach('acceptance-family-observations.json', {
+        body: JSON.stringify({
+          claim: 'Only this registered phase was observed. Mocked UI measurements are not certification; final assertions and visual review remain authoritative.',
+          scope, requiredPhases: mainPhases(width),
+          join: {
+            profile: ['project', 'profile', 'theme', 'profileWidth'],
+            observation: ['allocatedWidth', 'pack', 'family', 'phase', 'route', 'state', 'outerPack'],
+            rule: 'Join successful phase artifacts by profile, retaining every observation facet. Require every registered phase, all 27 packs in every real-route/core/allocated-width phase, and all 12 families for each pack across the union. Isolation covers its explicit inner/outer packs only. Phases are separate tests, not one completed 324-cell case.',
+          },
+          families: acceptanceFamilies, observedMeasurements: familyEvidence.length, observations: familyEvidence,
+        }, null, 2), contentType: 'application/json',
+      });
     });
   }
 }
