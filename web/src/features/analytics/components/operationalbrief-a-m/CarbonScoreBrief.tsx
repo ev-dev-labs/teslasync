@@ -35,7 +35,7 @@ export function CarbonScoreBrief({ analysis, states, display }: CarbonSectionPro
     title={t('carbon.score.title', 'Green timing score and evidence support')}
     description={t('carbon.source.lifetime', 'Lifetime summary')}
     scope={<span>{t('carbon.source.lifetimeScope', 'Full vehicle history')}</span>}>
-    {hasScoredSessions && score != null ? <Card className="flex flex-col items-center justify-center rounded-xl border-[var(--border-subtle)] bg-[var(--surface-2)] text-center shadow-none">
+    {hasScoredSessions && score != null ? <Card className="flex flex-1 flex-col items-center justify-center rounded-xl border-[var(--border-subtle)] bg-[var(--surface-2)] text-center shadow-none">
       <LinearGauge value={score} max={100} label={t('carbon.score.gaugeLabel', 'Lifetime green score')}
         color={score < 35 ? palette.COLOR.BAD : score < 70 ? palette.COLOR.WARN : palette.COLOR.GOOD} size={170} decimals={precision} />
       <Text as="p" variant="caption" className="mt-2">{t('carbon.score.scale', '100 maps to the model minimum; 0 maps to the model maximum.')}</Text>
