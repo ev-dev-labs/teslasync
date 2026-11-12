@@ -39,7 +39,7 @@ test('existing aggregate names reject any required job that did not succeed', ()
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
       ['contract', 'browser-build', 'visual-tests']],
     [browser.jobs, 'cross-browser', '${{ matrix.browser }} critical smoke',
-      ['contract', 'browser-build', 'cross-browser-tests']],
+      ['contract', 'browser-build', 'cross-browser-tests', 'app-design-tests']],
   ]) {
     const job = jobs[id];
     assert.equal(job.name, name);
@@ -75,17 +75,45 @@ test('browser shards reuse one build and retain isolated performance and Windows
   assert.equal(browser.jobs['cross-browser-tests'].steps.find(step => step.name === 'Run lightweight engine smoke')?.env.HOME, '/root');
   assert.match(commands(browser.jobs['cross-browser-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/3/);
   assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/32 --workers=2/);
-  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests']) {
+  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests', 'app-design-tests']) {
     const job = browser.jobs[id];
     assert.equal(job.needs, 'browser-build');
     assert.equal(job.strategy['fail-fast'], false);
     assert.ok(job.steps.some(step => step.with?.name === 'e2e-app' && step.uses?.startsWith('actions/download-artifact')));
-    assert.equal(job.steps.find(step => step.env?.E2E_REUSE_BUILD)?.env.E2E_REUSE_BUILD, '1');
+    for (const step of job.steps.filter(step => step.run?.includes('npm run e2e'))) {
+      assert.equal(step.env?.E2E_REUSE_BUILD ?? job.env?.E2E_REUSE_BUILD, '1');
+    }
   }
   assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
   assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard,
     Array.from({ length: 32 }, (_, i) => i + 1));
   assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
+});
+
+test('all application design profiles run in both engines without skipping replay or accepting partial discovery', () => {
+  const job = browser.jobs['app-design-tests'];
+  assert.deepEqual(job.strategy.matrix,
+    { browser: ['firefox', 'webkit'], width: [1440, 390], theme: ['dark', 'light', 'custom'] });
+  assert.equal(job.env.E2E_APP_DESIGN_CROSS_BROWSER, '1');
+  assert.equal(job.env.E2E_REUSE_BUILD, '1');
+  assert.equal(job.env.HOME, '/root');
+  const registration = job.steps.find(step => step.name === 'Require complete profile registration');
+  assert.match(registration.run, /tests\.length.*=== 1440 \? 23 : 21/);
+  assert.match(registration.run, /projectName === `app-design-\$\{process\.env\.APP_DESIGN_BROWSER\}`/);
+  assert.match(registration.run, /test\.title\.startsWith\(process\.env\.APP_DESIGN_PROFILE_TITLE\)/);
+  assert.match(commands(job), /--grep="\$APP_DESIGN_PROFILE_TITLE" --workers=1/);
+  const replay = job.steps.find(step => step.name === 'Preserve engine replay contract');
+  assert.equal(replay.if, "matrix.width == 1440 && matrix.theme == 'dark'");
+  assert.match(replay.run, /--grep-invert="Application design languages at"/);
+  const phases = job.steps.find(step => step.name === 'Run every application design phase');
+  assert.notEqual(phases.run.match(/--output=(\S+)/)?.[1], replay.run.match(/--output=(\S+)/)?.[1]);
+  assert.notEqual(phases.env.PLAYWRIGHT_JSON_OUTPUT_NAME, replay.env.PLAYWRIGHT_JSON_OUTPUT_NAME);
+  assert.ok(phases.env.PLAYWRIGHT_JSON_OUTPUT_NAME);
+  assert.ok(replay.env.PLAYWRIGHT_JSON_OUTPUT_NAME);
+  const envelope = job.steps.find(step => step.name === 'Bind application design evidence to its source and build');
+  assert.match(envelope.run, /indexSHA256: hash\("e2e\/\.app-dist\/index\.html"\)/);
+  assert.match(envelope.run, /acceptanceSourceSHA256: hash\("e2e\/widget-design-packs\.app\.spec\.ts"\)/);
+  assert.equal(job.steps.find(step => step.uses?.startsWith('actions/upload-artifact')).if, 'always()');
 });
 
 test('parallelization introduces no additional nonblocking test exceptions', () => {
