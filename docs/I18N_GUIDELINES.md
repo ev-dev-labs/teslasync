@@ -146,6 +146,16 @@ contributors add keys at once.
 
 ## Tooling
 
+### Runtime loading
+
+`web/src/i18n/index.ts` synchronously installs the generated English shell.
+The complete locale import table lives in `englishBundleLoader.ts`, loaded
+only when a deferred bundle is requested. Keep that registry behind its
+dynamic import: eagerly importing it adds every locale's import/preload
+metadata to startup even though the catalogs themselves remain deferred.
+Per-bundle caching, failed-load retries, namespace locality and batched store
+notifications remain owned by `index.ts`; generated catalogs are unchanged.
+
 ### `npm run i18n:validate` — strict CI check
 
 Cross-references every `t('key', …)` call against `web/src/i18n/en.json`.
