@@ -446,14 +446,15 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
   const records: Array<{ size: SizeName; mode: 'view' | 'edit'; rows: WidgetRecord[] }> = []
 
   for (const size of ['min', 'default', 'large'] as const) {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    // Seed on the static same-origin shell without aborting an application mid-boot.
+    await page.goto('/offline.html', { waitUntil: 'domcontentloaded' })
     await page.evaluate((seed) => {
       localStorage.setItem('teslasync-dashboards', JSON.stringify(seed.dashboards))
       localStorage.setItem('teslasync-active-dashboard', seed.active)
       localStorage.setItem('teslasync-row-height-version', '2')
       localStorage.removeItem('teslasync-dashboard-pending-save')
     }, buildSeed(size))
-    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     await waitForGeometrySettled(page, mockApi)
 
     for (const mode of ['view', 'edit'] as const) {
