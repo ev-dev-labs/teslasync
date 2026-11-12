@@ -33,6 +33,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { Drawer } from '@/components/ui';
 import { SessionList } from './SessionList';
 import type { ChatSessionInfo } from '@/api/types';
 
@@ -196,6 +197,32 @@ describe('SessionList', () => {
     fireEvent.keyDown(editor, { key: 'Escape', isComposing: true });
     expect(onRename).not.toHaveBeenCalled();
     expect(editor).toHaveValue('会話');
+  });
+
+  it('cancels inline rename before the enclosing history drawer handles Escape', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onRename = vi.fn();
+    render(
+      <Drawer open onClose={onClose} title="History">
+        <SessionList sessions={[makeSession()]} activeSessionId=""
+          onSelect={vi.fn()} onNewChat={vi.fn()} onRename={onRename} onDelete={vi.fn()} />
+      </Drawer>,
+    );
+    const history = screen.getByRole('dialog', { name: 'History' });
+    await user.click(within(history).getByRole('button', { name: 'Rename conversation' }));
+    const editor = within(history).getByRole('textbox', { name: 'Rename conversation' });
+    await user.clear(editor);
+    await user.type(editor, 'Cancelled revision');
+    await user.keyboard('{Escape}');
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onRename).not.toHaveBeenCalled();
+    expect(within(history).queryByRole('textbox', { name: 'Rename conversation' })).toBeNull();
+    expect(within(history).getByRole('button', { name: 'Rename conversation' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("renders a row's title, relative time and message count", () => {

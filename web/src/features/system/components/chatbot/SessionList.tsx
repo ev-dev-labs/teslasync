@@ -92,6 +92,7 @@ export function SessionList({
       commitRename(true);
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       cancelRename();
     }
   };
@@ -184,7 +185,7 @@ export function SessionList({
                         ref={renameInputRef}
                         value={renameDraft}
                         onChange={(e) => setRenameDraft(e.target.value)}
-                        onKeyDown={handleRenameKeyDown}
+                        onKeyDownCapture={handleRenameKeyDown}
                         size="sm"
                         className="min-h-11 md:min-h-9"
                         label={t('chatbot.rename.placeholder', 'Conversation name')}

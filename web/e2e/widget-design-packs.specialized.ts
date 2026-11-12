@@ -339,14 +339,19 @@ export async function inspectSpecializedRoute(
     const fallback = main.getByRole('table', { name: 'Contribution heatmap — data table', includeHidden: true });
     await expect(fallback.getByRole('row', { includeHidden: true })).toHaveCount(await cells.count() + 1);
     const bars = main.locator('.recharts-bar-rectangle path');
-    evidence.contributionBars = await renderedGeometry(bars);
-    const nonzero = await bars.evaluateAll(nodes => nodes.findIndex(node => (node as SVGPathElement).getBBox().height > 1));
-    expect(nonzero).toBeGreaterThanOrEqual(0);
-    await bars.nth(nonzero).hover();
-    const tooltip = page.locator('[data-app-part~="chart-tooltip"]:visible').first();
-    await expect(tooltip).toContainText('Contribution');
-    evidence.contributionTooltip = await renderedGeometry(tooltip);
-    await tooltip.screenshot({ path: testInfo.outputPath(`${prefix}-contribution-tooltip.png`), animations: 'disabled' });
+    await withRunningObservationClock(page, async () => {
+      let nonzero = -1;
+      await expect.poll(async () => {
+        nonzero = await bars.evaluateAll(nodes => nodes.findIndex(node => (node as SVGPathElement).getBBox().height > 1));
+        return nonzero;
+      }, { message: 'real contribution paths finish growing before native hover' }).toBeGreaterThanOrEqual(0);
+      evidence.contributionBars = await renderedGeometry(bars);
+      await bars.nth(nonzero).hover();
+      const tooltip = page.locator('[data-app-part~="chart-tooltip"]:visible').first();
+      await expect(tooltip).toContainText('Contribution');
+      evidence.contributionTooltip = await renderedGeometry(tooltip);
+      await tooltip.screenshot({ path: testInfo.outputPath(`${prefix}-contribution-tooltip.png`), animations: 'disabled' });
+    });
     evidence.review = await inspectReviewDetails(page, packId, testInfo, `${prefix}-review.png`);
   }
   if (path === `/drives/${DRIVE_DETAIL_ID}` || path === `/drives/${DRIVE_DETAIL_ID}/replay` || path === '/live') {
@@ -549,7 +554,8 @@ export async function inspectSpecializedRoute(
     await rename.press('Escape');
     await expect(sessions).toBeVisible();
     const deleteTrigger = row.getByRole('button', { name: 'Delete conversation', exact: true });
-    await deleteTrigger.click();
+    await deleteTrigger.focus();
+    await deleteTrigger.press('Enter');
     const confirmation = page.getByRole('dialog', { name: 'Delete conversation?', exact: true });
     evidence.confirmation = await inspectOpenDialog(page, confirmation, packId, testInfo, `${prefix}-confirmation.png`);
     await expect(sessions).toBeVisible();
