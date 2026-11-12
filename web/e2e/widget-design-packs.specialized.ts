@@ -396,9 +396,11 @@ export async function inspectSpecializedRoute(
     evidence.mapControls = await renderedGeometry(main.getByRole('group', { name: 'Map style', exact: true }).first());
     evidence.mapStage = await renderedGeometry(main.locator('[data-app-part~="map-stage"]'));
     if (path === `/drives/${DRIVE_DETAIL_ID}`) {
-      const columnTooltips = main.locator('[role="tooltip"]').filter({ hasText: /^Columns$/ });
-      await expect(columnTooltips).toHaveCount(2);
-      for (const tooltip of await columnTooltips.all()) {
+      // Compact toolbars mount More instead of Columns until their dialog opens.
+      const toolbarTooltips = main.locator('[data-app-part~="table-toolbar"] [role="tooltip"]')
+        .filter({ hasText: /^(?:Columns|More)$/ });
+      await expect(toolbarTooltips).toHaveCount(2);
+      for (const tooltip of await toolbarTooltips.all()) {
         await expect(tooltip).toHaveCSS('white-space', 'nowrap');
       }
       await expect(main.locator('[data-map-legend="speed"] li')).toHaveCount(4);
