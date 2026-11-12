@@ -55,7 +55,7 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
   }));
   const locked = <Text>{t('theme.widgetDesignPacks.sampleLocked', 'Locked')}</Text>;
   return <AppDesignPackPreview packId={packId}>
-    <div data-widget-pack-preview={packId} className="space-y-4">
+    <div data-widget-pack-preview={packId} className="space-y-4 [[data-app-part~='overlay']:has(&)]:[overflow-anchor:none]">
     {packId !== 'classic' && (!BatteryPresentation || !VehiclePresentation) && (
       <Text role="status">{t('theme.widgetDesignPacks.loading', 'Loading preview...')}</Text>
     )}
