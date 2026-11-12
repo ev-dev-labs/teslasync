@@ -70,13 +70,13 @@ test('Date semantics contract uses the standard hermetic API lifecycle', () => {
   );
   expect(source).toContain('installApiMocks');
   expect(source).toContain('waitForHarnessReady');
-  expect(source).toContain('assertMockApiComplete');
+  expect(source).toContain('closeMockedPage');
   expect(source.indexOf('await installApiMocks')).toBeLessThan(source.indexOf('page.goto'));
   expect(source.indexOf('page.goto')).toBeLessThan(source.indexOf('await waitForHarnessReady'));
   const tryIndex = source.indexOf('try {', source.indexOf('await waitForHarnessReady'));
   const assertionCatchIndex = source.indexOf('} catch (error)', tryIndex);
   const assertionIndex = source.indexOf('page.evaluate', tryIndex);
-  const completionIndex = source.indexOf('await assertMockApiComplete', assertionCatchIndex);
+  const completionIndex = source.indexOf('await closeMockedPage', assertionCatchIndex);
   expect(tryIndex).toBeGreaterThan(source.indexOf('await waitForHarnessReady'));
   expect(assertionIndex).toBeGreaterThan(tryIndex);
   expect(assertionIndex).toBeLessThan(assertionCatchIndex);
