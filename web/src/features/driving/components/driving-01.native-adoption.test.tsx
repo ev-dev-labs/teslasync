@@ -408,10 +408,10 @@ describe('driving-01 native ownership', () => {
 
   it('owns real dayparts and keeps the existing hourly plot and calendar qualifiers', () => {
     const { container } = show(<DepartureForecastHourDistribution forecast={forecast} state={ready} locale="en-US" timeZone="UTC" />);
-    const bank = container.querySelector('[data-app-part="metric-grid"]')!;
-    const tiles = bank.querySelectorAll('[data-app-metric="tile"]');
-    expect(tiles).toHaveLength(4);
-    expect([...tiles].map(tile => tile.querySelector('[data-app-part="metric-value"]')?.textContent))
+    const bank = screen.getByLabelText('Departure daypart distribution', { selector: 'dl' });
+    expect(bank).toHaveAttribute('data-app-list', 'definitions');
+    expect(within(bank).getAllByRole('term')).toHaveLength(4);
+    expect(within(bank).getAllByRole('definition').map(reading => reading.textContent))
       .toEqual(['0 · 0.00%', '3 · 100.00%', '0 · 0.00%', '0 · 0.00%']);
     expect(container.querySelector('.recharts-bar')).toBeInTheDocument();
     expect(container.querySelector('[data-app-part~="chart-plot"]')).toBeInTheDocument();

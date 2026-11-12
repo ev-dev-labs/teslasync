@@ -274,7 +274,7 @@ jobs:
           path: web/e2e/.app-dist
       - name: Bind application design evidence to its source and build
         run: |
-          node --input-type=module -e '
+          node --input-type=module <<'NODE'
             import { createHash } from "node:crypto";
             import { readFileSync, writeFileSync } from "node:fs";
             const hash = path => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -287,11 +287,11 @@ jobs:
               profileWidth: Number(process.env.APP_DESIGN_PROFILE_WIDTH),
               theme: process.env.APP_DESIGN_PROFILE_THEME,
             }, null, 2));
-          '
+          NODE
       - name: Require complete profile registration
         run: |
           npx playwright test widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep="$APP_DESIGN_PROFILE_TITLE" --list --reporter=json > app-design-registration.json
-          node --input-type=module -e '
+          node --input-type=module <<'NODE'
             import assert from "node:assert/strict";
             import { readFileSync } from "node:fs";
             const collect = suites => suites.flatMap(suite => [
@@ -304,7 +304,7 @@ jobs:
             assert.ok(tests.every(test => test.projectName === `app-design-${process.env.APP_DESIGN_BROWSER}`
               && test.title.startsWith(process.env.APP_DESIGN_PROFILE_TITLE)));
             console.log(`Complete profile registration: ${tests.length} cases`);
-          '
+          NODE
       - name: Run every application design phase
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: app-design-results.json

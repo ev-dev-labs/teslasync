@@ -191,7 +191,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toEqual({ browser: ['firefox', 'webkit', 'edge'], shard: [1, 2, 3] });
   const engines = workflow.jobs['cross-browser'];
   expect(engines.if).toBe('always()');
-  expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests']);
+  expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests', 'app-design-tests']);
   expect(engines.strategy?.matrix?.browser).toEqual(['firefox', 'webkit', 'edge']);
   expect(engines.steps.find(step => step.run?.includes('all(job["result"] == "success"'))).toBeDefined();
   const buildSteps = Object.values(workflow.jobs).flatMap(job =>
