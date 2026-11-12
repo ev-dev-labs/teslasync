@@ -431,12 +431,14 @@ export async function inspectPortaledIsolation(page: Page, preview: Locator) {
     hasText: 'Every action here is local to this synthetic preview.',
   });
   await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveCSS('opacity', '1');
   expect(await tooltip.evaluate(element =>
     element.closest('[data-app-design-preview]')?.getAttribute('data-app-design-pack'))).toBe('quiet');
   await assertOwnedTree(tooltip, 'quiet');
   const safety = await isolationAppearance(tooltip);
   await preview.getByRole('heading', { name: 'Application preview', exact: true }).hover();
-  await expect(tooltip).toBeHidden();
+  // The shared bubble stays mounted for clipping measurements; opacity controls its reveal.
+  await expect(tooltip).toHaveCSS('opacity', '0');
   await preview.getByRole('button', { name: 'Inspect sample journey', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Synthetic journey details', exact: true });
   await expect(dialog).toBeVisible();
