@@ -33,7 +33,15 @@ export async function compositionGeometry(host: Locator) {
     return { frame: { width: round(origin.width), height: round(origin.height) }, parts: Object.fromEntries(parts.map(part => [part,
       [...(element.matches(`[data-app-part~="${part}"]`) ? [element as HTMLElement] : []),
         ...element.querySelectorAll<HTMLElement>(`[data-app-part~="${part}"]`)]
-        .filter(node => node.getClientRects().length > 0).slice(0, 12).map(node => {
+        .filter(node => {
+          if (node.getClientRects().length === 0) return false;
+          // Screen-reader-only content has no painted composition, including tables inside clipped captions.
+          for (let ancestor: HTMLElement | null = node; ancestor && element.contains(ancestor); ancestor = ancestor.parentElement) {
+            const css = getComputedStyle(ancestor);
+            if (['absolute', 'fixed'].includes(css.position) && css.clip === 'rect(0px, 0px, 0px, 0px)') return false;
+          }
+          return true;
+        }).slice(0, 12).map(node => {
           const box = node.getBoundingClientRect();
           const css = getComputedStyle(node);
           return {
@@ -374,10 +382,11 @@ export async function isolationAppearance(host: Locator) {
     const nodes = [element, ...element.querySelectorAll('[data-app-part]')];
     return nodes.filter(node => node.getClientRects().length > 0).map(node => {
       const css = getComputedStyle(node);
-      return Object.fromEntries(['display', 'grid-template-columns', 'flex-direction',
+      return { tag: node.tagName, part: node.getAttribute('data-app-part'),
+        ...Object.fromEntries(['display', 'grid-template-columns', 'flex-direction',
         'padding', 'gap', 'font-family', 'font-size', 'font-weight', 'line-height',
         'color', 'background-color', 'background-image', 'border-width', 'border-style',
-        'border-radius', 'box-shadow', 'outline-style'].map(key => [key, css.getPropertyValue(key)]));
+        'border-radius', 'box-shadow', 'outline-style'].map(key => [key, css.getPropertyValue(key)])) };
     });
   });
   return { geometry, styles };
@@ -395,7 +404,18 @@ export async function assertOwnerGuardActivation(preview: Locator) {
     const capture = () => nodes.filter(node => node.getClientRects().length > 0).map(node => {
       const css = getComputedStyle(node);
       const box = node.getBoundingClientRect();
-      return { width: box.width, height: box.height,
+      let width = box.width;
+      let height = box.height;
+      if (node instanceof SVGGraphicsElement) {
+        const bounds = node.getBBox();
+        const matrix = node.getScreenCTM();
+        // Project local SVG extents without subtracting imprecise global screen coordinates.
+        if (matrix) {
+          width = Math.abs(matrix.a * bounds.width) + Math.abs(matrix.c * bounds.height);
+          height = Math.abs(matrix.b * bounds.width) + Math.abs(matrix.d * bounds.height);
+        }
+      }
+      return { width, height,
         styles: properties.map(property => css.getPropertyValue(property)) };
     });
     const owners = [element, ...element.querySelectorAll('[data-app-design-owner]')]

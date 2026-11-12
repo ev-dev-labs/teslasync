@@ -146,9 +146,18 @@ async function inspectRetainedAndNativeControls(preview: Locator) {
 }
 
 async function inspectIncompletePreview(page: Page, preview: Locator) {
+  const settlePointer = async (host: Locator) => {
+    await page.mouse.move(0, 0);
+    await host.evaluate(async element => {
+      await Promise.all(element.getAnimations({ subtree: true })
+        .filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+        .map(animation => animation.finished.catch(() => {})));
+    });
+  };
   await preview.evaluate(element => element.removeAttribute('data-app-data'));
   await expect(preview).not.toHaveAttribute('data-app-design-owner');
   await expect(preview.locator('[data-app-design-owner]')).toHaveCount(0);
+  await settlePointer(preview);
   const inline = await isolationAppearance(preview);
   const portals: Record<string, unknown> = {};
   for (const [trigger, name] of [
@@ -166,6 +175,7 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
         owned: element.hasAttribute('data-app-design-owner'),
       };
     }, profileAttributes)).toEqual({ neutralBoundary: true, ownedTargets: 0, owned: false });
+    await settlePointer(portal);
     portals[name] = await isolationAppearance(portal);
     if (trigger === 'Preview help') await portal.getByRole('button', { name: 'Dismiss help' }).click();
     else if (trigger === 'Source quality filter') await portal.getByRole('button', { name: 'Done', exact: true }).click();
@@ -351,6 +361,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
   for (const { width, phase } of [1440, 390].flatMap(width => mainPhases(width).map(phase => ({ width, phase })))) {
     test(`Application design languages at ${width}px in ${theme} — phase ${phase.label}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 1000 });
+      const workspaceHeader = page.getByRole('banner', {
+        name: width < 1280 ? 'Site header' : 'Workspace command bar', exact: true,
+      });
       const mode = theme === 'custom' ? 'dark' : theme;
       const reviewUnits = {
         temperature: theme === 'custom' ? 'F' : 'C', distance: theme === 'custom' ? 'mi' : 'km',
@@ -413,10 +426,10 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       }[] = [];
       const observe = (
         pack: PackId, family: typeof acceptanceFamilies[number], evidence: unknown,
-        state = 'default', outerPack?: PackId,
+        state = 'default', outerPack?: PackId, allocatedWidth = scope.allocatedWidth,
       ) => {
         familyEvidence.push({
-          scope: { ...scope, pack, family, route: phase.kind === 'route' ? phase.path : '/settings', state,
+          scope: { ...scope, allocatedWidth, pack, family, route: phase.kind === 'route' ? phase.path : '/settings', state,
             ...(outerPack ? { outerPack } : {}) },
           status: 'observed-not-certified', evidence,
         });
@@ -432,9 +445,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);
             await expectProfile(page, packId);
-            await expect(page.getByRole('banner', {
-              name: width < 1280 ? 'Site header' : 'Workspace command bar', exact: true,
-            })).toBeVisible();
+            await expect(workspaceHeader).toBeVisible();
             await expect(page.locator('[data-app-part~="page"]').first()).toBeVisible();
             if (path === '/') {
               await expect(page.locator('[data-vehicle-studio]')).toBeVisible();
@@ -729,15 +740,26 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         const isolated: Record<string, unknown> = {};
         const incomplete: Record<string, unknown> = {};
         const outer: Record<string, unknown> = {};
+        const allocations: Record<string, { availableWidth: number; comparedWidth: number }> = {};
+        const isolationWidth = width < 1280 ? 320 : 768;
         for (const outerPack of ['memphis', 'blueprint'] as const) {
           await selectReviewPack(page, outerPack);
           await expectProfile(page, outerPack);
-          outer[outerPack] = await isolationAppearance(page.locator('[data-app-part~="workspace-header"]'));
+          await expect(workspaceHeader).toBeVisible();
+          outer[outerPack] = await isolationAppearance(workspaceHeader);
           const outerBefore = await preservedPreferences(page);
           await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
           const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
           const preview = dialog.locator('[data-preview-synthetic="true"]');
           await expect(preview).toBeVisible();
+          const availableWidth = await preview.evaluate(element => element.getBoundingClientRect().width);
+          expect(availableWidth).toBeGreaterThanOrEqual(isolationWidth);
+          // Outer dialog borders allocate different space; compare inner designs at the same measured width.
+          await preview.evaluate((element, allocatedWidth) => {
+            element.style.width = `${allocatedWidth}px`;
+          }, isolationWidth);
+          await expect.poll(() => preview.evaluate(element => element.getBoundingClientRect().width)).toBe(isolationWidth);
+          allocations[outerPack] = { availableWidth, comparedWidth: isolationWidth };
           await assertPlotAndMap(preview);
           await assertOwnerGuardActivation(preview);
           await expectProfile(page, outerPack);
@@ -745,9 +767,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           const portaled = await inspectPortaledIsolation(page, preview);
           isolated[outerPack] = { inline, portaled };
           incomplete[outerPack] = await inspectIncompletePreview(page, preview);
-          observe('quiet', 'page-composition', inline, 'mixed-pack-owned-inline', outerPack);
-          observe('quiet', 'dialogs-popovers', portaled, 'mixed-pack-owned-portals', outerPack);
-          observe('quiet', 'dialogs-popovers', incomplete[outerPack], 'mixed-pack-incomplete-neutral', outerPack);
+          observe('quiet', 'page-composition', inline, 'mixed-pack-owned-inline', outerPack, isolationWidth);
+          observe('quiet', 'dialogs-popovers', portaled, 'mixed-pack-owned-portals', outerPack, isolationWidth);
+          observe('quiet', 'dialogs-popovers', incomplete[outerPack], 'mixed-pack-incomplete-neutral', outerPack, isolationWidth);
           observe(outerPack, 'shell-navigation', outer[outerPack], 'outer-profile-retained');
           await dialog.screenshot({ path: testInfo.outputPath(`quiet-inside-${outerPack}.png`), animations: 'disabled' });
           await page.keyboard.press('Escape');
@@ -756,7 +778,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           expect(await preservedPreferences(page)).toEqual(outerBefore);
         }
         await testInfo.attach('mixed-pack-isolation.json', {
-          body: JSON.stringify({ scope, innerPack: 'quiet', isolated, incomplete, outer }, null, 2), contentType: 'application/json',
+          body: JSON.stringify({ scope, innerPack: 'quiet', allocations, isolated, incomplete, outer }, null, 2), contentType: 'application/json',
         });
         expect(isolated.memphis, 'Quiet inline and real open portals are independent of outer application pack')
           .toEqual(isolated.blueprint);
