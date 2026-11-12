@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { load } from 'js-yaml';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { isSsePath, resolveApiFixture } from './mockApi';
+import { isSsePath, resolveApiFixture, waitForHarnessReady } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -13,6 +13,35 @@ test('declared route scenarios are unique', () => {
   const keys = QUALITY_ROUTES.flatMap((route) =>
     route.scenarios.map((scenario) => `${route.name}:${scenario}`));
   expect(new Set(keys).size).toBe(keys.length);
+});
+
+test('DOM readiness samples are not separated by automation round trips', async ({ page }) => {
+  await page.setContent('<main>Ready application</main>');
+  const delayedPage = new Proxy(page, {
+    get(target, property) {
+      if (property === 'evaluate') {
+        return async (...args: Parameters<Page['evaluate']>) => {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return target.evaluate(...args);
+        };
+      }
+      const value: unknown = Reflect.get(target, property);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  await waitForHarnessReady(delayedPage, null);
+});
+
+test('DOM readiness still rejects continuously changing layout within its 8s budget', async ({ page }) => {
+  await page.setContent('<main>Changing application</main>');
+  await page.evaluate(() => {
+    let expanded = false;
+    setInterval(() => {
+      expanded = !expanded;
+      document.querySelector('main')!.style.height = expanded ? '120px' : '240px';
+    }, 50);
+  });
+  await expect(waitForHarnessReady(page, null)).rejects.toThrow(/Timeout 8000ms exceeded/);
 });
 
 test('optional storage state is omitted cleanly and validates explicit paths', () => {

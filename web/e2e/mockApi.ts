@@ -1111,20 +1111,25 @@ export async function waitForHarnessReady(
   await expect.poll(
     () => page.evaluate(() => Boolean((window as Window & { __TESLASYNC_E2E_READY__?: boolean }).__TESLASYNC_E2E_READY__)),
   ).toBe(true);
-  let previous = '';
-  let stableSamples = 0;
-  await expect.poll(async () => {
-    const signature = await page.evaluate(() => {
+  const state = await page.evaluateHandle(() => ({ previous: '', stableSamples: 0 }));
+  try {
+    // Keep the five 150ms samples inside the browser; tracing round trips must not consume the 8s DOM budget.
+    const settled = await page.waitForFunction(sample => {
       const main = document.querySelector('main');
-      return `${main?.innerHTML.length ?? 0}:${main?.scrollHeight ?? 0}`;
-    });
-    stableSamples = signature === previous ? stableSamples + 1 : 0;
-    previous = signature;
-    return stableSamples;
-  }, {
-    message: 'application DOM did not settle after mocked requests completed',
-    intervals: [150, 150, 150, 150, 150, 150, 150, 150],
-  }).toBeGreaterThanOrEqual(5);
+      const signature = `${main?.innerHTML.length ?? 0}:${main?.scrollHeight ?? 0}`;
+      sample.stableSamples = signature === sample.previous ? sample.stableSamples + 1 : 0;
+      sample.previous = signature;
+      return sample.stableSamples >= 5 ? sample.stableSamples : false;
+    }, state, { polling: 150, timeout: 8_000 });
+    try {
+      expect(await settled.jsonValue(), 'application DOM settles after mocked requests complete')
+        .toBeGreaterThanOrEqual(5);
+    } finally {
+      await settled.dispose();
+    }
+  } finally {
+    await state.dispose();
+  }
 }
 
 export async function waitForNoVisibleActivity(page: Page): Promise<void> {
