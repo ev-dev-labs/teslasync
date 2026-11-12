@@ -13,6 +13,100 @@ export const specializedReviewRoutes = [
   `/drives/${DRIVE_DETAIL_ID}`, `/drives/${DRIVE_DETAIL_ID}/replay`, '/live', '/chatbot', '/statistics',
 ] as const;
 
+async function withRunningObservationClock(page: Page, interact: () => Promise<void>) {
+  const observationTime = await page.evaluate(() => Date.now());
+  // Leaflet auto-pan and Recharts' mousemove throttle both measure elapsed Date time.
+  await page.clock.setSystemTime(observationTime);
+  try {
+    await interact();
+  } finally {
+    await page.clock.setFixedTime(observationTime);
+  }
+}
+
+export interface RouteVectorSegment {
+  index: number; space: string; d: string; length: number;
+  start: { x: number; y: number }; end: { x: number; y: number };
+  bounds: { x: number; y: number; width: number; height: number };
+}
+
+export function connectedRouteVectorGeometry(segments: readonly RouteVectorSegment[]) {
+  const endpointKey = (segment: RouteVectorSegment, point: RouteVectorSegment['start']) =>
+    JSON.stringify([segment.space, point.x, point.y]);
+  const endpoints = new Map<string, number[]>();
+  segments.forEach((segment, index) => {
+    if (!(segment.length > 0) || ![
+      segment.length, segment.start.x, segment.start.y, segment.end.x, segment.end.y,
+      segment.bounds.x, segment.bounds.y, segment.bounds.width, segment.bounds.height,
+    ].every(Number.isFinite)) throw new Error('Route vectors require finite nondegenerate native geometry');
+    for (const point of [segment.start, segment.end]) {
+      const key = endpointKey(segment, point);
+      endpoints.set(key, [...(endpoints.get(key) ?? []), index]);
+    }
+  });
+  const visited = new Set<number>();
+  return segments.flatMap((first, firstIndex) => {
+    if (visited.has(firstIndex)) return [];
+    visited.add(firstIndex);
+    const members = [firstIndex];
+    const connections: { from: number; to: number; point: RouteVectorSegment['start'] }[] = [];
+    for (let cursor = 0; cursor < members.length; cursor++) {
+      const segment = segments[members[cursor]];
+      for (const point of [segment.start, segment.end]) {
+        for (const neighbor of endpoints.get(endpointKey(segment, point)) ?? []) {
+          if (visited.has(neighbor)) continue;
+          visited.add(neighbor);
+          members.push(neighbor);
+          connections.push({ from: segment.index, to: segments[neighbor].index, point });
+        }
+      }
+    }
+    const group = members.map(index => segments[index]);
+    const x = Math.min(...group.map(segment => segment.bounds.x));
+    const y = Math.min(...group.map(segment => segment.bounds.y));
+    return [{
+      space: first.space,
+      segmentIndices: group.map(segment => segment.index).sort((a, b) => a - b),
+      connections,
+      bounds: {
+        x, y,
+        width: Math.max(...group.map(segment => segment.bounds.x + segment.bounds.width)) - x,
+        height: Math.max(...group.map(segment => segment.bounds.y + segment.bounds.height)) - y,
+      },
+      length: group.reduce((sum, segment) => sum + segment.length, 0),
+    }];
+  });
+}
+
+async function renderedRouteSegments(paths: Locator): Promise<RouteVectorSegment[]> {
+  return paths.evaluateAll(nodes => {
+    const svgs = [...new Set(nodes.map(node => node instanceof SVGPathElement ? node.ownerSVGElement : null))];
+    return nodes.flatMap((node, index) => {
+      if (!(node instanceof SVGPathElement) || !node.matches('.leaflet-interactive[fill="none"]')) return [];
+      const d = node.getAttribute('d') ?? '';
+      // Leaflet polylines have one M followed by L commands; arcs, closed markers and disjoint subpaths are not a route.
+      if (!/^M[-+\d.eE,\s]+(?:L[-+\d.eE,\s]+)+$/.test(d) || node.getClientRects().length === 0) return [];
+      const css = getComputedStyle(node);
+      if (css.display === 'none' || css.visibility !== 'visible' || css.stroke === 'none'
+        || Number(css.opacity) === 0 || Number(css.strokeOpacity) === 0) return [];
+      const matrix = node.getScreenCTM();
+      if (!matrix) return [];
+      const length = node.getTotalLength();
+      const start = node.getPointAtLength(0);
+      // Clamp beyond the rounded native length to read the exact final endpoint.
+      const end = node.getPointAtLength(length + 1);
+      const bounds = node.getBBox();
+      return [{
+        index, d, length,
+        // Identical coordinates only prove continuity within the same SVG and rendered transform.
+        space: JSON.stringify([svgs.indexOf(node.ownerSVGElement), matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f]),
+        start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y },
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+      }];
+    });
+  });
+}
+
 async function renderedGeometry(nodes: Locator, minimum = 1) {
   await expect(nodes.first()).toBeVisible();
   await expect.poll(() => nodes.evaluateAll(elements => {
@@ -55,7 +149,10 @@ async function inspectOpenDialog(
 
 async function inspectReviewDetails(page: Page, packId: PackId, testInfo: TestInfo, file: string) {
   const trigger = page.locator('main').getByRole('button', { name: 'Review details', exact: true }).first();
-  await trigger.click();
+  // WebKit pointer activation focuses main; establish the keyboard return target before opening.
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+  await trigger.press('Enter');
   const geometry = await inspectOpenDialog(page, page.getByRole('dialog'), packId, testInfo, file);
   await expect(trigger).toBeFocused();
   return geometry;
@@ -137,14 +234,18 @@ export async function inspectSpecializedRoute(
     await testInfo.attach(`${prefix}-cell-status-paints.json`, { body: JSON.stringify(paints), contentType: 'application/json' });
     evidence.cells = await renderedGeometry(heatmap, 4);
     await main.getByRole('button', { name: 'Switch to bar view', exact: true }).click();
-    const bars = main.getByRole('figure', { name: 'Cell voltage heatmap', exact: true })
-      .locator('.recharts-bar-rectangle path');
+    const voltageChart = main.getByRole('figure', { name: 'Cell voltage heatmap', exact: true });
+    const bars = voltageChart.locator('.recharts-bar-rectangle path');
     evidence.voltageBars = await renderedGeometry(bars, 3);
-    await bars.first().hover();
-    const tooltip = page.locator('[data-app-part~="chart-tooltip"]:visible').first();
-    await expect(tooltip).toContainText('Voltage');
-    evidence.voltageTooltip = await renderedGeometry(tooltip);
-    await tooltip.screenshot({ path: testInfo.outputPath(`${prefix}-voltage-tooltip.png`), animations: 'disabled' });
+    // Reveal the whole responsive plot, not just the first bar's partly clipped bounds.
+    await voltageChart.scrollIntoViewIfNeeded();
+    await withRunningObservationClock(page, async () => {
+      await bars.first().hover();
+      const tooltip = page.locator('[data-app-part~="chart-tooltip"]:visible').first();
+      await expect(tooltip).toContainText('Voltage');
+      evidence.voltageTooltip = await renderedGeometry(tooltip);
+      await tooltip.screenshot({ path: testInfo.outputPath(`${prefix}-voltage-tooltip.png`), animations: 'disabled' });
+    });
     await main.getByRole('button', { name: 'Switch to grid view', exact: true }).click();
     evidence.review = await inspectReviewDetails(page, packId, testInfo, `${prefix}-review.png`);
     sources.setNoCellData(true);
@@ -254,11 +355,20 @@ export async function inspectSpecializedRoute(
     evidence.map = await renderedGeometry(map);
     const paths = map.locator('.leaflet-overlay-pane path');
     if (path !== '/live') {
-      await expect.poll(() => paths.evaluateAll(nodes => nodes.filter(node => {
-        const box = (node as SVGPathElement).getBBox();
-        return box.width > 30 && box.height > 10;
-      }).length)).toBeGreaterThan(0);
+      let segments: RouteVectorSegment[] = [];
+      let connected: ReturnType<typeof connectedRouteVectorGeometry> = [];
+      await expect.poll(async () => {
+        segments = await renderedRouteSegments(paths);
+        connected = connectedRouteVectorGeometry(segments);
+        return connected.filter(({ bounds: box }) => box.width > 30 && box.height > 10).length;
+      }).toBeGreaterThan(0);
       evidence.routeVectors = await renderedGeometry(paths);
+      evidence.routeVectorSegments = segments;
+      evidence.connectedRouteVectors = connected;
+      await testInfo.attach(`${prefix}-connected-route-vectors.json`, {
+        body: JSON.stringify({ segments, connected, originalPathGeometry: evidence.routeVectors }),
+        contentType: 'application/json',
+      });
     } else {
       // The actual Live stage renders a marker, not a fictional route trace.
       // Its real multi-point vectors are checked after switching to Recent.
@@ -273,13 +383,17 @@ export async function inspectSpecializedRoute(
       await expect(route).toHaveAttribute('data-route-mode', 'path');
       await expect(route.locator('[data-app-part~="map-provenance"]')).toHaveCount(0);
       evidence.recordedRoute = await renderedGeometry(route);
-      await map.locator('.leaflet-interactive').last().click();
-      const popup = map.locator('.leaflet-popup-content-wrapper');
-      await expect(popup).toBeVisible();
-      await expect(popup).toHaveAttribute('data-app-design-owner', new RegExp(`^pack-${packId}(?:\\s|$)`));
-      evidence.endpointPopup = await renderedGeometry(popup);
-      await popup.screenshot({ path: testInfo.outputPath(`${prefix}-endpoint.png`), animations: 'disabled' });
-      await map.locator('.leaflet-popup-close-button').click();
+      await withRunningObservationClock(page, async () => {
+        await map.locator('.leaflet-interactive').last().click();
+        const popup = map.locator('.leaflet-popup-content-wrapper');
+        await expect(popup).toBeVisible();
+        await expect(map.locator('.leaflet-map-pane')).not.toHaveClass(/leaflet-pan-anim/);
+        await expect(popup).toHaveAttribute('data-app-design-owner', new RegExp(`^pack-${packId}(?:\\s|$)`));
+        evidence.endpointPopup = await renderedGeometry(popup);
+        await popup.screenshot({ path: testInfo.outputPath(`${prefix}-endpoint.png`), animations: 'disabled' });
+        await map.locator('.leaflet-popup-close-button').click();
+        await expect(popup).toBeHidden();
+      });
       const overview = main.locator('[data-chart-key="drive-detail-overview"]');
       const travellers = overview.getByRole('slider');
       await expect(travellers).toHaveCount(2);
