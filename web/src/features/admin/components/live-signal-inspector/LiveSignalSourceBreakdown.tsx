@@ -13,6 +13,7 @@ import { Layers } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { SourceLayerBadge } from '@/components/data-display';
+import { Grid } from '@/components/layout';
 import { cn } from '@/lib/cn';
 
 import { LiveSectionState } from './LiveSectionState';
@@ -128,7 +129,7 @@ export function LiveSignalSourceBreakdown({
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Grid minItemWidth="wide" gap={3}>
             {segments.map(({ key, labelKey, labelFallback, count, roundedPct }) => (
               <div
                 data-app-part="metric"
@@ -154,7 +155,7 @@ export function LiveSignalSourceBreakdown({
                 <Caption data-app-part="metric-label">{t(labelKey, labelFallback)}</Caption>
               </div>
             ))}
-          </div>
+          </Grid>
         </div>
       </LiveSectionState>
     </GlassPanel>

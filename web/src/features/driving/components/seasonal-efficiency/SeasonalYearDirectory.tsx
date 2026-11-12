@@ -6,6 +6,7 @@ import type { SeasonalSectionProps } from './types';
 import { formatIntensityWhPerM } from './formatters';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalYearDirectory({
@@ -29,7 +30,7 @@ export function SeasonalYearDirectory({
           {analysis.years.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.yearDirectory.empty', 'No local calendar years have included observations.')} />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <Grid minItemWidth="wide" gap={3}>
               {analysis.years.map((year) => (
                 <div data-app-part="card" data-surface-variant="standalone" key={year.year} className="rounded-lg border border-[var(--panel-border)] p-3">
                   <div className="flex items-center justify-between">
@@ -58,7 +59,7 @@ export function SeasonalYearDirectory({
                   </Text>
                 </div>
               ))}
-            </div>
+            </Grid>
           )}
         </SeasonalSectionBody>
       </GlassPanel>

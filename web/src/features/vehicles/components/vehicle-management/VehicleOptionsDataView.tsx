@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/feedback'
+import { Grid } from '@/components/layout'
 import { Badge, Code, Heading, Text } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { parseVehicleOptions } from './managementData'
@@ -55,7 +56,7 @@ export function VehicleOptionsDataView({
         </Badge>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <Grid minItemWidth="wide" gap={2}>
         {options.map((option, index) => {
           const title =
             option.displayName ??
@@ -120,7 +121,7 @@ export function VehicleOptionsDataView({
             </div>
           )
         })}
-      </div>
+      </Grid>
 
       <ManagementRawDetails value={data} />
     </div>

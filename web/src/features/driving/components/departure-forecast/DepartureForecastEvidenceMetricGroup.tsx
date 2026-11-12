@@ -1,4 +1,5 @@
 import { Heading, Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
 
 export interface DepartureForecastEvidenceMetric {
   label: string;
@@ -19,7 +20,8 @@ export function DepartureForecastEvidenceMetricGroup({
       <Heading level="sub" className="mb-2">
         {title}
       </Heading>
-      <dl data-app-part="list metric-grid" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <Grid minItemWidth="wide" gap={2}>
+      <dl data-app-part="list" data-app-list="definitions" className="contents">
         {metrics.map((metric) => (
           <div
             key={metric.label}
@@ -37,6 +39,7 @@ export function DepartureForecastEvidenceMetricGroup({
           </div>
         ))}
       </dl>
+      </Grid>
     </div>
   );
 }

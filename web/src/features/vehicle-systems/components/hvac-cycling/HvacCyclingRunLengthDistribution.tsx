@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
@@ -130,7 +130,7 @@ export function HvacCyclingRunLengthDistribution({
               </ResponsiveContainer>
             )}
           </EmbeddedChart>
-          <div data-app-part="metric-grid" className="mt-3 grid min-w-0 grid-cols-2 items-stretch gap-2 md:grid-cols-4 [&>*]:min-w-0">
+          <Grid minItemWidth="wide" gap={2} className="mt-3">
             <Quantile label={t('hvacCycling.distribution.onP25', 'On fragment P25')} value={formatDuration(on.p25S)} />
             <Quantile label={t('hvacCycling.distribution.onMedian', 'On fragment median')} value={formatDuration(on.medianS)} />
             <Quantile label={t('hvacCycling.distribution.onP90', 'On fragment P90')} value={formatDuration(on.p90S)} />
@@ -139,7 +139,7 @@ export function HvacCyclingRunLengthDistribution({
             <Quantile label={t('hvacCycling.distribution.offMedian', 'Off fragment median')} value={formatDuration(off.medianS)} />
             <Quantile label={t('hvacCycling.distribution.offP90', 'Off fragment P90')} value={formatDuration(off.p90S)} />
             <Quantile label={t('hvacCycling.distribution.offMax', 'Longest off fragment')} value={formatDuration(off.maxS)} />
-          </div>
+          </Grid>
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>

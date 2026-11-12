@@ -2,6 +2,7 @@ import { Clock4 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   Badge,
@@ -69,7 +70,7 @@ export function DepartureConsistency({
             )}
           />
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+          <Grid minItemWidth="wide" gap={2}>
             {DAY_ORDER.map((day) => {
               const profile = summary.dayProfiles[day]!;
               return (
@@ -120,7 +121,7 @@ export function DepartureConsistency({
                 </div>
               );
             })}
-          </div>
+          </Grid>
         )}
       </DrivingRhythmSectionBody>
     </GlassPanel>

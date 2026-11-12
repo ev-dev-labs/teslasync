@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
 import type { RangeBufferResult } from '../../lib/rangeBuffer';
 
@@ -151,7 +152,7 @@ export function RangeBufferMethodology({
             'Definitions, calendar semantics, support rules, accounting, and interpretation limits.',
           )}
         </Text>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Grid minItemWidth="wide" gap={3}>
           {items.map((item) => (
             <article
               data-app-part="card"
@@ -168,7 +169,7 @@ export function RangeBufferMethodology({
               </Text>
             </article>
           ))}
-        </div>
+        </Grid>
         <AlertBanner className="mt-4" variant="warning">
           <Text as="p" variant="caption">
             {t(

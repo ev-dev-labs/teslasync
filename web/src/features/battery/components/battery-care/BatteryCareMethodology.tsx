@@ -1,5 +1,6 @@
 import { Database, FlaskConical, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Grid } from '@/components/layout';
 
 import {
   Badge,
@@ -116,7 +117,7 @@ export function BatteryCareMethodology({
         </Badge>
       }
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <Grid minItemWidth="wide" gap={3}>
         <div data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={!sessionsAvailable ? 'missing' : undefined} className="rounded-xl bg-[var(--surface-2)] p-3">
           <MetricValue data-app-part="metric-reading metric-value">{sessionsAvailable ? fmtInt(coverage.returnedSessions) : '—'}</MetricValue>
           <MetricLabel data-app-part="metric-label">
@@ -141,7 +142,7 @@ export function BatteryCareMethodology({
             {t('batteryCare.method.eligibleDrives', 'Arrival-SoC eligible')}
           </MetricLabel>
         </div>
-      </div>
+      </Grid>
 
       <div className="mt-4 space-y-3">
         <div className="flex items-start gap-2">

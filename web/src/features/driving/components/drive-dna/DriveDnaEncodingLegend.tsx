@@ -22,8 +22,6 @@ import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import type { DriveDnaSectionState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-const ENCODING_COLUMNS = { default: 1, sm: 2, xl: 5 } as const;
-
 interface DriveDnaEncodingLegendProps {
   model: DriveDnaModel;
   state: DriveDnaSectionState;
@@ -165,7 +163,7 @@ export function DriveDnaEncodingLegend({
           returnedRows={model.sample.returnedRows}
           className="mt-4"
         >
-          <Grid cols={ENCODING_COLUMNS} gap={3}>
+          <Grid minItemWidth="wide" gap={3}>
             {rows.map((row) => {
               const status = availability(row.dimension.availableCount);
               return (

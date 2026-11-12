@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { GlassPanel, Heading, Icon, PanelTitle, Text } from '@/components/ui';
 import { typography } from '@/lib/tokens';
 
@@ -147,7 +148,7 @@ export function ArrivalReliabilityMethodology({
             'Definitions, formulas, support gates, route grouping, and omitted inputs.',
           )}
         </Text>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Grid minItemWidth="wide" gap={3}>
           {items.map((item) => (
             <article
               key={item.key}
@@ -164,7 +165,7 @@ export function ArrivalReliabilityMethodology({
               </Text>
             </article>
           ))}
-        </div>
+        </Grid>
         <AlertBanner className="mt-4" variant="warning">
           <Text as="p" variant="caption">
             {t(

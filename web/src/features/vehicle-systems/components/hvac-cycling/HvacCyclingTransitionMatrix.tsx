@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { MetricLabel, MetricValue, Text } from '@/components/ui';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
@@ -43,7 +43,7 @@ export function HvacCyclingTransitionMatrix({
         </Text>
       }>
         <HvacCyclingSectionBody summary={summary} state={state} requirement="intervals">
-          <div data-app-part="metric-grid" className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:grid-cols-3 [&>*]:min-w-0">
+          <Grid minItemWidth="wide" gap={3}>
             <MatrixCell
               label={t('hvacCycling.transitions.offOff', 'Off → off')}
               value={matrix.offToOff}
@@ -68,7 +68,7 @@ export function HvacCyclingTransitionMatrix({
               label={t('hvacCycling.transitions.total', 'Observed state transitions')}
               value={summary.transitionCount}
             />
-          </div>
+          </Grid>
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'hvacCycling.transitions.starts',

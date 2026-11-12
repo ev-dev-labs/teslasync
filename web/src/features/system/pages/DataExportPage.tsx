@@ -10,7 +10,7 @@ import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib
 import { typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
-import { PageLayout } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -903,10 +903,10 @@ function ColumnPickerSection({
           </div>
         </div>
         <div
-          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
           role="group"
           aria-label={t('dataExport.columns.title', "STEP 2½ — Columns")}
         >
+          <Grid minItemWidth="wide" gap={2}>
           {data.columns.map((col) => {
             const checked = selectedSet.has(col.name);
             const required = requiredSet.has(col.name);
@@ -940,6 +940,7 @@ function ColumnPickerSection({
               </div>
             );
           })}
+          </Grid>
         </div>
       </div>
     </div>

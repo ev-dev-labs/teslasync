@@ -2,6 +2,7 @@ import { Link2, MapPin, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { GlassPanel, MetricValue, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -23,7 +24,7 @@ export function JourneyDirectory({ result, state, loading = false }: JourneyFrag
       {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : journeys.length === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<MapPin className="h-7 w-7" />} message={t('journeyFragmentation.directory.empty', 'No observed journeys are available for the directory.')} />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <Grid minItemWidth="wide" gap={3}>
           {journeys.map((journey, index) => (
             <div data-app-part="card metric" data-surface-variant="standalone" data-app-metric="headline" key={journey.driveIds.join('-')} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-start justify-between gap-3">
@@ -42,7 +43,7 @@ export function JourneyDirectory({ result, state, loading = false }: JourneyFrag
               <Text data-app-part="metric-context" as="p" variant="caption">{formatDuration(journey.drivingSeconds + journey.observedParkingSeconds)} · {t('journeyFragmentation.directory.gaps', '{{count}} linked gaps', { count: journey.parkingGapsMin.length })}</Text>
             </div>
           ))}
-        </div>
+        </Grid>
       )}
     </GlassPanel>
   );

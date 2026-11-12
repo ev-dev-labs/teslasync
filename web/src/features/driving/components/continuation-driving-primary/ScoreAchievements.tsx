@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { Badge, Text, Caption } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -21,7 +21,8 @@ export function ScoreAchievements({ items, sourceFallback }: {
   return (
     <LayoutCard title={t('driveScore.achievements.title', 'Achievements')}>
       {sourceFallback ?? (
-        <ul data-app-part="list" className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
+        <Grid minItemWidth="wide" gap={3}>
+        <ul data-app-part="list" className="contents">
           {items.map((achievement) => (
             <li key={achievement.id} data-app-part="card" data-surface-variant="standalone" className={cn(
               'flex min-w-0 flex-col items-center rounded-xl border p-4 text-center transition-colors',
@@ -46,6 +47,7 @@ export function ScoreAchievements({ items, sourceFallback }: {
             </li>
           ))}
         </ul>
+        </Grid>
       )}
     </LayoutCard>
   );

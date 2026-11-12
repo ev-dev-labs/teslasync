@@ -113,29 +113,28 @@ export function HvacCyclingHourlyDuty({
           <Text as="h4" variant="label" className="mb-2 mt-3">
             {t('hvacCycling.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
-          <div data-app-part="metric-grid" className="grid grid-cols-3 gap-2 sm:grid-cols-6 xl:grid-cols-12">
+          <dl data-app-part="list" data-app-list="definitions" className="grid grid-cols-3 gap-2 sm:grid-cols-6 xl:grid-cols-12">
             {data.map((bucket) => (
               <div
                 key={bucket.hourIndex}
-                data-app-part="metric"
+                data-app-part="metric list-row"
                 data-app-metric="tile"
-                data-surface-variant="standalone"
                 className="rounded-lg border border-[var(--border-subtle)] p-2"
               >
-                <MetricLabel data-app-part="metric-label">{bucket.hour}</MetricLabel>
-                <div data-app-part="metric-reading" className="mt-1">
+                <MetricLabel as="dt" data-app-part="metric-label">{bucket.hour}</MetricLabel>
+                <dd data-app-part="metric-reading" className="mt-1">
                   <Text data-app-part="metric-value" as="p" variant="caption">
                     {formatDuration(bucket.observedS)}
                   </Text>
-                </div>
-                <Text data-app-part="metric-context" as="p" variant="caption">
+                </dd>
+                <Text data-app-part="metric-context" as="dd" variant="caption">
                   {t('hvacCycling.hourly.transitionCount', '{{count}} starts', {
                     count: bucket.starts,
                   })}
                 </Text>
               </div>
             ))}
-          </div>
+          </dl>
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>

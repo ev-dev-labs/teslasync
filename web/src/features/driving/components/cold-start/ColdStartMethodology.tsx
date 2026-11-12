@@ -2,6 +2,7 @@ import { CheckCircle2, FlaskConical, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
@@ -89,7 +90,7 @@ export function ColdStartMethodology({
           />
         ) : (
           <div className="flex min-h-64 flex-col justify-between gap-4">
-            <div data-app-part="metric-grid" className="grid grid-cols-3 gap-2">
+            <Grid minItemWidth="wide" gap={2}>
               <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded" className="rounded-xl bg-[var(--surface-2)] p-3">
                 <MetricValue data-app-part="metric-reading"><span data-app-part="metric-value">{formatCount(summary.cold.drives)}/{formatCount(MIN_GROUP_DRIVES)}</span></MetricValue>
                 <MetricLabel data-app-part="metric-label">{t('coldStart.method.coldEvidence', 'Cold evidence')}</MetricLabel>
@@ -102,7 +103,7 @@ export function ColdStartMethodology({
                 <MetricValue data-app-part="metric-reading"><span data-app-part="metric-value">{formatCount(classified)}</span></MetricValue>
                 <MetricLabel data-app-part="metric-label">{t('coldStart.method.classified', 'Classified')}</MetricLabel>
               </div>
-            </div>
+            </Grid>
 
             <div className="space-y-2">
               <div className="flex items-start gap-2">

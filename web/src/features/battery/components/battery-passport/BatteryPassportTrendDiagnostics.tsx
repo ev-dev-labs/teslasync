@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 
 import type {
   BatteryPassportAnalysis,
@@ -332,7 +332,8 @@ export function BatteryPassportTrendDiagnostics({
               'The evidence-breadth indicator uses valid core fields, trend volume and span, thermal evidence, and digest presence. It is not confidence or accuracy.',
             )}
           </Text>
-          <dl data-app-part="list" data-app-list="definitions" className="mt-4 grid gap-2 sm:grid-cols-5">
+          <Grid minItemWidth="wide" gap={2} className="mt-4">
+          <dl data-app-part="list" data-app-list="definitions" className="contents">
             {categories.map((category) => (
               <div
                 key={category.key}
@@ -356,6 +357,7 @@ export function BatteryPassportTrendDiagnostics({
               </div>
             ))}
           </dl>
+          </Grid>
           {analysis.trend.cap.backendCapReached ? (
             <AlertBanner
               className="mt-4"

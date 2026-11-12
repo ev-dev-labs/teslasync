@@ -2,6 +2,7 @@ import { ListOrdered } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
@@ -38,7 +39,8 @@ export function SeasonalRankedMonths({
           {ranked.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.rankedMonths.empty', 'No local month has an included observation yet.')} />
           ) : (
-            <div data-app-part="list" data-app-list="ranked" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <Grid minItemWidth="wide" gap={2}>
+            <div data-app-part="list" data-app-list="ranked" className="contents">
               {ranked.map((month, index) => (
                 <div data-app-part="card list-row" data-surface-variant="standalone" key={month.month} className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] p-3">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -55,6 +57,7 @@ export function SeasonalRankedMonths({
                 </div>
               ))}
             </div>
+            </Grid>
           )}
         </SeasonalSectionBody>
       </GlassPanel>

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
@@ -57,7 +57,7 @@ export function HvacCyclingThresholdGateMatrix({
           )}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
-          <div data-app-part="metric-grid" className="grid min-w-0 grid-cols-2 items-stretch gap-3 md:grid-cols-4 [&>*]:min-w-0">
+          <Grid minItemWidth="wide" gap={3}>
             <Gate
               label={t('hvacCycling.thresholds.maxGap', 'Maximum observed gap')}
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {
@@ -104,7 +104,7 @@ export function HvacCyclingThresholdGateMatrix({
               value={fmtInt(threshold.runDisplayLimit)}
               affected={summary.runDirectory.omitted}
             />
-          </div>
+          </Grid>
         </HvacCyclingSectionBody>
       </LayoutCard>
     </section>
