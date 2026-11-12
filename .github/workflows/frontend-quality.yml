@@ -168,6 +168,29 @@ jobs:
           E2E_REUSE_BUILD: '1'
           GUARD_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
         run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
+      - name: Record application design build receipt
+        if: always() && matrix.suite == 'quality'
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          for (const key of ['GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']) {
+            if (!process.env[key]) throw new Error(`Missing actual ${key}`);
+          }
+          const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const common = {
+            checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: 'e2e-app',
+            indexSHA256: hash(join('e2e', '.app-dist', 'index.html')),
+            acceptanceSourceSHA256: hash(join('e2e', 'widget-design-packs.app.spec.ts')),
+          };
+          // Profile contexts are not completion claims; the actual reports establish coverage.
+          const receipts = [390, 1440].flatMap(profileWidth => ['dark', 'light', 'custom']
+            .map(theme => ({ ...common, project: 'chromium-smoke', profileWidth, theme })));
+          mkdirSync('test-results', { recursive: true });
+          writeFileSync(join('test-results', 'app-design-receipts.json'), JSON.stringify(receipts, null, 2));
+          NODE
       - name: Upload Chromium failure evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2
