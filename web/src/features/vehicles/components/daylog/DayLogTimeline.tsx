@@ -442,7 +442,9 @@ function DetailLine({ label, value, mono }: { label: string; value: string; mono
         {label}:
       </Text>
       {mono ? (
-        <Code data-app-part="metric-value" as="dd" className="min-w-0 max-w-full break-all">{value}</Code>
+        <dd data-app-part="metric-value" className="min-w-0 max-w-full">
+          <Code className="break-all">{value}</Code>
+        </dd>
       ) : (
         <Text data-app-part="metric-value" as="dd" variant="caption" className="min-w-0 max-w-full break-words">{value}</Text>
       )}

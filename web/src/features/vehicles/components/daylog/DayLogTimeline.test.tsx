@@ -189,6 +189,10 @@ describe('DayLogTimeline assigned receipt correction', () => {
         expect(field.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
       }
     }
+    const identity = within(details).getByText('receipt-1', { exact: true });
+    expect(identity.tagName).toBe('CODE');
+    expect(identity.closest('dd')).toHaveAttribute('data-app-part', 'metric-value');
+    expect(within(details).getByText('2026-11-01T05:30:00Z', { exact: true }).tagName).toBe('CODE');
     expect(within(details).getByText('0.00 km', { exact: true })).toBeInTheDocument();
     expect(within(details).getByText('0.00 kWh', { exact: true })).toBeInTheDocument();
     expect(within(details).getByText('false', { exact: true })).toBeInTheDocument();
