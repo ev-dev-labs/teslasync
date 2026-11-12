@@ -168,7 +168,7 @@
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tooltip"]:where([data-app-design-owner]) {
     /* Keep Tooltip's inverse foreground/surface, measured width and offsets. */
     border: 1px solid transparent;
-    text-wrap: pretty;
+    text-wrap-style: pretty;
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="status"]:where([data-app-field-feedback]):where([data-app-design-owner]) {

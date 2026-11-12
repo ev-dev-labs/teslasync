@@ -10,6 +10,7 @@ import loadConfig from 'tailwindcss/loadConfig';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Map as LeafletMap } from 'leaflet';
 import { MapContainer } from '@/components/maps';
+import { Tooltip } from '../Tooltip';
 import { TagInput } from '@/components/forms/TagInput';
 import { PageLayout } from '@/components/layout/layout-reference/PageLayout';
 import { Section } from '@/components/layout/layout-reference/Section';
@@ -52,6 +53,26 @@ afterEach(() => {
 });
 
 describe('category browser-floor source-to-consumer contracts (not historical-browser certification)', () => {
+  it('leaves default and multiline Tooltip wrapping to the shared component', () => {
+    const mounted = render(
+      <section data-app-design-preview {...getAppDesignAttributes('classic')}>
+        <Tooltip content="Columns"><span>Default</span></Tooltip>
+        <Tooltip content="Long help content" multiline><span>Multiline</span></Tooltip>
+      </section>,
+    );
+    releases.push(observeAppDesignScopes(mounted.container));
+    const [singleLine, multiline] = screen.getAllByRole('tooltip');
+    expect(singleLine).toHaveClass('whitespace-nowrap');
+    expect(multiline).toHaveClass('whitespace-normal');
+    for (const tooltip of [singleLine, multiline]) {
+      const applied = declarations(tooltip, floorRules('controls'));
+      expect(applied).not.toHaveProperty('text-wrap');
+      expect(applied).not.toHaveProperty('text-wrap-mode');
+      expect(applied).not.toHaveProperty('white-space');
+      expect(applied).toHaveProperty('text-wrap-style', 'pretty');
+    }
+  });
+
   it.each(['v2', 'classic', 'v3', 'v6'] as const)(
     '%s preserves real TagInput validation, recovery and disabled paint without :has',
     pack => {
