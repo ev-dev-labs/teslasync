@@ -178,10 +178,10 @@ captions and metric labels remain distinct. This explicit mobile floor is an
 exception to the scaling rule above, not evidence that every phone surface
 already meets it. The sizing and reflow rules also apply in forced-colors
 mode without replacing system colors or removing its control borders.
-Page-level sizing rules do not resize widget shells,
-including the protected Digital Twin designs; Classic's page metric-grid
-reflow also excludes widget-owned grids. Nested previews reset app-owned
-role tokens and only targets with the matching owner receive pack treatments.
+Classic applies its phone prose floor to app-owned widget content, but not
+the protected Digital Twin designs; page metric-grid reflow also excludes
+widget-owned grids. Nested previews reset app-owned role tokens and only
+targets with the matching owner receive pack treatments.
 `data-app-design-preserve` marks the Digital Twin and Digital Twin Mini
 subtrees, including their fullscreen panels, as widget-owned. App-pack
 selectors must not alter their composition or chrome; inherited theme and
@@ -213,9 +213,10 @@ stacked cells without altering the shared chart source. It keeps its complete
 table in a bounded scroll region. Browser checks cover table semantics in
 Chrome; other engines still need verification.
 
-On Classic phones, actionable page-level freshness dots get a 44px target,
-including while a refresh is busy. Read-only indicators, edge-aligned dots and
-widget-owned layouts keep their original geometry.
+On Classic phones, actionable page-level freshness dots and app-owned,
+non-protected widget-header freshness dots get a 44px target, including while
+a refresh is busy. Read-only indicators, protected widgets and widget-only
+mode keep their original geometry.
 
 ### Font-size inheritance adoption — MDC-013 / MDC-020
 

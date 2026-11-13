@@ -16,22 +16,42 @@ motion and forced-color support regardless of the pack.
 
 On phones, enforce a 16px minimum for Classic's body-role and brief prose even
 when the saved font scale is below 1. Larger saved scales still apply, and the
-saved preference is not changed. These page-level rules exclude widget shells
-to protect the Digital Twin layouts; other widget text still needs review.
+saved preference is not changed. App-owned widget prose follows the same
+floor; protected Digital Twin subtrees remain unchanged and need separate
+resolution.
 Use the same floor for page-owned field labels, field values and labeled
 buttons to keep forms legible and avoid undersized mobile input text. The
-browser contract checks the floor and widget exclusion at the saved scale
-extremes; production-route coverage is still in progress.
+browser contract checks the floor and protected-widget exclusion at the saved
+scale extremes; production-route coverage is still in progress.
 Apply the phone sizing and layout rules in forced-colors mode too, while
 leaving system color and control-border treatment intact. A browser contract
 checks the 16px floor at the smallest saved scale; full-page forced-colors
 and fallback-table review are still required.
 
+The shared WidgetShell is pinned by exact-source contracts. Its footer can be
+identified as the sibling of the existing `widget-body` boundary, so use that
+existing boundary instead of adding a new attribute to the pinned source.
+The preliminary full Vitest run was stopped after reporting four failures
+caused by that attribute; it did not finish and is not a passing full run.
+The two affected source-contract files were rerun after restoring the pinned
+source:
+
+```text
+Test Files  2 passed (2)
+     Tests  776 passed (776)
+```
+
+The browser contract for the existing footer boundary also passed:
+
+```text
+1 passed (1.3s)
+```
+
 Preserve the exact-source i18n contracts on `Text`, `Tooltip`, `FreshnessDot`
 and `ChartContainer`. Classic identifies existing body roles through their
 canonical classes rather than changing `Text`'s markup. Enlarge actionable
-page-level freshness targets through owner-scoped CSS, including their busy
-state; leave read-only, edge-aligned and widget-owned indicators unchanged.
+page and app-owned widget freshness targets through owner-scoped CSS, including
+their busy state; leave read-only and protected-widget indicators unchanged.
 For app-owned local tooltips only, remove an
 opacity-hidden or Escape-dismissed bubble from scroll layout; restore its
 original positioning while active. This does not change the trigger, portal
@@ -130,3 +150,14 @@ The before/after comparison records each widget at its actual viewport width.
 Because the surrounding desktop shell can change the grid's available width,
 it then measures both widget compositions at the same width; the captured
 images remain the unaltered, naturally sized widgets.
+
+### Temporarily skipped: protected widget phone targets and text
+
+The original 390px diagnostic, an instrumented retry, and a rebuilt
+refinement still leave the protected twins' 36 x 36 Open control, 10 x 28
+refresh control and 14.1px text below the requested phone minima. The
+non-protected dashboard targets and prose in the observed fixture improved,
+but the protected-subtree boundary deliberately prevents their rules from
+altering the twins. Do not waive these findings or change the preserved
+design without a compatible token-only solution. Revisit at the final gate;
+Classic remains in progress.

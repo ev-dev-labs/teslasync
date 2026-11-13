@@ -128,9 +128,179 @@ targets. It also found 14.1px widget titles and body text, including text
 inside the protected twins. The original widgets' geometry and these mobile
 requirements must both be respected; neither this diagnostic nor dashboard
 mobile accessibility has passed. Its saved screenshots are defect evidence.
+After the owner-scoped refinement and a production rebuild, the same
+diagnostic reports only the protected twins' 36 x 36 Open and 10 x 28 refresh
+targets, plus their 14.1px title and body text. The retained screenshot shows
+the warning and dashboard actions still occupy most of the first screen;
+the visual result remains generic and is not a pass.
+
+The refreshed protected-twin comparison completed with `10 passed (1.5m)`
+across the five sizes and both modes. Four 390px page captures completed
+with `8 passed (2.1m)` across both modes. These results cover the captured
+states, not all interactions or contrast findings.
+The open Charging and Charging Patterns tables were then recaptured in both
+modes with `4 passed (1.1m)`; the two inspected examples show stacked rows
+with readable labels but remain visually repetitive.
+
+The dashboard was also recaptured and inspected at 768px and 1440px in
+both modes: `4 passed (48.5s)`. The final scrolled state reported no
+automated contrast violations, but one desktop and three tablet nodes per
+mode required manual review. A follow-up context capture completed with
+`4 passed` and found the selected Home label over an opaque background at
+16.03:1 dark and 14.93:1 light. After scrolling the other tablet nodes into
+view, the Physics label measured 6.01:1 dark and 5.58:1 light, and the
+latency text 5.66:1 and 5.64:1. This does not resolve their originally
+reported partial occlusion or establish full-page contrast.
+
+| Dashboard image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `desktop/dashboard.png` | 5 | 4 | 6 | 7 | 5 | — | 4 |
+| `desktop-light/dashboard.png` | 5 | 4 | 6 | 7 | 5 | — | 4 |
+| `tablet/dashboard.png` | 5 | 4 | 6 | 7 | 5 | — | 4 |
+| `tablet-light/dashboard.png` | 5 | 4 | 6 | 7 | 5 | — | 4 |
+
+The hidden setup checklist occupies a large first panel, leaving the vehicle
+below the fold; this is the captured saved layout, not a reason to remove the
+widget. At tablet width the layout selector and icon actions crowd their row.
+The similarly toned panels and repeated rules still make Classic feel generic
+in both modes. The 11px rail labels are also hard to read.
+
+Action center, Charging overview, Charging Patterns and Drives were recaptured
+and inspected at 768px and 1440px in both modes: `16 passed (2.6m)`. Axe
+reported zero violated contrast rules in the final scrolled states. Its
+incomplete-node counts per mode were, respectively, 3/2/20/2 on tablet and
+1/0/18/7 on desktop; those nodes and the other scroll positions still need
+review.
+
+| Page and viewport, dark/light | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Action center, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Action center, desktop | 6 | 6 | 6 | 7 | 6 | — | 4 |
+| Charging overview, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Charging overview, desktop | 6 | 6 | 6 | 7 | 5 | — | 4 |
+| Charging Patterns, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Charging Patterns, desktop | 6 | 6 | 6 | 7 | 6 | — | 4 |
+| Drives, tablet | 7 | 6 | 6 | 7 | 6 | — | 4 |
+| Drives, desktop | 7 | 6 | 6 | 7 | 6 | — | 4 |
+
+The Action center's important counts have too little visual priority among
+wide repeated rules. The tablet Charging and Drives search hints clip despite
+unused horizontal space. Charging Patterns still has a large gap between the
+chart title and its fine axis labels. All four pages need a more distinctive
+Classic surface and typographic hierarchy.
+
+Vehicles, Energy, Battery and Analytics were captured at tablet and desktop
+sizes in both modes. The run did **not** pass:
+
+```text
+  3 failed
+    [tablet-light] capture vehicles (/vehicles)
+    [desktop-light] capture battery (/battery)
+    [desktop-light] capture vehicles (/vehicles)
+  13 passed (2.3m)
+```
+
+In the final scrolled state, the light-mode Vehicles "View details" link and
+the Battery home-charge count use `#3b82f6` on `#fafbfc`, measuring **3.54:1**
+against the required 4.5:1. The selected accent itself must remain unchanged;
+these text uses need an accessible foreground role instead. Axe also reported
+incomplete nodes requiring manual review: Analytics 28/23, Battery 4/9, Energy
+3/13 and Vehicles 2/0, for tablet/desktop respectively in each mode. The
+automated results do not cover every scroll position.
+
+| Page and viewport, dark/light | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vehicles, tablet | 6 | 5 | 6 | 4 | 5 | — | 4 |
+| Vehicles, desktop | 6 | 6 | 6 | 4 | 5 | — | 4 |
+| Energy, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Energy, desktop | 6 | 6 | 6 | 7 | 5 | — | 4 |
+| Battery, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Battery, desktop | 6 | 6 | 6 | 4 | 5 | — | 4 |
+| Analytics, tablet | 6 | 5 | 6 | 7 | 5 | — | 4 |
+| Analytics, desktop | 6 | 6 | 6 | 7 | 5 | — | 4 |
+
+These are partial visual scores, not contrast certification. The Vehicles
+page spends its first screen on source status and repetitive summary rows
+before the actual vehicle. Energy and Battery repeat similarly weighted
+metric banks, and Analytics gives its section selector a large sparse panel.
+Fine labels and near-identical surfaces make all four views feel generic.
+
+The same four pages were captured at 390px in both modes with the scoped
+touch-target, prose-size, horizontal-scroll and Axe checks enabled:
+
+```text
+  6 failed
+  2 passed (1.6m)
+```
+
+Energy has a horizontally scrollable table: its 352px content sits in a
+330px viewport. No Energy screenshots were written because this assertion
+failed first. Battery has four 10px chart-summary labels. Vehicles has 28px
+Reveal and Copy controls, and its light-mode details link also fails contrast.
+Analytics passed the automated checks in both modes, but each scan left 14
+nodes for manual contrast review. These are captured states, not full-page
+accessibility passes.
+
+| Page and image, dark/light | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vehicles, `phone-390*/vehicles.png` | 5 | 4 | 5 | 4 | 4 | 3 | 4 |
+| Battery, `phone-390*/battery.png` | 6 | 5 | 4 | 7 | 5 | 4 | 4 |
+| Analytics, `phone-390*/analytics.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+
+Vehicle source cards delay the actual vehicle, the Battery first screen is
+dominated by the long introductory metric bank, and Analytics repeats dense
+rules without a clear visual focal point. The bottom-navigation labels are
+also visibly clipped on these images. Energy remains unscored because no
+normal capture was produced.
+
+Another capture batch covered Geofences, Help, Journeys and Trips at 390px
+and 1440px in both modes:
+
+```text
+  3 failed
+  13 passed (2.6m)
+```
+
+Help overflows to 471px on both phone modes; its light desktop dashboard
+link also fails contrast at 3.54:1. Phone screenshots were not saved because
+the overflow assertion failed. Axe reported 11 incomplete nodes per phone
+mode on Journeys; desktop Geofences had none, while Journeys and Trips had
+four and nine respectively. These still require manual contrast review.
+
+| Page and image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Geofences, `phone-390/geofences.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+| Geofences, `desktop/geofences.png` | 6 | 5 | 6 | 7 | 5 | N/A | 4 |
+| Journeys, `phone-390/journeys.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+| Journeys, `desktop/journeys.png` | 6 | 4 | 5 | 7 | 4 | N/A | 4 |
+| Trips, `phone-390/trips.png` | 6 | 5 | 5 | 7 | 5 | 5 | 4 |
+| Trips, `desktop/trips.png` | 6 | 5 | 5 | 7 | 5 | N/A | 4 |
+| Help, `desktop-light/help.png` | 4 | 3 | 5 | 4 | 4 | N/A | 3 |
+
+Geofences repeats nested empty panels, the Journeys split view leaves a large
+unbalanced blank column, and Trips' exported chart actions compete with its
+heading on mobile. Help's first card has excessive empty space. The phone
+navigation remains visibly clipped in the newly viewed captures.
+
+| Latest viewed image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Action center, `phone-390/action-center.png` | 7 | 6 | 6 | 7 | 6 | 6 | 4 |
+| Charging overview, `phone-390/charging.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+| Charging patterns, `phone-390-light/charging-heatmap.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+| Drives, `phone-390/drives.png` | 7 | 6 | 6 | 7 | 6 | 6 | 4 |
+| Dashboard, `phone-390-scale-1-01/dashboard.png` | 6 | 5 | 6 | 7 | 4 | 3 | 4 |
+
+The refreshed dashboard image exposes a previously unreported defect:
+the Charging label in the bottom navigation wraps and is clipped by the
+viewport. Its target dimensions alone did not catch this. The dashboard
+warning and controls still postpone the first vehicle panel, and the Action
+center's wrapped action rail and sparse metric rules consume excess height.
+Charging's search hint clips, the heatmap needs many phone screens, and fine
+metric labels remain hard to scan. These are open defects, not passes.
 
 The changed DashboardGrid remains 582 → 586 lines against
 `feature/app-design-themes`, with 6 → 6 `GlassPanel`/`ChartContainer` lines.
+WidgetShell remains 217 → 217 lines with 0 → 0 such sections.
 
 Checkpoint verification on the protected-surface changes:
 
@@ -149,6 +319,13 @@ hook verification: ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES
 ```
 
 The full Vitest suite has not completed cleanly on this checkpoint.
+The latest `npm run lint` completed successfully on the current source:
+
+```text
+OK — no direct date/time formatting outside the shared layer (3856 files scanned)
+[audit-registry] OK — every audit is registered, executable, thresholded and wired
+[release-identity] OK — release threads VITE_APP_VERSION + VITE_GIT_SHA + VITE_RELEASE_BUILD into the single build-scan/export step; compose uses its own opt-in variables and unversioned builds stay unparseable and harmless
+```
 
 The phone prose rule initially did not apply in forced-colors mode. A browser
 contract reproduced 14px text and now verifies the 16px floor there without
@@ -178,6 +355,7 @@ precede the latest forced-colors CSS edits.
 | Action center, `phone-430/action-center.png` | 7 | 6 | 6 | 7 | 6 | 6 | 4 |
 | Charging overview, `phone-360/charging.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
 | Charging patterns, `phone-390-light/charging-heatmap.png` | 6 | 5 | 6 | 7 | 5 | 5 | 4 |
+| Dashboard, `phone-390-scale-1-01/dashboard.png` | 6 | 5 | 6 | 7 | 5 | 4 | 4 |
 
 The refreshed phone views still have large header/action gaps and fine
 metric labels. Charging's search hint clips at 360px, and the long patterns

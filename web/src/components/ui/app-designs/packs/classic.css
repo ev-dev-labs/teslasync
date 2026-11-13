@@ -339,10 +339,10 @@
     --app-heatmap-day-width: max(2.5rem, calc(2.5rem * var(--font-scale, 1)));
     --app-heatmap-gap: calc(var(--density-gap) / 4);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
   }
@@ -410,8 +410,15 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-heading]:where([data-app-design-owner~="pack-classic"]) {
     flex-basis: var(--app-brief-heading-basis);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"]):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-brief-copy-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-message"], [data-testid="widget-body"] + div) a[href]:where([data-app-design-owner~="pack-classic"]) {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="chart-tooltip"] :where([data-chart-tooltip-label], [data-chart-tooltip-name], [data-chart-tooltip-value], [data-chart-tooltip-value] *, [data-chart-tooltip-copy]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
@@ -427,6 +434,12 @@
     min-inline-size: var(--app-touch-size);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="widget-shell-header"] button[data-app-part~="status"][data-app-icon-only="true"]:not(:disabled):where([data-app-design-owner~="pack-classic"]) {
     width: var(--app-touch-size) !important;
     height: var(--app-touch-size) !important;
     min-width: var(--app-touch-size) !important;

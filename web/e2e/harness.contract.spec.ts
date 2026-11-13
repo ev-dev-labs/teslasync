@@ -116,7 +116,7 @@ test('mobile text audit reports visible small prose without flagging hidden or o
   ]);
 });
 
-test('Classic phone prose respects its minimum without resizing widget content', async ({ page }) => {
+test('Classic phone prose respects its minimum without resizing protected widget content', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.setContent(`
     <style>
@@ -158,6 +158,7 @@ test('Classic phone prose respects its minimum without resizing widget content',
     <div data-widget-pack="classic">
       <p id="widget-body" class="text-sm text-[var(--text-secondary)]" data-app-design-owner="pack-classic">Widget</p>
       <input id="widget-field" class="text-sm" data-app-part="field-control" data-app-design-owner="pack-classic" />
+      <div data-testid="widget-body"></div><div><a href="#details" id="widget-footer-link" data-app-design-owner="pack-classic">Details</a></div>
       <div id="widget-brief" class="brief-list" data-operational-metric-list data-app-design-owner="pack-classic">
         <div id="widget-bank" class="brief-bank" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic"><span>One</span><span>Two</span></div>
       </div>
@@ -166,6 +167,9 @@ test('Classic phone prose respects its minimum without resizing widget content',
         <p id="widget-tooltip" class="text-xs" data-chart-tooltip-label data-app-design-owner="pack-classic">Date</p>
       </div>
       <svg><path id="widget-cursor" class="recharts-rectangle recharts-tooltip-cursor" fill="#ccc" data-app-design-owner="pack-classic"></path></svg>
+    </div>
+    <div data-widget-pack="classic" data-app-design-preserve>
+      <p id="protected-body" class="text-sm text-[var(--text-secondary)]">Protected widget</p>
     </div>
   `);
   await page.locator('html').evaluate(element => {
@@ -198,8 +202,10 @@ test('Classic phone prose respects its minimum without resizing widget content',
   await expect(page.locator('#page-tooltip')).toHaveCSS('box-shadow', 'rgba(0, 0, 0, 0.4) 0px 2px 6px 0px');
   await expect(page.locator('#chart-cursor')).toHaveCSS('fill', 'rgb(18, 52, 86)');
   await expect(page.locator('#widget-cursor')).toHaveCSS('fill', 'rgb(204, 204, 204)');
-  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '14px');
-  await expect(page.locator('#widget-field')).toHaveCSS('font-size', '14px');
+  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#widget-field')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#widget-footer-link')).toHaveCSS('min-height', '44px');
+  await expect(page.locator('#protected-body')).toHaveCSS('font-size', '14px');
   await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
@@ -221,13 +227,14 @@ test('Classic phone prose respects its minimum without resizing widget content',
   await expect(page.locator('#page-brief').getByRole('listitem')).toHaveCount(2);
   await expect(page.locator('#history-primary')).toHaveCSS('font-size', '16px');
   await expect(page.locator('#tooltip-copy')).toHaveCSS('font-size', '16px');
-  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '14px');
+  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#protected-body')).toHaveCSS('font-size', '14px');
   await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
 });
 
-test('Classic enlarges phone refresh targets without changing widget or read-only dots', async ({ page }) => {
+test('Classic enlarges phone refresh targets without changing protected or read-only dots', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.setContent(`
     <style>
@@ -238,7 +245,8 @@ test('Classic enlarges phone refresh targets without changing widget or read-onl
     <button id="busy" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic" aria-disabled="true" aria-busy="true"></button>
     <button id="readonly" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic" disabled></button>
     <button id="edge" class="original !h-7 !w-2.5" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button>
-    <div data-widget-pack="classic"><button id="widget-refresh" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button></div>
+    <div data-widget-pack="classic"><div data-role="widget-shell-header"><button id="widget-refresh" class="original !h-7 !w-2.5" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button></div></div>
+    <div data-widget-pack="classic" data-app-design-preserve><div data-role="widget-shell-header"><button id="protected-refresh" class="original !h-7 !w-2.5" data-app-part="status" data-app-icon-only="true"></button></div></div>
   `);
   await page.locator('html').evaluate(element => {
     element.setAttribute('data-app-design-pack', 'classic');
@@ -251,7 +259,8 @@ test('Classic enlarges phone refresh targets without changing widget or read-onl
   }
   await expect(page.locator('#readonly')).toHaveCSS('width', '28px');
   await expect(page.locator('#edge')).toHaveCSS('width', '10px');
-  await expect(page.locator('#widget-refresh')).toHaveCSS('width', '28px');
+  await expect(page.locator('#widget-refresh')).toHaveCSS('width', '44px');
+  await expect(page.locator('#protected-refresh')).toHaveCSS('width', '10px');
   await page.emulateMedia({ forcedColors: 'active' });
   await expect(page.locator('#refresh')).toHaveCSS('width', '44px');
   await page.setViewportSize({ width: 768, height: 1024 });
