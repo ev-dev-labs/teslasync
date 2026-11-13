@@ -61,7 +61,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a masthead and long-form reading hierarchy replace cockpit density.
 - Signature: strong section rules and generous headline spacing.
 
-### 12. Ambient (`ambient`) - in progress
+### 12. Ambient (`ambient`) - passed-with-notes
 - Mood: tranquil, atmospheric and unhurried.
 - Distinction: floating islands of content with ample separation.
 - Signature: a restrained surface wash that never obscures data.

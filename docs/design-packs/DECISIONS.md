@@ -39,11 +39,25 @@ pass 4
 fail 0
 ```
 
+The shared server later exited with `EBUSY` while watching a task-owned
+Memphis browser profile under `web`. The orchestrator restarted the same
+origin with dot-directory scratch excluded from the watcher and verified
+HTTP 200. Workers were told to keep browser profiles outside `web`, count
+interrupted invocations, and preserve the two-round cap. No unrelated
+processes or files were stopped or removed.
+
 The first eight dashboard captures were compared side by side without taking
 new screenshots. Horizon Loft looked too close to Classic and Concierge, and
 Precision Ledger too close to Studio. Their owners were sent back for
 pack-only, screenshot-free differentiation; the existing images predate
 those refinements and are not proof that the distinction is resolved.
+After eight committed packs, the existing Classic, Studio, Horizon, Showroom,
+Expressive, Pixel, Motorsport and Blueprint phone dashboards were compared
+without another capture. Studio/Pixel show denser technical frames, Motorsport
+uses an italic heading and directional rule, and Blueprint has a drafting
+grid; Horizon and Showroom still appear close in the saved views. Those views
+precede subsequent refinements, so Showroom was sent for a pack-only,
+screenshot-free showroom composition refinement, not a claimed visual pass.
 Precision Ledger and Executive Concierge exceeded the 45-minute slot. Both
 were asked to stop and reported their incomplete evidence; this runtime did
 not expose an agent-kill operation. No concurrent replacement was allowed to
