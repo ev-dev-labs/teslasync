@@ -14,6 +14,9 @@ so a failing geometry check can still be inspected. A saved image is not a
 pass; the capture command's complete diagnostics remain authoritative. Use
 the explicit default font scale suffix for new spot checks to keep historical
 viewport and stitched images intact.
+Begin with eight isolated pack workers and refill each slot as it finishes.
+This keeps browser and build load bounded on the shared machine while the
+full unit suite is running; it is not an eight-pack completion gate.
 
 ## Identity and existing preferences
 
