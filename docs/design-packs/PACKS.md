@@ -56,7 +56,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: technical workbench composition with measured whitespace.
 - Signature: subtle construction lines and annotation-like labels.
 
-### 11. Editorial (`editorial`) - in progress
+### 11. Editorial (`editorial`) - passed-with-notes
 - Mood: independent automotive journal.
 - Distinction: a masthead and long-form reading hierarchy replace cockpit density.
 - Signature: strong section rules and generous headline spacing.
