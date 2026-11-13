@@ -131,7 +131,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: broad structural outlines and unapologetic grid alignment.
 - Signature: a solid offset edge rather than a soft shadow.
 
-### 26. Cyberdeck (`cyber`) - in progress
+### 26. Cyberdeck (`cyber`) - passed-with-notes
 - Mood: futuristic, technical and controlled.
 - Distinction: instrument-first canvas with segmented actions and dense status.
 - Signature: clipped-looking framed corners and circuit-like rules.
