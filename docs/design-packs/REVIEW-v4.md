@@ -245,3 +245,143 @@ docs\design-packs\requests\v4.md trailing_whitespace_lines=0
 The orchestrator subsequently ran `npm run build` in the isolated verification
 worktree with the final Concierge stylesheet: **exit 0**. Its SHA-256 matched
 the working stylesheet. The prior capture and contrast limitations remain.
+
+## Screenshot-free layout-name follow-up
+
+The captured 390px Dashboard truncated the selected layout name. The v4
+phone-only rule now lets the selected name wrap, including long unbroken
+names, while keeping the adjacent Layout caption on one line. The selector
+targets the owner-qualified context-action control and excludes protected
+and widget-pack subtrees. It does not change font, density or color tokens.
+No screenshots were taken; the existing captures predate this change.
+
+### Real dashboard measurements
+
+The following probe ran from `web` as an inline `node -` Playwright script
+against the existing Vite server and isolated dashboard mock. It compared
+against the original truncation through a temporary test-only style, then
+removed that style and waited 150ms for CSS transitions to settle. It tested
+the fixture name and an injected 92-character unbroken name. Each case
+checked rendered text bounds and scroll dimensions, single-line caption,
+button width and minimum target height, document overflow, adjacent action
+dimensions, and the protected Digital Twin container and button/SVG
+dimensions and font sizes. Height increases in the layout button are
+intentional; other measured target dimensions did not change.
+
+```text
+CASE scale=1 colors=none width=360 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=none width=360 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=none width=390 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=none width=390 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=none width=430 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=none width=430 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=360 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=360 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=390 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=390 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=430 text=words button=256.25x44.00->256.25x81.17 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1 colors=active width=430 text=unbroken button=256.25x44.00->256.25x125.95 nameLines=5 captionLines=1 scroll=160/160 protected=12
+MENU scale=1 expanded=true visible=true afterEscape=false
+DESKTOP scale=1 {"whiteSpace":"nowrap","textOverflow":"ellipsis"}
+FIXTURE scale=1 unmatched=[] pending=0
+CASE scale=1.35 colors=none width=360 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=none width=360 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=none width=390 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=none width=390 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=none width=430 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=none width=430 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=360 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=360 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=390 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=390 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=430 text=words button=270.34x44.22->270.34x104.66 nameLines=3 captionLines=1 scroll=160/160 protected=12
+CASE scale=1.35 colors=active width=430 text=unbroken button=270.34x44.22->270.34x225.53 nameLines=7 captionLines=1 scroll=160/160 protected=12
+MENU scale=1.35 expanded=true visible=true afterEscape=false
+DESKTOP scale=1.35 {"whiteSpace":"nowrap","textOverflow":"ellipsis"}
+FIXTURE scale=1.35 unmatched=[] pending=0
+CLASSIC_390={"whiteSpace":"nowrap","textOverflow":"ellipsis"} unmatched=[] pending=0
+REAL_CSS_CASES=24 widths=360,390,430 scales=1,1.35 forced-colors=none,active names=words,unbroken
+REAL_CSS_FAILURES=0
+REAL_CSS_EXIT=0
+```
+
+The first 24-case probe failed, because it sampled `flex-shrink` immediately
+after removing the temporary baseline style:
+
+```text
+REAL_CSS_CASES=24 widths=360,390,430 scales=1,1.35 forced-colors=none,active names=words,unbroken
+REAL_CSS_FAILURES=9
+REAL_CSS_EXIT=1
+STALE_CAPTION={"immediate":{"shrink":"1","white":"nowrap","transition":"all","duration":"1e-05s","animations":["flex-shrink"]},"later":{"shrink":"0","white":"nowrap","transition":"all","duration":"1e-05s","animations":[]}}
+CAPTION_SETTLING_EXIT=0
+```
+
+The final probe waited before evaluating the real styles. Its fixture has a
+zero actual safe-area inset. These measurements do not constitute a visual,
+contrast or accessibility pass.
+
+### Follow-up tests and audit
+
+```text
+Set-Location web
+npx vitest run src\components\ui\app-designs\packs\PackNativeStepsPreservation.test.tsx src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx src\components\ui\DataTable.appDesign.test.tsx -t 'v4|keeps public/widget-only/incomplete previews neutral' --maxWorkers=2
+Test Files  3 passed (3)
+Tests       8 passed | 192 skipped (200)
+V4_NATIVE_DATATABLE_EXIT=0
+
+npx vitest run src\components\ui\AppDesignBridge.test.tsx --maxWorkers=2
+FAIL  src/components/ui/AppDesignBridge.test.tsx > nearest design boundary isolation > keeps actual Quiet boundary variables stable under contrasting active outer identities
+AssertionError: expected '' to be '0px' // Object.is equality
+ ❯ src/components/ui/AppDesignBridge.test.tsx:125:91
+Test Files  1 failed (1)
+Tests       1 failed | 12 passed (13)
+BRIDGE_EXIT=1
+
+npx vitest run src\components\ui\AppDesignBridge.test.tsx -t 'keeps actual Quiet boundary variables stable' --maxWorkers=2
+Test Files  1 passed (1)
+Tests       1 passed | 12 skipped (13)
+BRIDGE_VARIABLE_RECHECK_EXIT=0
+
+npx vitest run src\components\ui\AppDesignBridge.test.tsx --maxWorkers=2
+Test Files  1 passed (1)
+Tests       13 passed (13)
+BRIDGE_RECHECK_EXIT=0
+
+npx tsc --noEmit
+TSC_EXIT=0
+```
+
+The first additional bridge run failed in the shared Quiet/Bauhaus variable
+test despite its earlier pass above; both isolated and full rechecks then
+passed. The cause of the intermittent failure is not established. That test
+extracts only custom-property declarations, and this follow-up's wrapping
+selectors add none; the shared test and other pack styles were left untouched.
+An independent JSDOM switch diagnostic yielded Bauhaus
+`--app-card-radius: 0px` both with and without the v4 stylesheet; it is not
+a substitute for the bridge test.
+
+The scoped `audit-violations` script again exited 0 with six zero pattern
+counts and a TypeScript pass (`npx tsc --noEmit`). Its pattern categories
+primarily target TS/TSX, not CSS. `audit_code` returned `No violations found`
+for `concierge.css`; direct `rg` checks of that stylesheet and the unchanged
+layout switcher returned the following:
+
+```text
+inline_styles: 0 matches (rg exit 1)
+raw_html: 0 matches (rg exit 1)
+direct_imports: 0 matches (rg exit 1)
+old_api_imports: 0 matches (rg exit 1)
+double_api_prefix: 0 matches (rg exit 1)
+camel_query_params: 0 matches (rg exit 1)
+```
+
+No page or API hook was modified; page line/section comparisons and
+hook-route checks remain inapplicable. The previous visual and accessibility
+limitations remain unresolved.
+
+```text
+git diff --check -- web\src\components\ui\app-designs\packs\concierge.css docs\design-packs\REVIEW-v4.md
+DIFF_CHECK_EXIT=0
+web\src\components\ui\app-designs\packs\concierge.css trailing_whitespace_lines=0
+docs\design-packs\REVIEW-v4.md trailing_whitespace_lines=0
+```

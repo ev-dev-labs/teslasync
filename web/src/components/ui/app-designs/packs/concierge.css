@@ -349,6 +349,16 @@
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v4"] [data-app-part~="page-actions"] [data-action-zone="context"] > section > div > button[aria-haspopup="menu"] > span.truncate[class~="max-w-[10rem]"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v4"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    text-align: start;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v4"] [data-app-part~="page-actions"] [data-action-zone="context"] > section > div > button[aria-haspopup="menu"]:has(> span.truncate[class~="max-w-[10rem]"]) > span:first-child:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v4"]) {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v4"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v4"]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(10.5rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
