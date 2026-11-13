@@ -36,7 +36,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: spacious canvas compositions give existing vehicle imagery room to lead.
 - Signature: framed hero surfaces and inset captions.
 
-### 7. Expressive Form (`v6`) - in progress
+### 7. Expressive Form (`v6`) - passed-with-notes
 - Mood: energetic, creative and structured.
 - Distinction: geometric content blocks and segmented controls establish a lively rhythm.
 - Signature: asymmetric heading and action alignment.
