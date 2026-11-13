@@ -273,6 +273,27 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-app-part~="page-actions"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *) :is([data-action-zone="commands"], [data-action-zone="commands"] > [data-action-group]):where([data-app-design-owner~="pack-warm"]) {
     gap: calc(var(--density-gap) / 3);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-action-zone="context"] > section > div:has(> button[data-app-part~="button"][aria-haspopup="menu"] > span[class~="max-w-[10rem]"].truncate):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-action-zone="context"] > section > div > button[data-app-part~="button"][aria-haspopup="menu"]:has(> span[class~="max-w-[10rem]"].truncate):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-action-zone="context"] > section > div > button[data-app-part~="button"][aria-haspopup="menu"]:has(> span[class~="max-w-[10rem]"].truncate) > span:first-child:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]) {
+    flex: none;
+    white-space: nowrap;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-action-zone="context"] > section > div > button[data-app-part~="button"][aria-haspopup="menu"]:has(> span[class~="max-w-[10rem]"].truncate) > svg:last-child:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]) {
+    flex: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-action-zone="context"] > section > div > button[data-app-part~="button"][aria-haspopup="menu"] > span[class~="max-w-[10rem]"].truncate:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]) {
+    min-inline-size: 0;
+    max-inline-size: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-align: start;
+    text-overflow: clip;
+    white-space: normal;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-warm"]) {
     font-size: var(--app-body-size, 1rem);
   }

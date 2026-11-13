@@ -148,9 +148,89 @@ Test Files  1 passed (1)
 The worker did not rerun the full Warm preservation selection or TypeScript
 after this follow-up; the existing two capture invocations remain the limit.
 
-The orchestrator subsequently built a snapshot containing the final Terminal,
+The orchestrator subsequently built a snapshot containing the Terminal,
 Editorial, Quiet, Swiss and Warm stylesheets with `npm run build` (exit 0);
-Warm's SHA-256 matched the working stylesheet. A combined native
+Warm's SHA-256 then matched the working stylesheet. The layout-selector
+follow-up below changed Warm afterward, so that build is not evidence for the
+current stylesheet. A combined native
 composition, ordered-step and DataTable selection reported 3 files passed,
 35 tests passed and 165 skipped. These checks do not resolve the interrupted
 final capture or visual and contrast findings above.
+
+## Layout-selector follow-up
+
+The phone-only Warm rules now let the saved dashboard name use the available
+width and wrap, including long unbroken names. The “Layout” caption and
+chevron do not shrink; the button and its wrapper stay within the context
+zone. The rules require Warm ownership and exclude preserved subtrees.
+Desktop truncation is unchanged.
+
+The screenshot-free check loads the actual dashboard and application CSS on
+the shared server with isolated synthetic fixtures. It checks 360, 390 and
+430px, scales 0.85, 1 and 1.35, forced colors on and off, a short name,
+the original long name, an unbroken name, and in-browser modified/pinned badge
+replicas. It checks clipping, overlap, target size, caption and chevron
+geometry, page overflow, two actual protected Digital Twin subtrees, a
+protected selector clone, and menu open/close. The badge replicas do not test
+the real modified/pinned state transitions.
+
+```powershell
+$env:E2E_BASE_URL='http://127.0.0.1:5173' # Use the already-running server's origin.
+node 'docs\design-packs\shots\warm\layout-dom-check.cjs'
+```
+
+Exit 0; exact output:
+
+```text
+360px scale=1 forced-colors=none saved: lines=2 caption=1 button=294.0x58.8 zone=294.0 icon=14.0 doc=360/360 protected=2
+360px scale=1 forced-colors=none unbroken: lines=2 caption=1 button=294.0x58.8 zone=294.0 icon=14.0 doc=360/360 protected=2
+360px scale=1 forced-colors=none modified-and-pinned: lines=3 caption=1 button=294.0x106.0 zone=294.0 icon=14.0 doc=360/360 protected=2
+360px scale=1 forced-colors=none short: lines=1 caption=1 button=132.6x44.0 zone=294.0 icon=14.0 doc=360/360 protected=2
+390px scale=1 forced-colors=none saved: lines=2 caption=1 button=324.0x58.8 zone=324.0 icon=14.0 doc=390/390 protected=2
+390px scale=1 forced-colors=none unbroken: lines=2 caption=1 button=324.0x58.8 zone=324.0 icon=14.0 doc=390/390 protected=2
+390px scale=1 forced-colors=none modified-and-pinned: lines=3 caption=1 button=324.0x81.2 zone=324.0 icon=14.0 doc=390/390 protected=2
+390px scale=1 forced-colors=none short: lines=1 caption=1 button=132.6x44.0 zone=324.0 icon=14.0 doc=390/390 protected=2
+430px scale=1 forced-colors=none saved: lines=2 caption=1 button=364.0x58.8 zone=364.0 icon=14.0 doc=430/430 protected=2
+430px scale=1 forced-colors=none unbroken: lines=2 caption=1 button=364.0x58.8 zone=364.0 icon=14.0 doc=430/430 protected=2
+430px scale=1 forced-colors=none modified-and-pinned: lines=3 caption=1 button=364.0x81.2 zone=364.0 icon=14.0 doc=430/430 protected=2
+430px scale=1 forced-colors=none short: lines=1 caption=1 button=132.6x44.0 zone=332.6 icon=14.0 doc=430/430 protected=2
+PASS: 72 real-dashboard CSS checks; desktop, protected content and menu preserved; 0 screenshots.
+```
+
+The orchestrator made the server origin configurable and reran this check
+against the existing server; it produced the same output and exited 0.
+
+The check confirms that protected subtrees have no design owner and the
+protected selector clone keeps its original truncation. It is not a visual
+review of the Digital Twins and does not resolve their previously reported
+small targets or the Axe incomplete nodes.
+
+After the final CSS change:
+
+```powershell
+cd web
+npx vitest run 'src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx' 'src\components\ui\DataTable.appDesign.test.tsx' -t warm
+```
+
+Exit 0:
+
+```text
+ Test Files  2 passed (2)
+      Tests  5 passed | 141 skipped (146)
+```
+
+`npx tsc --noEmit` exited 0 without diagnostics. A PostCSS parse and
+final-target ownership check exited 0:
+
+```text
+PostCSS: 69 rules; 73 selector targets; 0 missing final-target Warm ownership
+```
+
+The `audit_code` tool reported no violations for `warm.css`; its checks are
+principally TS/TSX patterns, not a visual CSS audit. No screenshot was taken
+and no build was run during this follow-up. Harness syntax and cleanup:
+
+```text
+node --check: exit 0
+Playwright-owned profile/artifact entries remaining: 0
+```
