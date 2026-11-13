@@ -131,3 +131,88 @@ stylesheets. It exited 0:
 ```
 
 The build does not resolve the failed capture or incomplete contrast checks.
+
+## Standalone DataTable preservation repair
+
+The v6-only DataTable test reproduced the reported baseline failure:
+`AssertionError: expected 0 to be greater than 0` for the identity-rule
+match (exit 1). The v6 stylesheet now applies its token-derived panel paint
+and asymmetric corners to the owner-scoped standalone table frame, without
+changing its border widths or targeting embedded tables, widget-owned
+surfaces, semantic tones or other pack owners.
+
+From `web`, the post-fix command was:
+
+```powershell
+npx vitest run src\components\ui\DataTable.appDesign.test.tsx src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx --testNamePattern='v6'
+```
+
+Exit 0; actual output:
+
+```text
+ RUN  v4.1.12 D:/repos/teslasync/web
+
+ ✓ src/components/ui/DataTable.appDesign.test.tsx (35 tests | 34 skipped) 569ms
+     ✓ v6 binds only the painted frame to existing base and identity surface rules  553ms
+ ✓ src/components/ui/app-designs/packs/PackNativeCompositionPreservation.test.tsx (111 tests | 107 skipped) 1344ms
+     ✓ honors nearest complete and incomplete previews, widget-only neutrality and final-target ownership  879ms
+
+ Test Files  2 passed (2)
+      Tests  5 passed | 141 skipped (146)
+   Start at  12:44:43
+   Duration  17.84s (transform 15.45s, setup 1.18s, import 25.80s, tests 1.91s, environment 3.08s)
+```
+
+A separate inline, synthetic DOM-only Edge check applied the new rule
+without using a server or taking screenshots. Its actual output was:
+
+```text
+DOM-only frame paint: PASS (v6 standalone only; embedded, other owner, tone and widget unchanged)
+DOM-only geometry, scroll offsets, focused selection and border widths: UNCHANGED
+Forced-colors native frame radius: PASS
+```
+
+`npx tsc --noEmit` exited 0 with no diagnostics. The scoped
+`audit-violations` script exited 0 with this output; its TSX/API-specific
+checks have limited relevance to a CSS-only change:
+
+```text
+═══════════════════════════════════════════════════════════
+  TeslaSync Engineering Guidelines Audit
+  Target: D:\repos\teslasync\web\src\components\ui\app-designs\packs\expressive.css
+═══════════════════════════════════════════════════════════
+
+▸ [1/7] Static inline styles (var(--*))...
+  ✅ 0 violations
+
+▸ [2/7] Raw HTML elements...
+  ✅ 0 violations
+
+▸ [3/7] Direct library imports...
+  ✅ 0 violations
+
+▸ [4/7] Old API imports...
+  ✅ 0 violations
+
+▸ [5/7] Double /api/v1/ prefix...
+  ✅ 0 violations
+
+▸ [6/7] camelCase query params (vehicleId=)...
+  ✅ 0 violations
+
+▸ [7/7] TypeScript compilation...
+  ✅ TypeScript passes
+
+═══════════════════════════════════════════════════════════
+  ✅ ALL CHECKS PASSED — 0 total violations
+═══════════════════════════════════════════════════════════
+```
+
+`git diff --check` for the stylesheet and review exited 0. No new screenshots
+were taken; the existing capture and accessibility limitations above remain.
+
+The orchestrator subsequently ran `npm run build` in the verification snapshot
+with the repaired v5, v6 and Atlas stylesheets: **exit 0**. All three SHA-256
+hashes matched the working files. The combined native-composition, ordered-step
+and DataTable contracts reported **3 files passed, 200 tests passed**. This
+does not establish the post-capture appearance or contrast.
