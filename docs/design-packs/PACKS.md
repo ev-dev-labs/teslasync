@@ -21,7 +21,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: generous card groupings and a split header create a spacious workspace.
 - Signature: softly elevated, wide-radius surfaces.
 
-### 4. Precision Ledger (`v3`) - in progress
+### 4. Precision Ledger (`v3`) - passed-with-notes
 - Mood: exact, quiet and analytical.
 - Distinction: compact ledger rows, aligned figures and understated controls.
 - Signature: fine horizontal rules and tabular numeric alignment.

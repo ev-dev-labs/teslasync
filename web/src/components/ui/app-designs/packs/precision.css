@@ -1,89 +1,140 @@
-/* Precision: aligned ledger rules, baseline readings and low-chrome controls. */
+/* Precision Ledger: quiet surfaces, ruled facts and aligned readings. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"]:where([data-app-design-owner~="pack-v3"]) {
+    --app-brief-column-min-width: 13rem;
+    --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+  }
+}
+
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"]:where([data-app-design-owner~="pack-v3"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--surface-1);
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-3);
+    --app-card-radius: var(--radius-xs);
+    --app-card-shadow: var(--elevation-0);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: var(--radius-xs);
+    --app-control-surface: var(--control-bg);
+    --app-content-density: 1;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-subtle);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-1);
+    --app-conversation-radius: var(--radius-sm);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v3"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 55%, transparent), transparent 14rem);
+    background: var(--app-surface-canvas, var(--bg-app));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v3"]) {
-    background-color: var(--surface-1);
-    border-inline-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-inline-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-v3"]) {
-    background-color: var(--surface-1);
-    border-block-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-end: 1px solid var(--border-default);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-v3"]) {
     gap: calc(var(--density-gap) / 2);
     padding-block: var(--density-pad-y);
     border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-v3"]) {
     border-radius: var(--radius-xs);
     border-inline-start: 2px solid transparent;
     column-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"]):where([data-app-design-owner~="pack-v3"]) {
     border-inline-start-color: var(--theme-accent);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    background-color: var(--app-surface-raised, var(--surface-2));
     font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v3"]) {
-    align-items: baseline;
-    gap: var(--density-gap) calc(var(--density-gap) * 2);
-    padding-block-end: var(--density-pad-y);
-    border-block-end: 2px solid var(--border-strong);
+    align-items: center;
+    gap: var(--density-gap);
+    padding-block-end: calc(var(--density-pad-y) / 2);
+    border-block-end: 1px solid var(--border-strong);
     flex-wrap: wrap;
     justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v3"]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    font-weight: var(--app-display-weight, var(--font-weight-bold));
+    letter-spacing: var(--app-display-tracking, var(--tracking));
     font-variant-numeric: tabular-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
-    align-items: baseline;
+    align-items: center;
     gap: calc(var(--density-gap) / 2) var(--density-gap);
-    padding-inline-start: var(--density-pad-x);
+    padding-inline-start: calc(var(--density-pad-x) / 2);
     margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-v3"]) {
-    row-gap: calc(var(--density-gap) * 1.5);
+    row-gap: calc(var(--density-gap) * var(--app-content-density, 1.25));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="section"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="section"]:not(:where([data-operational-brief], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v3"]) {
     row-gap: var(--density-gap);
     padding-block-start: var(--density-pad-y);
-    border-block-start: 1px solid var(--border-strong);
+    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-v3"]) {
     gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-v3"]) {
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-xs);
-    box-shadow: var(--elevation-0);
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xs));
+    box-shadow: var(--app-card-shadow, var(--elevation-0));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:not(:where(
+    [data-app-tone], [data-app-variant], [data-selected="true"], [aria-selected="true"],
+    [class~="border-[var(--theme-primary)]"], [class*="border-[var(--semantic"], [class*="border-theme"], [class*="border-neon"],
+    .dashboard-widget-panel[class~="border-[var(--border-subtle)]"],
+    [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *,
+    [data-app-design-preserve], [data-app-design-preserve] *,
+    :is([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-metric-grid="native-gauge"], [data-app-part~="chart"], [data-app-part~="map"]),
+    :is([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-metric-grid="native-gauge"], [data-app-part~="chart"], [data-app-part~="map"]) *
+  )):where([data-app-design-owner~="pack-v3"]) {
+    border-block-start-color: transparent;
+    border-inline-color: transparent;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:where([class~="bg-[var(--panel-bg)]"]):where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v3"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-    gap: var(--density-gap);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 0 var(--density-gap);
     align-items: start;
-    border-block: 1px solid var(--border-default);
-    padding-block: var(--density-pad-y);
+    border-block-start: 1px solid var(--app-grid-rule, var(--border-default));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *)):not(:has(:where(
+    [data-app-design-preserve], [data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-metric-grid="native-gauge"], [data-app-part~="chart"], [data-app-part~="map"]
+  ))):where([data-app-design-owner~="pack-v3"]) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v3"]) {
     row-gap: calc(var(--density-gap) / 2);
-    padding-inline-end: var(--density-pad-x);
-    border-inline-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
     color: var(--text-secondary);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
-    font-variant-numeric: tabular-nums slashed-zero;
-    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums lining-nums;
+    overflow-wrap: break-word;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="field"]:where([data-app-design-owner~="pack-v3"]) {
     gap: calc(var(--density-gap) / 2);
@@ -98,8 +149,16 @@
     border-radius: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="button"]:where([data-app-design-owner~="pack-v3"]) {
-    border-radius: var(--radius-xs);
+    border-radius: var(--app-control-radius, var(--radius-xs));
     font-variant-numeric: tabular-nums;
+    transition-duration: var(--app-interaction-duration, var(--motion-duration-fast));
+    transition-timing-function: var(--app-interaction-easing, var(--motion-easing-standard));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="button"][data-app-variant="secondary"]:where([class~="bg-[var(--control-bg)]"]):not(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--app-control-surface, var(--control-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="button"][data-app-variant="secondary"]:where([class~="bg-[var(--control-bg)]"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--control-bg-hover);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-v3"]) {
     gap: var(--density-gap);
@@ -112,24 +171,18 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-v3"]) {
     gap: var(--density-gap);
-    border-block-end: 2px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-strong);
     padding-block: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table"]:where([data-app-design-owner~="pack-v3"]) {
-    border-collapse: separate;
-    border-spacing: 0;
-    font-variant-numeric: tabular-nums slashed-zero;
+    font-variant-numeric: tabular-nums lining-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-v3"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-grid-header, var(--surface-2));
     font-weight: var(--font-weight-semibold);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-row"]:where([data-app-design-owner~="pack-v3"]) {
-    vertical-align: baseline;
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-v3"]) {
-    border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px solid var(--border-subtle);
+    border-block-end: 1px solid var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-v3"]) {
     border-block-start: 1px solid var(--border-strong);
@@ -139,10 +192,11 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-v3"]) {
     border: 1px solid var(--border-strong);
+    background-color: var(--app-surface-overlay, var(--surface-3));
     box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-v3"]) {
-    border-block-end: 2px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-strong);
     gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-v3"]) {
@@ -151,11 +205,12 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-v3"]) {
     border-block-start: 1px solid var(--border-strong);
     gap: var(--density-gap);
-    background-color: var(--surface-1);
+    background-color: var(--app-surface-overlay, var(--surface-3));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-v3"]) {
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-xs);
+    background-color: var(--app-surface-overlay, var(--surface-3));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-v3"]) {
@@ -172,8 +227,11 @@
     gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-v3"]) {
-    background-color: var(--surface-1);
-    box-shadow: inset 0 -1px var(--border-subtle);
+    background-color: var(--app-chart-surface, var(--surface-1));
+    box-shadow: inset 0 -1px var(--app-chart-grid, var(--border-subtle));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-chart-metadata], [data-chart-scale]):where([data-app-design-owner~="pack-v3"]) {
+    color: var(--app-chart-ink, var(--text-secondary));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-v3"]) {
     gap: calc(var(--density-gap) / 2) calc(var(--density-gap) * 1.5);
@@ -183,9 +241,9 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="chart-tooltip"]:where([data-app-design-owner~="pack-v3"]) {
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-xs);
-    background-color: var(--surface-1);
+    background-color: var(--app-surface-overlay, var(--surface-3));
     box-shadow: var(--elevation-2);
-    font-variant-numeric: tabular-nums slashed-zero;
+    font-variant-numeric: tabular-nums lining-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="map"]:where([data-app-design-owner~="pack-v3"]) {
     border-radius: var(--radius-xs);
@@ -212,10 +270,24 @@
     background-color: var(--surface-1);
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)):where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-app-part~="conversation-session-list"])):where([data-app-design-owner~="pack-v3"]) {
     row-gap: calc(var(--density-gap) / 2);
     border-block: 1px solid var(--border-default);
     padding-block: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--app-conversation-surface, var(--surface-1));
+    border-inline-start: 1px solid var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] :where([data-app-part~="conversation"], [data-app-part~="conversation-sessions"]):where([data-app-design-owner~="pack-v3"]) {
+    border-color: var(--app-grid-rule, var(--border-default));
+    border-radius: var(--app-card-radius, var(--radius-xs));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-v3"]) {
+    border-radius: var(--app-conversation-radius, var(--radius-sm));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-v3"]) {
+    border-block-start: 1px solid var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-v3"]) {
     padding-block: calc(var(--density-pad-y) / 2);
@@ -238,7 +310,7 @@
     border-inline-start-width: 2px;
     row-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="loading"]:not([data-app-feedback-kind="inline-spinner"]):where([data-app-design-owner~="pack-v3"]) {
     gap: var(--density-gap);
     border-block-end: 1px solid var(--border-subtle);
     padding-block-end: var(--density-pad-y);
@@ -248,21 +320,41 @@
     background-color: var(--skeleton-bg);
   }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
-    inline-size: 100%;
+    inline-size: auto;
     padding-inline-start: 0;
     border-inline-start-width: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v3"]) {
-    padding-block: var(--density-pad-y);
-    gap: var(--density-gap);
+    padding-block: calc(var(--density-pad-y) / 2);
+    gap: var(--density-gap) calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v3"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.375rem), 1fr));
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"] > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v3"]) {
+    gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v3"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-v3"]) {
+    font-size: var(--app-body-size, 1rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-widget-pack] :where([data-role="widget-header-title"], p.text-sm, a[href].text-xs, [data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where([data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-widget-pack] [data-role="widget-header-title"]:where([data-app-design-owner~="pack-v3"]) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-widget-pack] a[href].text-xs:where([data-app-design-owner~="pack-v3"]) {
+    min-inline-size: var(--app-touch-size, 2.75rem);
+    min-block-size: var(--app-touch-size, 2.75rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [role="region"].sticky :where(span.text-xs):not([aria-hidden="true"]):where([data-app-design-owner~="pack-v3"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
   }
 }
-
-
-

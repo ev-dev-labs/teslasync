@@ -1,8 +1,8 @@
 # Design pack status
 
 - Branch: `design-packs-v2`, based on `feature/app-design-themes`.
-- Nine packs have bounded reviews with unresolved accessibility and layout notes.
-- Work is assigned for all 27 packs; the last three are starting from source baseline.
+- All 27 pack stylesheets have code changes relative to the source branch.
+- Ten packs have committed bounded reviews with unresolved accessibility and layout notes; the others remain uncommitted.
 - The first eight reviews have findings; later pack work is underway.
 - Shared Phase 1 foundation builds; the earlier full test run was stopped and did not pass.
 - Shared phone rules and preview isolation have passed focused browser and unit contracts.
