@@ -3,11 +3,12 @@ import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const script = fileURLToPath(new URL('../capture-design-packs.mjs', import.meta.url));
+const webRoot = fileURLToPath(new URL('../../', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 
 test('capture runner requires a pack, page list, viewport list and server', () => {
@@ -44,19 +45,29 @@ test('capture output stays outside Vite and cleans only its own directory after 
     assert.ok(address && typeof address !== 'string');
     const args = ['--pack', 'not-a-pack', '--pages', 'dashboard', '--viewports', 'phone-390',
       '--base-url', `http://127.0.0.1:${address.port}`];
-    const child = spawn(process.execPath, [script, ...args], {
-      env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: scratch },
-      stdio: 'ignore',
-    });
-    const status = await new Promise((resolve, reject) => {
-      child.once('error', reject);
-      child.once('exit', resolve);
-    });
+    const runWithRoot = outputRoot => {
+      const child = spawn(process.execPath, [script, ...args], {
+        env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: outputRoot },
+        stdio: 'ignore',
+      });
+      return new Promise((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', resolve);
+      });
+    };
+    const status = await runWithRoot(scratch);
     assert.equal(status, 1);
     assert.deepEqual(await readdir(scratch), ['keep.txt']);
 
+    const repoRoot = dirname(webRoot);
+    const captureDirs = async () => (await readdir(repoRoot))
+      .filter(name => name.startsWith('teslasync-design-pack-capture-')).sort();
+    const before = await captureDirs();
+    assert.equal(await runWithRoot(repoRoot), 1);
+    assert.deepEqual(await captureDirs(), before);
+
     const insideWeb = spawnSync(process.execPath, [script, ...args], {
-      encoding: 'utf8', env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: process.cwd() },
+      encoding: 'utf8', env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: webRoot },
     });
     assert.equal(insideWeb.status, 1);
     assert.match(insideWeb.stderr, /outside the web directory/);

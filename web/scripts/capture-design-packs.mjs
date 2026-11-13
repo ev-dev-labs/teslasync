@@ -41,7 +41,7 @@ async function main() {
   }
   const outputRoot = await realpath(process.env.DESIGN_PACK_CAPTURE_OUTPUT_ROOT ?? tmpdir());
   const fromWeb = relative(await realpath(root), outputRoot);
-  if (!fromWeb || (!fromWeb.startsWith(`..${sep}`) && !isAbsolute(fromWeb))) {
+  if (!fromWeb || (fromWeb !== '..' && !fromWeb.startsWith(`..${sep}`) && !isAbsolute(fromWeb))) {
     throw new Error('Capture output root must be outside the web directory');
   }
   const response = await fetch(server.origin, { redirect: 'error', signal: AbortSignal.timeout(5_000) });
