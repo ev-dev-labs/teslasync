@@ -62,7 +62,9 @@ that unaltered screen as `<page>.png` and, when there is more content, save
 scrolling the main region. Repeated navigation and chrome in that sequence are
 intentional; they do not represent a single continuous screen. Each attempt
 clears only that page's previous images, and writes new images only after its
-mock API, browser error and overflow assertions pass. Composite or file-write
+mock API, browser error and overflow assertions pass, even when the subsequent
+touch or prose diagnostics fail. Those images are defect evidence, not passes.
+Composite or file-write
 failures remove both outputs rather than leaving a partial page. Capture test
 artifacts use a port-specific directory separate from the ordinary Playwright
 output: an overlapping harness run removed two active trace files in the
@@ -116,3 +118,15 @@ revisit it at the final gate; it has no passing screenshot evidence.
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
 images. Pack changes may affect their existing presentation tokens, not their
 data, geometry, interactions or image assets.
+
+The dashboard marks the full panel of each protected twin as an application
+composition boundary, including the fullscreen panel. The design-scope
+observer removes app-owned selector markers inside that boundary, including
+on inserted or reparented content, while inherited theme and widget-pack
+tokens remain available. Other widgets and app previews retain their existing
+ownership. Phone target sizes inside these protected widgets still require
+separate verification; preserving geometry alone is not a mobile pass.
+The before/after comparison records each widget at its actual viewport width.
+Because the surrounding desktop shell can change the grid's available width,
+it then measures both widget compositions at the same width; the captured
+images remain the unaltered, naturally sized widgets.

@@ -109,13 +109,53 @@ repetitive matrix, small metadata labels, weak day grouping and a generic
 visual identity. Other viewports, states and the incomplete contrast checks
 remain unverified.
 
+## Protected Digital Twin comparison
+
+The original Tesla-image widgets are isolated from app-wide composition rules
+while retaining inherited theme and widget-pack tokens. With app-wide styling
+off and on, the real Digital Twin and Mini were captured at 360, 390 and
+430px, tablet and desktop in dark and light mode. The comparison checks the
+image origin, ownership, position, dimensions and corner treatment. Phone and
+tablet cases passed directly; desktop grid width increased by 18px with the
+app-wide shell, so geometry was compared at the same width after preserving
+the natural screenshots. Both desktop cases passed the normalized comparison.
+The phone images visibly retain the widget-only composition; this is not a
+pass for the surrounding dashboard or other interaction states.
+
+A separate 390px dashboard diagnostic at saved font scale 1.01 found undersized
+Settings, widget refresh, the twin Open link, All drives and Open vehicle
+targets. It also found 14.1px widget titles and body text, including text
+inside the protected twins. The original widgets' geometry and these mobile
+requirements must both be respected; neither this diagnostic nor dashboard
+mobile accessibility has passed. Its saved screenshots are defect evidence.
+
+The changed DashboardGrid remains 582 → 586 lines against
+`feature/app-design-themes`, with 6 → 6 `GlassPanel`/`ChartContainer` lines.
+
+Checkpoint verification on the protected-surface changes:
+
+```text
+Dashboard and ownership Vitest: Test Files  4 passed (4)
+                               Tests       39 passed (39)
+Twin browser comparison, phone/tablet: 8 passed
+Twin browser comparison, normalized desktop: 2 passed (20.8s)
+npx tsc --noEmit: exit 0 (no output)
+targeted ESLint: exit 0 (no output)
+npm run lint: exit 0
+npm run build: exit 0
+frontend guideline audit: 0 total violations; TypeScript passes
+hook verification: ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES
+390px dashboard touch and body-size diagnostic: 1 failed
+```
+
+The full Vitest suite has not completed cleanly on this checkpoint.
+
 The phone prose rule initially did not apply in forced-colors mode. A browser
 contract reproduced 14px text and now verifies the 16px floor there without
 changing widget text or forced-colors borders. A separate contract exposed a
 Classic metric-grid rule collapsing a two-column widget grid to one column;
 the rule now excludes widget descendants and the isolated normal and
-forced-colors checks preserve the two-column geometry. The real Digital Twin
-and Mini still need visual comparison in the final viewport matrix.
+forced-colors checks preserve the two-column geometry.
 The first 390px forced-colors screenshot revealed that the otherwise
 non-overflowing native chart fallback table squeezed its cells to 10.2px at
 the smallest font scale. The revised 0.85-scale capture preserves the 168

@@ -179,6 +179,45 @@ describe('nearest design boundary isolation', () => {
     await waitFor(() => expect(panel).not.toHaveAttribute('data-app-design-owner'));
   });
 
+  it('keeps protected widget trees isolated when boundaries change or content moves', async () => {
+    selection.packId = 'classic';
+    selection.appWide = true;
+    const view = render(<>
+      <AppDesignBridge />
+      <div data-testid="outer">
+        <div data-testid="protected" data-app-design-preserve="">
+          <div data-testid="protected-child" data-app-part="section" />
+          <section data-app-design-preview {...getAppDesignAttributes('quiet')}>
+            <div data-testid="nested-preview" data-app-part="badge" />
+          </section>
+        </div>
+      </div>
+    </>);
+    const outer = view.getByTestId('outer');
+    const boundary = view.getByTestId('protected');
+    const child = view.getByTestId('protected-child');
+    const nested = view.getByTestId('nested-preview');
+    expect(outer).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic'));
+    expect(boundary).not.toHaveAttribute('data-app-design-owner');
+    expect(child).not.toHaveAttribute('data-app-design-owner');
+    expect(nested).not.toHaveAttribute('data-app-design-owner');
+
+    boundary.removeAttribute('data-app-design-preserve');
+    await waitFor(() => expect(child).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic')));
+    await waitFor(() => expect(nested).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-quiet')));
+    boundary.setAttribute('data-app-design-preserve', '');
+    await waitFor(() => expect(child).not.toHaveAttribute('data-app-design-owner'));
+    await waitFor(() => expect(nested).not.toHaveAttribute('data-app-design-owner'));
+
+    const inserted = document.createElement('span');
+    boundary.append(inserted);
+    await waitFor(() => expect(inserted).not.toHaveAttribute('data-app-design-owner'));
+    outer.append(inserted);
+    await waitFor(() => expect(inserted).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic')));
+    boundary.append(inserted);
+    await waitFor(() => expect(inserted).not.toHaveAttribute('data-app-design-owner'));
+  });
+
   it('shares lifecycle with independently mounted previews and removes all private markers on last release', () => {
     const view = render(<section data-testid="preview" data-app-design-preview {...getAppDesignAttributes('quiet')}>
       <div data-app-part="panel" data-testid="panel" />

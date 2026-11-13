@@ -182,6 +182,11 @@ Page-level sizing rules do not resize widget shells,
 including the protected Digital Twin designs; Classic's page metric-grid
 reflow also excludes widget-owned grids. Nested previews reset app-owned
 role tokens and only targets with the matching owner receive pack treatments.
+`data-app-design-preserve` marks the Digital Twin and Digital Twin Mini
+subtrees, including their fullscreen panels, as widget-owned. App-pack
+selectors must not alter their composition or chrome; inherited theme and
+widget-pack tokens continue to apply. Ownership must update when a protected
+subtree is inserted, reparented or toggled.
 `HistoryListRow` exposes `data-history-primary` and
 `data-history-action-rail`; `RouteDisplay` exposes the `history-route` part.
 The existing inline metric-grid marker identifies its data row. Packs may

@@ -36,6 +36,7 @@ const touchSuffix = touchDevice ? '-touch' : '';
 const captureStates = process.env.DESIGN_PACK_CAPTURE_STATES === '1';
 const dashboardWidgets = [
   ['onboarding-checklist', 'Onboarding'], ['vehicle-hero', 'Vehicle card'],
+  ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini'],
   ['battery-gauge', 'Battery'], ['climate-status', 'Climate'],
   ['recent-drives', 'Recent drives'], ['charge-status', 'Charge status'],
   ['security-status', 'Security'], ['quick-nav', 'Quick navigation'],
@@ -93,6 +94,7 @@ for (const route of routes) {
         return fulfillApiFixture(request, mocks, { json: RULES[0] });
       });
     }
+
     if (route.path === '/resale-vault') {
       await page.route(url => url.pathname === '/api/v1/public/battery-certificate/verify', request => {
         if (request.request().method() !== 'POST'
@@ -711,20 +713,20 @@ for (const route of routes) {
     expect(mainWidth.scrollWidth, JSON.stringify({ ...mainWidth, overflowDetails }))
       .toBeLessThanOrEqual(mainWidth.clientWidth + 1);
     expect(uniqueScrollRegions, 'mobile content has horizontal scrolling regions').toEqual([]);
-    if (touchAudit) {
-      const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
-        [JSON.stringify(target), target])).values());
-      expect(uniqueTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
-    }
-    if (textAudit) {
-      const uniqueText = Array.from(new Map(smallBodyText.map(text =>
-        [JSON.stringify(text), text])).values());
-      expect(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
-    }
     expect(pageErrors, 'uncaught browser errors').toEqual([]);
     await assertMockApiComplete(page, mocks);
     await writeCaptureImages(viewportPath, fullPath, frames);
     if (tableImage) await writeFile(tablePath, tableImage);
+    if (touchAudit) {
+      const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+        [JSON.stringify(target), target])).values());
+      expect.soft(uniqueTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+    }
+    if (textAudit) {
+      const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+        [JSON.stringify(text), text])).values());
+      expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+    }
     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
       await testInfo.attach('contrast-audit.json', {
@@ -766,6 +768,137 @@ for (const route of routes) {
         id: rule.id,
         nodes: rule.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
       })), 'WCAG color contrast violations').toEqual([]);
+    }
+  });
+}
+
+if (routes.some(route => route.path === '/')) {
+  test('preserve the two Digital Twin widgets with the application design enabled', async ({ page }, testInfo) => {
+    const mode = testInfo.project.use.colorScheme === 'light' ? 'light' : 'dark';
+    const width = testInfo.project.use.viewport?.width;
+    const baseURL = testInfo.project.use.baseURL;
+    if (!width || typeof baseURL !== 'string') throw new Error('Capture viewport or origin missing');
+    const saved = createReviewPreference();
+    saved.pack_id = packId;
+    const selection = dashboardWidgets.filter(([id]) => id === 'vehicle-twin' || id === 'digital-twin-mini');
+    if (forcedColors) await page.emulateMedia({ forcedColors: 'active' });
+    const mocks = await installPackReview(
+      page, mode, width < 768 ? 390 : width, false, selection, true, saved, baseURL,
+      { font_scale: fontScale },
+    );
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    const directory = resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots', packId,
+      `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}`);
+    const paths = selection.flatMap(([id]) => ['widget-only', 'app-wide'].map(state =>
+      resolve(directory, `dashboard--${id}--${state}.png`)));
+    await mkdir(directory, { recursive: true });
+    await Promise.all(paths.map(path => rm(path, { force: true })));
+    const images: Buffer[] = [];
+    const widgetWidths = new Map<string, number>();
+    const measurements: Array<Array<{ label: string; x: number; y: number; width: number; height: number; radius: string }>> = [];
+
+    for (const appWide of [false, true]) {
+      saved.app_wide = appWide;
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await waitForHarnessReady(page, mocks);
+      if (appWide) await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', packId);
+      else await expect(page.locator('html')).not.toHaveAttribute('data-app-design-pack');
+      const current: Array<{ label: string; x: number; y: number; width: number; height: number; radius: string }> = [];
+      for (const [id] of selection) {
+        const widget = page.locator(`[data-widget-id="pack-review-${id}"]`);
+        await expect(widget).toHaveAttribute('data-app-design-preserve', '');
+        await expect(widget).not.toHaveAttribute('data-app-design-owner');
+        await expect(widget.locator('[data-app-design-owner]')).toHaveCount(0);
+        const studio = widget.locator('[data-vehicle-studio]');
+        const twin = studio.locator('[data-vehicle-twin]');
+        const photo = twin.locator('img').first();
+        await expect(studio).toBeVisible();
+        await expect(twin).toBeVisible();
+        await expect.poll(() => photo.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        const photoSource = await photo.getAttribute('src');
+        expect(photoSource).not.toBeNull();
+        expect(new URL(photoSource!).hostname).toBe('static-assets.tesla.com');
+        const naturalBounds = await widget.boundingBox();
+        if (!naturalBounds) throw new Error(`${id}: widget has no bounds`);
+        images.push(await widget.screenshot({ animations: 'disabled' }));
+        const originalWidth = await widget.evaluate(element => ({
+          value: (element as HTMLElement).style.getPropertyValue('width'),
+          priority: (element as HTMLElement).style.getPropertyPriority('width'),
+        }));
+        if (!appWide) widgetWidths.set(id, naturalBounds.width);
+        else {
+          const referenceWidth = widgetWidths.get(id);
+          if (referenceWidth === undefined) throw new Error(`${id}: reference width missing`);
+          if (Math.abs(naturalBounds.width - referenceWidth) > 1) {
+            await widget.evaluate((element, width) => {
+              (element as HTMLElement).style.setProperty('width', `${width}px`, 'important');
+            }, referenceWidth);
+            await page.evaluate(() => new Promise<void>(resolveFrame =>
+              requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()))));
+          }
+        }
+        current.push(...await widget.evaluate((element, widgetId) => {
+          const container = element.getBoundingClientRect();
+          const selectors = [
+            '[data-role="widget-shell-header"]', '[data-testid="widget-body"]',
+            '[data-vehicle-studio]', '[data-vehicle-twin]', '[data-vehicle-twin] > img',
+          ];
+          const nodes: Array<[string, Element]> = [['widget', element]];
+          for (const selector of selectors) {
+            const node = element.querySelector(selector);
+            if (!node) throw new Error(`${widgetId}: missing ${selector}`);
+            nodes.push([selector, node]);
+          }
+          element.querySelectorAll('[data-app-part~="badge"]').forEach((node, index) => {
+            nodes.push([`badge ${index}`, node]);
+          });
+          return nodes.map(([label, node]) => {
+            const box = node.getBoundingClientRect();
+            return {
+              label: `${widgetId} ${label}`,
+              x: box.x - container.x, y: box.y - container.y,
+              width: box.width, height: box.height,
+              radius: getComputedStyle(node).borderRadius,
+            };
+          });
+        }, id));
+        if (appWide) {
+          await widget.evaluate((element, original) => {
+            const style = (element as HTMLElement).style;
+            if (original.value) style.setProperty('width', original.value, original.priority);
+            else style.removeProperty('width');
+          }, originalWidth);
+        }
+      }
+      measurements.push(current);
+      await assertMockApiComplete(page, mocks);
+    }
+
+    expect(errors).toEqual([]);
+    expect(measurements[0].length).toBeGreaterThanOrEqual(12);
+    expect(measurements[1]).toHaveLength(measurements[0].length);
+    for (let index = 0; index < selection.length; index += 1) {
+      await testInfo.attach(`${selection[index][0]}-widget-only.png`, {
+        body: images[index], contentType: 'image/png',
+      });
+      await testInfo.attach(`${selection[index][0]}-app-wide.png`, {
+        body: images[selection.length + index], contentType: 'image/png',
+      });
+    }
+    for (let index = 0; index < measurements[0].length; index += 1) {
+      const before = measurements[0][index];
+      const after = measurements[1][index];
+      expect(after.label).toBe(before.label);
+      for (const dimension of ['x', 'y', 'width', 'height'] as const) {
+        expect(Math.abs(after[dimension] - before[dimension]), `${before.label} ${dimension}`)
+          .toBeLessThanOrEqual(1);
+      }
+      expect(after.radius, `${before.label} corner treatment`).toBe(before.radius);
+    }
+    for (let index = 0; index < selection.length; index += 1) {
+      await writeFile(paths[index * 2], images[index]);
+      await writeFile(paths[index * 2 + 1], images[selection.length + index]);
     }
   });
 }
