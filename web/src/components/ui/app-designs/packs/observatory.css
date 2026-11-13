@@ -1,38 +1,68 @@
-/* Scientific monitoring: separate scope, readings, plots and evidence rails. */
+/* Observatory: quiet observation, calibrated frames and separated readings. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(var(--border-default) 0.75px, transparent 0.75px);
-    background-size: 1.5rem 1.5rem;
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"]:where([data-app-design-owner~="pack-observatory"]) {
-    --app-rule-style: solid; --app-nav-radius: var(--radius-pill); --app-shadow: var(--elevation-1);
-    --panel-radius: var(--radius-lg); --panel-shadow: var(--elevation-1); --panel-shadow-hover: var(--elevation-1);
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--surface-1);
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-3);
+    --app-card-radius: var(--radius-md);
+    --app-card-shadow: var(--elevation-1);
+    --app-nav-radius: var(--radius-sm);
+    --app-control-radius: var(--radius-sm);
+    --app-control-surface: var(--app-surface-raised);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-bold);
+    --app-display-tracking: calc(var(--tracking, 0em) - 0.01em);
+    --app-content-density: 1.1;
+    --app-chart-surface: var(--app-surface-panel);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--app-surface-raised);
+    --app-grid-rule: var(--border-strong);
+    --app-conversation-surface: var(--app-surface-raised);
+    --app-conversation-radius: var(--radius-md);
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-end: 1px solid var(--border-strong); background-color: var(--surface-1);
+    border-inline-end: 1px solid var(--border-default); background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px solid var(--border-strong); background-color: var(--surface-1);
+    border-block-end: 1px solid var(--border-default); background-color: var(--app-surface-panel, var(--surface-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-observatory"]) {
-    border-radius: var(--radius-pill); border: 1px solid transparent;
+    border-radius: var(--app-nav-radius, var(--radius-sm));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-color: var(--border-strong); background-color: var(--surface-2); background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1)); font-weight: var(--font-weight-semibold);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"]):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: inset 0 -2px 0 var(--theme-accent);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-observatory"]) {
     display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
-    gap: calc(var(--density-gap) * 2); padding-block: var(--density-pad-x);
-    border-block-end: 1px solid var(--border-strong);
+    gap: calc(var(--density-gap) * 1.5); padding-block: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-observatory"]) {
+    align-items: flex-start;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-route-focus-target]:where([data-app-design-owner~="pack-observatory"]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-card-title]:where([data-app-design-owner~="pack-observatory"]) {
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--app-display-tracking, var(--tracking));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-observatory"]) {
     display: flex; flex-wrap: wrap; align-items: center; gap: var(--density-gap); margin-inline-start: auto;
@@ -40,96 +70,163 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-observatory"]) {
     row-gap: calc(var(--density-gap) * 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="section"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-start: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] section[data-app-part~="section"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-start: 1px solid var(--border-default); padding-block-start: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--border-strong); background-color: var(--surface-1);
-    border-radius: var(--radius-lg); box-shadow: var(--elevation-1); background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 5%, var(--surface-1)), var(--surface-1) 5.5rem);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] section[data-operational-brief][data-app-part~="section"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-start: 0;
+    padding-block-start: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-observatory"]) {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-    gap: var(--density-gap); align-items: stretch;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"]:not([data-app-tone], [data-app-card-kind], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-observatory"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not([data-app-tone], [data-app-card-kind], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-md));
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: calc(var(--density-gap) * 1.25);
+    align-items: stretch;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone], [data-metric-track], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     display: flex; flex-direction: column; align-items: stretch; gap: var(--density-gap);
-    padding: var(--density-pad-y) var(--density-pad-x); border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md); background-color: var(--surface-2); box-shadow: none;
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-label"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
-    max-inline-size: 34ch; padding-block-end: calc(var(--density-gap) / 2);
-    border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:is([data-app-metric="card"], [data-app-metric="stat-card"]):not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    background-image:
+      linear-gradient(var(--border-strong), var(--border-strong)),
+      linear-gradient(var(--border-strong), var(--border-strong));
+    background-size: 0.5rem 1px, 1px 0.5rem;
+    background-position: right 0.25rem top 0.5rem, right 0.5rem top 0.25rem;
+    background-repeat: no-repeat;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-value"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-gap);
-    font-variant-numeric: tabular-nums lining-nums; text-align: start;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    position: relative;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field"]:where(:not([data-app-field-kind="choice"])):where([data-app-design-owner~="pack-observatory"]) {
-    row-gap: var(--density-gap); padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"])::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 0.25rem;
+    inset-inline-end: 0.25rem;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    background:
+      linear-gradient(var(--border-strong), var(--border-strong)) center / 0.5rem 1px no-repeat,
+      linear-gradient(var(--border-strong), var(--border-strong)) center / 1px 0.5rem no-repeat;
+    pointer-events: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="stat-card"]:not([data-app-tone]) [data-app-part~="metric-heading"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-end: 1px solid var(--border-default);
+    padding-block-end: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-    background-color: var(--surface-1); box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-label"]:not(:where([data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: calc(var(--tracking, 0em) + 0.01em);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-value"]:not(:where([data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: calc(var(--tracking, 0em) - 0.01em);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field"]:where(:not([data-app-field-kind="choice"])):not(:where([data-app-card-kind="conversation"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    row-gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):not(:where([data-app-card-kind="conversation"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: calc(var(--tracking, 0em) + 0.01em);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):not(:where([data-role="helix-composer"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border: 1px solid var(--control-border);
+    border-radius: var(--app-control-radius, var(--radius-sm));
+    background-color: var(--app-control-surface, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-radius: var(--radius-sm);
+    border-radius: var(--app-control-radius, var(--radius-sm));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-observatory"]) { box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--border-strong); background-color: var(--surface-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-observatory"]) {
+    border: 1px solid var(--control-border);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--border-strong); border-radius: var(--radius-md);
-    padding: calc(var(--density-gap) / 2); gap: var(--density-gap);
+    border: 1px solid var(--border-default); border-radius: var(--radius-md);
+    padding: calc(var(--density-gap) / 2); gap: calc(var(--density-gap) / 2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid transparent; border-radius: var(--radius-sm);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-color: var(--border-strong); background-color: var(--surface-2); font-weight: var(--font-weight-semibold); box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):not([data-app-variant="primary"], [data-app-variant="danger"]):where([data-app-design-owner~="pack-observatory"]) {
+    border-color: var(--control-border-hover);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    font-weight: var(--font-weight-semibold);
+    box-shadow: inset 0 -2px 0 var(--theme-accent);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-2); border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm); padding: var(--density-pad-y) var(--density-pad-x);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-toolbar"]:not([data-app-toolbar-slot]):not(:where([data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-end: 1px solid var(--app-grid-rule, var(--border-default));
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:not([data-app-table-variant="embedded"]):not(:where([data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    font-variant-numeric: tabular-nums lining-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-2); border-block-end: 2px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:not([data-app-table-variant="embedded"]):not(:where([data-app-card-kind="conversation"] *)) > [data-app-part~="table-head"]:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
+    border-block-end: 1px solid var(--app-grid-rule, var(--border-default));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-observatory"]) {
-    padding: var(--density-pad-y) var(--density-pad-x); border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px solid var(--border-default);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:not([data-app-table-variant="embedded"]):not(:where([data-app-card-kind="conversation"] *)) [data-app-part~="table-head"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-observatory"]) {
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: calc(var(--tracking, 0em) + 0.01em);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-row"][aria-selected="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    outline: 1px solid var(--border-strong); outline-offset: -1px; background-color: var(--surface-2);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:not([data-app-table-variant="embedded"]):not(:where([data-app-card-kind="conversation"] *)) [data-app-part~="table-row"]:is([aria-selected="true"], [data-selected="true"]):where([data-app-design-owner~="pack-observatory"]) {
+    outline: 1px solid var(--control-border-hover); outline-offset: -1px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-observatory"]) {
-    padding-block: var(--density-pad-y); border-block-start: 1px solid var(--border-strong); gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="pagination"]:not(:where([data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-block-start: 1px solid var(--border-default); gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-    border-radius: var(--radius-lg); box-shadow: var(--elevation-3);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"], [data-app-tone]):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-overlay, var(--surface-3));
+    border-color: var(--control-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px solid var(--border-strong); padding-block: var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-observatory"]) {
-    padding-block: var(--density-pad-x);
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-start: 1px solid var(--border-strong); background-color: var(--surface-2);
-    padding-block: var(--density-pad-y);
+    border-block-start: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    border-inline-start-color: var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-role="helix-side-panel"] > div:first-child:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-end-color: var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-role="helix-composer"], [data-app-part~="conversation-composer"]):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-conversation-surface, var(--surface-2));
+    border-color: var(--control-border);
+    border-radius: var(--app-conversation-radius, var(--radius-md));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-role="helix-composer"]:focus-within:where([data-app-design-owner~="pack-observatory"]) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="conversation-message"][data-role="assistant"] > [data-app-card-kind="conversation"]:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-conversation-surface, var(--surface-2));
+    border-color: var(--border-default);
+    border-radius: var(--app-conversation-radius, var(--radius-md));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
     box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"]:not([data-app-tone]):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-overlay, var(--surface-3));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid transparent; border-radius: var(--radius-sm);
@@ -140,28 +237,45 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):focus-visible:where([data-app-design-owner~="pack-observatory"]) {
     outline: 2px solid var(--focus-ring); outline-offset: -2px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md); box-shadow: none;
+  /* The small crossed registrations frame the chart without touching its plot. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart"][data-chart-variant="panel"]:not([data-app-tone], [style*="background"]):not(:where([data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    background-image:
+      linear-gradient(var(--border-strong), var(--border-strong)),
+      linear-gradient(var(--border-strong), var(--border-strong)),
+      linear-gradient(var(--border-strong), var(--border-strong)),
+      linear-gradient(var(--border-strong), var(--border-strong));
+    background-size: 0.75rem 1px, 1px 0.75rem, 0.75rem 1px, 1px 0.75rem;
+    background-position: left 0.375rem top 0.75rem, left 0.75rem top 0.375rem, right 0.375rem top 0.75rem, right 0.75rem top 0.375rem;
+    background-repeat: no-repeat;
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-md));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px solid var(--border-strong); padding-block-end: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-chart-variant="panel"] > [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-observatory"]) {
+    border-block-end: 1px solid var(--border-default);
+    padding-block-end: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-1); box-shadow: inset 0 0 0 1px var(--border-default);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-plot"]:not(:where([data-chart-variant="embedded"] *, [data-widget-pack] *)):where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--app-chart-surface, var(--surface-1));
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-chart-variant="embedded"] [data-chart-viewport]:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: transparent;
+    box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart"] .recharts-cartesian-grid line:where([data-app-design-owner~="pack-observatory"]) {
-    stroke: var(--border-strong); stroke-dasharray: 1 5;
+    stroke: var(--app-chart-grid, var(--border-default)); stroke-dasharray: 1 5;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart"] :where(.recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line):where([data-app-design-owner~="pack-observatory"]) {
     stroke: var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart"] .recharts-cartesian-axis-tick-value:where([data-app-design-owner~="pack-observatory"]) {
-    fill: var(--text-secondary);
+    fill: var(--app-chart-ink, var(--text-secondary));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block: 1px solid var(--border-default); padding-block: var(--density-pad-y);
-    gap: calc(var(--density-gap) * 2); justify-content: flex-start;
+    border-block-start: 1px solid var(--border-default); padding-block: calc(var(--density-pad-y) / 2);
+    gap: var(--density-gap); justify-content: flex-start;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="map"]:where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid var(--border-strong); border-radius: var(--radius-md);
@@ -177,19 +291,18 @@
     border: 1px solid var(--border-strong); border-block-start-style: solid;
     background-color: var(--surface-1); padding: var(--density-pad-y); gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-observatory"]) {
-    padding-block: var(--density-pad-y); border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-list="ranked"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-observatory"]) {
+    padding-block: calc(var(--density-pad-y) / 2); border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-observatory"]) {
     border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
     row-gap: calc(var(--density-gap) * 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-observatory"]) {
-    border-width: 1px; border-style: solid; border-radius: var(--radius-pill);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="badge"]:where([data-app-design-owner~="pack-observatory"]) {
+    border-radius: var(--radius-pill);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-radius: var(--radius-sm); border-inline-start-width: 2px;
-    padding: var(--density-pad-y) var(--density-pad-x);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="feedback"]:not([data-app-tone], [role="alert"]):not(:where([data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-radius: var(--radius-sm);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-observatory"]) {
     border: 1px dashed var(--border-strong); border-radius: var(--radius-md);
@@ -198,7 +311,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="error"]:where([data-app-design-owner~="pack-observatory"]) {
     border-inline-start: 2px solid var(--semantic-danger); padding-inline-start: var(--density-pad-x);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="loading"]:not([data-app-part~="metric"]):where([data-app-design-owner~="pack-observatory"]) {
     border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-observatory"]) {
@@ -209,18 +322,36 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-observatory"]) {
     outline: 2px solid var(--focus-ring); outline-offset: 2px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    border: 2px solid var(--semantic-danger);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"][aria-invalid="true"]:not([type="checkbox"], [type="radio"], [role="switch"], [data-app-control-kind="composite"]):where([data-app-design-owner~="pack-observatory"]) {
+    border-color: var(--semantic-danger);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :is([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-observatory"]) {
-    box-shadow: none; border-style: dotted;
-    background-color: var(--surface-2); color: var(--text-secondary);
+    box-shadow: none;
+    cursor: not-allowed;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-observatory"]) {
     border-style: solid; cursor: progress;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--control-bg-hover); border-block-end-width: 2px;
+    background-color: var(--control-bg-hover);
+  }
+}
+@media screen and (min-width: 1280px) and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-observatory"]) {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, clamp(15rem, calc(30vw - 9rem), 18rem)) minmax(24.5rem, 1.2fr);
+  }
+}
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-action-zone="context"] [aria-haspopup="menu"]:where([data-app-design-owner~="pack-observatory"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-action-zone="context"] [aria-haspopup="menu"] > span.truncate:where([data-app-design-owner~="pack-observatory"]) {
+    max-inline-size: min(24rem, 55vw);
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
 }
 @media screen and (forced-colors: none) and (hover: hover) {
@@ -236,25 +367,54 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-observatory"]) {
     border-color: var(--control-border-hover);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-row"]:hover:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-2);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table"]:not([data-app-table-variant="embedded"]) [data-app-part~="table-row"]:not([data-app-tone], [aria-selected="true"], [data-selected="true"], [data-virtual-spacer]):not(:where([data-app-card-kind="conversation"] *)):hover:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--control-bg-hover);
   }
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-observatory"]) {
-    inline-size: 100%;
-    padding-inline-start: 0;
-    border-inline-start-width: 0;
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-observatory"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
+    align-items: center;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-observatory"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.375rem), 1fr));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(10.375rem, calc(10.375rem * var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"][data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    padding-inline: calc(var(--density-pad-x) * 0.75);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="card"] [data-app-part~="metric-label"] > span:not(:where([data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: break-word;
+    text-overflow: clip;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="conversation-composer-actions"]:where([data-app-design-owner~="pack-observatory"]) {
+    margin-inline-start: auto;
+  }
 }
-
-
-
+@media screen and (max-width: 1023px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-observatory"]) {
+    row-gap: calc(var(--density-gap) * 0.75);
+  }
+}
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-observatory"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-observatory"]) {
+    flex: 1 0 max-content;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-observatory"]) {
+    inline-size: auto;
+    max-inline-size: 100%;
+    padding-inline-start: 0;
+    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-widget-pack] :where([data-app-metric="headline"], [data-app-metric="stat-card"]) :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-observatory"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-testid="widget-body"] + div a[href]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-observatory"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+}

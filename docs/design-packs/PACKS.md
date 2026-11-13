@@ -81,7 +81,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: physical-looking measurement groupings with clear labels.
 - Signature: concentric rings and understated inset borders.
 
-### 16. Observatory (`observatory`) - in progress
+### 16. Observatory (`observatory`) - passed-with-notes
 - Mood: patient scientific observation.
 - Distinction: expansive plots and carefully separated reference readings.
 - Signature: fine crosshair-like alignment marks around instruments.
