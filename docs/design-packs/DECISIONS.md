@@ -1,5 +1,15 @@
 # Design pack decisions
 
+## Parallel review capture
+
+The shared preview/dev server is owned by the orchestrator. The pack capture
+runner accepts a pack, page list and viewport-project list and requires an
+already-running local server; its Playwright configuration never starts one.
+For pack reviews it saves one viewport image per page and project, scans the
+scrolling content without saving extra frames, and keeps each pack's test
+artifacts separate. Existing stitched images are historical evidence. The
+two-round limit applies to subsequent per-pack reviews, not past captures.
+
 ## Identity and existing preferences
 
 Keep all 27 persisted IDs, names and aliases. The existing verified,

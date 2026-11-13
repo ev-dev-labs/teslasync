@@ -36,6 +36,7 @@ const forcedColorsSuffix = forcedColors ? '-forced-colors' : '';
 const touchDevice = process.env.DESIGN_PACK_TOUCH_DEVICE === '1';
 const touchSuffix = touchDevice ? '-touch' : '';
 const captureStates = process.env.DESIGN_PACK_CAPTURE_STATES === '1';
+const viewportOnly = process.env.DESIGN_PACK_VIEWPORT_ONLY === '1';
 const threeChargers = process.env.DESIGN_PACK_ENERGY_THREE_CHARGERS === '1';
 const chargerSuffix = threeChargers ? '-three-chargers' : '';
 const dashboardWidgets = [
@@ -821,7 +822,7 @@ for (const route of routes) {
       await waitForHarnessReady(page, mocks);
       const next = await main.evaluate(element => element.scrollTop);
       if (next <= position.top) throw new Error('Main content could not be scrolled for capture');
-      frames.push(await page.screenshot({ animations: 'disabled' }));
+      if (!viewportOnly) frames.push(await page.screenshot({ animations: 'disabled' }));
       if (width < 768) horizontalScrollRegions.push(...await findHorizontalScrollRegions(page));
       if (touchAudit) smallTouchTargets.push(...await findSmallTouchTargets(page));
       if (textAudit) smallBodyText.push(...await findSmallBodyText(page));
