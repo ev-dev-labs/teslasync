@@ -41,7 +41,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: geometric content blocks and segmented controls establish a lively rhythm.
 - Signature: asymmetric heading and action alignment.
 
-### 8. Pixel Cockpit (`v7`) - in progress
+### 8. Pixel Cockpit (`v7`) - passed-with-notes
 - Mood: digital workshop with retro-computing precision.
 - Distinction: squared instrument panels and a compact technical grid.
 - Signature: crisp stepped corners and small calibration marks.
