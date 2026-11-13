@@ -116,7 +116,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: layered transparent-looking surfaces without obscuring content.
 - Signature: a crisp reflected edge instead of a heavy shadow.
 
-### 23. Deco Grand (`deco`) - in progress
+### 23. Deco Grand (`deco`) - passed-with-notes
 - Mood: refined architectural grandeur.
 - Distinction: formal mastheads and symmetrical editorial sections.
 - Signature: paired fine rules and carefully proportioned corners.
