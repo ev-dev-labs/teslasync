@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { access, mkdir, readFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { load } from 'js-yaml';
 import sharp from 'sharp';
@@ -10,7 +10,7 @@ import { isSsePath, resolveApiFixture } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
-import { CAPTURE_VIEWPORTS, captureRoutes, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();
@@ -48,6 +48,24 @@ test('capture image failures do not leave partial evidence', async () => {
   await expect(writeCaptureImages(viewportPath, resolve(directory, 'missing', 'full.png'), [frame, frame]))
     .rejects.toMatchObject({ code: 'ENOENT' });
   await expect(access(viewportPath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('ordinary captures preserve separate interactive-state evidence', async () => {
+  const directory = test.info().outputPath('capture-state-preservation');
+  await mkdir(directory, { recursive: true });
+  const viewportPath = resolve(directory, 'page.png');
+  const fullPath = resolve(directory, 'page--full.png');
+  const tablePath = resolve(directory, 'page--table.png');
+  const image = Buffer.from('existing evidence');
+  await Promise.all([viewportPath, fullPath, tablePath].map(path => writeFile(path, image)));
+
+  await clearCaptureImages(viewportPath, fullPath, tablePath, false);
+  await expect(access(viewportPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(access(fullPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(await readFile(tablePath)).toEqual(image);
+
+  await clearCaptureImages(viewportPath, fullPath, tablePath, true);
+  await expect(access(tablePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 test('mobile captures detect visible nested scrolling without flagging clipped content or text inputs', async ({ page }) => {

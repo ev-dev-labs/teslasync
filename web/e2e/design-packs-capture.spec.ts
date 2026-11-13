@@ -6,7 +6,7 @@ import { expect, type Locator } from '@playwright/test';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { test } from './app-design-test';
-import { BODY_ROLE_SELECTOR, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { BODY_ROLE_SELECTOR, clearCaptureImages, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { cardLayoutContractPaths, resolveCardLayoutContractSource } from './cardLayoutContractSources';
@@ -78,7 +78,7 @@ for (const route of routes) {
     const tablePath = resolve(directory, `${route.file}--table.png`);
     let tableImage: Buffer | undefined;
     await mkdir(directory, { recursive: true });
-    await Promise.all([rm(viewportPath, { force: true }), rm(fullPath, { force: true }), rm(tablePath, { force: true })]);
+    await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates);
     if (forcedColors) await page.emulateMedia({ forcedColors: 'active' });
     const saved = createReviewPreference();
     saved.pack_id = packId;

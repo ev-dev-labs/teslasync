@@ -81,9 +81,20 @@ that unaltered screen as `<page>.png` and, when there is more content, save
 `<page>--full.png` as a vertical sequence of actual viewport captures while
 scrolling the main region. Repeated navigation and chrome in that sequence are
 intentional; they do not represent a single continuous screen. Each attempt
-clears only that page's previous images, and writes new images only after its
+clears that page's previous viewport and full images; a normal capture leaves
+its separate interactive-table image intact. State captures clear the old
+table image before attempting to replace it. New images are written only after its
 mock API, browser error and overflow assertions pass, even when the subsequent
 touch or prose diagnostics fail. Those images are defect evidence, not passes.
+The cleanup contract and a real Charging recapture verified that an existing
+table image survives an ordinary run:
+
+```text
+2 passed (683ms)
+1 passed (19.7s)
+Interactive table unchanged: True
+```
+
 Composite or file-write
 failures remove both outputs rather than leaving a partial page. Capture test
 artifacts use a port-specific directory separate from the ordinary Playwright

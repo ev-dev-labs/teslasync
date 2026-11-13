@@ -182,6 +182,13 @@ export async function findSmallBodyText(page: Page) {
   }));
 }
 
+export async function clearCaptureImages(
+  viewportPath: string, fullPath: string, tablePath: string, captureStates: boolean,
+): Promise<void> {
+  const paths = captureStates ? [viewportPath, fullPath, tablePath] : [viewportPath, fullPath];
+  await Promise.all(paths.map(path => rm(path, { force: true })));
+}
+
 export async function writeCaptureImages(viewportPath: string, fullPath: string, frames: Buffer[]): Promise<void> {
   const first = frames[0];
   if (!first) throw new Error('A capture needs at least one viewport image');
