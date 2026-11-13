@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -29,4 +32,36 @@ test('capture configuration never manages the server lifecycle', async () => {
   const config = await readFile(new URL('../../e2e/design-packs-capture.config.ts', import.meta.url), 'utf8');
   assert.match(config, /DESIGN_PACK_CAPTURE_BASE_URL/);
   assert.doesNotMatch(config, /\bwebServer\s*:/);
+});
+
+test('capture output stays outside Vite and cleans only its own directory after failure', async () => {
+  const scratch = await mkdtemp(join(tmpdir(), 'teslasync-capture-test-'));
+  const server = createServer((_, response) => { response.writeHead(200).end('ok'); });
+  try {
+    await writeFile(join(scratch, 'keep.txt'), 'keep');
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const args = ['--pack', 'not-a-pack', '--pages', 'dashboard', '--viewports', 'phone-390',
+      '--base-url', `http://127.0.0.1:${address.port}`];
+    const child = spawn(process.execPath, [script, ...args], {
+      env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: scratch },
+      stdio: 'ignore',
+    });
+    const status = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', resolve);
+    });
+    assert.equal(status, 1);
+    assert.deepEqual(await readdir(scratch), ['keep.txt']);
+
+    const insideWeb = spawnSync(process.execPath, [script, ...args], {
+      encoding: 'utf8', env: { ...process.env, DESIGN_PACK_CAPTURE_OUTPUT_ROOT: process.cwd() },
+    });
+    assert.equal(insideWeb.status, 1);
+    assert.match(insideWeb.stderr, /outside the web directory/);
+  } finally {
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    await rm(scratch, { recursive: true, force: true });
+  }
 });

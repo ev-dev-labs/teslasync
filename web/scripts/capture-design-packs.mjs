@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +39,11 @@ async function main() {
     || server.username || server.password || server.pathname !== '/' || server.search || server.hash) {
     throw new Error('The capture server must be a local HTTP(S) origin');
   }
+  const outputRoot = await realpath(process.env.DESIGN_PACK_CAPTURE_OUTPUT_ROOT ?? tmpdir());
+  const fromWeb = relative(await realpath(root), outputRoot);
+  if (!fromWeb || (!fromWeb.startsWith(`..${sep}`) && !isAbsolute(fromWeb))) {
+    throw new Error('Capture output root must be outside the web directory');
+  }
   const response = await fetch(server.origin, { redirect: 'error', signal: AbortSignal.timeout(5_000) });
   if (!response.ok) throw new Error(`Capture server returned HTTP ${response.status}`);
 
@@ -47,7 +53,8 @@ async function main() {
     '--grep=capture ',
     ...projects.map(project => `--project=${project}`),
   ];
-  const outputDir = await mkdtemp(join(tmpdir(), 'teslasync-design-pack-capture-'));
+  const outputDir = join(outputRoot, `teslasync-design-pack-capture-${randomUUID()}`);
+  await mkdir(outputDir);
   try {
     const child = spawn(process.execPath, args, {
       cwd: root,

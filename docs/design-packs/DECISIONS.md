@@ -28,7 +28,16 @@ evidence must be reported, not silently replaced.
 Capture invocations now use a unique temporary Playwright output directory
 outside the Vite root and remove that directory after completion; the
 requested review images remain under `shots`. Direct use of the capture
-configuration also defaults outside the Vite root.
+configuration also defaults outside the Vite root. Workers restricted to
+project-local scratch can set `DESIGN_PACK_CAPTURE_OUTPUT_ROOT` to their own
+existing pack shots directory; the runner creates and removes only its unique
+child. Roots inside `web` are rejected. The focused runner tests reported:
+
+```text
+tests 4
+pass 4
+fail 0
+```
 
 The first eight dashboard captures were compared side by side without taking
 new screenshots. Horizon Loft looked too close to Classic and Concierge, and
