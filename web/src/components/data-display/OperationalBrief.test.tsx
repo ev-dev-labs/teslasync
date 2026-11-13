@@ -52,6 +52,7 @@ describe('OperationalBrief', () => {
     expect(container.querySelector('[data-max-per-row]')).toHaveAttribute('data-max-per-row', '3');
     expect(Array.from(container.querySelectorAll('[data-operational-metric-bank]'), row => row.getAttribute('data-columns')))
       .toEqual(['3', '3']);
+    expect(screen.getAllByRole('list').flatMap(list => within(list).getAllByRole('listitem'))).toHaveLength(6);
 
     rerender(<OperationalBrief eyebrow="Evidence" title="Balanced rows" description="Source metrics"
       statusLabel="Returned" maxPerRow={3} metrics={metrics.slice(0, 4)} />);

@@ -382,15 +382,7 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal:
     >
       {import.meta.env.DEV && <TooltipTextSentry content={content} tooltipId={tooltipId} />}
       {enrichedChild}
-      {/* Hidden bubbles must not expand scroll bounds when unrelated content moves the trigger. */}
-      {portal ? <AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal> : (
-        <span className={cn(
-          'pointer-events-none absolute inset-0 overflow-hidden supports-[overflow:clip]:overflow-clip',
-          !dismissed && 'group-hover/tip:overflow-visible group-focus-within/tip:overflow-visible',
-        )}>
-          {bubble}
-        </span>
-      )}
+      {portal ? <AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal> : bubble}
     </span>
   );
 }

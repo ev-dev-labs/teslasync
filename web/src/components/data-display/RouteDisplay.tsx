@@ -111,13 +111,13 @@ export function RouteDisplay({
 
   let body: React.ReactNode;
   if (!startLabel && !endLabel) {
-    body = <span className="truncate opacity-60">{noLocation}</span>;
+    body = <span className="truncate">{noLocation}</span>;
   } else if (isRoundTrip) {
     body = (
       <span className="truncate">
         {startLabel}
         {!isExplicitSingle && (
-          <span className="opacity-60"> ↻ {t('route.roundTrip', 'round trip')}</span>
+          <span> ↻ {t('route.roundTrip', 'round trip')}</span>
         )}
       </span>
     );
@@ -131,6 +131,7 @@ export function RouteDisplay({
 
   return (
     <div
+      data-app-part="history-route"
       data-testid={testId}
       className={cn(
         'text-xs text-[var(--text-secondary)] flex items-center gap-1 truncate',

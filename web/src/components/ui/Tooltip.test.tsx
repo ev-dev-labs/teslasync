@@ -295,7 +295,7 @@ describe('Tooltip — multiline', () => {
     }
   });
 
-  it('clips an unopened tooltip and reclamps it when its trigger is focused', () => {
+  it('reclamps an unopened tooltip when its trigger is focused', () => {
     let left = 100;
     const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
     const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
@@ -311,7 +311,6 @@ describe('Tooltip — multiline', () => {
       const tip = screen.getByRole('tooltip');
       const trigger = screen.getByRole('button', { name: 'Info' });
       expect(tip.style.left).toBe('-32px');
-      expect(tip.parentElement).toHaveClass('overflow-hidden', 'supports-[overflow:clip]:overflow-clip');
       left = 340;
       fireEvent.focus(trigger);
       expect(tip.style.left).toBe('-62px');

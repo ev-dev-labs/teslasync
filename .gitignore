@@ -62,6 +62,7 @@ docs/.vitepress/dist/
 # Test artifacts
 test-results/
 web/test-results/
+web/test-results-design-packs-capture/
 web/test-results-pwa-assets/
 web/test-results-guard/
 web/playwright-report/

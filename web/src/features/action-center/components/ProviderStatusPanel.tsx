@@ -71,7 +71,7 @@ export function ProviderStatusPanel({ providers, loading }: ProviderStatusPanelP
                 })}
               </Caption>
               {provider.limitations.map((limitation) => (
-                <Text data-app-part="record-context" as="p" key={limitation} variant="caption" className="mt-1">
+                <Text data-app-part="record-context" as="p" key={limitation} variant="bodySm" className="mt-1">
                   {limitation}
                 </Text>
               ))}

@@ -168,6 +168,50 @@ pixel overrides that bypass user scaling. Preserve full rich captions and units.
 Owners: `web\src\lib\tokens.ts:169–234`, `web\tailwind.config.js:145–185`,
 `web\src\index.css:18–26`, `web\src\components\ui\FontProvider.tsx`.
 
+**Design-pack mobile extension (in progress):** An owner-qualified pack may
+style the existing canonical body-role class combinations without changing
+`Text` semantics. Classic uses `--app-body-size` for phone prose, feedback,
+field labels, field values and labeled buttons, with a 1rem minimum even when
+the saved scale is below 1;
+larger scales still apply and the stored preference is unchanged. Short
+captions and metric labels remain distinct. This explicit mobile floor is an
+exception to the scaling rule above, not evidence that every phone surface
+already meets it. The sizing and reflow rules also apply in forced-colors
+mode without replacing system colors or removing its control borders.
+Page-level sizing rules do not resize widget shells,
+including the protected Digital Twin designs; Classic's page metric-grid
+reflow also excludes widget-owned grids. Nested previews reset app-owned
+role tokens and only targets with the matching owner receive pack treatments.
+`HistoryListRow` exposes `data-history-primary` and
+`data-history-action-rail`; `RouteDisplay` exposes the `history-route` part.
+The existing inline metric-grid marker identifies its data row. Packs may
+reflow these phone rows and reserve the action rail only alongside the primary
+line, without changing row links, selection, actions, values or widget layout.
+The charging cost heatmap exposes cost-specific grid, axis, day and day-label markers;
+a phone pack may wrap each day's 24 ordered hourly cells into two aligned
+12-hour rows, while preserving all cells, their titles and the accessible data
+table. Desktop composition and chart data remain unchanged.
+The interactive Charging Patterns heatmap instead wraps each weekday's 24
+ordered buttons into six-hour phone rows, with visible hour labels and 44px
+targets. On coarse-pointer tablets and wider touch devices, the available
+chart width selects balanced six-, eight-, twelve- or twenty-four-hour rows;
+the plot may grow vertically rather than shrink the targets. Its roving
+keyboard order, detail popover and accessible table remain unchanged; its
+fine-pointer desktop viewport keeps the existing height.
+
+On phones and coarse-pointer tablets, the two charging heatmap data tables opt into a stacked presentation
+with `data-mobile-stack-table` and localized `data-mobile-label` values.
+Their native table, headers, rows, cell names and order remain intact; the
+shared data grid is not changed. The weekly chart's forced-colors alternative
+uses localized `data-heatmap-label-*` values on its page section to label the
+stacked cells without altering the shared chart source. It keeps its complete
+table in a bounded scroll region. Browser checks cover table semantics in
+Chrome; other engines still need verification.
+
+On Classic phones, actionable page-level freshness dots get a 44px target,
+including while a refresh is busy. Read-only indicators, edge-aligned dots and
+widget-owned layouts keep their original geometry.
+
 ### Font-size inheritance adoption — MDC-013 / MDC-020
 
 **Additive decision for `phase3-font-inheritance-contract`:** Accordion's
@@ -348,6 +392,11 @@ Tooltip keeps `w-80`, wrapping, side offsets, measured boundary/viewport correct
 computed inline max-width/translation, hover/focus/touch/Escape and described-by
 identity; only its static viewport cap receives a name.
 
+The app-design layer may take an owner-qualified, non-portaled Tooltip bubble
+out of scroll layout while it is hidden or Escape-dismissed. Its existing
+local positioning is restored on hover or focus; the trigger, focus ring,
+portal behavior and measured active placement remain owned by Tooltip.
+
 Affected owners must recheck after adoption: `overlay-geometry-tokens` proves
 generated CSS equivalence, responsive precedence and unchanged existing tokens
 at `web\tailwind.config.js` with its existing token test owner;
@@ -494,6 +543,10 @@ OperationalBrief captions remain fully visible, including rich specialist
 context. Loading never fabricates values; its details drawer honors the summary's
 loading suppression. Status/scope/freshness/review actions come from real sources,
 not copied example labels. Keep calculation ownership in domain adapters.
+Its `data-operational-metric-list` is one accessible list; metric banks retain
+their children and order. The Classic presentation may reflow those banks on
+smaller screens, preserving the explicit single-column case and the underlying
+metrics, labels and actions.
 Public reports use `usePublicOperationalMetrics(metrics, preferences)` with
 explicit existing viewer/source preferences and the same pure formatter, without
 authenticated settings/workspace subscriptions or new public data exposure.

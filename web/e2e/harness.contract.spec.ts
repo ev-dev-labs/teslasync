@@ -1,13 +1,447 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { access, mkdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { load } from 'js-yaml';
+import sharp from 'sharp';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
 import { isSsePath, resolveApiFixture } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
+import { CAPTURE_VIEWPORTS, captureRoutes, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+
+test('design pack captures cover registered application routes with unique filenames', () => {
+  const routes = captureRoutes();
+  expect(routes.length).toBeGreaterThan(200);
+  expect(new Set(routes.map(route => route.file)).size).toBe(routes.length);
+  expect(routes).toEqual(expect.arrayContaining([
+    expect.objectContaining({ template: '/', file: 'dashboard' }),
+    expect.objectContaining({ template: '/drives/:id', path: '/drives/412' }),
+    expect.objectContaining({ template: '/vehicles/:id', path: '/vehicles/7' }),
+  ]));
+  expect(routes.some(route => route.template === '/watch')).toBe(false);
+  expect(selectCaptureRoutes('dashboard,/drives').map(route => route.file)).toEqual(['dashboard', 'drives']);
+  expect(() => selectCaptureRoutes('not-a-page')).toThrow('Unknown design pack capture page');
+  expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
+    [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
+  ]);
+});
+
+test('capture image failures do not leave partial evidence', async () => {
+  const directory = test.info().outputPath('capture-artifacts');
+  await mkdir(directory, { recursive: true });
+  const viewportPath = resolve(directory, 'page.png');
+  const fullPath = resolve(directory, 'page--full.png');
+  const frame = await sharp({
+    create: { width: 4, height: 3, channels: 4, background: '#112233' },
+  }).png().toBuffer();
+
+  await writeCaptureImages(viewportPath, fullPath, [frame, frame]);
+  expect(await readFile(viewportPath)).toEqual(frame);
+  expect(await sharp(fullPath).metadata()).toMatchObject({ width: 4, height: 6 });
+
+  await writeCaptureImages(viewportPath, fullPath, [frame]);
+  await expect(access(fullPath)).rejects.toMatchObject({ code: 'ENOENT' });
+
+  await expect(writeCaptureImages(viewportPath, resolve(directory, 'missing', 'full.png'), [frame, frame]))
+    .rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(access(viewportPath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('mobile captures detect visible nested scrolling without flagging clipped content or text inputs', async ({ page }) => {
+  await page.setContent(`
+    <div id="scrolling" style="width: 100px; overflow-x: auto"><div style="width: 200px">Reading</div></div>
+    <div id="clipped" style="width: 100px; overflow-x: hidden"><div style="width: 200px">Reading</div></div>
+    <div style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0)">
+      <div id="screen-reader-scroll" style="width: 100px; overflow-x: auto"><div style="width: 200px">Alternative</div></div>
+    </div>
+    <div id="static-clip" style="position: static; clip: rect(0, 0, 0, 0); width: 100px; overflow-x: auto"><div style="width: 200px">Visible</div></div>
+    <input style="width: 100px" value="A deliberately long editable field value">
+  `);
+  expect(await findHorizontalScrollRegions(page)).toEqual([
+    expect.objectContaining({ id: 'scrolling', clientWidth: 100, scrollWidth: 200 }),
+    expect.objectContaining({ id: 'static-clip', clientWidth: 100, scrollWidth: 200 }),
+  ]);
+});
+
+test('mobile touch audit reports visible small targets and respects labelled inputs', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setContent(`
+    <button id="large" style="width:44px;height:44px">OK</button>
+    <button id="small" style="width:30px;height:30px">No</button>
+    <label id="label" style="display:inline-flex;width:44px;height:44px">
+      <input type="checkbox" style="width:12px;height:12px"> Mark
+    </label>
+    <button id="hidden" style="display:none;width:20px;height:20px">Hidden</button>
+    <button id="outside" style="position:absolute;left:500px;width:20px;height:20px">Outside</button>
+  `);
+  expect(await findSmallTouchTargets(page)).toEqual([
+    expect.objectContaining({ id: 'small', width: 30, height: 30 }),
+  ]);
+});
+
+test('mobile text audit reports visible small prose without flagging hidden or off-screen text', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setContent(`
+    <p id="small" style="font-size:14px">Small paragraph</p>
+    <span id="small-role" data-typography-role="bodySm" style="font-size:15px">Small body role</span>
+    <span id="small-role-class" class="text-sm text-[var(--text-secondary)]" style="font-size:15px">Small body role class</span>
+    <p id="caption" data-typography-role="caption" style="font-size:12px">Short metadata</p>
+    <p id="feedback" data-app-part="feedback-title" style="font-size:14px">Feedback title</p>
+    <div data-app-part="list-row">
+      <div data-app-part="history-route" id="route" style="font-size:12px">Route</div>
+      <div data-history-primary><span id="primary" style="font-size:14px">Time</span></div>
+      <div data-app-metric-grid="inline" id="metrics" style="font-size:12px">Distance</div>
+    </div>
+    <label id="field-label" data-app-part="field-label" style="font-size:14px">Search</label>
+    <input id="field-input" data-app-part="field-control" placeholder="Search drives" style="font-size:14px" />
+    <button id="field-button" data-app-part="button" style="font-size:14px">Apply</button>
+    <p id="large" style="font-size:16px">Readable paragraph</p>
+    <p id="hidden" style="display:none;font-size:12px">Hidden paragraph</p>
+    <p id="outside" style="position:absolute;left:500px;font-size:12px">Outside paragraph</p>
+  `);
+  expect(await findSmallBodyText(page)).toEqual([
+    expect.objectContaining({ id: 'small', size: 14 }),
+    expect.objectContaining({ id: 'small-role', size: 15 }),
+    expect.objectContaining({ id: 'small-role-class', size: 15 }),
+    expect.objectContaining({ id: 'feedback', size: 14 }),
+    expect.objectContaining({ id: 'route', size: 12 }),
+    expect.objectContaining({ id: 'primary', size: 14 }),
+    expect.objectContaining({ id: 'metrics', size: 12 }),
+    expect.objectContaining({ id: 'field-label', size: 14 }),
+    expect.objectContaining({ id: 'field-input', size: 14 }),
+    expect.objectContaining({ id: 'field-button', size: 14 }),
+  ]);
+});
+
+test('Classic phone prose respects its minimum without resizing widget content', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setContent(`
+    <style>
+      .text-sm { font-size: 14px; }
+      .text-xs { font-size: 12px; }
+      .widget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 180px; }
+      .brief-list, .brief-bank { display: flex; }
+      .page-actions { border-inline-start: 3px solid CanvasText; }
+    </style>
+    <p id="page-body" class="text-sm text-[var(--text-secondary)]" data-app-design-owner="pack-classic">Page</p>
+    <label id="page-field-label" class="text-sm" data-app-part="field-label" data-app-design-owner="pack-classic">Search</label>
+    <input id="page-field" class="text-sm" data-app-part="field-control" data-app-design-owner="pack-classic" />
+    <button id="page-button" class="text-sm" data-app-part="button" data-app-design-owner="pack-classic">Apply</button>
+    <div id="page-actions" class="page-actions" data-app-part="page-actions" data-app-design-owner="pack-classic"></div>
+    <div data-operational-brief-compact="true">
+      <div id="page-brief" class="brief-list" data-operational-metric-list data-app-design-owner="pack-classic">
+        <div id="page-bank" class="brief-bank" role="list" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic">
+          <span id="page-brief-value" role="listitem" data-operational-value data-app-design-owner="pack-classic">One</span><span role="listitem">Two</span>
+        </div>
+      </div>
+    </div>
+    <div data-app-part="list-row" data-app-design-owner="pack-classic">
+      <div data-history-primary data-app-design-owner="pack-classic">
+        <span id="history-primary" class="text-sm" data-app-design-owner="pack-classic">Time</span>
+      </div>
+      <div id="history-route" class="text-xs" data-app-part="history-route" data-app-design-owner="pack-classic">Route</div>
+      <div id="history-metrics" class="text-xs" data-app-metric-grid="inline" data-app-design-owner="pack-classic">
+        <span id="history-metric" class="text-xs" data-app-metric="inline" data-app-design-owner="pack-classic">Distance</span>
+      </div>
+    </div>
+    <div id="page-tooltip" data-app-part="chart-tooltip" data-app-design-owner="pack-classic">
+      <p id="tooltip-label" class="text-xs" data-chart-tooltip-label data-app-design-owner="pack-classic">Date</p>
+      <span id="tooltip-value" class="text-xs" data-chart-tooltip-value data-app-design-owner="pack-classic">
+        Value <span id="tooltip-unit" class="text-xs" data-app-design-owner="pack-classic">kWh</span>
+      </span>
+      <p id="tooltip-copy" class="text-xs" data-chart-tooltip-copy data-app-design-owner="pack-classic">Recorded values</p>
+    </div>
+    <svg><path id="chart-cursor" class="recharts-rectangle recharts-tooltip-cursor" fill="#ccc" data-app-design-owner="pack-classic"></path></svg>
+    <div data-widget-pack="classic">
+      <p id="widget-body" class="text-sm text-[var(--text-secondary)]" data-app-design-owner="pack-classic">Widget</p>
+      <input id="widget-field" class="text-sm" data-app-part="field-control" data-app-design-owner="pack-classic" />
+      <div id="widget-brief" class="brief-list" data-operational-metric-list data-app-design-owner="pack-classic">
+        <div id="widget-bank" class="brief-bank" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic"><span>One</span><span>Two</span></div>
+      </div>
+      <div id="widget-grid" class="widget-grid" data-app-part="metric-grid" data-app-design-owner="pack-classic"><span>One</span><span>Two</span></div>
+      <div data-app-part="chart-tooltip" data-app-design-owner="pack-classic">
+        <p id="widget-tooltip" class="text-xs" data-chart-tooltip-label data-app-design-owner="pack-classic">Date</p>
+      </div>
+      <svg><path id="widget-cursor" class="recharts-rectangle recharts-tooltip-cursor" fill="#ccc" data-app-design-owner="pack-classic"></path></svg>
+    </div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+    element.style.setProperty('--font-scale', '0.85');
+    element.style.setProperty('--surface-2', '#123456');
+    element.style.setProperty('--elevation-2', '0px 2px 6px rgba(0, 0, 0, 0.4)');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  await expect(page.locator('#page-body')).toHaveCSS('font-size', '16px');
+  for (const id of ['page-field-label', 'page-field', 'page-button']) {
+    await expect(page.locator(`#${id}`)).toHaveCSS('font-size', '16px');
+  }
+  await expect(page.locator('#page-actions')).toHaveCSS('border-left-width', '0px');
+  await expect(page.locator('#page-brief')).toHaveCSS('display', 'grid');
+  await expect(page.locator('#page-bank')).toHaveCSS('display', 'contents');
+  await expect(page.locator('#page-brief-value')).toHaveCSS('font-size', '17px');
+  await expect(page.locator('#page-brief').getByRole('list')).toHaveCount(1);
+  await expect(page.locator('#page-brief').getByRole('listitem')).toHaveCount(2);
+  await expect(page.locator('#history-primary')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#history-route')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#history-metrics')).toHaveCSS('font-size', '12px');
+  await expect(page.locator('#history-metric')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#tooltip-label')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#tooltip-value')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#tooltip-unit')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#tooltip-copy')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#page-tooltip')).toHaveCSS('font-variant-numeric', 'tabular-nums');
+  await expect(page.locator('#page-tooltip')).toHaveCSS('box-shadow', 'rgba(0, 0, 0, 0.4) 0px 2px 6px 0px');
+  await expect(page.locator('#chart-cursor')).toHaveCSS('fill', 'rgb(18, 52, 86)');
+  await expect(page.locator('#widget-cursor')).toHaveCSS('fill', 'rgb(204, 204, 204)');
+  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '14px');
+  await expect(page.locator('#widget-field')).toHaveCSS('font-size', '14px');
+  await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
+  await expect(page.locator('#widget-tooltip')).toHaveCSS('font-size', '12px');
+  await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '1.35'));
+  await expect(page.locator('#tooltip-label')).toHaveCSS('font-size', '21.6px');
+  await expect(page.locator('#tooltip-copy')).toHaveCSS('font-size', '21.6px');
+  await expect(page.locator('#page-field')).toHaveCSS('font-size', '21.6px');
+  await expect(page.locator('#widget-tooltip')).toHaveCSS('font-size', '12px');
+  await page.emulateMedia({ forcedColors: 'active' });
+  await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '0.85'));
+  await expect(page.locator('#page-body')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#page-field')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#page-actions')).toHaveCSS('border-left-width', '3px');
+  await expect(page.locator('#page-brief')).toHaveCSS('display', 'grid');
+  await expect(page.locator('#page-bank')).toHaveCSS('display', 'contents');
+  await expect(page.locator('#page-brief-value')).toHaveCSS('font-size', '17px');
+  await expect(page.locator('#page-brief').getByRole('list')).toHaveCount(1);
+  await expect(page.locator('#page-brief').getByRole('listitem')).toHaveCount(2);
+  await expect(page.locator('#history-primary')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#tooltip-copy')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('#widget-body')).toHaveCSS('font-size', '14px');
+  await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
+});
+
+test('Classic enlarges phone refresh targets without changing widget or read-only dots', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setContent(`
+    <style>
+      .original { box-sizing: border-box; padding: 0; border: 0; width: 28px !important; height: 28px !important; min-width: 0 !important; min-height: 0 !important; }
+      [class~="!w-2.5"] { width: 10px !important; }
+    </style>
+    <button id="refresh" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button>
+    <button id="busy" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic" aria-disabled="true" aria-busy="true"></button>
+    <button id="readonly" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic" disabled></button>
+    <button id="edge" class="original !h-7 !w-2.5" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button>
+    <div data-widget-pack="classic"><button id="widget-refresh" class="original !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button></div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  for (const id of ['refresh', 'busy']) {
+    await expect(page.locator(`#${id}`)).toHaveCSS('width', '44px');
+    await expect(page.locator(`#${id}`)).toHaveCSS('height', '44px');
+  }
+  await expect(page.locator('#readonly')).toHaveCSS('width', '28px');
+  await expect(page.locator('#edge')).toHaveCSS('width', '10px');
+  await expect(page.locator('#widget-refresh')).toHaveCSS('width', '28px');
+  await page.emulateMedia({ forcedColors: 'active' });
+  await expect(page.locator('#refresh')).toHaveCSS('width', '44px');
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(page.locator('#refresh')).toHaveCSS('width', '28px');
+});
+
+test.describe('Classic touch tablet controls', () => {
+  test.use({ hasTouch: true });
+
+  test('keeps actionable controls reachable without resizing widget or read-only dots', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.setContent(`
+      <style>
+        .small { box-sizing: border-box; padding: 0; border: 0; width: 28px !important; height: 28px !important; }
+        .dot { min-width: 0 !important; min-height: 0 !important; }
+        input { width: 200px; height: 36px; }
+      </style>
+      <button id="action" class="small" data-app-part="button" data-app-design-owner="pack-classic"></button>
+      <a id="link" class="small" href="#content" data-app-design-owner="pack-classic" style="display:inline-flex"></a>
+      <div>
+        <input id="field" data-app-part="field-control" data-app-design-owner="pack-classic" />
+        <div>
+          <button data-app-part="button" data-app-design-owner="pack-classic"></button>
+          <button data-app-part="button" data-app-design-owner="pack-classic"></button>
+        </div>
+      </div>
+      <button id="refresh" class="small dot !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic"></button>
+      <button id="readonly" class="small dot !h-7" data-app-part="status" data-app-icon-only="true" data-app-design-owner="pack-classic" disabled></button>
+      <div data-widget-pack="classic"><button id="widget-action" class="small" data-app-part="button" data-app-design-owner="pack-classic"></button></div>
+    `);
+    await page.locator('html').evaluate(element => {
+      element.setAttribute('data-app-design-pack', 'classic');
+      element.setAttribute('data-app-design-owner', 'pack-classic');
+      element.style.setProperty('--density-gap', '6px');
+    });
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+    expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+    for (const id of ['action', 'link', 'refresh']) {
+      await expect(page.locator(`#${id}`)).toHaveCSS('width', '44px');
+      await expect(page.locator(`#${id}`)).toHaveCSS('height', '44px');
+    }
+    await expect(page.locator('#field')).toHaveCSS('height', '44px');
+    await expect(page.locator('#field')).toHaveCSS('padding-right', '100px');
+    await expect(page.locator('#readonly')).toHaveCSS('width', '28px');
+    await expect(page.locator('#widget-action')).toHaveCSS('width', '28px');
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(page.locator('#action')).toHaveCSS('width', '44px');
+  });
+
+  test('uses evenly divided heatmap rows at each available width', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.setContent(`
+      <div data-chart-key="charging-weekly-heatmap">
+        <div id="viewport" data-chart-viewport data-app-design-owner="pack-classic" style="width:300px">
+          <div id="grid" data-heatmap-grid data-app-design-owner="pack-classic" style="display:grid;gap:2px">
+            ${Array.from({ length: 24 }, (_, hour) => `<button data-heatmap-slot="${hour}" data-app-design-owner="pack-classic">${hour}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    `);
+    await page.locator('html').evaluate(element => {
+      element.setAttribute('data-app-design-pack', 'classic');
+      element.setAttribute('data-app-design-owner', 'pack-classic');
+    });
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+    for (const [width, columns] of [[300, 6], [420, 8], [600, 12], [1200, 24]]) {
+      await page.locator('#viewport').evaluate((element, value) => { element.style.width = `${value}px`; }, width);
+      await expect.poll(async () => page.locator('#grid').evaluate(element =>
+        getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(columns);
+      const cells = await page.locator('#grid button').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));
+      expect(Math.min(...cells)).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('keeps the forced-colors fallback caption and headers readable on touch tablets', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.setContent(`
+      <style>.tiny { font-size: 12px; }</style>
+      <figure data-chart-key="charging-weekly-heatmap">
+        <div data-chart-alternative>
+          <table data-app-part="table" data-app-design-owner="pack-classic">
+            <caption class="tiny" data-app-design-owner="pack-classic">Weekly heatmap</caption>
+            <thead data-app-design-owner="pack-classic"><tr>
+              <th class="tiny" data-app-design-owner="pack-classic">Day</th>
+            </tr></thead>
+            <tbody data-app-design-owner="pack-classic"><tr data-app-design-owner="pack-classic">
+              <td data-app-design-owner="pack-classic">Sunday</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </figure>
+    `);
+    await page.locator('html').evaluate(element => {
+      element.setAttribute('data-app-design-pack', 'classic');
+      element.setAttribute('data-app-design-owner', 'pack-classic');
+      element.style.setProperty('--font-scale', '0.85');
+    });
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(page.locator('caption')).toHaveCSS('font-size', '16px');
+    await expect(page.locator('th')).toHaveCSS('font-size', '16px');
+    await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '1.35'));
+    await expect(page.locator('caption')).toHaveCSS('font-size', '21.6px');
+    await expect(page.locator('th')).toHaveCSS('font-size', '21.6px');
+  });
+});
+
+test('Classic stacked chart fallback uses localized headers without changing cell names', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setContent(`
+    <section data-app-design-owner="pack-classic" data-heatmap-label-day="Jour"
+      data-heatmap-label-hour="Heure" data-heatmap-label-sessions="Seances"
+      data-heatmap-label-energy="Energie" data-heatmap-label-status="Statut">
+      <figure data-chart-key="charging-weekly-heatmap">
+        <div data-chart-alternative>
+          <table data-app-design-owner="pack-classic">
+            <thead data-app-design-owner="pack-classic"><tr>
+              <th>Jour</th><th>Heure</th><th>Seances</th><th>Energie</th><th>Statut</th>
+            </tr></thead>
+            <tbody data-app-design-owner="pack-classic"><tr data-app-design-owner="pack-classic">
+              <td data-app-design-owner="pack-classic">lun</td><td data-app-design-owner="pack-classic">00:00</td>
+              <td data-app-design-owner="pack-classic">1</td><td data-app-design-owner="pack-classic">2 kWh</td>
+              <td data-app-design-owner="pack-classic">OK</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </figure>
+    </section>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  const cells = page.locator('tbody td');
+  const labels = () => cells.evaluateAll(elements => elements.map(element => getComputedStyle(element, '::before').content));
+  const expected = ['Jour', 'Heure', 'Seances', 'Energie', 'Statut'].map(label => `${JSON.stringify(label)} / ""`);
+  expect(await labels()).toEqual(expected);
+  await expect(page.getByRole('cell').first()).toHaveAccessibleName('lun');
+  await page.emulateMedia({ forcedColors: 'active' });
+  expect(await labels()).toEqual(expected);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  expect(await labels()).toEqual(Array(5).fill('none'));
+});
+
+test('hidden app-owned tooltips do not enlarge scroll regions', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      .group\\/tip { position: relative; display: inline-flex; }
+      .absolute { position: absolute; }
+    </style>
+    <div id="scroller" style="width:160px;overflow:auto">
+      <span class="group/tip">
+        <button id="trigger">Details</button>
+        <span id="bubble" class="absolute" data-app-part="tooltip" data-app-design-owner="pack-classic"
+          style="left:300px;width:180px;opacity:0">Additional details</span>
+      </span>
+    </div>
+  `);
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8') });
+  await page.mouse.move(350, 750);
+  const bubble = page.locator('#bubble');
+  await expect(bubble).toHaveCSS('position', 'fixed');
+  expect(await page.locator('#scroller').evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
+  await page.locator('#trigger').focus();
+  await expect(bubble).toHaveCSS('position', 'absolute');
+  await bubble.evaluate(element => element.classList.add('!opacity-0'));
+  await expect(bubble).toHaveCSS('position', 'fixed');
+  expect(await page.locator('#scroller').evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
+});
+
+test('Classic cost heatmap reflow does not resize the separate interactive heatmap or widgets', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setContent(`
+    <style>.cost { min-width: 600px } .pattern { min-width: 640px }</style>
+    <div id="cost" class="cost" data-cost-heatmap-grid data-app-design-owner="pack-classic"></div>
+    <div id="pattern" class="pattern" data-heatmap-grid data-app-design-owner="pack-classic"></div>
+    <div data-widget-pack="classic">
+      <div id="widget-cost" class="cost" data-cost-heatmap-grid data-app-design-owner="pack-classic"></div>
+    </div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  await expect(page.locator('#cost')).toHaveCSS('min-width', '0px');
+  await expect(page.locator('#pattern')).toHaveCSS('min-width', '640px');
+  await expect(page.locator('#widget-cost')).toHaveCSS('min-width', '600px');
+});
 
 test('declared route scenarios are unique', () => {
   const keys = QUALITY_ROUTES.flatMap((route) =>

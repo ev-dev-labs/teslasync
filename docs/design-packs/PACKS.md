@@ -4,7 +4,7 @@ Order follows the existing manifest. `todo` means not yet redesigned or
 reviewed; `in progress` is not a pass. A pass requires the complete visual,
 mobile and verification loop in the corresponding review.
 
-### 1. Classic (`classic`) - todo
+### 1. Classic (`classic`) - in progress
 - Mood: calm, confident and familiar.
 - Distinction: balanced cards and a simple reading rhythm provide the neutral baseline.
 - Signature: a fine frame with a restrained active-navigation underline.

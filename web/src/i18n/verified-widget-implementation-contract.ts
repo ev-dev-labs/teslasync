@@ -582,7 +582,7 @@ export function catalogBeforeWidgetImplementation<T extends Record<string, unkno
     for (const part of parts.slice(0, -1)) parent = parent[part] as Record<string, unknown>;
     const leaf = parts[parts.length - 1];
     expect(parent[leaf], change.path).toEqual(change.current);
-    if ('previous' in change) parent[leaf] = change.previous;
+    if ('previous' in change) parent[leaf] = structuredClone(change.previous);
     else delete parent[leaf];
   }
   for (const addition of transition.catalogAdditions) {

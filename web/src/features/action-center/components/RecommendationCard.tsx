@@ -97,7 +97,7 @@ export function RecommendationCard({
               {recommendation.title}
             </PanelTitle>
             <Text as="p" variant="bodySm" className="mt-1 break-words">{recommendation.summary}</Text>
-            <Text as="p" size="sm" color="muted" className="mt-2 break-words">{recommendation.rationale}</Text>
+            <Text as="p" variant="bodySm" className="mt-2 break-words">{recommendation.rationale}</Text>
             <Text as="p" variant="caption" className="mt-3 break-words">
               {recommendation.vehicle?.display_name ??
                 t('actionCenter.card.allVehicles', 'All vehicles')} ·{' '}

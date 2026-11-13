@@ -14,6 +14,37 @@ Use restrained, accessible depth and outlines rather than decorative colored
 glows. The design contract requires semantic colors, focus visibility, reduced
 motion and forced-color support regardless of the pack.
 
+On phones, enforce a 16px minimum for Classic's body-role and brief prose even
+when the saved font scale is below 1. Larger saved scales still apply, and the
+saved preference is not changed. These page-level rules exclude widget shells
+to protect the Digital Twin layouts; other widget text still needs review.
+Use the same floor for page-owned field labels, field values and labeled
+buttons to keep forms legible and avoid undersized mobile input text. The
+browser contract checks the floor and widget exclusion at the saved scale
+extremes; production-route coverage is still in progress.
+Apply the phone sizing and layout rules in forced-colors mode too, while
+leaving system color and control-border treatment intact. A browser contract
+checks the 16px floor at the smallest saved scale; full-page forced-colors
+and fallback-table review are still required.
+
+Preserve the exact-source i18n contracts on `Text`, `Tooltip`, `FreshnessDot`
+and `ChartContainer`. Classic identifies existing body roles through their
+canonical classes rather than changing `Text`'s markup. Enlarge actionable
+page-level freshness targets through owner-scoped CSS, including their busy
+state; leave read-only, edge-aligned and widget-owned indicators unchanged.
+For app-owned local tooltips only, remove an
+opacity-hidden or Escape-dismissed bubble from scroll layout; restore its
+original positioning while active. This does not change the trigger, portal
+or focus behavior. Body-class matching is a scoped diagnostic, not proof
+that every kind of body copy has been identified.
+
+For the weekly chart's forced-colors table, localize the mobile field labels
+on the existing page section and inherit them into generated labels. This
+preserves the shared chart's exact source and its native accessible table.
+The normal data-table alternatives continue using their existing localized
+cell attributes. Chrome checks cell names and labels; cross-browser behavior
+remains unverified.
+
 ## Visual evidence
 
 Use isolated synthetic API fixtures and block external requests for screenshot
@@ -23,6 +54,62 @@ production routes and known detail fixtures; missing fixtures, runtime errors,
 overflow and incomplete captures are failures, not visual passes. Do not mark
 a pack passed until its screenshots have been inspected and all requested
 gates have actually run.
+
+The application scrolls its `main` element rather than the document, so a
+normal Playwright full-page screenshot only captures the first screen. Save
+that unaltered screen as `<page>.png` and, when there is more content, save
+`<page>--full.png` as a vertical sequence of actual viewport captures while
+scrolling the main region. Repeated navigation and chrome in that sequence are
+intentional; they do not represent a single continuous screen. Each attempt
+clears only that page's previous images, and writes new images only after its
+mock API, browser error and overflow assertions pass. Composite or file-write
+failures remove both outputs rather than leaving a partial page. Capture test
+artifacts use a port-specific directory separate from the ordinary Playwright
+output: an overlapping harness run removed two active trace files in the
+390px probe, so those two results must be rerun. Set
+`DESIGN_PACK_CAPTURE_OUTPUT_DIR` to a unique task-owned directory for each
+concurrent run, and pass a unique `--output` directory to other Playwright
+commands in a shared workspace.
+
+`DESIGN_PACK_CHECK_TOUCH=1` additionally fails a phone capture when a visible
+interactive target is smaller than 44 x 44 CSS pixels. This is a diagnostic
+for rendered states, not proof for unopened menus, off-screen overlays or
+assistive technology. `DESIGN_PACK_CHECK_CONTRAST=1` runs Axe's contrast rule
+and reports incomplete checks separately; incomplete findings require manual
+review and are not passes.
+`DESIGN_PACK_CHECK_TEXT_SIZE=1` checks visible unclassified paragraphs, explicit
+body roles, feedback copy and history-row primary, route and inline metric
+text against the 16px phone minimum. Explicit captions and metric labels are
+treated as metadata. It is a diagnostic, not proof for unclassified text,
+nested styles or unopened states.
+
+For the interactive Charging Patterns heatmap, keep every weekday/hour slot,
+the existing roving keyboard order, detail popover and data table. On phones,
+wrap each day into six-hour rows with 44px targets instead of horizontally
+scrolling a 24-column chart. On coarse-pointer tablets, choose balanced
+six-, eight-, twelve- or twenty-four-hour rows from the plot's available
+width and stack the native data table. The chart viewport follows its
+content's height on touch devices; fine-pointer desktop sizing is preserved.
+The 768px touch-tablet dark/light production captures passed geometry,
+keyboard, open-table and overflow checks, with 20 incomplete Axe nodes per
+mode. A forced-colors tablet capture found 12px fallback captions and
+headers; the responsive rule was extended and the production recapture
+passed in both modes. One Axe node per forced-colors capture still requires
+manual review. Incomplete Axe findings are not contrast passes.
+
+The current capture excludes `/connect`, `/glance`, `/onboarding`, `/s/:token`,
+`/watch` and `/year-review/:year`: those standalone routes do not all use the
+authenticated shell or its verified design bridge. Their coverage and
+identity-safe theming remain unresolved and block a full-app pass.
+
+### Temporarily skipped: period comparison capture
+
+The initial 390px probe, a targeted phone/desktop retry, and an isolated
+desktop diagnostic all failed to settle `/period-compare`. The browser trace
+recorded 250 successful `/api/v1/settings` reads in about 10 seconds, with
+repeated query-observer subscriptions. Do not mask the churn or change API
+behavior as part of this visual-only work. Skip this route temporarily and
+revisit it at the final gate; it has no passing screenshot evidence.
 
 ## Protected surfaces
 

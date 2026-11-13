@@ -163,7 +163,7 @@ describe('LiveMonitorKpiBand — layout & accessibility', () => {
     const { container } = renderBand({ connected: false, bufferCount: 123, uniqueSignals: 21 });
     const grid = container.querySelector('[data-operational-brief] [role="list"]');
     expect(grid).not.toBeNull();
-    expect(grid).toHaveClass('flex', 'flex-wrap');
+    expect(grid?.querySelector('[data-operational-metric-bank]')).toHaveClass('flex', 'flex-wrap');
     expect(grid).toHaveAttribute('data-columns', '3');
     expectAllSixLabels();
     expect(screen.getByText('123')).toBeInTheDocument();

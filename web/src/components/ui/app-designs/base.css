@@ -20,6 +20,17 @@
      previews. Fonts, colors, density, semantic roles and palettes stay owned
      by their existing providers. A local pack may refine these later. */
   [data-app-design-preview] {
+    --app-body-size: 1em;
+    --app-body-leading: normal;
+    --app-heatmap-day-width: 2.5rem;
+    --app-heatmap-gap: 0;
+    --app-brief-heading-basis: auto;
+    --app-brief-copy-size: 1em;
+    --app-brief-value-size: 1em;
+    --app-touch-size: 2.75rem;
+    --app-header-action-gap: 0px;
+    --app-heatmap-axis-size: 1em;
+    --app-heatmap-touch-size: 2.75rem;
     --app-feedback-signal: var(--text-secondary);
     --panel-radius: var(--radius-lg);
     --panel-shadow: var(--elevation-1);
@@ -133,6 +144,12 @@
   [data-app-design-owner]:where([data-app-part~="overlay"], [data-app-part~="dialog"], [data-app-part~="popover"], [data-app-part~="tooltip"]) {
     /* Positioning, portal layers, focus traps and dismissal stay at their owners. */
     overflow-wrap: anywhere;
+  }
+
+  /* Opacity-hidden, non-portaled bubbles must not enlarge scrollable bounds. */
+  .group\/tip:not(:hover):not(:focus-within) > [data-app-part~="tooltip"][data-app-design-owner],
+  .group\/tip > [data-app-part~="tooltip"].\!opacity-0[data-app-design-owner] {
+    position: fixed;
   }
 }
 

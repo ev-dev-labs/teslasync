@@ -1,10 +1,17 @@
 /* Classic: a quiet frame, balanced reading groups and explicit action rails. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-brief-value-size);
+  }
+}
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-classic"]) {
     background-color: var(--bg-app);
     background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--theme-accent) 4%, transparent), transparent 62%);
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-classic"]) {
     border-inline-end: 1px solid var(--border-default);
@@ -37,8 +44,6 @@
     flex-wrap: wrap;
     justify-content: space-between;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-classic"]) {
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
     align-items: center;
     gap: var(--density-gap);
@@ -56,7 +61,7 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--elevation-1);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
     gap: var(--density-gap);
@@ -164,6 +169,9 @@
     box-shadow: var(--elevation-2);
     font-variant-numeric: tabular-nums;
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] .recharts-rectangle.recharts-tooltip-cursor:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    fill: var(--surface-2);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="map"]:where([data-app-design-owner~="pack-classic"]) {
     border-radius: var(--radius-lg);
     outline: 1px solid var(--border-default);
@@ -216,21 +224,324 @@
     background-color: var(--skeleton-bg);
   }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (max-width: 1023px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list][data-columns="1"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"][data-operational-metric-bank]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: contents;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list] > [data-app-part~="feedback"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+  }
+}
+@media screen and (min-width: 640px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-heatmap-axis-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-axis-hour]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-heatmap-axis-size);
+    line-height: var(--app-body-leading, 1.4);
+    white-space: nowrap;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-axis-hour]:nth-child(2n + 3):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    visibility: hidden;
+  }
+}
+@media screen and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-heatmap-touch-size: 2.75rem;
+    --app-touch-size: var(--app-heatmap-touch-size);
+    --app-body-size: var(--app-heatmap-axis-size);
+    --app-body-leading: 1.4;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: repeat(6, minmax(var(--app-heatmap-touch-size), 1fr));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid] :is([data-heatmap-axis-spacer], [data-heatmap-axis-hour]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-day-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+    padding-block-start: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-slot]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    height: var(--app-heatmap-touch-size);
+    min-width: var(--app-heatmap-touch-size);
+    min-height: var(--app-heatmap-touch-size);
+    transform: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-hour-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: inline;
+    font-size: var(--app-heatmap-axis-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-viewport]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    contain: layout;
+    container: classic-heatmap / inline-size;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-tooltip] :is([data-chart-tooltip-label], [data-chart-tooltip-copy]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-heatmap-axis-size);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  @container classic-heatmap (min-width: 24rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(8, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+  @container classic-heatmap (min-width: 36rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(12, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+  @container classic-heatmap (min-width: 72rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(24, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+}
+@media screen and (min-width: 768px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-touch-size: 2.75rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(button[data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"], a[href]:not(.sr-only), input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), select, textarea):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button:nth-of-type(2)):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) * 2 + var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+}
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-brief-heading-basis: 12rem;
+    --app-body-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    --app-body-leading: 1.4;
+    --app-brief-copy-size: var(--app-body-size);
+    --app-touch-size: 2.75rem;
+    --app-header-action-gap: 0px;
+    --app-heatmap-day-width: max(2.5rem, calc(2.5rem * var(--font-scale, 1)));
+    --app-heatmap-gap: calc(var(--density-gap) / 4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] :where([data-history-primary] > :first-child, [data-app-part~="history-route"], [data-app-metric-grid="inline"] [data-app-metric="inline"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] :where([data-app-part~="history-route"], [data-app-part~="history-route"] > span):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] [data-history-action-rail="true"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] [data-history-action-rail="true"] [data-history-primary]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--density-gap));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-axis]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+    margin-inline-start: calc(var(--app-heatmap-day-width) + var(--app-heatmap-gap));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-day]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: var(--app-heatmap-day-width) repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-day-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-row: span 2;
+    inline-size: auto;
+    margin-inline: 0;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
-    inline-size: 100%;
+    inline-size: auto;
+    max-inline-size: 100%;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"] :is([data-action-zone="commands"], [data-action-zone="commands"] > [data-action-group]):where([data-app-design-owner~="pack-classic"]) {
+    gap: var(--app-header-action-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-classic"]) {
     padding-block: var(--density-pad-y);
-    gap: var(--density-gap);
+    gap: var(--density-gap) calc(var(--density-gap) / 3);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-classic"]) {
+    gap: calc(var(--density-gap) / 3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-classic"]) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="tabs"] > [data-app-part~="tab"]:where([data-app-design-owner~="pack-classic"]) {
+    block-size: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-heading]:where([data-app-design-owner~="pack-classic"]) {
+    flex-basis: var(--app-brief-heading-basis);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-brief-copy-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="chart-tooltip"] :where([data-chart-tooltip-label], [data-chart-tooltip-name], [data-chart-tooltip-value], [data-chart-tooltip-value] *, [data-chart-tooltip-copy]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-hour-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] label[data-app-field-kind="choice"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
 }
 
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
+    border-inline-start-width: 0;
+  }
+}
 
+@media screen and (max-width: 639px), screen and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-label-day]:where([data-app-design-owner~="pack-classic"]) {
+    --heatmap-label-day: attr(data-heatmap-label-day);
+    --heatmap-label-hour: attr(data-heatmap-label-hour);
+    --heatmap-label-sessions: attr(data-heatmap-label-sessions);
+    --heatmap-label-energy: attr(data-heatmap-label-energy);
+    --heatmap-label-status: attr(data-heatmap-label-status);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table):where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+    inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption:where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+    inline-size: 100%;
+    text-align: start;
+    overflow-wrap: break-word;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead:where([data-app-design-owner~="pack-classic"]) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody:where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--density-gap);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody :is(th, td):where([data-app-design-owner~="pack-classic"]) {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :first-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+    font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :last-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table] tbody td[data-mobile-label], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table tbody td):where([data-app-design-owner~="pack-classic"])::before {
+    content: attr(data-mobile-label);
+    content: attr(data-mobile-label) / "";
+    color: var(--text-secondary);
+    font-size: calc(var(--app-body-size) * 0.875);
+    font-weight: var(--font-weight-medium);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(1):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-day);
+    content: var(--heatmap-label-day) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(2):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-hour);
+    content: var(--heatmap-label-hour) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(3):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-sessions);
+    content: var(--heatmap-label-sessions) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(4):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-energy);
+    content: var(--heatmap-label-energy) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(5):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-status);
+    content: var(--heatmap-label-status) / "";
+  }
+}
 
+@media screen and (forced-colors: active) and (max-width: 767px), screen and (forced-colors: active) and (min-width: 768px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] [data-app-part~="table"]:where([data-app-design-owner~="pack-classic"]) {
+    table-layout: fixed;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] :where(caption, th, td):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline: calc(var(--density-gap) / 4);
+    overflow-wrap: anywhere;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+}
+
+@media screen and (forced-colors: active) and (max-width: 639px), screen and (forced-colors: active) and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] [data-table-variant="embedded"] > div:where([data-app-design-owner~="pack-classic"]) {
+    max-block-size: calc(var(--app-touch-size) * 9);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

@@ -81,13 +81,13 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
           tabIndex={0}
           className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         >
-          <div className="min-w-[600px]">
+          <div data-cost-heatmap-grid className="min-w-[600px]">
             <div
               role="img"
               aria-label={chartLabel}
             >
               {/* Hour labels */}
-              <div className="flex gap-0.5 ml-12 mb-1">
+              <div data-cost-heatmap-axis className="flex gap-0.5 ms-12 mb-1">
                 {HOURS.map((i) => (
                   <Caption key={i} className="flex-1 text-center">
                     {i % 3 === 0 ? `${i}` : ''}
@@ -96,8 +96,8 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
               </div>
               {/* Grid rows */}
               {DAYS.map((dayLabel, dayIdx) => (
-                <div key={dayLabel} className="flex items-center gap-0.5 mb-0.5">
-                  <Caption className="w-10 shrink-0 text-right mr-1">{dayLabel}</Caption>
+                <div key={dayLabel} data-cost-heatmap-day className="flex items-center gap-0.5 mb-0.5">
+                  <Caption data-cost-heatmap-day-label className="w-10 shrink-0 text-end me-1">{dayLabel}</Caption>
                   {HOURS.map((hourIdx) => {
                     const entry = cellByKey.get(dayIdx * 24 + hourIdx);
                     const sessions = Math.max(0, safeNumber(entry?.sessions));
@@ -141,6 +141,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
               >
                 <Table
                   variant="embedded"
+                  data-mobile-stack-table
                   aria-label={chartLabel}
                   tabIndex={0}
                   className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
@@ -161,9 +162,9 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                       return (
                         <tr data-app-part="table-row" key={`${dayIdx}-${hourIdx}`}>
                           <th data-app-part="table-cell" scope="row">{dayLabel}</th>
-                          <td data-app-part="table-cell">{hourIdx}:00</td>
-                          <td data-app-part="table-cell">{sessions}</td>
-                          <td data-app-part="table-cell">{sessions > 0 ? `${formatCurrency(cost)}/kWh` : '—'}</td>
+                          <td data-app-part="table-cell" data-mobile-label={t('analytics.charging.hour', 'Hour')}>{hourIdx}:00</td>
+                          <td data-app-part="table-cell" data-mobile-label={t('charging.charts.sessions', 'Sessions')}>{sessions}</td>
+                          <td data-app-part="table-cell" data-mobile-label={t('charging.grid.costPerEnergy', 'Cost per kWh')}>{sessions > 0 ? `${formatCurrency(cost)}/kWh` : '—'}</td>
                         </tr>
                       );
                     }))}

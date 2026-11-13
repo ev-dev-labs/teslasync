@@ -182,11 +182,11 @@ export function OperationalBrief({
 
   return (
     <>
-      <section data-app-part="section" aria-labelledby={hideHeading ? undefined : titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
+      <section data-app-part="section" aria-labelledby={hideHeading ? undefined : titleId} data-testid={testId} data-operational-brief data-operational-brief-compact={compact || undefined} aria-busy={loading || undefined}>
         <BriefSurface variant={variant} className={className}>
           <div className={cn(variant === 'embedded' ? 'min-w-0' : compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1 basis-full sm:basis-auto', wrapTitle ? 'whitespace-normal break-words' : 'whitespace-normal break-words sm:truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
+              {!hideHeading && <PanelTitle id={titleId} data-operational-brief-heading className={cn('min-w-0 flex-1 basis-full sm:basis-auto', wrapTitle ? 'whitespace-normal break-words' : 'whitespace-normal break-words sm:truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
               {showRange && scope && <span data-app-part="badge" className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
               <div className="flex shrink-0 items-center gap-2">
                 {actions}
@@ -203,6 +203,8 @@ export function OperationalBrief({
             <div
               className={cn('flex min-w-0 flex-col gap-y-3', compact ? 'mt-2' : 'mt-4')}
               data-max-per-row={resolvedMaxPerRow}
+              data-columns={metricRows[0]?.length ?? 0}
+              data-operational-metric-list
             >
               {emptyMetrics ? (
                 <div data-app-part="feedback empty" data-app-feedback-kind="empty" className="min-w-0 flex-[1_1_200px] py-2" role="listitem">
