@@ -686,6 +686,134 @@ test('Classic compact phone headers share a row only when the action rail fits',
   }
 });
 
+test('workbench uses the full width when a section has no header', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      [data-app-part="page-content"] { container-type: inline-size; width: 1000px; }
+    </style>
+    <main data-app-part="page-content">
+      <section id="headed" data-app-part="section" data-app-design-owner="content-workbench">
+        <header data-app-design-owner="content-workbench">Heading</header>
+        <div data-app-design-owner="content-workbench">Content</div>
+      </section>
+      <section id="headerless" data-app-part="section" data-app-design-owner="content-workbench">
+        <div data-app-design-owner="content-workbench">Standalone brief</div>
+      </section>
+      <section id="hidden-heading" data-app-part="section" data-app-design-owner="content-workbench">
+        <header hidden data-app-design-owner="content-workbench">Hidden heading</header>
+        <div data-app-design-owner="content-workbench">Standalone brief</div>
+      </section>
+    </main>
+  `);
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'shell.css'), 'utf8') });
+  const geometry = await page.evaluate(() => {
+    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+    return {
+      headed: box('#headed'), header: box('#headed > header'), content: box('#headed > div'),
+      headerless: box('#headerless'), brief: box('#headerless > div'),
+      hiddenHeading: box('#hidden-heading'), hiddenBrief: box('#hidden-heading > div'),
+    };
+  });
+  expect(geometry.content.left).toBeGreaterThan(geometry.header.right);
+  expect(geometry.brief.left).toBeCloseTo(geometry.headerless.left, 0);
+  expect(geometry.brief.right).toBeCloseTo(geometry.headerless.right, 0);
+  expect(geometry.hiddenBrief.left).toBeCloseTo(geometry.hiddenHeading.left, 0);
+  expect(geometry.hiddenBrief.right).toBeCloseTo(geometry.hiddenHeading.right, 0);
+});
+
+test('real phone navigation fits its reserved shell across packs and preferences', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 8px; --density-pad-y: 8px; --density-pad-x: 12px; --shell-tab-bar-height: 64px; }
+      html[data-tab-bar="off"] { --shell-tab-bar-height: 0px; }
+      body { margin: 0; font-family: Arial, sans-serif; }
+      button { align-items: center; justify-content: center; border: 0; font: inherit; font-weight: 500; }
+      [data-role="status-bar"] { position: fixed; bottom: var(--shell-tab-bar-height); height: 44px; }
+    </style>
+    <div data-app-part="shell" data-presentation-mode="standard" data-owned>
+      <footer data-role="status-bar"></footer>
+      <nav data-role="bottom-tab-bar" data-app-part="navigation" data-owned class="sidenav-phone-tabs safe-bottom">
+        ${['Home', 'Vehicles', 'Driving', 'Charging', 'More'].map(label => `
+          <button aria-label="${label}" data-app-part="button nav-item" data-owned class="sidenav-phone-tab">
+            <span class="nav-phone-icon" data-owned style="display:inline-flex;flex:none"><svg data-owned width="22" height="22"></svg></span>
+            <span class="sidenav-tab-label" data-owned>${label}</span>
+          </button>
+        `).join('')}
+      </nav>
+    </div>
+  `);
+  const sheets = [
+    ...['base.css', 'shell.css', 'controls.css', ...PACK_IDS.map(id => join('packs', APP_DESIGN_PACK_FILES[id])), 'mobile.css']
+      .map(sheet => resolve('src', 'components', 'ui', 'app-designs', sheet)),
+    resolve('src', 'components', 'layout', 'sidebar', 'sidenav.css'),
+  ];
+  for (const sheet of sheets) await page.addStyleTag({ content: await readFile(sheet, 'utf8') });
+
+  for (const pack of PACK_IDS) {
+    const owner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+    await page.locator('html').evaluate((element, values) => {
+      element.setAttribute('data-app-design-pack', values.pack);
+      element.setAttribute('data-app-design-owner', values.owner);
+      document.querySelectorAll('[data-owned]').forEach(node => node.setAttribute('data-app-design-owner', values.owner));
+    }, { pack, owner });
+    const exhaustive = pack === 'classic' || pack === 'v1';
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of exhaustive ? [360, 390, 400, 401, 430] : [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const scale of exhaustive ? [0.85, 1, 1.35] : [1]) {
+          for (const gap of exhaustive ? [8, 16] : [8]) {
+            for (const safe of exhaustive ? [0, 24] : [24]) {
+              const context = `${pack}, ${forcedColors}, ${width}px, scale ${scale}, gap ${gap}, inset ${safe}`;
+              await page.locator('html').evaluate((element, values) => {
+                element.style.setProperty('--font-scale', String(values.scale));
+                element.style.setProperty('--density-gap', `${values.gap}px`);
+                element.style.setProperty('--app-phone-tab-safe', `${values.safe}px`);
+              }, { scale, gap, safe });
+              expect(await findClippedBottomNavigationLabels(page), context).toEqual([]);
+              expect(await findSplitBottomNavigationWords(page), context).toEqual([]);
+              expect(await findSmallTouchTargets(page), context).toEqual([]);
+              const geometry = await page.evaluate(() => {
+                const nav = document.querySelector<HTMLElement>('[data-role="bottom-tab-bar"]')!;
+                const bar = nav.getBoundingClientRect();
+                const buttons = Array.from(nav.querySelectorAll('button'), button => button.getBoundingClientRect().toJSON());
+                const status = document.querySelector<HTMLElement>('[data-role="status-bar"]')!.getBoundingClientRect();
+                return {
+                  bar: bar.toJSON(), buttons, status: status.toJSON(),
+                  padding: parseFloat(getComputedStyle(nav).paddingBottom),
+                  scrollWidth: document.documentElement.scrollWidth,
+                };
+              });
+              expect(geometry.padding, context).toBe(safe);
+              expect(geometry.bar.bottom, context).toBe(844);
+              expect(geometry.status.bottom, context).toBeCloseTo(geometry.bar.top, 0);
+              expect(geometry.scrollWidth, context).toBeLessThanOrEqual(width);
+              for (const button of geometry.buttons) {
+                expect(button.width, context).toBeGreaterThanOrEqual(44);
+                expect(button.height, context).toBeGreaterThanOrEqual(44);
+                expect(button.top, context).toBeGreaterThanOrEqual(geometry.bar.top);
+                expect(button.bottom, context).toBeLessThanOrEqual(geometry.bar.bottom - safe + 0.5);
+              }
+              for (let i = 0; i < geometry.buttons.length; i++) {
+                for (const other of geometry.buttons.slice(i + 1)) {
+                  const button = geometry.buttons[i];
+                  const overlap = Math.min(button.right, other.right) - Math.max(button.left, other.left) > 0.5
+                    && Math.min(button.bottom, other.bottom) - Math.max(button.top, other.top) > 0.5;
+                  expect(overlap, context).toBe(false);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});
+
 test('Classic navigation keeps labels, touch targets and shell offsets visible at phone scales', async ({ page }) => {
   await page.setContent(`
     <style>

@@ -65,15 +65,18 @@
     text-overflow: clip;
   }
 
-  [data-role="bottom-tab-bar"][data-app-design-owner] {
+  [data-role="bottom-tab-bar"][data-app-design-owner],
+  [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"][data-app-design-owner] {
     gap: 0;
     padding-block-start: 0;
     padding-block-end: var(--app-phone-tab-safe);
   }
 
-  [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner] {
+  [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner],
+  [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner] {
     flex: 1 1 max-content;
     min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
     block-size: auto;
     gap: var(--app-phone-tab-gap);
     padding-block: var(--app-phone-tab-padding);

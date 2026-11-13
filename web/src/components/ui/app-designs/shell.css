@@ -753,16 +753,16 @@
 
 @media screen and (forced-colors: none) {
   @container (min-width: 48rem) {
-    [data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *) > section[data-app-part~="section"][data-app-design-owner~="content-workbench"] {
+    [data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *) > section[data-app-part~="section"]:has(> header:not([hidden]))[data-app-design-owner~="content-workbench"] {
       display: grid;
       grid-template-columns: minmax(12rem, 1fr) minmax(0, 4fr);
       align-items: start;
       gap: 1rem;
     }
-    [data-app-part~="page-content"] > section[data-app-part~="section"] > header[data-app-design-owner~="content-workbench"] {
+    [data-app-part~="page-content"] > section[data-app-part~="section"]:has(> header:not([hidden])) > header[data-app-design-owner~="content-workbench"] {
       grid-column: 1;
     }
-    [data-app-part~="page-content"] > section[data-app-part~="section"] > :not(header)[data-app-design-owner~="content-workbench"] {
+    [data-app-part~="page-content"] > section[data-app-part~="section"]:has(> header:not([hidden])) > :not(header)[data-app-design-owner~="content-workbench"] {
       grid-column: 2;
       min-inline-size: 0;
       margin-block: 0;

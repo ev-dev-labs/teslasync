@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -45,26 +47,30 @@ async function main() {
     '--grep=capture ',
     ...projects.map(project => `--project=${project}`),
   ];
-  const child = spawn(process.execPath, args, {
-    cwd: root,
-    env: {
-      ...process.env,
-      DESIGN_PACK: pack,
-      DESIGN_PACK_PAGES: pages === 'all' ? '' : pages,
-      DESIGN_PACK_CAPTURE_BASE_URL: server.origin,
-      DESIGN_PACK_CAPTURE_OUTPUT_DIR: join(root, 'test-results-design-packs-capture', `pack-${pack}`),
-      DESIGN_PACK_CAPTURE_STATES: '0',
-      DESIGN_PACK_CHECK_TOUCH: '1',
-      DESIGN_PACK_CHECK_TEXT_SIZE: '1',
-      DESIGN_PACK_VIEWPORT_ONLY: '1',
-    },
-    stdio: 'inherit',
-  });
-  const result = await new Promise((resolveExit, reject) => {
-    child.once('error', reject);
-    child.once('exit', (code, signal) => resolveExit(code ?? (signal ? 1 : 0)));
-  });
-  process.exitCode = result;
+  const outputDir = await mkdtemp(join(tmpdir(), 'teslasync-design-pack-capture-'));
+  try {
+    const child = spawn(process.execPath, args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        DESIGN_PACK: pack,
+        DESIGN_PACK_PAGES: pages === 'all' ? '' : pages,
+        DESIGN_PACK_CAPTURE_BASE_URL: server.origin,
+        DESIGN_PACK_CAPTURE_OUTPUT_DIR: outputDir,
+        DESIGN_PACK_CAPTURE_STATES: '0',
+        DESIGN_PACK_CHECK_TOUCH: '1',
+        DESIGN_PACK_CHECK_TEXT_SIZE: '1',
+        DESIGN_PACK_VIEWPORT_ONLY: '1',
+      },
+      stdio: 'inherit',
+    });
+    process.exitCode = await new Promise((resolveExit, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code, signal) => resolveExit(code ?? (signal ? 1 : 0)));
+    });
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
 }
 
 main().catch(error => {

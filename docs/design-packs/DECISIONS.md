@@ -23,8 +23,55 @@ restarted the same local origin with the transient capture-artifact directory
 excluded from its watcher and confirmed HTTP 200. An interrupted invocation
 still counts toward the affected pack's two-round cap; its missing or failed
 evidence must be reported, not silently replaced.
-The runner's default artifact path is still inside the Vite root; the
-watcher exclusion is a session workaround, not a general runner fix.
+Capture invocations now use a unique temporary Playwright output directory
+outside the Vite root and remove that directory after completion; the
+requested review images remain under `shots`. Direct use of the capture
+configuration also defaults outside the Vite root.
+
+The first eight dashboard captures were compared side by side without taking
+new screenshots. Horizon Loft looked too close to Classic and Concierge, and
+Precision Ledger too close to Studio. Their owners were sent back for
+pack-only, screenshot-free differentiation; the existing images predate
+those refinements and are not proof that the distinction is resolved.
+Precision Ledger and Executive Concierge exceeded the 45-minute slot. Both
+were asked to stop and reported their incomplete evidence; this runtime did
+not expose an agent-kill operation. No concurrent replacement was allowed to
+edit either owned stylesheet while its worker was still active. Concierge's
+single retry is screenshot-free because both capture invocations were spent;
+the original Ledger owner is doing the distinctness follow-up.
+
+The real phone bar was clipped when the lazy-loaded `sidenav.css` applied its
+60px minimum after the app-design styles. The shared mobile layer now
+overrides that minimum with the existing 44px touch token and controls the
+shell's competing padding and gap. A screenshot-free regression loads the
+real styles in that order and checks all 27 profiles at 360/390/430px, with
+additional 400/401px, density, scale and safe-inset combinations for Classic
+and Studio, in normal and forced colors. It checks bounds, overlap, whole
+labels and status-bar reservation:
+
+```text
+2 passed (1.2m)
+```
+
+Headerless workbench sections no longer reserve an empty heading column; the
+same browser run checks both headed and headerless sections. A separate
+follow-up checks the equivalent hidden-heading case and reported:
+
+```text
+1 passed (1.8m)
+```
+
+The related navigation and design unit tests reported:
+
+```text
+Test Files  3 passed (3)
+     Tests  72 passed (72)
+```
+
+These are synthetic contracts, not full-route or cross-browser acceptance.
+The capture runner's invalid-pack test exited 1 as expected and left zero
+new temporary output directories; its e2e TypeScript and focused ESLint
+checks exited 0.
 
 ## Identity and existing preferences
 
@@ -70,7 +117,8 @@ The latest browser contracts, including 27 synthetic profiles at
 
 These are component-level contracts, not rendered-route or contrast passes.
 
-After the final shared CSS changes, `cd web; npm run build` exited 0:
+After the shared CSS changes, `cd web; npm run build` in the isolated
+verification checkout exited 0:
 
 ```text
 [pwa-contract] OK — source + build contracts satisfied
@@ -211,9 +259,10 @@ failures remove both outputs rather than leaving a partial page. Capture test
 artifacts use a port-specific directory separate from the ordinary Playwright
 output: an overlapping harness run removed two active trace files in the
 390px probe, so those two results must be rerun. Set
-`DESIGN_PACK_CAPTURE_OUTPUT_DIR` to a unique task-owned directory for each
-concurrent run, and pass a unique `--output` directory to other Playwright
-commands in a shared workspace.
+`DESIGN_PACK_CAPTURE_OUTPUT_DIR` to a unique task-owned directory when
+invoking the capture configuration directly, and pass a unique `--output`
+directory to other Playwright commands in a shared workspace. The bounded
+capture script now creates its own isolated temporary directory.
 
 `DESIGN_PACK_CHECK_TOUCH=1` additionally fails a phone capture when a visible
 interactive target is smaller than 44 x 44 CSS pixels. This is a diagnostic
