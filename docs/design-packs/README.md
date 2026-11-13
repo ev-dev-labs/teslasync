@@ -17,6 +17,10 @@ header, content, controls, data, chart, map, and feedback composition roles;
 including isolated previews and portals. `data-app-design-preserve` protects
 the original Digital Twin widget compositions.
 
+The Appearance gallery renders an isolated, synthetic application thumbnail
+for every pack. Its sample sparkline uses the saved chart palette; changing a
+preview does not change the active selection or issue vehicle commands.
+
 The existing theme, font, density, semantic-color, and chart-palette settings
 remain authoritative. Packs compose their surfaces and treatments from those
 preferences rather than replace them. The current bridge does not cover the

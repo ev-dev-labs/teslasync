@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertBanner, EmptyState, SectionErrorBoundary, Skeleton } from '@/components/feedback';
 import { Badge, Button, GlassPanel, Modal, PanelTitle, Select, Subhead, Text } from '@/components/ui';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { useWidgetDesignPack } from '@/hooks/useWidgetDesignPack';
 import { PACK_MANIFEST } from '@/features/dashboard/widgets/designPacks/manifest';
 import { PackBoundary } from '@/features/dashboard/widgets/designPacks/PackBoundary';
@@ -10,7 +11,7 @@ import type { WidgetDesignPackPreviewProps } from './WidgetDesignPackPreview';
 import WidgetDesignPackThumbnail from './WidgetDesignPackThumbnail';
 import { cn } from '@/lib/cn';
 
-export default function WidgetDesignPackSettings() {
+export default function WidgetDesignPackSettings({ chartColor }: { chartColor: string }) {
   const { t } = useTranslation(['settings', 'dashboard']);
   const preference = useWidgetDesignPack();
   const [designStyle, setDesignStyle] = useState<PackStyle | 'all'>('all');
@@ -20,6 +21,7 @@ export default function WidgetDesignPackSettings() {
   const [previewError, setPreviewError] = useState(false);
   const generation = useRef(0);
   const previewTrigger = useRef<HTMLButtonElement | null>(null);
+  const galleryRef = useRef<HTMLDivElement | null>(null);
   const headingId = 'settings-widget-design-packs';
   const previewEntry = PACK_MANIFEST.find(entry => entry.id === previewId);
   const packName = (key: string) => t(key, { ns: 'dashboard' });
@@ -28,6 +30,11 @@ export default function WidgetDesignPackSettings() {
     && (intensity === 'all' || entry.intensity === intensity));
 
   useEffect(() => () => { ++generation.current; }, []);
+
+  useLayoutEffect(() => {
+    const gallery = galleryRef.current;
+    return gallery ? observeAppDesignScopes(gallery) : undefined;
+  }, []);
 
   function openPreview(id: PackId) {
     const request = ++generation.current;
@@ -100,7 +107,7 @@ export default function WidgetDesignPackSettings() {
         label: t('theme.widgetDesignPacks.resetFilters', 'Show all designs'),
         onClick: () => { setDesignStyle('all'); setIntensity('all'); },
       }} />}
-    <div className="grid auto-rows-fr min-w-0 gap-4 @xl:grid-cols-2 @5xl:grid-cols-4" aria-busy={preference.isSaving}>
+    <div ref={galleryRef} className="grid auto-rows-fr min-w-0 gap-4 @xl:grid-cols-2 @5xl:grid-cols-4" aria-busy={preference.isSaving}>
       {PACK_MANIFEST.map(entry => {
         const name = packName(entry.nameKey);
         const active = preference.isReady && preference.packId === entry.id;
@@ -109,7 +116,7 @@ export default function WidgetDesignPackSettings() {
             'h-full min-w-0 flex-col gap-3 rounded-shape-lg border border-[var(--border-default)] p-3',
             visiblePacks.includes(entry) ? 'flex' : 'hidden',
           )}>
-          <WidgetDesignPackThumbnail packId={entry.id} />
+          <WidgetDesignPackThumbnail packId={entry.id} chartColor={chartColor} />
           <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
             <Subhead id={`${headingId}-${entry.id}`}>{name}</Subhead>
             {active && <Badge variant="neutral">{t('theme.widgetDesignPacks.active', 'Active')}</Badge>}

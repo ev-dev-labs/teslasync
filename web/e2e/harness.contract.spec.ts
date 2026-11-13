@@ -6,9 +6,11 @@ import { load } from 'js-yaml';
 import sharp from 'sharp';
 import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
+import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockApi';
+import { closeMockApiFixtures, isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity } from './mockApi';
+import { createReviewPreference, installPackReview } from './widget-design-packs.mock';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -29,6 +31,83 @@ test('design pack captures cover registered application routes with unique filen
   expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
     [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
   ]);
+});
+
+test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  const preference = createReviewPreference();
+  preference.pack_id = 'v7';
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin, { chart_palette: 'neon' });
+  try {
+    await page.setViewportSize({ width: 360, height: 844 });
+    await page.goto('/settings');
+    await waitForHarnessReady(page, mocks);
+    await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
+    const gallery = page.locator('[aria-labelledby="settings-widget-design-packs"]');
+    const thumbnails = gallery.locator('[data-app-design-thumbnail]');
+    await expect(thumbnails).toHaveCount(PACK_IDS.length);
+    await expect(gallery.getByRole('button', { name: 'Pixel Cockpit active' })).toBeDisabled();
+    for (const width of [360, 430, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const geometry = await thumbnails.evaluateAll(elements => elements.map(element => {
+        const panel = element.querySelector<HTMLElement>('[data-app-part~="panel"]');
+        const value = panel?.querySelector<HTMLElement>('[data-app-part~="metric-value"]');
+        const chart = element.querySelector<HTMLElement>('[data-app-part~="chart"]');
+        const navigation = element.querySelector<HTMLElement>('[data-app-part~="navigation"]');
+        const card = element.closest('section');
+        return {
+          id: element.getAttribute('data-app-design-thumbnail'),
+          owner: panel?.getAttribute('data-app-design-owner'),
+          radius: panel ? getComputedStyle(panel).borderTopLeftRadius : '',
+          navigation: navigation ? getComputedStyle(navigation).flexDirection : '',
+          chartWidth: chart?.getBoundingClientRect().width ?? 0,
+          chartColor: chart?.querySelector('polyline')?.getAttribute('stroke'),
+          bounds: value && panel ? {
+            reading: value.getBoundingClientRect().toJSON(),
+            panel: panel.getBoundingClientRect().toJSON(),
+          } : null,
+          valueFits: !!value && !!panel && (() => {
+            const reading = value.getBoundingClientRect();
+            const bounds = panel.getBoundingClientRect();
+            return reading.width > 0 && reading.height > 0 && reading.right <= bounds.right + 1
+              && reading.bottom <= bounds.bottom + 1;
+          })(),
+          stageHeight: element.getBoundingClientRect().height,
+          cardOverflow: card ? card.scrollWidth - card.clientWidth : Infinity,
+          targets: [...(card?.querySelectorAll('button') ?? [])].map(button => {
+            const rect = button.getBoundingClientRect();
+            return Math.min(rect.width, rect.height);
+          }),
+        };
+      }));
+      expect(geometry.map(item => item.id)).toEqual(PACK_IDS);
+      expect(geometry.filter(item => !item.valueFits).map(({ id, bounds }) => ({ id, bounds })), `${width}px clipped values`).toEqual([]);
+      for (const item of geometry) {
+        expect(item.owner, `${width}px ${item.id}`).toContain(`pack-${item.id}`);
+        expect(item.stageHeight, `${width}px ${item.id}`).toBe(256);
+        expect(item.chartWidth, `${width}px ${item.id}`).toBeGreaterThan(0);
+        expect(item.chartColor, `${width}px ${item.id}`).toBe(CHART_COLORS_NEON_DARK[0]);
+        expect(item.cardOverflow, `${width}px ${item.id}`).toBeLessThanOrEqual(1);
+        for (const target of item.targets) expect(target, `${width}px ${item.id}`).toBeGreaterThanOrEqual(44);
+      }
+      expect(geometry.find(item => item.id === 'v2')?.navigation).toBe('column');
+      expect(geometry.find(item => item.id === 'v6')?.navigation).toBe('row');
+      expect(geometry.find(item => item.id === 'v2')?.radius).not.toBe(geometry.find(item => item.id === 'v7')?.radius);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    }
+    await page.setViewportSize({ width: 430, height: 900 });
+    await gallery.getByRole('button', { name: 'Use Cyberdeck pack' }).click();
+    await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
+    expect(preference.pack_id).toBe('cyber');
+    await page.reload();
+    await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
+    await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
+  } finally {
+    await closeMockApiFixtures();
+  }
 });
 
 test('shared pack phone rules retain readable controls, grid text and protected content', async ({ page }) => {

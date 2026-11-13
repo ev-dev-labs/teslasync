@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { ToastProvider } from '@/components/feedback';
 import { MockResizeObserver } from '@/test/setup';
 import WidgetDesignPackSettings from './WidgetDesignPackSettings';
+import { getAppDesignAttributes } from '@/components/ui/app-designs/designs';
 import { PACK_MANIFEST } from '@/features/dashboard/widgets/designPacks/manifest';
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +52,7 @@ vi.mock('react-i18next', async () => {
 
 function renderSettings() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><MemoryRouter><ToastProvider><WidgetDesignPackSettings /></ToastProvider></MemoryRouter></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><MemoryRouter><ToastProvider><WidgetDesignPackSettings chartColor="var(--theme-primary)" /></ToastProvider></MemoryRouter></QueryClientProvider>);
 }
 
 async function ready() {
@@ -92,6 +93,27 @@ afterEach(() => {
 });
 
 describe('Widget design pack settings', () => {
+  it('renders isolated application thumbnails for every saved pack without writing preferences', async () => {
+    const view = renderSettings();
+    await ready();
+    const thumbnails = view.container.querySelectorAll<HTMLElement>('[data-app-design-thumbnail]');
+    expect(thumbnails).toHaveLength(PACK_MANIFEST.length);
+    for (const entry of PACK_MANIFEST) {
+      const thumbnail = view.container.querySelector<HTMLElement>(`[data-app-design-thumbnail="${entry.id}"]`);
+      expect(thumbnail).toHaveAttribute('aria-hidden', 'true');
+      expect(thumbnail).toHaveAttribute('data-app-design-preview');
+      for (const [attribute, value] of Object.entries(getAppDesignAttributes(entry.id))) {
+        expect(thumbnail).toHaveAttribute(attribute, value);
+      }
+      for (const role of ['shell', 'navigation', 'page-header', 'panel', 'chart']) {
+        const element = thumbnail?.querySelector(`[data-app-part~="${role}"]`);
+        expect(element).toBeInTheDocument();
+        expect(element).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${entry.id}`));
+      }
+    }
+    expect(mocks.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
+  });
+
   it('retries a failed scope verification without requiring a reload', async () => {
     mocks.mode.mockResolvedValue({ isSuccess: false });
     renderSettings();
