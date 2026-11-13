@@ -91,7 +91,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: bold geometric grouping and an intentionally modular grid.
 - Signature: a simple shape-led emphasis at section boundaries.
 
-### 18. Quiet Form (`quiet`) - in progress
+### 18. Quiet Form (`quiet`) - passed-with-notes
 - Mood: contemplative and editorial.
 - Distinction: a pared-back reading column with minimal interface chrome.
 - Signature: delicate separators and generous negative space.
