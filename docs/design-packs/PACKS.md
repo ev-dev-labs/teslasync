@@ -76,7 +76,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: map-forward cards and a hybrid navigation frame.
 - Signature: coordinate-inspired labels and framed map regions.
 
-### 15. Analog (`analog`) - in progress
+### 15. Analog (`analog`) - passed-with-notes
 - Mood: tactile instrument bench.
 - Distinction: physical-looking measurement groupings with clear labels.
 - Signature: concentric rings and understated inset borders.

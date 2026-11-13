@@ -58,6 +58,14 @@ uses an italic heading and directional rule, and Blueprint has a drafting
 grid; Horizon and Showroom still appear close in the saved views. Those views
 precede subsequent refinements, so Showroom was sent for a pack-only,
 screenshot-free showroom composition refinement, not a claimed visual pass.
+The next eight existing 390px dashboard images (Ambient, Precision, Concierge,
+Terminal, Editorial, Quiet, Warm and Analog) were compared without another
+capture. Terminal's prompt-like geometry, Editorial's masthead, Ambient's
+separation and Analog's concentric framing were visible. Precision, Quiet and
+Concierge remained too similar in these saved views; Precision was sent back
+for a stronger ruled-ledger header and aligned action zone. The comparison
+images predate several subsequent fixes, so neither the new distinction nor
+the other packs' full-page distinctiveness is established by this check.
 Precision Ledger and Executive Concierge exceeded the 45-minute slot. Both
 were asked to stop and reported their incomplete evidence; this runtime did
 not expose an agent-kill operation. No concurrent replacement was allowed to
