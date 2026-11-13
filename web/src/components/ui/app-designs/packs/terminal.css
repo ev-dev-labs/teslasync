@@ -1,90 +1,138 @@
 /* A command ledger, not a forced monospace/green-screen theme. */
 @media screen and (forced-colors: none) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-terminal"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 3.5%, var(--surface-2)), transparent 15rem);
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"]:where([data-app-design-owner~="pack-terminal"]) {
-    --app-rule-style: solid; --app-nav-radius: 0px; --app-shadow: var(--elevation-1);
-    --panel-radius: 0px; --panel-shadow: var(--elevation-1); --panel-shadow-hover: var(--elevation-1);
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--surface-1);
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-3, var(--surface-elevated));
+    --app-card-radius: 0px;
+    --app-card-shadow: none;
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: 0px;
+    --app-control-surface: var(--control-bg);
+    --app-content-density: 0.95;
+    --app-brief-column-min-width: 18rem;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-1);
+    --app-conversation-radius: 0px;
+    --app-rule-style: solid;
+    --app-nav-radius: 0px;
+    --app-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-inline-end: 1px solid var(--border-strong); background-color: var(--surface-1);
+    border-inline-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-end: 2px solid var(--border-strong); background-color: var(--surface-1);
+    border-block-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-terminal"]) {
-    gap: calc(var(--density-gap) / 2); padding-block: var(--density-pad-y);
-    border-block: 1px solid var(--border-strong);
+    gap: calc(var(--density-gap) / 2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-terminal"]) {
-    border-radius: 0; border-inline-start: 3px solid transparent;
+    border-radius: 0;
+    border-inline-start: 3px solid transparent;
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-terminal"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"]):where([data-app-design-owner~="pack-terminal"]) {
     border-inline-start-color: var(--theme-accent);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    background-color: var(--app-surface-raised, var(--surface-2));
     font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-terminal"]) {
-    display: flex; flex-direction: row; align-items: stretch; gap: var(--density-gap);
-    border-block: 2px solid var(--border-strong); padding-block: var(--density-pad-y); flex-wrap: wrap; justify-content: space-between;
+    border-block: 1px solid var(--border-strong);
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-terminal"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-route-focus-target]:where([data-app-design-owner~="pack-terminal"]) {
+    font-weight: var(--font-weight-bold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-route-focus-target], [data-card-title]):where([data-app-design-owner~="pack-terminal"])::before {
+    content: "›" / "";
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    margin-inline-end: 0.4em;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-terminal"]) {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start;
     gap: var(--density-gap);
-    margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-terminal"]) {
     row-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="section"]:where([data-app-design-owner~="pack-terminal"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="section"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-terminal"]) {
     border-block-start: 1px solid var(--border-strong);
     padding-block: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
-    box-shadow: var(--elevation-1); background-color: var(--surface-1); background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 4%, var(--surface-1)), var(--surface-1) 5.5rem);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="panel"], [data-app-part~="card"]):where([data-surface-variant="standalone"]):not([data-app-tone], [data-app-card-kind="conversation"], [style*="background"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--border-strong);
+    border-radius: var(--app-card-radius, 0px);
+    box-shadow: var(--app-card-shadow, none);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-terminal"]) {
-    display: grid; grid-template-columns: minmax(0, 1fr);
-    column-gap: var(--density-gap); row-gap: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    column-gap: var(--density-gap);
+    row-gap: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
-    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
-    gap: var(--density-gap); padding: var(--density-pad-y) var(--density-pad-x);
-    border: 0; border-block-end: 1px solid var(--border-strong);
-    border-radius: 0; box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric"]:where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-app-tone], [data-surface-variant="embedded"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end-color: var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-label"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
-    max-inline-size: 34ch; text-align: start;
+    text-align: start;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-value"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-terminal"]) {
-    text-align: end; font-variant-numeric: tabular-nums slashed-zero;
+    font-variant-numeric: tabular-nums slashed-zero;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field"]:where(:not([data-app-field-kind="choice"])):where([data-app-design-owner~="pack-terminal"]) {
-    row-gap: calc(var(--density-gap) / 2); padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-form-heading]:where([data-app-design-owner~="pack-terminal"]) {
     border-block-end: 1px solid var(--border-default);
+    padding-block-end: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-terminal"]) { text-underline-offset: .3em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-terminal"]) {
+    font-weight: var(--font-weight-medium);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
-    background-color: var(--surface-1); box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [data-app-control-kind], [aria-invalid="true"], :disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border);
+    border-radius: var(--app-control-radius, 0px);
+    background-color: var(--app-control-surface, var(--control-bg));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:where([data-app-design-owner~="pack-terminal"]) {
     border-radius: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-terminal"]) { box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"][aria-haspopup="menu"]:where([data-app-design-owner~="pack-terminal"]) {
+    max-inline-size: 100%;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); background-color: var(--surface-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"][aria-haspopup="menu"] > span:first-child:has(+ span.truncate):where([data-app-design-owner~="pack-terminal"]) {
+    flex: 0 0 auto;
+    max-inline-size: 35%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"][aria-haspopup="menu"] > span.truncate:where([data-app-design-owner~="pack-terminal"]) {
+    flex: 1 1 12rem;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    text-align: start;
+    white-space: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border);
+    background-color: var(--app-control-surface, var(--control-bg));
+    box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-terminal"]) {
     border-block: 1px solid var(--border-strong); padding-block: calc(var(--density-gap) / 2);
@@ -93,41 +141,49 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-terminal"]) {
     border-radius: 0; border: 1px solid transparent;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-color: var(--border-strong); background-color: var(--surface-2); font-weight: var(--font-weight-semibold); box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):not([data-app-variant="primary"], [data-app-variant="danger"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border-hover);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    font-weight: var(--font-weight-semibold);
+    box-shadow: inset 0 -2px 0 var(--theme-accent);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="table-toolbar"], [data-app-part~="pagination"]):where([data-app-design-owner~="pack-terminal"]) {
-    border-block: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
-    gap: var(--density-gap); border-radius: 0;
+    border-block-start: 1px solid var(--border-strong);
+    gap: var(--density-gap);
+    border-radius: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-strong);
+    box-shadow: inset 0 0 0 1px var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-terminal"]) {
-    background-color: var(--surface-2); border-block-end: 2px solid var(--border-strong);
+    background-color: var(--app-grid-header, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-end: 1px solid var(--border-default); border-inline-end: 1px solid var(--border-default);
-    padding: var(--density-pad-y) var(--density-pad-x);
+    box-shadow: inset 0 -1px 0 var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-row"][aria-selected="true"]:where([data-app-design-owner~="pack-terminal"]) {
-    outline: 1px solid var(--border-strong); outline-offset: -1px; background-color: var(--surface-2);
+    outline: 1px solid var(--focus-ring);
+    outline-offset: -1px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-terminal"]) {
-    border: 2px solid var(--border-strong); border-radius: 0;
-    background-color: var(--surface-1); box-shadow: var(--elevation-3);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--border-strong);
+    border-radius: 0;
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
+    box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-end: 2px solid var(--border-strong); padding-block: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-terminal"]) {
-    padding-block: var(--density-pad-x);
+    border-block-end: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-start: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
+    border-block-start: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0; box-shadow: var(--elevation-2);
+    border-radius: 0;
+    box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="popover"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--control-border);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-terminal"]) {
     border-radius: 0; border-block-end: 1px solid var(--border-strong);
@@ -139,83 +195,120 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):focus-visible:where([data-app-design-owner~="pack-terminal"]) {
     outline: 2px solid var(--focus-ring); outline-offset: -2px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
-    background-color: var(--surface-1); box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"][data-chart-variant="panel"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--border-strong);
+    border-radius: 0;
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-end: 1px solid var(--border-strong); padding-block-end: var(--density-pad-y);
+    box-shadow: inset 0 -1px 0 var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-terminal"]) {
-    background-image: repeating-linear-gradient(to bottom, var(--border-strong) 0 3px, transparent 3px 6px), repeating-linear-gradient(to bottom, var(--border-strong) 0 3px, transparent 3px 6px);
-    background-position: left top, right top; background-size: 1px 100%; background-repeat: no-repeat;
-    background-color: var(--surface-1);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"] .recharts-cartesian-grid line:where([data-app-design-owner~="pack-terminal"]) {
-    stroke: var(--border-strong); stroke-dasharray: 1 4;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart"] .recharts-cartesian-axis-tick-value:where([data-app-design-owner~="pack-terminal"]) {
-    fill: var(--text-secondary);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-chart-viewport="bounded"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--app-chart-surface, var(--surface-1));
+    background-image: repeating-linear-gradient(to bottom, var(--border-strong) 0 2px, transparent 2px 6px), repeating-linear-gradient(to bottom, var(--border-strong) 0 2px, transparent 2px 6px);
+    background-position: left top, right top;
+    background-size: 1px 100%;
+    background-repeat: no-repeat;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-start: 1px solid var(--border-strong); padding-block-start: var(--density-pad-y);
-    gap: var(--density-gap); justify-content: flex-start;
+    box-shadow: inset 0 1px 0 var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map"]:where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
+    border-radius: 0;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
-    background-color: var(--surface-1); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-terminal"]) {
-    outline: 2px solid var(--surface-1); outline-offset: 1px;
+    border-color: var(--border-strong);
+    border-radius: 0;
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px solid var(--border-strong); border-radius: 0;
-    background-color: var(--surface-1); padding: var(--density-pad-y); gap: var(--density-gap);
+    border-color: var(--border-strong);
+    border-radius: 0;
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-terminal"]) {
-    padding-block: var(--density-pad-y); border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-list="ranked"], [data-app-list="definitions"]) > [data-app-part~="list-row"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-end-color: var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
+    border-inline-start: 1px solid var(--border-strong);
+    padding-inline-start: var(--density-pad-x);
     row-gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-terminal"]) {
-    border-radius: 0; border-style: solid;
+    border-radius: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="feedback"], [data-app-part~="empty"]):where([data-app-design-owner~="pack-terminal"]) {
-    border: 1px dashed var(--border-strong); border-inline-start-style: solid;
-    border-inline-start-width: 2px; border-radius: 0;
-    padding: var(--density-pad-y) var(--density-pad-x); text-align: start; align-items: flex-start;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-feedback-kind="empty"]:not([data-app-tone]):where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start-color: var(--text-secondary);
+    border-radius: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="error"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-inline-start: 3px solid var(--semantic-danger); padding-inline-start: var(--density-pad-x);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"], [data-app-feedback-kind="error"])[data-app-tone="info"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--semantic-info-bg);
+    border-block-color: var(--semantic-info-border);
+    border-inline-end-color: var(--semantic-info-border);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-block: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"], [data-app-feedback-kind="error"])[data-app-tone="success"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--semantic-success-bg);
+    border-block-color: var(--semantic-success-border);
+    border-inline-end-color: var(--semantic-success-border);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"], [data-app-feedback-kind="error"])[data-app-tone="warning"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--semantic-warning-bg);
+    border-block-color: var(--semantic-warning-border);
+    border-inline-end-color: var(--semantic-warning-border);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-feedback-kind="notice"], [data-app-feedback-kind="insight"], [data-app-feedback-kind="error"])[data-app-tone="danger"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--semantic-danger-bg);
+    border-block-color: var(--semantic-danger-border);
+    border-inline-end-color: var(--semantic-danger-border);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="feedback-title"]:where([data-app-design-owner~="pack-terminal"]) {
+    font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-terminal"]) {
-    background-color: var(--skeleton-bg); border: 1px solid var(--border-strong); border-radius: 0;
+    border-radius: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="error"] [data-app-part~="button"]:where([data-app-design-owner~="pack-terminal"]) { text-underline-offset: .3em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-block-start: 1px solid var(--border-strong);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="conversation-message"][data-role="user"] [data-app-card-kind="conversation"] > p:first-child:where([data-app-design-owner~="pack-terminal"])::before {
+    content: "›" / "";
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    margin-inline-end: 0.4em;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-inline-start-color: var(--border-strong);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-terminal"]) {
+    border-radius: 0;
+    background-color: var(--app-control-surface, var(--control-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-role="helix-composer"]:focus-within:where([data-app-design-owner~="pack-terminal"]) {
+    border-color: var(--focus-ring);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-role="helix-composer"] textarea[data-app-part~="field-control"]:where([data-app-design-owner~="pack-terminal"]) {
+    border: 0;
+    background-color: transparent;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-terminal"]) {
-    outline: 2px solid var(--focus-ring); outline-offset: 2px;
+    outline: var(--focus-ring-width, 2px) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset, 2px);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-color: var(--semantic-danger); border-inline-start-width: 3px;
+    border-color: var(--semantic-danger);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-terminal"]) {
-    border-style: dotted; box-shadow: none;
-    background-color: var(--surface-2); color: var(--text-secondary);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-terminal"]) {
+    cursor: not-allowed;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-terminal"]) {
-    border-style: solid; cursor: progress;
+    cursor: progress;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-terminal"]) {
-    border-block-end-width: 2px; background-color: var(--control-bg-hover);
+    background-color: var(--control-bg-hover);
   }
 }
 @media screen and (forced-colors: none) and (hover: hover) {
@@ -228,16 +321,8 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
     border-color: var(--control-border-hover); background-color: var(--control-bg-hover);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [data-app-control-kind], :disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-terminal"]) {
     border-color: var(--control-border-hover);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="table-row"]:hover:where([data-app-design-owner~="pack-terminal"]) {
-    background-color: var(--surface-2);
-  }
-}
-@media screen and (forced-colors: none) and (min-width: 1024px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-terminal"]) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {

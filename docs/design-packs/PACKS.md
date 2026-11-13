@@ -66,7 +66,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: floating islands of content with ample separation.
 - Signature: a restrained surface wash that never obscures data.
 
-### 13. Terminal (`terminal`) - in progress
+### 13. Terminal (`terminal`) - passed-with-notes
 - Mood: purposeful command-line workstation.
 - Distinction: a compact, linear ledger with explicit operational feedback.
 - Signature: prompt-like leading markers and monochrome rules.
