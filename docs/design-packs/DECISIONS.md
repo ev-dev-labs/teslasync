@@ -17,6 +17,14 @@ viewport and stitched images intact.
 Begin with eight isolated pack workers and refill each slot as it finishes.
 This keeps browser and build load bounded on the shared machine while the
 full unit suite is running; it is not an eight-pack completion gate.
+The initial Vite process watched Playwright trace files, reloaded active
+reviews and exited with `EBUSY` on a locked `.network` trace. The orchestrator
+restarted the same local origin with the transient capture-artifact directory
+excluded from its watcher and confirmed HTTP 200. An interrupted invocation
+still counts toward the affected pack's two-round cap; its missing or failed
+evidence must be reported, not silently replaced.
+The runner's default artifact path is still inside the Vite root; the
+watcher exclusion is a session workaround, not a general runner fix.
 
 ## Identity and existing preferences
 
