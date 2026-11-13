@@ -9,37 +9,37 @@ mobile and verification loop in the corresponding review.
 - Distinction: balanced cards and a simple reading rhythm provide the neutral baseline.
 - Signature: a fine frame with a restrained active-navigation underline.
 
-### 2. Telemetry Studio (`v1`) - todo
+### 2. Telemetry Studio (`v1`) - in progress
 - Mood: precise engineering studio.
 - Distinction: dense instruments and a narrow rail prioritize live measurements.
 - Signature: calibrated rules around instrument groups.
 
-### 3. Horizon Loft (`v2`) - todo
+### 3. Horizon Loft (`v2`) - in progress
 - Mood: airy, contemporary and optimistic.
 - Distinction: generous card groupings and a split header create a spacious workspace.
 - Signature: softly elevated, wide-radius surfaces.
 
-### 4. Precision Ledger (`v3`) - todo
+### 4. Precision Ledger (`v3`) - in progress
 - Mood: exact, quiet and analytical.
 - Distinction: compact ledger rows, aligned figures and understated controls.
 - Signature: fine horizontal rules and tabular numeric alignment.
 
-### 5. Executive Concierge (`v4`) - todo
+### 5. Executive Concierge (`v4`) - in progress
 - Mood: composed, personal and assured.
 - Distinction: a structured sidebar and curated card summaries emphasize decisions.
 - Signature: a discreet vertical guide beside key summaries.
 
-### 6. Iconic Showroom (`v5`) - todo
+### 6. Iconic Showroom (`v5`) - in progress
 - Mood: polished automotive showroom.
 - Distinction: spacious canvas compositions give existing vehicle imagery room to lead.
 - Signature: framed hero surfaces and inset captions.
 
-### 7. Expressive Form (`v6`) - todo
+### 7. Expressive Form (`v6`) - in progress
 - Mood: energetic, creative and structured.
 - Distinction: geometric content blocks and segmented controls establish a lively rhythm.
 - Signature: asymmetric heading and action alignment.
 
-### 8. Pixel Cockpit (`v7`) - todo
+### 8. Pixel Cockpit (`v7`) - in progress
 - Mood: digital workshop with retro-computing precision.
 - Distinction: squared instrument panels and a compact technical grid.
 - Signature: crisp stepped corners and small calibration marks.
