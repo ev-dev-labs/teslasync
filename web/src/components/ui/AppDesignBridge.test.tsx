@@ -99,7 +99,7 @@ describe('nearest design boundary isolation', () => {
         inheritedRules.push(inherited.toString());
       });
     }
-    installStyles(inheritedRules.join('\n'));
+    installStyles(`:root { --panel-radius: var(--radius-lg); }\n${inheritedRules.join('\n')}`);
     selection.appWide = true;
     selection.packId = 'ambient';
     const view = render(<>
@@ -109,7 +109,7 @@ describe('nearest design boundary isolation', () => {
     const boundary = view.getByTestId('quiet-variables');
     const snapshot = () => {
       const style = getComputedStyle(boundary);
-      return ['--app-border-width', '--app-nav-radius', '--app-shadow', '--panel-radius',
+      return ['--app-border-width', '--app-nav-radius', '--app-shadow', '--app-card-radius', '--panel-radius',
         '--panel-shadow', '--panel-shadow-hover', '--app-feedback-signal']
         .map(property => [property, style.getPropertyValue(property)]);
     };
@@ -122,7 +122,8 @@ describe('nearest design boundary isolation', () => {
       <AppDesignBridge />
       <section data-testid="quiet-variables" data-app-design-preview {...getAppDesignAttributes('quiet')} />
     </>);
-    expect(getComputedStyle(document.documentElement).getPropertyValue('--panel-radius')).toBe('0px');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--panel-radius')).toBe('var(--radius-lg)');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--app-card-radius')).toBe('0px');
     expect(getComputedStyle(document.documentElement).getPropertyValue('--app-border-width')).toBe('2px');
     expect(snapshot()).toEqual(first);
   });

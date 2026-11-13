@@ -86,7 +86,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: expansive plots and carefully separated reference readings.
 - Signature: fine crosshair-like alignment marks around instruments.
 
-### 17. Bauhaus (`bauhaus`) - in progress
+### 17. Bauhaus (`bauhaus`) - passed-with-notes
 - Mood: disciplined modernist workshop.
 - Distinction: bold geometric grouping and an intentionally modular grid.
 - Signature: a simple shape-led emphasis at section boundaries.
