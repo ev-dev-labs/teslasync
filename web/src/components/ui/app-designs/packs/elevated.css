@@ -1,21 +1,50 @@
-/* Elevated: generous shared surfaces and soft, clearly separated reading groups. */
+/* Horizon Loft: open reading groups on quietly elevated, rounded surfaces. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"]:where([data-app-design-owner~="pack-v2"]) {
+    --app-brief-column-min-width: 10rem;
+  }
+}
+
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"]:where([data-app-design-owner~="pack-v2"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-elevated, var(--surface-2));
+    --app-card-radius: max(var(--radius-xl), 1.25rem);
+    --app-card-shadow: var(--elevation-2);
+    --app-nav-radius: var(--radius-lg);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: calc(var(--tracking, 0em) - 0.01em);
+    --app-control-radius: var(--radius-lg);
+    --app-control-surface: var(--app-surface-raised);
+    --app-content-density: 1.12;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--app-surface-raised);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--app-surface-raised);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--app-surface-raised);
+    --app-conversation-radius: var(--app-card-radius);
+  }
+
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v2"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 65%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v2"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-surface-panel, var(--surface-1));
     border-inline-end: 1px solid var(--border-subtle);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-v2"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-surface-panel, var(--surface-1));
     border-block-end: 1px solid var(--border-subtle);
     column-gap: calc(var(--density-gap) * 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-v2"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
@@ -24,10 +53,9 @@
     column-gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-v2"]) {
-    box-shadow: inset 0 -2px var(--theme-accent);
+    box-shadow: inset 0 -2px var(--theme-primary);
     font-weight: var(--font-weight-semibold);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v2"]) {
     align-items: center;
@@ -37,38 +65,53 @@
     justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v2"]) {
+    align-items: center;
+    min-inline-size: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-route-focus-target]:where([data-app-design-owner~="pack-v2"]) {
+    text-wrap: balance;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v2"]) {
     gap: var(--density-gap);
     border-radius: var(--radius-xl);
     margin-inline-start: auto;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="page-content"], [data-app-part~="section"]):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="page-content"], [data-app-part~="section"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     row-gap: calc(var(--density-gap) * 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="grid"], [data-app-part~="stack"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     gap: calc(var(--density-gap) * 1.5);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-v2"]) {
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--elevation-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:not(:where([data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"])):where([data-app-design-owner~="pack-v2"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not(:where([data-app-tone], [data-app-metric], [data-app-part~="metric"], [data-app-part~="metric-grid"] *, [data-app-metric] *, [data-widget-pack], [data-widget-pack] *, [data-surface-variant] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)):where([data-app-design-owner~="pack-v2"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart"][data-chart-variant="panel"]:not(:where([data-app-tone], [data-app-metric], [data-app-metric] *, [data-app-part~="metric-grid"] *, [data-widget-pack], [data-widget-pack] *, [data-surface-variant] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)):where([data-app-design-owner~="pack-v2"]) {
+    border-radius: clamp(1.5rem, 2.2vw, 2rem);
+    box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"]:not(:where([data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"])):where([data-app-design-owner~="pack-v2"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-layout-reference][data-app-part~="page-content"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)):where([data-app-design-owner~="pack-v2"]) {
+    gap: clamp(calc(var(--density-gap) * 2), 3vw, calc(var(--density-gap) * 3));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-operational-metric-bank]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: calc(var(--density-gap) * 1.5);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-metric="score"], [data-app-part~="badge"], [data-app-tone], [data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     padding-block: var(--density-pad-y);
     row-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="segments"] *, [data-app-metric="score"] *, [data-app-metric-grid="native-gauge"] *, [data-app-tone] *, [data-widget-pack] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     color: var(--text-secondary);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v2"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="segments"] *, [data-app-metric="score"] *, [data-app-metric-grid="native-gauge"] *, [data-app-tone] *, [data-widget-pack] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
@@ -82,13 +125,16 @@
     color: var(--text-secondary);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] :where([data-app-part~="field-control"], [data-app-part~="button"]):not(:where([type="radio"], [type="checkbox"], [type="range"], [type="color"], [role="switch"])):where([data-app-design-owner~="pack-v2"]) {
-    border-radius: var(--radius-lg);
+    border-radius: var(--app-control-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where(:hover):not(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-v2"]) {
+    box-shadow: var(--elevation-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-v2"]) {
     gap: calc(var(--density-gap) / 2);
     padding: calc(var(--density-gap) / 2);
-    border-radius: var(--radius-xl);
-    background-color: var(--surface-2);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-v2"]) {
     border-radius: var(--radius-lg);
@@ -99,19 +145,14 @@
     padding-block: var(--density-pad-y);
     border-block-end: 1px solid var(--border-subtle);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="table"]:where([data-app-design-owner~="pack-v2"]) {
-    border-collapse: separate;
-    border-spacing: 0;
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-v2"]) {
-    background-color: var(--surface-2);
+    background-color: var(--app-grid-header, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="table-row"]:where([data-app-design-owner~="pack-v2"]) {
     vertical-align: middle;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-v2"]) {
-    border-block-end: 1px solid var(--border-subtle);
-    padding-block: var(--density-pad-y);
+    border-block-end-color: var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-v2"]) {
     gap: var(--density-gap);
@@ -131,27 +172,33 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-v2"]) {
     gap: var(--density-gap);
     border-block-start: 1px solid var(--border-subtle);
-    background-color: var(--surface-2);
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-v2"]) {
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--elevation-2);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-v2"]) {
     border-radius: var(--radius-md);
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-v2"]) {
-    border-radius: var(--radius-xl);
+    border-radius: var(--app-card-radius, var(--radius-xl));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-v2"]) {
     gap: var(--density-gap);
     padding-block-end: calc(var(--density-pad-y) * 1.5);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-v2"]) {
-    background-color: var(--surface-1);
-    border-radius: var(--radius-lg);
+    border-radius: var(--app-control-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-chart-variant="embedded"] [data-chart-viewport]:where([data-app-design-owner~="pack-v2"]) {
+    background-color: transparent;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-chart-variant="panel"][data-chart-state="ready"] [data-chart-viewport]:where([data-app-design-owner~="pack-v2"]) {
+    background-color: var(--app-chart-surface, var(--surface-2));
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-v2"]) {
     gap: var(--density-gap) calc(var(--density-gap) * 1.5);
@@ -161,12 +208,12 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="chart-tooltip"]:where([data-app-design-owner~="pack-v2"]) {
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
-    background-color: var(--surface-elevated);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
     font-variant-numeric: tabular-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="map"]:where([data-app-design-owner~="pack-v2"]) {
-    border-radius: var(--radius-xl);
+    border-radius: var(--app-card-radius, var(--radius-xl));
     outline: 1px solid var(--border-default);
     outline-offset: -1px;
   }
@@ -182,8 +229,8 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="map-popup"]:where([data-app-design-owner~="pack-v2"]) {
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    background-color: var(--surface-1);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-v2"]) {
@@ -226,20 +273,104 @@
     border-radius: var(--radius-lg);
     background-color: var(--skeleton-bg);
   }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="conversation-transcript"]:where([data-app-design-owner~="pack-v2"]) {
+    gap: calc(var(--density-gap) * 1.5);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-v2"]) {
+    border-radius: var(--app-conversation-radius, var(--radius-xl));
+    background-color: var(--app-conversation-surface, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="conversation-message"][data-role="user"] [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-v2"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    background-color: color-mix(in srgb, var(--theme-accent) 10%, var(--app-surface-panel, var(--surface-1)));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-v2"]) {
+    border-color: var(--border-default);
+    background-color: var(--app-surface-panel, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-v2"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-surface-raised, var(--control-bg));
+  }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-v2"]) {
+    gap: 0;
+    padding-block-start: 0;
+    padding-block-end: var(--app-phone-tab-safe);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-v2"]) {
+    min-block-size: var(--app-touch-size);
+    padding-block: var(--app-phone-tab-padding);
+    gap: var(--app-phone-tab-gap);
+    font-size: var(--app-body-size);
+    line-height: var(--app-phone-tab-line-height);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v2"]) {
-    inline-size: 100%;
+    inline-size: auto;
+    max-inline-size: 100%;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-action-zone="context"] [aria-haspopup="menu"]:where([data-app-design-owner~="pack-v2"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-action-zone="context"] [aria-haspopup="menu"] > span.truncate:where([data-app-design-owner~="pack-v2"]) {
+    max-inline-size: min(16rem, 55vw);
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v2"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     padding-block: var(--density-pad-y);
+    gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-header"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *):where([data-app-design-owner~="pack-v2"]) {
+    padding-block: calc(var(--density-pad-y) * 1.15);
+    gap: calc(var(--density-gap) * 0.75) calc(var(--density-gap) * 1.25);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-v2"]) {
+    flex: 1 1 min(100%, calc(12rem * max(1, var(--font-scale, 1))));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-operational-metric-bank]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v2"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(10rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v2"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="conversation-composer-actions"]:where([data-app-design-owner~="pack-v2"]) {
+    align-self: flex-end;
+    margin-inline-start: auto;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-widget-pack] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):where([data-app-design-owner~="pack-v2"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-widget-pack] [data-app-metric="stat-card"] [data-app-part~="metric-unit"]:where([data-app-design-owner~="pack-v2"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-testid="widget-body"] + div a[href]:where([data-app-design-owner~="pack-v2"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+}
+
+@media screen and (forced-colors: none) and (min-width: 1024px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-header"].flex-row:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *):where([data-app-design-owner~="pack-v2"]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: calc(var(--density-gap) * 2.5);
+    padding-block: calc(var(--density-pad-y) * 2);
+  }
+}
+
+@media screen and (forced-colors: none) and (min-width: 1280px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-v2"]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 18rem) minmax(0, 1fr);
+    column-gap: var(--density-gap);
+  }
+}
+
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v2"]) {
+    border-inline-start-width: 0;
   }
 }
 

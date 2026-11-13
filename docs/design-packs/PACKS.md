@@ -16,7 +16,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: dense instruments and a narrow rail prioritize live measurements.
 - Signature: calibrated rules around instrument groups.
 
-### 3. Horizon Loft (`v2`) - in progress
+### 3. Horizon Loft (`v2`) - passed-with-notes
 - Mood: airy, contemporary and optimistic.
 - Distinction: generous card groupings and a split header create a spacious workspace.
 - Signature: softly elevated, wide-radius surfaces.
@@ -106,12 +106,12 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a strict grid, compact headings and aligned data columns.
 - Signature: an unmistakable modular baseline and precise rules.
 
-### 21. Material Play (`material`) - todo
+### 21. Material Play (`material`) - in progress
 - Mood: approachable and tactile.
 - Distinction: stepped elevation and clearly filled controls organize the workspace.
 - Signature: consistent tonal control surfaces and rounded groups.
 
-### 22. Glass Current (`glass`) - todo
+### 22. Glass Current (`glass`) - in progress
 - Mood: light, contemporary and fluid.
 - Distinction: layered transparent-looking surfaces without obscuring content.
 - Signature: a crisp reflected edge instead of a heavy shadow.
