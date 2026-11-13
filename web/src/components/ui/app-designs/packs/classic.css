@@ -5,6 +5,7 @@
     --app-brief-column-min-width: 9rem;
     --app-input-action-clearance: 0.75rem;
     --app-vehicle-icon-space: 2rem;
+    --app-header-title-min-width: 12rem;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-brief-value-size);
@@ -477,6 +478,12 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-classic"]) {
     gap: calc(var(--density-gap) / 3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"].flex-row:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    column-gap: calc(var(--density-gap) / 4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 min(100%, calc(var(--app-header-title-min-width) * max(1, var(--font-scale, 1))));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));

@@ -228,7 +228,7 @@ test('Classic phone metrics and workspace range remain readable as text scales',
   for (const forcedColors of ['none', 'active'] as const) {
     await page.emulateMedia({ forcedColors });
     for (const direction of ['ltr', 'rtl'] as const) {
-      await page.locator('html').evaluate((element, value) => { element.dir = value; }, direction);
+      await page.locator('html').evaluate((element, value) => { element.setAttribute('dir', value); }, direction);
       for (const width of [360, 430]) {
         await page.setViewportSize({ width, height: 844 });
         for (const scale of [0.85, 1.35]) {
@@ -276,6 +276,91 @@ test('Classic phone metrics and workspace range remain readable as text scales',
       });
       expect(await findOverlappingWorkspaceInputActions(page), `${forcedColors}, ${direction}, two actions`).toEqual([]);
       await page.locator('[data-actions] button').last().evaluate((element) => element.remove());
+    }
+  }
+});
+
+test('Classic compact phone headers share a row only when the action rail fits', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 12px; --density-pad-y: 12px; }
+      body { margin: 0; font: 16px system-ui, sans-serif; }
+      header { display: flex; width: calc(100vw - 32px); }
+      header.flex-row { flex-direction: row; flex-wrap: wrap; }
+      header.flex-col { flex-direction: column; }
+      [data-app-part~="page-title"] { display: flex; min-width: 0; align-items: center; }
+      h1 { margin: 0; min-width: 0; font-size: calc(24px * var(--font-scale)); overflow-wrap: break-word; }
+      button { flex: none; width: 44px; height: 44px; }
+      [data-app-part~="page-actions"] { display: flex; flex: none; }
+    </style>
+    <header class="flex-row" data-single data-app-part="page-header" data-app-design-owner="pack-classic">
+      <div data-app-part="page-title" data-app-design-owner="pack-classic">
+        <h1>Energy intelligence</h1><button aria-label="More information"></button>
+      </div>
+      <div data-app-part="page-actions" data-app-design-owner="pack-classic"><button aria-label="Save view"></button></div>
+    </header>
+    <header class="flex-row" data-many data-app-part="page-header" data-app-design-owner="pack-classic">
+      <div data-app-part="page-title" data-app-design-owner="pack-classic"><h1>Action center</h1></div>
+      <div data-many-actions data-app-part="page-actions" data-app-design-owner="pack-classic">
+        <button aria-label="Refresh"></button><button aria-label="Copy"></button><button aria-label="Share"></button>
+        <button aria-label="Save"></button><button aria-label="More"></button>
+      </div>
+    </header>
+    <header class="flex-col" data-stacked data-app-part="page-header" data-app-design-owner="pack-classic">
+      <div data-app-part="page-title" data-app-design-owner="pack-classic"><h1>Stacked header</h1></div>
+    </header>
+    <div data-widget-pack="classic">
+      <header class="flex-row" data-protected data-app-part="page-header" data-app-design-owner="pack-classic">
+        <div data-app-part="page-title" data-app-design-owner="pack-classic"><h1>Protected</h1></div>
+      </header>
+    </div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const direction of ['ltr', 'rtl'] as const) {
+      await page.locator('html').evaluate((element, value) => { element.setAttribute('dir', value); }, direction);
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const scale of [0.85, 1.35]) {
+          await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+          const context = `${forcedColors}, ${direction}, ${width}, ${scale}`;
+          const geometry = await page.evaluate(() => {
+            const read = (selector: string) => {
+              const header = document.querySelector<HTMLElement>(selector)!;
+              const title = header.querySelector<HTMLElement>('[data-app-part~="page-title"]')!;
+              const actions = header.querySelector<HTMLElement>('[data-app-part~="page-actions"]');
+              const titleBox = title.getBoundingClientRect();
+              const actionBox = actions?.getBoundingClientRect();
+              return {
+                title: { top: titleBox.top, bottom: titleBox.bottom, left: titleBox.left, right: titleBox.right },
+                actions: actionBox && { top: actionBox.top, bottom: actionBox.bottom, left: actionBox.left, right: actionBox.right },
+                overflow: header.scrollWidth - header.clientWidth,
+                basis: getComputedStyle(title).flexBasis,
+                columnGap: getComputedStyle(header).columnGap,
+              };
+            };
+            return { single: read('[data-single]'), many: read('[data-many]'), stacked: read('[data-stacked]'), protected: read('[data-protected]') };
+          });
+          const actions = geometry.single.actions!;
+          expect(Math.abs(actions.top - geometry.single.title.top), context).toBeLessThanOrEqual(1);
+          expect(direction === 'ltr' ? actions.left >= geometry.single.title.right - 1 : actions.right <= geometry.single.title.left + 1, context).toBe(true);
+          expect(geometry.single.overflow, context).toBeLessThanOrEqual(1);
+          expect(geometry.many.overflow, context).toBeLessThanOrEqual(1);
+          if (width === 360 && scale === 1.35) {
+            expect(geometry.many.actions!.top, context).toBeGreaterThanOrEqual(geometry.many.title.bottom);
+          }
+          expect(geometry.stacked.basis, context).toBe('auto');
+          expect(geometry.protected.basis, context).toBe('auto');
+          expect(geometry.stacked.columnGap, context).toBe('4px');
+          expect(geometry.protected.columnGap, context).toBe('4px');
+        }
+      }
     }
   }
 });

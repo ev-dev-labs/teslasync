@@ -160,6 +160,26 @@ for (const route of routes) {
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
+    if (route.path === '/energy' && width < 768 && packId === 'classic') {
+      const headerGeometry = await page.locator('[data-role="page-header"]').first().evaluate(header => {
+        const title = header.querySelector<HTMLElement>('[data-app-part~="page-title"]')!;
+        const actions = header.querySelector<HTMLElement>('[data-app-part~="page-actions"]')!;
+        const heading = title.querySelector<HTMLElement>('[data-route-focus-target]')!;
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        const titleBox = title.getBoundingClientRect();
+        const actionBox = actions.getBoundingClientRect();
+        return {
+          title: { top: titleBox.top, right: titleBox.right },
+          actions: { top: actionBox.top, left: actionBox.left },
+          headingLines: Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0).length,
+        };
+      });
+      expect(Math.abs(headerGeometry.actions.top - headerGeometry.title.top)).toBeLessThanOrEqual(1);
+      expect(headerGeometry.actions.left + 1).toBeGreaterThanOrEqual(headerGeometry.title.right);
+      if (width >= 430 && fontScale === 1.35) expect(headerGeometry.headingLines).toBe(1);
+    }
+
     if (route.path === '/energy' && width < 768 && packId === 'classic'
       && process.env.DESIGN_PACK_CHECK_WORKSPACE === '1') {
       const vehicle = page.locator('[data-role="mobile-workspace-controls"] [data-role="vehicle-picker-control"] input');
