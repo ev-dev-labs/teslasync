@@ -116,7 +116,7 @@ vi.mock('@/components/charts', () => ({
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
-  Legend: () => null,
+  ChartLegend: () => null,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive">{children}</div>
   ),

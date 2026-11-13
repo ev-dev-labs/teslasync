@@ -168,6 +168,29 @@ jobs:
           E2E_REUSE_BUILD: '1'
           GUARD_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
         run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
+      - name: Record application design build receipt
+        if: always() && matrix.suite == 'quality'
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          for (const key of ['GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']) {
+            if (!process.env[key]) throw new Error(`Missing actual ${key}`);
+          }
+          const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const common = {
+            checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: 'e2e-app',
+            indexSHA256: hash(join('e2e', '.app-dist', 'index.html')),
+            acceptanceSourceSHA256: hash(join('e2e', 'widget-design-packs.app.spec.ts')),
+          };
+          // Profile contexts are not completion claims; the actual reports establish coverage.
+          const receipts = [390, 1440].flatMap(profileWidth => ['dark', 'light', 'custom']
+            .map(theme => ({ ...common, project: 'chromium-smoke', profileWidth, theme })));
+          mkdirSync('test-results', { recursive: true });
+          writeFileSync(join('test-results', 'app-design-receipts.json'), JSON.stringify(receipts, null, 2));
+          NODE
       - name: Upload Chromium failure evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2
@@ -239,11 +262,101 @@ jobs:
             web/test-results/
             web/playwright-report/
 
+  app-design-tests:
+    name: ${{ matrix.browser }} application designs (${{ matrix.width }}px/${{ matrix.theme }})
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    needs: browser-build
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+        width: [1440, 390]
+        theme: [dark, light, custom]
+    env:
+      E2E_MOCKS: '1'
+      E2E_REUSE_BUILD: '1'
+      E2E_APP_DESIGN_CROSS_BROWSER: '1'
+      APP_DESIGN_BROWSER: ${{ matrix.browser }}
+      APP_DESIGN_PROFILE_WIDTH: ${{ matrix.width }}
+      APP_DESIGN_PROFILE_THEME: ${{ matrix.theme }}
+      APP_DESIGN_PROFILE_TITLE: Application design languages at ${{ matrix.width }}px in ${{ matrix.theme }}
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-app
+          path: web/e2e/.app-dist
+      - name: Bind application design evidence to its source and build
+        run: |
+          node --input-type=module <<'NODE'
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            const hash = path => createHash("sha256").update(readFileSync(path)).digest("hex");
+            writeFileSync("app-design-run-envelope.json", JSON.stringify({
+              checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
+              workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: "e2e-app",
+              indexSHA256: hash("e2e/.app-dist/index.html"),
+              acceptanceSourceSHA256: hash("e2e/widget-design-packs.app.spec.ts"),
+              project: `app-design-${process.env.APP_DESIGN_BROWSER}`,
+              profileWidth: Number(process.env.APP_DESIGN_PROFILE_WIDTH),
+              theme: process.env.APP_DESIGN_PROFILE_THEME,
+            }, null, 2));
+          NODE
+      - name: Require complete profile registration
+        run: |
+          npx playwright test widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep="$APP_DESIGN_PROFILE_TITLE" --list --reporter=json > app-design-registration.json
+          node --input-type=module <<'NODE'
+            import assert from "node:assert/strict";
+            import { readFileSync } from "node:fs";
+            const collect = suites => suites.flatMap(suite => [
+              ...(suite.specs ?? []).flatMap(spec => (spec.tests ?? []).map(test => ({ ...test, title: spec.title }))),
+              ...collect(suite.suites ?? []),
+            ]);
+            const tests = collect(JSON.parse(readFileSync("app-design-registration.json", "utf8")).suites);
+            assert.equal(tests.length, Number(process.env.APP_DESIGN_PROFILE_WIDTH) === 1440 ? 23 : 21);
+            assert.equal(new Set(tests.map(test => test.title)).size, tests.length);
+            assert.ok(tests.every(test => test.projectName === `app-design-${process.env.APP_DESIGN_BROWSER}`
+              && test.title.startsWith(process.env.APP_DESIGN_PROFILE_TITLE)));
+            console.log(`Complete profile registration: ${tests.length} cases`);
+          NODE
+      - name: Run every application design phase
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: app-design-results.json
+        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep="$APP_DESIGN_PROFILE_TITLE" --workers=1 --reporter=line,json --output=test-results/app-design-profile
+      - name: Preserve engine replay contract
+        if: matrix.width == 1440 && matrix.theme == 'dark'
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: app-design-replay-results.json
+        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep-invert="Application design languages at" --workers=1 --reporter=line,json --output=test-results/app-design-replay
+      - name: Upload application design evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: app-design-${{ matrix.browser }}-${{ matrix.width }}-${{ matrix.theme }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            web/app-design-registration.json
+            web/app-design-run-envelope.json
+            web/app-design-results.json
+            web/app-design-replay-results.json
+            web/test-results/
+            web/playwright-report/
+
   cross-browser:
     # Preserve existing engine check names; none can pass with a missing shard.
     name: ${{ matrix.browser }} critical smoke
     if: always()
-    needs: [contract, browser-build, cross-browser-tests]
+    needs: [contract, browser-build, cross-browser-tests, app-design-tests]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

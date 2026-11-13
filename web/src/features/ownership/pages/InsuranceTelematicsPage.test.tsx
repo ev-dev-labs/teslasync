@@ -9,10 +9,16 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const datePreferences = vi.hoisted(() => ({
   override: null as { locale: string; timezone: string } | null,
@@ -203,6 +209,144 @@ beforeEach(() => {
 });
 
 describe('InsuranceTelematicsPage — confirm-gated delete', () => {
+  it('adopts the existing contribution track and original fill for all designs without changing geometry or source color', () => {
+    const profile = makeProfile({ factors: [{
+      code: 'contribution', label: 'Recorded contribution', narrative: 'Original weighted factor',
+      observed_rate: 3, baseline_rate: 2, rate_unit: 'events/m', score: -0.25,
+      weight: 0.4, contribution_pct: 37.125, direction: 'higher_is_better',
+      sample_count: 19, percentile: null,
+    }] });
+    const original = structuredClone(profile);
+    mockProfile.mockReturnValue(makeQuery(profile));
+    const view = renderPage();
+    const row = within(card('Factor decomposition')).getByText('Recorded contribution').closest('tr')!;
+    const track = row.querySelector('[data-metric-track]')!;
+    const fill = track.firstElementChild as HTMLElement;
+    expect(track).toHaveAttribute('data-app-part', 'metric');
+    expect(track).toHaveAttribute('data-app-metric', 'bar');
+    expect(fill).toHaveAttribute('data-metric-fill');
+    expect(track).not.toHaveAttribute('data-app-design-owner');
+    expect(track).not.toHaveAttribute('role');
+    expect(track.parentElement).toHaveClass('min-w-28');
+    expect(track).toHaveClass('h-1.5', 'w-full', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-2)]');
+    expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--text-secondary)]');
+    expect(fill.style.width).toBe('37.125%');
+    const readout = track.nextElementSibling!.textContent;
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(view.container, pack);
+      const release = observeAppDesignScopes(view.container);
+      try {
+        expectAppDesignDataMode(track, getAppDesignAttributes(pack)['data-app-data'], '[data-metric-track]');
+        const selected = matchesAppDesignCss(fill, '[data-metric-fill]');
+        expect(selected.length).toBeGreaterThan(0);
+        for (const { declarations } of selected) {
+          expect(declarations).not.toHaveProperty('width');
+          expect(declarations).not.toHaveProperty('height');
+          expect(declarations).not.toHaveProperty('background');
+          expect(declarations).not.toHaveProperty('background-color');
+        }
+        expect(fill.style.width).toBe('37.125%');
+        expect(track.nextElementSibling).toHaveTextContent(readout!);
+        expect(row).toHaveTextContent('Higher is better');
+        expect(row).toHaveTextContent('Original weighted factor');
+      } finally {
+        release();
+      }
+    }
+    expect(profile).toEqual(original);
+  });
+
+  it.each([
+    { value: 0, width: '0%', reading: true },
+    { value: -25, width: '0%', reading: true },
+    { value: 125, width: '100%', reading: true },
+    { value: null, width: '0%', reading: false },
+    { value: undefined, width: '', reading: false },
+    { value: NaN, width: '', reading: false },
+    { value: Infinity, width: '100%', reading: false },
+    { value: -Infinity, width: '0%', reading: false },
+  ])('retains the original contribution width/readout distinction for $value', ({ value, width, reading }) => {
+    const factor: RiskFactor = {
+      code: 'contribution', label: 'Recorded contribution', narrative: 'Original weighted factor',
+      observed_rate: 3, baseline_rate: 2, rate_unit: 'events/m', score: 0,
+      weight: 0.4, contribution_pct: 0, direction: 'higher_is_worse',
+      sample_count: 19, percentile: null,
+    };
+    const data = { ...makeProfile(), factors: [{ ...factor, contribution_pct: value }] };
+    mockProfile.mockReturnValue(makeQuery(data));
+    renderPage();
+    const row = within(card('Factor decomposition')).getByText('Recorded contribution').closest('tr')!;
+    const track = row.querySelector('[data-metric-track]')!;
+    expect((track.firstElementChild as HTMLElement).style.width).toBe(width);
+    if (reading) expect(track.nextElementSibling).not.toHaveTextContent('—');
+    else expect(track.nextElementSibling).toHaveTextContent(/^—$/);
+    expect(Object.is(data.factors[0].contribution_pct, value)).toBe(true);
+    expect(track).not.toHaveAttribute('aria-valuenow');
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it('binds the actual policy and checksum surfaces to every design without turning records into metrics', () => {
+    const policy = makePolicy({ insurer: 'Long insurer '.repeat(12).trim(), policy_ref: 'POL-'.repeat(40) });
+    const profile = makeProfile({ policy, evidence_packet_hash: 'a7'.repeat(32) });
+    const original = structuredClone(profile);
+    mockProfile.mockReturnValue(makeQuery(profile));
+    const view = renderPage();
+    const policyLabel = within(card('Premium simulation')).getByText(`${policy.insurer} · ${policy.policy_ref}`);
+    const policySurface = policyLabel.parentElement!.parentElement!;
+    const checksum = within(card('Risk-summary checksum')).getByText(profile.evidence_packet_hash);
+    const checksumSurface = checksum.parentElement!;
+    const records = [policySurface, checksumSurface];
+    const before = records.map(record => record.textContent);
+    for (const record of records) {
+      expect(record).toHaveAttribute('data-app-part', 'card');
+      expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(record).not.toHaveAttribute('data-app-design-owner');
+      expect(record).toHaveClass('p-4', 'bg-[var(--panel-bg)]');
+    }
+    expect(policySurface).toHaveTextContent('open-ended');
+    expect(checksum).toHaveClass('break-all');
+    expect(checksumSurface.querySelector('[data-app-metric], [data-app-part~="metric"]')).toBeNull();
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(view.container, pack);
+      const release = observeAppDesignScopes(view.container);
+      try {
+        const selectors: string[] = [];
+        postcss.parse(readFileSync(resolve(
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
+        ), 'utf8')).walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="card"]')) selectors.push(rule.selector);
+        });
+        for (const record of records) {
+          expect(record.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`);
+          expect(selectors.some(selector => record.matches(selector))).toBe(true);
+        }
+        expect(records.map(record => record.textContent)).toEqual(before);
+      } finally {
+        release();
+      }
+    }
+    fireEvent.click(within(policySurface).getByRole('button', { name: 'Remove' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(policy.policy_ref);
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(profile).toEqual(original);
+  });
+
+  it('keeps the checksum independent of missing policy and premium records', () => {
+    const profile = makeProfile({ policy: null, premium: null });
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+    expect(within(card('Premium simulation')).queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(within(card('Premium simulation')).getByRole('button', { name: 'Add policy' })).toBeEnabled();
+    const checksum = within(card('Risk-summary checksum')).getByText(profile.evidence_packet_hash);
+    expect(checksum.parentElement).toHaveAttribute('data-app-part', 'card');
+    expect(checksum.parentElement).not.toHaveAttribute('data-app-design-owner');
+    expect(mockUpsert().mutate).not.toHaveBeenCalled();
+  });
+
   it('refreshes chart and policy dates with locale and zone preferences without rewriting source or form instants', () => {
     const start = '2026-03-01T00:30:00Z';
     const end = '2026-03-02T00:30:00Z';

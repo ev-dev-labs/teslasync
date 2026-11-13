@@ -31,11 +31,11 @@ export function RangeMatrix({ source, loading }: RangeSectionProps) {
   const title = `${t('range.efficiencyMatrix', 'Personal Efficiency Matrix')} (${unit})`;
   return (
     <LayoutCard title={title}>
-      <section aria-label={title} className="min-w-0">
+      <section data-app-part="chart" data-chart-family="condition-matrix" aria-label={title} className="min-w-0">
         <RangeSourceSlot source={source} loading={loading} empty={matrix.length === 0}
           message={t('range.noMatrix', 'Efficiency data requires drives in different conditions.')} height={200}>
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2 px-3">
+          <div data-chart-matrix="" className="space-y-3">
+            <div data-chart-scale="" className="grid grid-cols-3 gap-2 px-3">
               {speeds.map(speed => (
                 <Caption key={speed} className="block min-w-0 break-words">
                   {t(`range.speedBucket.${speed}`, speedLabels[speed])}
@@ -43,8 +43,8 @@ export function RangeMatrix({ source, loading }: RangeSectionProps) {
               ))}
             </div>
             {temperatures.map(temperature => (
-              <div key={temperature} className="min-w-0 rounded-lg border border-[var(--border-subtle)] p-3">
-                <Text as="p" variant="bodySm" className="mb-2">
+              <div key={temperature} data-chart-matrix-row="" className="min-w-0 rounded-lg border border-[var(--border-subtle)] p-3">
+                <Text data-chart-matrix-label="" as="p" variant="bodySm" className="mb-2">
                   {t(`range.tempBucket.${temperature}`, temperatureLabels[temperature])}
                 </Text>
                 <div className="grid grid-cols-3 gap-2">
@@ -52,13 +52,13 @@ export function RangeMatrix({ source, loading }: RangeSectionProps) {
                     const bucket = lookup[`${temperature}|${speed}`];
                     const efficiency = knownNumber(bucket?.wh_km);
                     return (
-                      <div key={speed} aria-label={`${t(`range.tempBucket.${temperature}`, temperatureLabels[temperature])}, ${t(`range.speedBucket.${speed}`, speedLabels[speed])}`}
+                      <div key={speed} data-chart-matrix-cell="" aria-label={`${t(`range.tempBucket.${temperature}`, temperatureLabels[temperature])}, ${t(`range.speedBucket.${speed}`, speedLabels[speed])}`}
                         className={cn('min-w-0 rounded-lg p-2',
                         efficiency == null ? 'bg-[var(--surface-2)]' : matrixTone(efficiency))}>
-                        <Text as="span" variant="bodySm" className="block break-words tabular-nums">
+                        <Text data-chart-readout="" as="span" variant="bodySm" className="block break-words tabular-nums">
                           {efficiency == null ? '—' : fmtNumber(convertEfficiencyFromSI(efficiency, unitPrefs.distance))}
                         </Text>
-                        {bucket && <Caption className="block">({knownNumber(bucket.samples) ?? '—'})</Caption>}
+                        {bucket && <Caption data-chart-metadata="" className="block">({knownNumber(bucket.samples) ?? '—'})</Caption>}
                       </div>
                     );
                   })}

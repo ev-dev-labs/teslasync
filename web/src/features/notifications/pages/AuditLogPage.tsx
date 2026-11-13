@@ -105,7 +105,7 @@ export default function AuditLogPage() {
               className="py-6"
             />
           ) : isLoading ? (
-            <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: t('audit.title', 'Audit log') })} className="space-y-2 mt-4">
+            <div data-app-part="status" role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: t('audit.title', 'Audit log') })} className="space-y-2 mt-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton key={i} className="h-8" />
               ))}

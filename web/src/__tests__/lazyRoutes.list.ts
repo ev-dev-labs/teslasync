@@ -28,6 +28,13 @@ export const LAZY_ROUTE_IMPORTS: Array<{
       return { default: module.TaskOnboardingHost }
     },
   },
+  {
+    name: 'AppDesignBridge',
+    load: async () => {
+      const module = await import('../components/ui/AppDesignBridge')
+      return { default: module.AppDesignBridge }
+    },
+  },
   { name: 'MobileGridReference', load: () => import('../features/developer-reference/mobile-grid/MobileGridReferencePage') },
   { name: 'LayoutReference', load: () => import('../features/developer-reference/layout/LayoutReferencePage') },
   { name: 'StatReference', load: () => import('../features/developer-reference/stats/StatReferencePage') },

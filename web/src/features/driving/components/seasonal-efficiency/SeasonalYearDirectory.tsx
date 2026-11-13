@@ -6,6 +6,7 @@ import type { SeasonalSectionProps } from './types';
 import { formatIntensityWhPerM } from './formatters';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalYearDirectory({
@@ -29,23 +30,23 @@ export function SeasonalYearDirectory({
           {analysis.years.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.yearDirectory.empty', 'No local calendar years have included observations.')} />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <Grid minItemWidth="wide" gap={3}>
               {analysis.years.map((year) => (
-                <div key={year.year} className="rounded-lg border border-[var(--panel-border)] p-3">
+                <div data-app-part="card" data-surface-variant="standalone" key={year.year} className="rounded-lg border border-[var(--panel-border)] p-3">
                   <div className="flex items-center justify-between">
                     <Text variant="subhead">{year.year}</Text>
                     <Text variant="caption">{t('seasonalEfficiency.yearDirectory.samples', '{{count}} samples', { count: year.sampleCount })}</Text>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div>
-                      <Text variant="caption">{t('seasonalEfficiency.yearDirectory.observed', 'Observed')}</Text>
-                      <Text variant="bodySm" as="p">{formatIntensityWhPerM(year.observedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
+                  <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid grid-cols-2 gap-2">
+                    <div data-app-part="list-row">
+                      <Text data-app-part="metric-label" variant="caption" as="dt">{t('seasonalEfficiency.yearDirectory.observed', 'Observed')}</Text>
+                      <Text data-app-part="metric-reading" variant="bodySm" as="dd"><span data-app-part="metric-value">{formatIntensityWhPerM(year.observedEnergyIntensityWhPerM, units.unitPrefs)}</span></Text>
                     </div>
-                    <div>
-                      <Text variant="caption">{t('seasonalEfficiency.yearDirectory.adjusted', 'Deseasonalized')}</Text>
-                      <Text variant="bodySm" as="p">{formatIntensityWhPerM(year.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs)}</Text>
+                    <div data-app-part="list-row">
+                      <Text data-app-part="metric-label" variant="caption" as="dt">{t('seasonalEfficiency.yearDirectory.adjusted', 'Deseasonalized')}</Text>
+                      <Text data-app-part="metric-reading" variant="bodySm" as="dd"><span data-app-part="metric-value">{formatIntensityWhPerM(year.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs)}</span></Text>
                     </div>
-                  </div>
+                  </dl>
                   <Text variant="caption" as="p" className="mt-2">
                     {t('seasonalEfficiency.yearDirectory.distance', '{{distance}} observed distance', {
                       distance: units.formatDistance(year.distanceM),
@@ -58,7 +59,7 @@ export function SeasonalYearDirectory({
                   </Text>
                 </div>
               ))}
-            </div>
+            </Grid>
           )}
         </SeasonalSectionBody>
       </GlassPanel>

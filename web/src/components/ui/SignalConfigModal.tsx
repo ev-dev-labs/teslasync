@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Button } from './Button'
+import { Card } from './Card'
 import { Input } from './Input'
 import { Modal } from './Modal'
 import { Select } from './Select'
@@ -281,7 +282,12 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
       </Caption>
 
       {/* Master Controls — sticky to top of Modal scroll container */}
-      <div className="sm:sticky top-0 z-10 -mx-4 -mt-3 space-y-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:-mx-6 sm:px-6">
+      <Card
+        padding="none"
+        data-app-form-section
+        data-print-card={undefined}
+        className="sm:sticky top-0 z-10 -mx-4 -mt-3 space-y-3 rounded-none border-0 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 shadow-none sm:-mx-6 sm:px-6"
+      >
         {/* Presets */}
         <div className="flex flex-wrap gap-2">
           {PRESETS.map(p => (
@@ -293,7 +299,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
         </div>
 
         {/* Master Toggle + Master Interval */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div data-app-form-body className="flex items-center gap-4 flex-wrap">
           <Button type="button" variant="outline" size="sm" wrapLabel onClick={() => toggleAll(!allSelected)} aria-pressed={allSelected}
             className="min-h-11 md:min-h-9">
             <span className="h-4 w-4 shrink-0 rounded-shape-sm border border-[var(--control-border)] flex items-center justify-center">
@@ -320,7 +326,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             />
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Signal List */}
       <div className="space-y-2 py-3">
@@ -340,9 +346,15 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             const catSelectedCount = catSignals.filter(s => s.selected).length
 
             return (
-              <div key={category} className="border border-[var(--border-default)] rounded-shape-lg">
+              <Card
+                key={category}
+                padding="none"
+                data-app-form-section
+                data-print-card={undefined}
+                className="border border-[var(--border-default)] rounded-shape-lg bg-transparent shadow-none"
+              >
                 {/* Category Header */}
-                <div className="flex flex-wrap items-center gap-2 rounded-shape-lg px-3 py-2 bg-[var(--surface-2)]">
+                <div data-app-form-heading className="flex flex-wrap items-center gap-2 rounded-shape-lg px-3 py-2 bg-[var(--surface-2)]">
                   <Button type="button" variant="outline" size="sm" onClick={() => toggleCategory(category)} aria-pressed={allCatSelected}
                     aria-label={allCatSelected
                       ? t('signalConfig.deselectCategory', 'Deselect all {{category}} signals', { category })
@@ -373,10 +385,10 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
 
                 {/* Signal Rows */}
                 {expanded && (
-                  <div className="divide-y divide-[var(--border-subtle)]">
+                  <div data-app-form-body className="divide-y divide-[var(--border-subtle)]">
                     {catSignals.map(sig => {
                       return (
-                        <div key={sig.name} className={cn(
+                        <div key={sig.name} data-app-part="field" data-app-field-surface className={cn(
                           'flex flex-wrap items-center gap-2 px-3 py-2',
                           sig.selected && 'bg-[var(--theme-accent-soft)]'
                         )}>
@@ -389,7 +401,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                             )}>
                             {sig.selected && <Icon icon={CheckCircle} size="sm" />}
                           </Button>
-                          <Text as="span" variant="code" className="min-w-0 flex-1 break-all">{sig.name}</Text>
+                          <Text data-app-part="field-label" as="span" variant="code" className="min-w-0 flex-1 break-all">{sig.name}</Text>
                           <Select value={String(sig.interval)}
                             onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
                             aria-label={t('signalConfig.intervalForSignal', 'Sampling interval for {{signal}}', { signal: sig.name })}
@@ -402,7 +414,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                     })}
                   </div>
                 )}
-              </div>
+              </Card>
             )
           })
         )}

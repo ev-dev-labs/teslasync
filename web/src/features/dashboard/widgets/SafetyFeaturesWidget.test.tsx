@@ -246,7 +246,7 @@ describe.each(PACK_IDS)('SafetyFeaturesWidget [%s]', (packId) => {
     expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: /refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

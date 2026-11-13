@@ -2,6 +2,7 @@ import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
@@ -44,10 +45,13 @@ export function DepartureForecastWeekdayRoutines({
           )}
         </Text>
         <DepartureForecastSectionBody forecast={forecast} state={state}>
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <Grid minItemWidth="wide" gap={2}>
+          <ul data-app-part="list" className="contents">
             {forecast.weekdayProfiles.map((profile) => (
               <li
                 key={profile.weekday}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -111,6 +115,7 @@ export function DepartureForecastWeekdayRoutines({
               </li>
             ))}
           </ul>
+          </Grid>
         </DepartureForecastSectionBody>
       </GlassPanel>
     </section>

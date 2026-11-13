@@ -317,7 +317,7 @@ export default function MQTTInspectorPage() {
           />
           {partialMeasurements && (
             <DataStateNotice state="partial" className="mt-3" data-testid="mqtt-partial-measurements">
-              <dl className="space-y-1">
+              <dl data-app-part="list" className="space-y-1">
                 {briefMetrics.filter(metric => metric.valueState === 'missing').map(metric => (
                   <div key={metric.key} className="flex flex-wrap gap-x-2">
                     <Text as="dt" variant="bodySm">{metric.label}</Text>

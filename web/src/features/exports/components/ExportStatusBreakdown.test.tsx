@@ -175,7 +175,7 @@ describe('ExportStatusBreakdown', () => {
     });
 
     it('renders the storage footer with a formatted byte total', () => {
-      renderBreakdown({
+      const { container } = renderBreakdown({
         stats: makeStats({
           byStatus: { ready: 1 },
           totalBytes: 2 * 1024 * 1024,
@@ -184,6 +184,11 @@ describe('ExportStatusBreakdown', () => {
 
       expect(screen.getByText('Storage used')).toBeInTheDocument();
       expect(screen.getByText('2.00 MB')).toBeInTheDocument();
+      const storage = container.querySelector('[data-app-metric-kind="export-storage"]');
+      expect(storage).toHaveAttribute('data-app-metric', 'inline');
+      expect(storage?.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Storage used');
+      expect(storage?.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('2.00 MB');
+      expect(storage?.querySelector('[data-app-part~="metric-unit"]')).toBeNull();
     });
 
     it('renders an em dash for storage when no bytes have accumulated', () => {
@@ -193,6 +198,7 @@ describe('ExportStatusBreakdown', () => {
 
       expect(screen.getByText('Storage used')).toBeInTheDocument();
       expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.getByText('—')).toHaveAttribute('data-app-part', 'metric-reading metric-value');
     });
   });
 

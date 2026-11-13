@@ -377,7 +377,7 @@ export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetPr
   const details = (
     <div className="min-w-0 space-y-3">
       <Caption as="p">{sampleScope}</Caption>
-      <dl aria-label={t('widget.speedProfile.speedRange', 'Speed range')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
+      <dl data-app-part="list" aria-label={t('widget.speedProfile.speedRange', 'Speed range')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
         {chartData.map((datum) => (
           <div key={datum.sourceIndex} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
             <Caption as="dt" className="min-w-0 break-words">{datum.bucket} {unitPrefs.speed}</Caption>

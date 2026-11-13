@@ -34,7 +34,7 @@ export default function PedalUsage({ vehicleId }: { vehicleId: number | null | u
     <LayoutCard title={t('dynamics.pedalUsage', 'Pedal Usage')}>
       <DynamicsPausedNotice state={state} label={t('dynamics.pedalResource', 'Pedal telemetry')} />
       {query.isLoading && !state.hasData ? (
-        <div role="status" aria-busy="true"
+        <div data-app-part="status" role="status" aria-busy="true"
           aria-label={t('dynamics.pedalLoading', 'Loading pedal telemetry…')}
           className="grid min-h-[8rem] grid-cols-1 gap-4 py-2 @md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (

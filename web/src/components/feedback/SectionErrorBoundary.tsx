@@ -48,6 +48,9 @@ export function SectionErrorBoundary({
   if (fallbackTitle) {
     const titleFallback = (
       <div
+        data-app-part="feedback error"
+        data-app-feedback-kind="notice"
+        data-app-tone="danger"
         role="alert"
         className={cn(
           'flex min-w-0 items-start gap-3 rounded-panel border p-4',
@@ -55,9 +58,9 @@ export function SectionErrorBoundary({
           severityTokens.critical.border,
         )}
       >
-        <Icon icon={AlertTriangle} size="lg" className={severityTokens.critical.fg} />
-        <div className="flex-1 min-w-0">
-          <Text as="p" variant="bodySm" className="break-words">{fallbackTitle}</Text>
+        <Icon data-app-part="feedback-icon" icon={AlertTriangle} size="lg" className={severityTokens.critical.fg} />
+        <div data-app-part="feedback-content" className="flex-1 min-w-0">
+          <Text data-app-part="feedback-title" as="p" variant="bodySm" className="break-words">{fallbackTitle}</Text>
           <HelperText className="break-words">
             {t('errors.section.subtitle', 'Other parts of the page should still work.')}
           </HelperText>

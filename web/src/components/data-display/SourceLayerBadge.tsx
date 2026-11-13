@@ -92,6 +92,7 @@ export function SourceLayerBadge({ source, ageMs, showLabel, className }: Source
   return (
     <Tooltip content={tooltip} multiline>
       <Button
+        data-app-part="status badge"
         type="button"
         variant="ghost"
         aria-label={style === STYLE.unknown ? t('common.unknown', 'Unknown') : label}

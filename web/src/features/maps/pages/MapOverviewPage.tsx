@@ -82,10 +82,12 @@ interface PositionRecord {
 /** One icon + label + trailing (badge/value) row inside Location Details. */
 function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="shrink-0" aria-hidden="true">{icon}</span>
-      <Text variant="bodySm" className="flex-1">{label}</Text>
-      {children}
+    <div data-app-part="list-row" className="flex min-w-0 flex-wrap items-center gap-3">
+      <Text as="dt" data-app-part="metric-label" variant="bodySm" className="flex min-w-0 flex-1 items-center gap-3 [overflow-wrap:anywhere]">
+        <span className="shrink-0" aria-hidden="true">{icon}</span>
+        {label}
+      </Text>
+      <dd data-app-part="metric-value" className="min-w-0 max-w-full [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
@@ -344,8 +346,8 @@ export default function MapOverviewPage() {
 
       {/* 1 — Hero: recorded position map + info panel in ONE surface (trip replay model). */}
       <FadeIn delay={0.05}>
-        <GlassPanel className="overflow-hidden p-0">
-          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2.5 sm:px-5">
+        <GlassPanel data-app-part="panel map-stage" className="overflow-hidden p-0">
+          <div data-app-part="map-toolbar" data-map-control="mode" className="flex min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2.5 sm:px-5">
             <TabNav
               tabs={[
                 { key: 'live', label: t('mapOverview.modeLive', 'Live') },
@@ -356,11 +358,16 @@ export default function MapOverviewPage() {
               ariaLabel={t('mapOverview.mapMode', 'Map mode')}
             />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,13fr)_minmax(300px,7fr)]" data-testid="map-overview-hero">
+          <div data-app-part="grid map-split" data-map-kind="overview" data-map-mode={mode} className="grid grid-cols-1 lg:grid-cols-[minmax(0,13fr)_minmax(300px,7fr)]" data-testid="map-overview-hero">
           {/* Recorded position map — the hero visual. */}
           {mode === 'live' ? (
           <div
             role="region"
+            data-app-part="map"
+            data-data-state={latestState.status}
+            data-provenance={latestState.provenance}
+            data-map-state={latestLoading ? 'loading' : latestError ? 'error' : !hasValidLocation ? 'empty' : undefined}
+            aria-busy={latestLoading || undefined}
             aria-label={positionMapLabel}
             className="relative h-[380px] overflow-hidden sm:h-[460px] lg:h-auto lg:min-h-[560px]"
           >
@@ -414,6 +421,11 @@ export default function MapOverviewPage() {
              the cell with the bar directly under the map at every width. */
           <div
             role="region"
+            data-app-part="map"
+            data-data-state={historyState.status}
+            data-provenance={historyState.provenance}
+            data-map-state={historyLoading ? 'loading' : historyError ? 'error' : playbackPoints.length < 2 ? 'empty' : undefined}
+            aria-busy={historyLoading || undefined}
             aria-label={positionMapLabel}
             className="relative flex h-[380px] flex-col overflow-hidden sm:h-[460px] lg:h-[560px]"
           >
@@ -449,19 +461,20 @@ export default function MapOverviewPage() {
           {/* Info panel: latest observation, location status, coordinates —
               or the playback position's stats in Recent route mode. */}
           <section
+            data-app-part="map-details"
             aria-label={mode === 'live'
               ? t('mapOverview.locationDetails', 'Location details')
               : t('mapOverview.playbackPosition', 'Playback position')}
             aria-busy={(mode === 'live' ? latestLoading : historyLoading) || undefined}
             className="flex min-w-0 flex-col gap-4 border-t border-[var(--border-subtle)] p-4 sm:p-5 lg:border-s lg:border-t-0"
           >
-            <header className="flex min-w-0 flex-wrap items-center gap-2">
+            <header data-app-part="list-heading" className="flex min-w-0 flex-wrap items-center gap-2">
               <PanelTitle className="mb-0 min-w-0 flex-1">
                 {mode === 'live'
                   ? t('mapOverview.locationDetails', 'Location details')
                   : t('mapOverview.playbackPosition', 'Playback position')}
               </PanelTitle>
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div data-app-part="map-toolbar" data-map-control="actions" className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <IconButton icon={<Route className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.navRoute', 'Navigation route')} onClick={() => { void navigate('/navigation'); }} />
                 <IconButton icon={<Fence className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.geofences', 'Geofences')} onClick={() => { void navigate('/geofences'); }} />
                 <IconButton icon={<LocateFixed className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.locations', 'Locations')} onClick={() => { void navigate('/locations'); }} />
@@ -477,7 +490,7 @@ export default function MapOverviewPage() {
             {latestLoading ? (
               <Skeleton lines={3} height={20} />
             ) : (
-              <div className="space-y-3">
+              <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
                 <StatusRow
                   icon={<Gauge className={cn('h-5 w-5', typography.color.muted)} />}
                   label={t('mapOverview.observedSpeed', 'Observed speed')}
@@ -516,12 +529,13 @@ export default function MapOverviewPage() {
                     <Text size="sm" weight="semibold" color="primary">—</Text>
                   )}
                 </StatusRow>
-              </div>
+              </dl>
             )}
             <div className="space-y-3">
                   <DataSourceNotice sources={[{ id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' }]} />
                   {locationLoading && <Skeleton lines={3} height={20} />}
                   {locationError && <QueryError error={locationError} onRetry={() => locationQuery.refetch()} />}
+                  <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
                   {/* Home */}
                   <StatusRow
                     icon={<Home className={cn('h-5 w-5', typography.color.muted)} />}
@@ -551,6 +565,7 @@ export default function MapOverviewPage() {
                       {triLabel(homelinkNearby)}
                     </Badge>
                   </StatusRow>
+                  </dl>
 
                   {locationQuery.isSuccess && !locationDetails && !latest && (
                     <EmptyState /* no-action: transient empty state — no location data yet */
@@ -561,7 +576,7 @@ export default function MapOverviewPage() {
             {latestLoading ? (
               <Skeleton lines={2} height={20} />
             ) : (
-              <div className="space-y-3">
+              <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
                 {/* Odometer */}
                 <StatusRow
                   icon={<Navigation className={cn('h-5 w-5', typography.color.muted)} />}
@@ -589,7 +604,7 @@ export default function MapOverviewPage() {
                     )}
                   </span>
                 </StatusRow>
-              </div>
+              </dl>
             )}
             </>
             ) : historyLoading ? (
@@ -601,7 +616,7 @@ export default function MapOverviewPage() {
             ) : playbackPoints.length > 1 && recentPosition ? (
               <>
               <StaleRefreshWarning state={historyState} label={positionMapLabel} />
-              <div className="grid grid-cols-2 gap-x-2">
+              <div data-app-part="metric-grid" className="grid grid-cols-2 gap-x-2">
                 <TripReplayReadout
                   label={t('mapOverview.colTime', 'Time')}
                   value={formatDateTime(recentPosition.point.timestamp)}
@@ -641,7 +656,7 @@ export default function MapOverviewPage() {
         </GlassPanel>
       </FadeIn>
       <Drawer open={detailsOpen} onClose={() => setDetailsOpen(false)} title={t('mapOverview.sourcesTitle', 'Sources and method')}>
-        <div className="space-y-3">
+        <div data-app-part="map-sources" className="space-y-3">
           <Text as="p" variant="bodySm" color="secondary">
             {t('mapOverview.brief.description', 'Reported motion and coordinates from the latest position; missing GPS is not a measured zero.')}
           </Text>

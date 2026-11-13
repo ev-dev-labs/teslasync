@@ -68,14 +68,16 @@ export function DateGroupedList<T>({
   testId,
 }: DateGroupedListProps<T>) {
   return (
-    <div className={cn(groupSpacing, className)} data-testid={testId}>
+    <div data-app-part="list" data-app-list="grouped" className={cn(groupSpacing, className)} data-testid={testId}>
       {groups.map((group) => (
         <section
+          data-app-part="section"
           key={group.dateKey}
           aria-labelledby={`date-group-${group.dateKey}`}
           data-date-key={group.dateKey}
         >
           <header
+            data-app-part="list-heading"
             className="mb-3 flex items-center gap-3"
             id={`date-group-${group.dateKey}`}
           >

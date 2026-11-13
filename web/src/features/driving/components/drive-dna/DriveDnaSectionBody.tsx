@@ -29,17 +29,21 @@ interface PassiveStateProps {
 function PassiveState({ className, icon, message }: PassiveStateProps) {
   return (
     <div
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
       className={cn(
         'flex flex-col items-center justify-center py-16 text-center',
         className,
       )}
     >
-      <div className="mb-4 text-[var(--text-muted)]" aria-hidden="true">
+      <div data-app-part="feedback-icon" className="mb-4 text-[var(--text-muted)]" aria-hidden="true">
         {icon}
       </div>
-      <Text as="p" variant="bodySm" className="mb-4 max-w-md">
-        {message}
-      </Text>
+      <div data-app-part="feedback-content">
+        <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mb-4 max-w-md">
+          {message}
+        </Text>
+      </div>
     </div>
   );
 }

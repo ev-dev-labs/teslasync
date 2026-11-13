@@ -43,6 +43,10 @@ import type { ExportBulkResult, ExportJobSummary } from '@/api/hooks/useExports'
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
 import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const datePreferences = vi.hoisted(() => ({
   locale: 'en-US',
@@ -135,11 +139,53 @@ describe('ExportsPage — phase-five contract adoption', () => {
     const link = screen.getByRole('link', { name: 'Download export job-ready-1' });
     expect(link).toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
     expect(link).toHaveAttribute('download');
+    expect(link).toHaveAttribute('data-app-part', 'button');
+    expect(link).toHaveAttribute('data-app-variant', 'ghost');
+    expect(link).toHaveAttribute('data-app-size', 'auto');
+    expect(link).not.toHaveAttribute('role');
     expect(link).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.ghost.split(' '));
     expect(link).toHaveClass('min-h-11', 'min-w-11');
     expect(link.className).not.toMatch(/cyan-|white\/|text-sm/);
     expect(screen.getAllByRole('button', { name: 'Refresh' }).at(-1)).toHaveClass('min-h-11', 'min-w-11');
     expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
+  it('activates actual native-link and storage consumers without intercepting modified download navigation', () => {
+    const controlsCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8');
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = renderPage();
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v3'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const link = screen.getByRole('link', { name: 'Download export job-ready-1' });
+      const storage = container.querySelector('[data-app-metric-kind="export-storage"]')!;
+      const reading = storage.querySelector('[data-app-part~="metric-value"]')!;
+      const controlMatches: string[] = [];
+      postcss.parse(controlsCss).walkRules(rule => {
+        if (rule.nodes.some(node => node.type === 'decl' && node.prop === 'touch-action')) {
+          controlMatches.push(...rule.selectors.filter(selector => link.matches(selector)));
+        }
+      });
+      expect(controlMatches.length).toBeGreaterThan(0);
+      const storageMatches: string[] = [];
+      postcss.parse(feedbackCss).walkRules(rule => {
+        if (rule.nodes.some(node => node.type === 'decl' && node.prop === 'font-variant-numeric')) {
+          storageMatches.push(...rule.selectors.filter(selector => reading.matches(selector)));
+        }
+      });
+      expect(storageMatches.length).toBeGreaterThan(0);
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true });
+      link.addEventListener('click', event => {
+        expect(event.defaultPrevented).toBe(false);
+        event.preventDefault();
+      }, { once: true });
+      link.dispatchEvent(click);
+      expect(link).toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+      link.removeAttribute('data-app-design-owner');
+      expect(controlMatches.every(selector => !link.matches(selector))).toBe(true);
+    } finally { release(); }
   });
 
   it.each([

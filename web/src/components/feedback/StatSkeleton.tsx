@@ -54,6 +54,7 @@ export function StatSkeleton({ count = 4, className }: StatSkeletonProps) {
 
   return (
     <div
+      data-app-part="metric-grid loading"
       role="status"
       aria-busy="true"
       aria-label={t('feedback.statSkeleton.loading', 'Loading statistics')}
@@ -61,7 +62,7 @@ export function StatSkeleton({ count = 4, className }: StatSkeletonProps) {
       className={cn('grid grid-cols-2 gap-3', colClass, className)}
     >
       {Array.from({ length: cards }).map((_, i) => (
-        <GlassPanel key={i} className="p-4 space-y-2">
+        <GlassPanel key={i} data-app-part="metric" data-app-metric="stat-card" data-app-state="loading" className="p-4 space-y-2">
           <Skeleton className="h-3 w-16" />
           <Skeleton className="h-7 w-24" />
         </GlassPanel>

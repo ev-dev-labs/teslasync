@@ -99,13 +99,16 @@ export function ChargingRepairForm({
   return (
     <div
       id={formId}
+      data-app-part="panel"
+      data-app-form-section
+      data-surface-variant="standalone"
       role="region"
       aria-label={t('dataRepair.charging.formLabel', 'Repair charging session #{{id}}', {
         id: session.id,
       })}
       className="mt-2 space-y-4 rounded-lg bg-amber-500/[0.04] p-3 ring-1 ring-amber-400/20 sm:p-4"
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+      <div data-app-form-body className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         <Input
           label={t('dataRepair.field.endedAt', 'End date/time (ISO)')}
           value={form.ended_at}

@@ -272,7 +272,7 @@ export function ChargingPlacesWorkspace({
                 ? t('chargingPlaces.workspace.bulkUnconfirmed', 'Deletion was not confirmed. Selections remain available for review.')
                 : t('chargingPlaces.workspace.bulkIncomplete', 'Some deletions did not complete. Failed selections remain available for review.')}
             </InlineCallout>
-            <ul className="min-w-0 space-y-1">
+            <ul data-app-part="list" className="min-w-0 space-y-1">
               {bulkRecovery.failed.map(({ id, reason }) => (
                 <li key={id}>
                   <Text variant="bodySm">

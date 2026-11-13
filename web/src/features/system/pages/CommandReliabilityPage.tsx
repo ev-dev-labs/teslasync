@@ -10,9 +10,9 @@ import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/compone
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartTooltip, ChartLegend,
   ComposedChart, Bar, Scatter,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from '@/components/charts';
 
 import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
@@ -215,7 +215,7 @@ export default function CommandReliabilityPage() {
                   tick={{ fill: chartTokens.axisStroke, fontSize: 12 }}
                 />
                 <Tooltip content={<ChartTooltip valueFormatter={formatRate} />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <ChartLegend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine x={95} stroke={chartTokens.axisStroke} strokeDasharray="4 4" />
                 <Bar
                   dataKey="lower"
@@ -261,7 +261,7 @@ export default function CommandReliabilityPage() {
               message={t('commandReliability.noCommands', 'No commands recorded yet.')}
             />
           ) : (
-            <ul className="grid gap-3 lg:grid-cols-2">
+            <ul data-app-part="list" className="grid gap-3 lg:grid-cols-2">
               {summary.commands.map((c) => (
                 <li
                   key={c.command}
@@ -273,7 +273,7 @@ export default function CommandReliabilityPage() {
                       {t(`commandReliability.grade.${c.grade}`, GRADE_DEFAULT[c.grade])}
                     </Badge>
                   </div>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                  <dl data-app-part="list" className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
                     <Text as="dt" variant="caption">
                       {t('commandReliability.outcome', 'Outcome')}
                     </Text>

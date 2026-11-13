@@ -23,6 +23,11 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { parse, type Rule } from 'postcss'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 import type { NeonColor } from '@/lib/tokens'
 import {
@@ -50,7 +55,34 @@ function renderCard(overrides: Partial<SafetySettingCardProps> = {}) {
   return render(<SafetySettingCard {...baseProps(overrides)} />)
 }
 
+const surfaceRules: Rule[] = []
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'))
+  .walkRules(rule => { surfaceRules.push(rule) })
+
 describe('SafetySettingCard — content + structure', () => {
+  it.each(PACK_IDS)('%s owns the native tile frame without replacing its list, value or documentation link', pack => {
+    const view = render(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <ul><SafetySettingCard {...baseProps({ value: '—', valueVariant: 'neutral' })} /></ul>
+      </div>,
+    )
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const tile = screen.getByRole('listitem')
+      expect(tile).toHaveAttribute('data-surface-variant', 'standalone')
+      expect(tile).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+      expect(surfaceRules.some(rule => rule.selector.includes('[data-app-part~="card"]')
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-style')
+        && tile.matches(rule.selector))).toBe(true)
+      expect(tile.tagName).toBe('LI')
+      expect(screen.getByTestId('safety-settings-value-quietHoursEnabled')).toHaveTextContent('—')
+      expect(screen.getByRole('heading', { level: 3, name: 'Quiet hours' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Open documentation for Quiet hours' }))
+        .toHaveAttribute('href', '/docs/notifications/quiet-hours.md')
+      expect(screen.getByRole('link')).toHaveAttribute('target', '_blank')
+    } finally { release() }
+  })
+
   it('renders the title as an h3, the value chip, and the description paragraph', () => {
     renderCard()
 

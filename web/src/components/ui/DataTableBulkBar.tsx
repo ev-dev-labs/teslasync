@@ -33,7 +33,7 @@ export function DataTableBulkBar({ count, onClear, children, className }: DataTa
   const safeCount = Number.isFinite(count) ? Math.trunc(count) : 0
   if (safeCount <= 0) return null
   return (
-    <div role="region" aria-label={t('table.bulkActions.region', 'Bulk actions')} className={cn(tableTokens.bulkBar, 'min-w-0 max-w-full', className)}>
+    <div data-app-part="table-toolbar" data-app-toolbar-slot="selection" role="region" aria-label={t('table.bulkActions.region', 'Bulk actions')} className={cn(tableTokens.bulkBar, 'min-w-0 max-w-full', className)}>
       <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words" aria-live="polite">
         {t('table.bulkActions.selected', '{{count}} selected', { count: safeCount })}
       </Text>

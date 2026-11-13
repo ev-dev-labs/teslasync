@@ -83,11 +83,14 @@ export default function NotFoundPage() {
             <Caption as="p" className="mb-2">
               {t('notFound.didYouMean', 'Did you mean:')}
             </Caption>
-            <ul className="flex min-w-0 flex-col items-center gap-2">
+            <ul data-app-part="list" className="flex min-w-0 flex-col items-center gap-2">
               {suggestions.map((s) => (
                 <li key={s.path} className="min-w-0 max-w-full">
                   <Link
                     to={s.path}
+                    data-app-part="button"
+                    data-app-variant="ghost"
+                    data-app-size="auto"
                     className={`${BUTTON_BASE} min-h-11 max-w-full flex-wrap px-3 py-2 text-[var(--text-primary)] hover:underline forced-colors:text-[LinkText]`}
                   >
                     {t(s.i18nKey, s.label)}

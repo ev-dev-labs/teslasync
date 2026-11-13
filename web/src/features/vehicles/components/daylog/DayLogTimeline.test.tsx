@@ -1,10 +1,14 @@
 import { setGlobalLocale } from '@/lib/numberFormat';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { DayLogEvent } from '@/api/types';
 import { DayLogTimeline, type DayLogTimelineProps } from './DayLogTimeline';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const preferences = vi.hoisted(() => ({
   locale: 'en-US',
@@ -121,6 +125,82 @@ function history() {
 beforeEach(() => { setGlobalLocale('en-GB'); });
 
 describe('DayLogTimeline assigned receipt correction', () => {
+  it('activates real timeline content and opened definition consumers under each owned profile and releases the off state', async () => {
+    const timelineSelectors: string[] = [];
+    const definitionSelectors: string[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => {
+        timelineSelectors.push(...rule.selectors.filter(selector =>
+          selector.includes('data-app-part~="timeline-') && selector.includes('data-app-design-owner')));
+        definitionSelectors.push(...rule.selectors.filter(selector =>
+          selector.includes('data-app-list="definitions"') && selector.includes('data-app-design-owner')));
+      });
+    const view = mount({ events: [event({ payload: { future_flag: false, future_reading: 0 } })] });
+    const host = screen.getByTestId('daylog-timeline');
+    host.setAttribute('data-app-design-preview', '');
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const row = screen.getByTestId('daylog-event-receipt-1');
+      expect(row).not.toHaveAttribute('data-app-design-owner');
+      fireEvent.click(within(row).getByRole('button'));
+      const content = row.textContent;
+      const definitions = [...row.querySelectorAll('dl[data-app-list="definitions"] > [data-app-part="list-row"]')];
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) host.setAttribute(name, value);
+        await waitFor(() => expect(row.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`));
+        expect(timelineSelectors.some(selector => row.matches(selector))).toBe(true);
+        expect(definitions.every(field => definitionSelectors.some(selector => field.matches(selector)))).toBe(true);
+        expect(row.textContent).toBe(content);
+        expect(row.parentElement?.style.transform).toMatch(/^translateY\(/);
+        expect(row).toHaveAttribute('aria-posinset', '1');
+        expect(row).toHaveAttribute('aria-setsize', '1');
+      }
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) host.removeAttribute(name);
+      await waitFor(() => expect(row).not.toHaveAttribute('data-app-design-owner'));
+      expect(timelineSelectors.some(selector => row.matches(selector))).toBe(false);
+      expect(definitions.every(field => definitionSelectors.every(selector => !field.matches(selector)))).toBe(true);
+    } finally { release(); }
+  });
+
+  it('owns the real virtual event, expanded panel and complete definition readings without coercing payloads', () => {
+    mount({ events: [event({
+      type: 'drive_end', ref_kind: 'drive', ref_id: 17,
+      payload: { distance_m: 0, energy_used_wh: 0, future_flag: false, future_absent: null },
+    })] });
+    expect(screen.getByTestId('daylog-list')).toHaveAttribute('data-app-part', 'list timeline');
+    const row = screen.getByTestId('daylog-event-receipt-1');
+    expect(row).toHaveAttribute('data-app-part', 'timeline-row');
+    expect(row).toHaveAttribute('aria-posinset', '1');
+    expect(row).toHaveAttribute('aria-setsize', '1');
+    expect(row.querySelector('[data-app-part="timeline-content"]')).toContainElement(
+      within(row).getByRole('link', { name: 'Drive ended' }),
+    );
+    fireEvent.click(within(row).getByRole('button'));
+    const details = document.getElementById(within(row).getByRole('button').getAttribute('aria-controls') ?? '')!;
+    expect(details).toHaveAttribute('data-app-part', 'card');
+    expect(details).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(details).toHaveClass('border-0', 'bg-surface-2', 'shadow-none');
+    const definitions = details.querySelectorAll('dl[data-app-list="definitions"]');
+    expect(definitions).toHaveLength(2);
+    for (const definition of definitions) {
+      for (const field of definition.children) {
+        expect(field).toHaveAttribute('data-app-part', 'list-row');
+        expect(field.querySelector('dt')).toHaveAttribute('data-app-part', 'metric-label');
+        expect(field.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
+      }
+    }
+    const identity = within(details).getByText('receipt-1', { exact: true });
+    expect(identity.tagName).toBe('CODE');
+    expect(identity.closest('dd')).toHaveAttribute('data-app-part', 'metric-value');
+    expect(within(details).getByText('2026-11-01T05:30:00Z', { exact: true }).tagName).toBe('CODE');
+    expect(within(details).getByText('0.00 km', { exact: true })).toBeInTheDocument();
+    expect(within(details).getByText('0.00 kWh', { exact: true })).toBeInTheDocument();
+    expect(within(details).getByText('false', { exact: true })).toBeInTheDocument();
+    expect(within(details).queryByText('Future absent:')).toBeNull();
+    expect(row.parentElement).toHaveAttribute('role', 'presentation');
+    expect(row.parentElement?.style.transform).toMatch(/^translateY\(/);
+  });
+
   it('allocates below-md targets on real search, action, category and link hosts', () => {
     mount({ events: [event({ type: 'drive_end', ref_kind: 'drive', ref_id: 17 })] });
     expect(screen.getByRole('textbox', { name: 'Search events' })).toHaveClass(

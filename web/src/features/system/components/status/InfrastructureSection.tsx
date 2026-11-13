@@ -68,7 +68,7 @@ export function InfrastructureSection() {
       badges={headerBadge}
     >
       {telemetryLoading ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('systemStatus.infrastructure.loading', 'Loading infrastructure diagnostics')}
@@ -78,7 +78,7 @@ export function InfrastructureSection() {
           <Skeleton className="h-28" />
         </div>
       ) : telemetryError ? (
-        <div role="alert" className="text-sm text-[var(--text-muted)]">
+        <div data-app-part="feedback" role="alert" className="text-sm text-[var(--text-muted)]">
           {t('systemStatus.infrastructure.loadError', 'Unable to load infrastructure diagnostics.')}
         </div>
       ) : (

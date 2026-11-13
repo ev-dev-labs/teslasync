@@ -25,6 +25,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -150,6 +153,11 @@ vi.mock('@/api/hooks/useFleetOps', async (importActual) => {
   return { ...actual, useFleetWorkOrders: vi.fn() };
 });
 
+vi.mock('@/lib/routePrefetch', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/routePrefetch')>();
+  return { ...actual, prefetchRoute: vi.fn(), schedulePrefetch: vi.fn(() => vi.fn()) };
+});
+
 // The first-vehicle SSE warm-up is irrelevant to what this page renders.
 vi.mock('@/hooks/useVehicleLive', () => ({
   useVehicleLive: () => ({ state: {}, connected: false }),
@@ -176,12 +184,16 @@ import {
   useSyncVehicles,
   useDeleteVehicle,
   FleetStatesBatchError,
+  vehicleKeys,
 } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { useFleetWorkOrders, type FleetWorkOrder } from '@/api/hooks/useFleetOps';
 import { fmtNumber } from '@/lib/numberFormat';
 import { maskFor } from '@/lib/maskValue';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { batteryColor } from '@/lib/colors';
+import { prefetchRoute } from '@/lib/routePrefetch';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
@@ -953,6 +965,35 @@ describe('VehicleListPage — pinned ordering', () => {
 /* ──────────────────── Loading / error / empty branches ───────────────────── */
 
 describe('VehicleListPage — loading, error & empty states', () => {
+  it('retains the live-state and pin source rows as independent loading reads settle', () => {
+    mockFleetStates.mockReturnValue(qr({ isPending: true, isLoading: true, isFetching: true }));
+    mockPinned.mockReturnValue(qr({ isPending: true, isLoading: true, isFetching: true }));
+    const view = renderPage();
+    const liveSource = screen.getByRole('status', { name: 'Live vehicle state' });
+    const pinSource = screen.getByRole('status', { name: 'Pinned' });
+    expect(liveSource).toHaveTextContent('Loading...');
+    expect(pinSource).toHaveTextContent('Loading...');
+    expect(within(liveSource).getByRole('button')).toBeDisabled();
+    expect(within(pinSource).getByRole('button')).toBeDisabled();
+
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, Date.now() - 600_000)],
+    }));
+    mockPinned.mockReturnValue(qr({ data: [] }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/vehicles']}>
+        <QueryClientProvider client={view.client}><VehicleListPage /><LocationProbe /></QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('status', { name: 'Live vehicle state' })).toBe(liveSource);
+    expect(screen.getByRole('status', { name: 'Pinned' })).toBe(pinSource);
+    expect(within(liveSource).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(within(liveSource).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(pinSource).not.toHaveTextContent('Loading...');
+    expect(pinSource).not.toHaveTextContent('Unavailable');
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
+  });
+
   function expectUnknownRosterShells() {
     for (const title of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
@@ -1360,8 +1401,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
     const header = document.querySelector('header') as HTMLElement;
     expect(header).not.toBeNull();
-    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
-    expect(within(header).queryByText('just now')).toBeNull();
+    expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
   });
 
   it('surfaces a refresh error even though the wrapper batch resolved successfully', () => {
@@ -1392,8 +1433,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
       const view = renderPage();
       const header = document.querySelector('header') as HTMLElement;
       // …the observation age does not.
-      expect(within(header).queryByText('just now')).toBeNull();
-      expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
+      expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
+      expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
       view.unmount();
     }
   });
@@ -1517,10 +1558,15 @@ describe('VehicleListPage — loading, error & empty states', () => {
     const refetch = vi.fn();
     mockFleetStates.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
     renderPage();
-    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    const retry = screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' });
+    const source = retry.closest('li');
+    if (!source) throw new Error('Missing live-state source status row');
+    expect(source).toHaveAttribute('data-app-source-state', 'paused');
+    expect(within(source).getByText('Live vehicle state')).toBeInTheDocument();
+    expect(within(source).getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.queryByTestId('fleet-battery-skeleton')).toBeNull();
     expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' }));
+    fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledOnce();
     expect(mockVehicles.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
   });
@@ -1573,8 +1619,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
-    expect(within(header).queryByText('just now')).toBeNull();
+    expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
   });
 
   it('describes a total outage as unresolved, never as a fleet of offline vehicles', () => {
@@ -1866,5 +1912,223 @@ describe('VehicleListPage — field and independent source qualification', () =>
     expect(remove).toHaveClass('text-[var(--semantic-danger)]');
     expect(deleteMut.mutate).not.toHaveBeenCalled();
     expect(syncMut.mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('VehicleListPage — native app-design consumers (source-only)', () => {
+  const rules: Rule[] = [];
+  const designDirectory = resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs');
+  const sheets = [
+    ...['base', 'controls', 'feedback'].map(sheet => resolve(designDirectory, `${sheet}.css`)),
+    ...Object.keys(APPLICATION_DESIGNS).map(pack => resolve(designDirectory, 'packs', APP_DESIGN_PACK_FILES[pack])),
+  ];
+  for (const sheet of sheets) {
+    postcss.parse(readFileSync(sheet, 'utf8')).walkRules(rule => { rules.push(rule); });
+  }
+  const matchesConsumer = (element: Element, selector: string, property: string | RegExp) =>
+    rules.some(rule => rule.nodes.some(node => node.type === 'decl'
+      && (typeof property === 'string' ? node.prop === property : property.test(node.prop)))
+      && rule.selectors.some(candidate => candidate.includes(selector) && element.matches(candidate)));
+
+  it('joins real inline readings, battery header/track and footer anchors to every complete profile without changing their values', async () => {
+    const reducedMotion = vi.spyOn(window, 'matchMedia').mockImplementation(query => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+    }));
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1),
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power', 'is_locked', 'sentry_mode'],
+    }] }));
+    mockFleetWorkOrders.mockReturnValue(qr({ isError: true, error: new Error('work orders unavailable') }));
+    const view = renderPage();
+    const host = view.container;
+    host.setAttribute('data-app-design-preview', '');
+    const release = observeAppDesignScopes(host);
+    try {
+      const grid = cardGrid();
+      const chips = Array.from(grid.querySelectorAll('[data-app-metric-kind="vehicle-stat-chip"]'));
+      expect(chips).toHaveLength(3);
+      expect(chips.map(chip => chip.querySelector('[data-app-part~="metric-label"]')?.textContent?.trim()))
+        .toEqual(['Range:', 'Odometer:', 'Charging:']);
+      expect(chips.map(chip => chip.querySelector('[data-app-part~="metric-reading"]')?.textContent))
+        .toEqual(['400.00 km', '100.00 km', '11.00 kW']);
+      const battery = grid.querySelector('[data-app-metric-kind="vehicle-battery"]');
+      if (!battery) throw new Error('Missing native vehicle battery composition');
+      expect(battery.querySelector('[data-app-part~="metric-label"]')).toHaveTextContent('Battery');
+      await waitFor(() => expect(battery.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('80%'), { timeout: 2_000 });
+      const bar = within(grid).getByRole('progressbar', { name: 'Battery level' });
+      expect(bar).toHaveAttribute('aria-valuenow', '80');
+      expect(bar).toHaveAttribute('aria-valuemax', '100');
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: batteryColor(80) });
+      const link = within(grid).getByRole('link', { name: 'Open Model 3 Alpha details' });
+      const titleLink = within(grid).getByRole('link', { name: 'Model 3 Alpha' });
+      const summary = screen.getByText('Service attention is temporarily unavailable').closest('summary');
+      if (!summary?.parentElement) throw new Error('Missing native service source disclosure');
+      const disclosure = summary.parentElement;
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveAttribute('href', '/vehicles/1');
+      expect(link).toHaveAttribute('data-app-variant', 'ghost');
+      expect(link).toHaveClass('min-h-11');
+      expect(link).not.toHaveAttribute('role');
+      expect(titleLink).not.toHaveAttribute('data-app-part');
+      expect(link).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesConsumer(link, '[data-app-part~="button"]', 'touch-action')).toBe(false);
+
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) host.setAttribute(name, value);
+        await waitFor(() => expect(link.getAttribute('data-app-design-owner')?.split(' ')).toContain(`pack-${pack}`));
+        expect(matchesConsumer(link, '[data-app-part~="button"]', 'touch-action')).toBe(true);
+        expect(matchesConsumer(summary, '[data-app-part~="button"]', 'touch-action')).toBe(true);
+        expect(matchesConsumer(disclosure, '[data-app-part~="panel"]', 'border-width')).toBe(true);
+        const shapeProperty = /^border-(?:radius|start-start-radius)$/;
+        expect(matchesConsumer(link, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} footer`).toBe(true);
+        expect(matchesConsumer(summary, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} summary`).toBe(true);
+        expect(matchesConsumer(disclosure, `[data-app-design-pack="${pack}"]`, /^border(?:-.+)?$/), `${pack} disclosure`).toBe(true);
+        for (const chip of chips) {
+          expect(matchesConsumer(chip, '[data-app-metric="inline"]', 'flex-wrap')).toBe(true);
+          expect(matchesConsumer(chip, '[data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]', 'outline')).toBe(true);
+          const label = chip.querySelector('[data-app-part~="metric-label"]');
+          if (!label) throw new Error('Missing accessible chip label');
+          expect(matchesConsumer(label, '[data-app-part~="metric-label"]', 'overflow')).toBe(false);
+          const reading = chip.querySelector('[data-app-part~="metric-reading"]');
+          if (!reading) throw new Error('Missing source-formatted chip reading');
+          expect(matchesConsumer(reading, '[data-app-part~="metric-reading"]', 'font-variant-numeric')).toBe(true);
+        }
+        const batteryLabel = battery.querySelector('[data-app-part~="metric-label"]');
+        const batteryReading = battery.querySelector('[data-app-part~="metric-reading"]');
+        if (!batteryLabel || !batteryReading) throw new Error('Missing native battery reading slots');
+        expect(matchesConsumer(batteryLabel, '[data-app-part~="metric-label"]', 'overflow-wrap')).toBe(true);
+        expect(matchesConsumer(batteryReading, '[data-app-part~="metric-reading"]', 'font-variant-numeric')).toBe(true);
+        expect(matchesConsumer(battery, '[data-app-part~="metric"]', 'display')).toBe(false);
+        const track = bar.querySelector('[data-metric-track]');
+        if (!track) throw new Error('Missing native battery track');
+        expect(matchesConsumer(track, `[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`, 'outline')).toBe(true);
+      }
+      grid.setAttribute('data-app-design-preview', '');
+      const firstChip = chips[0];
+      if (!firstChip) throw new Error('Missing native vehicle stat chip');
+      for (const [name, value] of Object.entries(getAppDesignAttributes('classic'))) grid.setAttribute(name, value);
+      await waitFor(() => expect(link.getAttribute('data-app-design-owner')?.split(' ')).toContain('pack-classic'));
+      expect(matchesConsumer(link, '[data-app-design-pack="memphis"]', 'border-radius')).toBe(false);
+      expect(matchesConsumer(firstChip, '[data-app-data="instrument"]', 'outline')).toBe(false);
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) grid.removeAttribute(name);
+      await waitFor(() => expect(link).not.toHaveAttribute('data-app-design-owner'));
+      expect(disclosure.getAttribute('data-app-design-owner')?.split(' ')).toContain('pack-memphis');
+      expect(matchesConsumer(link, '[data-app-part~="button"]', 'touch-action')).toBe(false);
+      expect(matchesConsumer(firstChip, '[data-app-metric="inline"]', 'outline')).toBe(false);
+      grid.removeAttribute('data-app-design-preview');
+      for (const name of Object.keys(getAppDesignAttributes('memphis'))) host.removeAttribute(name);
+      await waitFor(() => expect(disclosure).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchesConsumer(summary, '[data-app-part~="button"]', 'touch-action')).toBe(false);
+      expect(matchesConsumer(disclosure, '[data-app-part~="panel"]', 'border-width')).toBe(false);
+      fireEvent.focus(link);
+      fireEvent.mouseEnter(link);
+      expect(prefetchRoute).toHaveBeenCalledWith('/vehicles/1');
+      link.focus();
+      expect(link).toHaveFocus();
+      fireEvent.click(link, { ctrlKey: true });
+      expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles');
+      fireEvent.click(link);
+      await waitFor(() => expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/1'));
+      expect(S1.charger_power).toBe(11);
+      expect(S1.rated_range).toBe(400_000);
+    } finally {
+      release();
+      reducedMotion.mockRestore();
+    }
+  });
+
+  it('keeps retained caveats in their native context slots instead of presenting them as current readings', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [retainedEntry(V1, S1, Date.now() - 600_000)] }));
+    renderPage();
+    const grid = cardGrid();
+    const chips = Array.from(grid.querySelectorAll('[data-app-metric-kind="vehicle-stat-chip"]'));
+    expect(chips).toHaveLength(5);
+    for (const chip of chips) {
+      expect(chip.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('—');
+      expect(chip.querySelector('[data-app-part~="metric-context"]')).toHaveTextContent('not currently verified');
+    }
+    const battery = grid.querySelector('[data-app-metric-kind="vehicle-battery"]');
+    expect(battery?.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('—');
+    expect(battery?.querySelector('[data-app-part~="metric-context"]')).toHaveTextContent('Last known: 80.00% (10m ago)');
+    expect(within(grid).getByRole('progressbar', { name: 'Battery level' })).not.toHaveAttribute('aria-valuenow');
+    expect(battery?.querySelector('[data-metric-fill]')).toBeNull();
+  });
+
+  it('uses the same active card renderer in measured virtual rows and only warms the visible records', async () => {
+    const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.getAttribute('aria-label') === 'Vehicle fleet' ? 650 : 290;
+    });
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024);
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1024);
+    try {
+      const vehicles = Array.from({ length: 30 }, (_, index) => makeVehicle({
+        id: index + 1, vehicle_id: index + 1, display_name: `Registered vehicle ${index + 1}`,
+      }));
+      mockVehicles.mockReturnValue(qr({ data: vehicles }));
+      mockFleetStates.mockReturnValue(qr({ data: vehicles.map(vehicle => resolvedEntry(vehicle, S1)) }));
+      const { client } = renderPage();
+      const list = within(cardGrid()).getByRole('list', { name: 'Vehicle fleet' });
+      await waitFor(() => expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0));
+      const rows = within(list).getAllByRole('listitem');
+      expect(rows.length).toBeLessThan(vehicles.length);
+      expect(rows[0]).toHaveAttribute('aria-posinset', '1');
+      expect(rows[0]).toHaveAttribute('aria-setsize', '30');
+      expect(rows[0]?.querySelector('[data-app-metric-kind="vehicle-stat-chip"]')).not.toBeNull();
+      expect(rows[0]?.querySelector('[data-app-metric-kind="vehicle-battery"]')).not.toBeNull();
+      expect(within(list).getByRole('link', { name: 'Open Registered vehicle 1 details' }))
+        .toHaveAttribute('data-app-part', 'button');
+      expect(within(list).queryByRole('link', { name: 'Open Registered vehicle 30 details' })).toBeNull();
+      expect(client.getQueryData(vehicleKeys.detail('1'))).toEqual(vehicles[0]);
+      expect(client.getQueryData(vehicleKeys.detail('30'))).toBeUndefined();
+    } finally {
+      height.mockRestore();
+      width.mockRestore();
+      clientWidth.mockRestore();
+    }
+  });
+
+  it('preserves the native work-order disclosure, independent retry and roster through source recovery', async () => {
+    const refetch = vi.fn();
+    mockFleetWorkOrders.mockReturnValue(qr({ isError: true, error: new Error('work orders unavailable'), refetch }));
+    const view = renderPage();
+    const summary = screen.getByText('Service attention is temporarily unavailable').closest('summary');
+    if (!summary?.parentElement) throw new Error('Missing native work-order disclosure');
+    const details = summary.parentElement;
+    expect(details.tagName).toBe('DETAILS');
+    expect(details).toHaveAttribute('data-app-part', 'panel');
+    expect(details).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(details).not.toHaveAttribute('open');
+    expect(summary).toHaveAttribute('data-app-part', 'button');
+    expect(summary).toHaveAttribute('data-app-variant', 'ghost');
+    expect(summary).not.toHaveAttribute('role');
+    const card = within(cardGrid()).getByRole('link', { name: 'Open Model 3 Alpha details' });
+    fireEvent.click(summary);
+    expect(details).toHaveAttribute('open');
+    fireEvent.click(within(details).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockVehicles.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
+    expect(syncMut.mutate).not.toHaveBeenCalled();
+    fireEvent.click(summary);
+    expect(details).not.toHaveAttribute('open');
+    mockFleetWorkOrders.mockReturnValue(qr({ data: { items: [], total: 0, offset: 0, limit: 100 }, refetch }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/vehicles']}>
+        <QueryClientProvider client={view.client}><VehicleListPage /><LocationProbe /></QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText('Service attention is temporarily unavailable')).toBeNull();
+    expect(within(cardGrid()).getByRole('link', { name: 'Open Model 3 Alpha details' })).toBe(card);
+    expect(screen.getByRole('region', { name: 'Fleet summary' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Fleet overview' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'All vehicles' })).toBeInTheDocument();
   });
 });

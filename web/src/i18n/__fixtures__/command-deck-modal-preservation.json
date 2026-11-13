@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the exact local CommandDeck tablet-modal deferral and explicit navigation intent handling; recover the complete independently compiled V27 predecessor before the unchanged app-design source proof without changing the saved docking preference.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v27/assets/Bn034Yra.js.map",
+    "mapSha256": "f86ea50d91a7b6b5fd48961bfeced1a8918f342ee29a8aa7d24679a363292c3a",
+    "mapSource": "D:/repos/teslasync/web/src/components/layout/sidebar/CommandDeck.tsx",
+    "sha256": "582b05334ecae836d8d6a4cdf63f86fcfeee12c41f43a077561f104ca74856c9"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/components/ui/Modal.tsx",
+      "sha256": "bf9a4f2d3c8716c9b7452cc75081b5776506c561296eae049ab3dcc9f1d90f6c"
+    },
+    {
+      "file": "web/src/components/ui/runtime.ts",
+      "sha256": "58f35457bd8c4ae6ce154ec10121749b178164990754023e692344e8ff3ad6bf"
+    },
+    {
+      "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+      "sha256": "c118f88f6e9735a09ea016df07db9021eb11f8ef4d77c60dd7f394bcd118b51f"
+    },
+    {
+      "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+      "sha256": "6a0f4dd720fbb6b527f7131b2c497c2fe904e28b098e9db645d0518c11af9a84"
+    },
+    {
+      "file": "web/src/components/layout/BottomTabBar.tsx",
+      "sha256": "3ccbab1591e788259f27bfac8ba23f80df284616a5f3a44d6fadfd934e56aa5e"
+    },
+    {
+      "file": "web/src/components/layout/sidebar/sidebarIcons.ts",
+      "sha256": "886461e6e6c9e311c84fee10d54a45ad7a3a0d1e3653bf1fbf8a4dbfaddd50d7"
+    },
+    {
+      "file": "web/src/components/layout/sectionGroups.ts",
+      "sha256": "93d8e6d5659f7c45e5c15a85c12e3aefb60ecaa96db0a64df6aecc4708dedf3a"
+    },
+    {
+      "file": "web/src/components/layout/sidebar/sidebarSuggest.ts",
+      "sha256": "ea7c671ba7e6f23ebc14020b9b0b70a6e6d0e5566d8a028729e703668451eaf9"
+    },
+    {
+      "file": "web/src/components/layout/sidebar/sidenav.css",
+      "sha256": "1ab13224ddefa59c8f6f273261ffcc279b2739ba2b0da3744a9d9d2c3f01b0c2"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/components/layout/sidebar/CommandDeck.tsx",
+      "before": "582b05334ecae836d8d6a4cdf63f86fcfeee12c41f43a077561f104ca74856c9",
+      "after": "849f8d827da05395a6d7581735fcb5c40cbc72bc29b26d872cffc05d12a4be2e",
+      "originalLineCount": 144,
+      "currentLineCount": 158,
+      "originalCallCount": 1,
+      "originalCallsSha256": "8e4314ebf2f83f4025f2186cf3c77861bf94acec04f1065ee1ab6c8ccffcbd31",
+      "originalProjectionSha256": "5a82d4010265db4e3212861e969bbb2ed48175974ad206d299c81393b6b366f4",
+      "hunks": [
+        {
+          "start": 61,
+          "old": [],
+          "new": [
+            "  const currentViewport = useRef(viewport)",
+            "  const [deferTabletPanel, setDeferTabletPanel] = useState(false)",
+            "  const panelVisible = panelOpen && !(viewport === 'tablet' && deferTabletPanel)"
+          ]
+        },
+        {
+          "start": 67,
+          "old": [
+            "    const resize = () => setViewport(window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')"
+          ],
+          "new": [
+            "    const resize = () => {",
+            "      const next = window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop'",
+            "      if (next !== currentViewport.current) {",
+            "        // Keep the docked preference without mounting a competing modal on resize.",
+            "        setDeferTabletPanel(next === 'tablet' && document.querySelector(",
+            "          '[aria-modal=\"true\"]:not(.sidenav-tablet-panel):not(.sidenav-sheet)',",
+            "        ) !== null)",
+            "        currentViewport.current = next",
+            "      }",
+            "      setViewport(next)",
+            "    }"
+          ]
+        },
+        {
+          "start": 84,
+          "old": [
+            "      else onPanelOpenChange(true)"
+          ],
+          "new": [
+            "      else { setDeferTabletPanel(false); onPanelOpenChange(true) }"
+          ]
+        },
+        {
+          "start": 121,
+          "old": [],
+          "new": [
+            "    setDeferTabletPanel(false)"
+          ]
+        },
+        {
+          "start": 126,
+          "old": [
+            "    else onPanelOpenChange(!(panelOpen && title === selection.title))"
+          ],
+          "new": [
+            "    else onPanelOpenChange(!(panelVisible && title === selection.title))"
+          ]
+        },
+        {
+          "start": 132,
+          "old": [
+            "  return <div data-role=\"command-deck\" data-panel-open={panelOpen} className=\"sidenav-deck\">"
+          ],
+          "new": [
+            "  return <div data-role=\"command-deck\" data-panel-open={panelVisible} className=\"sidenav-deck\">"
+          ]
+        },
+        {
+          "start": 137,
+          "old": [
+            "        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelOpen} /></div>"
+          ],
+          "new": [
+            "        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelVisible} /></div>"
+          ]
+        },
+        {
+          "start": 139,
+          "old": [
+            "      <Modal open={viewport === 'tablet' && panelOpen} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+          ],
+          "new": [
+            "      <Modal open={viewport === 'tablet' && panelVisible} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+          ]
+        }
+      ]
+    }
+  ]
+}

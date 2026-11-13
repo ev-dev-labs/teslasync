@@ -61,7 +61,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     const invalid = Boolean(error) || (ariaInvalid != null && ariaInvalid !== false && ariaInvalid !== 'false');
     return (
-      <div className="min-w-0 space-y-1">
+      <div data-app-part="field" className="min-w-0 space-y-1">
         {label && (
           <div className="flex min-w-0 items-center gap-1">
             <Label
@@ -83,9 +83,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </div>
         )}
         <div className="relative">
-          {icon && <span className="absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
+          {icon && <span data-app-field-affix="prefix" className="absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
           <input
             ref={ref}
+            data-app-part="field-control"
+            data-app-size={size}
             id={inputId}
             required={required}
             aria-required={required ? 'true' : undefined}
@@ -105,10 +107,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-describedby={describedBy}
             {...props}
           />
-          {suffix && <span className="absolute end-3 top-1/2 -translate-y-1/2">{suffix}</span>}
+          {suffix && <span data-app-field-affix="suffix" className="absolute end-3 top-1/2 -translate-y-1/2">{suffix}</span>}
         </div>
-        {error && <p id={`${inputId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
-        {hint && !error && <p id={`${inputId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}
+        {error && <p data-app-part="status" data-app-field-feedback="error" id={`${inputId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
+        {hint && !error && <p data-app-part="status" data-app-field-feedback="hint" id={`${inputId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );
   },

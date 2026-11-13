@@ -31,7 +31,7 @@ export function DiscoveryCadenceSummary({
   ];
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] p-4">
+    <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] p-4">
       <div className="flex items-center justify-between gap-2">
         <Text as="p" variant="label">
           {t('explorer.coverage.cadence', 'Discovery cadence')}

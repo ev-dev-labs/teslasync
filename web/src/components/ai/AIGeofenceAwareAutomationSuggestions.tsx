@@ -249,29 +249,32 @@ function InnerSection({
     >
       {draft && (
         <div
+          data-app-part="feedback"
+          data-app-feedback-kind="insight"
+          data-app-tone="neutral"
           className="min-w-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           data-testid="ai-feature-geofence-aware-automation-suggestions-draft"
         >
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1 break-words">
-              <Caption as="div">
+            <div data-app-part="feedback-content" className="min-w-0 flex-1 space-y-1 break-words">
+              <Caption data-app-part="feedback-title" as="div">
                 {t(
                   'automations.builder.aiGeofenceAware.proposalLabel',
                   'Proposed automation',
                 )}
               </Caption>
-              <Text as="div" size="sm" weight="medium" color="primary">
+              <Text data-app-part="feedback-message" as="div" size="sm" weight="medium" color="primary">
                 {draft.draft.name || t(
                   'automations.builder.aiGeofenceAware.unnamed',
                   '(unnamed)',
                 )}
               </Text>
               {draft.draft.description && (
-                <Caption as="div">
+                <Caption data-app-part="feedback-detail" as="div">
                   {draft.draft.description}
                 </Caption>
               )}
-              <Caption as="div">
+              <Caption data-app-part="feedback-detail" as="div">
                 {t('automations.builder.aiGeofenceAware.triggersLabel', 'Triggers')}:{' '}
                 <span>{draft.draft.triggers.length}</span>
                 {' · '}
@@ -282,7 +285,7 @@ function InnerSection({
                 <span>{draft.draft.actions.length}</span>
               </Caption>
               {draft.validation_error && (
-                <Caption as="div">
+                <Caption data-app-part="feedback-detail" as="div">
                   {draft.validation_error}
                 </Caption>
               )}
@@ -295,7 +298,7 @@ function InnerSection({
                 </Text>
               )}
             </div>
-            <div className="flex min-w-0 max-w-full flex-col gap-2">
+            <div data-app-part="feedback-actions" className="flex min-w-0 max-w-full flex-col gap-2">
               <Button
                 type="button"
                 variant="outline"

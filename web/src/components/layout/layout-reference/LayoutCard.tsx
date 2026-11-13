@@ -33,6 +33,7 @@ export function LayoutCard({ title, icon, description, actions, summary, header,
       ref={cardRef}
       padding="none"
       data-card
+      data-app-part="card section"
       data-card-header-owner={header === undefined ? 'host' : 'content'}
       data-card-size={placement?.size ?? size}
       data-card-resolved-span={placement?.span ?? 1}

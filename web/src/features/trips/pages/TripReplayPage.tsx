@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef, useCallback, useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
@@ -277,6 +277,15 @@ export default function TripReplayPage() {
 
   /* ---- URL deep-linking: ?at=0.42&play=1 (debounced 300ms) ---- */
   const [searchParams, setSearchParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const latestUrlWriterRef = useRef({
+    id, pathname, progress: replay.progress, playing: replay.isPlaying,
+    sampleCount: positions.length, setSearchParams,
+  });
+  latestUrlWriterRef.current = {
+    id, pathname, progress: replay.progress, playing: replay.isPlaying,
+    sampleCount: positions.length, setSearchParams,
+  };
   const restoredDriveRef = useRef<string | null>(null);
   const writeDriveRef = useRef<string | null>(null);
   const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -312,25 +321,29 @@ export default function TripReplayPage() {
     const snapshotProgress = replay.progress;
     const snapshotPlaying = replay.isPlaying;
     writeTimerRef.current = setTimeout(() => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (snapshotProgress > 0 && snapshotProgress < 1) {
-            next.set('at', snapshotProgress.toFixed(3));
-          } else {
-            next.delete('at');
-          }
-          if (snapshotPlaying) next.set('play', '1');
-          else next.delete('play');
-          return next;
-        },
-        { replace: true },
-      );
+      const writer = latestUrlWriterRef.current;
+      if (writer.id !== id || writer.sampleCount === 0
+        || writer.progress !== snapshotProgress || writer.playing !== snapshotPlaying) return;
+      // BrowserRouter's rendered query can lag navigation already written to history.
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.pathname !== writer.pathname) return;
+      const prev = currentUrl.searchParams;
+      const next = new URLSearchParams(prev);
+      if (snapshotProgress > 0 && snapshotProgress < 1) {
+        next.set('at', snapshotProgress.toFixed(3));
+      } else {
+        next.delete('at');
+      }
+      if (snapshotPlaying) next.set('play', '1');
+      else next.delete('play');
+      if (next.toString() !== prev.toString()) {
+        writer.setSearchParams(next, { replace: true });
+      }
     }, 300);
     return () => {
       if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
     };
-  }, [id, replay.progress, replay.isPlaying, positions.length, setSearchParams]);
+  }, [id, pathname, replay.progress, replay.isPlaying, positions.length, setSearchParams]);
 
   /* ---- Elevation profile data ---- */
   // Keep every sample index, including unknown altitude, so elevation
@@ -513,30 +526,30 @@ export default function TripReplayPage() {
       {/* ================================================================ */}
       <FadeIn>
         <TripReplaySummaryBrief drive={drive} source={driveState} elevation={elevStats} formatDriveTime={formatDriveTime} />
-        <dl className="flex flex-wrap gap-x-4 gap-y-2 pt-2" aria-label={t('calculationDetails.sources', 'Data sources')}>
-          <div data-testid="replay-summary-source" data-provenance={summaryProvenance}>
-            <Text as="dt" variant="caption">{t('replay.summary.title', 'Drive Summary')}</Text>
-            <Text as="dd" variant="caption">{summaryProvenance === 'live'
+        <dl data-app-part="list" data-app-list="definitions" className="flex flex-wrap gap-x-4 gap-y-2 pt-2" aria-label={t('calculationDetails.sources', 'Data sources')}>
+          <div data-app-part="list-row" data-testid="replay-summary-source" data-provenance={summaryProvenance}>
+            <Text as="dt" data-app-part="metric-label" variant="caption">{t('replay.summary.title', 'Drive Summary')}</Text>
+            <Text as="dd" data-app-part="metric-value" variant="caption">{summaryProvenance === 'live'
               ? t('provenance.live', 'Live')
               : summaryProvenance === 'historical'
                 ? t('provenance.historical', 'Historical')
                 : t('provenance.unknown', 'Unknown source')}</Text>
           </div>
-          <div data-testid="replay-route-source" data-provenance={positions.length > 0 ? 'historical' : 'unknown'}>
-            <Text as="dt" variant="caption">{t('replay.map.ariaLabel', 'Trip route map')}</Text>
-            <Text as="dd" variant="caption">{positions.length > 0
+          <div data-app-part="list-row" data-testid="replay-route-source" data-provenance={positions.length > 0 ? 'historical' : 'unknown'}>
+            <Text as="dt" data-app-part="metric-label" variant="caption">{t('replay.map.ariaLabel', 'Trip route map')}</Text>
+            <Text as="dd" data-app-part="metric-value" variant="caption">{positions.length > 0
               ? t('provenance.historical', 'Historical')
               : t('provenance.unknown', 'Unknown source')}</Text>
           </div>
-          <div data-testid="replay-derived-source" data-provenance="inferred">
-            <Text as="dt" variant="caption">
+          <div data-app-part="list-row" data-testid="replay-derived-source" data-provenance="inferred">
+            <Text as="dt" data-app-part="metric-label" variant="caption">
               {t('replay.summary.efficiency', 'Efficiency')}{' · '}
               {t('replay.summary.elevGain', 'Elevation Gain')}{' · '}
               {t('replay.summary.elevLoss', 'Elevation Loss')}{' · '}
               {t('replay.elevation.title', 'Elevation profile')}{' · '}
               {t('replay.overview.label', 'Event overview')}
             </Text>
-            <Text as="dd" variant="caption">{t('provenance.inferred', 'Estimated')}</Text>
+            <Text as="dd" data-app-part="metric-value" variant="caption">{t('provenance.inferred', 'Estimated')}</Text>
           </div>
         </dl>
       </FadeIn>
@@ -548,12 +561,13 @@ export default function TripReplayPage() {
           {/*  The desktop readouts align with the map, not six tall cards. */}
           {/* ============================================================ */}
           <FadeIn delay={0.05}>
-            <GlassPanel role="region"
+            <GlassPanel role="region" data-app-part="panel map-stage"
+              data-data-state={driveState.status}
               aria-label={t('replay.map.section', 'Route map and live position')}
               className="flex flex-col overflow-hidden"
             >
-              <div className="contents lg:order-first lg:grid lg:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-              <div className="order-first h-[55vh] min-w-0 lg:order-none lg:h-auto lg:min-h-[440px]">
+              <div data-app-part="map-split" data-map-kind="replay" className="contents lg:order-first lg:grid lg:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+              <div data-app-part="map" data-map-kind="replay" data-map-state={positions.length === 0 ? 'empty' : undefined} className="order-first h-[55vh] min-w-0 lg:order-none lg:h-auto lg:min-h-[440px]">
                 {positions.length > 0 ? <TripReplayMap
                   positions={positions}
                   currentIndex={replay.currentIndex}
@@ -570,8 +584,8 @@ export default function TripReplayPage() {
                   </div>
                 )}
               </div>
-              <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
-                <div className="flex min-w-0 items-center gap-2 px-3 pb-2 sm:px-4">
+              <div data-app-part="map-details" className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
+                <div data-app-part="map-toolbar" data-map-control="sources" className="flex min-w-0 flex-wrap items-center gap-2 px-3 pb-2 sm:px-4">
                   <PanelTitle className="mb-0 min-w-0 flex-1">
                     {t('replay.currentStats', 'Current Position Stats')}
                   </PanelTitle>
@@ -582,7 +596,7 @@ export default function TripReplayPage() {
                     ? <time dateTime={cp.timestamp}>{formatDateTime(cp.timestamp)}</time>
                     : t('common.unknown', 'Unknown')}
                 </Text>
-                <div className="grid flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
+                <div data-app-part="metric-grid" className="grid flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
                   <TripReplayReadout
                     label={t('replay.stat.speed', 'Speed')}
                     value={cp?.speed != null && Number.isFinite(cp.speed)
@@ -639,7 +653,7 @@ export default function TripReplayPage() {
                   />
                 </div>
                 <Drawer open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('replay.sources', 'Sources')}>
-                <dl className="grid gap-2">
+                <dl data-app-part="list map-sources" data-app-list="definitions" className="grid gap-2">
                   {quantitySources.map(([quantity, label]) => {
                     const sourceTs = positions[replay.currentIndex]?.sourceTimestamps[quantity] ?? null;
                     const origin = positions[replay.currentIndex]?.sourceOrigins[quantity] ?? 'unknown';
@@ -658,10 +672,10 @@ export default function TripReplayPage() {
                       ? `${fmtNumber(Math.max(0, (positionTs - sourceTs) / 1000))} s`
                       : t('common.unknown', 'Unknown');
                     return (
-                      <div key={quantity} className="min-w-0" data-testid={`replay-source-${quantity}`}
+                      <div data-app-part="list-row" key={quantity} className="min-w-0" data-testid={`replay-source-${quantity}`}
                         data-source={origin} data-provenance={provenance}>
-                        <Text as="dt" variant="caption">{label}{!known && ` · ${t('common.unknown', 'Unknown')}`}</Text>
-                        <Text as="dd" variant="caption">
+                        <Text as="dt" data-app-part="metric-label" variant="caption">{label}{!known && ` · ${t('common.unknown', 'Unknown')}`}</Text>
+                        <Text as="dd" data-app-part="metric-value" variant="caption">
                           {t('calculationDetails.source', 'Source')}: {origin === 'position'
                             ? t('dashboard.grid.positionHeading', 'Position')
                             : origin === 'telemetry'
@@ -673,7 +687,7 @@ export default function TripReplayPage() {
                               ? t('provenance.inferred', 'Estimated')
                               : t('provenance.unknown', 'Unknown source')}
                         </Text>
-                        <Text as="dd" variant="caption" className="[overflow-wrap:anywhere]">
+                        <Text as="dd" data-app-part="metric-context" variant="caption" className="[overflow-wrap:anywhere]">
                           {t('common.timestamp', 'Timestamp')}: {sourceTs != null
                             ? <time dateTime={toIsoString(sourceTs) ?? undefined}>{formatDateTime(sourceTs)}</time>
                             : t('common.unknown', 'Unknown')}
@@ -690,7 +704,7 @@ export default function TripReplayPage() {
           {/* ============================================================ */}
           {/*  Section 3 — Playback transport stays attached to the map     */}
           {/* ============================================================ */}
-            <div className="border-t border-[var(--border-subtle)]" data-tour="drive-replay-scrubber">
+            <div data-app-part="map-toolbar" data-map-control="playback" className="border-t border-[var(--border-subtle)]" data-tour="drive-replay-scrubber">
               {replay.canPlay ? <PlaybackControls
                 framed={false}
                 className="p-3 sm:p-4"

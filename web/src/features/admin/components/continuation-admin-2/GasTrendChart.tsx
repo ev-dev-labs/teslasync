@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import type { GasPriceHistory } from '@/api/types';
 import { ChartCard } from '@/components/layout';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ChartTooltip, AREA_DEFAULTS, areaGradient } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend, ResponsiveContainer, ChartTooltip, AREA_DEFAULTS, areaGradient } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatDate } from '@/lib/dateFormat';
@@ -42,7 +42,7 @@ export function GasTrendChart({ source }: { source: DataState<GasPriceHistory[]>
           <YAxis width={96} tick={axisTick} domain={['auto', 'auto']}
             tickFormatter={(value) => units.length === 1 ? `${formatPrice(value)}/${unitLabel(units[0])}` : formatPrice(value)} />
           <Tooltip content={<ChartTooltip valueFormatter={(value, _name, unit) => `${formatPrice(value)}/${unitLabel(unit ?? '')}`} />} />
-          <Legend wrapperStyle={{ ...chartText, color: chartTokens.tooltipMutedText }} />
+          <ChartLegend wrapperStyle={{ ...chartText, color: chartTokens.tooltipMutedText }} />
           {units.map((unit, index) => (
             <Area key={unit} {...AREA_DEFAULTS}
               dataKey={(row: (typeof rows)[number]) => row.unit === unit ? row.price_per_unit : null}

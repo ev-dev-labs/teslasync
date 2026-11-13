@@ -10,6 +10,9 @@
  *   - When `chartKey` is omitted, no context is provided and the
  *     legend renders passively (no Router / URL state required).
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -24,6 +27,8 @@ import type { ChartAnnotationsConfig } from '../ChartContainer';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { LayoutCard } from '../../layout/layout-reference/LayoutCard';
 import { Button } from '../../ui/Button';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../../ui/app-designs/designs';
 
 const { requestMock, toastSuccess, toastError, invalidateMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
@@ -90,6 +95,120 @@ function renderWithProviders(ui: React.ReactNode, route = '/page') {
   );
 }
 
+describe('ChartContainer original mobile annotation chips', () => {
+  const rows: ChartAnnotationRow[] = [
+    {
+      id: 71, vehicle_id: 7, occurred_at: '2025-03-01T00:00:00Z',
+      category: 'maintenance', title: 'Battery inspection', description: 'Original inspection details',
+      scope: ['battery'], created_at: '2025-03-01T00:00:00Z', updated_at: '2025-03-01T00:00:00Z',
+    },
+    {
+      id: 72, vehicle_id: 7, occurred_at: '2025-03-02T00:00:00Z',
+      category: 'milestone', title: 'Recorded milestone', description: null,
+      scope: ['battery'], created_at: '2025-03-02T00:00:00Z', updated_at: '2025-03-02T00:00:00Z',
+    },
+  ];
+  const badgeRules = PACK_IDS.flatMap(pack => {
+    const rules: Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+      .walkRules(rule => {
+        if (rule.selector.includes('[data-app-part~="badge"]')
+          && rule.nodes.some(node => node.type === 'decl' && node.prop.startsWith('border-') && node.prop.endsWith('radius'))) rules.push(rule);
+      });
+    return rules;
+  });
+  const consumed = (chip: Element) => badgeRules.filter(rule => chip.matches(rule.selector));
+  function chart(chartId: string) {
+    return (
+      <ChartContainer title="Battery observations" ariaLabel="Original battery trend"
+        annotations={{ vehicleId: 7, scope: 'battery', chartId }} exportable={false}
+        data={[{ reading: 0 }, { reading: null }]}
+        dataColumns={[{ key: 'reading', label: 'Original reading' }]}>
+        {({ annotations, hidden }) => (
+          <div data-testid="original-annotation-plot" data-hidden={hidden} data-count={annotations.length}>
+            Original measured series
+          </div>
+        )}
+      </ChartContainer>
+    );
+  }
+
+  it('binds the actual ordered caption chips to all 27 existing badge consumers at the nearest complete profile', async () => {
+    requestMock.mockResolvedValue(rows);
+    const { getByTestId } = renderWithProviders(
+      <section data-app-design-preview="" {...getAppDesignAttributes('classic')} data-testid="outer-profile">
+        <section data-app-design-preview="" data-testid="chip-profile">{chart('native-chip-profiles')}</section>
+      </section>,
+    );
+    const row = await screen.findByLabelText('Annotations on this chart');
+    const chips = [...row.querySelectorAll('span[data-app-part~="badge"]')];
+    expect(row).toHaveClass('mb-2', 'flex', 'flex-wrap', 'gap-1.5', 'sm:hidden');
+    expect(row).not.toHaveAttribute('data-app-part');
+    expect(chips.map(chip => chip.textContent)).toEqual(rows.map(item => item.title));
+    for (const [index, chip] of chips.entries()) {
+      expect(chip).toHaveAttribute('data-app-variant', 'neutral');
+      expect(chip).toHaveAttribute('title', rows[index].description ?? rows[index].title);
+      expect(chip).toHaveClass('inline-flex', 'items-center', 'gap-1', 'rounded-full', 'border', 'px-2', 'py-0.5');
+      expect(chip.querySelector('svg')).toHaveClass('h-2.5', 'w-2.5');
+      expect(chip.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    const host = getByTestId('chip-profile');
+    const outer = getByTestId('outer-profile');
+    const release = observeAppDesignScopes(outer);
+    try {
+      expect(chips.every(chip => consumed(chip).length === 0)).toBe(true);
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) host.setAttribute(name, value);
+        await waitFor(() => expect(chips[0]).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+        for (const chip of chips) {
+          expect(consumed(chip).length, pack).toBeGreaterThan(0);
+          expect(consumed(chip).every(rule => rule.selector.includes(`[data-app-design-pack="${pack}"]`))).toBe(true);
+        }
+      }
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) host.removeAttribute(name);
+      host.setAttribute('data-widget-design-pack', 'blueprint');
+      await waitFor(() => expect(chips[0]).not.toHaveAttribute('data-app-design-owner'));
+      expect(chips.every(chip => consumed(chip).length === 0)).toBe(true);
+      host.setAttribute('data-app-design-pack', 'classic');
+      await Promise.resolve();
+      expect(chips.every(chip => consumed(chip).length === 0)).toBe(true);
+      expect(chips.map(chip => chip.textContent)).toEqual(rows.map(item => item.title));
+      expect(row.closest('[data-chart-viewport]')).toBeNull();
+      expect(screen.getByTestId('original-annotation-plot')).toHaveAttribute('data-count', '2');
+      expect(screen.getByRole('table', { hidden: true })).toHaveTextContent('0');
+      expect(screen.getByRole('table', { hidden: true })).toHaveTextContent('—');
+    } finally {
+      release();
+    }
+  });
+
+  it('keeps persisted hidden annotations absent until the original toggle restores the same chips and overlay data', async () => {
+    const key = 'teslasync-annotations-hidden:native-chip-hidden';
+    localStorage.setItem(key, '1');
+    requestMock.mockResolvedValue(rows);
+    try {
+      renderWithProviders(chart('native-chip-hidden'));
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Annotations' })).not.toHaveAttribute('aria-busy'));
+      expect(screen.queryByLabelText('Annotations on this chart')).toBeNull();
+      expect(screen.getByTestId('original-annotation-plot')).toHaveAttribute('data-hidden', 'true');
+      expect(screen.getByTestId('original-annotation-plot')).toHaveAttribute('data-count', '0');
+      fireEvent.click(screen.getByRole('button', { name: 'Show annotations' }));
+      const row = screen.getByLabelText('Annotations on this chart');
+      expect(within(row).getByText(rows[0].title)).toHaveAttribute('data-app-part', 'badge');
+      expect(row.querySelectorAll('[data-app-part~="badge"]')).toHaveLength(2);
+      expect(screen.getByTestId('original-annotation-plot')).toHaveAttribute('data-count', '2');
+      expect(localStorage.getItem(key)).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Hide annotations' }));
+      expect(screen.queryByLabelText('Annotations on this chart')).toBeNull();
+      expect(localStorage.getItem(key)).toBe('1');
+      expect(within(screen.getByRole('region', { name: 'Annotations' })).getByText(rows[0].title)).toBeInTheDocument();
+      expect(screen.getByTestId('original-annotation-plot')).toHaveTextContent('Original measured series');
+    } finally {
+      localStorage.removeItem(key);
+    }
+  });
+});
+
 it('keeps visible supporting captions outside the bounded plot while retaining the accessible table', () => {
   renderWithProviders(<ChartContainer title="Charge evidence" ariaLabel="Charge power"
     caption={<span>AC: 3 retained sessions</span>}
@@ -101,6 +220,34 @@ it('keeps visible supporting captions outside the bounded plot while retaining t
   expect(caption.closest('[data-chart-viewport]')).toBeNull();
   expect(screen.getByText('Unchanged plot').closest('[data-chart-viewport]')).not.toBeNull();
   expect(screen.getByRole('table', { hidden: true })).toHaveTextContent('5000');
+});
+
+it('marks the existing chart parts without inserting a second frame or moving descriptions and source data', () => {
+  const { container } = renderWithProviders(
+    <ChartContainer title="Signed observations" ariaLabel="Signed power with an unknown observation"
+      ariaDescription="Measurements include a missing observation, not an interpolated zero."
+      chartKey="original-power-id" metadata={{ unitLabel: 'W' }}
+      summary={<span>Original source context</span>}
+      data={[{ power: -250 }, { power: null }, { power: 0 }]}
+      dataColumns={[{ key: 'power', label: 'Power (W)' }]}>
+      <span data-testid="source-plot">Original signed observations</span>
+    </ChartContainer>,
+  );
+  const figure = screen.getByRole('figure', { name: 'Signed observations' });
+  expect(container.querySelectorAll('[data-app-part~="chart"]')).toHaveLength(1);
+  expect(figure).toHaveAttribute('data-chart-key', 'original-power-id');
+  expect(figure.querySelector('[data-app-part~="chart-header"]')).toHaveAttribute('data-card-slot', 'header');
+  const plot = figure.querySelector('[data-app-part~="chart-plot"]');
+  expect(plot).toHaveAttribute('data-chart-viewport', 'bounded');
+  expect(plot).toHaveAttribute('role', 'group');
+  expect(plot).toContainElement(screen.getByTestId('source-plot'));
+  expect(plot).not.toContainElement(screen.getByText('Original source context'));
+  const alternative = figure.querySelector('[data-chart-alternative]');
+  expect(figure).toHaveAttribute('aria-describedby', alternative?.id);
+  expect(alternative).toHaveTextContent('-250');
+  expect(alternative).toHaveTextContent('—');
+  expect(alternative).toHaveTextContent('0');
+  expect(alternative).toHaveTextContent('not an interpolated zero');
 });
 
 it('keeps short annotated titles intrinsically word-sized beside the full canonical toolbar', () => {

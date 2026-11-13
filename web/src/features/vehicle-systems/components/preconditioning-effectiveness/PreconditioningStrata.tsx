@@ -51,14 +51,15 @@ export function PreconditioningStrata({
               return (
                 <article
                   key={row.regime}
+                  data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       {row.regime === 'hot'
                         ? <Flame className="h-5 w-5 text-amber-300" aria-hidden="true" />
                         : <Snowflake className="h-5 w-5 text-theme-accent" aria-hidden="true" />}
-                      <Text as="h3" variant="label">
+                      <Text data-app-part="record-title" as="h3" variant="label">
                         {preconditioningRegimeLabel(t, row.regime)}
                       </Text>
                     </div>
@@ -66,33 +67,33 @@ export function PreconditioningStrata({
                       {preconditioningEvidenceLabel(t, row.evidence)}
                     </Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <div>
-                      <MetricLabel>{t('preconditioningEffectiveness.strata.activeCount', 'HVAC-active count')}</MetricLabel>
-                      <MetricValue className="mt-1">{fmtInt(row.conditionedCount)}</MetricValue>
+                  <div data-app-part="record-body metric-grid" className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div data-app-part="metric" data-app-metric="stat">
+                      <MetricLabel data-app-part="metric-label">{t('preconditioningEffectiveness.strata.activeCount', 'HVAC-active count')}</MetricLabel>
+                      <MetricValue data-app-part="metric-reading metric-value" className="mt-1">{fmtInt(row.conditionedCount)}</MetricValue>
                     </div>
-                    <div>
-                      <MetricLabel>{t('preconditioningEffectiveness.strata.controlCount', 'Explicit-off count')}</MetricLabel>
-                      <MetricValue className="mt-1">{fmtInt(row.unconditionedCount)}</MetricValue>
+                    <div data-app-part="metric" data-app-metric="stat">
+                      <MetricLabel data-app-part="metric-label">{t('preconditioningEffectiveness.strata.controlCount', 'Explicit-off count')}</MetricLabel>
+                      <MetricValue data-app-part="metric-reading metric-value" className="mt-1">{fmtInt(row.unconditionedCount)}</MetricValue>
                     </div>
-                    <div>
-                      <MetricLabel>{t('preconditioningEffectiveness.strata.readiness', 'Readiness difference')}</MetricLabel>
-                      <MetricValue className="mt-1">
+                    <div data-app-part="metric" data-app-metric="stat">
+                      <MetricLabel data-app-part="metric-label">{t('preconditioningEffectiveness.strata.readiness', 'Readiness difference')}</MetricLabel>
+                      <MetricValue data-app-part="metric-reading metric-value" className="mt-1">
                         {published
                           ? formatDelta(row.startDeltaAdvantageC, { signed: true })
                           : '—'}
                       </MetricValue>
                     </div>
-                    <div>
-                      <MetricLabel>{t('preconditioningEffectiveness.strata.improvement', 'Improvement difference')}</MetricLabel>
-                      <MetricValue className="mt-1">
+                    <div data-app-part="metric" data-app-metric="stat">
+                      <MetricLabel data-app-part="metric-label">{t('preconditioningEffectiveness.strata.improvement', 'Improvement difference')}</MetricLabel>
+                      <MetricValue data-app-part="metric-reading metric-value" className="mt-1">
                         {published
                           ? formatDelta(row.improvementLiftC, { signed: true })
                           : '—'}
                       </MetricValue>
                     </div>
                   </div>
-                  <Text as="p" variant="caption" className="mt-4">
+                  <Text data-app-part="record-context" as="p" variant="caption" className="mt-4">
                     {published
                       ? t(
                           'preconditioningEffectiveness.strata.confidence',

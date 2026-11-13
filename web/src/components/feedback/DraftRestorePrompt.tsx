@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { FileWarning, X } from 'lucide-react'
 import { Button, Modal } from '@/components/ui/runtime'
-import { formatRelativeTime } from '@/lib/dateFormat'
+import { Text } from '@/components/ui/Typography'
+import { captureAppDesignOrigin, type AppDesignOriginSnapshot } from '@/components/ui/appDesignOrigin'
+import { reportFrontendError } from '@/lib/errorReporter'
+import { AlertBanner } from './AlertBanner'
+import type { DraftRestoreReviewContent } from './DraftRestoreReviewContent'
 import {
   discardDraftEnvelope,
   getDrafts,
@@ -71,6 +75,35 @@ interface DraftRestorePromptProps {
   skipSessionGuard?: boolean
 }
 
+function ReviewBody(props: ComponentProps<typeof DraftRestoreReviewContent>) {
+  const { t } = useTranslation()
+  const [Content, setContent] = useState<typeof DraftRestoreReviewContent | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadFailed(false)
+    void import('./DraftRestoreReviewContent').then(module => {
+      if (!cancelled) setContent(() => module.DraftRestoreReviewContent)
+    }, error => {
+      if (cancelled) return
+      reportFrontendError(error, 'react')
+      setLoadFailed(true)
+    })
+    return () => { cancelled = true }
+  }, [attempt])
+
+  return Content ? <Content {...props} /> : loadFailed ? (
+    <AlertBanner variant="danger" role="alert">
+      {t('errorBoundary.inlineTitle', 'Component failed to load')}
+      <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>
+        {t('error.retry', 'Retry')}
+      </Button>
+    </AlertBanner>
+  ) : <Text role="status">{t('a11y.loading', 'Loading')}</Text>
+}
+
 export function DraftRestorePrompt({
   gracePeriodMs = PROMPT_GRACE_MS,
   skipSessionGuard = false,
@@ -80,7 +113,8 @@ export function DraftRestorePrompt({
 
   const [drafts, setDrafts] = useState<DraftEntry[]>([])
   const [showPrompt, setShowPrompt] = useState(false)
-  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewOrigin, setReviewOrigin] = useState<AppDesignOriginSnapshot>()
+  const reviewOpen = reviewOrigin !== undefined
   const evaluatedRef = useRef(false)
 
   // Mount-time evaluation: collect cross-tab `acquired` broadcasts during
@@ -130,7 +164,7 @@ export function DraftRestorePrompt({
           .map((d) => freshByKey.get(d.storageKey))
           .filter((d): d is DraftEntry => Boolean(d))
         if (next.length === 0) {
-          setReviewOpen(false)
+          setReviewOrigin(undefined)
           setShowPrompt(false)
         }
         return next
@@ -142,17 +176,17 @@ export function DraftRestorePrompt({
   const handleDismiss = useCallback(() => {
     writeDismissed()
     setShowPrompt(false)
-    setReviewOpen(false)
+    setReviewOrigin(undefined)
   }, [])
 
-  const handleReview = useCallback(() => {
-    setReviewOpen(true)
+  const handleReview = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    setReviewOrigin(captureAppDesignOrigin(event.currentTarget))
   }, [])
 
   const handleResume = useCallback(
     (entry: DraftEntry) => {
       writeDismissed()
-      setReviewOpen(false)
+      setReviewOrigin(undefined)
       setShowPrompt(false)
       // React Router doesn't accept arbitrary external URLs, but since
       // every recovery route is an in-app pathname (resolved at register
@@ -173,7 +207,7 @@ export function DraftRestorePrompt({
     setDrafts((prev) => {
       const next = prev.filter((d) => d.storageKey !== entry.storageKey)
       if (next.length === 0) {
-        setReviewOpen(false)
+        setReviewOrigin(undefined)
         setShowPrompt(false)
       }
       return next
@@ -246,74 +280,9 @@ export function DraftRestorePrompt({
         title={t('draft.recovery.modalTitle', 'Restore unsaved drafts')}
         size="md"
         data-testid="draft-restore-modal"
+        originSnapshot={reviewOrigin}
       >
-        <div className="space-y-4">
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(
-              'draft.recovery.modalBody',
-              'These drafts were saved in your browser before this session. Resume to continue editing or discard to clear them.',
-            )}
-          </p>
-
-          {drafts.length === 0 ? (
-            <p
-              className="text-sm text-[var(--text-muted)]"
-              data-testid="draft-restore-modal-empty"
-            >
-              {t('draft.recovery.empty', 'No drafts to restore.')}
-            </p>
-          ) : (
-            <ul className="space-y-2" data-testid="draft-restore-modal-list">
-              {drafts.map((entry) => (
-                <li
-                  key={entry.storageKey}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2"
-                  data-testid={`draft-restore-row-${entry.storageKey}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-[var(--text-primary)]">
-                      {entry.label || t('draft.recovery.fallbackLabel', 'Unsaved draft')}
-                    </div>
-                    <div className="text-xs text-[var(--text-secondary)]">
-                      {t('draft.recovery.savedAt', 'Saved {{when}}', {
-                        when: formatRelativeTime(new Date(entry.savedAt)),
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleResume(entry)}
-                      data-testid={`draft-restore-resume-${entry.storageKey}`}
-                    >
-                      {t('draft.recovery.resume', 'Resume')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDiscard(entry)}
-                      data-testid={`draft-restore-discard-${entry.storageKey}`}
-                    >
-                      {t('draft.recovery.discard', 'Discard')}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDismiss}
-              data-testid="draft-restore-modal-close"
-            >
-              {t('draft.recovery.close', 'Close')}
-            </Button>
-          </div>
-        </div>
+        <ReviewBody drafts={drafts} handleResume={handleResume} handleDiscard={handleDiscard} handleDismiss={handleDismiss} />
       </Modal>
     </>
   )

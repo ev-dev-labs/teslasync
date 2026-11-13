@@ -127,9 +127,9 @@ function AttributionDistanceBucket({
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   return (
-    <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-      <Badge variant={variant} size="sm">{label}</Badge>
-      <Text as="div" size="lg" weight="semibold" className="mt-2 tabular-nums">
+    <div data-app-part="metric" data-app-metric="tile" className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+      <div data-app-part="metric-label"><Badge variant={variant} size="sm">{label}</Badge></div>
+      <Text data-app-part="metric-reading metric-value" as="div" size="lg" weight="semibold" className="mt-2 tabular-nums">
         {value == null ? t('fsd.notMeasured', 'Not measured') : formatDistance(value)}
       </Text>
     </div>
@@ -243,7 +243,7 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
         )}
       </Text>
       <FsdSectionBody state={state}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div data-app-part="metric-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {buckets.map((bucket) => (
             <AttributionDistanceBucket
               key={bucket.key}
@@ -261,28 +261,37 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
           </Text>
           {resetEvents.length > 0 ? (
             <>
-            <ol className="space-y-2">
+            <ol data-app-part="list" className="space-y-2">
               {resetPage.slice.map((event) => (
                 <li
                   key={`${event.field}-${event.at}`}
+                  data-app-part="feedback"
+                  data-app-feedback-kind="notice"
+                  data-app-tone="warning"
                   className={`flex flex-wrap items-center gap-2 rounded-lg border ${neonColorMap.amber.border} ${neonColorMap.amber.bg} p-3 ${typography.size.sm}`}
                 >
+                  <div data-app-part="feedback-content" className="flex min-w-0 flex-wrap items-center gap-2">
                   <Text as="span" weight="medium">{formatDateTime(event.at)}</Text>
                   <Badge variant="warning" size="sm">{event.field}</Badge>
                   {event.firmware_version ? (
                     <Badge variant="neutral" size="sm">{event.firmware_version}</Badge>
                   ) : null}
-                  <Text as="span" color="muted">
+                  <Text data-app-part="feedback-message" as="span" color="muted">
                     {t('fsd.resets.changed', 'Counter moved from {{previous}} to {{current}}.', {
                       previous: formatDistance(event.previous_value_m),
                       current: formatDistance(event.current_value_m),
                     })}
                   </Text>
-                  {event.affected_drive_ids.map((driveID) => (
-                    <Link key={driveID} to={`/drives/${driveID}`} className={driveLinkClassName}>
-                      #{driveID}
-                    </Link>
-                  ))}
+                  </div>
+                  {event.affected_drive_ids.length > 0 && (
+                    <div data-app-part="feedback-actions" className="flex flex-wrap items-center gap-2">
+                      {event.affected_drive_ids.map((driveID) => (
+                        <Link data-app-part="button" data-app-variant="ghost" data-app-size="sm" key={driveID} to={`/drives/${driveID}`} className={driveLinkClassName}>
+                          #{driveID}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
@@ -374,7 +383,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
       header: t('fsd.drives.date', 'Drive'),
       render: (row) => (
         <div>
-          <Link to={`/drives/${row.drive_id}`} className={`${driveLinkClassName} justify-start text-start`}>
+          <Link data-app-part="button" data-app-variant="ghost" data-app-size="sm" to={`/drives/${row.drive_id}`} className={`${driveLinkClassName} justify-start text-start`}>
             {formatDateTime(row.started_at)}
           </Link>
           <Text as="div" size="xs" color="muted" className="whitespace-normal break-words">
@@ -424,7 +433,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
       key: 'drive_id',
       header: '',
       render: (row) => (
-        <Link to={`/drives/${row.drive_id}`} className={driveLinkClassName} aria-label={t('fsd.drives.open', 'Open drive {{id}}', { id: row.drive_id })}>
+        <Link data-app-part="button" data-app-variant="ghost" data-app-size="sm" to={`/drives/${row.drive_id}`} className={driveLinkClassName} aria-label={t('fsd.drives.open', 'Open drive {{id}}', { id: row.drive_id })}>
           <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
         </Link>
       ),

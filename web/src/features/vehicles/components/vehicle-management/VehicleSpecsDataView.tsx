@@ -55,11 +55,11 @@ export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
       <Table aria-label={t('vehicleManagement.specs.title', 'Vehicle specifications')}>
         <tbody>
           {fields.map((field) => (
-            <tr key={field.key}>
-              <th scope="row" className="font-normal">
+            <tr data-app-part="table-row" key={field.key}>
+              <th data-app-part="table-cell" scope="row" className="font-normal">
                 <Text variant="label">{field.label}</Text>
               </th>
-              <td className={typeof field.value === 'number' ? 'text-right tabular-nums' : undefined}>
+              <td data-app-part="table-cell" className={typeof field.value === 'number' ? 'text-right tabular-nums' : undefined}>
                 {typeof field.value === 'boolean' ? (
                   <Badge variant={field.value ? 'success' : 'neutral'}>
                     {field.value

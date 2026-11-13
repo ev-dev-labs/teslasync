@@ -12,6 +12,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -81,6 +86,36 @@ describe('ChargingSummaryPanel — loading/error/empty', () => {
 });
 
 describe('ChargingSummaryPanel — currency grouping', () => {
+  it.each(PACK_IDS)('%s owns each actual currency shell without merging or reclassifying its tiles', (pack) => {
+    const view = render(<MemoryRouter><div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <ChargingSummaryPanel isLoading={false} summary={[
+        makeSummary({ currency: 'USD', session_count: 0, total_energy_wh: 0, total_cost_decimal: 0 }),
+        makeSummary({ currency: 'EUR', session_count: 2, total_energy_wh: 50_000, total_cost_decimal: 6 }),
+      ]} />
+    </div></MemoryRouter>);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const groups = view.container.querySelectorAll('[data-app-part="card"][data-surface-variant="standalone"]');
+      expect(groups).toHaveLength(2);
+      const sheet = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'));
+      for (const [index, group] of [...groups].entries()) {
+        expect(group).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        let surfaceBound = false;
+        sheet.walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="card"]') && group.matches(rule.selector)) {
+            rule.walkDecls('border-radius', () => { surfaceBound = true; });
+          }
+        });
+        expect(surfaceBound).toBe(true);
+        expect(group.querySelectorAll('[data-app-metric="tile"]')).toHaveLength(3);
+        expect(group).toHaveClass('p-3', 'bg-[var(--surface-2)]');
+        expect(group).toHaveTextContent(index === 0 ? 'USD' : 'EUR');
+        expect(group).toHaveTextContent(index === 0 ? '$0.00' : '€6.00');
+      }
+      expect(view.container.querySelector('[role="progressbar"]')).toBeNull();
+    } finally { release(); }
+  });
+
   it('retains every independent currency and measured zero when refresh fails', () => {
     renderPanel({
       error: new Error('refresh'),

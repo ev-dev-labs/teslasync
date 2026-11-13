@@ -26,15 +26,15 @@ export function TrueCostBoundaryDisclosure({
           )}
         </AlertBanner>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <Text as="p" variant="label">{t('tco.boundary.included', 'Included evidence')}</Text>
-            <Text as="p" variant="bodySm" className="mt-1">
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <Text data-app-part="record-header record-title" as="p" variant="label">{t('tco.boundary.included', 'Included evidence')}</Text>
+            <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-1">
               {t('tco.boundary.includedBody', 'Recorded positive-cost charging, positive-distance drives, configured fuel assumptions, and a flat maintenance heuristic.')}
             </Text>
           </div>
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <Text as="p" variant="label">{t('tco.boundary.excluded', 'Explicitly excluded')}</Text>
-            <Text as="p" variant="bodySm" className="mt-1">
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <Text data-app-part="record-header record-title" as="p" variant="label">{t('tco.boundary.excluded', 'Explicitly excluded')}</Text>
+            <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-1">
               {t('tco.boundary.excludedBody', 'Purchase price, depreciation, resale, insurance, registration, financing, taxes, and actual service records.')}
             </Text>
           </div>

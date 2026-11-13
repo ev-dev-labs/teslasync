@@ -96,7 +96,7 @@ export function useWidgetDesignPack() {
   }, [client, origin]);
 
   const isReady = !!scope && read.data?.scope === scope && !blocked;
-  const setPackId = useCallback(async (packId: PackId): Promise<boolean> => {
+  const setPackId = useCallback(async (packId: PackId, appWide?: boolean): Promise<boolean> => {
     if (!isReady || !scope || pendingWrite.current || active.current.blocked ||
       resolveAvailablePackId(packId) !== packId) return false;
     const currentGeneration = generation.current;
@@ -107,7 +107,7 @@ export function useWidgetDesignPack() {
       active.current.origin === origin && active.current.scope === scope && serverOrigin() === origin;
     setFailure(null);
     try {
-      await save.mutateAsync({ pack_id: packId, origin, scope, signal: controller.signal, isCurrent });
+      await save.mutateAsync({ pack_id: packId, app_wide: appWide, origin, scope, signal: controller.signal, isCurrent });
       return isCurrent();
     } catch (error) {
       if (isCurrent()) setFailure(error instanceof Error ? error.message : 'Widget design preference could not be saved');
@@ -126,6 +126,7 @@ export function useWidgetDesignPack() {
 
   return {
     packId: isReady ? read.data!.pack_id : 'classic' as PackId,
+    appWide: isReady && read.data!.app_wide,
     isReady,
     isSaving: isReady && save.isPending,
     error: failure ?? verified.error?.message ?? read.error?.message ?? null,

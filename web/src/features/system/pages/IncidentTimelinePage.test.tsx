@@ -36,6 +36,11 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 // i18n stub: `t(key, 'Fallback', { var })` → the fallback, interpolating any
 // {{var}} tokens; `t(key, { defaultValue })` → the defaultValue. Keeps the
@@ -467,6 +472,37 @@ describe('IncidentTimelinePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resolve' }));
     const dialog = await screen.findByRole('dialog');
+    const notice = dialog.querySelector('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveAttribute('data-app-part', 'status feedback');
+    expect(notice).toHaveAttribute('data-app-tone', 'warning');
+    expect(notice?.querySelector('[data-app-part~="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(notice?.querySelector('[data-app-part~="feedback-message"]')).toHaveTextContent('You can still view the timeline.');
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-feedback-kind="notice"]')) rules.push(rule); });
+    const root = document.documentElement;
+    const original = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    try {
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+        const release = observeAppDesignScopes(root);
+        try {
+          expect(rules.some(rule => notice!.matches(rule.selector) && rule.nodes.some(node =>
+            node.type === 'decl' && node.prop === 'display' && node.value === 'grid')), pack).toBe(true);
+          for (const slot of notice!.children) {
+            expect(rules.some(rule => slot.matches(rule.selector)), pack).toBe(true);
+            slot.removeAttribute('data-app-design-owner');
+            expect(rules.some(rule => slot.matches(rule.selector)), `${pack}: final target required`).toBe(false);
+          }
+          expect(notice).toHaveAttribute('data-app-tone', 'warning');
+        } finally { release(); }
+      }
+    } finally {
+      for (const [name, value] of original) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
     fireEvent.click(within(dialog).getByRole('button', { name: /Cancel/i }));
 
     await waitFor(() =>

@@ -356,4 +356,45 @@ describe('deferred English resources', () => {
     expect(i18n.t('dashboard.title', 'Dashboard fallback')).not.toBe('Dashboard fallback')
     await i18n.changeLanguage('en')
   })
+
+  it('keeps the import registry deferred and retries failed bundle loads without losing shell or inline copy', async () => {
+    const loadBundle = vi.fn()
+      .mockRejectedValueOnce(new Error('locale chunk unavailable'))
+      .mockResolvedValue({ dashboard: catalog.dashboard })
+    const registry = vi.fn(() => ({ loadEnglishBundleResource: loadBundle }))
+    vi.resetModules()
+    vi.doMock('./englishBundleLoader', registry)
+    vi.doMock('i18next', async () => {
+      const installed = await vi.importActual<typeof import('i18next')>('i18next')
+      return { ...installed, default: installed.createInstance() }
+    })
+    let runtime: typeof import('./index') | undefined
+    try {
+      runtime = await import('./index')
+      expect(runtime.default.t('statusBar.connection.ok')).toBe('Online')
+      await runtime.loadEnglishNamespace('nav')
+      await expect(runtime.loadEnglishNamespace('not-a-real-namespace')).rejects.toThrow('Unknown English translation namespace')
+      expect(registry).not.toHaveBeenCalled()
+
+      const first = runtime.loadEnglishNamespace('dashboard')
+      expect(runtime.loadEnglishNamespace('dashboard')).toBe(first)
+      await expect(first).rejects.toThrow('locale chunk unavailable')
+      expect(runtime.default.t('dashboard.title', '__inline__')).toBe('__inline__')
+      expect(runtime.default.t('statusBar.connection.ok')).toBe('Online')
+
+      const retry = runtime.loadEnglishNamespace('dashboard')
+      expect(retry).not.toBe(first)
+      expect(runtime.loadEnglishNamespace('dashboard')).toBe(retry)
+      await retry
+      expect(runtime.default.t('dashboard.title')).toBe(catalog.dashboard.title)
+      await runtime.loadEnglishNamespace('dashboard')
+      expect(registry).toHaveBeenCalledTimes(1)
+      expect(loadBundle.mock.calls).toEqual([['detail-dashboard'], ['detail-dashboard']])
+    } finally {
+      runtime?.flushPendingEnglishResourcesForTest()
+      vi.doUnmock('./englishBundleLoader')
+      vi.doUnmock('i18next')
+      vi.resetModules()
+    }
+  })
 })

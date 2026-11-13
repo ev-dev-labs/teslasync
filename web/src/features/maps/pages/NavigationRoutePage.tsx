@@ -17,6 +17,7 @@ import { deriveDataState } from '@/api/dataState';
 
 import { GlassPanel, Badge, DataTable, Text, Caption, MetricValue, Icon, type Column, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
+import { VisuallyHidden } from '@/components/a11y';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import {
   Skeleton,
@@ -115,7 +116,7 @@ function RouteField({ label, children }: RouteFieldProps) {
 function InitialSourceContent({ paused, label, children }: { paused: boolean; label: string; children: ReactNode }) {
   const { t } = useTranslation();
   return (
-    <div role="status" aria-label={label} aria-live="polite">
+    <div data-app-part="status" role="status" aria-label={label} aria-live="polite">
       {paused
         ? <Caption>{t('dataSources.status.paused', 'Refresh paused')}</Caption>
         : children}
@@ -852,14 +853,26 @@ export default function NavigationRoutePage() {
                       message={t('navigation.noRoute', 'No active route selected')}
                     />
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <MetricValue as="span" className={trafficDelayColor}>
-                        {trafficDelaySec == null || !Number.isFinite(trafficDelaySec) ? '—' : formatDuration(trafficDelaySec)}
-                      </MetricValue>
-                      <TrafficDelayBadge
-                        seconds={trafficDelaySec}
-                        t={t}
-                      />
+                    <div
+                      data-app-part="metric"
+                      data-app-metric="headline"
+                      data-app-state={trafficDelaySec == null || !Number.isFinite(trafficDelaySec) ? 'missing' : 'value'}
+                      className="flex flex-wrap items-center gap-3"
+                    >
+                      <VisuallyHidden data-app-part="metric-label">
+                        {t('nav.trafficDelayTitle', 'Route traffic delay')}
+                      </VisuallyHidden>
+                      <div data-app-part="metric-reading" className="flex items-baseline">
+                        <MetricValue data-app-part="metric-value" as="span" className={trafficDelayColor}>
+                          {trafficDelaySec == null || !Number.isFinite(trafficDelaySec) ? '—' : formatDuration(trafficDelaySec)}
+                        </MetricValue>
+                      </div>
+                      <div data-app-part="metric-context">
+                        <TrafficDelayBadge
+                          seconds={trafficDelaySec}
+                          t={t}
+                        />
+                      </div>
                     </div>
                   )}
                 </LayoutCard>

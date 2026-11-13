@@ -82,7 +82,7 @@ export function JourneySequence({ drive, distance, duration, comparisons = [] }:
   );
 
   return (
-    <ol aria-label={t('driveDetail.timeline.label', 'Drive timeline')} className="min-w-0 space-y-1" data-testid="journey-sequence">
+    <ol data-app-part="list" aria-label={t('driveDetail.timeline.label', 'Drive timeline')} className="min-w-0 space-y-1" data-testid="journey-sequence">
       {endpoint(endpoints[0])}
       <li className="flex min-w-0 gap-3" data-journey-leg>
         <span className="flex w-7 shrink-0 justify-center" aria-hidden="true">

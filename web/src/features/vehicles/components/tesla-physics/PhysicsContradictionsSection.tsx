@@ -45,16 +45,16 @@ export default function PhysicsContradictionsSection({ physics }: { physics: Phy
           { value: 'unknown', label: t('teslaOnly.contradictionUnknownOnly', 'Unknown-flagged episodes') },
           { value: 'known', label: t('teslaOnly.contradictionKnownOnly', 'Unflagged episodes') },
         ]} />
-      {mostRecent && <div className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{t('teslaOnly.contradictionLatest', 'Latest matching episode: {{kind}} · {{count}} observed readings', {
+      {mostRecent && <div data-app-part="card" data-app-record-kind="physics-evidence" className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-record-slot="reading" as="p" variant="bodySm">{t('teslaOnly.contradictionLatest', 'Latest matching episode: {{kind}} · {{count}} observed readings', {
           kind: mostRecent.kind, count: mostRecent.observations ?? 1,
         })}</Text>
-        <Text as="p" variant="bodySm">{mostRecent.detail}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.contradictionPortContext', 'Nearest port sample within two minutes: {{at}} · state {{state}} · latch {{latch}} · gear {{gear}}', {
+        <Text data-app-record-slot="context" as="p" variant="bodySm">{mostRecent.detail}</Text>
+        <Text data-app-record-slot="context" as="p" variant="caption">{t('teslaOnly.contradictionPortContext', 'Nearest port sample within two minutes: {{at}} · state {{state}} · latch {{latch}} · gear {{gear}}', {
           at: time(nearbyPort?.at, t), state: nearbyPort?.charge_state || t('teslaOnly.unknown', 'unknown'),
           latch: nearbyPort?.latch || t('teslaOnly.unknown', 'unknown'), gear: nearbyPort?.gear || t('teslaOnly.unknown', 'unknown'),
         })}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.contradictionPortCaution', 'Proximity is context, not a synchronous reading or proof of which signal was wrong.')}</Text>
+        <Text data-app-record-slot="context" as="p" variant="caption">{t('teslaOnly.contradictionPortCaution', 'Proximity is context, not a synchronous reading or proof of which signal was wrong.')}</Text>
       </div>}
       {episodes.length ? <DataTable tableId="physics:episodes" data={[...episodes].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 8)} pagination={pagination}
         mobileColumns={['kind', 'window', 'observations']} keyExtractor={(r) => `${r.at}-${r.kind}-${r.detail}`} columns={[

@@ -115,7 +115,7 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
                 recharts' native syncId mechanism propagates the visible window
                 to every other chart sharing the same dataset.
               */}
-              <ChartBrush dataKey="time" />
+              {ChartBrush({ dataKey: 'time' })}
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -199,9 +199,9 @@ function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
       caption={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}
     >
       <Table variant="embedded" aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
-        <thead><tr><th scope="col">{t('driveDetail.report.signal', 'Signal')}</th><th scope="col">{meanLabel}</th><th scope="col">{maxLabel}</th><th scope="col">{minLabel}</th></tr></thead>
+        <thead data-app-part="table-head"><tr data-app-part="table-row"><th data-app-part="table-cell" scope="col">{t('driveDetail.report.signal', 'Signal')}</th><th data-app-part="table-cell" scope="col">{meanLabel}</th><th data-app-part="table-cell" scope="col">{maxLabel}</th><th data-app-part="table-cell" scope="col">{minLabel}</th></tr></thead>
         <tbody>{items.map((item) => (
-          <tr key={item.label}><th scope="row">{item.label}</th><td className="whitespace-nowrap tabular-nums">{item.mean}</td><td className="whitespace-nowrap tabular-nums">{item.max}</td><td className="whitespace-nowrap tabular-nums">{item.min}</td></tr>
+          <tr data-app-part="table-row" key={item.label}><th data-app-part="table-cell" scope="row">{item.label}</th><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.mean}</td><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.max}</td><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.min}</td></tr>
         ))}</tbody>
       </Table>
     </ChartSummary>

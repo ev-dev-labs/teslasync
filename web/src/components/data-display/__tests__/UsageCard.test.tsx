@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import {
   UsageCard,
   type UsageCardBand,
@@ -123,6 +127,12 @@ describe('UsageCard', () => {
     expect(screen.getByText('7')).toBeInTheDocument()
     expect(screen.getByText('route_summary')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
+    const group = screen.getByText('By feature').closest('[data-app-part~="card"]')
+    expect(group).toHaveAttribute('data-surface-variant', 'standalone')
+    expect(group?.querySelector('[data-app-part~="list-heading"]')).toHaveTextContent('By feature')
+    const list = within(group as HTMLElement).getByRole('list')
+    expect(list).toHaveAttribute('data-app-list', 'ranked')
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2)
   })
 
   it('renders the alert banner when provided', () => {
@@ -159,11 +169,14 @@ describe('UsageCard', () => {
     )
     const internal = screen.getByRole('link', { name: /view logs/i })
     expect(internal).toHaveAttribute('href', '/api-logs')
+    expect(internal).toHaveAttribute('data-app-part', 'button')
+    expect(internal).toHaveAttribute('data-app-variant', 'ghost')
 
     const external = screen.getByRole('link', { name: /docs/i })
     expect(external).toHaveAttribute('href', 'https://example.com/docs')
     expect(external).toHaveAttribute('target', '_blank')
     expect(external).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(external).toHaveAttribute('data-app-variant', 'primary')
   })
 
   it('renders all sections together when fully populated', () => {
@@ -240,5 +253,41 @@ describe('UsageCard', () => {
     expect(link).toHaveFocus()
     // Row-17 text rule: wrap at word boundaries (break-words), never per character.
     expect(screen.getByText('Prior history')).toHaveClass('break-words', 'text-start')
+  })
+
+  it('binds actual history/disclaimer surfaces and footer links to all pack consumers without owning the default tree (source-only)', () => {
+    const { container } = wrap(<UsageCard
+      topLists={[
+        { key: 'history', title: 'Prior 30-day cycles', items: [{ key: 'prior', label: '0 events', value: '$0.00' }] },
+        { key: 'source', title: 'Source and limitations', items: [{ key: 'estimate', label: 'Locally observed traffic, not an invoice', value: 'Estimated' }] },
+      ]}
+      footer={[
+        { key: 'logs', to: '/api-logs', label: 'Open API logs' },
+        { key: 'docs', to: 'https://example.com/reference', label: 'Pricing reference', primary: true, external: true },
+      ]}
+    />)
+    container.setAttribute('data-app-design-preview', '')
+    const surfaces = Array.from(container.querySelectorAll('[data-app-part~="card"]'))
+    const links = screen.getAllByRole('link')
+    const packs = Object.keys(APPLICATION_DESIGNS) as Array<Parameters<typeof getAppDesignAttributes>[0]>
+    for (const pack of packs) {
+      const rules: postcss.Rule[] = []
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+        .walkRules(rule => { rules.push(rule) })
+      const surfaceRules = rules.filter(rule => rule.selector.includes('[data-app-part~="card"]')
+        && rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop)))
+      const buttonRules = rules.filter(rule => rule.selector.includes('[data-app-part~="button"]')
+        && rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop)))
+      expect(surfaces.some(surface => surfaceRules.some(rule => surface.matches(rule.selector)))).toBe(false)
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value)
+      const release = observeAppDesignScopes(container)
+      try {
+        for (const surface of surfaces) expect(surfaceRules.some(rule => surface.matches(rule.selector)), pack).toBe(true)
+        for (const link of links) expect(buttonRules.some(rule => link.matches(rule.selector)), pack).toBe(true)
+        expect(surfaces[0]).toHaveTextContent('0 events$0.00')
+        expect(surfaces[1]).toHaveTextContent('Locally observed traffic, not an invoiceEstimated')
+        expect(container.querySelector('[role="progressbar"]')).toBeNull()
+      } finally { release() }
+    }
   })
 })

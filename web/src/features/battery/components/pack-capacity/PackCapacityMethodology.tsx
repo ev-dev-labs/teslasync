@@ -191,13 +191,16 @@ export function PackCapacityMethodology({
           {items.map((item) => (
             <article
               key={item.key}
+              data-app-part="card"
+              data-app-card-kind="record"
+              data-surface-variant="standalone"
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-theme-accent">
+              <div data-app-part="record-header" className="mb-2 flex items-center gap-2 text-theme-accent">
                 {item.icon}
-                <Heading level="sub">{item.title}</Heading>
+                <Heading data-app-part="record-title" level="sub">{item.title}</Heading>
               </div>
-              <Text as="p" variant="bodySm">
+              <Text data-app-part="record-body" as="p" variant="bodySm">
                 {item.body}
               </Text>
             </article>

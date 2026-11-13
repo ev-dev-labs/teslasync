@@ -12,6 +12,11 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parse, type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { neonColorMap } from '@/lib/tokens';
 
 const { datePreferences } = vi.hoisted(() => ({
   datePreferences: { locale: 'en-US', tz_display_default: 'utc', timezone_user: '' },
@@ -88,6 +93,18 @@ const mockReport = useConsumablesReport as unknown as ReturnType<typeof vi.fn>;
 const mockCreate = useCreateConsumable as unknown as ReturnType<typeof vi.fn>;
 const mockEvent = useCreateConsumableEvent as unknown as ReturnType<typeof vi.fn>;
 const mockRemove = useDeleteConsumable as unknown as ReturnType<typeof vi.fn>;
+
+const designRules: Rule[] = [];
+for (const sheet of ['base', 'feedback']) {
+  parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', `${sheet}.css`), 'utf8'))
+    .walkRules(rule => { designRules.push(rule); });
+}
+
+function consumes(node: Element | null, contract: string, property: string) {
+  return node != null && designRules.some(rule => rule.selector.includes(contract)
+    && rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === property)
+    && Array.from(node.ownerDocument.querySelectorAll(rule.selector)).includes(node));
+}
 
 function makeItem(overrides: Partial<ConsumableItem> = {}): ConsumableItem {
   return {
@@ -232,6 +249,54 @@ beforeEach(() => {
 });
 
 describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
+  it('composes each real lifecycle surface and all four readings without conflating source currency, zero or absent predictions', () => {
+    const first = makeLifecycle({
+      item: makeItem({ label: 'EUR filter', currency: 'EUR' }),
+      cost_per_m_minor: null, replacement_cost_minor: 0,
+      adjusted_life_m: null, remaining_m: null, remaining_s: null,
+    });
+    const second = makeLifecycle({
+      item: makeItem({ id: 2, label: 'GBP wiper', currency: 'GBP' }),
+      cost_per_m_minor: 0, replacement_cost_minor: 1234,
+      distance_used_m: 0, remaining_m: 0, remaining_s: 0,
+    });
+    mockReport.mockReturnValue(makeQuery({ ...makeReport(first), items: [first, second] }));
+    const { container } = renderPage();
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      for (const label of ['EUR filter', 'GBP wiper']) {
+        const surface = screen.getByRole('heading', { name: label }).closest('[data-app-part~="card"]');
+        expect(consumes(surface, '[data-app-part~="card"]', 'border-radius')).toBe(true);
+        const rows = surface?.querySelectorAll('[data-app-list="definitions"] > [data-app-part~="list-row"]');
+        expect(rows).toHaveLength(4);
+        expect(Array.from(rows ?? [], row => row.querySelector('dt')?.textContent))
+          .toEqual(['Distance on part', 'Duty-adjusted life', 'Remaining', 'Projected replacement']);
+        for (const row of rows ?? []) {
+          expect(consumes(row, '[data-app-list="definitions"]', 'grid-template-columns')).toBe(true);
+          expect(row.querySelectorAll('dd')).toHaveLength(2);
+          expect(row.querySelector('[data-app-part~="metric-context"]')).toBeInTheDocument();
+        }
+      }
+      const eur = screen.getByRole('heading', { name: 'EUR filter' }).closest('[data-app-part~="card"]')!;
+      const gbp = screen.getByRole('heading', { name: 'GBP wiper' }).closest('[data-app-part~="card"]')!;
+      expect(eur).toHaveTextContent('€0.00');
+      expect(eur.querySelector('[data-app-metric="tile"][data-state="missing"]')).toHaveTextContent('—');
+      expect(eur.querySelector('[data-app-list="definitions"] > :nth-child(3) > [data-app-part~="metric-value"]')).toHaveTextContent('—');
+      expect(gbp).toHaveTextContent('£12.34');
+      expect(gbp).toHaveTextContent('£0.00');
+      expect(gbp.querySelectorAll('[data-app-metric="tile"][data-state="value"]')).toHaveLength(2);
+      expect(gbp.querySelector('[data-app-list="definitions"] > :nth-child(3) > [data-app-part~="metric-value"]')).not.toHaveTextContent('—');
+      expect(gbp).toHaveTextContent('per 1 000 metres driven');
+      expect(first.cost_per_m_minor).toBeNull();
+      expect(second.cost_per_m_minor).toBe(0);
+      expect(mockEvent().mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+    }
+  });
+
   it('uses both page briefs while retaining the specialist part card, wear basis and actual zero counts', () => {
     mockReport.mockReturnValue(makeQuery(makeReport()));
     renderPage();
@@ -342,14 +407,23 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({
       cost_per_m_minor: null, replacement_cost_minor: 0, events: null,
     }))));
-    renderPage();
+    const view = renderPage();
     const projection = card('Part-by-part projection');
     const wear = within(projection).getByText('Part wear cost').parentElement;
     const replacement = within(projection).getByText('Replacement cost').parentElement;
     expect(wear).toHaveTextContent('—');
     expect(wear).not.toHaveTextContent('$0.00');
+    expect(wear).toHaveAttribute('data-state', 'missing');
     expect(replacement).toHaveTextContent('$0.00');
+    expect(replacement).toHaveAttribute('data-state', 'value');
     expect(within(projection).queryByRole('button', { name: /Service history/ })).not.toBeInTheDocument();
+    mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({
+      cost_per_m_minor: Number.NaN, replacement_cost_minor: 0,
+    }))));
+    view.rerenderPage();
+    expect(wear).toHaveAttribute('data-state', 'invalid');
+    expect(wear).toHaveTextContent('—');
+    expect(wear).not.toHaveTextContent('$0.00');
   });
 
   it('keeps a pending event note editable when its register refresh fails', () => {
@@ -475,10 +549,15 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
   it('labels and focuses the event target, uses its currency and restores the row trigger on cancel', () => {
     mockItems.mockReturnValue(makeQuery({ items: [makeItem({ currency: 'EUR' })] }));
     mockReport.mockReturnValue(makeQuery(makeReport()));
-    renderPage();
+    const { container } = renderPage();
     const trigger = screen.getByRole('button', { name: 'Log event' });
     fireEvent.click(trigger);
     const editor = screen.getByRole('form', { name: 'Log event — Cabin Filter' });
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    expect(editor).toHaveAttribute('data-app-part', 'card');
+    expect(consumes(editor, '[data-app-part~="card"]', 'border-radius')).toBe(true);
     expect(within(editor).getByRole('heading', { name: 'Log event — Cabin Filter' })).toHaveFocus();
     expect(editor).toHaveTextContent('EUR');
     expect(editor).not.toHaveTextContent('USD');
@@ -488,6 +567,7 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     expect(trigger).toHaveFocus();
     expect(screen.queryByRole('form', { name: 'Log event — Cabin Filter' })).not.toBeInTheDocument();
     expect(mockEvent().mutate).not.toHaveBeenCalled();
+    release();
   });
 
   it('closes the old vehicle event editor without submitting or clearing its draft on workspace change', () => {
@@ -693,21 +773,45 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('keeps the life bar decorative, clamps only its visual width and leaves missing predictions unknown', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes the original decorative life track without changing extent, status paint or unknown predictions', pack => {
     mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({
       health_pct: 120, remaining_m: null, remaining_s: null, adjusted_life_m: null,
     }))));
     const view = renderPage();
     const projection = card('Part-by-part projection');
     expect(projection).toHaveTextContent('120');
-    const fill = projection.querySelector('[aria-hidden="true"] > [style]');
-    expect(fill).toHaveStyle({ width: '100%' });
-    expect(fill?.parentElement).toHaveAttribute('aria-hidden', 'true');
-    expect(within(projection).getByText('Remaining').parentElement).toHaveTextContent('—');
-    expect(within(projection).getByText('Duty-adjusted life').parentElement).toHaveTextContent('—');
-    mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ health_pct: Number.NaN }))));
-    view.rerenderPage();
-    expect(projection.querySelector('[aria-hidden="true"] > [style]')).not.toBeInTheDocument();
-    expect(within(projection).getByText('Remaining life').parentElement).toHaveTextContent('—');
+    const track = projection.querySelector('[data-app-metric="bar"][data-metric-track]')!;
+    expect(track).not.toHaveAttribute('data-app-design-owner');
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) view.container.setAttribute(name, value);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      expect(consumes(track, `[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`, 'outline')).toBe(true);
+      expect(track).toHaveAttribute('aria-hidden', 'true');
+      expect(track).not.toHaveAttribute('role');
+      expect(track).toHaveClass('h-2', 'w-full', 'overflow-hidden', 'rounded-full');
+      const fill = track.querySelector('[data-metric-fill]')!;
+      expect(consumes(fill, '[data-metric-fill]', 'box-sizing')).toBe(true);
+      expect(fill).toHaveStyle({ width: '100%' });
+      expect(fill).toHaveClass('h-full', 'rounded-full', neonColorMap.green.dot);
+      expect(within(projection).getByText('Remaining').parentElement).toHaveTextContent('—');
+      expect(within(projection).getByText('Duty-adjusted life').parentElement).toHaveTextContent('—');
+      for (const health_pct of [0, -20, 40]) {
+        mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ health_pct }))));
+        view.rerenderPage();
+        const currentFill = track.querySelector('[data-metric-fill]');
+        expect(currentFill).toHaveStyle({ width: `${health_pct === 40 ? 40 : 0}%` });
+        expect(currentFill).toHaveClass(health_pct === 40 ? neonColorMap.amber.dot : neonColorMap.red.dot);
+        expect(track).toHaveAttribute('data-state', 'value');
+        expect(within(projection).getByText('Remaining life').parentElement).not.toHaveTextContent('—');
+      }
+      mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ health_pct: Number.NaN }))));
+      view.rerenderPage();
+      expect(track).toHaveAttribute('data-state', 'invalid');
+      expect(track.querySelector('[data-metric-fill]')).not.toBeInTheDocument();
+      expect(within(projection).getByText('Remaining life').parentElement).toHaveTextContent('—');
+    } finally {
+      release();
+    }
   });
 });

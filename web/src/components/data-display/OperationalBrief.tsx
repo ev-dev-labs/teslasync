@@ -182,12 +182,12 @@ export function OperationalBrief({
 
   return (
     <>
-      <section aria-labelledby={hideHeading ? undefined : titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
+      <section data-app-part="section" aria-labelledby={hideHeading ? undefined : titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
         <BriefSurface variant={variant} className={className}>
           <div className={cn(variant === 'embedded' ? 'min-w-0' : compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
             <div className="flex min-w-0 items-center justify-between gap-2">
               {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1', wrapTitle ? 'whitespace-normal break-words' : 'truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
-              {showRange && scope && <span className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
+              {showRange && scope && <span data-app-part="badge" className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
               <div className="flex shrink-0 items-center gap-2">
                 {actions}
                 <IconButton
@@ -205,26 +205,30 @@ export function OperationalBrief({
               data-max-per-row={resolvedMaxPerRow}
             >
               {emptyMetrics ? (
-                <div className="min-w-0 flex-[1_1_200px] py-2" role="listitem">
-                  <Text as="p" size="sm" weight="medium">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
-                  <Text as="p" size="xs" color="muted" className="mt-1">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {metrics.map((metric) => <span key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}
+                <div data-app-part="feedback empty" data-app-feedback-kind="empty" className="min-w-0 flex-[1_1_200px] py-2" role="listitem">
+                  <Text data-app-part="feedback-title" as="p" size="sm" weight="medium">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
+                  <Text data-app-part="feedback-message" as="p" size="xs" color="muted" className="mt-1">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
+                  <div data-app-part="feedback-detail" className="mt-2 flex flex-wrap gap-1.5">
+                    {metrics.map((metric) => <span data-app-part="badge" key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}
                   </div>
                 </div>
               ) : metricRows.map((row, rowIndex) => (
                 <div key={rowIndex} role="list" className="flex min-w-0 flex-wrap gap-x-5 gap-y-3"
-                  data-operational-metric-bank data-columns={row.length}>
+                  data-operational-metric-bank data-app-part="metric-grid" data-columns={row.length}>
                   {row.map((metric) => (
                     <div
                       key={metric.key}
                       role="listitem"
                       data-operational-metric={metric.key}
+                      data-app-part="metric"
+                      data-app-metric="brief"
+                      data-app-state={(metric.loading ?? loading) ? 'loading' : metricState(metric)}
                       data-value-state={metric.valueState}
                       className="min-w-0 flex-[1_1_200px] py-1"
                     >
-                      <MetricLabel>{metric.label}</MetricLabel>
+                      <MetricLabel data-app-part="metric-label">{metric.label}</MetricLabel>
                       <MetricValue
+                        data-app-part="metric-value"
                         data-operational-value={(metric.loading ?? loading) ? undefined : true}
                         aria-busy={(metric.loading ?? loading) || undefined}
                         className={cn(
@@ -234,7 +238,7 @@ export function OperationalBrief({
                         )}
                       >
                         {(metric.loading ?? loading) ? (
-                          <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
+                          <span data-app-part="skeleton" aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                         ) : metric.value}
                       </MetricValue>
                     </div>
@@ -244,24 +248,26 @@ export function OperationalBrief({
             </div>
 
             {primaryAttention && (
-              <div className={cn('flex min-w-0 flex-col border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center', compact ? 'mt-2 gap-2' : 'mt-4 gap-3')}>
+              <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone={primaryAttention.tone ?? 'info'} className={cn('flex min-w-0 flex-col border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center', compact ? 'mt-2 gap-2' : 'mt-4 gap-3')}>
                 <Icons.alertCircle
+                  data-app-part="feedback-icon"
                   className={cn(
                     'h-4 w-4 shrink-0',
                     TONE_TEXT[primaryAttention.tone ?? 'info'],
                   )}
                   aria-hidden="true"
                 />
-                <div className="min-w-0 flex-1">
-                  <Text as="p" size="sm" weight="semibold" color="primary">
+                <div data-app-part="feedback-content" className="min-w-0 flex-1">
+                  <Text data-app-part="feedback-title" as="p" size="sm" weight="semibold" color="primary">
                     {primaryAttention.title}
                   </Text>
-                  <Text as="p" size="xs" color="muted">
+                  <Text data-app-part="feedback-message" as="p" size="xs" color="muted">
                     {primaryAttention.description}
                   </Text>
                 </div>
                 {attention.length > 1 && (
                   <Button
+                    data-app-part="button feedback-actions"
                     type="button"
                     variant="ghost"
                     size="sm"
@@ -299,21 +305,25 @@ export function OperationalBrief({
           <div className="space-y-3">
             <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>
             {emptyMetrics ? (
-              <div className="space-y-2">
-                <Text as="p" size="sm">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
-                <Text as="p" size="xs" color="muted">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
-                <div className="flex flex-wrap gap-1.5">{metrics.map((metric) => <span key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}</div>
+              <div data-app-part="feedback empty" data-app-feedback-kind="empty" className="space-y-2">
+                <Text data-app-part="feedback-title" as="p" size="sm">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
+                <Text data-app-part="feedback-message" as="p" size="xs" color="muted">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
+                <div data-app-part="feedback-detail" className="flex flex-wrap gap-1.5">{metrics.map((metric) => <span data-app-part="badge" key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}</div>
               </div>
             ) : visibleMetrics.map((metric) => (
               <div
                 key={metric.key}
                 role="group"
                 aria-label={metric.label}
+                data-app-part="card metric"
+                data-app-metric="card"
+                data-app-state={(metric.loading ?? loading) ? 'loading' : metricState(metric)}
                 className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-3">
-                  <MetricLabel>{metric.label}</MetricLabel>
+                <div data-app-part="metric-body" className="flex min-w-0 flex-wrap items-baseline justify-between gap-3">
+                  <MetricLabel data-app-part="metric-label">{metric.label}</MetricLabel>
                   <Text
+                    data-app-part="metric-value"
                     as="span"
                     size="sm"
                     weight="bold"
@@ -321,12 +331,12 @@ export function OperationalBrief({
                     className={cn('min-w-0 break-words tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
                     {(metric.loading ?? loading) ? (
-                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
+                      <span data-app-part="skeleton" aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                     ) : metric.value}
                   </Text>
                 </div>
                 {hasMetricExplanation(metric.detail) && (
-                  <Text as="div" size="xs" color="muted" className="mt-1">
+                  <Text data-app-part="metric-context" as="div" size="xs" color="muted" className="mt-1">
                     {metric.detail}
                   </Text>
                 )}
@@ -349,9 +359,13 @@ export function OperationalBrief({
               attention.map((item) => (
                 <div
                   key={item.key}
+                  data-app-part="feedback"
+                  data-app-feedback-kind="insight"
+                  data-app-tone={item.tone ?? 'info'}
                   className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <Text
+                    data-app-part="feedback-title"
                     as="p"
                     size="sm"
                     weight="semibold"
@@ -359,7 +373,7 @@ export function OperationalBrief({
                   >
                     {item.title}
                   </Text>
-                  <Text as="p" size="xs" color="muted" className="mt-1">
+                  <Text data-app-part="feedback-message" as="p" size="xs" color="muted" className="mt-1">
                     {item.description}
                   </Text>
                 </div>

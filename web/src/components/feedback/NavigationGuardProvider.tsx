@@ -1,7 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import type { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { captureAppDesignOrigin, type AppDesignOriginSnapshot } from '../ui/appDesignOrigin'
+import { Button } from '../ui/Button'
+import { AlertBanner } from './AlertBanner'
+import { isFocusRestorable } from '@/hooks/useDialogFocus'
+import { reportFrontendError } from '@/lib/errorReporter'
 
 /**
  * One registered "form is dirty" guard.
@@ -26,6 +31,13 @@ export interface NavigationGuardEntry {
 interface PendingConfirm {
   resolve: (ok: boolean) => void
   message?: string
+  originSnapshot: AppDesignOriginSnapshot
+}
+
+function captureConfirmationOrigin() {
+  const active = document.activeElement
+  return captureAppDesignOrigin(active instanceof HTMLElement && active !== document.body && active !== document.documentElement
+    ? active : null)
 }
 
 interface NavigationGuardContextValue {
@@ -81,6 +93,11 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const guards = useRef<Map<string, NavigationGuardEntry>>(new Map())
   const [pending, setPending] = useState<PendingConfirm | null>(null)
+  const pendingRef = useRef<PendingConfirm | null>(null)
+  const [Dialog, setDialog] = useState<typeof ConfirmDialog | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const loadingRef = useRef<HTMLDivElement>(null)
   // Re-use the in-flight confirm when both popstate AND a click intercept
   // race: the second caller awaits the same dialog instead of orphaning.
   const pendingPromiseRef = useRef<Promise<boolean> | null>(null)
@@ -114,7 +131,9 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
     const dirty = findDirty()
     if (!dirty) return Promise.resolve(true)
     const promise = new Promise<boolean>((resolve) => {
-      setPending({ resolve, message: dirty.getMessage() })
+      const request = { resolve, message: dirty.getMessage(), originSnapshot: captureConfirmationOrigin() }
+      pendingRef.current = request
+      setPending(request)
     })
     pendingPromiseRef.current = promise
     return promise
@@ -160,7 +179,7 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
       if (pendingPromiseRef.current) return
       const message = dirty.getMessage()
       const promise = new Promise<boolean>((resolve) => {
-        setPending({
+        const request: PendingConfirm = {
           resolve: (ok) => {
             if (ok) {
               skipNextPopstateRef.current = true
@@ -169,7 +188,10 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
             resolve(ok)
           },
           message,
-        })
+          originSnapshot: captureConfirmationOrigin(),
+        }
+        pendingRef.current = request
+        setPending(request)
       })
       pendingPromiseRef.current = promise
     }
@@ -182,18 +204,14 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
     [register, confirmIfDirty],
   )
 
-  // pending is mirrored into a ref so handleConfirm/handleCancel can
+  // The request ref is set before scheduling its render so an immediate
+  // unmount can still cancel it. handleConfirm/handleCancel can
   // resolve the awaited promise WITHOUT calling navigate(-1) inside a
   // setState updater. Calling navigate inside an updater triggers a setState
   // on MemoryRouter while React is mid-render, producing a "setState during
   // render" warning. The ref + plain setPending(null) lets the resolve side
   // effect run as a normal event-handler setState, which React batches
   // safely with the pending=null update.
-  const pendingRef = useRef<PendingConfirm | null>(null)
-  useEffect(() => {
-    pendingRef.current = pending
-  }, [pending])
-
   const handleConfirm = useCallback(() => {
     const current = pendingRef.current
     pendingRef.current = null
@@ -207,23 +225,66 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
     pendingRef.current = null
     pendingPromiseRef.current = null
     setPending(null)
+    const origin = current?.originSnapshot.origin
+    if (loadingRef.current?.contains(document.activeElement) && isFocusRestorable(origin)) {
+      origin.focus()
+    }
     if (current) current.resolve(false)
+  }, [])
+
+  useEffect(() => {
+    if (!pending || Dialog) return
+    let cancelled = false
+    setLoadFailed(false)
+    void import('../ui/ConfirmDialog').then(module => {
+      if (!cancelled) setDialog(() => module.ConfirmDialog)
+    }, error => {
+      if (cancelled) return
+      reportFrontendError(error, 'react')
+      setLoadFailed(true)
+    })
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      handleCancel()
+    }
+    window.addEventListener('keydown', cancel)
+    return () => { cancelled = true; window.removeEventListener('keydown', cancel) }
+  }, [pending, Dialog, loadAttempt, handleCancel])
+
+  useEffect(() => () => {
+    pendingRef.current?.resolve(false)
+    pendingRef.current = null
+    pendingPromiseRef.current = null
   }, [])
 
   return (
     <Ctx.Provider value={ctxValue}>
       {children}
-      <ConfirmDialog
-        open={pending != null}
+      {pending && (Dialog ? <Dialog
+        open
+        originSnapshot={pending.originSnapshot}
         title={t('forms.unsavedTitle', 'Unsaved changes')}
-        message={pending?.message ?? t('forms.unsavedWarning', 'You have unsaved changes. Discard them?')}
+        message={pending.message ?? t('forms.unsavedWarning', 'You have unsaved changes. Discard them?')}
         confirmLabel={t('forms.discard', 'Discard changes')}
         cancelLabel={t('forms.keepEditing', 'Keep editing')}
         variant="warning"
         silenceKey="unsaved-navigation"
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-      />
+      /> : <div ref={loadingRef}>
+        <AlertBanner variant={loadFailed ? 'danger' : 'info'} role={loadFailed ? 'alert' : 'status'}
+          aria-label={t('forms.unsavedTitle', 'Unsaved changes')}>
+          {loadFailed ? t('errorBoundary.inlineTitle', 'Component failed to load') : t('a11y.loading', 'Loading')}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={handleCancel}>{t('common.cancel', 'Cancel')}</Button>
+            {loadFailed && <Button variant="secondary" onClick={() => setLoadAttempt(attempt => attempt + 1)}>
+              {t('error.retry', 'Retry')}
+            </Button>}
+          </div>
+        </AlertBanner>
+      </div>)}
     </Ctx.Provider>
   )
 }

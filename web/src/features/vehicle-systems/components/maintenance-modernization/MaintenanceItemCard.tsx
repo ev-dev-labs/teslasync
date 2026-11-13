@@ -109,6 +109,9 @@ export function MaintenanceItemCard({
             </Caption>
           </div>
           {pct != null && <div
+            data-app-part="metric"
+            data-app-metric="bar"
+            data-metric-track
             role="progressbar"
             aria-valuenow={Math.round(pct)}
             aria-valuemin={0}
@@ -117,6 +120,7 @@ export function MaintenanceItemCard({
             className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
           >
             <div
+              data-metric-fill
               className={cn('h-full rounded-full motion-safe:transition-all motion-safe:duration-slow', progressFillClass(pct))}
               style={{ width: `${pct}%` }}
             />
@@ -139,7 +143,7 @@ export function MaintenanceItemCard({
         )}
       </div>
       <Accordion title={t('maintenance.details.title', 'Service interval and metadata')}>
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <dl data-app-part="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {fields.map(field => (
             <div key={field.key} className="min-w-0">
               <Caption as="dt">{field.label}</Caption>

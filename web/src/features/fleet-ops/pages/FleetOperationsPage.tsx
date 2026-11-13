@@ -71,7 +71,7 @@ export default function FleetOperationsPage() {
   const workOrdersState = useDataState(workOrdersQuery);
   const forecastState = useDataState(forecastQuery, { provenance: 'inferred' });
   const pendingContent = (state: DataState<unknown>, loading: boolean, lines: number) => (
-    <div role="status" aria-busy={loading && !state.isRefreshBlocked}>
+    <div data-app-part="status" role="status" aria-busy={loading && !state.isRefreshBlocked}>
       <Text as="p" variant="bodySm" color="muted">
         {state.isRefreshBlocked
           ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
@@ -166,7 +166,7 @@ export default function FleetOperationsPage() {
               onRetry={() => void vehiclesQuery.refetch()}
             />
           ) : !vehiclesState.hasData ? (
-            <div role="status" aria-label={vehiclesState.isRefreshBlocked
+            <div data-app-part="status" role="status" aria-label={vehiclesState.isRefreshBlocked
               ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
               : vehiclesQuery.isLoading
                 ? t('common.loading', 'Loading...')

@@ -37,13 +37,13 @@ export function DriveLedgerPanel({ ledger }: { ledger?: PhysicsDriveLedger | nul
           <TermRow label={t('physicsLedger.drive.drivetrainLoss', 'Drivetrain loss (model)')} term={ledger.drivetrain_loss_wh} format={energy} />
         </tbody>
         <tfoot>
-          <tr>
-            <th scope="row">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row">
               <Text as="span" size="sm" className="font-semibold">
                 {t('physicsLedger.drive.unexplained', 'Unexplained residual')}
               </Text>
             </th>
-            <td className="text-right tabular-nums">
+            <td data-app-part="table-cell" className="text-right tabular-nums">
               <Text as="span" size="sm" className="font-semibold">
                 {ledger.unexplained_known && ledger.unexplained_wh != null ? energy(ledger.unexplained_wh) : unknownLabel(t)}
               </Text>

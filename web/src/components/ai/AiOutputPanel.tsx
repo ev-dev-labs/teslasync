@@ -35,6 +35,7 @@ import type { TFunction } from 'i18next'
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail'
+import { Card } from '@/components/ui/Card'
 import { Text } from '@/components/ui/Typography'
 import type {
   AiStreamState,
@@ -109,17 +110,25 @@ export function AiOutputPanel({
     state === 'done'
   if (!hasAnything) return null
   return (
-    <div
-      className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
+    <Card
+      className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4 shadow-none"
+      data-print-card={undefined}
       data-testid="ai-output-panel"
     >
       {state === 'error' && (
-        <Text as="p" variant="body" role="alert" className="flex items-start gap-2 text-[var(--semantic-danger)]">
+        <Text
+          as="p" variant="body" role="alert"
+          data-app-part="feedback"
+          data-app-feedback-kind="notice"
+          data-app-tone="danger"
+          className="flex items-start gap-2 text-[var(--semantic-danger)]"
+        >
           <HelixMark
+            data-app-part="feedback-icon"
             className="h-4 w-4 shrink-0 mt-0.5"
             aria-hidden="true"
           />
-          <span className="min-w-0 break-words">
+          <span data-app-part="feedback-content feedback-message" className="min-w-0 break-words">
             <Text weight="medium">{t('helix.errorLabel', 'Helix error:')}</Text>{' '}
             {recovery ? (
               <>
@@ -160,7 +169,7 @@ export function AiOutputPanel({
         </Text>
       )}
       <HelixEvidenceTrail activity={activity} state={state} usage={usage} localizeKnownTools />
-    </div>
+    </Card>
   )
 }
 AiOutputPanel.displayName = 'AiOutputPanel'

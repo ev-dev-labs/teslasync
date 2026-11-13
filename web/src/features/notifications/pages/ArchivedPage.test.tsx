@@ -37,6 +37,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -185,6 +190,31 @@ afterEach(() => {
 });
 
 describe('ArchivedPage independent lookup trust', () => {
+  it('keeps archive-to-inbox navigation as the real header control for every complete app profile', () => {
+    const rules: Rule[] = [];
+    postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+      .walkRules(rule => { rules.push(rule); });
+    const view = renderPage();
+    const host = view.container;
+    host.setAttribute('data-app-design-preview', '');
+    try {
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) host.setAttribute(name, value);
+        const release = observeAppDesignScopes(host);
+        try {
+          const link = screen.getByRole('link', { name: 'Back to inbox' });
+          expect(link).toHaveAttribute('href', '/notifications/inbox');
+          expect(link).toHaveAttribute('data-app-variant', 'ghost');
+          expect(rules.some(rule => rule.selectors.some(selector =>
+            selector.includes('[data-app-part~="button"]') && link.matches(selector)))).toBe(true);
+          link.focus();
+          expect(link).toHaveFocus();
+          expect(link).toHaveClass('focus-visible:outline-2');
+        } finally { release(); }
+      }
+    } finally { view.unmount(); view.client.clear(); }
+  });
+
   it('shows active lookup loading without claiming empty catalogs or hiding the summary', async () => {
     installRequest({ vehicles: () => new Promise<never>(() => {}) });
     renderPage();

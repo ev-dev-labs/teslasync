@@ -29,11 +29,17 @@
  * settings request and i18n are mocked for deterministic presentation.
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 
 import type { RouteSummary } from '@/types/driving';
 import { RouteCard, type RouteCardProps } from './RouteCard';
 import { makeUnitDisplay } from './helpers';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import {
+  expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile,
+} from '@/components/feedback/appDesignCss.test-utils';
+import { ROUTE_EFF_COLORS } from './constants';
 
 const actualThemeProvider = await vi.importActual<
   typeof import('@/components/ui/ThemeProvider')
@@ -178,6 +184,30 @@ describe('RouteCard — header (endpoints, caption, badge)', () => {
 });
 
 describe('RouteCard — best/avg/worst readout', () => {
+  it.each(['km', 'mi'] as const)('binds native definition readings and units in every design without changing negative/inverted %s operands or the gradient', distance => {
+    const unit = makeUnitDisplay(distance);
+    const { container } = renderCard({ unit, route: makeRoute({ bestEfficiency: -30, avgEfficiency: 200, worstEfficiency: 100 }) });
+    const before = gradientBackground(container);
+    const definitions = container.querySelector('[data-app-list="definitions"]')!;
+    const values = [...definitions.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent);
+    expect(values).toEqual([-30, 200, 100].map(value => String(Math.round(unit.toEfficiency(value)))));
+    expect(definitions.querySelectorAll('[data-app-part="metric-unit"]')).toHaveLength(3);
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        for (const reading of definitions.querySelectorAll('[data-app-part="metric-reading"]')) {
+          expectAppDesignDataMode(reading, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]');
+          expect(reading.querySelector('[data-app-part="metric-unit"]')).toHaveTextContent(unit.efficiencyUnit);
+        }
+        expect([...definitions.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent)).toEqual(values);
+        expect(gradientBackground(container)).toBe(before);
+        expect(gradientBar(container).parentElement).toHaveAttribute('data-app-metric', 'bar');
+      } finally { release(); }
+    }
+  });
+
   it('renders each labelled figure with its SI-per-km value and unit', () => {
     renderCard();
 
@@ -197,8 +227,8 @@ describe('RouteCard — best/avg/worst readout', () => {
   it('pairs each figure with a toned-down status colour (never hue-only)', () => {
     renderCard();
     // colour is always paired with the value text, per the neon-text guideline.
-    expect(screen.getByText('120').closest('p')?.className).toContain('text-emerald-300');
-    expect(screen.getByText('200').closest('p')?.className).toContain('text-rose-300');
+    expect(screen.getByText('120').closest('dd')?.className).toContain('text-emerald-300');
+    expect(screen.getByText('200').closest('dd')?.className).toContain('text-rose-300');
   });
 });
 
@@ -224,6 +254,115 @@ describe('RouteCard — unit conversion (miles branch)', () => {
 });
 
 describe('RouteCard — gradient bar', () => {
+  it('binds only the original aria-hidden track and original fill to deliberate native consumers in all27', () => {
+    const { container } = renderCard();
+    const fill = gradientBar(container);
+    const track = fill.parentElement!;
+    const before = gradientBackground(container);
+    expect(track).toHaveAttribute('data-app-part', 'metric');
+    expect(track).toHaveAttribute('data-metric-track');
+    expect(fill).toHaveAttribute('data-metric-fill');
+    expect(track.children).toHaveLength(1);
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expectAppDesignDataMode(track, APPLICATION_DESIGNS[pack].data, '[data-app-metric="bar"][data-metric-track]');
+        const trackRules = matchesAppDesignCss(track, '[data-app-metric="bar"][data-metric-track]');
+        expect(trackRules.some(rule => 'outline' in rule.declarations)).toBe(true);
+        expect(trackRules.every(rule => Object.keys(rule.declarations)
+          .every(property => ['outline', 'outline-offset'].includes(property)))).toBe(true);
+        const fillRules = matchesAppDesignCss(fill, '[data-metric-fill]');
+        expect(fillRules).toHaveLength(1);
+        expect(fillRules[0].declarations).toEqual({ 'box-sizing': 'border-box', 'min-inline-size': '0' });
+        expect(track).toHaveAttribute('aria-hidden', 'true');
+        expect(track).toHaveClass('mt-4', 'h-2.5', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-2)]');
+        expect(fill).toHaveClass('h-full', 'rounded-full');
+        expect(fill.style.width).toBe('');
+        expect(gradientBackground(container)).toBe(before);
+        for (const node of [track, fill]) {
+          for (const attribute of ['role', 'aria-valuemin', 'aria-valuemax', 'aria-valuenow', 'data-value', 'data-percent']) {
+            expect(node).not.toHaveAttribute(attribute);
+          }
+        }
+        expect(screen.getByText('12 trips · 25.00 km avg')).toBeInTheDocument();
+        expect(container.querySelectorAll('dl > div')).toHaveLength(3);
+      } finally { release(); }
+    }
+  });
+
+  it.each([
+    { name: 'normal', bestEfficiency: 120, avgEfficiency: 160, worstEfficiency: 200, bestStop: '60', avgStop: '80' },
+    { name: 'net regeneration', bestEfficiency: -30, avgEfficiency: 160, worstEfficiency: 200, bestStop: '0', avgStop: '80' },
+    { name: 'inverted stops', bestEfficiency: 180, avgEfficiency: 90, worstEfficiency: 200, bestStop: '90', avgStop: '45' },
+    { name: 'zero denominator', bestEfficiency: -10, avgEfficiency: 20, worstEfficiency: 0, bestStop: '0', avgStop: '100' },
+    { name: 'all negative', bestEfficiency: -30, avgEfficiency: -20, worstEfficiency: -10, bestStop: '0', avgStop: '0' },
+    { name: 'malformed source with existing safe converter', bestEfficiency: NaN, avgEfficiency: Infinity, worstEfficiency: -Infinity, bestStop: '0', avgStop: '0' },
+  ])('retains the exact full-width source gradient for $name', ({ bestEfficiency, avgEfficiency, worstEfficiency, bestStop, avgStop }) => {
+    const { container } = renderCard({ route: makeRoute({ bestEfficiency, avgEfficiency, worstEfficiency }) });
+    expect(gradientBackground(container)).toBe(
+      `linear-gradient(to right, ${ROUTE_EFF_COLORS.best} 0%, ${ROUTE_EFF_COLORS.best} ${bestStop}%,` +
+      ` ${ROUTE_EFF_COLORS.avg} ${bestStop}%, ${ROUTE_EFF_COLORS.avg} ${avgStop}%,` +
+      ` ${ROUTE_EFF_COLORS.worst} ${avgStop}%, ${ROUTE_EFF_COLORS.worst} 100%)`,
+    );
+    expect(gradientBar(container)).toHaveAttribute('data-metric-fill');
+    expect(gradientBar(container).style.width).toBe('');
+    expect(container.querySelectorAll('[data-metric-fill]')).toHaveLength(1);
+    expect(container.textContent).not.toContain('%');
+  });
+
+  it('does not repair a caller converter that intentionally propagates malformed operands', () => {
+    const { container } = renderCard({
+      route: makeRoute({ bestEfficiency: NaN, avgEfficiency: Infinity, worstEfficiency: NaN }),
+      unit: { ...makeUnitDisplay('km'), toEfficiency: value => value ?? 0 },
+    });
+    expect(gradientBackground(container)).toBe(
+      `linear-gradient(to right, ${ROUTE_EFF_COLORS.best} 0%, ${ROUTE_EFF_COLORS.best} NaN%,` +
+      ` ${ROUTE_EFF_COLORS.avg} NaN%, ${ROUTE_EFF_COLORS.avg} NaN%,` +
+      ` ${ROUTE_EFF_COLORS.worst} NaN%, ${ROUTE_EFF_COLORS.worst} 100%)`,
+    );
+    expect(gradientBar(container).parentElement).toHaveAttribute('aria-hidden', 'true');
+    expect(gradientBar(container).parentElement).not.toHaveAttribute('role');
+  });
+
+  it.each(['default', 'widget-only', 'public', 'incomplete'] as const)('leaves the native range neutral in %s scope', scope => {
+    const { container } = renderCard();
+    if (scope === 'widget-only') container.setAttribute('data-widget-pack', 'v2');
+    if (scope === 'public') container.setAttribute('data-public-report', '');
+    if (scope === 'incomplete') {
+      container.setAttribute('data-app-design-preview', '');
+      setAppDesignTestProfile(container, 'v2');
+      container.removeAttribute('data-app-map');
+    }
+    const release = observeAppDesignScopes(container);
+    try {
+      for (const node of [gradientBar(container), gradientBar(container).parentElement!]) {
+        expect(node).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesAppDesignCss(node, '[data-metric-track]')).toHaveLength(0);
+      }
+    } finally { release(); }
+  });
+
+  it('respects nearest complete ownership and makes an incomplete nested range neutral', async () => {
+    const { container } = renderCard();
+    container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(container, 'classic');
+    const island = container.firstElementChild!;
+    island.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(island, 'v2');
+    const track = gradientBar(container).parentElement!;
+    const release = observeAppDesignScopes(container);
+    try {
+      expectAppDesignDataMode(track, 'cards', '[data-app-metric="bar"][data-metric-track]');
+      expect(matchesAppDesignCss(track, '[data-app-data="table"]')).toHaveLength(0);
+      island.removeAttribute('data-app-controls');
+      await waitFor(() => expect(track).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchesAppDesignCss(track, '[data-metric-track]')).toHaveLength(0);
+      expect(gradientBar(container)).not.toHaveAttribute('data-app-design-owner');
+    } finally { release(); }
+  });
+
   it('renders the three-stop gradient at the computed best/avg percentages', () => {
     const { container } = renderCard(); // best 120, avg 160, worst 200 → 60% / 80%
     const bg = gradientBackground(container);

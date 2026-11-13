@@ -55,16 +55,18 @@ export function EvidenceLimitationsPanel({
                 {t('serviceIntelligence.evidence.count', '{{count}} items', { count: items.length })}
               </Badge>
             </div>
-            <ol className="space-y-2">
+            <ol data-app-part="list" data-app-list="records" className="space-y-2">
               {items.map((item) => (
                 <li
                   key={item.id}
+                  data-app-part="card"
+                  data-app-card-kind="record"
                   className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <Text variant="body" weight="semibold">{item.title}</Text>
-                      <Caption className="mt-1 block">{item.source_name}</Caption>
+                      <Text data-app-part="record-title" variant="body" weight="semibold">{item.title}</Text>
+                      <Caption data-app-part="record-context" className="mt-1 block">{item.source_name}</Caption>
                     </div>
                     <Badge variant="neutral">
                       {t(
@@ -73,9 +75,12 @@ export function EvidenceLimitationsPanel({
                       )}
                     </Badge>
                   </div>
-                  <Text as="p" variant="bodySm" className="mt-2">{item.summary}</Text>
+                  <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-2">{item.summary}</Text>
                   {item.source_document_url && (
                     <a
+                      data-app-part="button"
+                      data-app-variant="ghost"
+                      data-app-size="sm"
                       href={item.source_document_url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -94,7 +99,7 @@ export function EvidenceLimitationsPanel({
               <Info className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('serviceIntelligence.limitations.title', 'Interpretation limits')}
             </Heading>
-            <ul className="list-disc space-y-2 ps-5">
+            <ul data-app-part="list" className="list-disc space-y-2 ps-5">
               {limitations.map((limitation) => (
                 <li key={limitation}><Text variant="bodySm">{limitation}</Text></li>
               ))}

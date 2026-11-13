@@ -217,6 +217,11 @@ describe('Charging site twin scoped modernization', () => {
     expect(articles[0]).toHaveTextContent('#2');
     expect(articles[0]).toHaveTextContent('Caller order first');
     expect(articles[0]).toHaveTextContent('Assumed arrivals only.');
+    expect(articles[0].firstElementChild).toHaveAttribute('data-app-part', 'card');
+    expect(articles[0].firstElementChild).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(articles[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Caller order first');
+    expect(articles[0].querySelector('[data-app-part="metric-reading"]')).toHaveTextContent('Queue -20.00% · peak -2.00 kW');
+    expect(articles[0].querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Assumed arrivals only.');
     expect(articles[0].querySelector('span')).toHaveClass('bg-[var(--surface-2)]');
     expect(screen.getByText('• Poisson arrivals are modeled, not live charger telemetry.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Per-charger power/), { target: { value: '90000' } });

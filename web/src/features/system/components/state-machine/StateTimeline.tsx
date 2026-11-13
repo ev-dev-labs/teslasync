@@ -102,18 +102,21 @@ export function StateTimeline({
     return (
       <div
         data-testid="state-timeline-empty"
+        data-app-part="feedback empty"
+        data-app-feedback-kind="empty"
+        role="status"
         className={cn(
           'rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-4 py-3 text-xs text-[var(--text-muted)]',
           'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
           className,
         )}
       >
-        <div>
+        <div data-app-part="feedback-message">
           {t('debugger.timeline.empty', 'No transitions in window')}
           {hasHint ? (
             <>
               {' · '}
-              <span className="text-[var(--text-secondary)]">
+              <span data-app-part="feedback-detail" className="text-[var(--text-secondary)]">
                 {t('debugger.timeline.lastSeen', 'Last transition {{rel}}', {
                   rel: formatRelative(lastTransition!.ts),
                 })}
@@ -122,7 +125,7 @@ export function StateTimeline({
           ) : null}
         </div>
         {hasHint && (showWiden || showJump) ? (
-          <div className="flex items-center gap-2">
+          <div data-app-part="feedback-actions" className="flex items-center gap-2">
             {showWiden ? (
               <Button
                 size="sm"
@@ -154,16 +157,20 @@ export function StateTimeline({
   return (
     <div
       data-testid="state-timeline"
+      data-app-part="chart"
+      data-chart-family="state-timeline"
+      data-chart-variant="panel"
+      data-chart-state="ready"
       className={cn('rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-4 py-3', className)}
     >
-      <div className="mb-2 flex items-center justify-between text-2xs tracking-wider text-[var(--text-muted)]">
+      <div data-chart-scale="" className="mb-2 flex items-center justify-between text-2xs tracking-wider text-[var(--text-muted)]">
         <span>{formatDate(start) !== formatDate(end) ? `${formatDateShort(start)} ` : ''}{formatTime(start)}</span>
         <span>
           {t('debugger.controls.window', 'Window')}: {formatDurationMsCompact(windowMinutes * 60_000)}
         </span>
         <span>{formatDate(start) !== formatDate(end) ? `${formatDateShort(end)} ` : ''}{formatTime(end)}</span>
       </div>
-      <div className="relative h-10">
+      <div data-chart-viewport="" className="relative h-10">
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-2)]" />
         {ticks.map(({ tr, leftPct }) => {
           const color = getStateColor(fsmType, tr.to_state);

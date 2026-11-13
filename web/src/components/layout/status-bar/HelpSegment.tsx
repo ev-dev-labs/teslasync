@@ -1,15 +1,16 @@
-import { useRef } from 'react';
-import { Bug, CircleHelp, Compass, Keyboard } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
+import { CircleHelp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Popover } from '@/components/ui/Popover';
-import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Text } from '@/components/ui/Typography';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { dispatchTourLauncherOpen } from '@/lib/tourRegistry';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { reportFrontendError } from '@/lib/errorReporter';
 import { cn } from '@/lib/cn';
 import { severityTokens, typography } from '@/lib/tokens';
-import { VersionSegment } from './VersionSegment';
+import type { HelpMenuContent } from './HelpMenuContent';
 import { useStatusBarPopover } from './StatusBarContext';
 import { useBuildNews } from './useAboutBuild';
 
@@ -18,6 +19,49 @@ export interface HelpSegmentProps {
   iconOnly?: boolean;
   embedded?: boolean;
   onAction?: () => void;
+}
+
+function HelpMenuBody(props: ComponentProps<typeof HelpMenuContent>) {
+  const { t } = useTranslation();
+  const [Content, setContent] = useState<typeof HelpMenuContent | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadFailed(false);
+    void import('./HelpMenuContent').then(module => {
+      if (!cancelled) setContent(() => module.HelpMenuContent);
+    }, error => {
+      if (cancelled) return;
+      reportFrontendError(error, 'react');
+      setLoadFailed(true);
+    });
+    return () => { cancelled = true; };
+  }, [attempt]);
+
+  useLayoutEffect(() => {
+    if (Content && bodyRef.current?.contains(document.activeElement)) {
+      bodyRef.current.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    }
+  }, [Content]);
+
+  return (
+    <div ref={bodyRef} tabIndex={-1}>
+      {Content ? <Content {...props} /> : loadFailed ? (
+        <AlertBanner variant="danger" role="alert">
+          {t('errorBoundary.inlineTitle', 'Component failed to load')}
+          <Button variant="secondary" onClick={() => {
+            bodyRef.current?.focus({ preventScroll: true });
+            setAttempt(value => value + 1);
+          }}>
+            {t('error.retry', 'Retry')}
+          </Button>
+        </AlertBanner>
+      ) : <Text role="status">{t('a11y.loading', 'Loading')}</Text>}
+    </div>
+  );
 }
 
 export function HelpSegment({
@@ -30,83 +74,7 @@ export function HelpSegment({
   const { open, toggle, close } = useStatusBarPopover('help');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const { hasBuildNews } = useBuildNews();
-  const menuActionClassName = cn(
-    'h-auto min-h-11 min-w-11 w-full justify-start px-3 py-2 md:min-h-9 md:min-w-0',
-    typography.color.secondary,
-  );
-
-  const runAndClose = (action: () => void) => {
-    close();
-    onAction?.();
-    action();
-  };
-
-  const menu = (
-    <div className="p-1" data-testid="status-bar-help-menu">
-      <PanelTitle className="px-3 pb-1 pt-2">
-        {t('statusBar.help.title', 'Help & support')}
-      </PanelTitle>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        wrapLabel
-        aria-label={t('help.shortcuts', 'Open keyboard shortcuts')}
-        onClick={() =>
-          runAndClose(() =>
-            window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts')),
-          )
-        }
-        className={menuActionClassName}
-        icon={<Icon icon={Keyboard} size="sm" />}
-      >
-        <Text as="span" size="xs" weight="medium">
-          {t('help.shortcutsLabel', 'Keyboard shortcuts')}
-        </Text>
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        wrapLabel
-        aria-label={t('help.tour', 'Open tour launcher')}
-        onClick={() => runAndClose(dispatchTourLauncherOpen)}
-        className={menuActionClassName}
-        icon={<Icon icon={Compass} size="sm" />}
-        data-tour-launcher-trigger
-      >
-        <Text as="span" size="xs" weight="medium">
-          {t('help.tourLabel', 'Take a tour')}
-        </Text>
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        wrapLabel
-        aria-label={t('help.feedback', 'Open feedback / bug report form')}
-        onClick={() =>
-          runAndClose(() =>
-            window.dispatchEvent(new CustomEvent('open-feedback-modal')),
-          )
-        }
-        className={menuActionClassName}
-        icon={<Icon icon={Bug} size="sm" />}
-        data-testid="status-bar-feedback-trigger"
-      >
-        <Text as="span" size="xs" weight="medium">
-          {t('help.feedbackLabel', 'Report a problem')}
-        </Text>
-      </Button>
-      <div className="mt-1 border-t border-[var(--border-subtle)] pt-1">
-        <VersionSegment
-          variant="menu"
-          aboutOpen={false}
-          onOpenAbout={() => runAndClose(onOpenAbout)}
-        />
-      </div>
-    </div>
-  );
+  const menu = <HelpMenuBody close={close} onAction={onAction} onOpenAbout={onOpenAbout} />;
 
   if (embedded) {
     return (

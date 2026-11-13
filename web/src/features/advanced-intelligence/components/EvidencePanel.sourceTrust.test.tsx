@@ -34,6 +34,9 @@ function expectShells() {
     expect(screen.getByRole('region', { name })).toBeVisible();
   }
   expect(screen.getByText('Explicitly unsupported')).toBeVisible();
+  const notice = screen.getByText('Explicitly unsupported').closest('[data-app-feedback-kind="notice"]');
+  expect(notice).toHaveAttribute('data-app-tone', 'warning');
+  expect(screen.getByText('• No identity attribution.')).toHaveAttribute('data-app-part', 'feedback-message');
   expect(screen.getByText('• No identity attribution.')).toBeVisible();
 }
 

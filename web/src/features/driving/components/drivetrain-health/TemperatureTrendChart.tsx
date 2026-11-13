@@ -13,7 +13,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ReferenceLine,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
@@ -87,7 +87,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
               }}
             />
             <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <ChartLegend />
             <Line
               {...AREA_DEFAULTS}
               dataKey="outsideTemp"

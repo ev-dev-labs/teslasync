@@ -47,26 +47,39 @@ func TestWidgetDesignPostgresIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	readMigration := func(direction string) string {
+	readMigration := func(name, direction string) string {
 		t.Helper()
-		data, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000257_widget_design_preferences."+direction+".sql"))
+		data, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", name+"."+direction+".sql"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		return string(data)
 	}
-	up, down := readMigration("up"), readMigration("down")
+	up, down := readMigration("000257_widget_design_preferences", "up"), readMigration("000257_widget_design_preferences", "down")
 	for range 2 {
 		if _, err := pool.Exec(ctx, up); err != nil {
 			t.Fatal(err)
 		}
 	}
+	if _, err := pool.Exec(ctx, "INSERT INTO widget_design_preferences (subject_scope, pack_id) VALUES ($1, $2)", "legacy", "quiet"); err != nil {
+		t.Fatal(err)
+	}
+	appUp := readMigration("000258_app_design_scope", "up")
+	for range 2 {
+		if _, err := pool.Exec(ctx, appUp); err != nil {
+			t.Fatal(err)
+		}
+	}
 	repo := NewWidgetDesignRepository(pool)
+	if legacy, err := repo.Get(ctx, "legacy"); err != nil || legacy == nil || legacy.AppWide || legacy.PackID != "quiet" {
+		t.Fatalf("legacy selection changed: %+v %v", legacy, err)
+	}
 	id, err := repo.Get(ctx, "subject-a")
 	if err != nil || id != nil {
 		t.Fatalf("absent preference: %v %v", id, err)
 	}
-	if err := repo.Put(ctx, "subject-a", "v4"); err != nil {
+	enabled := true
+	if _, err := repo.Put(ctx, "subject-a", "v4", &enabled); err != nil {
 		t.Fatal(err)
 	}
 	// A second independent connection pool observes the committed selection.
@@ -81,11 +94,11 @@ func TestWidgetDesignPostgresIntegration(t *testing.T) {
 	}
 	defer otherPool.Close()
 	other := NewWidgetDesignRepository(otherPool)
-	if id, err := other.Get(ctx, "subject-a"); err != nil || id == nil || *id != "v4" {
+	if id, err := other.Get(ctx, "subject-a"); err != nil || id == nil || id.PackID != "v4" || !id.AppWide {
 		t.Fatalf("independent pool read: %v %v", id, err)
 	}
 	for _, scope := range []string{"subject-a", "subject-b", "open"} {
-		if err := other.Put(ctx, scope, "memphis"); err != nil {
+		if _, err := other.Put(ctx, scope, "memphis", nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -94,8 +107,21 @@ func TestWidgetDesignPostgresIntegration(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM widget_design_preferences").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 3 {
+	if count != 4 {
 		t.Fatalf("upsert created duplicate scopes: %d", count)
+	}
+	if saved, err := repo.Get(ctx, "subject-a"); err != nil || saved == nil || !saved.AppWide {
+		t.Fatalf("pack-only write lost opt-in: %+v %v", saved, err)
+	}
+	disabled := false
+	if saved, err := other.Put(ctx, "subject-a", "memphis", &disabled); err != nil || saved.AppWide {
+		t.Fatalf("explicit opt-out failed: %+v %v", saved, err)
+	}
+	if _, err := pool.Exec(ctx, readMigration("000258_app_design_scope", "down")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "SELECT pack_id FROM widget_design_preferences WHERE subject_scope = $1", "subject-a"); err != nil {
+		t.Fatalf("app scope rollback lost original pack contract: %v", err)
 	}
 	if err := pool.QueryRow(ctx, "SELECT updated_at FROM widget_design_preferences WHERE subject_scope = $1", "subject-a").Scan(&updated); err != nil || updated.IsZero() {
 		t.Fatalf("updated_at not persisted: %v %v", updated, err)

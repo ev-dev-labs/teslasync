@@ -69,7 +69,7 @@ export function SignalWindowPicker({
       {signalsError ? (
         <QueryError error={signalsError} onRetry={onRetrySignals} />
       ) : signalsRefreshBlocked && signalsPending ? (
-        <div className="space-y-3" role="status">
+        <div data-app-part="status" className="space-y-3" role="status">
           <Text as="p" variant="bodySm" color="secondary">
             {t('dataSources.status.paused', 'Refresh paused')}
           </Text>

@@ -33,7 +33,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import { convertDistanceFromSI, formatTemperature as formatTemperatureFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -47,6 +47,7 @@ const savedDatePreferences = vi.hoisted(() => ({
   timezone: 'UTC',
 }));
 const messageTranslations = vi.hoisted(() => ({} as Record<string, string>));
+const nativeChart = vi.hoisted(() => ({ enabled: false }));
 vi.mock('@/lib/timezone', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/timezone')>(),
   useTimezone: () => savedDatePreferences.timezone,
@@ -78,7 +79,14 @@ vi.mock('@/lib/csvExport', async (importOriginal) => ({
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart };
+  return {
+    ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart,
+    ResponsiveContainer: ({ children }: { children: ReactElement<{ width?: number; height?: number }> }) =>
+      nativeChart.enabled
+        ? cloneElement(children, { width: 640, height: 320 })
+        : <actual.ResponsiveContainer width="100%" height="100%">{children}</actual.ResponsiveContainer>,
+    AREA_DEFAULTS: { ...actual.AREA_DEFAULTS, isAnimationActive: false },
+  };
 });
 
 // ── i18n stub: resolve the fallback (or the key when it IS the template) and
@@ -323,6 +331,7 @@ function metricValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  nativeChart.enabled = false;
   for (const key of Object.keys(messageTranslations)) delete messageTranslations[key];
   analysisRange.startInstant = '2024-03-10T15:42:19.125Z';
   analysisRange.endInstantExclusive = '2024-03-11T15:42:19.125Z';
@@ -340,6 +349,21 @@ beforeEach(() => {
 });
 
 describe('BatteryDegradationPage — date-preference boundary', () => {
+  it('zooms the native projection brush without dropping forecast bands, thresholds or full-source alternatives', () => {
+    nativeChart.enabled = true;
+    const { container } = renderPage();
+    const chart = container.querySelector('.recharts-wrapper');
+    expect(chart).toBeInTheDocument();
+    expect(chart?.querySelectorAll('.recharts-area-area')).toHaveLength(2);
+    expect(chart?.querySelectorAll('.recharts-line-curve')).toHaveLength(3);
+    expect(chart?.querySelectorAll('.recharts-reference-line-line')).toHaveLength(2);
+    const axis = chart?.querySelector('.recharts-xAxis');
+    expect(axis).toHaveTextContent(formatDayKey(HEALTH.history[0].date, { locale: 'en-US', tz: 'UTC' }));
+    fireEvent.keyDown(within(chart as HTMLElement).getAllByRole('slider')[0], { key: 'ArrowRight' });
+    expect(axis).not.toHaveTextContent(formatDayKey(HEALTH.history[0].date, { locale: 'en-US', tz: 'UTC' }));
+    expect(screen.getByRole('table', { name: 'Health trend & projection — data table' })).toHaveTextContent('99');
+    expect(screen.getByRole('table', { name: 'Degradation history' })).toHaveTextContent('99');
+  });
   it('uses the header range for health analysis and follows changes without a second picker', () => {
     const view = renderPage();
     expect(mockHealth).toHaveBeenLastCalledWith('7', {

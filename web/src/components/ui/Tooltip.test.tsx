@@ -252,6 +252,49 @@ describe('Tooltip — multiline', () => {
     }
   });
 
+  it('reclamps an unopened fixed-size trigger when its non-clipping toolbar resizes', () => {
+    const observers: { targets: Set<Element>; notify: () => void }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      targets = new Set<Element>();
+      constructor(callback: ResizeObserverCallback) {
+        observers.push({ targets: this.targets, notify: () => callback([], this) });
+      }
+      observe(target: Element) { this.targets.add(target); }
+      unobserve(target: Element) { this.targets.delete(target); }
+      disconnect() { this.targets.clear(); }
+    });
+    let left = 100;
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(30);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1440);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      () => new DOMRect(left, 40, 48, 48),
+    );
+    const { unmount } = render(
+      <div data-testid="toolbar">
+        <Tooltip content="Profile" side="right"><button>Account</button></Tooltip>
+      </div>,
+    );
+    try {
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.left).toBe('56px');
+      left = 1387;
+      act(() => {
+        for (const observer of observers) {
+          if (observer.targets.has(screen.getByTestId('toolbar'))) observer.notify();
+        }
+      });
+      expect(tip.style.left).toBe('11px');
+      expect(left + Number.parseFloat(tip.style.left) + tip.offsetWidth).toBeLessThanOrEqual(1428);
+      expect(screen.getByRole('button', { name: 'Account' })).toHaveAccessibleDescription('Profile');
+    } finally {
+      unmount();
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('positions an unopened tooltip on mount and updates its bounds after resizing', () => {
     const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(320);
     const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);

@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppSettings } from '@/api/types';
 import english from '@/i18n/en.json';
 import { typography } from '@/lib/tokens';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import type {
   ActionCenterRecommendation,
   ActionCenterState,
@@ -207,6 +211,37 @@ describe('RecommendationCard expiry preferences', () => {
 });
 
 describe('RecommendationCard restrained accessible presentation', () => {
+  it('activates real tile/readout consumers without converting rank or confidence into progress', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = render(card());
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v3'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const tiles = container.querySelectorAll('[data-app-metric="tile"]');
+      expect(tiles).toHaveLength(2);
+      expect(tiles[0]).toHaveAttribute('data-app-design-owner', expect.stringContaining('data-ledger'));
+      expect(tiles[0]).toHaveAttribute('data-app-metric-kind', 'recommendation-rank');
+      expect(tiles[1]).toHaveAttribute('data-app-metric-kind', 'recommendation-confidence');
+      expect(tiles[0].querySelector('[data-app-part~="metric-label"]')).toHaveTextContent('Rank');
+      expect(tiles[0].querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('450');
+      expect(tiles[1].querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('86%');
+      expect(tiles[1].querySelector('[data-app-part~="metric-context"]')).toHaveTextContent('High');
+      const matched: string[] = [];
+      postcss.parse(feedbackCss).walkRules(rule => {
+        if (rule.selector.includes('[data-app-metric="tile"]') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'grid-template-columns')) {
+          matched.push(...rule.selectors.filter(selector => tiles[0].matches(selector)));
+        }
+      });
+      expect(matched.some(selector => selector.includes('data-ledger'))).toBe(true);
+      tiles[0].removeAttribute('data-app-design-owner');
+      expect(matched.every(selector => !tiles[0].matches(selector))).toBe(true);
+      expect(container.querySelector('[role="progressbar"], [role="meter"]')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+      expect(onAction).toHaveBeenCalledExactlyOnceWith(recommendation, 'dismiss');
+    } finally { release(); }
+  });
+
   it('preserves the article identity all metadata and neutral rank confidence roles', () => {
     const original = structuredClone(recommendation);
     render(card());

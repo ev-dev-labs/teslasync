@@ -127,7 +127,7 @@ export function WidgetDetailCard({
   const classic = <KVList layout="responsive" wrap className="widget-detail-list h-full overflow-y-auto" items={items} />;
   return presentation === 'timeline' ? (
     <TimelinePresentation compact={compact} render={slots => (
-      <div className={cn('widget-detail-list h-full overflow-y-auto', slots.feed)}>
+      <div data-app-part="list timeline" className={cn('widget-detail-list h-full overflow-y-auto', slots.feed)}>
         {items.map((item, index) => (
           <div key={item.id ?? index} className={slots.row}>
             <KVList layout="responsive" wrap items={[item]} />

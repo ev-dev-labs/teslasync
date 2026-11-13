@@ -153,16 +153,16 @@ export function ArchetypeExactAccounting({
           <Table aria-label={t('archetypes.accounting.title', 'Exact accounting identities')}>
             <tbody>
             {identities.map((identity) => (
-              <tr
+              <tr data-app-part="table-row"
                 key={identity.label}
               >
-                <th scope="row"><MetricLabel>{identity.label}</MetricLabel></th>
-                <td>
+                <th data-app-part="table-cell" scope="row"><MetricLabel>{identity.label}</MetricLabel></th>
+                <td data-app-part="table-cell">
                   <Text as="p" variant="bodySm">
                     {identity.equation}
                   </Text>
                 </td>
-                <td>
+                <td data-app-part="table-cell">
                   <Badge variant={identity.balanced ? 'success' : 'danger'}>
                     {identity.balanced
                       ? t('archetypes.common.balanced', 'Balances')

@@ -52,6 +52,8 @@ const METHOD_COLORS: Record<string, string> = {
 export function MethodBadge({ method, className }: { method: string; className?: string }) {
   return (
     <span
+      data-app-part="badge"
+      data-app-variant="neutral"
       className={cn(
         'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-2xs font-mono font-bold w-12 text-center shrink-0',
         METHOD_COLORS[method] ?? 'bg-gray-500/20 text-[var(--text-muted)]',

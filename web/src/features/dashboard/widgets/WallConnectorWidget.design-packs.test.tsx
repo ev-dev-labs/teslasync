@@ -277,7 +277,7 @@ describe.each(packs)('Wall Connector %s (%s)', (packId, appearance) => {
     expect(rows()).toHaveLength(3);
     expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
     const refresh = screen.getByRole('button', { name: /Refresh data/ });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(charging.refetch).not.toHaveBeenCalled();
   });

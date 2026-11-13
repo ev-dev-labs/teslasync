@@ -44,7 +44,7 @@ export function RegionSettings() {
         </div>
 
         {isLoading ? (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-busy="true"
             aria-label={t('region.loading', 'Loading region…')}

@@ -22,6 +22,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkline } from '@/components/charts';
+import { Skeleton } from '@/components/feedback';
 import { Caption } from '@/components/ui';
 import { useSignalHistory } from '@/api/hooks/useSignals';
 import { useDataState } from '@/hooks/useDataState';
@@ -162,13 +163,10 @@ function SparklineFetcher({
 
   if (query.isLoading && !historyState.hasData) {
     return (
-      <span
-        aria-hidden="true"
-        className={cn(
-          'inline-block animate-pulse rounded bg-[var(--surface-2)] motion-reduce:animate-none',
-          className,
-        )}
-        style={{ width, height }}
+      <Skeleton
+        width={`${width}px`}
+        height={height}
+        className={cn('inline-block', className)}
       />
     );
   }

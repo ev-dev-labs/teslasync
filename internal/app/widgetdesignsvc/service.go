@@ -15,23 +15,24 @@ type Service struct{ repo port.Repository }
 
 func New(repo port.Repository) *Service { return &Service{repo: repo} }
 
-func (s *Service) Get(ctx context.Context, scope string) (string, error) {
-	id, err := s.repo.Get(ctx, scope)
+func (s *Service) Get(ctx context.Context, scope string) (widgetdesign.Preference, error) {
+	value, err := s.repo.Get(ctx, scope)
 	if err != nil {
-		return "", fmt.Errorf("read widget design preference: %w", err)
+		return widgetdesign.Preference{}, fmt.Errorf("read widget design preference: %w", err)
 	}
-	if id == nil || !widgetdesign.ValidPackID(*id) {
-		return "classic", nil
+	if value == nil || !widgetdesign.ValidPackID(value.PackID) {
+		return widgetdesign.Preference{PackID: "classic"}, nil
 	}
-	return *id, nil
+	return *value, nil
 }
 
-func (s *Service) Put(ctx context.Context, scope, id string) error {
+func (s *Service) Put(ctx context.Context, scope, id string, appWide *bool) (widgetdesign.Preference, error) {
 	if !widgetdesign.ValidPackID(id) {
-		return ErrInvalidPack
+		return widgetdesign.Preference{}, ErrInvalidPack
 	}
-	if err := s.repo.Put(ctx, scope, id); err != nil {
-		return fmt.Errorf("save widget design preference: %w", err)
+	value, err := s.repo.Put(ctx, scope, id, appWide)
+	if err != nil {
+		return widgetdesign.Preference{}, fmt.Errorf("save widget design preference: %w", err)
 	}
-	return nil
+	return value, nil
 }

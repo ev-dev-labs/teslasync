@@ -124,7 +124,7 @@ export default function LiveSignalsWidget({ vehicleId, size }: WidgetProps) {
     />
   );
   const list = (enhanced: boolean) => (
-    <ul className="overflow-y-auto" aria-label={t('widget.liveSignals', 'Live signals')}>
+    <ul data-app-part="list" className="overflow-y-auto" aria-label={t('widget.liveSignals', 'Live signals')}>
       {rows.map((row) => (
         <li key={row.name}
           className={cn('grid min-h-10 items-center gap-2 border-b border-[var(--border-subtle)] py-1.5 last:border-b-0',

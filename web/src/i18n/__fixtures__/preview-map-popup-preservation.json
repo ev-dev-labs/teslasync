@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed two-line PreviewMap container-relative popup layout and block-title successor; recover exact compiled cc2 before the unchanged map-frame inverse and original catalog producer comparison.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v14/assets/D6d2l0-s.js.map",
+    "mapSha256": "b704b16251a7a3f53414d2d20a7d94be0bf5c988e3164d15fde50d07838cc4da",
+    "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewMap.tsx",
+    "sha256": "cc2b432e4e21ed4c3dddf8f0cabba350259bc9063b43a35a0d961f717775e43d",
+    "httpIntegrityReceipt": "full-design-v14-preview-endpoints-http-integrity.json",
+    "httpIntegrityReceiptSha256": "abfb6f1591e67918d687a0f80e45fe6c51b40d17b0539a134a2f07b48eeaa36b",
+    "compiledAsset": "full-design-runtime-candidate-dist-v14/assets/D6d2l0-s.js",
+    "compiledAssetSha256": "367281e28aee495b27ffcc7af1198b2ae380df95acecc1356f3776c16fcdd60a"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/fixtures.ts",
+      "sha256": "6223bd4ec1e17f4c4193b914702714c3c861f0866684f884b9e61ed30f277ae7"
+    },
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx",
+      "sha256": "e9f6de0d3b2e4ec118177f4a1d84b2094a641145706bc21bc2559499869b0541"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "fcb1c7a8a04d0f828acfea0082c2b3d139d20cc84a500ce05fc066ea024eeb8c"
+    },
+    {
+      "file": "web/src/components/maps/index.ts",
+      "sha256": "68bb915ea5f964d5ba6e5c83002b35c5e0b84bc0aa721a3770d5497668c77e43"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewMap.tsx",
+      "before": "cc2b432e4e21ed4c3dddf8f0cabba350259bc9063b43a35a0d961f717775e43d",
+      "after": "5838c13c58dc2b205d08694f2512290f7f736c9aea59a50c90e5c03ca3a490c9",
+      "originalLineCount": 59,
+      "currentLineCount": 59,
+      "originalCallCount": 9,
+      "originalCallsSha256": "f031b159ba61eba315fdfe154701747518c1d85dd6e2fb35580d8b7e8b1f0a3d",
+      "originalProjectionSha256": "c1b53e91d49dee1dcc69b21b68d5cf249d26d000baaf6a08494bf5f48df5f92a",
+      "hunks": [
+        {
+          "start": 19,
+          "old": [
+            "      <div data-app-part=\"map map-stage\" className=\"relative isolate h-72 min-w-0 overflow-hidden rounded-panel border border-[var(--border-default)]\">"
+          ],
+          "new": [
+            "      <div data-app-part=\"map map-stage\" className=\"relative isolate h-72 min-w-0 overflow-hidden rounded-panel border border-[var(--border-default)] [container-type:inline-size]\">"
+          ]
+        },
+        {
+          "start": 46,
+          "old": [
+            "              <Popup><Text>{t('theme.appDesignPreview.stop', 'Fictional stop {{number}}', { number: index + 1 })}</Text>"
+          ],
+          "new": [
+            "              <Popup className=\"[&_.leaflet-popup-content]:max-w-[calc(100cqw_-_5.5rem)]\"><Text as=\"div\">{t('theme.appDesignPreview.stop', 'Fictional stop {{number}}', { number: index + 1 })}</Text>"
+          ]
+        }
+      ]
+    }
+  ]
+}

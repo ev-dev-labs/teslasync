@@ -76,7 +76,7 @@ function defaultIconCreate(count: number, overrideColor?: string): L.DivIcon {
     bg = `${DATA_VISUAL_COLORS.info}d9`; // cyan
   }
   const html = `
-    <div style="
+    <div data-app-part="map-marker" data-map-marker="cluster" style="
       width:36px;height:36px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;
       background:${bg};
@@ -100,7 +100,7 @@ function makeDotIcon(color: string): L.DivIcon {
     iconAnchor: [8, 8],
     popupAnchor: [0, -8],
     html: `
-      <div style="width:16px;height:16px;border-radius:50%;
+      <div data-app-part="map-marker" data-map-marker="point" style="width:16px;height:16px;border-radius:50%;
         background:${color};border:2px solid ${DATA_VISUAL_COLORS.canvasWhite};"></div>
     `,
   });

@@ -23,8 +23,9 @@
  *
  * Strategy mirrors the sibling PeriodComparePage suite: render the REAL page +
  * REAL shared subtree (PageContainer, OperationalBrief, Timeline, TabNav, Pagination,
- * QueryError, charts). Only the network `request` helper and react-i18next are
- * mocked. `useVehicles` runs for real (driven by the mocked `request`) so the
+ * QueryError, charts). The network `request` helper, i18n and timezone are
+ * controlled; the pending-ring fixture alone holds the real deferred hook's
+ * string result. `useVehicles` runs for real (driven by the mocked `request`) so the
  * active-vehicle derivation and its enabled/disabled query gate are genuinely
  * exercised. Interactions use `fireEvent` — the repo's established convention
  * (no @testing-library/user-event dependency is present).
@@ -36,6 +37,9 @@
  * (`waitForCount`), never a heading.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -61,6 +65,19 @@ vi.hoisted(() => {
 });
 
 const { mockRequest, tzMock } = vi.hoisted(() => ({ mockRequest: vi.fn(), tzMock: vi.fn() }));
+const deferredSearch = vi.hoisted(() => ({ held: null as string | null }));
+
+vi.mock('react', async importOriginal => {
+  const actual = await importOriginal<typeof import('react')>();
+  return {
+    ...actual,
+    useDeferredValue: (value: unknown) => {
+      const deferred = actual.useDeferredValue(value);
+      // Pin the scheduler's retained query only for the pending-branch fixture.
+      return typeof value === 'string' && deferredSearch.held != null ? deferredSearch.held : deferred;
+    },
+  };
+});
 
 // Only `request` is replaced; the real `isApiError` / `ApiError` exports stay so
 // <QueryError> classifies the injected ApiError(500) into its "Server error" branch.
@@ -111,6 +128,9 @@ import {
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { ApiError } from '@/lib/resilience';
+import { setLowBandwidthMode } from '@/hooks/useLowBandwidthMode';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -239,12 +259,15 @@ async function waitForCount(n: number) {
 }
 
 beforeEach(() => {
+  deferredSearch.held = null;
   mockRequest.mockReset();
   tzMock.mockReturnValue('UTC');
   window.localStorage.clear();
 });
 
 afterEach(() => {
+  deferredSearch.held = null;
+  act(() => { setLowBandwidthMode('auto'); });
   onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
@@ -455,6 +478,70 @@ describe('CommandHistoryPage — daily bucketing timezone', () => {
 // ─── 3. Filters, interactions & a11y ──────────────────────────────────────────
 
 describe('CommandHistoryPage — filters & interactions', () => {
+  it('keeps Commands native navigation and the real pending ring owned without changing retained search results', async () => {
+    installRequest({ commands: richCommands() });
+    const { container } = renderPage();
+    await waitForCount(5);
+    const commands = screen.getByRole('link', { name: 'Commands' });
+    expect(commands).toHaveAttribute('href', '/commands');
+    expect(commands.querySelector('button')).toBeNull();
+    expect(commands).not.toHaveAttribute('role', 'button');
+    const search = screen.getByRole('textbox', { name: 'Search commands' });
+    deferredSearch.held = '';
+    fireEvent.change(search, { target: { value: 'wake' } });
+    const ring = screen.getByRole('status', { name: 'Filtering…' });
+    expect(ring).toHaveAttribute('data-app-part', 'loading-indicator');
+    expect(ring).toHaveAttribute('aria-live', 'polite');
+    expect(ring).toHaveClass('pointer-events-none', 'absolute', 'h-3', 'w-3', 'rounded-full', 'motion-reduce:animate-none', 'animate-spin');
+    expect(search).toHaveValue('wake');
+    expect(within(timelinePanel()).getByText('5 commands')).toBeInTheDocument();
+    expect(within(timelinePanel()).getByText('Honk horn')).toBeInTheDocument();
+    const feedback = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'));
+    const missingLoaderPacks: string[] = [];
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
+      const release = observeAppDesignScopes(container);
+      try {
+        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
+        const links: string[] = [];
+        identity.walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="button"]') && commands.matches(rule.selector)) links.push(rule.selector);
+        });
+        expect(links, `${pack}: native Commands link`).not.toHaveLength(0);
+        const loaders: string[] = [];
+        feedback.walkRules(rule => {
+          if (rule.selector.includes('[data-app-feedback-kind="inline-spinner"]') &&
+            rule.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`) &&
+            ring.matches(rule.selector)) loaders.push(rule.selector);
+        });
+        if (loaders.length === 0) missingLoaderPacks.push(pack);
+        expect(commands).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        expect(ring).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+      } finally {
+        release();
+      }
+    }
+    container.removeAttribute('data-app-controls');
+    const release = observeAppDesignScopes(container);
+    try {
+      expect(commands).not.toHaveAttribute('data-app-design-owner');
+      expect(ring).not.toHaveAttribute('data-app-design-owner');
+    } finally {
+      release();
+    }
+    act(() => { setLowBandwidthMode('on'); });
+    expect(screen.getByRole('status', { name: 'Filtering…' })).not.toHaveClass('animate-spin');
+    expect(search).toHaveValue('wake');
+    deferredSearch.held = null;
+    fireEvent.change(search, { target: { value: 'no-such-command' } });
+    await screen.findByText('No commands match the current filters');
+    expect(screen.queryByRole('status', { name: 'Filtering…' })).toBeNull();
+    expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
+    expect(mockRequest.mock.calls.every(call => !String(call[0]).includes('/command/'))).toBe(true);
+    expect(missingLoaderPacks, 'complete profiles without a deliberate compact-ring consumer').toEqual([]);
+  });
+
   it('filters the timeline to failures when the Failed status tab is chosen', async () => {
     installRequest({ commands: richCommands() });
     renderPage();

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Lightbulb, Shield } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Badge, Card, GlassPanel } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
@@ -144,29 +144,31 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
           {(optimizer.recommendations ?? []).length > 0 ? (
             <div className="space-y-3">
               {(optimizer.recommendations ?? []).map((rec, i) => (
-                <div
+                <Card
                   key={i}
-                  className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+                  variant="embedded"
+                  padding="none"
+                  className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)] p-4"
                 >
                   <Shield className={cn('h-5 w-5 mt-0.5 shrink-0',
                     rec.priority === 'high' ? 'text-[var(--semantic-danger)]' :
                     rec.priority === 'medium' ? 'text-[var(--semantic-warning)]' : 'text-[var(--text-secondary)]',
                   )} aria-hidden="true" />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-sm font-semibold text-[var(--text-primary)]">{rec.title}</span>
-                      <span className="text-2xs px-1.5 py-0.5 rounded-full bg-[var(--surface-3)] font-medium text-[var(--text-secondary)]">
+                      <Badge variant="neutral" size="sm" className="border-0 bg-[var(--surface-3)] text-2xs">
                         {rec.priority}
-                      </span>
+                      </Badge>
                       {rec.estimated_savings != null && Number.isFinite(rec.estimated_savings) && rec.estimated_savings > 0 && (
-                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--text-secondary)] font-medium" title={costSource}>
+                        <Badge variant="neutral" size="sm" className="border-0 bg-[var(--surface-3)] text-2xs" title={costSource}>
                           {t('charging.forecast.monthlySavings', 'Monthly savings')}: ~{fmtNumber(rec.estimated_savings)}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     <p className="text-xs text-[var(--text-secondary)]">{rec.detail}</p>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           ) : (

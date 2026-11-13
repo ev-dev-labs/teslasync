@@ -75,7 +75,7 @@ export function BatteryPassportSectionBody({
     );
   }
   const loadingContent = (
-      <div
+      <div data-app-part="status"
         className={cn('min-h-36', className)}
         role="status"
         aria-label={t(

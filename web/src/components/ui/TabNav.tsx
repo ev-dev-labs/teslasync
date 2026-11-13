@@ -26,6 +26,7 @@ export function TabNav({ tabs, active, onChange, ariaLabel, className }: TabNavP
   return (
     <div
       role="group"
+      data-app-part="tabs"
       aria-label={ariaLabel}
       className={cn(
         'flex items-center gap-1 overflow-x-auto rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-1 scrollbar-thin',
@@ -37,6 +38,7 @@ export function TabNav({ tabs, active, onChange, ariaLabel, className }: TabNavP
         return (
           <button
             key={t.key}
+            data-app-part="tab"
             // Native buttons default to type="submit"; without this an in-form
             // TabNav (e.g. the alerts filter strip) would submit the surrounding
             // form on every tab change.

@@ -235,7 +235,7 @@ export function NotificationGroupRow({
         >
           <StaleRefreshWarning state={membersState} label={membersLabel} />
           {membersState.status === 'initial' && (
-            <div
+            <div data-app-part="status"
               className="flex items-center gap-2 px-2 py-2"
               role="status"
               aria-live="polite"
@@ -251,7 +251,7 @@ export function NotificationGroupRow({
             </div>
           )}
           {membersState.fatalError && (
-            <div
+            <div data-app-part="feedback"
               className="space-y-2 px-2 py-2"
               role="alert"
               data-testid="group-members-error"

@@ -69,13 +69,13 @@ export default function LineTelemetryLayout({
     <div key="plot" className={cn('min-w-0 flex-1', layout.plot)}>{chart}</div>
   );
   const facts = (
-    <dl key="facts" className={layout.details}>
+    <dl key="facts" data-app-part="list" data-app-list="definitions" className={layout.details}>
       {details.map(metric => (
-        <div key={metric.label} className="min-w-0">
-          <MetricLabel as="dt">{metric.label}</MetricLabel>
-          <MetricValue as="dd" className="break-words">
-            {metric.value ?? '—'}
-            {metric.value != null && metric.unit && <Caption className="ms-1">{metric.unit}</Caption>}
+        <div key={metric.label} data-app-part="list-row" className="min-w-0">
+          <MetricLabel as="dt" data-app-part="metric-label">{metric.label}</MetricLabel>
+          <MetricValue as="dd" data-app-part="metric-reading" className="break-words">
+            <span data-app-part="metric-value">{metric.value ?? '—'}</span>
+            {metric.value != null && metric.unit && <Caption data-app-part="metric-unit" className="ms-1">{metric.unit}</Caption>}
           </MetricValue>
         </div>
       ))}
@@ -89,11 +89,11 @@ export default function LineTelemetryLayout({
             ) : ['studio', 'iconic', 'expressive'].includes(appearance) ? (
               <Activity className={cn('shrink-0 text-[var(--text-secondary)]', appearance === 'iconic' ? 'size-10' : 'size-6')} aria-hidden="true" />
             ) : null}
-            <dl className="min-w-0">
-              <MetricLabel as="dt">{headline.label}</MetricLabel>
-              <MetricValue as="dd" className="break-words">
-                {headline.value ?? '—'}
-                {headline.value != null && headline.unit && <Caption className="ms-1">{headline.unit}</Caption>}
+            <dl data-app-part="metric" data-app-metric="headline" className="min-w-0">
+              <MetricLabel as="dt" data-app-part="metric-label">{headline.label}</MetricLabel>
+              <MetricValue as="dd" data-app-part="metric-reading" className="break-words">
+                <span data-app-part="metric-value">{headline.value ?? '—'}</span>
+                {headline.value != null && headline.unit && <Caption data-app-part="metric-unit" className="ms-1">{headline.unit}</Caption>}
               </MetricValue>
             </dl>
           </div>;

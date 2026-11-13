@@ -251,7 +251,7 @@ describe.each(packCases)('tire pressure history %s / %s source states', (packId,
 
     historyMock.mockReturnValue(makeQuery(samples, { isFetching: true }));
     view.rerender(widget(packId));
-    expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /refresh data/i })).toHaveAttribute('aria-disabled', 'true');
     expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
   });
 

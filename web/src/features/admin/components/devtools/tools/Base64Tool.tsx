@@ -90,19 +90,19 @@ export function Base64Tool() {
           placeholder={placeholder}
         />
         {result.error && (
-          <p role="alert" className="text-sm text-rose-300">
+          <p data-app-part="feedback" role="alert" className="text-sm text-rose-300">
             {result.value}
           </p>
         )}
         {!result.error && result.value && (
-          <div className="rounded bg-[var(--surface-overlay)] p-3">
-            <div className="flex items-center justify-between">
+          <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-overlay)] p-3">
+            <div data-app-code-slot="heading" className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">
                 {t('devtools.utils.outputLabel', 'Output')}
               </span>
               <CopyButton text={result.value} />
             </div>
-            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.value}</pre>
+            <pre data-app-code-slot="body" className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.value}</pre>
           </div>
         )}
       </div>

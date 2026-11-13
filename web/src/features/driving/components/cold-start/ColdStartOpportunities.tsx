@@ -91,7 +91,7 @@ export function ColdStartOpportunities({
             message={emptyMessage(summary, t)}
           />
         ) : (
-          <ol
+          <ol data-app-part="list"
             className="divide-y divide-[var(--border-subtle)]"
             aria-label={t(
               'coldStart.opportunities.listAria',
@@ -121,23 +121,23 @@ export function ColdStartOpportunities({
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-2)] p-3">
-                  <div>
-                    <MetricLabel>{t('coldStart.opportunities.distance', 'Distance')}</MetricLabel>
-                    <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatDistance(opportunity.distanceM)}
+                <div data-app-part="metric-grid" className="grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-2)] p-3">
+                  <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                    <MetricLabel data-app-part="metric-label">{t('coldStart.opportunities.distance', 'Distance')}</MetricLabel>
+                    <Text data-app-part="metric-reading" as="p" variant="bodySm" mono className="mt-1">
+                      <span data-app-part="metric-value">{formatDistance(opportunity.distanceM)}</span>
                     </Text>
                   </div>
-                  <div>
-                    <MetricLabel>{t('coldStart.opportunities.temperature', 'Temperature')}</MetricLabel>
-                    <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatTemperature(opportunity.outsideTempAvgC)}
+                  <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                    <MetricLabel data-app-part="metric-label">{t('coldStart.opportunities.temperature', 'Temperature')}</MetricLabel>
+                    <Text data-app-part="metric-reading" as="p" variant="bodySm" mono className="mt-1">
+                      <span data-app-part="metric-value">{formatTemperature(opportunity.outsideTempAvgC)}</span>
                     </Text>
                   </div>
-                  <div className="text-end">
-                    <MetricLabel>{t('coldStart.opportunities.energy', 'Above baseline')}</MetricLabel>
-                    <MetricValue className="mt-1 text-base">
-                      {formatEnergy(opportunity.estimatedAvoidableWh)}
+                  <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded" className="text-end">
+                    <MetricLabel data-app-part="metric-label">{t('coldStart.opportunities.energy', 'Above baseline')}</MetricLabel>
+                    <MetricValue data-app-part="metric-reading" className="mt-1 text-base">
+                      <span data-app-part="metric-value">{formatEnergy(opportunity.estimatedAvoidableWh)}</span>
                     </MetricValue>
                   </div>
                 </div>

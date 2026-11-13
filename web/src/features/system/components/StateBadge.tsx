@@ -22,6 +22,7 @@ export function StateBadge({ state, fsmType }: StateBadgeProps) {
 
   return (
     <span
+      data-app-part="badge"
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
         color.bg,

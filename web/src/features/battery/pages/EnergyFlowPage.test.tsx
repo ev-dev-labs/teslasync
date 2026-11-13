@@ -37,9 +37,12 @@ import type { StatMetric } from '@/components/data-display';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { getAppDesignAttributes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const briefProps = vi.hoisted(() => vi.fn());
 const translationCalls = vi.hoisted(() => vi.fn());
+const chartFrames = vi.hoisted(() => ({ real: false }));
 
 vi.mock('../components/operationalbrief-all/BatteryEvidenceBrief', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../components/operationalbrief-all/BatteryEvidenceBrief')>();
@@ -55,7 +58,17 @@ vi.mock('../components/operationalbrief-all/BatteryEvidenceBrief', async (import
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    EmbeddedChart: (props: Parameters<typeof actual.EmbeddedChart>[0]) => {
+      if (chartFrames.real) return <actual.EmbeddedChart {...props} />;
+      const children = typeof props.children === 'function'
+        ? props.children({ annotations: [], hidden: false, hiddenSeries: null })
+        : props.children;
+      return <chartTestDoubles.EmbeddedChart {...props}>{children}</chartTestDoubles.EmbeddedChart>;
+    },
+  };
 });
 
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
@@ -281,18 +294,22 @@ function HeaderRangeControl() {
   })}>Choose one day in header</Button>;
 }
 
-function renderPage(entries: string[] = ['/battery/energy']) {
+function renderPage(entries: string[] = ['/energy-flow'], pack?: PackId) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const tree = (design?: PackId) => (
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
-        <EnergyFlowPage />
+        <div data-app-design-preview={design ? true : undefined} {...(design ? getAppDesignAttributes(design) : {})}>
+          <EnergyFlowPage />
+        </div>
         <HeaderRangeControl />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(tree(pack));
+  return { ...result, setDesign: (design: PackId) => result.rerender(tree(design)) };
 }
 
 function kpiRegion() {
@@ -312,6 +329,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.length = 'km';
+  chartFrames.real = false;
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
   installHappyPath();
@@ -585,7 +603,7 @@ describe('EnergyFlowPage — period presentation', () => {
   });
 
   it('publishes exact one-day bounds without claiming complete historical coverage', () => {
-    renderPage(['/battery/energy?from=2025-03-07&to=2025-03-07']);
+    renderPage(['/energy-flow?from=2025-03-07&to=2025-03-07']);
     assertOperationalBriefDisclosure(kpiRegion(), 'Selected workspace range', { contains: true });
     expect(translationCalls).toHaveBeenCalledWith(
       'energyFlow.summary.selectedWindow', 'Selected workspace range', undefined,
@@ -662,7 +680,7 @@ describe('EnergyFlowPage — live energy flow', () => {
 
     const power = screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!;
     for (const label of ['HVAC', 'Accessories']) {
-      const row = within(power).getByText(label).parentElement!.parentElement!;
+      const row = within(power).getByText(label).closest('dt')!.parentElement!;
       expect(within(row).getByText('N/A')).toHaveClass(typography.color.secondary);
       expect(row).not.toHaveClass('opacity-50');
     }
@@ -820,9 +838,130 @@ describe('EnergyFlowPage — historical sections', () => {
   });
 });
 
+describe('EnergyFlowPage — application design adapters', () => {
+  it.each(['classic', 'v1', 'v2', 'v3', 'v6', 'editorial'] as const)(
+    '%s preserves the physical flow, four live facts and independent history interactions',
+    (pack) => {
+      renderPage(['/energy-flow?from=2025-03-01&to=2025-03-07'], pack);
+      const diagram = screen.getByRole('heading', { name: 'Energy flow diagram', exact: true })
+        .closest('[data-card]') as HTMLElement;
+      const cells = diagram.querySelector('[data-flow-grid]')!.children;
+      expect(Array.from(cells).map(cell => cell.getAttribute('aria-label')))
+        .toEqual(['Grid', 'Charging', 'Battery', 'Driving', 'Motor']);
+      const charging = within(diagram).getByRole('group', { name: 'Charging', exact: true });
+      expect(within(charging).getByText('11.00 kW').closest('[data-app-part~="badge"]'))
+        .toHaveAttribute('data-app-variant', 'info');
+      const driving = within(diagram).getByRole('group', { name: 'Driving', exact: true });
+      expect(within(driving).getByText('N/A').closest('[data-app-part~="badge"]'))
+        .toHaveAttribute('data-app-variant', 'neutral');
+      expect(within(diagram).getByRole('meter', { name: 'Battery', exact: true }))
+        .toHaveAttribute('aria-valuenow', '82');
+      expect(within(diagram).getByText('62.50')).toBeInTheDocument();
+
+      const power = screen.getByRole('heading', { name: 'Live power', exact: true })
+        .closest('[data-card]') as HTMLElement;
+      expect(within(power).getAllByRole('term').map(term => term.textContent))
+        .toEqual(['DC power', 'AC power', 'HVAC', 'Accessories']);
+      expect(within(power).getAllByRole('definition').map(value => value.textContent))
+        .toEqual(['11.00 kW', '0.00 kW', 'N/A', 'N/A']);
+
+      fireEvent.click(within(historyTable()).getByRole('button', { name: 'Energy' }));
+      expect(within(historyTable()).getAllByRole('row')[1]).toHaveTextContent('20.00 kWh');
+      fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+      const details = screen.getByRole('dialog', { name: 'Energy summary metrics details' });
+      expect(within(details).getByText('123.00 km')).toBeInTheDocument();
+      fireEvent.keyDown(details, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(mockStats).toHaveBeenLastCalledWith('1', {
+        start: '2025-03-01T00:00:00.000Z', end: '2025-03-08T00:00:00.000Z',
+      });
+      expect(mockFlow).toHaveBeenLastCalledWith('1');
+      expect(within(power).getByText('11.00 kW')).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { dc: 10, ac: 0, variant: 'neutral', value: '0.01 kW' },
+    { dc: 11, ac: 0, variant: 'info', value: '0.01 kW' },
+    { dc: -10, ac: 0, variant: 'neutral', value: '-0.01 kW' },
+    { dc: -11, ac: 0, variant: 'info', value: '-0.01 kW' },
+    { dc: 0, ac: 0, variant: 'neutral', value: '0.00 kW' },
+    { dc: null, ac: 0, variant: 'neutral', value: '—' },
+    { dc: 11, ac: null, variant: 'neutral', value: '—' },
+  ])('keeps the existing signed 10 W activity threshold and missing-channel rule: $dc / $ac',
+    ({ dc, ac, variant, value }) => {
+      mockFlow.mockReturnValue(qr({ data: makeFlowData({
+        dc_charging_power_w: dc, ac_charging_power_w: ac,
+      }) }));
+      renderPage(undefined, 'v1');
+      const charging = screen.getByRole('group', { name: 'Charging', exact: true });
+      expect(within(charging).getByText(value).closest('[data-app-part~="badge"]'))
+        .toHaveAttribute('data-app-variant', variant);
+      const grid = charging.closest('[data-flow-grid]')!;
+      expect(Array.from(grid.children).map(cell => cell.getAttribute('aria-label')))
+        .toEqual(['Grid', 'Charging', 'Battery', 'Driving', 'Motor']);
+    },
+  );
+
+  it('keeps sorting and the open evidence drawer when the surrounding design changes', () => {
+    unitState.length = 'mi';
+    const { setDesign } = renderPage(undefined, 'v1');
+    fireEvent.click(within(historyTable()).getByRole('button', { name: 'Energy' }));
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Energy summary metrics details' });
+
+    setDesign('editorial');
+    expect(screen.getByRole('dialog', { name: 'Energy summary metrics details' })).toBe(details);
+    expect(within(details).getByText('76.43 mi')).toBeInTheDocument();
+    fireEvent.keyDown(details, { key: 'Escape' });
+    expect(within(historyTable()).getAllByRole('row')[1]).toHaveTextContent('20.00 kWh');
+    expect(metricValue('Efficiency')).toBe('257.00 Wh/mi');
+    expect(screen.getByRole('group', { name: 'Charging', exact: true })).toHaveTextContent('11.00 kW');
+  });
+
+  it('retains the independent live snapshot and history rows during a failed history refresh', () => {
+    const refetchStats = vi.fn();
+    mockStats.mockReturnValue(qr({
+      data: makeStatsData(), error: new Error('history refresh failed'), isError: true, refetch: refetchStats,
+    }));
+    renderPage(undefined, 'v3');
+    expect(historyTable()).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Charging', exact: true })).toHaveTextContent('11.00 kW');
+    fireEvent.click(within(kpiRegion().closest('[data-card]') as HTMLElement).getByRole('button', { name: 'Refresh' }));
+    expect(refetchStats).toHaveBeenCalledOnce();
+    expect(mockFlow.mock.results[0].value.refetch).not.toHaveBeenCalled();
+    expect(metricValue('Total energy')).toBe('42.00 kWh');
+  });
+
+  it('leaves real shared chart alternatives in display units with unknown gaps and measured zeros intact', () => {
+    chartFrames.real = true;
+    unitState.length = 'mi';
+    const missing = makeDay({ date: '2025-03-07', distance_m: 1609.344 });
+    Reflect.set(missing, 'energy_wh', null);
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ daily_breakdown: [
+      makeDay({ date: '2025-03-06', energy_wh: 0, distance_m: 0, efficiency_wh_per_m: 0 }),
+      missing,
+    ] }) }));
+    renderPage(undefined, 'v6');
+    const energy = screen.getByRole('table', { name: 'Daily energy usage — data table' });
+    expect(within(energy).getByRole('columnheader', { name: 'Energy (kWh)' })).toBeInTheDocument();
+    expect(within(energy).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[1].textContent))
+      .toEqual(['0.00', '—']);
+    const distance = screen.getByRole('table', { name: 'Daily distance — data table' });
+    expect(within(distance).getByRole('columnheader', { name: 'Distance (mi)' })).toBeInTheDocument();
+    expect(within(distance).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[1].textContent))
+      .toEqual(['0.00', '1.00']);
+    const efficiency = screen.getByRole('table', { name: 'Daily efficiency — data table' });
+    expect(within(efficiency).getByRole('columnheader', { name: 'Wh/mi' })).toBeInTheDocument();
+    expect(within(efficiency).getAllByRole('row').slice(1)).toHaveLength(1);
+    expect(within(efficiency).getByRole('cell', { name: '322.00' })).toBeInTheDocument();
+    expect(historyTable()).toBeInTheDocument();
+  });
+});
+
 describe('EnergyFlowPage — data contract & controls', () => {
   it('requests exact history bounds from the workspace header range', () => {
-    renderPage(['/battery/energy?from=2025-03-01&to=2025-03-07']);
+    renderPage(['/energy-flow?from=2025-03-01&to=2025-03-07']);
     // Inclusive 7-day window, snake_case-free positional args, string vehicle id.
     expect(mockStats).toHaveBeenCalledWith('1', {start:'2025-03-01T00:00:00.000Z',end:'2025-03-08T00:00:00.000Z'});
     expect(mockFlow).toHaveBeenCalledWith('1');

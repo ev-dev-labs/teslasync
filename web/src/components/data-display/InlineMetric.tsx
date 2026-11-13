@@ -19,12 +19,12 @@ export function InlineMetric({ icon, value, kind, label, className }: InlineMetr
     ? Number.isFinite(value) ? kind === 'count' ? fmtInt(value) : fmtNumber(value) : '—'
     : value ?? '—'
   return (
-    <span className={cn('inline-flex items-center gap-1 text-xs text-[var(--text-muted)]', className)}>
+    <span data-app-part="metric" data-app-metric="inline" className={cn('inline-flex items-center gap-1 text-xs text-[var(--text-muted)]', className)}>
       <span aria-hidden="true" className="shrink-0 [&>svg]:h-3 [&>svg]:w-3">
         {icon}
       </span>
-      <span>{displayValue}</span>
-      {label ? <span className="text-[var(--text-muted)]">{label}</span> : null}
+      <span data-app-part="metric-value">{displayValue}</span>
+      {label ? <span data-app-part="metric-label" className="text-[var(--text-muted)]">{label}</span> : null}
     </span>
   )
 }

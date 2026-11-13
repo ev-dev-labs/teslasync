@@ -37,7 +37,7 @@ export function UpcomingRoadmap({
     >
       <LayoutCard title={t('milestones.roadmap.title', 'Upcoming milestone roadmap')}>
         <MilestoneSectionBody state={state}>
-          <ul className="space-y-2">
+          <ul data-app-part="list" className="space-y-2">
             {summary.upcoming.map((milestone) => {
               const forecast = milestone.forecast;
               const hasRange =

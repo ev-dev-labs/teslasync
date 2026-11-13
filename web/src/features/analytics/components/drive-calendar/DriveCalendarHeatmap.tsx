@@ -70,13 +70,14 @@ export function DriveCalendarHeatmap({
       >
         <div
           role="group"
+          data-app-part="chart"
           aria-label={t(
             'driveCalendar.heatmap.aria',
             'Daily driving heatmap for the selected period; {{active}} active days and a {{streak}} day end-of-period streak',
             { active: calendar.activeDays, streak: calendar.currentStreak },
           )}
         >
-          <div className="overflow-x-auto pb-1">
+          <div data-app-part="chart-plot" className="overflow-x-auto pb-1">
             <div className="w-full min-w-max">
               <div className="mb-1 grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2">
                 <span aria-hidden="true" />
@@ -150,25 +151,25 @@ export function DriveCalendarHeatmap({
         />
         <Accordion title={t('card.viewDetails', 'View details')} className="mt-3">
           <Table variant="embedded" aria-label={t('driveCalendar.activity', 'Driving activity')}>
-            <thead>
-              <tr>
-                <th scope="col">{t('common.date', 'Date')}</th>
-                <th scope="col">{t('driveCalendar.distance', 'Distance')}</th>
-                <th scope="col">{t('driveCalendar.weekdayPattern.drives', 'Drives')}</th>
+            <thead data-app-part="table-head">
+              <tr data-app-part="table-row">
+                <th data-app-part="table-cell" scope="col">{t('common.date', 'Date')}</th>
+                <th data-app-part="table-cell" scope="col">{t('driveCalendar.distance', 'Distance')}</th>
+                <th data-app-part="table-cell" scope="col">{t('driveCalendar.weekdayPattern.drives', 'Drives')}</th>
               </tr>
             </thead>
             <tbody>
               {calendar.days.filter(day => day.availability !== 'outside-range').map((day) => (
-                <tr key={day.date}>
-                  <th scope="row">
+                <tr data-app-part="table-row" key={day.date}>
+                  <th data-app-part="table-cell" scope="row">
                     {formatDayKey(day.date, { style: 'long', locale: unitPrefs.locale })}
                   </th>
                   {day.availability === 'before-first-drive' ? (
-                    <td colSpan={2}>{t('driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown')}</td>
+                    <td data-app-part="table-cell" colSpan={2}>{t('driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown')}</td>
                   ) : (
                     <>
-                      <td>{formatDistance(day.distanceM)}</td>
-                      <td>{day.drives}</td>
+                      <td data-app-part="table-cell">{formatDistance(day.distanceM)}</td>
+                      <td data-app-part="table-cell">{day.drives}</td>
                     </>
                   )}
                 </tr>

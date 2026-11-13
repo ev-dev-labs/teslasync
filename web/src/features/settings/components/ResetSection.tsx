@@ -319,7 +319,7 @@ export function ResetSection() {
               </Text>
             </div>
           </div>
-          <ul className="divide-y divide-[var(--border-subtle)]">
+          <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]">
             {sections.map((row) => (
               <SectionRowItem
                 key={row.id}
@@ -352,7 +352,7 @@ export function ResetSection() {
               </Text>
             </div>
           </div>
-          <ul className="space-y-3">
+          <ul data-app-part="list" className="space-y-3">
             {deniedRows.map((row) => (
               <li
                 key={row.id}

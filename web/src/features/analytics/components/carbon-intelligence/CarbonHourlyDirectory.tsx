@@ -108,10 +108,10 @@ export function CarbonHourlyDirectory({
             {analysis.curve.rankedRows.map((row) => {
               const band = bandPresentation(row.band, t);
               return (
-                <tr
+                <tr data-app-part="table-row"
                   key={row.hour}
                 >
-                  <th scope="row">
+                  <th data-app-part="table-cell" scope="row">
                     <Text as="p" variant="label">
                       {t('carbon.directory.rank', 'Rank {{rank}} · {{hour}}', {
                         rank: row.rank,
@@ -119,10 +119,10 @@ export function CarbonHourlyDirectory({
                       })}
                     </Text>
                   </th>
-                  <td className="text-right"><Text as="p" variant="caption" mono>
+                  <td data-app-part="table-cell" className="text-right"><Text as="p" variant="caption" mono>
                       {display.formatIntensity(row.intensityGPerKwh)}
                     </Text></td>
-                  <td><Badge variant={band.variant}>{band.label}</Badge></td>
+                  <td data-app-part="table-cell"><Badge variant={band.variant}>{band.label}</Badge></td>
                 </tr>
               );
             })}

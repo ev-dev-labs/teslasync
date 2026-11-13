@@ -198,7 +198,7 @@ it.each(Object.entries(PACK_APPEARANCES))('%s retains the recommendations but pr
   expect(screen.getByText('Smooth acceleration')).toBeVisible();
   expect(screen.getByText('Compare recent drives')).toBeVisible();
   const refresh = screen.getByRole('button', { name: /refresh/i });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(refetch).not.toHaveBeenCalled();
 });

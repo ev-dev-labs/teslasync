@@ -112,10 +112,10 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
   const gaugeLabel = t('driveScore.gaugeLabel', 'Drive score: {{score}} out of 100', { score: score.total })
 
   return (
-    <GlassPanel className="p-5">
+    <GlassPanel data-app-part="panel section" className="p-5">
       <div className="flex items-center gap-6">
         {/* Animated circular gauge */}
-        <div className="relative flex-shrink-0" role="img" aria-label={gaugeLabel}>
+        <div data-app-part="metric" data-app-metric="ring" className="relative flex-shrink-0" role="img" aria-label={gaugeLabel}>
           <svg width="130" height="130" viewBox="0 0 130 130" aria-hidden="true">
             {/* Background circle */}
             <circle
@@ -153,10 +153,10 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
         <div className="flex-1 space-y-2">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('driveScore.title', 'Drive Score')}</h3>
           {breakdown.map(item => (
-            <div key={item.key}>
+            <div data-app-part="metric" data-app-metric="bar" key={item.key}>
               <div className="flex justify-between text-xs mb-0.5">
-                <span className="text-[var(--text-secondary)]">{item.label}</span>
-                <span style={{ color: item.color }} className="font-medium">{item.value}/{item.max}</span>
+                <span data-app-part="metric-label" className="text-[var(--text-secondary)]">{item.label}</span>
+                <span data-app-part="metric-value" style={{ color: item.color }} className="font-medium">{item.value}/{item.max}</span>
               </div>
               <div
                 className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden"

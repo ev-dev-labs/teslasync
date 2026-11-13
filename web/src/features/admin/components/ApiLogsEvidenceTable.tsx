@@ -97,7 +97,7 @@ function ApiLogDetails({ log, serviceLabel, installation }: {
   const keyId = log.request_headers?.['App-Key-ID'];
   const verifiedKey = keyName && /^\d+$/.test(keyId ?? '');
   return (
-    <div className="min-w-0 space-y-3 bg-[var(--surface-2)] p-3 sm:p-4">
+    <div data-app-part="panel" data-surface-variant="standalone" className="min-w-0 space-y-3 bg-[var(--surface-2)] p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Label>{t('apiLogs.requestUrl', 'Request URL')}</Label>
         <CopyButton

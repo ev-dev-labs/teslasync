@@ -24,10 +24,13 @@ import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MapConfig } from '@/api/types';
+import { getAppDesignAttributes, APPLICATION_DESIGNS } from '@/components/ui/app-designs/designs';
 
 type FakeMap = {
   getContainer: () => HTMLElement | null;
   invalidateSize: (...args: unknown[]) => void;
+  on?: (event: string, handler: () => void) => void;
+  off?: (event: string, handler: () => void) => void;
 };
 
 type CapturedFsProps = {
@@ -89,10 +92,11 @@ import {
 
 const appendedContainers: HTMLElement[] = [];
 
-function renderTile(style?: MapStyle) {
+function renderTile(style?: MapStyle, parts?: string) {
   // Row-19 contract: the layer marks the map container (map-style-dark)
   // instead of styling tiles, so every render needs a fake map.
   const { container: mapContainer, map } = makeMapWithContainer();
+  if (parts) mapContainer.setAttribute('data-app-part', parts);
   H.map = map;
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const view = render(
@@ -121,7 +125,10 @@ function makeMapWithContainer(): { container: HTMLElement; map: FakeMap; invalid
   document.body.appendChild(container);
   appendedContainers.push(container);
   const invalidateSize = vi.fn();
-  return { container, invalidateSize, map: { getContainer: () => container, invalidateSize } };
+  return {
+    container, invalidateSize,
+    map: { getContainer: () => container, invalidateSize, on: vi.fn(), off: vi.fn() },
+  };
 }
 
 beforeEach(() => {
@@ -140,6 +147,76 @@ afterEach(() => {
 });
 
 describe('MapTileLayer — free provider tile selection', () => {
+  it('annotates native popup frames on opening without replacing popup content or existing part tokens', () => {
+    const { container, map } = makeMapWithContainer();
+    H.map = map;
+    const on = vi.mocked(map.on!);
+    const off = vi.mocked(map.off!);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const { unmount } = render(<QueryClientProvider client={qc}><MapTileLayer /></QueryClientProvider>);
+    const popup = document.createElement('div');
+    popup.className = 'leaflet-popup-content-wrapper';
+    popup.setAttribute('data-app-part', 'caller-popup');
+    const content = document.createElement('p');
+    content.textContent = 'Original popup content';
+    popup.appendChild(content);
+    container.appendChild(popup);
+    const markPopups = on.mock.calls.find(([event]) => event === 'popupopen')?.[1];
+    expect(markPopups).toBeTypeOf('function');
+    act(() => { markPopups?.(); });
+    expect(popup).toHaveAttribute('data-app-part', 'caller-popup map-popup');
+    expect(popup.firstElementChild).toBe(content);
+    act(() => { markPopups?.(); });
+    expect(popup).toHaveAttribute('data-app-part', 'caller-popup map-popup');
+    unmount();
+    expect(off).toHaveBeenCalledWith('popupopen', markPopups);
+  });
+
+  it('marks the real map without replacing existing parts and removes only its own token', () => {
+    const { mapContainer, unmount } = renderTile('streets', 'panel');
+    expect(mapContainer).toHaveAttribute('data-app-part', 'panel map');
+    mapContainer.setAttribute('data-app-part', 'panel map caller-part');
+    unmount();
+    expect(mapContainer).toHaveAttribute('data-app-part', 'panel caller-part');
+  });
+
+  it('leaves a caller-owned map token in place after unmount', () => {
+    const { mapContainer, unmount } = renderTile('streets', 'map caller-part');
+    unmount();
+    expect(mapContainer).toHaveAttribute('data-app-part', 'map caller-part');
+  });
+
+  it('keeps the selected tile instance, credits and query count across all application designs', async () => {
+    const { mapContainer, unmount } = renderTile('satellite');
+    await settle();
+    const originalTile = tile();
+    const url = originalTile.getAttribute('data-url');
+    const attribution = originalTile.getAttribute('data-attribution');
+    const calls = H.getMapConfig.mock.calls.length;
+    const preview = document.createElement('div');
+    preview.setAttribute('data-app-design-preview', '');
+    document.body.appendChild(preview);
+    preview.appendChild(mapContainer);
+    try {
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+        await act(async () => {
+          for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) {
+            preview.setAttribute(name, value);
+          }
+        });
+        expect(tile()).toBe(originalTile);
+        expect(tile()).toHaveAttribute('data-url', url);
+        expect(tile()).toHaveAttribute('data-attribution', attribution);
+        expect(mapContainer).not.toHaveClass('map-style-dark');
+        expect(H.getMapConfig).toHaveBeenCalledTimes(calls);
+      }
+    } finally {
+      unmount();
+      preview.remove();
+    }
+    expect(mapContainer).not.toHaveAttribute('data-app-part');
+  });
+
   it('defaults to the key-free OSM basemap when no style is supplied', async () => {
     const { mapContainer } = renderTile();
     await settle();
@@ -224,6 +301,81 @@ describe('MapTileLayer — provider overrides', () => {
 });
 
 describe('MapInvalidator', () => {
+  it('remeasures native popups after layout changes and releases closed popup observations', () => {
+    vi.useFakeTimers();
+    const observers: { callback: ResizeObserverCallback; observer: Observer }[] = [];
+    class Observer implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        observers.push({ callback, observer: this });
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal('ResizeObserver', Observer);
+    try {
+      const mapContainer = document.createElement('div');
+      let mapWidth = 250;
+      Object.defineProperty(mapContainer, 'clientWidth', { get: () => mapWidth });
+      const element = document.createElement('div');
+      const content = document.createElement('div');
+      content.className = 'leaflet-popup-content';
+      element.appendChild(content);
+      Object.defineProperty(element, 'offsetWidth', { value: 365 });
+      Object.defineProperty(content, 'offsetWidth', { value: 301 });
+      const popup = { getElement: () => element, update: vi.fn(), options: { maxWidth: 300, minWidth: 50 } };
+      const on = vi.fn<(event: string, handler: (event: { popup: typeof popup }) => void) => void>();
+      const off = vi.fn();
+      H.map = { getContainer: () => mapContainer, invalidateSize: vi.fn(), on, off };
+      const { unmount } = render(<MapInvalidator />);
+      const open = on.mock.calls.find(([event]) => event === 'popupopen')?.[1];
+      const close = on.mock.calls.find(([event]) => event === 'popupclose')?.[1];
+      expect(open).toBeTypeOf('function');
+      act(() => open?.({ popup }));
+      const resize = observers[1];
+      expect(resize.observer.observe).toHaveBeenCalledWith(element);
+      const entry: ResizeObserverEntry = {
+        target: element, contentRect: element.getBoundingClientRect(),
+        borderBoxSize: [], contentBoxSize: [], devicePixelContentBoxSize: [],
+      };
+      act(() => resize.callback([entry], resize.observer));
+      act(() => resize.callback([entry], resize.observer));
+      expect(popup.update).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersToNextFrame());
+      expect(popup.update).toHaveBeenCalledTimes(1);
+      expect(popup.options.maxWidth).toBe(175);
+      mapWidth = 500;
+      act(() => observers[0].callback([], observers[0].observer));
+      expect(popup.options.maxWidth).toBe(300);
+      mapWidth = 250;
+      act(() => observers[0].callback([], observers[0].observer));
+      expect(popup.options.maxWidth).toBe(175);
+      act(() => close?.({ popup }));
+      expect(popup.options.maxWidth).toBe(300);
+      expect(resize.observer.unobserve).toHaveBeenCalledWith(element);
+      act(() => resize.callback([entry], resize.observer));
+      act(() => vi.advanceTimersToNextFrame());
+      expect(popup.update).toHaveBeenCalledTimes(3);
+      act(() => open?.({ popup }));
+      act(() => resize.callback([entry], resize.observer));
+      act(() => close?.({ popup }));
+      act(() => vi.advanceTimersToNextFrame());
+      expect(popup.update).toHaveBeenCalledTimes(3);
+      act(() => open?.({ popup }));
+      act(() => resize.callback([entry], resize.observer));
+      unmount();
+      act(() => vi.advanceTimersToNextFrame());
+      expect(popup.update).toHaveBeenCalledTimes(3);
+      expect(popup.options.maxWidth).toBe(300);
+      expect(resize.observer.disconnect).toHaveBeenCalledTimes(1);
+      expect(off).toHaveBeenCalledWith('popupopen', open);
+      expect(off).toHaveBeenCalledWith('popupclose', close);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it('observes container resizes and preserves the current map center without animation', () => {
     vi.useFakeTimers();
     const observe = vi.fn();
@@ -241,7 +393,7 @@ describe('MapInvalidator', () => {
     try {
       const mapContainer = document.createElement('div');
       const invalidateSize = vi.fn();
-      H.map = { getContainer: () => mapContainer, invalidateSize };
+      H.map = { getContainer: () => mapContainer, invalidateSize, on: vi.fn(), off: vi.fn() };
       const { unmount } = render(<MapInvalidator />);
 
       expect(observe).toHaveBeenCalledWith(mapContainer);
@@ -301,6 +453,8 @@ describe('MapFullscreenControl', () => {
     render(<MapFullscreenControl />);
     const control = container.querySelector('.leaflet-control');
     expect(control).not.toBeNull();
+    expect(control).toHaveAttribute('data-app-part', 'map-toolbar');
+    expect(control).toHaveAttribute('data-map-control', 'fullscreen');
     expect(control?.className).toContain('top-2 right-2');
     expect(container.querySelector('[data-testid="fs-button"]')).not.toBeNull();
   });

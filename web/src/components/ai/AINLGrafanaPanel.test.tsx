@@ -484,6 +484,8 @@ describe('AINLGrafanaPanel — typed draft capture + Apply handoff', () => {
 
     // The typed preview surfaces the panel facts the user reviews.
     const preview = await screen.findByTestId('ai-feature-nl-grafana-panel-draft')
+    expect(preview).toHaveAttribute('data-app-part', 'card')
+    expect(preview).toHaveAttribute('data-surface-variant', 'standalone')
     expect(preview).toHaveTextContent('Drives per day this month')
     expect(preview).toHaveTextContent(/Panel type: timeseries/i)
     expect(preview).toHaveTextContent(/Datasource: postgres \(tesla-postgres\)/i)

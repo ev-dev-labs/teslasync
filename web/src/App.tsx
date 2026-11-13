@@ -28,6 +28,11 @@ const TaskOnboardingHost = lazy(async () => {
   return { default: module.TaskOnboardingHost }
 })
 
+const AppDesignBridge = lazy(async () => {
+  const module = await import('./components/ui/AppDesignBridge')
+  return { default: module.AppDesignBridge }
+})
+
 // Dashboard
 const Dashboard = lazy(routeLoaders.Dashboard)
 const QuickStats = lazy(routeLoaders.QuickStats)
@@ -570,7 +575,7 @@ export default function App() {
           <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
         </main>
       } />}
-      <Route path="/" element={<Layout />}>
+      <Route path="/" element={<><Suspense fallback={null}><AppDesignBridge /></Suspense><Layout /></>}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}

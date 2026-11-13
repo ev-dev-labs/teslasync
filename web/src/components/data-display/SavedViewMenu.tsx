@@ -274,12 +274,15 @@ export function SavedViewMenu({
                 />
               </div>
             ) : (
-              <ul className="max-h-72 space-y-0.5 overflow-y-auto">
+              <ul data-app-part="list" data-app-list="saved-views" className="max-h-72 space-y-0.5 overflow-y-auto">
                 {views.map((v) => {
                   const isActive = v.query === currentQuery;
                   return (
-                    <li key={v.id}>
-                      <div
+                    <li
+                        key={v.id}
+                        data-app-part="list-row"
+                        data-app-record="saved-view"
+                        data-app-record-state={isActive ? 'active' : 'idle'}
                         className={cn(
                           'group flex flex-wrap items-center gap-1 rounded px-2 py-1.5',
                           'hover:bg-[var(--surface-3)]',
@@ -287,6 +290,7 @@ export function SavedViewMenu({
                         )}
                       >
                         <Button
+                          data-app-record-slot="label"
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -308,6 +312,7 @@ export function SavedViewMenu({
                           {v.name}
                         </Button>
                         <Button
+                          data-app-record-slot="action"
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -322,6 +327,7 @@ export function SavedViewMenu({
                           <Star className={cn('h-3.5 w-3.5', v.is_default && 'fill-current text-[var(--text-secondary)]')} />
                         </Button>
                         <Button
+                          data-app-record-slot="action"
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -332,6 +338,7 @@ export function SavedViewMenu({
                           {v.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                         </Button>
                         <Button
+                          data-app-record-slot="action"
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -345,6 +352,7 @@ export function SavedViewMenu({
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
+                          data-app-record-slot="action"
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -357,7 +365,6 @@ export function SavedViewMenu({
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
                     </li>
                   );
                 })}
@@ -636,18 +643,22 @@ function SavedViewManageDialog({
       {unresolvedContent ?? (views.length === 0 ? (
         <EmptyState message={t('savedViews.empty', 'No saved views yet')} />
       ) : (
-        <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
+        <ul data-app-part="list" data-app-list="saved-views" className="max-h-[60vh] space-y-1 overflow-y-auto">
           {views.map((v) => {
             const isActive = v.query === currentQuery;
             return (
               <li
                 key={v.id}
+                data-app-part="list-row"
+                data-app-record="saved-view"
+                data-app-record-state={isActive ? 'active' : 'idle'}
                 className={cn(
                   'flex flex-wrap items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2',
                   isActive && 'border-[var(--border-strong)] bg-[var(--surface-2)]',
                 )}
               >
                 <Button
+                  data-app-record-slot="label"
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -661,6 +672,7 @@ function SavedViewManageDialog({
                   {v.name}
                 </Button>
                 <Button
+                  data-app-record-slot="action"
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -675,6 +687,7 @@ function SavedViewManageDialog({
                   <Star className={cn('h-4 w-4', v.is_default && 'fill-current text-[var(--text-secondary)]')} />
                 </Button>
                 <Button
+                  data-app-record-slot="action"
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -685,6 +698,7 @@ function SavedViewManageDialog({
                   {v.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                 </Button>
                 <Button
+                  data-app-record-slot="action"
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -695,6 +709,7 @@ function SavedViewManageDialog({
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button
+                  data-app-record-slot="action"
                   type="button"
                   variant="ghost"
                   size="sm"

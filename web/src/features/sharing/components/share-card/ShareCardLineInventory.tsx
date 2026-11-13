@@ -38,10 +38,10 @@ export function ShareCardLineInventory({
 
             <tbody>
             {analysis.card.lineInventory.map((evidence, index) => (
-              <tr
+              <tr data-app-part="table-row"
                 key={evidence.key}
               >
-                <th scope="row">
+                <th data-app-part="table-cell" scope="row">
                   <Text as="p" variant="label">
                     {t('shareCard.lines.slot', 'Line {{slot}} · {{label}}', {
                       slot: index + 1,
@@ -49,19 +49,19 @@ export function ShareCardLineInventory({
                     })}
                   </Text>
                 </th>
-                <td>
+                <td data-app-part="table-cell">
                   <Badge variant={evidence.available ? 'success' : 'neutral'}>
                     {evidence.available
                       ? t('shareCard.lines.measured', 'Measured')
                       : t('shareCard.lines.missing', 'Missing')}
                   </Badge>
                 </td>
-                <td className="text-right">
+                <td data-app-part="table-cell" className="text-right">
                 <Text as="p" variant="bodySm" className="mt-2">
                   {lines[index]?.value ?? '—'}
                 </Text>
                 </td>
-                <td className="text-right">
+                <td data-app-part="table-cell" className="text-right">
                 <Text as="p" variant="caption" className="mt-1">
                   {t('shareCard.lines.support', '{{count}} supporting rows', {
                     count: evidence.supportRows,

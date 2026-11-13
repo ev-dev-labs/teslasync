@@ -341,6 +341,45 @@ describe('WidgetGaugeHero — spec chrome', () => {
     expect(root).toHaveClass('gap-3');
   });
 
+  it('keeps the native gauge composition qualified across standard and compact unknown/zero readings', () => {
+    const stats = [{ label: 'Range', value: 0, unit: 'km' }];
+    const view = render(
+      <WidgetGaugeHero
+        gauge={{ ...baseGauge, value: null, preserveReadingAndScale: true }}
+        stats={stats}
+      >
+        <div>Native gauge context</div>
+      </WidgetGaugeHero>,
+    );
+    const root = view.container.firstElementChild!;
+    expect(root).toHaveAttribute('data-app-part', 'metric-grid');
+    expect(root).toHaveAttribute('data-app-metric-grid', 'native-gauge');
+    expect(root).toHaveClass('flex', 'h-full', 'w-full', 'min-w-0', 'flex-col', 'items-center', 'justify-center', 'gap-3');
+    expect(root.children[0]).toBe(screen.getByTestId('linear-gauge'));
+    expect(root.children[1]).toHaveTextContent('Range0km');
+    expect(root.children[2]).toHaveTextContent('Native gauge context');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', 'null');
+    expect(screen.getByTestId('linear-gauge')).not.toHaveAttribute('data-app-metric-grid');
+
+    view.rerender(
+      <WidgetGaugeHero
+        gauge={{ ...baseGauge, value: 0, preserveReadingAndScale: true }}
+        stats={stats}
+        compact
+      >
+        <div>Native gauge context</div>
+      </WidgetGaugeHero>,
+    );
+    expect(root).toHaveAttribute('data-app-metric-grid', 'native-gauge');
+    expect(root).toHaveClass('flex', 'h-full', 'w-full', 'min-w-0', 'flex-col', 'items-center', 'justify-center', 'gap-3');
+    expect(root.children).toHaveLength(1);
+    expect(root.children[0]).toBe(screen.getByTestId('linear-gauge'));
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', '0');
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-size', '70');
+    expect(screen.queryByText('Range')).toBeNull();
+    expect(screen.queryByText('Native gauge context')).toBeNull();
+  });
+
   it('lays the stats row out full-width on the shared stat gaps', () => {
     const stats: GaugeHeroStat[] = [{ label: 'Range', value: 250, unit: 'mi' }];
     const { container } = render(<WidgetGaugeHero gauge={baseGauge} stats={stats} />);

@@ -199,7 +199,7 @@ export default function AnomalyDashboardPage() {
                 message={noVehicle || initialBlocked ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
               />
             ) : (
-              <ul className="space-y-2">
+              <ul data-app-part="list" className="space-y-2">
                 {healthEntries.map(([category, status]) => (
                   <SystemHealthCard key={category} category={category} status={healthStatus(status)} />
                 ))}
@@ -234,7 +234,7 @@ export default function AnomalyDashboardPage() {
               message={emptyMessage}
             />
           ) : (
-            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+            <ul data-app-part="list" className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
               {anomalies.map((a, i) => (
                 <AnomalyTimelineCard key={`${a.signal}-${a.type}-${i}`} anomaly={a} />
               ))}

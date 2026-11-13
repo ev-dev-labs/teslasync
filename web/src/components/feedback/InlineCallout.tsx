@@ -53,13 +53,13 @@ export function InlineCallout({
   const content = (
     <>
       {icon && (
-        <span className={cn('shrink-0 inline-flex [&>svg]:h-4 [&>svg]:w-4', v.text)} aria-hidden>
+        <span data-app-part="feedback-icon" className={cn('shrink-0 inline-flex [&>svg]:h-4 [&>svg]:w-4', v.text)} aria-hidden>
           {icon}
         </span>
       )}
-      <Text size="xs" color="secondary" className="flex-1 min-w-0 break-words">{children}</Text>
+      <Text data-app-part="feedback-message" size="xs" color="secondary" className="flex-1 min-w-0 break-words">{children}</Text>
       {action && (
-        <span className={cn('inline-flex min-w-0 max-w-full items-center gap-1', v.text)}>
+        <span data-app-part="feedback-actions" className={cn('inline-flex min-w-0 max-w-full items-center gap-1', v.text)}>
           <Text size="xs" weight="medium" className="min-w-0 break-words">{action.label}</Text>
           <Icon icon={ChevronRight} size="xs" className="rtl:rotate-180" />
         </span>
@@ -83,6 +83,9 @@ export function InlineCallout({
   if (action?.href) {
     return (
       <a
+        data-app-part="feedback"
+        data-app-feedback-kind="insight"
+        data-app-tone={variant}
         href={action.href}
         className={baseClass}
         data-testid={testId}
@@ -95,6 +98,9 @@ export function InlineCallout({
   if (action?.onClick) {
     return (
       <Button
+        data-app-part="feedback"
+        data-app-feedback-kind="insight"
+        data-app-tone={variant}
         variant="ghost"
         size="sm"
         type="button"
@@ -108,7 +114,7 @@ export function InlineCallout({
   }
 
   return (
-    <div role="status" className={baseClass} data-testid={testId}>
+    <div data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone={variant} role="status" className={baseClass} data-testid={testId}>
       {content}
     </div>
   );

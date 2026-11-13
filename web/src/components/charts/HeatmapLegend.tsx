@@ -11,7 +11,7 @@ interface HeatmapLegendProps {
 
 export function HeatmapLegend({ label, less, more, unavailable }: HeatmapLegendProps) {
   return (
-    <div role="group" aria-label={label} className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+    <div data-app-part="chart-legend" data-chart-family="heatmap" role="group" aria-label={label} className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
       {unavailable && (
         <span className="mr-3 flex items-center gap-1.5">
           <HeatmapCell level={null} label={unavailable} className="h-3.5 w-3.5 shrink-0" />

@@ -80,6 +80,7 @@ export function TopTransitionMatrix({
         </Text>
         <DestinationTransitionsSectionBody model={model} state={state}>
           <div
+            data-app-part="table"
             className="overflow-x-auto pb-2"
             role="table"
             aria-label={t(
@@ -87,8 +88,8 @@ export function TopTransitionMatrix({
               'Counts and observed outgoing shares in the top destination transition matrix',
             )}
           >
-            <div className="flex min-w-max gap-2" role="row">
-              <div className="w-36 shrink-0 p-2" role="columnheader">
+            <div data-app-part="table-head table-row" className="flex min-w-max gap-2" role="row">
+              <div data-app-part="table-cell" className="w-36 shrink-0 p-2" role="columnheader">
                 <Text variant="label">
                   {t(
                     'destinationTransitions.matrix.origin',
@@ -99,6 +100,7 @@ export function TopTransitionMatrix({
               {destinations.map((destination) => (
                 <div
                   key={destination.key}
+                  data-app-part="table-cell"
                   className="w-28 shrink-0 p-2 text-center"
                   role="columnheader"
                 >
@@ -110,10 +112,12 @@ export function TopTransitionMatrix({
               {rows.map((row) => (
                 <div
                   key={row.fromKey}
+                  data-app-part="table-row"
                   className="flex min-w-max gap-2"
                   role="row"
                 >
                   <div
+                    data-app-part="table-cell"
                     className="flex w-36 shrink-0 flex-col justify-center rounded-lg bg-[var(--surface-2)] p-2"
                     role="rowheader"
                   >
@@ -129,6 +133,7 @@ export function TopTransitionMatrix({
                   {row.cells.map((cell) => (
                     <div
                       key={cell.toKey}
+                      data-app-part="table-cell"
                       className={cn(
                         'flex w-28 shrink-0 flex-col justify-center rounded-lg border p-2 text-center',
                         cell.status === 'unsupported_origin'

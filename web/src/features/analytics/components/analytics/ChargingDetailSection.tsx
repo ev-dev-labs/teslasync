@@ -82,8 +82,9 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
                   {fmtInt(b.count)} {t('analytics.charging.sessions', 'sessions')}
                 </Text>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
+              <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
                 <div
+                  data-metric-fill
                   data-testid="charger-brand-fill"
                   className="h-full rounded-full bg-emerald-500 transition-all duration-slow"
                   style={{ width: `${b.pct}%` }}
@@ -112,8 +113,9 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
                 <Text size="xs" weight="medium" color="secondary" className="w-28 truncate text-right">
                   {ct.type ?? '—'}
                 </Text>
-                <div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
                   <div
+                    data-metric-fill
                     className="h-full rounded-full transition-all duration-slow"
                     style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                   />

@@ -41,7 +41,7 @@
  *     the Track column reorders the table and toggles direction.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, within, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
@@ -50,6 +50,11 @@ import type { MediaSnapshot } from '@/api/types';
 import { setGlobalPrecision } from '@/lib/numberFormat';
 import * as dateFormatting from '@/hooks/useDateFormat';
 import { formatDateTime } from '@/lib/dateFormat';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import {
+  expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile,
+} from '@/components/feedback/appDesignCss.test-utils';
 
 // ── motion primitives: render children verbatim (strip animation). ──
 vi.mock('@/components/motion', async importOriginal => ({
@@ -974,6 +979,149 @@ describe('MediaPlayerPage — playback progress hardening (bug fix)', () => {
     expect(bar).toHaveAttribute('aria-valuemax', '100');
     expect(bar).toHaveTextContent('0:00'); // NOT "-1:-05"
     expect(bar.textContent ?? '').not.toContain('-1');
+  });
+});
+
+describe('MediaPlayerPage — original native playback track ownership', () => {
+  const trackContract = '[data-app-metric="bar"][data-metric-track]';
+  const unknownProgress = 'Playback progress is unavailable without a reported elapsed time and positive duration.';
+  const playbackRow = () => nowPlayingRegion().querySelector('[aria-label="Playback progress"]');
+  const originalTrack = () => {
+    const track = playbackRow()?.querySelector(':scope > div');
+    if (!(track instanceof HTMLElement)) throw new Error('Missing original playback track');
+    return track;
+  };
+
+  it('activates the actual track and its single fill in all27 without adopting the labelled outer row', () => {
+    const view = renderPage();
+    const track = originalTrack();
+    const fill = track.firstElementChild;
+    expect(fill).toBeInstanceOf(HTMLElement);
+    expect(track).toHaveAttribute('data-app-part', 'metric');
+    expect(track).toHaveAttribute('data-app-metric', 'bar');
+    expect(track).toHaveAttribute('data-metric-track');
+    expect(fill).toHaveAttribute('data-metric-fill');
+    expect(track.children).toHaveLength(1);
+    const originalWidth = `${65000 / 185000 * 100}%`;
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(view.container, pack);
+      const release = observeAppDesignScopes(view.container);
+      try {
+        expectAppDesignDataMode(track, APPLICATION_DESIGNS[pack].data, trackContract);
+        const trackRules = matchesAppDesignCss(track, trackContract);
+        expect(trackRules.some(rule => 'outline' in rule.declarations)).toBe(true);
+        expect(trackRules.every(rule => Object.keys(rule.declarations)
+          .every(property => ['outline', 'outline-offset'].includes(property)))).toBe(true);
+        const fillRules = matchesAppDesignCss(fill!, '[data-metric-fill]');
+        expect(fillRules).toHaveLength(1);
+        expect(fillRules[0].declarations).toEqual({ 'box-sizing': 'border-box', 'min-inline-size': '0' });
+        expect(track).toHaveClass('h-1.5', 'flex-1', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-3)]');
+        expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--theme-primary)]',
+          'motion-safe:transition-all', 'duration-slow');
+        expect(fill).toHaveStyle({ width: originalWidth });
+        for (const node of [track, fill!]) {
+          expect(node).not.toHaveAttribute('role');
+          expect(node).not.toHaveAttribute('aria-valuenow');
+          expect(node).not.toHaveAttribute('aria-valuemax');
+        }
+        const row = within(nowPlayingRegion()).getByRole('progressbar', { name: 'Playback progress' });
+        expect(row).toBe(track.parentElement);
+        expect(row).not.toHaveAttribute('data-app-metric');
+        expect(row).not.toHaveAttribute('data-metric-track');
+        expect(row).toHaveAttribute('aria-valuemin', '0');
+        expect(row).toHaveAttribute('aria-valuemax', '185');
+        expect(row).toHaveAttribute('aria-valuenow', '65');
+        expect(row).toHaveTextContent('1:053:05');
+      } finally { release(); }
+    }
+  });
+
+  it.each([
+    { name: 'measured zero', elapsed: 0, duration: 1000, width: '0%', now: '0', max: '1', readings: ['0:00', '0:01'] },
+    { name: 'negative elapsed clamps only progress', elapsed: -5000, duration: 1000, width: '0%', now: '0', max: '1', readings: ['0:00', '0:01'] },
+    { name: 'elapsed exceeds duration', elapsed: 2000, duration: 1000, width: '100%', now: '1', max: '1', readings: ['0:02', '0:01'] },
+    { name: 'duration only', elapsed: null, duration: 1000, width: '0%', now: null, max: null, readings: ['—', '0:01'] },
+    { name: 'elapsed only', elapsed: 1000, duration: undefined, width: '0%', now: null, max: null, readings: ['0:01', '—'] },
+    { name: 'zero duration', elapsed: 0, duration: 0, width: '0%', now: null, max: null, readings: ['0:00', '0:00'] },
+    { name: 'negative duration', elapsed: 0, duration: -1000, width: '0%', now: null, max: null, readings: ['0:00', '0:00'] },
+    { name: 'nonfinite elapsed', elapsed: NaN, duration: 1000, width: '0%', now: null, max: null, readings: ['—', '0:01'] },
+    { name: 'nonfinite duration', elapsed: 1000, duration: Infinity, width: '0%', now: null, max: null, readings: ['0:01', '—'] },
+    { name: 'malformed elapsed', elapsed: '0', duration: 1000, width: '0%', now: null, max: null, readings: ['—', '0:01'] },
+  ])('preserves $name without inferring validity from the fallback width', ({ elapsed, duration, width, now, max, readings }) => {
+    mockMedia.mockReturnValue(makeQuery({
+      data: { ...LATEST, now_playing_elapsed: elapsed, now_playing_duration: duration },
+    }));
+    renderPage();
+    const track = originalTrack();
+    expect(track).toHaveAttribute('data-metric-track');
+    expect(track.querySelector('[data-metric-fill]')).toHaveStyle({ width });
+    expect(Array.from(playbackRow()!.querySelectorAll(':scope > span')).map(node => node.textContent)).toEqual(readings);
+    if (now === null) {
+      expect(playbackRow()).not.toHaveAttribute('role');
+      for (const attribute of ['aria-valuemin', 'aria-valuemax', 'aria-valuenow']) {
+        expect(playbackRow()).not.toHaveAttribute(attribute);
+      }
+      expect(within(nowPlayingRegion()).getByText(unknownProgress)).toBeInTheDocument();
+    } else {
+      expect(playbackRow()).toHaveAttribute('role', 'progressbar');
+      expect(playbackRow()).toHaveAttribute('aria-valuemin', '0');
+      expect(playbackRow()).toHaveAttribute('aria-valuemax', max);
+      expect(playbackRow()).toHaveAttribute('aria-valuenow', now);
+      expect(within(nowPlayingRegion()).queryByText(unknownProgress)).not.toBeInTheDocument();
+    }
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+    expect(bodyRows()).toHaveLength(3);
+  });
+
+  it.each([null, undefined])('keeps both unreported endpoints (%s) absent rather than adding a fallback track', value => {
+    mockMedia.mockReturnValue(makeQuery({
+      data: { ...LATEST, now_playing_elapsed: value, now_playing_duration: value },
+    }));
+    renderPage();
+    expect(playbackRow()).toBeNull();
+    expect(nowPlayingRegion().querySelector('[data-metric-track]')).toBeNull();
+    expect(within(nowPlayingRegion()).getByText(unknownProgress)).toBeInTheDocument();
+  });
+
+  it.each(['default', 'widget-only', 'public', 'incomplete'] as const)('leaves the actual playback track neutral in %s scope', scope => {
+    const view = renderPage();
+    const track = originalTrack();
+    if (scope === 'widget-only') view.container.setAttribute('data-widget-pack', 'v2');
+    if (scope === 'public') view.container.setAttribute('data-public-report', '');
+    if (scope === 'incomplete') {
+      view.container.setAttribute('data-app-design-preview', '');
+      setAppDesignTestProfile(view.container, 'v2');
+      view.container.removeAttribute('data-app-chart');
+    }
+    const release = observeAppDesignScopes(view.container);
+    try {
+      for (const node of [track, track.firstElementChild!]) {
+        expect(node).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesAppDesignCss(node, '[data-metric-track]')).toHaveLength(0);
+      }
+      expect(track.parentElement).toHaveAttribute('aria-valuenow', '65');
+    } finally { release(); }
+  });
+
+  it('uses the nearest complete profile and removes ownership when that native island becomes incomplete', async () => {
+    const view = renderPage();
+    view.container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(view.container, 'classic');
+    const island = nowPlayingRegion();
+    island.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(island, 'v2');
+    const track = originalTrack();
+    const release = observeAppDesignScopes(view.container);
+    try {
+      expectAppDesignDataMode(track, 'cards', trackContract);
+      expect(matchesAppDesignCss(track, '[data-app-data="table"]')).toHaveLength(0);
+      island.removeAttribute('data-app-controls');
+      await waitFor(() => expect(track).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchesAppDesignCss(track, trackContract)).toHaveLength(0);
+      expect(track.querySelector('[data-metric-fill]')).not.toHaveAttribute('data-app-design-owner');
+      expect(track.parentElement).toHaveAttribute('aria-valuenow', '65');
+    } finally { release(); }
   });
 });
 

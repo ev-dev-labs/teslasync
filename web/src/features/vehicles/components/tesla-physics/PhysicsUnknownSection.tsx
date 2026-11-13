@@ -42,11 +42,13 @@ export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPag
       <Text as="p" variant="bodySm">{t('teslaOnly.unknownWorst', 'Largest returned signal gap: {{signal}} · {{duration}}', {
         signal: worst?.kind ?? unknown(t), duration: hours(worst?.hours, t),
       })}</Text>
-      {sorted.length ? <div className="grid gap-3 md:grid-cols-2">
-        {sorted.map((row) => <div key={row.kind} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
-          <div className="flex justify-between gap-2"><Text as="span" variant="bodySm">{row.kind}</Text><Badge variant={row.unknown ? 'warning' : 'neutral'} size="sm">{hours(row.hours, t)}</Badge></div>
+      {sorted.length ? <div data-app-part="metric-grid" className="grid gap-3 md:grid-cols-2">
+        {sorted.map((row) => <div data-app-part="card metric" data-app-metric="card" key={row.kind} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
+          <div data-app-part="metric-body" className="flex flex-wrap justify-between gap-2"><Text data-app-part="metric-label" as="span" variant="bodySm">{row.kind}</Text><Badge data-app-part="badge metric-value metric-reading" variant={row.unknown ? 'warning' : 'neutral'} size="sm">{hours(row.hours, t)}</Badge>
+          <div data-app-part="metric-context" className="basis-full">
           <Text as="p" variant="caption">{t('teslaOnly.unknownBudgetShare', '{{value}} of requested window', { value: window != null && window > 0 ? `${fmtNumber(Math.min(100, Math.max(0, 100 * row.hours / window)))}%` : unknown(t) })}</Text>
           <Text as="p" variant="caption">{row.unknown ? t('teslaOnly.unknownBudgetFlagged', 'Uncertain signal coverage') : t('teslaOnly.unknownBudgetUnflagged', 'No unknown flag reported for this budget')}</Text>
+          </div></div>
         </div>)}
       </div> : <Text as="p" variant="bodySm">{t('teslaOnly.unknownNoBudgets', 'No signal-specific budgets returned; individual signal coverage cannot be assessed.')}</Text>}
       <div className="flex flex-wrap gap-4">

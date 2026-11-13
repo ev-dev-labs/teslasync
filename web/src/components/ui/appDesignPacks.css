@@ -1,0 +1,42 @@
+/* Kept behind AppDesignBridge's existing lazy boundary. The preview may import
+   this same entry independently; every rule must require an opt-in host.
+   Category compositions precede concrete pack treatments.
+   Every final selector target must require data-app-design-owner, including
+   vendor descendants and pseudo-elements. Ancestor scoping alone leaks through
+   nested previews. Owner tokens come only from the nearest complete profile:
+   pack-X for identities, slot-value for modes, presence for neutral invariants.
+   Preview-boundary inheritance resets are the only unowned-target exception.
+   No @scope/:scope dependency; scope lifecycle is shared by bridge and previews. */
+@import './app-designs/base.css';
+@import './app-designs/shell.css';
+@import './app-designs/controls.css';
+@import './app-designs/charts.css';
+@import './app-designs/maps.css';
+@import './app-designs/feedback.css';
+@import './app-designs/packs/classic.css';
+@import './app-designs/packs/studio.css';
+@import './app-designs/packs/elevated.css';
+@import './app-designs/packs/precision.css';
+@import './app-designs/packs/concierge.css';
+@import './app-designs/packs/iconic.css';
+@import './app-designs/packs/expressive.css';
+@import './app-designs/packs/pixel.css';
+@import './app-designs/packs/motorsport.css';
+@import './app-designs/packs/blueprint.css';
+@import './app-designs/packs/editorial.css';
+@import './app-designs/packs/ambient.css';
+@import './app-designs/packs/terminal.css';
+@import './app-designs/packs/atlas.css';
+@import './app-designs/packs/analog.css';
+@import './app-designs/packs/observatory.css';
+@import './app-designs/packs/bauhaus.css';
+@import './app-designs/packs/quiet.css';
+@import './app-designs/packs/warm.css';
+@import './app-designs/packs/swiss.css';
+@import './app-designs/packs/material.css';
+@import './app-designs/packs/glass.css';
+@import './app-designs/packs/deco.css';
+@import './app-designs/packs/kinetic.css';
+@import './app-designs/packs/brutal.css';
+@import './app-designs/packs/cyber.css';
+@import './app-designs/packs/memphis.css';

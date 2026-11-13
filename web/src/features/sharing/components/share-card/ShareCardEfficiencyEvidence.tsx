@@ -70,9 +70,9 @@ export function ShareCardEfficiencyEvidence({
             {(Object.keys(analysis.coverage) as Array<keyof ShareCardCoverage>).map((key) => {
               const field = analysis.coverage[key];
               return (
-                <tr key={key}>
-                  <th scope="row"><Text variant="label">{coverageLabels[key]}</Text></th>
-                  <td className="text-right"><Text variant="caption">
+                <tr data-app-part="table-row" key={key}>
+                  <th data-app-part="table-cell" scope="row"><Text variant="label">{coverageLabels[key]}</Text></th>
+                  <td data-app-part="table-cell" className="text-right"><Text variant="caption">
                     {t(
                       'shareCard.efficiency.coverageCounts',
                       '{{valid}} valid · {{missing}} missing',

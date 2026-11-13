@@ -172,7 +172,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
     color={color} width={chartWidth} height={20} ariaLabel={sparklineLabel}
   />;
   const instrument = !historyState.fatalError && (historyQuery.isLoading && !hasSparkline ? (
-    <div role="status" aria-label={t('dashboardWidgets.telemetry.signalHistoryLoading', 'Loading signal history')}>
+    <div data-app-part="status" role="status" aria-label={t('dashboardWidgets.telemetry.signalHistoryLoading', 'Loading signal history')}>
       <Skeleton className="h-5 w-14" />
     </div>
   ) : hasSparkline ? (

@@ -443,6 +443,8 @@ describe('AINLSqlPlayground — typed draft capture + Apply hand-off', () => {
       const preview = await screen.findByRole('group', {
         name: 'Proposed SQL (review before applying)',
       })
+      expect(preview).toHaveAttribute('data-app-part', 'card')
+      expect(preview).toHaveAttribute('data-surface-variant', 'standalone')
       expect(preview.querySelector('pre')?.textContent).toBe(proposal.sql)
       expect(preview).toHaveTextContent(proposal.rationale)
       expect(preview).toHaveTextContent('Referenced tables: drives, vehicles')

@@ -170,6 +170,11 @@ describe('RegexTesterTool', () => {
     expect(screen.getByLabelText('Pattern')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('Invalid pattern')).toBeInTheDocument()
     expect(screen.queryByText(/Matches$/)).toBeNull()
+    const notice = screen.getByText('Invalid regular expression').closest('[role="alert"]')!
+    expect(notice).toHaveAttribute('data-app-feedback-kind', 'notice')
+    expect(notice).toHaveAttribute('data-app-tone', 'danger')
+    expect(notice.querySelector('[data-app-part="feedback-content"] > code[data-app-part="feedback-message"]'))
+      .toHaveTextContent(/Invalid regular expression/i)
   })
 
   it('validates the pattern before any test string is entered', () => {

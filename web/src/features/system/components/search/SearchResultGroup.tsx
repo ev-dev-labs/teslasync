@@ -21,10 +21,12 @@ export function SearchResultGroup({ group }: { group: SearchHitGroup }) {
         </PanelTitle>
         <Badge variant="neutral" size="sm">{group.hits.length}</Badge>
       </div>
-      <ul className="divide-y divide-[var(--glass-border)]">
+      <ul data-app-part="list" className="divide-y divide-[var(--glass-border)]">
         {group.hits.map(hit => (
           <li key={`${hit.type}-${hit.id}`}>
             <Link
+              data-app-part="button"
+              data-app-variant="ghost"
               to={hit.url}
               aria-label={t('search.result.open', 'Open {{title}}', { title: hit.title })}
               className={cn(

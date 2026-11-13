@@ -150,10 +150,10 @@ export function RangeSlider({
   );
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div data-app-part="field" data-app-field-kind="range" className={cn('flex flex-col gap-2', className)}>
       {showLabel && (
         <div className="flex items-baseline justify-between gap-2">
-          <span className={cn(typography.role.label)}>{label}</span>
+          <span data-app-part="field-label" className={cn(typography.role.label)}>{label}</span>
           <Caption className="tabular-nums">
             {displayLow}
             {' – '}
@@ -176,6 +176,7 @@ export function RangeSlider({
         />
         <input
           id={lowId}
+          data-app-part="field-control"
           type="range"
           min={min}
           max={max}
@@ -189,6 +190,7 @@ export function RangeSlider({
         />
         <input
           id={highId}
+          data-app-part="field-control"
           type="range"
           min={min}
           max={max}

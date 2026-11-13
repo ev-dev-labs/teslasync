@@ -7,7 +7,7 @@ import fleetApiCopyChanges from './verified-fleet-api-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
-import { catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
+import { catalogBeforeAppDesign, catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
 import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -111,7 +111,7 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const beforeExternalAuth = structuredClone(catalog)
+  const beforeExternalAuth = catalogBeforeAppDesign(catalog)
   for (const [namespace, expected] of Object.entries(externalAuthCopy.added)) {
     expect(beforeExternalAuth[namespace], namespace).toEqual(expected)
     delete beforeExternalAuth[namespace]

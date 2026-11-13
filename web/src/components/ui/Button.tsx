@@ -63,6 +63,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
     <button
       ref={ref}
+      data-app-part="button"
+      data-app-variant={variant}
+      data-app-size={size}
       className={cn(
         BUTTON_BASE,
         reduce && 'transition-none',

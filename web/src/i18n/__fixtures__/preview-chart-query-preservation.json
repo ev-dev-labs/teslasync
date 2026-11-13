@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only PreviewChart's exact removal of obsolete opening-location/hash-restoration state and cleanup from the latest URL deleting its own hidden-series key; recover the complete independently compiled Candidate30 producer before its unchanged original raw pin. No new shared query-hook policy.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v30/assets/_feMzsyz.js.map",
+    "mapSha256": "1c4343fefb37b18da167b1a9f575b546a5c86f350f3de98fdd9109d9d6b2be43",
+    "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewChart.tsx",
+    "sha256": "706d9da9fe575ec0dfe0ae0945ba318e4c17c9f52d0e84e89ad4b6475b76929b"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/fixtures.ts",
+      "sha256": "6223bd4ec1e17f4c4193b914702714c3c861f0866684f884b9e61ed30f277ae7"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "beaef9bec78ad0320c60da69b137f2c4a48aacb14c800e22bcadbe571a7f09d9"
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "sha256": "ebc93a285304adaa8625bcf4c1d37145ad2df417a9152f99558976e327269bb2"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "26323fd8f2ac1cf1a453bc50d01c7f321e9adad2a3f93df4cd405d89da34ca50"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewChart.tsx",
+      "before": "706d9da9fe575ec0dfe0ae0945ba318e4c17c9f52d0e84e89ad4b6475b76929b",
+      "after": "4c018f85e411ea52eb7234e14f6481551221f83ab3b205cff80bf1272365afaa",
+      "originalLineCount": 63,
+      "currentLineCount": 59,
+      "originalCallCount": 9,
+      "originalCallsSha256": "f1b0488bb636f95638e129f61cf271d9d5aa33e5ece3e5480f188ed2de812aca",
+      "originalProjectionSha256": "d8de8976656fd7ee0f0837401b1a41fc5f54e5215aa302d409eac3405b34fc62",
+      "hunks": [
+        {
+          "start": 0,
+          "old": ["import { useEffect, useId, useRef } from 'react';"],
+          "new": ["import { useEffect, useId } from 'react';"]
+        },
+        {
+          "start": 2,
+          "old": ["import { useLocation, useNavigate } from 'react-router-dom';"],
+          "new": ["import { useNavigate } from 'react-router-dom';"]
+        },
+        {
+          "start": 14,
+          "old": [
+            "  const location = useLocation();",
+            "  const openedAt = useRef(location);"
+          ],
+          "new": []
+        },
+        {
+          "start": 18,
+          "old": [
+            "    // Shared query toggles replace the hash; restore it only while still on the original route.",
+            "    const hash = window.location.hash || (window.location.pathname === openedAt.current.pathname ? openedAt.current.hash : '');",
+            "    if (!params.has(parameter) && hash === window.location.hash) return;"
+          ],
+          "new": ["    if (!params.has(parameter)) return;"]
+        },
+        {
+          "start": 20,
+          "old": ["    navigate({ pathname: window.location.pathname, search: params.toString(), hash }, { replace: true });"],
+          "new": ["    navigate({ pathname: window.location.pathname, search: params.toString(), hash: window.location.hash }, { replace: true });"]
+        }
+      ]
+    }
+  ]
+}

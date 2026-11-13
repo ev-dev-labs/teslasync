@@ -36,7 +36,7 @@ export function CommandCenterFallback({
           {t('commands.hero.title', 'Selected vehicle')}
         </Heading>
         {loading ? (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-label={t('commands.fallback.loadingFleet', 'Loading your fleet')}
             className="mt-4 space-y-3"

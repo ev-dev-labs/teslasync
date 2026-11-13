@@ -85,7 +85,7 @@ describe('statistics modernization source contracts', () => {
     expect(page).toContain('Math.round(fromKm(v.distance))');
     expect(page).toContain('Math.round(v.energy)');
     expect(page).toContain('innerRadius={50} outerRadius={90} paddingAngle={3}');
-    expect(page).toContain('<Legend />');
+    expect(page).toContain('<ChartLegend />');
     expect(page).toContain('<ChartLegend state={fleetCompareHidden} />');
     expect(page).toContain("fleetCompareHidden.isHidden('distance')");
     expect(page).toContain("fleetCompareHidden.isHidden('energy')");

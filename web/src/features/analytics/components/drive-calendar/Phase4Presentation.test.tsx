@@ -15,6 +15,15 @@ import { WeekdayPatternChart } from './WeekdayPatternChart';
 import { RhythmInsightsPanel } from './RhythmInsightsPanel';
 import { TopDrivingDaysPanel } from './TopDrivingDaysPanel';
 import englishCatalog from '@/i18n/en.json';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+
+const ownershipRules: Rule[] = [];
+postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+  .walkRules(rule => { ownershipRules.push(rule); });
 
 const { chartCardMock, summaryTranslation } = vi.hoisted(() => ({
   chartCardMock: vi.fn(),
@@ -188,6 +197,8 @@ describe('canonical calendar frames preserve independent source bodies', () => {
     });
     const { container } = render(<MemoryRouter>
       <DriveCalendarHeatmap calendar={populated} isLoading={false} error={null} onRetry={vi.fn()} />
+      <RhythmInsightsPanel calendar={populated} isLoading={false} error={null} onRetry={vi.fn()} />
+      <TopDrivingDaysPanel days={populated.topDays} isLoading={false} error={null} onRetry={vi.fn()} />
     </MemoryRouter>);
 
     const heatmap = screen.getByRole('group', { name: /Daily driving heatmap/ });
@@ -224,6 +235,56 @@ describe('canonical calendar frames preserve independent source bodies', () => {
     await user.pointer({ keys: '[TouchA]', target: trigger });
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('table', { name: 'Driving activity' })).toBeInTheDocument();
+
+    const tiles = [...container.querySelectorAll('[data-app-metric="tile"]')];
+    expect(tiles).toHaveLength(5);
+    for (const tile of tiles) {
+      expect(tile.querySelector(':scope > [data-app-part~="metric-label"]')).not.toBeNull();
+      expect(tile.querySelector(':scope > [data-app-part~="metric-reading"]')).not.toBeNull();
+      expect(tile.querySelector(':scope > [data-app-part~="metric-context"]')).not.toBeNull();
+    }
+    expect(tiles[0]!.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('Monday');
+    expect(tiles[2]!.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('12.5 km');
+    const ranked = container.querySelector('ol[data-app-list="ranked"]')!;
+    const rank = within(ranked as HTMLElement).getByRole('listitem', { name: 'Rank 1' });
+    expect(rank.querySelector('[data-app-part~="metric-label"]')).toHaveTextContent('Jun 29, 2026');
+    expect(rank.querySelector('[data-app-part~="metric-context"]')).toHaveTextContent('2 drives');
+    expect(rank.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('12.5 km');
+    expect(rank.children).toHaveLength(2);
+    const readings = [...tiles, rank].map(node => node.textContent);
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const mode = APPLICATION_DESIGNS[pack].data;
+        for (const [node, kind] of [
+          [tiles[0]!, '[data-app-metric="tile"]'],
+          [tiles[2]!, '[data-app-metric="tile"]'],
+          [rank, '[data-app-list="ranked"]'],
+        ] as const) {
+          expect(ownershipRules.some(rule => rule.selectors.some(selector =>
+            selector.includes(kind) && selector.includes(`[data-app-data="${mode}"]`)
+            && node.matches(selector))), `${pack}: real reading/ranked row`).toBe(true);
+        }
+      } finally { release(); }
+    }
+    expect([...tiles, rank].map(node => node.textContent)).toEqual(readings);
+  });
+
+  it('keeps unavailable categorical and quantitative rhythm readings distinct from measured zero', () => {
+    const partial = { ...calendar, totalDrives: 1, activityRate: 0.25 };
+    const { container, rerender } = render(<MemoryRouter>
+      <RhythmInsightsPanel calendar={partial} isLoading={false} error={null} onRetry={vi.fn()} />
+    </MemoryRouter>);
+    const readings = () => [...container.querySelectorAll('[data-app-part~="metric-reading"]')].map(node => node.textContent);
+    expect(readings()).toEqual(['—', expect.stringMatching(/^25/), '—', '—', '—']);
+    rerender(<MemoryRouter>
+      <RhythmInsightsPanel calendar={{ ...partial, averageDistancePerActiveDayM: 0,
+        averageDrivesPerActiveDay: 0, weekendDistanceShare: 0 }}
+        isLoading={false} error={null} onRetry={vi.fn()} />
+    </MemoryRouter>);
+    expect(readings()).toEqual(['—', expect.stringMatching(/^25/), '0.0 km', expect.stringMatching(/^0(?:[.,]0+)?%$/), '—']);
   });
 
   it.each(['loading', 'fatal', 'empty'] as const)('keeps all six named surfaces while %s', state => {

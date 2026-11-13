@@ -28,6 +28,7 @@ export function PageHeaderSkeleton({ className }: BlockProps) {
       aria-busy="true"
       aria-label="Loading page header"
       data-testid="page-header-skeleton"
+      data-app-part="loading"
     >
       <Skeleton className="h-8 w-64" />
       <Skeleton className="h-4 w-96 max-w-full" />
@@ -53,6 +54,7 @@ export function StatGridSkeleton({ cards = 4, className }: StatGridSkeletonProps
       aria-busy="true"
       aria-label="Loading stat cards"
       data-testid="stat-grid-skeleton"
+      data-app-part="metric-grid loading"
     >
       {Array.from({ length: cards }).map((_, i) => (
         <Skeleton key={i} className="h-24 rounded-xl" />
@@ -79,6 +81,7 @@ export function ChartBlockSkeleton({ height = 320, className }: ChartBlockSkelet
       aria-busy="true"
       aria-label="Loading chart"
       data-testid="chart-block-skeleton"
+      data-app-part="loading"
       className={cn('w-full', className)}
     >
       <Skeleton className="rounded-xl" height={height} />
@@ -103,6 +106,7 @@ export function TableSkeleton({ rows = 8, cols = 4, className }: TableSkeletonPr
       aria-busy="true"
       aria-label="Loading table"
       data-testid="table-skeleton"
+      data-app-part="list loading"
     >
       <Skeleton className="h-10 rounded-t-xl" />
       {Array.from({ length: rows }).map((_, r) => (

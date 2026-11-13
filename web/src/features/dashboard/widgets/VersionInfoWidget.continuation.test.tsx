@@ -180,7 +180,11 @@ describe.each(PACK_IDS)('version and capture source independence (%s)', (packId)
     hooks.version.mockReturnValue({ ...retainedVersion, isFetching: true });
     hooks.capture.mockReturnValue({ ...retainedCapture, isFetching: true });
     view.rerender(widgetForPack(packId));
-    expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeDisabled();
+    const refresh = screen.getByRole('button', { name: /^Refresh data/ });
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(refresh);
+    expect(versionRetry).toHaveBeenCalledTimes(2);
+    expect(captureRetry).toHaveBeenCalledTimes(2);
     expect(screen.getByText('1d 1h 1m')).toBeVisible();
     expect(screen.getByText(`${fmtNumber(12.5)} ms`)).toBeVisible();
   });

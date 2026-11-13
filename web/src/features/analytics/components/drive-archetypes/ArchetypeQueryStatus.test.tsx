@@ -1,11 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 import { summarizeArchetypes } from '../../lib/driveArchetypes';
 import { ArchetypeQueryStatus } from './ArchetypeQueryStatus';
 import type { ArchetypeQueryState } from './types';
 
 const summary = summarizeArchetypes([], { timeZone: 'UTC' });
+const motion = vi.hoisted(() => ({ reduce: false }));
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: motion.reduce, durationMs: motion.reduce ? 0 : 250 }),
+}));
+beforeEach(() => { motion.reduce = false; });
 
 function state(overrides: Partial<ArchetypeQueryState> = {}): ArchetypeQueryState {
   return {
@@ -29,9 +37,15 @@ describe('ArchetypeQueryStatus recovery', () => {
       hasData: false, isResolved: false, isLoading: true, isFetching: true,
     })} />);
 
-    expect(screen.getByRole('status', {
+    const loading = screen.getByRole('status', {
       name: 'Loading drive-archetype evidence',
-    })).toBeInTheDocument();
+    });
+    expect(loading).toHaveAttribute('data-app-feedback-kind', 'notice');
+    expect(loading.querySelector('[data-app-part="feedback-content"]')).toHaveTextContent(
+      'Loading the bounded drive-history window...',
+    );
+    expect(loading.querySelector('[data-app-part="feedback-icon"] svg')).toHaveClass('h-4', 'w-4', 'motion-safe:animate-spin');
+    expect(loading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByText(/valid empty response/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
@@ -45,6 +59,31 @@ describe('ArchetypeQueryStatus recovery', () => {
     expect(screen.queryByRole('status', {
       name: 'Loading drive-archetype evidence',
     })).not.toBeInTheDocument();
+    expect(screen.queryByText(/valid empty response/)).not.toBeInTheDocument();
+  });
+
+  it('keeps named loading feedback readable when the shared reduced-motion or bandwidth policy suppresses spin', () => {
+    motion.reduce = true;
+    const { container } = render(<ArchetypeQueryStatus summary={summary} state={state({
+      hasData: false, isResolved: false, isLoading: true, isFetching: true,
+    })} />);
+    const loading = screen.getByRole('status', { name: 'Loading drive-archetype evidence' });
+    expect(loading.querySelector('svg')).not.toHaveClass('motion-safe:animate-spin');
+    expect(loading).toHaveTextContent('Loading the bounded drive-history window...');
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(matchesAppDesignCss(loading).some(match =>
+          match.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+          && match.declarations.display === 'grid'), `${pack}: loading notice composition`).toBe(true);
+        for (const part of ['feedback-icon', 'feedback-content']) {
+          expect(matchesAppDesignCss(loading.querySelector(`[data-app-part="${part}"]`)!, `[data-app-part~="${part}"]`).length)
+            .toBeGreaterThan(0);
+        }
+      } finally { release(); }
+    }
     expect(screen.queryByText(/valid empty response/)).not.toBeInTheDocument();
   });
 

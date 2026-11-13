@@ -115,28 +115,30 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
         />
       </div>
 
-      <div className="space-y-1 rounded-lg bg-[var(--surface-2)] p-2.5">
+      <div data-app-part="panel list" data-surface-variant="standalone" data-app-list="definitions" className="space-y-1 rounded-lg bg-[var(--surface-2)] p-2.5">
         {previewEntries.length === 0 ? (
           <Text as="span" variant="caption">—</Text>
         ) : (
           previewEntries.map(([k, v]) => (
-            <Text key={k} as="p" variant="caption" className="block truncate">
-              <Text as="span" size="xs" weight="medium" color="secondary">{k}:</Text>{' '}
-              {v ? (isSecretField(k) ? '••••••••' : v) : '—'}
+            <Text key={k} data-app-part="list-row" as="p" variant="caption" className="block truncate">
+              <Text data-app-part="metric-label" as="span" size="xs" weight="medium" color="secondary">{k}:</Text>{' '}
+              <span data-app-part="metric-reading"><span data-app-part="metric-value">{v ? (isSecretField(k) ? '••••••••' : v) : '—'}</span></span>
             </Text>
           ))
         )}
       </div>
 
       {webhookResult && (
-        <div role="status" className="space-y-1 rounded-lg border border-[var(--border-subtle)] p-2.5">
+        <div data-app-part="status feedback" data-app-feedback-kind="notice" role="status" className="space-y-1 rounded-lg border border-[var(--border-subtle)] p-2.5">
+          <div data-app-part="feedback-content" className="min-w-0 space-y-1">
           <Badge variant={webhookResult.success ? 'success' : 'danger'}>
             {webhookResult.success ? t('webhookChannels.test.success', 'Success') : t('webhookChannels.test.failure', 'Failed')}
           </Badge>
-          <Text variant="caption">{t('webhookChannels.test.status', 'Status {{status}}', { status: webhookResult.status_code })} · {t('webhookChannels.test.latency', '{{ms}} ms', { ms: webhookResult.latency_ms })}</Text>
-          {webhookResult.error && <Text variant="bodySm" color="subtle">{webhookResult.error}</Text>}
-          {webhookResult.signature && <Text variant="caption">{t('webhookChannels.test.signature', 'Signature:')} <code className="break-all">{webhookResult.signature}</code></Text>}
-          {webhookResult.body_preview && <Text variant="caption" className="break-all">{webhookResult.body_preview}</Text>}
+          <Text data-app-part="feedback-message" variant="caption">{t('webhookChannels.test.status', 'Status {{status}}', { status: webhookResult.status_code })} · {t('webhookChannels.test.latency', '{{ms}} ms', { ms: webhookResult.latency_ms })}</Text>
+          {webhookResult.error && <Text data-app-part="feedback-detail" variant="bodySm" color="subtle">{webhookResult.error}</Text>}
+          {webhookResult.signature && <Text data-app-part="feedback-detail" variant="caption">{t('webhookChannels.test.signature', 'Signature:')} <code className="break-all">{webhookResult.signature}</code></Text>}
+          {webhookResult.body_preview && <Text data-app-part="feedback-detail" variant="caption" className="break-all">{webhookResult.body_preview}</Text>}
+          </div>
         </div>
       )}
 

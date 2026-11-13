@@ -419,6 +419,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
   return (
     <div
       ref={wrapperRef}
+      data-app-part="field"
       className={cn('relative', className)}
       onBlur={handleWrapperBlur}
     >
@@ -427,11 +428,13 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
           {labelContent}
         </VisuallyHidden>
       ) : (
-        <label htmlFor={inputId} id={labelId} className={visibleLabelClass}>
+        <label data-app-part="field-label" htmlFor={inputId} id={labelId} className={visibleLabelClass}>
           {labelContent}
         </label>
       )}
       <div
+        data-app-field-surface
+        data-disabled={disabled || undefined}
         className={cn(
           'flex w-full flex-wrap items-center gap-1.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1.5 text-sm transition-colors',
           'focus-within:ring-2 focus-within:ring-[var(--focus-ring)] focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',
@@ -447,12 +450,14 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
           </span>
         )}
         {value.map((opt, i) => (
-          <span key={getOptionKey(opt)} className={chipBase}>
+          <span data-app-part="badge" key={getOptionKey(opt)} className={chipBase}>
             <span className="truncate" title={(getChipLabel ?? getOptionLabel)(opt)}>
               {(getChipLabel ?? getOptionLabel)(opt)}
             </span>
             <button
               type="button"
+              data-app-part="button"
+              data-app-icon-only="true"
               tabIndex={-1}
               disabled={disabled}
               onMouseDown={(e) => e.preventDefault()}
@@ -472,6 +477,9 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
         ))}
         <input
           ref={inputRef}
+          data-app-part="field-control"
+          data-app-control-kind="composite"
+          aria-busy={loading || undefined}
           id={inputId}
           type="text"
           role="combobox"
@@ -502,6 +510,8 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
         <div className="ml-auto flex items-center gap-1">
           {loading && (
             <span
+              data-app-part="loading-indicator"
+              data-app-feedback-kind="inline-spinner"
               className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent"
               role="status"
               aria-label={t('combobox.loading', 'Loading')}
@@ -510,6 +520,9 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
           {!noChevron && (
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="ghost"
+              data-app-icon-only="true"
               tabIndex={-1}
               disabled={disabled}
               onMouseDown={(e) => e.preventDefault()}
@@ -547,6 +560,8 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
       {open && (
         <ul
           id={listboxId}
+          data-app-part="popover"
+          aria-busy={loading || undefined}
           role="listbox"
           aria-label={label}
           aria-multiselectable="true"
@@ -583,6 +598,8 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
                 id={optionId}
                 role="option"
                 aria-selected={false}
+                aria-disabled={atMax || undefined}
+                data-active={isActive || undefined}
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => addOption(opt)}

@@ -9,6 +9,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Checkbox } from './Checkbox';
 import { Text } from './Typography';
+import type { AppDesignOriginSnapshot } from './appDesignOrigin';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -27,6 +28,8 @@ export interface ConfirmDialogProps {
   /** Disable confirmation until caller-owned validation (for example, a required reason) passes. */
   confirmDisabled?: boolean;
   aboveNotifications?: boolean;
+  /** Invocation captured before an on-demand confirmation module loads. */
+  originSnapshot?: AppDesignOriginSnapshot;
   /**
    * For extra-dangerous actions (delete vehicle, wipe database). The confirm
    * button stays disabled until the user types this exact string into the
@@ -81,6 +84,7 @@ export function ConfirmDialog({
   loading = false,
   confirmDisabled: disabledByCaller = false,
   aboveNotifications = false,
+  originSnapshot,
   requireTypedConfirmation,
   typedConfirmationLabel,
   silenceKey,
@@ -169,6 +173,8 @@ export function ConfirmDialog({
       title={title}
       size="sm"
       aboveNotifications={aboveNotifications}
+      originSnapshot={originSnapshot}
+      getReturnFocusTarget={originSnapshot ? () => originSnapshot.origin : undefined}
       footer={(
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Button type="button" variant="secondary" wrapLabel className="min-h-11 md:min-h-10" onClick={onCancel} disabled={loading}>
@@ -189,9 +195,14 @@ export function ConfirmDialog({
       )}
     >
       <div className="space-y-4">
-        <div className={cn('flex items-start gap-3 rounded-lg border p-3', tokens.bg, tokens.border)}>
-          {Icon && <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
-          <Text variant="bodySm" className="min-w-0 break-words">{message}</Text>
+        <div
+          data-app-part="status feedback"
+          data-app-feedback-kind="notice"
+          data-app-tone={variant}
+          className={cn('flex items-start gap-3 rounded-lg border p-3', tokens.bg, tokens.border)}
+        >
+          {Icon && <Icon data-app-part="feedback-icon" className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
+          <Text data-app-part="feedback-content feedback-message" variant="bodySm" className="min-w-0 break-words">{message}</Text>
         </div>
         {details}
         {requireTypedConfirmation && (

@@ -63,6 +63,8 @@ export default function ArchivedPage() {
       query={summaryQuery}
       secondaryActions={
         <Link
+          data-app-part="button"
+          data-app-variant="ghost"
           to="/notifications/inbox"
           className={cn(
             BUTTON_BASE,
@@ -89,7 +91,7 @@ export default function ArchivedPage() {
                 <QueryError error={source.state.fatalError} onRetry={source.state.retry ?? undefined}
                   resourceName={source.label} compact />
               ) : !source.state.hasData ? (
-                <div role="status" aria-label={source.fetching && !source.state.isRefreshBlocked
+                <div data-app-part="status" role="status" aria-label={source.fetching && !source.state.isRefreshBlocked
                   ? t('developerReference.layout.source.loading', 'Loading {{label}}', { label: source.label })
                   : source.label} className="min-w-0 space-y-2">
                   {source.fetching && !source.state.isRefreshBlocked ? (

@@ -32,7 +32,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading && !latest ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('common.loading', "Loading...")}

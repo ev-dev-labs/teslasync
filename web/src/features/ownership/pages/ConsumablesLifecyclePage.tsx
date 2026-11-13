@@ -383,6 +383,8 @@ export default function ConsumablesLifecyclePage() {
   const renderLifecycle = (lifecycle: ConsumableLifecycle) => (
     <div
       key={lifecycle.item.id}
+      data-app-part="card"
+      data-surface-variant="standalone"
       className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -413,22 +415,25 @@ export default function ConsumablesLifecyclePage() {
         </div>
       </div>
 
-      <div aria-hidden="true" className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <div data-app-part="metric" data-app-metric="bar" data-metric-track
+        data-state={lifecycle.health_pct == null ? 'missing' : Number.isFinite(lifecycle.health_pct) ? 'value' : 'invalid'}
+        aria-hidden="true" className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
         {Number.isFinite(lifecycle.health_pct) && <div
+          data-metric-fill
           className={`h-full rounded-full ${healthTone(lifecycle.health_pct)}`}
           style={{ width: `${Math.min(100, Math.max(0, lifecycle.health_pct))}%` }}
         />}
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <Text as="p" variant="caption">
+      <dl data-app-part="list" data-app-list="definitions" className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption">
             {t('ownership.consumables.card.used', 'Distance on part')}
           </Text>
-          <Text as="p" variant="bodySm" className="tabular-nums">
+          <Text data-app-part="metric-value" as="dd" variant="bodySm" className="tabular-nums">
             {units.formatDistance(lifecycle.distance_used_m)}
           </Text>
-          <Text as="p" variant="caption">
+          <Text data-app-part="metric-context" as="dd" variant="caption">
             {lifecycle.distance_life_used_pct != null
               ? t('ownership.consumables.card.ofRated', '{{value}} of rated life', {
                   value: formatPct(lifecycle.distance_life_used_pct),
@@ -436,48 +441,48 @@ export default function ConsumablesLifecyclePage() {
               : '—'}
           </Text>
         </div>
-        <div>
-          <Text as="p" variant="caption">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption">
             {t('ownership.consumables.card.adjusted', 'Duty-adjusted life')}
           </Text>
-          <Text as="p" variant="bodySm" className="tabular-nums">
+          <Text data-app-part="metric-value" as="dd" variant="bodySm" className="tabular-nums">
             {lifecycle.adjusted_life_m != null
               ? units.formatDistance(lifecycle.adjusted_life_m)
               : '—'}
           </Text>
-          <Text as="p" variant="caption">
+          <Text data-app-part="metric-context" as="dd" variant="caption">
             {t('ownership.consumables.card.multiplier', 'Wear ×{{value}}', {
               value: fmtNumber(lifecycle.stress_multiplier),
             })}
           </Text>
         </div>
-        <div>
-          <Text as="p" variant="caption">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption">
             {t('ownership.consumables.card.remaining', 'Remaining')}
           </Text>
-          <Text as="p" variant="bodySm" className="tabular-nums">
+          <Text data-app-part="metric-value" as="dd" variant="bodySm" className="tabular-nums">
             {lifecycle.remaining_m != null ? units.formatDistance(lifecycle.remaining_m) : '—'}
           </Text>
-          <Text as="p" variant="caption">
+          <Text data-app-part="metric-context" as="dd" variant="caption">
             {lifecycle.remaining_s != null ? formatSpan(lifecycle.remaining_s) : '—'}
           </Text>
         </div>
-        <div>
-          <Text as="p" variant="caption">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption">
             {t('ownership.consumables.card.replace', 'Projected replacement')}
           </Text>
-          <Text as="p" variant="bodySm">
+          <Text data-app-part="metric-value" as="dd" variant="bodySm">
             {lifecycle.projected_replace_at
               ? formatDateTime(lifecycle.projected_replace_at)
               : '—'}
           </Text>
-          <Text as="p" variant="caption">
+          <Text data-app-part="metric-context" as="dd" variant="caption">
             {t('ownership.consumables.card.binding', 'Bound by {{limit}}', {
               limit: lifecycle.binding_limit,
             })}
           </Text>
         </div>
-      </div>
+      </dl>
 
       <Text as="p" variant="bodySm">
         {lifecycle.narrative}
@@ -490,6 +495,8 @@ export default function ConsumablesLifecyclePage() {
             {
               key: 'replacementCost',
               label: t('ownership.consumables.form.cost', 'Replacement cost'),
+              state: lifecycle.replacement_cost_minor == null ? 'missing'
+                : Number.isFinite(lifecycle.replacement_cost_minor) ? 'value' : 'invalid',
               value: formatCurrencyMinor(
                 lifecycle.replacement_cost_minor,
                 lifecycle.item.currency,
@@ -499,6 +506,8 @@ export default function ConsumablesLifecyclePage() {
             {
               key: 'wearCost',
               label: t('ownership.consumables.card.wearCost', 'Part wear cost'),
+              state: lifecycle.cost_per_m_minor == null ? 'missing'
+                : Number.isFinite(lifecycle.cost_per_m_minor) ? 'value' : 'invalid',
               value: lifecycle.cost_per_m_minor != null
                 ? formatCurrencyMinor(
                     Math.round(lifecycle.cost_per_m_minor * 1000),
@@ -824,6 +833,8 @@ export default function ConsumablesLifecyclePage() {
 
           {eventFor != null ? (
             <form
+              data-app-part="card"
+              data-surface-variant="standalone"
               aria-labelledby={eventHeadingId}
               className="mb-6 grid min-w-0 gap-4 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4 md:grid-cols-4"
               onSubmit={submitEvent}

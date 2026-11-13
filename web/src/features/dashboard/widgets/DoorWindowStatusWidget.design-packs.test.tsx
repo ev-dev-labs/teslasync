@@ -281,7 +281,7 @@ describe.each(packs)('Door and window lifecycle %s (%s)', (pack, appearance) => 
     await presentation(view.container, appearance);
     expectReportedRows();
     const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refreshSecurity).not.toHaveBeenCalled();
   });

@@ -246,7 +246,7 @@ describe('VersionSegment — trigger chip', () => {
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'About this build' });
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText('App version')).toBeInTheDocument();
+    expect(await within(dialog).findByText('App version')).toBeInTheDocument();
     expect(within(dialog).getByText('v2.3.4')).toBeInTheDocument();
   });
 

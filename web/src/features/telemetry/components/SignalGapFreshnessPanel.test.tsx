@@ -190,6 +190,12 @@ describe('SignalGapFreshnessPanel', () => {
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('5 of 5 signals arriving')).toBeInTheDocument();
     expect(screen.getByText('All signals are arriving on time.')).toBeInTheDocument();
+    const notice = screen.getByText('All signals are arriving on time.').closest('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveAttribute('data-app-tone', 'success');
+    expect(notice?.querySelector('[data-app-part="feedback-icon"] svg')).toBeInTheDocument();
+    expect(notice?.querySelector('[data-app-part="feedback-content"] [data-app-part="feedback-message"]')).toHaveTextContent(
+      'All signals are arriving on time.',
+    );
     // freshnessColor: >= 80 → active/green.
     expect(gaugeStroke(container)).toBe(GAP_BUCKET_COLORS.active);
   });
@@ -205,7 +211,13 @@ describe('SignalGapFreshnessPanel', () => {
     );
 
     const items = screen.getAllByRole('listitem');
+    expect(screen.getByRole('list')).toHaveAttribute('data-app-list', 'ranked');
     expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item).toHaveAttribute('data-app-part', 'list-row');
+      expect(item.querySelector('[data-app-part="metric-label"]')).toBeInTheDocument();
+      expect(item.querySelector('[data-app-part="metric-value"]')).toBeInTheDocument();
+    }
     expect(within(items[0]).getByText('DriveState')).toBeInTheDocument();
     expect(within(items[0]).getByText('1h 0m ago')).toBeInTheDocument();
     expect(within(items[1]).getByText('ChargeState')).toBeInTheDocument();
@@ -230,6 +242,12 @@ describe('SignalGapFreshnessPanel', () => {
 
     expect(screen.queryByText('All signals are arriving on time.')).not.toBeInTheDocument();
     expect(screen.getByText('2 signals have never reported.')).toBeInTheDocument();
+    const notice = screen.getByText('2 signals have never reported.').closest('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveAttribute('data-app-tone', 'warning');
+    expect(notice?.querySelector('[data-app-part="feedback-icon"] svg')).toBeInTheDocument();
+    expect(notice?.querySelector('[data-app-part="feedback-content"] [data-app-part="feedback-message"]')).toHaveTextContent(
+      '2 signals have never reported.',
+    );
     expect(screen.getByText('2 of 4 signals arriving')).toBeInTheDocument();
   });
 

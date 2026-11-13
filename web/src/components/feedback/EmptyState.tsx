@@ -1,9 +1,9 @@
 import { useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Button as CtaButton, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
 import { Heading, Text } from '@/components/ui/Typography';
 import { useCardColumnRegistration } from '../layout/layout-reference/CardLayoutContext';
+import { MaybeLink } from './_MaybeLink';
 
 interface EmptyStateProps {
   /** Explicitly identifies a healthy or self-populating informational state. */
@@ -55,20 +55,23 @@ export function EmptyState({
       ref={emptyRef}
       role="status"
       data-empty-state
+      data-app-part="feedback empty"
+      data-app-feedback-kind="empty"
       data-variant={variant}
       className={cn('flex min-w-0 flex-1 flex-col items-center justify-center px-4 py-16 text-center', className)}
     >
       {icon && (
-        <div className="mb-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-[var(--text-secondary)]">
+        <div data-app-part="feedback-icon" className="mb-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-[var(--text-secondary)]">
           {icon}
         </div>
       )}
       {title && (
-        <Heading level="panel" className="mb-2 max-w-full break-words">
+        <Heading data-app-part="feedback-title" level="panel" className="mb-2 max-w-full break-words">
           {title}
         </Heading>
       )}
       <Text
+        data-app-part="feedback-message"
         variant="bodySm"
         as="p"
         className={cn(description ? 'mb-2' : 'mb-6', 'w-full min-w-0 max-w-lg break-words leading-relaxed')}
@@ -76,16 +79,17 @@ export function EmptyState({
         {message}
       </Text>
       {description && (
-        <Text variant="bodySm" as="p" color="muted" className="mb-6 w-full min-w-0 max-w-lg break-words leading-relaxed">
+        <Text data-app-part="feedback-detail" variant="bodySm" as="p" color="muted" className="mb-6 w-full min-w-0 max-w-lg break-words leading-relaxed">
           {description}
         </Text>
       )}
       {(hasPrimary || hasSecondary) && (
-        <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-3">
+        <div data-app-part="feedback-actions" className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-3">
           {actionTo ? (
-            <Link to={actionTo.to} className={linkButtonClasses}>
+            <MaybeLink to={actionTo.to} className={linkButtonClasses}
+              data-app-part="button" data-app-variant="secondary" data-app-size="md">
               {actionTo.label}
-            </Link>
+            </MaybeLink>
           ) : action ? (
             <CtaButton onClick={action.onClick} variant="secondary" size="md" wrapLabel className="min-h-11 md:min-h-10"
               disabled={action.disabled} loading={action.loading}>
@@ -93,9 +97,10 @@ export function EmptyState({
             </CtaButton>
           ) : null}
           {secondaryActionTo ? (
-            <Link to={secondaryActionTo.to} className={linkButtonClasses}>
+            <MaybeLink to={secondaryActionTo.to} className={linkButtonClasses}
+              data-app-part="button" data-app-variant="secondary" data-app-size="md">
               {secondaryActionTo.label}
-            </Link>
+            </MaybeLink>
           ) : secondaryAction ? (
             <CtaButton onClick={secondaryAction.onClick} variant="ghost" size="md" wrapLabel className="min-h-11 md:min-h-10">
               {secondaryAction.label}

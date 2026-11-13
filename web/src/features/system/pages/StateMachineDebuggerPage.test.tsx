@@ -15,6 +15,11 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { getStateColor } from '@/types/fsm';
 import { formatDurationMsCompact } from '@/lib/dateConvert';
 
@@ -94,6 +99,50 @@ describe('StateMachineDebuggerPage — mobile field access', () => {
 });
 
 describe('StateMachineDebuggerPage — timeline detail association', () => {
+  it('adopts raw context chips as neutral badges in every pack without reinterpreting values or hiding the selected transition', () => {
+    const details = {
+      zero: 0, off: false, nil: null, unknown: 'unknown', empty: '',
+      nested: { reason: 'original raw evidence' }, array: ['raw', 0],
+      long: 'UnbrokenRawIdentifier'.repeat(30),
+    };
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z', details }],
+      total: 1,
+    } }));
+    const { container } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    const detail = screen.getByRole('region', { name: 'Transition detail' });
+    const chips = Object.entries(details).map(([key, value]) => within(detail).getByText(`${key}: ${String(value)}`.trim()));
+    for (const chip of chips) {
+      expect(chip).toHaveAttribute('data-app-part', 'badge');
+      expect(chip).toHaveAttribute('data-app-variant', 'neutral');
+      expect(chip).toHaveClass('font-mono', 'max-w-full', 'whitespace-normal');
+      expect(chip).not.toHaveAttribute('data-app-design-owner');
+      expect(chip.querySelector('[data-app-part~="metric-value"]')).toBeNull();
+    }
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const rules: postcss.Rule[] = [];
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+          .walkRules(rule => { if (rule.selector.includes('[data-app-part~="badge"]')) rules.push(rule); });
+        for (const chip of chips) {
+          expect(rules.some(rule => chip.matches(rule.selector)), pack).toBe(true);
+          chip.removeAttribute('data-app-design-owner');
+          expect(rules.some(rule => chip.matches(rule.selector)), `${pack}: final target required`).toBe(false);
+        }
+        expect(within(detail).getByText('42')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-expanded', 'true');
+      } finally { release(); }
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    expect(detail).toHaveTextContent('Select a transition to inspect its snapshot');
+    expect(detail.querySelector('[data-app-part~="badge"]')).toBeNull();
+  });
+
   it('shares a stable named detail region between timeline selection and log disclosure', async () => {
     const user = userEvent.setup();
     mockTrans.mockReturnValue(makeQuery({ data: {

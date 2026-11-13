@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
-
+import { KVList } from '@/components/data-display';
 
 import type { ExplorerExclusions } from '../../lib/explorer';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -54,24 +54,17 @@ export function ExclusionAccounting({
   ];
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] p-4">
+    <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] p-4">
       <Text as="p" variant="label" className="mb-3">
         {t(
           'explorer.coverage.exclusions',
           'Exclusive exclusion accounting',
         )}
       </Text>
-      <ul className="space-y-2">
-        {rows.map((row) => (
-          <li
-            key={row.label}
-            className="flex items-center justify-between gap-3"
-          >
-            <Text as="span" variant="bodySm">{row.label}</Text>
-            <Text as="span" variant="bodySm" mono>{fmtInt(row.value)}</Text>
-          </li>
-        ))}
-      </ul>
+      <KVList wrap items={rows.map((row) => ({
+        label: row.label,
+        value: <Text as="span" variant="bodySm" mono>{fmtInt(row.value)}</Text>,
+      }))} />
     </div>
   );
 }

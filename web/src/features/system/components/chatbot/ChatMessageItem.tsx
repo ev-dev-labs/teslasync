@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCw, Pencil, Check, X } from 'lucide-react';
-import { Button, CopyButton, Text, Textarea, IconButton } from '@/components/ui';
+import { Button, BUTTON_BASE, BUTTON_VARIANTS, CopyButton, Text, Textarea, IconButton } from '@/components/ui';
 import { Avatar } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChatLink, ChatMessage } from '@/api/types';
@@ -100,6 +101,7 @@ export function ChatMessageItem({
   };
 
   const cancelEdit = () => {
+    if (saving) return;
     setEditing(false);
     setDraft(content);
   };
@@ -123,12 +125,15 @@ export function ChatMessageItem({
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submitEdit();
     } else if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelEdit();
+      if (!saving) {
+        e.preventDefault();
+        cancelEdit();
+      }
     }
   };
 
@@ -141,6 +146,9 @@ export function ChatMessageItem({
     <div
       className={cn('group flex gap-3', isUser ? 'justify-end' : 'justify-start')}
       data-role={isUser ? 'user' : 'assistant'}
+      data-app-part="conversation-message"
+      data-app-message-state={message.isStreaming ? 'streaming' : message.outcome ?? 'complete'}
+      data-app-revision-state={editing ? saving ? 'pending' : 'editing' : undefined}
     >
       {!isUser && (
         <div
@@ -152,8 +160,10 @@ export function ChatMessageItem({
       )}
 
       <div
+        data-app-part="card conversation-bubble"
+        data-app-card-kind="conversation"
         className={cn(
-          'rounded-2xl px-4 py-3 text-sm leading-relaxed border min-w-0',
+          'rounded-shape-lg px-d-pad-x py-d-pad-y text-d-base border min-w-0',
           isUser
             ? 'max-w-[90%] sm:max-w-[70%] bg-theme-accent/10 border-theme-accent/20'
             : 'max-w-[90%] sm:max-w-[80%] bg-[var(--surface-2)] border-[var(--border-subtle)]',
@@ -161,20 +171,23 @@ export function ChatMessageItem({
         data-print-card
       >
         {editing ? (
-          <div className="space-y-2">
+          <div data-app-part="field conversation-revision" data-app-form-section className="space-y-2">
             <Textarea
               ref={textareaRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleEditKeyDown}
+              readOnly={saving}
               rows={3}
+              size="auto"
               aria-label={t('chatbot.aria.editMessage', 'Edit message')}
             />
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div data-app-part="conversation-revision-actions" className="flex flex-wrap items-center justify-end gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={cancelEdit}
+                disabled={saving}
                 wrapLabel
                 className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
                 icon={<X className="h-3.5 w-3.5" />}
@@ -186,6 +199,7 @@ export function ChatMessageItem({
                 size="sm"
                 onClick={() => void submitEdit()}
                 disabled={saving || actionsDisabled || !draft.trim() || draft.trim() === content.trim()}
+                aria-busy={saving || undefined}
                 className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
                 wrapLabel
                 icon={<Check className="h-3.5 w-3.5" />}
@@ -199,7 +213,7 @@ export function ChatMessageItem({
             {visibleText}
           </Text>
         ) : (
-          <div className="text-[var(--text-primary)] break-words">
+          <div data-app-part="conversation-answer" className="text-[var(--text-primary)] break-words">
             <MarkdownRenderer>{visibleText}</MarkdownRenderer>
             {message.isStreaming && (
               <span
@@ -213,24 +227,37 @@ export function ChatMessageItem({
               usage={message.aiUsage}
             />
             {message.outcome && (
-              <Text as="p" variant="bodySm" color="secondary" role="status">
+              <AlertBanner
+                data-app-part="feedback conversation-outcome"
+                data-app-outcome={message.outcome}
+                variant={message.outcome === 'error' ? 'danger' : 'warning'}
+                role="status"
+                className="mt-3"
+              >
                 {message.outcome === 'empty'
                   ? t('chatbot.noOutput', 'No response text was returned. You can retry or edit your message.')
                   : message.outcome === 'canceled'
                     ? t('chatbot.canceled', 'Response stopped. Any partial text is incomplete.')
                     : t('chatbot.responseFailed', 'Response failed. You can retry or edit your message.')}
-              </Text>
+              </AlertBanner>
             )}
             {!message.isStreaming && (
               <KnowledgeCitations evidence={message.knowledgeEvidence ?? []} answer={content} />
             )}
             {(message.links?.length ?? 0) > 0 && !message.isStreaming && (
-              <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t('chatbot.citations', 'Sources')}>
+              <div data-app-part="conversation-citations" className="mt-2 flex flex-wrap gap-1.5" aria-label={t('chatbot.citations', 'Sources')}>
                 {(message.links ?? []).map((link) => (
                   <a
                     key={link.path}
                     href={link.path}
-                    className="inline-flex items-center rounded-full border border-theme-accent/25 bg-theme-accent/10 px-2.5 py-0.5 text-2xs font-medium text-theme-accent transition-colors hover:bg-theme-accent/20"
+                    data-app-part="button conversation-citation"
+                    data-app-variant="secondary"
+                    data-app-size="auto"
+                    className={cn(
+                      BUTTON_BASE,
+                      BUTTON_VARIANTS.secondary,
+                      'min-h-11 max-w-full whitespace-normal break-words px-d-pad-x py-d-pad-y text-d-base',
+                    )}
                   >
                     {link.label}
                   </a>
@@ -241,13 +268,13 @@ export function ChatMessageItem({
         )}
 
         {showTimestamp && (
-          <Text as="p" size="2xs" color="muted" className="mt-2">
+          <Text as="p" data-app-part="conversation-timestamp" variant="caption" className="mt-2">
             {formatTime(message.created_at)}
           </Text>
         )}
 
         {showActions && (
-          <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
+          <div data-app-part="conversation-actions" className="mt-2 flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
             <CopyButton
               text={content}
               iconOnly

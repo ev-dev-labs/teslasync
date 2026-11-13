@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
+  Card,
   GlassPanel,
   HelpTooltip,
   PanelTitle,
@@ -230,7 +231,7 @@ export function UtilizationMethodology({
             ) : (
               <>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <div className="rounded-xl border border-[var(--border-subtle)] p-3">
+                  <Card variant="embedded" padding="none" className="rounded-xl bg-transparent p-3 text-inherit">
                     <Text as="p" variant="label">
                       {t(
                         'utilization.method.timestampExclusions',
@@ -240,11 +241,11 @@ export function UtilizationMethodology({
                     <Table className="mt-2" aria-label={t('utilization.method.timestampExclusions', 'Timestamp eligibility')}>
                       <tbody>
                         {exclusions.map((item) => (
-                          <tr key={item.label}>
-                            <th scope="row" className="font-normal">
+                          <tr data-app-part="table-row" key={item.label}>
+                            <th data-app-part="table-cell" scope="row" className="font-normal">
                               <Text variant="bodySm">{item.label}</Text>
                             </th>
-                            <td className="text-right tabular-nums">
+                            <td data-app-part="table-cell" className="text-right tabular-nums">
                               <Text variant="bodySm" mono>
                                 {fmtInt(item.value)}
                               </Text>
@@ -253,8 +254,8 @@ export function UtilizationMethodology({
                         ))}
                       </tbody>
                     </Table>
-                  </div>
-                  <div className="rounded-xl border border-[var(--border-subtle)] p-3">
+                  </Card>
+                  <Card variant="embedded" padding="none" className="rounded-xl bg-transparent p-3 text-inherit">
                     <Text as="p" variant="label">
                       {t(
                         'utilization.method.fieldCoverageTitle',
@@ -264,11 +265,11 @@ export function UtilizationMethodology({
                     <Table className="mt-2" aria-label={t('utilization.method.fieldCoverageTitle', 'Metric field coverage')}>
                       <tbody>
                         {fieldCoverage.map((item) => (
-                          <tr key={item.label}>
-                            <th scope="row" className="font-normal">
+                          <tr data-app-part="table-row" key={item.label}>
+                            <th data-app-part="table-cell" scope="row" className="font-normal">
                               <Text variant="bodySm">{item.label}</Text>
                             </th>
-                            <td className="text-right tabular-nums">
+                            <td data-app-part="table-cell" className="text-right tabular-nums">
                               <Text variant="caption">
                                 {t(
                                   'utilization.method.fieldCoverageValue',
@@ -284,18 +285,19 @@ export function UtilizationMethodology({
                         ))}
                       </tbody>
                     </Table>
-                  </div>
+                  </Card>
                 </div>
               </>
             )}
 
-            <div className={cn(
+            <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone={accounting.historyCapReached ? 'warning' : 'neutral'} className={cn(
               'mt-3 rounded-xl border p-3',
               accounting.historyCapReached
                 ? [neonColorMap.amber.border, neonColorMap.amber.bg]
                 : [neonColorMap.neutral.border, neonColorMap.neutral.bg],
             )}>
-              <Text as="p" variant="caption">
+              <div data-app-part="feedback-content">
+              <Text data-app-part="feedback-message" as="p" variant="caption">
                 {accounting.historyCapReached
                   ? t(
                       'utilization.method.capped',
@@ -311,10 +313,11 @@ export function UtilizationMethodology({
                       },
                     )}
               </Text>
+              </div>
             </div>
           </div>
 
-          <ul className="space-y-3" aria-label={t('utilization.method.stepsLabel', 'Methodology notes')}>
+          <ul data-app-part="list" className="space-y-3" aria-label={t('utilization.method.stepsLabel', 'Methodology notes')}>
             {methods.map((method) => (
               <li
                 key={method.text}

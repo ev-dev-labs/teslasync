@@ -192,7 +192,7 @@ describe('AppearanceSettings — structure & delegation', () => {
     const picker = screen.getByTestId('theme-picker')
     expect(picker).toHaveAttribute('data-show-mode', 'true')
     expect(picker).toHaveAttribute('data-show-custom', 'true')
-    const packHeading = screen.getByRole('heading', { name: 'Widget design packs' })
+    const packHeading = screen.getByRole('heading', { name: 'App design packs' })
     expect(picker.compareDocumentPosition(packHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(packHeading.compareDocumentPosition(screen.getByText('Information density')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

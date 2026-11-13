@@ -34,12 +34,12 @@ export function TrueCostBreakEven({
         </Text>
         <TrueCostSectionBody state={state}>
           {supported ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-                <Text as="p" variant="metricLabel">
+            <div data-app-part="metric-grid" className="grid gap-3 md:grid-cols-2">
+              <div data-app-part="metric" data-app-metric="tile" data-app-state={analysis.breakEven.gasPricePerConfiguredUnit == null ? 'missing' : undefined} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+                <Text data-app-part="metric-label" as="p" variant="metricLabel">
                   {t('tco.breakEven.price', 'Break-even gasoline price')}
                 </Text>
-                <Text as="p" variant="metricValue" mono className="mt-2">
+                <Text data-app-part="metric-reading metric-value" as="p" variant="metricValue" mono className="mt-2">
                   {analysis.breakEven.gasPricePerConfiguredUnit != null
                     ? t('tco.breakEven.priceValue', '{{value}}/{{unit}}', {
                       value: display.formatCurrency(
@@ -49,22 +49,22 @@ export function TrueCostBreakEven({
                     })
                     : '—'}
                 </Text>
-                <Text as="p" variant="caption">
+                <Text data-app-part="metric-context" as="p" variant="caption">
                   {t('tco.breakEven.priceHint', 'Price where modeled lifetime gas cost equals recorded charging spend.')}
                 </Text>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-                <Text as="p" variant="metricLabel">
+              <div data-app-part="metric" data-app-metric="tile" data-app-state={analysis.breakEven.comparisonMpg == null ? 'missing' : undefined} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+                <Text data-app-part="metric-label" as="p" variant="metricLabel">
                   {t('tco.breakEven.mpg', 'Break-even comparison MPG')}
                 </Text>
-                <Text as="p" variant="metricValue" mono className="mt-2">
+                <Text data-app-part="metric-reading metric-value" as="p" variant="metricValue" mono className="mt-2">
                   {analysis.breakEven.comparisonMpg != null
                     ? t('tco.breakEven.mpgValue', '{{value}} MPG', {
                       value: display.formatNumber(analysis.breakEven.comparisonMpg),
                     })
                     : '—'}
                 </Text>
-                <Text as="p" variant="caption">
+                <Text data-app-part="metric-context" as="p" variant="caption">
                   {t('tco.breakEven.mpgHint', 'Efficiency where modeled lifetime gas cost equals recorded charging spend.')}
                 </Text>
               </div>

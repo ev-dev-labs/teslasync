@@ -61,6 +61,9 @@ export function GDPRDownloadPanel({
             )}
           </Text>
           <a
+            data-app-part="button"
+            data-app-variant="primary"
+            data-app-size="md"
             href={downloadUrl}
             download
             className={cn(

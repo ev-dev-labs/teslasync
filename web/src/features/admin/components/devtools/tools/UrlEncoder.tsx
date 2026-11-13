@@ -77,17 +77,17 @@ export function UrlEncoderTool() {
           placeholder={mode === 'encode' ? 'hello world&foo=bar' : 'hello%20world%26foo%3Dbar'}
         />
         {result.error && (
-          <p role="alert" className="text-sm text-rose-300">
+          <p data-app-part="feedback" role="alert" className="text-sm text-rose-300">
             {t('devtools.utils.urlInvalidInput', 'Invalid input')}
           </p>
         )}
         {result.output && (
-          <div className="rounded bg-[var(--surface-overlay)] p-3">
+          <div data-app-part="panel" data-app-panel-kind="code" data-surface-variant="standalone" className="rounded bg-[var(--surface-overlay)] p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output label')}</span>
-              <CopyButton text={result.output} />
+              <span data-app-code-slot="heading" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output label')}</span>
+              <span data-app-code-slot="actions"><CopyButton text={result.output} /></span>
             </div>
-            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.output}</pre>
+            <pre data-app-code-slot="body" className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.output}</pre>
           </div>
         )}
       </div>

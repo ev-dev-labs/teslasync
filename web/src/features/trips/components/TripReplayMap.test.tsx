@@ -246,6 +246,9 @@ describe('TripReplayMap — empty state', () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId('map-container')).toBeNull();
     expect(screen.queryByTestId('polyline')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-app-part', 'panel map');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-map-state', 'empty');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-provenance', 'unknown');
   });
 
   it('exposes the panel as a labelled region for screen readers', () => {
@@ -376,6 +379,10 @@ describe('TripReplayMap — speed-coloured segments', () => {
       UNKNOWN,
     ]);
     expect(screen.getByText('Speed: Unknown (- -)')).toBeInTheDocument();
+    const legend = screen.getByText('Speed: Unknown (- -)').closest('[data-app-part~="map-legend"]');
+    expect(legend).toHaveAttribute('data-map-legend', 'unknown-speed');
+    expect(legend).toHaveAttribute('data-map-state', 'unavailable');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-provenance', 'historical');
   });
 
   it('keeps missing and non-finite speed segments neutral and seekable while measured zero stays valid', () => {

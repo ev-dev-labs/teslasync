@@ -36,12 +36,15 @@ export function StatusTile({ icon, label, value, description, tone, size = 'base
   const c = toneClasses[tone] ?? toneClasses.muted;
   return (
     <div
+      data-app-part="card metric"
+      data-app-metric="tile"
+      data-app-metric-kind="security-status"
       className={cn(
         'rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.08]',
         className,
       )}
     >
-      <div className="flex items-center gap-2.5">
+      <div data-app-part="metric-label" className="flex items-center gap-2.5">
         <span
           aria-hidden="true"
           className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1', c.chip)}
@@ -51,6 +54,7 @@ export function StatusTile({ icon, label, value, description, tone, size = 'base
         <Caption className="min-w-0 truncate">{label}</Caption>
       </div>
       <Text
+        data-app-part="metric-reading metric-value"
         as="p"
         size={size === 'lg' ? 'lg' : 'base'}
         weight="semibold"
@@ -59,7 +63,7 @@ export function StatusTile({ icon, label, value, description, tone, size = 'base
         {value ?? '—'}
       </Text>
       {description && (
-        <Text as="p" variant="caption" className="mt-0.5 block truncate">
+        <Text data-app-part="metric-context" as="p" variant="caption" className="mt-0.5 block truncate">
           {description}
         </Text>
       )}

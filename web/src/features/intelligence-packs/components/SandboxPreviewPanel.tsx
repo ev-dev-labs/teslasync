@@ -149,12 +149,17 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           })}
         />
       ) : (
-        <div>
-          <Text variant="metricValue">{result.latest != null ? `${fmtNumber(result.latest)}${result.unit ? ` ${result.unit}` : ''}` : '—'}</Text>
-          <Text as="p" variant="caption">
-            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
-          </Text>
-        </div>
+        <MetricTile
+          value={result.latest}
+          unit={result.unit}
+          kind="measurement"
+          label={t('intelPacks.sandbox.latest', 'Latest')}
+          align="start"
+          sublabel={t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', {
+            value: result.average != null ? fmtNumber(result.average) : '—',
+            unit: result.unit ? ` ${result.unit}` : '',
+          })}
+        />
       )}
       {result.budgetError && <Caption className="block text-amber-300">{result.budgetError}</Caption>}
       {result.deniedFieldRefs.length > 0 && (
@@ -232,7 +237,7 @@ export function SandboxPreviewPanel() {
 
       {installed && trustNotice && (
         <InlineCallout variant={trustState.fatalError || trustState.refreshError ? 'warning' : 'info'}>
-          <div className="space-y-2" role="status" aria-live="polite">
+          <div data-app-part="status" className="space-y-2" role="status" aria-live="polite">
             <Text as="p" variant="bodySm">{trustNotice}</Text>
             {trustState.refreshError && (
               <Text as="p" variant="bodySm">

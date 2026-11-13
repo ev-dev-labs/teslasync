@@ -753,6 +753,8 @@ export default function DriverAttributionPage() {
         >
           {assignOpen ? (
             <form
+              data-app-part="card"
+              data-surface-variant="standalone"
               className="mb-6 grid gap-4 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4 md:grid-cols-3"
               onSubmit={submitAssignment}
             >

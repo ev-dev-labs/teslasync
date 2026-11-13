@@ -1,4 +1,7 @@
 import './__tests__/TeslaChargingHistoryPage.test';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { parse } from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -9,6 +12,8 @@ import type { AppSettings } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 
 // The global setup stubs useSettings to en-US/UTC defaults, which ignores the
 // per-test /settings payload this suite installs. Restore the real hook (a
@@ -25,6 +30,22 @@ import TeslaChargingHistoryPage from './TeslaChargingHistoryPage';
 
 const vehicle = { id: 1, vehicle_id: 1, vin: 'QA_HISTORY_VEHICLE', display_name: 'History fixture', state: 'online' };
 const clients: QueryClient[] = [];
+const designScopeReleases: Array<() => void> = [];
+
+function buttonSelectors(filename: string, neutralOnly = false) {
+  const selectors: string[] = [];
+  parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', filename), 'utf8'))
+    .walkRules(rule => {
+      if (rule.selector.includes('[data-app-part~="button"]')
+        && (!neutralOnly || rule.selector.includes('[data-app-variant="secondary"]'))) {
+        selectors.push(...rule.selectors);
+      }
+    });
+  return selectors;
+}
+
+const neutralControlSelectors = buttonSelectors('controls.css', true);
+const packButtonSelectors = new Map(PACK_IDS.map(id => [id, buttonSelectors(join('packs', APP_DESIGN_PACK_FILES[id]))]));
 
 function readExport(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -103,6 +124,8 @@ function mount(width = 1024, route = '/tesla-charging-history?from=2024-01-01&to
 }
 
 afterEach(() => {
+  for (const release of designScopeReleases.splice(0)) release();
+  for (const name of Object.keys(getAppDesignAttributes('classic'))) document.documentElement.removeAttribute(name);
   clients.splice(0).forEach(client => client.clear());
   onlineManager.setOnline(true);
   vi.useRealTimers();
@@ -384,10 +407,56 @@ describe('Tesla charging history adoption', () => {
     expect(payload.entries[0].total_due).toBe(12.5);
   });
 
-  it('distinguishes measured zero from unknown billing amounts and absent invoices on mobile', async () => {
+  it.each([375, 1024])('binds the real invoice link to all 27 existing design consumers at width %s', async width => {
+    installTransport(response());
+    mount(width);
+    if (width === 375) fireEvent.click(await screen.findByRole('button', { name: 'Quick view' }));
+    const invoice = await screen.findByRole('link', { name: 'Download invoice' });
+    const originalClasses = invoice.className;
+    expect(invoice).toHaveAttribute('href', '/api/v1/tesla/charging/invoice/synthetic%2Finvoice');
+    expect(invoice).toHaveAttribute('target', '_blank');
+    expect(invoice).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(invoice).toHaveAttribute('data-app-part', 'button');
+    expect(invoice).toHaveAttribute('data-app-variant', 'secondary');
+    expect(invoice).toHaveAttribute('data-app-size', 'md');
+    expect(invoice).not.toHaveAttribute('role');
+    expect(invoice).not.toHaveAttribute('data-app-design-owner');
+    expect(neutralControlSelectors.some(selector => invoice.matches(selector))).toBe(false);
+    act(() => invoice.focus());
+    expect(invoice).toHaveFocus();
+    const release = observeAppDesignScopes(document.documentElement);
+    designScopeReleases.push(release);
+    for (const packId of PACK_IDS) {
+      act(() => {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(packId))) {
+          document.documentElement.setAttribute(name, value);
+        }
+      });
+      await waitFor(() => expect(invoice).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${packId}`)));
+      expect(neutralControlSelectors.some(selector => invoice.matches(selector)), `${packId} controls`).toBe(true);
+      expect(packButtonSelectors.get(packId)?.some(selector => invoice.matches(selector)), `${packId} identity`).toBe(true);
+      expect(invoice.className).toBe(originalClasses);
+      expect(invoice).toHaveFocus();
+    }
+    act(() => {
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) document.documentElement.removeAttribute(name);
+    });
+    await waitFor(() => expect(invoice).not.toHaveAttribute('data-app-design-owner'));
+    expect(neutralControlSelectors.some(selector => invoice.matches(selector))).toBe(false);
+    expect(invoice.className).toBe(originalClasses);
+    expect(invoice).toHaveFocus();
+    expect(vi.mocked(request).mock.calls.some(([path]) => path.includes('/invoice/') || path.includes('/history/refresh'))).toBe(false);
+  });
+
+  it.each([
+    { has_invoice: false, invoice_content_id: null },
+    { has_invoice: false, invoice_content_id: 'unavailable-invoice' },
+    { has_invoice: true, invoice_content_id: null },
+    { has_invoice: true, invoice_content_id: '' },
+  ])('distinguishes measured zero from unknown billing amounts and absent invoices on mobile %#', async invoice => {
     installTransport(response([billingEntry({
       usage_wh: 0, total_due: 0, rate_base: null,
-      charge_stop_datetime: null, has_invoice: false, invoice_content_id: null,
+      charge_stop_datetime: null, ...invoice,
     })]));
     mount(375);
     fireEvent.click((await screen.findAllByRole('button', { name: 'Quick view' }))[0]);

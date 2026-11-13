@@ -477,7 +477,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1">
-            <label
+            <label data-app-part="field-label"
               htmlFor={textareaId}
               className={typography.role.metricLabel}
             >
@@ -765,7 +765,7 @@ function PresetGalleryModal({
             {t('notifications.alertStudio.editor.presetEmpty', 'No presets match this filter')}
           </Text>
         ) : (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ul data-app-part="list" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {presets.map(preset => (
               <li key={preset.id}>
                 <UiButton

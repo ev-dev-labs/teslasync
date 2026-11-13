@@ -52,6 +52,8 @@ vi.mock('react-i18next', async () => {
 import { ByteSizeConverterTool } from './ByteSizeConverter'
 import { fmtNumber } from '@/lib/numberFormat'
 import { BYTE_UNITS } from '../constants'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils'
 
 const RESULTS_LABEL = 'Converted byte sizes'
 const EMPTY_MSG = 'Enter a value to convert it across every unit.'
@@ -84,6 +86,24 @@ function typeValue(v: string) {
 }
 
 describe('ByteSizeConverterTool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes actual conversion rows while retaining zero and the selected unit', pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><ByteSizeConverterTool /></div>)
+    typeValue('0')
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      for (const unit of BYTE_UNITS) {
+        const row = cardFor(unit)
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]')
+        expect(row.querySelector('[data-app-part~="metric-unit"]')?.textContent).toBe(unit)
+        expect(row.querySelector('[data-app-part="metric-value"]')?.textContent).toBe(expected(0, 'B', unit))
+      }
+      fireEvent.change(unitSelect(), { target: { value: 'KB' } })
+      expect(cardFor('KB')).toHaveAttribute('aria-current', 'true')
+      expect(cardFor('B')).not.toHaveAttribute('aria-current')
+      expect(screen.queryByRole('status')).toBeNull()
+    } finally { release() }
+  })
+
   it('renders its title, description, and both labelled controls', () => {
     render(<ByteSizeConverterTool />)
 
@@ -121,6 +141,7 @@ describe('ByteSizeConverterTool', () => {
 
     const list = resultsList()
     expect(list).not.toBeNull()
+    expect(list).toHaveAttribute('data-app-list', 'definitions')
     expect(within(list as HTMLElement).getAllByRole('listitem')).toHaveLength(
       BYTE_UNITS.length,
     )
@@ -128,6 +149,12 @@ describe('ByteSizeConverterTool', () => {
     // 1024 B → 1024 bytes → 1.0000 KB. Values come from the real formatter.
     expect(within(cardFor('B')).getByText(expected(1024, 'B', 'B'))).toBeInTheDocument()
     expect(within(cardFor('KB')).getByText(expected(1024, 'B', 'KB'))).toBeInTheDocument()
+    for (const unit of BYTE_UNITS) {
+      const row = cardFor(unit)
+      expect(row).toHaveAttribute('data-app-part', 'list-row')
+      expect(row.querySelector('[data-app-part~="metric-unit"]')?.textContent).toBe(unit)
+      expect(row.querySelector('[data-app-part="metric-value"]')?.textContent).toBe(expected(1024, 'B', unit))
+    }
     // The empty state is gone now that there is real output.
     expect(screen.queryByRole('status')).toBeNull()
   })

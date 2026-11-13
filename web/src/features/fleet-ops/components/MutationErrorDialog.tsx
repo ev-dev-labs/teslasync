@@ -31,7 +31,7 @@ export function MutationErrorDialog({
 
   return (
     <Modal open={error != null} onClose={onClose} title={title} size="sm">
-      <p role="alert" className="text-sm text-[var(--text-secondary)]">{message}</p>
+      <p data-app-part="feedback" role="alert" className="text-sm text-[var(--text-secondary)]">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>
           {t('common.close', 'Close')}

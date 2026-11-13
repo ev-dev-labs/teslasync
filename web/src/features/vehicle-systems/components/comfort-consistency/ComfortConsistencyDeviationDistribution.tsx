@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { LayoutCard, Grid } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
@@ -29,9 +29,11 @@ interface ComfortConsistencyDeviationDistributionProps {
 
 function Quantile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="body" className="mt-1">{value}</Text>
+    <div data-app-part="metric" data-app-metric="tile" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+      <div data-app-part="metric-reading" className="mt-1">
+        <Text data-app-part="metric-value" as="p" variant="body">{value}</Text>
+      </div>
     </div>
   );
 }
@@ -104,7 +106,7 @@ export function ComfortConsistencyDeviationDistribution({
               </BarChart>
             </ResponsiveContainer>
           </EmbeddedChart>
-          <Grid cols={{ default: 2, xl: 4 }} gap={3} className="mt-4">
+          <div data-app-part="metric-grid" className="mt-4 grid min-w-0 grid-cols-2 items-stretch gap-3 xl:grid-cols-4 [&>*]:min-w-0">
             <Quantile
               label={t('comfortConsistency.deviation.mean', 'Sample mean')}
               value={formatDelta(summary.meanAbsDeviationC)}
@@ -121,7 +123,7 @@ export function ComfortConsistencyDeviationDistribution({
               label={t('comfortConsistency.deviation.weighted', 'Duration-weighted mean')}
               value={formatDelta(summary.durationWeightedMeanAbsDeviationC)}
             />
-          </Grid>
+          </div>
         </ComfortConsistencySectionBody>
       </LayoutCard>
     </section>

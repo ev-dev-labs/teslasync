@@ -67,28 +67,28 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
               <col className="md:w-[35%]" /><col className="md:w-[20%]" />
               <col className="md:w-[35%]" /><col className="md:w-[10%]" />
             </colgroup>
-            <thead><tr>
-              <th scope="col">{t('driveDetail.report.term', 'Physics term')}</th>
-              <th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
-              <th scope="col">{t('driveDetail.report.source', 'Source and method')}</th>
-              <th scope="col">{t('physicsLedger.missing', 'Missing signals')}</th>
+            <thead data-app-part="table-head"><tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="col">{t('driveDetail.report.term', 'Physics term')}</th>
+              <th data-app-part="table-cell" scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
+              <th data-app-part="table-cell" scope="col">{t('driveDetail.report.source', 'Source and method')}</th>
+              <th data-app-part="table-cell" scope="col">{t('physicsLedger.missing', 'Missing signals')}</th>
             </tr></thead>
             <tbody>{terms.map(({ key, label, term }) => (
-              <tr key={key}>
-                <th scope="row">{label}</th>
-                <td className="whitespace-nowrap tabular-nums">{term?.unknown ? unknown : energy(term?.value_wh)}</td>
-                <td>{term?.method ?? unknown}</td>
-                <td>{(term?.missing_signals ?? []).join(', ') || '—'}</td>
+              <tr data-app-part="table-row" key={key}>
+                <th data-app-part="table-cell" scope="row">{label}</th>
+                <td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{term?.unknown ? unknown : energy(term?.value_wh)}</td>
+                <td data-app-part="table-cell">{term?.method ?? unknown}</td>
+                <td data-app-part="table-cell">{(term?.missing_signals ?? []).join(', ') || '—'}</td>
               </tr>
             ))}</tbody>
           </Table>
           <Table variant="embedded" className="md:table-fixed" aria-label={t('driveDetail.report.reconciliation', 'Ledger reconciliation')}>
             <colgroup><col className="md:w-[35%]" /><col className="md:w-[65%]" /></colgroup>
             <tbody>
-              <tr><th scope="row">{t('physicsLedger.drive.predicted', 'Predicted (known terms)')}</th><td>{energy(drive?.predicted_wh)}</td></tr>
-              <tr><th scope="row">{t('physicsLedger.drive.session', 'Session')}</th><td>{energy(drive?.session_wh)}</td></tr>
-              <tr><th scope="row">{t('physicsLedger.drive.reconcile', 'Reconcile')}</th><td>{energy(drive?.reconcile_wh)}</td></tr>
-              <tr><th scope="row">{t('physicsLedger.drive.unexplained', 'Unexplained residual')}</th><td>{drive?.unexplained_known ? energy(drive.unexplained_wh) : unknown}</td></tr>
+              <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('physicsLedger.drive.predicted', 'Predicted (known terms)')}</th><td data-app-part="table-cell">{energy(drive?.predicted_wh)}</td></tr>
+              <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('physicsLedger.drive.session', 'Session')}</th><td data-app-part="table-cell">{energy(drive?.session_wh)}</td></tr>
+              <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('physicsLedger.drive.reconcile', 'Reconcile')}</th><td data-app-part="table-cell">{energy(drive?.reconcile_wh)}</td></tr>
+              <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('physicsLedger.drive.unexplained', 'Unexplained residual')}</th><td data-app-part="table-cell">{drive?.unexplained_known ? energy(drive.unexplained_wh) : unknown}</td></tr>
             </tbody>
           </Table>
           {ledger.drive?.missing_signals?.includes('mass_kg') ? (

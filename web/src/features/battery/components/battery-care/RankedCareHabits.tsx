@@ -128,30 +128,33 @@ export function RankedCareHabits({
           }
         />
       ) : (
-        <div className="space-y-3">
+        <div data-app-part="list" data-app-list="records" className="space-y-3">
           {care.opportunities.map((opportunity) => (
             <div
               key={opportunity.id}
+              data-app-part="card"
+              data-app-card-kind="record"
+              data-surface-variant="standalone"
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="flex items-start gap-3">
+              <div data-app-part="record-body" className="flex items-start gap-3">
                 <Badge variant="neutral">
                   {t('batteryCare.actions.rank', '#{{rank}}', {
                     rank: opportunity.rank,
                   })}
                 </Badge>
                 <div className="min-w-0">
-                  <Text as="h4" variant="subhead">
+                  <Text as="h4" variant="subhead" data-app-part="record-title">
                     {opportunityTitle(opportunity.id, t)}
                   </Text>
-                  <Text as="p" variant="bodySm" className="mt-1">
+                  <Text as="p" variant="bodySm" data-app-part="record-context" className="mt-1">
                     {opportunityDetail(
                       opportunity,
                       care.fullChargePct,
                       t,
                     )}
                   </Text>
-                  <Text as="p" variant="caption" className="mt-2">
+                  <Text as="p" variant="caption" data-app-part="record-context" className="mt-2">
                     {t(
                       'batteryCare.actions.contribution',
                       'Current index deduction: {{points}} points',

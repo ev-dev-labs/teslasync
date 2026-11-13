@@ -1,0 +1,749 @@
+/*
+ * Shared compositions for the verified, app-wide design opt-in. Pack identity
+ * styles refine this anatomy; the existing theme, density and semantic tokens
+ * still own color, type and scale. No control, portal or table engine is replaced.
+ *
+ * Keep the scope in :where() to avoid a document-level specificity ratchet.
+ * Inline geometry, important caller utilities and semantic colors are retained.
+ * The foundation aggregates this after the shared UI styles.
+ */
+@media screen and (forced-colors: none) {
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field-label"]:where([data-app-design-owner]) {
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    scroll-margin-block: var(--density-gap);
+    caret-color: var(--text-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-native-popup]:where([data-app-design-owner]) {
+    color-scheme: inherit;
+  }
+
+  /* Style native field chrome, not OS-owned dialogs, swatches or range thumbs. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) input[data-app-part~="field-control"]:where([type="range"]):where([data-app-design-owner]) {
+    accent-color: var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) input[data-app-part~="field-control"]:where([type="file"]):where([data-app-design-owner])::file-selector-button {
+    font: inherit;
+    color: var(--text-primary);
+    background-color: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-sm);
+    margin-inline-end: var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) input[data-app-part~="field-control"]:where([type="file"]:disabled):where([data-app-design-owner])::file-selector-button {
+    color: var(--text-secondary);
+    background-color: var(--surface-2);
+    cursor: not-allowed;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    border-color: var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-form-section]:where([data-app-design-owner]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-form-heading]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    margin-block-start: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-form-body]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    margin-block-start: 0;
+  }
+
+  /* Size props and caller padding remain authoritative, including icon actions. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where([data-app-design-owner]) {
+    text-underline-offset: 0.2em;
+    touch-action: manipulation;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where([aria-busy="true"]):where([data-app-design-owner]) {
+    cursor: progress;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where(:disabled, [aria-disabled="true"]):where([data-app-design-owner]) {
+    cursor: not-allowed;
+  }
+
+  /* Never recolor primary, danger, warning overrides, badges or status surfaces. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where([data-app-variant="primary"]:not(:disabled, [aria-disabled="true"])):where(:hover):where([data-app-design-owner]) {
+    box-shadow: var(--elevation-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where([data-app-variant="primary"]:not(:disabled, [aria-disabled="true"])):where(:active):where([data-app-design-owner]) {
+    box-shadow: var(--elevation-0);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tabs"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    scroll-padding-inline: var(--density-gap);
+    /* Leave room for keyboard outlines in horizontally scrolling strips. */
+    padding-block: 0.25rem;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where([data-app-design-owner]) {
+    position: relative;
+    text-align: center;
+    scroll-margin-inline: var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where(:not([data-app-variant="primary"], [data-app-variant="danger"])):where([data-app-design-owner]) {
+    color: var(--text-primary);
+    background-color: var(--control-bg);
+    border-color: var(--control-border-hover);
+    box-shadow: inset 0 -2px 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where(:not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"])):where(:hover):where([data-app-design-owner]) {
+    background-color: var(--control-bg-hover);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where(:disabled, [aria-disabled="true"]):where([data-app-design-owner]) {
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Portal geometry, stacking, focus ownership and scroll/footer sizing stay
+     in Modal/Drawer/Popover/Lightbox, not in this presentation layer. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="dialog"]:where(:not([data-app-dialog-kind="lightbox"])):where([data-app-design-owner]) {
+    border-color: var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="dialog-header"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    row-gap: var(--density-gap);
+    overflow-wrap: anywhere;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="dialog-footer"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="popover"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    border-color: var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) :is([role="option"], [role^="menuitem"], [role="checkbox"]):where(:not([data-app-variant="danger"])):where([data-app-design-owner]) {
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) :is([role="option"], [role^="menuitem"], [role="checkbox"]):where([aria-selected="true"], [aria-checked="true"]):where([data-app-design-owner]) {
+    box-shadow: inset 3px 0 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) [role="option"]:where([data-active="true"]:not([aria-disabled="true"])):where([data-app-design-owner]) {
+    background-color: var(--control-bg-hover);
+    outline: 1px solid var(--control-border-hover);
+    outline-offset: -1px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) :is([role="option"], [role^="menuitem"]):where([aria-disabled="true"]):where([data-app-design-owner]) {
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tooltip"]:where([data-app-design-owner]) {
+    /* Keep Tooltip's inverse foreground/surface, measured width and offsets. */
+    border: 1px solid transparent;
+    text-wrap-style: pretty;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="status"]:where([data-app-field-feedback]):where([data-app-design-owner]) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="status"]:where([data-app-field-feedback="error"]):where([data-app-design-owner]) {
+    padding-inline-start: 0.5rem;
+    border-inline-start: 2px solid var(--semantic-danger);
+  }
+
+  /* Filled: inset work areas, separate group headings, soft action wells. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-form-heading]:where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--surface-2);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--control-bg);
+    border-block-end-width: 2px;
+    border-start-start-radius: var(--radius-md);
+    border-start-end-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--control-bg);
+  }
+
+  /* File intake keeps its caller-owned dashed perimeter in every mode. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where(:not([data-app-control-kind="dropzone"])):where([data-app-design-owner~="controls-filled"]) {
+    border-block-end-width: 2px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-choice-surface]:where([data-app-design-owner~="controls-filled"]) {
+    border-block-end-width: 2px;
+    border-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-filled"]) {
+    border-radius: var(--radius-md);
+    border-block-end-width: 2px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="tabs"]:where([data-app-design-owner~="controls-filled"]) {
+    column-gap: 0.25rem;
+    border-block-end-color: transparent;
+    background-color: var(--surface-2);
+    border-radius: var(--radius-md);
+    padding-inline: 0.25rem;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="tab"]:where([data-app-design-owner~="controls-filled"]) {
+    border-radius: var(--radius-sm);
+    margin-block-end: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="tab"]:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where(:not([data-app-variant="primary"], [data-app-variant="danger"])):where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--surface-1);
+    box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > [data-app-part~="dialog-header"]:where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--surface-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > [data-app-part~="dialog-footer"]:where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--surface-2);
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-color: var(--border-default);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="popover"]:where([data-app-design-owner~="controls-filled"]) {
+    background-color: var(--surface-1);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-3);
+  }
+
+  /* Outline: open forms, ruled group headings, independently framed actions. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-form-heading]:where([data-app-design-owner~="controls-outline"]) {
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-outline"]) {
+    background-color: var(--surface-1);
+    border-width: 1px;
+    border-color: var(--border-strong);
+    border-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-outline"]) {
+    background-color: transparent;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where(:not([data-app-control-kind="dropzone"])):where([data-app-design-owner~="controls-outline"]) {
+    border-radius: var(--radius-sm);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is([data-app-choice-surface], [data-app-choice-indicator]):where([data-app-design-owner~="controls-outline"]) {
+    border-width: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-outline"]) {
+    border-style: solid;
+    border-width: 1px;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="tabs"]:where([data-app-design-owner~="controls-outline"]) {
+    column-gap: 0.5rem;
+    border-block-end-color: var(--control-border);
+    background-color: transparent;
+    border-radius: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="tab"]:where([data-app-design-owner~="controls-outline"]) {
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    margin-block-end: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="tab"]:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where(:not([data-app-variant="primary"], [data-app-variant="danger"])):where([data-app-design-owner~="controls-outline"]) {
+    border-color: var(--control-border-hover);
+    background-color: var(--surface-1);
+    box-shadow: inset 0 -2px 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="popover"]:where([data-app-design-owner~="controls-outline"]) {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):where([data-app-design-owner~="controls-outline"]) {
+    border-color: var(--control-border);
+    background-color: var(--surface-1);
+  }
+
+  /* Underline: editorial field baselines, a vertical form reading rail, and
+     disclosure/action rails instead of another set of nested filled cards. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-form-section]:where([data-app-design-owner~="controls-underline"]) {
+    background-color: transparent;
+    border-width: 0;
+    border-block-start: 2px solid var(--control-border);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-form-heading]:where([data-app-design-owner~="controls-underline"]) {
+    padding-block-end: var(--density-pad-y);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-form-body]:where([data-app-design-owner~="controls-underline"]) {
+    border-inline-start: 1px solid var(--control-border);
+    padding-inline-start: var(--density-pad-x);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-underline"]) {
+    background-color: transparent;
+    border-width: 0;
+    border-block-end: 2px solid var(--control-border);
+    border-radius: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-underline"]) {
+    background-color: transparent;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where(:not([data-app-control-kind="dropzone"])):where([data-app-design-owner~="controls-underline"]) {
+    border-width: 0;
+    border-block-end: 2px solid var(--control-border);
+    border-radius: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-choice-surface]:where([data-app-design-owner~="controls-underline"]) {
+    border-width: 0;
+    border-block-end: 2px solid var(--control-border);
+    border-radius: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-underline"]) {
+    border-radius: 0;
+    border-block-end-width: 2px;
+    box-shadow: none;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-part~="tabs"]:where([data-app-design-owner~="controls-underline"]) {
+    gap: 0;
+    border-width: 0;
+    border-block-end: 1px solid var(--control-border);
+    border-radius: 0;
+    background-color: transparent;
+    padding-inline: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-part~="tab"]:where(:not([data-app-variant="primary"], [data-app-variant="danger"])):where([data-app-design-owner~="controls-underline"]) {
+    border-radius: 0;
+    border-color: transparent;
+    margin-block-end: 0;
+    background-color: transparent;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-part~="tab"]:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where([data-app-design-owner~="controls-underline"]) {
+    box-shadow: inset 0 -3px 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) [data-app-part~="popover"]:where([data-app-design-owner~="controls-underline"]) {
+    border-radius: 0;
+    border-block-start-width: 3px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > [data-app-part~="dialog-header"]:where([data-app-design-owner~="controls-underline"]) {
+    border-block-end-width: 2px;
+    border-color: var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="underline"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > [data-app-part~="dialog-footer"]:where([data-app-design-owner~="controls-underline"]) {
+    border-block-start-width: 2px;
+    border-color: var(--control-border);
+  }
+
+  /* Segmented: grouped field labels and input wells; full selected segments
+     and menu rails retain native pressed/radio/tab semantics independently. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-form-heading]:where([data-app-design-owner~="controls-segmented"]) {
+    padding-inline-start: var(--density-pad-x);
+    padding-block: var(--density-pad-y);
+    border-inline-start: 3px solid var(--control-border-hover);
+    background-color: var(--surface-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :where([data-app-part~="field"]:not([data-app-field-kind="choice"], [data-app-field-kind="range"])) > [data-app-part~="field-label"]:where([data-app-design-owner~="controls-segmented"]) {
+    padding-inline-start: 0.5rem;
+    border-inline-start: 2px solid var(--border-strong);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-segmented"]) {
+    background-color: var(--surface-1);
+    border-radius: var(--radius-sm);
+    border-inline-start-width: 3px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-segmented"]) {
+    background-color: var(--surface-1);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where(:not([data-app-control-kind="dropzone"])):where([data-app-design-owner~="controls-segmented"]) {
+    border-inline-start-width: 3px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :is([data-app-choice-surface], [data-app-choice-indicator], [data-app-switch-track]):where([data-app-design-owner~="controls-segmented"]) {
+    border-radius: var(--radius-sm);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-part~="tabs"]:where([data-app-design-owner~="controls-segmented"]) {
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+    background-color: var(--surface-2);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-part~="tab"]:where([data-app-design-owner~="controls-segmented"]) {
+    flex-grow: 1;
+    border-radius: var(--radius-sm);
+    margin-block-end: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-part~="tab"]:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where(:not([data-app-variant="primary"], [data-app-variant="danger"])):where([data-app-design-owner~="controls-segmented"]) {
+    background-color: var(--surface-1);
+    box-shadow: inset 0 0 0 1px var(--control-border-hover), inset 0 -3px 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-segmented"]) {
+    border-radius: var(--radius-sm);
+    border-inline-start-width: 3px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):where([data-app-design-owner~="controls-segmented"]) {
+    background-color: var(--surface-2);
+    border-color: var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="segmented"]) [data-app-part~="popover"]:where([data-app-design-owner~="controls-segmented"]) {
+    border-radius: var(--radius-md);
+    border-inline-start-width: 3px;
+  }
+
+  /* Keep drag paint below validation/disabled states without changing intake. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where([data-app-control-kind="dropzone"][data-app-drag-active="true"]):where(:not([aria-busy="true"], [aria-disabled="true"], [data-disabled="true"], [aria-invalid="true"], [data-invalid="true"])):where([data-app-design-owner]) {
+    background-color: var(--control-bg-hover);
+    border-color: var(--focus-ring);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where([data-app-control-kind="dropzone"][aria-busy="true"]):where([data-app-design-owner]) {
+    cursor: progress;
+  }
+
+  /* Text fields and composite surfaces use the same error/open/focus language.
+     These rules follow all four compositions so error borders cannot disappear. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field-control"]:where([aria-invalid="true"], [aria-invalid="grammar"], [aria-invalid="spelling"], [data-invalid="true"]):where([data-app-design-owner]) {
+    border-color: var(--semantic-danger);
+  }
+
+  /* TagInput already marks its invalid surface with border-red-500; keep
+     that real error state visible in browsers without parent selectors. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where([data-invalid="true"], [aria-invalid="true"], .border-red-500):where([data-app-design-owner]) {
+    border-color: var(--semantic-danger);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where(:has([aria-invalid="true"])):where([data-app-design-owner]) {
+    border-color: var(--semantic-danger);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="field-control"][aria-invalid="true"]) + :is([data-app-choice-indicator], [data-app-choice-surface]):where([data-app-design-owner]) {
+    border-color: var(--semantic-danger);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field-control"]:where([aria-expanded="true"]:not([aria-invalid="true"], [data-invalid="true"], :disabled, [aria-disabled="true"])):where([data-app-design-owner]) {
+    border-color: var(--control-border-hover);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field-control"]:where(:disabled, [aria-disabled="true"]):where(:not([type="checkbox"], [type="radio"], [type="range"], [data-app-control-kind="composite"], [role="switch"])):where([data-app-design-owner]) {
+    background-color: var(--surface-2);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where([data-disabled="true"]):where([data-app-design-owner]) {
+    background-color: var(--surface-2);
+    cursor: not-allowed;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="field-control"]:where(:focus-visible):where(:not([type="checkbox"], [type="radio"], [data-app-control-kind="composite"])):where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="button"]:where(:focus-visible):where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where(:focus-visible):where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-field-surface]:where(:focus-within):where([data-app-design-owner]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Data modes preserve semantic tables, column widths, density padding,
+     sticky headers, virtual spacers and every mobile-adapter detail/action. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="table-toolbar"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    row-gap: var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="pagination"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    padding-block: var(--density-pad-y);
+    row-gap: var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="table-row"]:where(:focus-visible):where([data-app-design-owner]) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="table-row"]:where([aria-selected="true"], [data-selected="true"]):where([data-app-design-owner]) {
+    box-shadow: inset 3px 0 0 var(--theme-primary);
+  }
+
+  /* Table: continuous header band, horizontal reading, separate action rail. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-table"]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-table"]) {
+    background-color: var(--surface-2);
+    border-block-end: 1px solid var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner~="data-table"]) {
+    border-block-end: 1px solid var(--border-default);
+    padding-block: var(--density-pad-y);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) [data-app-part~="pagination"]:where([data-app-design-owner~="data-table"]) {
+    border-block-start: 1px solid var(--border-default);
+  }
+
+  /* Ledger: open book-like rows, vertical column rules, double closing rule. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-ledger"]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-ledger"]) {
+    background-color: var(--surface-1);
+    border-block-end: 2px solid var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-app-part~="table"] > :is(thead, tbody) > tr:not([data-virtual-spacer])) > :is(th, td):where(:not(:first-child)):where([data-app-design-owner~="data-ledger"]) {
+    border-inline-start: 1px solid var(--border-default);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-app-part~="table"] > tbody > tr:not([data-virtual-spacer], [data-expanded-content], [data-row-group])) > td:where([data-app-design-owner~="data-ledger"]) {
+    border-block-end: 1px solid var(--border-default);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner~="data-ledger"]) {
+    align-items: end;
+    padding-block: var(--density-pad-y);
+    border-block-end: 2px solid var(--control-border);
+    background-color: transparent;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) [data-app-part~="pagination"]:where([data-app-design-owner~="data-ledger"]) {
+    border-block-start: 3px double var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-mobile-table]) [data-app-part~="table-row"]:where([data-app-design-owner~="data-ledger"]) {
+    border-radius: 0;
+    border-block-end: 1px solid var(--control-border);
+  }
+
+  /* Cards: row surfaces, not display:block tables or a second data pipeline.
+     Virtualized tables cannot add border-spacing to measured row geometry. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :is(table)[data-app-part~="table"]:where(:not([data-app-virtualized="true"])):where([data-app-design-owner~="data-cards"]) {
+    border-collapse: separate;
+    border-spacing: 0 var(--density-gap);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-cards"]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-cards"]) {
+    background-color: transparent;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table"]:not([data-app-virtualized="true"]) > tbody > tr:not([data-virtual-spacer], [data-expanded-content], [data-row-group])) > td:where([data-app-design-owner~="data-cards"]) {
+    border-block: 1px solid var(--border-strong);
+    background-color: var(--surface-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table"]:not([data-app-virtualized="true"]) > tbody > tr:not([data-virtual-spacer], [data-expanded-content], [data-row-group])) > td:where(:first-child):where([data-app-design-owner~="data-cards"]) {
+    border-inline-start: 1px solid var(--border-strong);
+    border-start-start-radius: var(--radius-md);
+    border-end-start-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table"]:not([data-app-virtualized="true"]) > tbody > tr:not([data-virtual-spacer], [data-expanded-content], [data-row-group])) > td:where(:last-child):where([data-app-design-owner~="data-cards"]) {
+    border-inline-end: 1px solid var(--border-strong);
+    border-start-end-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table"]:not([data-app-virtualized="true"]) > tbody > tr:not([data-virtual-spacer], [data-expanded-content], [data-row-group])):where(:hover, :focus-within) > td:where([data-app-design-owner~="data-cards"]) {
+    background-color: var(--control-bg-hover);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-app-part~="table"]:not([data-app-virtualized="true"]) > tbody > tr:is([aria-selected="true"], [data-selected="true"])) > td:where([data-app-design-owner~="data-cards"]) {
+    background-color: var(--control-bg);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner~="data-cards"]) {
+    padding-block: var(--density-pad-y);
+    align-items: start;
+    border-block-end: 0;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) :where([data-mobile-table]) [data-app-part~="table-row"]:where([data-app-design-owner~="data-cards"]) {
+    margin-block: var(--density-gap);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"]) [data-app-part~="pagination"]:where([data-app-design-owner~="data-cards"]) {
+    padding-inline: var(--density-pad-x);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+  }
+
+  /* Instrument: a strongly indexed header grid and bounded reading cells. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-instrument"]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-instrument"]) {
+    background-color: var(--surface-3);
+    border-block-end: 2px solid var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-app-part~="table"] > :is(thead, tbody) > tr:not([data-virtual-spacer])) > :is(th, td):where(:not(:first-child)):where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 1px solid var(--border-strong);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-app-part~="table"] > tbody > tr:not([data-virtual-spacer])) > td:where([data-app-design-owner~="data-instrument"]) {
+    border-block-end: 1px solid var(--border-strong);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner~="data-instrument"]) {
+    background-color: var(--surface-2);
+    padding-block: var(--density-pad-y);
+    border-block: 1px solid var(--control-border);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) [data-app-part~="pagination"]:where([data-app-design-owner~="data-instrument"]) {
+    border-block-start: 2px solid var(--control-border);
+    background-color: var(--surface-2);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-mobile-table]) [data-card-meta]:where([data-app-design-owner~="data-instrument"]) {
+    border-inline-start: 1px solid var(--border-strong);
+    padding-inline-start: 0.5rem;
+  }
+
+  /* Embedded matrices keep their enclosing panel's surface. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) table[data-app-part~="table"]:where([data-app-table-variant="embedded"]) > thead:where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) table[data-app-part~="table"]:where([data-app-table-variant="embedded"]) > thead > tr:where([data-app-design-owner]) {
+    background-color: transparent;
+  }
+
+  /* The adapter's original fixed-pixel typography and max-height must not cap
+     a real row when the independent font scale or density preference changes. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-mobile-table]) .mgr-row[data-app-part~="card"]:where([data-app-design-owner]) {
+    block-size: auto;
+    max-block-size: none;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-mobile-table]) :is(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value):where([data-app-design-owner]) {
+    font-size: calc(var(--density-text) * var(--font-scale));
+    line-height: inherit;
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-mobile-table]) .mgr-kv:where([data-app-design-owner]) {
+    min-block-size: 3rem;
+  }
+
+  /* A row's interactive selection must read above its mode's cell surfaces. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="table"] > tbody > tr:is([aria-selected="true"], [data-selected="true"])) > td:where(:first-child):where([data-app-design-owner]) {
+    box-shadow: inset 3px 0 0 var(--theme-primary);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="table"] > thead > tr) > th:where([aria-sort="ascending"], [aria-sort="descending"]):where([data-app-design-owner]) {
+    box-shadow: inset 0 -2px 0 var(--control-border-hover);
+  }
+
+  /* Actual vendor calendar controls stay in react-day-picker's engine. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"] .rdp-tesla) :is(.rdp-day_button, .rdp-button_previous, .rdp-button_next):where(:focus-visible):where([data-app-design-owner]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"] .rdp-tesla) .rdp-range_middle:where([data-app-design-owner]) {
+    background-color: var(--control-bg);
+  }
+
+  /* Physical inset shadows have an explicit logical-direction equivalent. */
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) :is([role="option"], [role^="menuitem"], [role="checkbox"]):where(:dir(rtl)):where([aria-selected="true"], [aria-checked="true"]):where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="table-row"]:where(:dir(rtl)):where([aria-selected="true"], [data-selected="true"]):where([data-app-design-owner]),
+  :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="table"] > tbody > tr:is([aria-selected="true"], [data-selected="true"])) > td:where(:first-child):where(:dir(rtl)):where([data-app-design-owner]) {
+    box-shadow: inset -3px 0 0 var(--theme-primary);
+  }
+
+  @media (max-width: 47.999rem) {
+    :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="tab"]:where([data-app-design-owner]) {
+      min-block-size: 2.75rem;
+      min-inline-size: 2.75rem;
+    }
+
+    :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) :where([data-app-part~="popover"]) :is([role="option"], [role^="menuitem"], [role="checkbox"]):where(:not([aria-disabled="true"])):where([data-app-design-owner]) {
+      min-block-size: 2.75rem;
+    }
+
+    :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner]) {
+      align-items: stretch;
+    }
+
+    :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-form-body]:where([data-app-design-owner]) {
+      max-inline-size: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) [data-app-part]:where(:not([data-app-part~="overlay"], [data-app-part~="dialog"])):where([data-app-design-owner]) {
+      transition-duration: 0s;
+      animation-duration: 0s;
+      animation-iteration-count: 1;
+    }
+    }
+}

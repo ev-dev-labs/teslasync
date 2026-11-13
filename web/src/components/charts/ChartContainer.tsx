@@ -585,6 +585,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     return (
       <figure
         ref={mergedRef}
+        data-app-part="chart"
         data-print-card
         aria-labelledby={titleId}
         aria-describedby={fallbackId}
@@ -626,6 +627,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // intrinsic width to enlarge the entire page. Keep every chart frame
           // inside its assigned track instead.
           'grid min-w-0 max-w-full grid-rows-[auto_auto_1fr_auto_auto]',
+          // A revealed fallback table must follow the caption, not share its grid row.
+          'forced-colors:!flex forced-colors:flex-col',
           className,
         )}
       >
@@ -643,7 +646,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         ) : null}
         {(variant === 'panel' || visibleTitle || showToolbar || isFullscreen) && (
           <ChartSlotPortal target={summaryTarget}>
-          <header data-card-header data-card-slot="header" className={cn(
+          <header data-app-part="chart-header" data-card-header data-card-slot="header" className={cn(
             'flex min-w-0 flex-wrap items-start justify-between gap-3',
             toolbarTarget && !icon && !metadataContent && 'contents',
             variant === 'panel'
@@ -794,7 +797,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           </ChartSlotPortal>
         )}
 
-        {summary != null && <div data-card-stats data-card-slot="summary" className="mb-3 min-w-0">{summary}</div>}
+        {summary != null && <div data-chart-summary data-card-stats data-card-slot="summary" className="mb-3 min-w-0">{summary}</div>}
 
         <div data-chart-body data-card-slot="plot" className="min-h-0 min-w-0">
         {showMarkerRow && (
@@ -806,6 +809,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               <Text
                 as="span"
                 variant="caption"
+                data-app-part="badge"
+                data-app-variant="neutral"
                 key={ann.id}
                 className={cn('inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5', typography.color.secondary)}
                 title={ann.description ?? ann.label}
@@ -819,6 +824,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
         <div
           style={chartHeightStyle}
+          data-app-part="chart-plot"
           data-chart-viewport="bounded"
           className={cn(
             // Recharts' ResponsiveContainer measures this viewport. Width,
@@ -926,6 +932,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         */}
         <VisuallyHidden
           as="figcaption"
+          data-chart-alternative
           data-card-slot="caption"
           id={fallbackId}
           className={cn(

@@ -25,6 +25,9 @@
  * level produced `undefined` and crashed the card reading `.color`/`.label`.
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, renderHook, screen, within, fireEvent, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -37,6 +40,8 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { buildMobileTableRow } from '@/components/ui/MobileDataTableAdapter';
 import * as apiClient from '@/api/client';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const rangeState = vi.hoisted(() => ({
   startInstant: '2026-10-13T21:55:16.618Z',
@@ -310,14 +315,14 @@ function install({ latest, latestOpts, history, historyOpts, charging }: Install
   mockCharging.mockReturnValue(qr({ data: charging ?? null }));
 }
 
-function renderPage(path = '/climate-control') {
+function renderPage(path = '/climate-control', wrap: (page: ReactNode) => ReactNode = page => page) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
-        <ClimateControlPage />
+        {wrap(<ClimateControlPage />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -369,6 +374,149 @@ beforeEach(() => {
   unitState.timezoneMode = 'vehicle';
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
+});
+
+describe('vehicle systems redesign consumers — climate', () => {
+  const designRules: Rule[] = [];
+  for (const file of ['base.css', 'feedback.css']) {
+    postcss.parse(readFileSync(resolve(
+      process.cwd(), 'src', 'components', 'ui', 'app-designs', file,
+    ), 'utf8')).walkRules(rule => { designRules.push(rule); });
+  }
+  const matches = (node: Element, contract: string, property: string) => designRules.some(rule =>
+    rule.selector.includes(contract)
+    && rule.selectors.some(selector => node.matches(selector))
+    && rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === property));
+
+  it.each(['/climate-control', '/climate'])('%s binds both real seat records and the opened delta capsule in all 27 profiles', async path => {
+    install({ latest: climate(), history: HISTORY });
+    const root = document.documentElement;
+    const saved = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    for (const [name, value] of Object.entries(getAppDesignAttributes('classic'))) root.setAttribute(name, value);
+    const view = renderPage(path);
+    const release = observeAppDesignScopes(root);
+    try {
+      const records = ['Auto climate (left)', 'Auto climate (right)'].map(label =>
+        within(group('climate-seats')).getByText(label).closest('[data-app-card-kind="record"]')!);
+      expect(records.every(Boolean)).toBe(true);
+      const brief = card('Temp delta').closest<HTMLElement>('[data-operational-brief]')!;
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      const detail = within(dialog).getByRole('group', { name: 'Temp delta' });
+      const capsule = within(detail).getByText('Near target');
+      expect(capsule).toHaveAttribute('data-app-part', 'badge');
+      expect(capsule).toHaveAttribute('data-app-variant', 'neutral');
+      expect(detail).toHaveTextContent('+1.00°C');
+
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+        await waitFor(() => expect(capsule.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`));
+        for (const [index, record] of records.entries()) {
+          expect(record.getAttribute('data-app-design-owner')).toContain(`data-${APPLICATION_DESIGNS[pack].data}`);
+          expect(matches(record, '[data-app-part~="card"]', 'border-radius')).toBe(true);
+          expect(matches(record, '[data-app-card-kind="record"]', 'display')).toBe(true);
+          const header = record.querySelector(':scope > [data-app-part~="record-header"]')!;
+          expect(header).not.toBeNull();
+          expect(matches(header, '[data-app-card-kind="record"]', 'display')).toBe(true);
+          expect(matches(header.querySelector('[data-app-part~="record-title"]')!, '[data-app-part~="record-title"]', 'min-inline-size')).toBe(true);
+          expect(record).toHaveTextContent(index === 0 ? 'Auto' : 'Manual');
+          expect(record.querySelector('[role="meter"], [role="progressbar"], [data-app-part~="metric"]')).toBeNull();
+        }
+        expect(matches(capsule, '[data-app-part~="badge"]', 'white-space')).toBe(true);
+        expect(capsule).toHaveTextContent(/^Near target$/);
+        expect(dialog).toContainElement(detail);
+      }
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(within(card('Temp delta')).getByText('+1.00°C')).toBeInTheDocument();
+    } finally {
+      release();
+      view.unmount();
+      for (const [name, value] of saved) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  it.each([
+    [true, false, {}, 'Auto', 'Manual'],
+    [false, null, { fetchStatus: 'paused' }, 'Manual', '—'],
+    [null, true, { error: new Error('retained climate'), isError: true }, '—', 'Auto'],
+    [undefined, undefined, {}, '—', '—'],
+  ] as const)('retains explicit seat states %s/%s without numeric or command substitution', (left, right, state, leftText, rightText) => {
+    const latest = climate({ autoSeatClimateLeft: left, autoSeatClimateRight: right });
+    install({ latest, latestOpts: state, history: HISTORY });
+    renderPage();
+    for (const [label, expected, value] of [
+      ['Auto climate (left)', leftText, left],
+      ['Auto climate (right)', rightText, right],
+    ] as const) {
+      const record = within(group('climate-seats')).getByText(label).closest<HTMLElement>('[data-app-card-kind="record"]')!;
+      expect(record).not.toBeNull();
+      expect(within(record).getByText(expected, { exact: true })).toBeInTheDocument();
+      expect(record.querySelector('[data-app-part~="badge"]')?.getAttribute('data-app-variant') ?? null)
+        .toBe(value == null ? null : value ? 'success' : 'neutral');
+      expect(record.querySelector('button, input, [role="meter"], [role="progressbar"]')).toBeNull();
+    }
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(latest.autoSeatClimateLeft).toBe(left);
+    expect(latest.autoSeatClimateRight).toBe(right);
+  });
+
+  it.each(['C', 'F'] as const)('preserves signed %s delta readings and raw Celsius boundaries in the real details drawer', temp => {
+    unitState.temp = temp;
+    for (const [delta, label, celsius, fahrenheit] of [
+      [-1.01, 'Below target', '-1.01°C', '-1.82°F'],
+      [-1, 'Near target', '-1.00°C', '-1.80°F'],
+      [0, 'Near target', '0.00°C', '0.00°F'],
+      [1, 'Near target', '+1.00°C', '+1.80°F'],
+      [1.01, 'Above target', '+1.01°C', '+1.82°F'],
+    ] as const) {
+      install({ latest: climate({ insideTemp: 21 + delta, driverTempSetting: 21 }) });
+      const view = renderPage();
+      expect(within(card('Temp delta')).getByText(temp === 'C' ? celsius : fahrenheit)).toBeInTheDocument();
+      withMetricDetail('Temp delta', detail => {
+        const capsule = within(detail).getByText(label);
+        expect(capsule).toHaveAttribute('data-app-part', 'badge');
+        expect(capsule).toHaveAttribute('data-app-variant', 'neutral');
+        expect(capsule).toHaveClass('px-3', 'py-1');
+      });
+      view.unmount();
+    }
+  });
+
+  it('keeps default and incomplete nested previews unowned until their own complete profile is selected', async () => {
+    install({ latest: climate() });
+    const plain = renderPage();
+    const defaultRecord = within(group('climate-seats')).getByText('Auto climate (left)')
+      .closest('[data-app-card-kind="record"]')!;
+    expect(defaultRecord).not.toBeNull();
+    expect(defaultRecord).not.toHaveAttribute('data-app-design-owner');
+    expect(defaultRecord).toHaveClass('min-h-11', 'rounded-md', 'bg-[var(--surface-2)]', 'px-3', 'py-2');
+    plain.unmount();
+
+    const view = renderPage('/climate', page => <div data-app-design-preview="" {...getAppDesignAttributes('v1')}>
+      <div data-testid="seat-preview" data-app-design-preview="" data-app-design-pack="blueprint">{page}</div>
+    </div>);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const record = within(group('climate-seats')).getByText('Auto climate (left)')
+        .closest('[data-app-card-kind="record"]')!;
+      expect(record).not.toHaveAttribute('data-app-design-owner');
+      expect(matches(record, '[data-app-card-kind="record"]', 'display')).toBe(false);
+      for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) {
+        screen.getByTestId('seat-preview').setAttribute(name, value);
+      }
+      await waitFor(() => expect(record.getAttribute('data-app-design-owner')).toContain('pack-blueprint'));
+      expect(record.getAttribute('data-app-design-owner')).toContain('data-ledger');
+      expect(record.getAttribute('data-app-design-owner')).not.toContain('pack-v1');
+      expect(matches(record, '[data-app-card-kind="record"]', 'display')).toBe(true);
+    } finally {
+      release();
+      view.unmount();
+    }
+  });
 });
 
 describe('climate date display preferences', () => {

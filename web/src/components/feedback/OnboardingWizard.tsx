@@ -130,7 +130,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
   const isLastStep = currentStep >= steps.length - 1
 
   return (
-    <div className="fixed inset-0 top-12 lg:top-0 z-50 flex items-center justify-center p-4">
+    <div data-app-part="overlay" className="fixed inset-0 top-12 lg:top-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop — doesn't cover mobile header so hamburger stays clickable.
           Decorative: the accessible dismiss path is the Skip/Close buttons. */}
       <div
@@ -143,6 +143,8 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
       {/* Modal */}
       <div
         ref={dialogRef}
+        data-app-part="dialog"
+        data-app-dialog-kind="onboarding"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
@@ -164,6 +166,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 
         {/* Step indicators */}
         <div
+          data-app-part="dialog-header"
           className="flex items-center justify-center gap-2 mb-6"
           role="group"
           aria-label={t('onboarding.progress.stepOf', 'Step {{current}} of {{total}}', {
@@ -187,7 +190,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         </div>
 
         {/* Content */}
-        <div className="flex flex-col items-center text-center">
+        <div data-app-part="dialog-body" className="flex flex-col items-center text-center">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-shape-lg mb-5 bg-[var(--surface-2)] text-[var(--text-secondary)] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]"
             aria-hidden="true"
@@ -204,7 +207,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div data-app-part="dialog-footer" className="flex flex-wrap items-center justify-between gap-3">
           <Button
             type="button"
             variant="ghost"

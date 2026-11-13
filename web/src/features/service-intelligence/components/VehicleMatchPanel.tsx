@@ -113,21 +113,21 @@ export function VehicleMatchPanel({
       >
         <div className="space-y-4">
           <Table aria-label={t('serviceIntelligence.vehicle.title', 'Vehicle match context')}><tbody>
-            <tr>
-              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.model', 'Vehicle')}</Caption></th>
-              <td><Text variant="body">{context ? `${context.make} ${context.model}` : unavailable}</Text></td>
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Caption>{t('serviceIntelligence.vehicle.model', 'Vehicle')}</Caption></th>
+              <td data-app-part="table-cell"><Text variant="body">{context ? `${context.make} ${context.model}` : unavailable}</Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.modelYear', 'Model year')}</Caption></th>
-              <td className="text-right"><Text variant="body">{display(context?.model_year ?? null, unavailable)}</Text></td>
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Caption>{t('serviceIntelligence.vehicle.modelYear', 'Model year')}</Caption></th>
+              <td data-app-part="table-cell" className="text-right"><Text variant="body">{display(context?.model_year ?? null, unavailable)}</Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.assemblyPlant', 'Assembly plant')}</Caption></th>
-              <td><Text variant="body">{display(plant, unavailable)}</Text></td>
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Caption>{t('serviceIntelligence.vehicle.assemblyPlant', 'Assembly plant')}</Caption></th>
+              <td data-app-part="table-cell"><Text variant="body">{display(plant, unavailable)}</Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.firmware', 'Observed firmware')}</Caption></th>
-              <td><Text variant="body" mono>{display(context?.firmware_version ?? null, unavailable)}</Text></td>
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Caption>{t('serviceIntelligence.vehicle.firmware', 'Observed firmware')}</Caption></th>
+              <td data-app-part="table-cell"><Text variant="body" mono>{display(context?.firmware_version ?? null, unavailable)}</Text></td>
             </tr>
           </tbody></Table>
           <Text as="p" variant="helper">{context?.build_match_basis ?? unavailable}</Text>

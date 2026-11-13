@@ -246,8 +246,8 @@ export function NotificationLatencyPanel() {
                   <Table aria-label={group.title}>
                     <tbody>
                       {group.rows.map((cohort) => (
-                        <tr key={cohort.key}>
-                          <th scope="row" className="min-w-0 break-words">
+                        <tr data-app-part="table-row" key={cohort.key}>
+                          <th data-app-part="table-cell" scope="row" className="min-w-0 break-words">
                             <Text as="p" variant="bodySm" className="font-medium">
                               {cohort.key.replace('_', ' ')}
                             </Text>
@@ -260,7 +260,7 @@ export function NotificationLatencyPanel() {
                               })}
                             </Text>
                           </th>
-                          <td className="text-right tabular-nums">
+                          <td data-app-part="table-cell" className="text-right tabular-nums">
                             <Text variant="bodySm" mono>{latencyLabel(cohort.p95Ms)}</Text>
                           </td>
                         </tr>

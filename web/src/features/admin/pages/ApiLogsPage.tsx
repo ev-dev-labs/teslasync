@@ -321,7 +321,7 @@ export default function ApiLogsPage() {
                   message={t('apiLogs.noServices', 'No service activity yet')}
                 />
               ) : (
-                <ul className="flex flex-wrap gap-2">
+                <ul data-app-part="list" className="flex flex-wrap gap-2">
                   {serviceRows.map(({ svc, count }) => {
                     const cfg = serviceConfig(svc);
                     const active = service === svc;

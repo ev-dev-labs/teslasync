@@ -126,7 +126,7 @@ export function ArchetypeCandidateModels({
           </div>
           <Table className="min-w-[760px]" aria-label={t('archetypes.candidates.title', 'Candidate-k model selection')}>
 
-            <thead><tr>
+            <thead data-app-part="table-head"><tr data-app-part="table-row">
               {[
                 t('archetypes.candidates.model', 'Candidate'),
                 silhouetteName,
@@ -136,26 +136,26 @@ export function ArchetypeCandidateModels({
                 t('archetypes.candidates.clusterRange', 'Smallest / largest'),
                 t('archetypes.candidates.decision', 'Decision'),
               ].map((label, index) => (
-                <th key={label} scope="col" className={index > 0 && index < 6 ? 'text-right' : undefined}>
+                <th data-app-part="table-cell" key={label} scope="col" className={index > 0 && index < 6 ? 'text-right' : undefined}>
                   <MetricLabel>{label}</MetricLabel>
                 </th>
               ))}
             </tr></thead>
             <tbody>
             {rows.map((row) => (
-              <tr
+              <tr data-app-part="table-row"
                 key={row.k}
                 className={cn(
                   row.selected === t('archetypes.common.selected', 'Selected') && 'bg-theme-accent/5',
                 )}
               >
-                <th scope="row"><Text variant="bodySm">{row.model}</Text></th>
-                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
-                <td>
+                <th data-app-part="table-cell" scope="row"><Text variant="bodySm">{row.model}</Text></th>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
+                <td data-app-part="table-cell">
                 <Badge variant={row.selected === t('archetypes.common.selected', 'Selected') ? 'success' : 'neutral'}>
                   {row.selected}
                 </Badge>

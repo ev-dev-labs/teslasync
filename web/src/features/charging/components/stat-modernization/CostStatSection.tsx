@@ -49,7 +49,7 @@ export function CostStatSection({
         {period.kind !== 'unknown' && <p>{period.provenance}</p>}
       </div>
       {retained && (error || isLoading) ? (
-        <p role="status" className="mb-3 text-xs text-[var(--text-secondary)]">
+        <p data-app-part="status" role="status" className="mb-3 text-xs text-[var(--text-secondary)]">
           {t('developerReference.stats.state.retained', 'Showing retained measurements')}
         </p>
       ) : null}

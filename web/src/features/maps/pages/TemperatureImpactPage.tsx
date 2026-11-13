@@ -664,7 +664,7 @@ export default function TemperatureImpactPage() {
               skeletonHeight: 180,
               icon: <Lightbulb className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
-              <ul className="space-y-2">
+              <ul data-app-part="list" className="space-y-2">
                 {tips.map((tip) => {
                   const Icon = tip.icon;
                   return (

@@ -556,7 +556,7 @@ export default function EnergyPage() {
       key: 'date',
       header: t('energy.table.date', 'Date'),
       render: (s) => (
-        <Link to={`/charging/${s.id}`} className={cn(
+        <Link to={`/charging/${s.id}`} data-app-part="button" data-app-variant="ghost" className={cn(
           BUTTON_BASE, 'min-h-11 justify-start whitespace-normal text-start md:min-h-6',
           typography.color.secondary,
         )}>
@@ -1047,6 +1047,8 @@ export default function EnergyPage() {
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Link
                   to="/temperature-impact"
+                  data-app-part="button"
+                  data-app-variant="secondary"
                   className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
                   <Icon icon={Thermometer} className={typography.color.secondary} />
@@ -1054,6 +1056,8 @@ export default function EnergyPage() {
                 </Link>
                 <Link
                   to="/speed-profile"
+                  data-app-part="button"
+                  data-app-variant="secondary"
                   className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
                   <Icon icon={Gauge} className={typography.color.secondary} />
@@ -1061,6 +1065,8 @@ export default function EnergyPage() {
                 </Link>
                 <Link
                   to="/route-efficiency"
+                  data-app-part="button"
+                  data-app-variant="secondary"
                   className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
                   <Icon icon={MapPinned} className={typography.color.secondary} />

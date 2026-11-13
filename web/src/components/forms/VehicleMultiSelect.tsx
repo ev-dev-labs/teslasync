@@ -246,14 +246,17 @@ export function VehicleMultiSelect({
   const hasError = Boolean(errorText);
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div data-app-part="field" ref={containerRef} className={cn('relative', className)}>
       <Button
         variant="secondary"
         ref={triggerRef}
         id={triggerId}
         type="button"
+        data-app-part="button field-control"
+        data-app-control-kind="picker"
         disabled={disabled || isFleetEmpty}
         aria-expanded={open}
+        data-invalid={hasError ? true : undefined}
         aria-haspopup="dialog"
         aria-controls={popoverId}
         aria-describedby={hasError ? errorId : undefined}
@@ -277,7 +280,7 @@ export function VehicleMultiSelect({
       </Button>
 
       {isFleetEmpty && (
-        <HelperText className="mt-1">
+        <HelperText data-app-part="status" data-app-field-feedback="hint" className="mt-1">
           {t(
             'notifications.alertStudio.editor.vehiclesEmptyFleetHelp',
             'Add a vehicle in Settings → Vehicles to use this rule.',
@@ -286,7 +289,7 @@ export function VehicleMultiSelect({
       )}
 
       {hasError && (
-        <ErrorText id={errorId} className="mt-1">
+        <ErrorText data-app-part="status" data-app-field-feedback="error" id={errorId} className="mt-1">
           {errorText}
         </ErrorText>
       )}
@@ -294,6 +297,7 @@ export function VehicleMultiSelect({
       {open && !isFleetEmpty && !disabled && (
         <div
           id={popoverId}
+          data-app-part="popover"
           ref={popoverRef}
           role="group"
           aria-labelledby={triggerId}

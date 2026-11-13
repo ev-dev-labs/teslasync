@@ -163,12 +163,22 @@ describe('BehavioralSentinelPage', () => {
     mocks.query.mockReturnValue(query(payload({ items: [finding({ finding_type: identifier })] })));
     renderPage();
     const article = findingArticle();
-    expect(article).toHaveClass('min-w-0', 'rounded-panel', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    expect(article).toHaveClass('min-w-0');
+    const frame = article.firstElementChild!;
+    expect(frame).toHaveAttribute('data-app-part', 'card');
+    expect(frame).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(frame).toHaveClass('rounded-panel', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]', 'sm:p-5');
+    expect(frame.querySelectorAll('[data-app-part="card"]')).toHaveLength(2);
     expect(within(article).getByRole('heading', { name: identifier })).toHaveClass('break-words');
     const lists = within(article).getAllByRole('list');
     expect(lists).toHaveLength(2);
     expect(within(lists[0]).getByRole('listitem')).toHaveTextContent('test-command-history: Test-only timing comparison across command groups.');
     expect(within(lists[1]).getByRole('listitem')).toHaveTextContent('Test-only aggregate pattern cannot establish intent.');
+    for (const list of lists) {
+      const detail = list.closest('[data-app-part="card"]');
+      expect(detail).not.toBe(frame);
+      expect(detail).toHaveClass('p-3', 'bg-transparent');
+    }
     const glyph = article.querySelector('svg');
     expect(glyph).toHaveAttribute('aria-hidden', 'true');
     expect(glyph).toHaveClass('shrink-0', 'text-[var(--text-secondary)]');

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed three-hunk PreviewOverlays dialog-invoker successor; recover the complete immutable preview catalog producer before its original source comparison.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v12/assets/bhNzbJH5.js.map",
+    "mapSha256": "7a6683d1828c0042ef445463c18a49a7930a22f3ec22530e40164053e6378eda",
+    "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewOverlays.tsx",
+    "corroboratingMaps": [
+      {
+        "map": "full-design-runtime-frozen-dist-v11/assets/DYa-qNc3.js.map",
+        "mapSha256": "f48735013681daaf4ab1350d71cbe6e116190e5cbab669eebd8bd3631a71a57e"
+      },
+      {
+        "map": "full-design-runtime-candidate-dist-v9/assets/DYa-qNc3.js.map",
+        "mapSha256": "f48735013681daaf4ab1350d71cbe6e116190e5cbab669eebd8bd3631a71a57e"
+      }
+    ],
+    "corroboratingMapSource": "../../src/features/settings/components/app-design-preview/PreviewOverlays.tsx",
+    "sha256": "200eec6effc01a8faf9d05be1bd3d1645c52d1d478940d0b9435ef9e9502bb35"
+  },
+  "compiledCurrentProof": {
+    "map": "full-design-runtime-candidate-dist-v14/assets/D6d2l0-s.js.map",
+    "mapSha256": "b704b16251a7a3f53414d2d20a7d94be0bf5c988e3164d15fde50d07838cc4da",
+    "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewOverlays.tsx",
+    "sha256": "d70cc7377a476cccc13602feb4b38a8a57ee9cc24a8588f124cd579515ce9a1c"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/components/ui/index.ts",
+      "sha256": "b2fcbd2722d6bd3e802a7aea0ae19b722d76b68c3494ba63a725e80eb552c0c6"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"
+    },
+    {
+      "file": "web/src/components/ui/Modal.tsx",
+      "sha256": "bf9a4f2d3c8716c9b7452cc75081b5776506c561296eae049ab3dcc9f1d90f6c"
+    },
+    {
+      "file": "web/src/components/ui/Popover.tsx",
+      "sha256": "a896ac23c169fc247615fd7234a3e26cc71252a3dfb8a752f12dc42436016225"
+    },
+    {
+      "file": "web/src/components/ui/Tabs.tsx",
+      "sha256": "b2690aabf71ce171aa2646c888143fe1404c89fcb8ea5b0fca612922d809e2b6"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "fcb1c7a8a04d0f828acfea0082c2b3d139d20cc84a500ce05fc066ea024eeb8c"
+    },
+    {
+      "file": "web/src/components/ui/Tooltip.tsx",
+      "sha256": "63c0fe0e6025030564d73b10fc83a4544d0bdf914ca91a18308b788b36735ca9"
+    },
+    {
+      "file": "web/src/components/ui/AppDesignPortal.tsx",
+      "sha256": "a2898954070103b83c790399100f2955a350325f83d7acdca9cdd61f6bcab719"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "sha256": "541094100b79cd6db75262c959733e00ae0917a6f758b547eec741bfe7daea08"
+    },
+    {
+      "file": "web/src/lib/routeFocus.ts",
+      "sha256": "ce6ecdd6fa9cdd85135575ce91be200b348887c12217168b1d6adfb06eb1c4e8"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewOverlays.tsx",
+      "before": "200eec6effc01a8faf9d05be1bd3d1645c52d1d478940d0b9435ef9e9502bb35",
+      "after": "d70cc7377a476cccc13602feb4b38a8a57ee9cc24a8588f124cd579515ce9a1c",
+      "originalLineCount": 48,
+      "currentLineCount": 50,
+      "originalCallCount": 15,
+      "originalCallsSha256": "39a87caf510618bf09af13dab3d084866aafaf79ad124c1953c7da04715b5e86",
+      "originalProjectionSha256": "e02a7a0151b137e29a7770a81abc563a29875b4924e30199101c04a35e5591e5",
+      "hunks": [
+        {
+          "start": 10,
+          "old": [],
+          "new": [
+            "  const dialogTrigger = useRef<HTMLButtonElement>(null);"
+          ]
+        },
+        {
+          "start": 19,
+          "old": [
+            "      <Button onClick={() => setDialog(true)}>{t('theme.appDesignPreview.openDialog', 'Inspect sample journey')}</Button>"
+          ],
+          "new": [
+            "      <Button ref={dialogTrigger} onClick={() => setDialog(true)}>{t('theme.appDesignPreview.openDialog', 'Inspect sample journey')}</Button>"
+          ]
+        },
+        {
+          "start": 33,
+          "old": [],
+          "new": [
+            "        getReturnFocusTarget={() => dialogTrigger.current}"
+          ]
+        }
+      ]
+    }
+  ]
+}

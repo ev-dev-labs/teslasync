@@ -453,40 +453,41 @@ export default function SpeedProfilePage() {
                         {bucket.range}
                       </Text>
                     </div>
-                    <dl className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.driveCountShare', 'Drive count share')}</Text>
-                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtNumber(bucket.pct)}%
+                    <dl data-app-part="list" data-app-list="definitions" className="flex-1 space-y-2">
+                      <div data-app-part="list-row" className="flex items-center justify-between gap-2">
+                        <Text data-app-part="metric-label" as="dt" variant="caption">{t('speedProfile.driveCountShare', 'Drive count share')}</Text>
+                        <Text data-app-part="metric-reading" as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          <span data-app-part="metric-value">{fmtNumber(bucket.pct)}%</span>
                         </Text>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.driveCount', 'Drive count')}</Text>
-                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtInt(bucket.readings)}
+                      <div data-app-part="list-row" className="flex items-center justify-between gap-2">
+                        <Text data-app-part="metric-label" as="dt" variant="caption">{t('speedProfile.driveCount', 'Drive count')}</Text>
+                        <Text data-app-part="metric-reading" as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          <span data-app-part="metric-value">{fmtInt(bucket.readings)}</span>
                         </Text>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
-                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {effData
+                      <div data-app-part="list-row" className="flex items-center justify-between gap-2">
+                        <Text data-app-part="metric-label" as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
+                        <Text data-app-part="metric-reading" as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          <span data-app-part="metric-value">{effData
                             ? `${fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} ${speedUnit}`
-                            : driveValueStatus}
+                            : driveValueStatus}</span>
                         </Text>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{efficiencyUnit}</Text>
+                      <div data-app-part="list-row" className="flex items-center justify-between gap-2">
+                        <Text data-app-part="metric-label" as="dt" variant="caption">{efficiencyUnit}</Text>
                         <Text
                           as="dd"
+                          data-app-part="metric-reading"
                           size="sm"
                           weight="bold"
                           className={cn('tabular-nums', effData && efficiencyClass(effData.avgEff))}
                         >
-                          {effData ? fmtNumber(toEfficiencyDisplay(effData.avgEff)) : driveValueStatus}
+                          <span data-app-part="metric-value">{effData ? fmtNumber(toEfficiencyDisplay(effData.avgEff)) : driveValueStatus}</span>
                         </Text>
                       </div>
                       {drivesRetained && (
-                        <Caption as="div">{t('driving.brief.retained', 'Retained source')}</Caption>
+                        <Caption data-app-part="metric-context" as="div">{t('driving.brief.retained', 'Retained source')}</Caption>
                       )}
                     </dl>
                   </GlassPanel>
@@ -558,7 +559,7 @@ export default function SpeedProfilePage() {
                     </ResponsiveContainer>
                   </EmbeddedChart>
                 </div>
-                <ul
+                <ul data-app-part="list"
                   className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1"
                   aria-label={t('speedProfile.efficiencyBands', 'Efficiency bands')}
                   data-testid="speed-efficiency-bands"
@@ -590,14 +591,16 @@ export default function SpeedProfilePage() {
             ) : isLoading ? (
               <Skeleton height={120} />
             ) : (data?.optimalSpeedMps ?? 0) > 0 ? (
-              <div className="flex items-start gap-3 rounded-lg border-l-2 border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-                <Text as="p" size="sm" color="secondary">
-                  {t('speedProfile.insightEvidenceText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.', {
-                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
-                    unit: speedUnit,
-                  })}
-                </Text>
+              <div data-app-part="feedback" data-app-feedback-kind="notice" className="flex items-start gap-3 rounded-lg border-l-2 border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <Zap data-app-part="feedback-icon" className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                <div data-app-part="feedback-content">
+                  <Text data-app-part="feedback-message" as="p" size="sm" color="secondary">
+                    {t('speedProfile.insightEvidenceText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.', {
+                      speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
+                      unit: speedUnit,
+                    })}
+                  </Text>
+                </div>
               </div>
             ) : (
               <EmptyState

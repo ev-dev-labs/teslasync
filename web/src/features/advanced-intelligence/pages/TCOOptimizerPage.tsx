@@ -297,27 +297,27 @@ export default function TCOOptimizerPage() {
                   ) : null}
                 </div>
                 <Table variant="embedded" aria-labelledby={`${strategyId}-${index}`}><tbody>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.cost', 'Projected cost')}</th>
-                    <td>{strategy.projected_cost_minor != null
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.cost', 'Projected cost')}</th>
+                    <td data-app-part="table-cell">{strategy.projected_cost_minor != null
                       ? money(strategy.projected_cost_minor)
                       : t('advancedIntelligence.unsupported.short', 'Unsupported')}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.risk', 'Risk score')}</th>
-                    <td className="text-end">{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct)}%` : '—'}</td>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.risk', 'Risk score')}</th>
+                    <td data-app-part="table-cell" className="text-end">{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct)}%` : '—'}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.convenience', 'Convenience')}</th>
-                    <td className="text-end">{fmtNumber(strategy.convenience_score_pct)}%</td>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.convenience', 'Convenience')}</th>
+                    <td data-app-part="table-cell" className="text-end">{fmtNumber(strategy.convenience_score_pct)}%</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</th>
-                    <td className="text-end">{fmtNumber(strategy.home_charging_pct)}% / {fmtNumber(strategy.public_charging_pct)}%</td>
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</th>
+                    <td data-app-part="table-cell" className="text-end">{fmtNumber(strategy.home_charging_pct)}% / {fmtNumber(strategy.public_charging_pct)}%</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</th>
-                    <td>{strategy.within_budget == null
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</th>
+                    <td data-app-part="table-cell">{strategy.within_budget == null
                       ? t('advancedIntelligence.unsupported.short', 'Unsupported')
                       : strategy.within_budget
                         ? t('advancedIntelligence.tco.withinBudget', 'Within budget')

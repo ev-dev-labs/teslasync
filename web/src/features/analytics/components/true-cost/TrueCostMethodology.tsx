@@ -32,16 +32,21 @@ export function TrueCostMethodology({
         <Text as="p" variant="caption" className="mb-4">
           {t('tco.methodology.subtitle', 'Deterministic interpretation of the canonical operating-cost envelope with runtime validation and no imputed UI rows.')}
         </Text>
-        <ol className="grid gap-2 md:grid-cols-2">
+        <ol data-app-part="list" data-app-list="records" className="grid gap-2 md:grid-cols-2">
           {limits.map((limit, index) => (
             <li
               key={limit}
+              data-app-part="card list-row"
+              data-app-card-kind="record"
+              data-surface-variant="standalone"
               className="flex gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
-              <Text variant="label" mono>
-                {t('tco.methodology.item', '{{number}}.', { number: index + 1 })}
-              </Text>
-              <Text variant="bodySm">{limit}</Text>
+              <div data-app-part="record-body" className="flex gap-3">
+                <Text variant="label" mono>
+                  {t('tco.methodology.item', '{{number}}.', { number: index + 1 })}
+                </Text>
+                <Text variant="bodySm">{limit}</Text>
+              </div>
             </li>
           ))}
         </ol>

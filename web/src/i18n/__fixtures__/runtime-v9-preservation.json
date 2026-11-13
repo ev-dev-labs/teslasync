@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the six exact parent-owned V9 runtime successors. Reverse each to independently compiled V6/V8 bytes before applying unchanged Replay, Help, application-design and older producer proofs.",
+  "independentCurrentProof": {
+    "manifest": "full-design-live-browser-runtime-candidate-v9-source-freeze.json",
+    "manifestSha256": "118787acaeb74703e4d9b2156aa789cc5905b46289cede56260ab17aaab544a8",
+    "integrity": "full-design-v9-http-integrity.json",
+    "integritySha256": "935f0904921081428c07c0693ac5d4cc870140f83857a7e93e93fe3d629a6fbf"
+  },
+  "dependencies": [
+    {"file": "web/src/components/ui/AppDesignPortal.tsx", "sha256": "a2898954070103b83c790399100f2955a350325f83d7acdca9cdd61f6bcab719"},
+    {"file": "web/src/components/ui/Button.tsx", "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"},
+    {"file": "web/src/hooks/useMotionPreference.ts", "sha256": "cfd32886cfc5c54e7d8b6876f22fda63e110d9eedacddd992b61219e5ed5b832"}
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "before": "e0bfa5725a9e559bb63132a898325f4baa11b02dd8f1fabd1bd49b106708dbac",
+      "after": "dbeb6c6c65f7948afa026e6b16832cae89f7f4e16de63098f66e9c56cf6ff14e",
+      "predecessorMap": "full-design-runtime-frozen-dist-v6/assets/oSuOSMx7.js.map",
+      "predecessorMapSha256": "c2e15a6114fd50d78ecb7a9a89c49d2df0be97418b78a45fb9c93a1914c19ae3",
+      "predecessorMapSource": "../../src/features/trips/pages/TripReplayPage.tsx",
+      "originalCallCount": 61,
+      "originalCallsSha256": "4b6caa103d11ad1ed7c70ca53a9d9e83b6e0608d4372569bf610524b154c6895",
+      "hunks": [
+        {"start": 0, "old": ["import { startTransition, useMemo, useEffect, useRef, useCallback, useState } from 'react';", "import { useParams, Link, useSearchParams } from 'react-router-dom';"], "new": ["import { useMemo, useEffect, useRef, useCallback, useState } from 'react';", "import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom';"]},
+        {"start": 279, "old": ["  const [pendingUrlWrite, setPendingUrlWrite] = useState<{", "    id: string;", "    progress: number;", "    playing: boolean;", "  } | null>(null);"], "new": ["  const { pathname } = useLocation();", "  const latestUrlWriterRef = useRef({", "    id, pathname, progress: replay.progress, playing: replay.isPlaying,", "    sampleCount: positions.length, setSearchParams,", "  });", "  latestUrlWriterRef.current = {", "    id, pathname, progress: replay.progress, playing: replay.isPlaying,", "    sampleCount: positions.length, setSearchParams,", "  };"]},
+        {"start": 323, "old": ["      // Match Router's transitions rather than overtaking a pending navigation.", "      startTransition(() => {", "        setPendingUrlWrite({ id, progress: snapshotProgress, playing: snapshotPlaying });", "      });"], "new": ["      const writer = latestUrlWriterRef.current;", "      if (writer.id !== id || writer.sampleCount === 0", "        || writer.progress !== snapshotProgress || writer.playing !== snapshotPlaying) return;", "      // BrowserRouter's rendered query can lag navigation already written to history.", "      const currentUrl = new URL(window.location.href);", "      if (currentUrl.pathname !== writer.pathname) return;", "      const prev = currentUrl.searchParams;", "      const next = new URLSearchParams(prev);", "      if (snapshotProgress > 0 && snapshotProgress < 1) {", "        next.set('at', snapshotProgress.toFixed(3));", "      } else {", "        next.delete('at');", "      }", "      if (snapshotPlaying) next.set('play', '1');", "      else next.delete('play');", "      if (next.toString() !== prev.toString()) {", "        writer.setSearchParams(next, { replace: true });", "      }"]},
+        {"start": 345, "old": ["  }, [id, replay.progress, replay.isPlaying, positions.length, setSearchParams]);", "", "  // Commit pending navigation before merging a due write into the router's query.", "  useEffect(() => {", "    if (!pendingUrlWrite) return;", "    setPendingUrlWrite(null);", "    if (pendingUrlWrite.id !== id || positions.length === 0", "      || pendingUrlWrite.progress !== replay.progress", "      || pendingUrlWrite.playing !== replay.isPlaying) return;", "    setSearchParams(", "      (prev) => {", "        const next = new URLSearchParams(prev);", "        if (pendingUrlWrite.progress > 0 && pendingUrlWrite.progress < 1) {", "          next.set('at', pendingUrlWrite.progress.toFixed(3));", "        } else {", "          next.delete('at');", "        }", "        if (pendingUrlWrite.playing) next.set('play', '1');", "        else next.delete('play');", "        return next;", "      },", "      { replace: true },", "    );", "  }, [pendingUrlWrite, id, positions.length, replay.progress, replay.isPlaying, setSearchParams]);"], "new": ["  }, [id, pathname, replay.progress, replay.isPlaying, positions.length, setSearchParams]);"]}
+      ]
+    },
+    {
+      "file": "web/src/components/ui/Tooltip.tsx",
+      "before": "f9fcbb0a648f69d95e690cefca8c60c6074cb867142302e5ffe46470be9a1a8a",
+      "after": "63c0fe0e6025030564d73b10fc83a4544d0bdf914ca91a18308b788b36735ca9",
+      "predecessorMap": "full-design-runtime-frozen-dist-v6/assets/index-C4QTP2qu.js.map",
+      "predecessorMapSha256": "8e7553ee831b1deeadb1c30728cc5e75b536a4f3dda8b49bab364bb2e6aea4d2",
+      "predecessorMapSource": "../../src/components/ui/Tooltip.tsx",
+      "originalCallCount": 0,
+      "originalCallsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "hunks": [
+        {"start": 3, "old": [], "new": ["  createContext,"]},
+        {"start": 6, "old": [], "new": ["  useContext,"]},
+        {"start": 19, "old": [], "new": ["import { AppDesignPortal } from './AppDesignPortal';", "", "/** Header compositions can move triggers without changing their allocated size. */", "export const TooltipPortalContext = createContext(false);"]},
+        {"start": 57, "old": [], "new": ["  /** Escape layout/scroll containers while retaining the trigger's complete design profile. */", "  portal?: boolean;"]},
+        {"start": 156, "old": [" * - The visibility CSS handles both `:hover` AND `:focus-within` so keyboard", " *   users (Tab into a button wrapped in a tooltip) get the same affordance as", " *   mouse users."], "new": [" * - Hover and focus-within share visibility, using trigger events when the", " *   bubble is portaled. Keyboard and mouse users get the same affordance."]},
+        {"start": 168, "old": ["export function Tooltip({ content, side = 'top', multiline, boundaryRef, children }: TooltipProps) {"], "new": ["export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal: portalProp, children }: TooltipProps) {"]},
+        {"start": 170, "old": [], "new": ["  const inheritedPortal = useContext(TooltipPortalContext);", "  const portal = portalProp ?? inheritedPortal;"]},
+        {"start": 176, "old": [], "new": ["  const [verticalOffset, setVerticalOffset] = useState(12);"]},
+        {"start": 179, "old": [], "new": ["  const [active, setActive] = useState(false);"]},
+        {"start": 208, "old": ["    for (const clipper of findClippingAncestors(trigger)) {"], "new": ["    for (const clipper of portal ? [] : findClippingAncestors(trigger)) {"]},
+        {"start": 216, "old": ["    if (multiline || boundaryRef) setMaxWidth(availableWidth);", "    const width = multiline || boundaryRef"], "new": ["    if (multiline || boundaryRef || portal) setMaxWidth(availableWidth);", "    const width = multiline || boundaryRef || portal"]},
+        {"start": 228, "old": ["    setHorizontalOffset(left - bounds.left);", "  }, [side, multiline, boundaryRef]);"], "new": ["    setHorizontalOffset(portal ? left : left - bounds.left);", "    if (portal) {", "      const viewportHeight = document.documentElement.clientHeight || window.innerHeight;", "      const height = tooltip.offsetHeight;", "      const below = bounds.bottom + 8;", "      const above = bounds.top - height - 8;", "      let top = side === 'bottom' ? below", "        : side === 'top' ? above : bounds.top + (bounds.height - height) / 2;", "      if (side === 'bottom' && below + height > viewportHeight - 12 && above >= 12) top = above;", "      if (side === 'top' && above < 12 && below + height <= viewportHeight - 12) top = below;", "      setVerticalOffset(Math.max(12, Math.min(top, viewportHeight - height - 12)));", "    }", "  }, [side, multiline, boundaryRef, portal]);"]},
+        {"start": 259, "old": [], "new": ["    // Complete-profile changes can recenter a fixed-size title without a", "    // ResizeObserver notification. Observe only the portaled trigger's ancestry,", "    // never the bubble whose measured offsets we write ourselves.", "    const layoutObserver = portal && typeof MutationObserver === 'function'", "      ? new MutationObserver(updatePosition) : null;", "    if (layoutObserver) {", "      for (let ancestor = triggerRef.current as HTMLElement | null; ancestor; ancestor = ancestor.parentElement) {", "        layoutObserver.observe(ancestor, {", "          attributes: true,", "          attributeFilter: ['class', 'style', 'dir', 'data-app-design-owner'],", "        });", "      }", "    }"]},
+        {"start": 273, "old": [], "new": ["    if (portal) window.addEventListener('scroll', updatePosition, true);"]},
+        {"start": 276, "old": [], "new": ["      layoutObserver?.disconnect();"]},
+        {"start": 278, "old": [], "new": ["      if (portal) window.removeEventListener('scroll', updatePosition, true);"]},
+        {"start": 280, "old": ["  }, [content, updatePosition, boundaryRef]);"], "new": ["  }, [content, updatePosition, boundaryRef, portal]);"]},
+        {"start": 320, "old": ["  return (", "    <span", "      ref={triggerRef}", "      className=\"relative inline-flex group/tip\"", "      onMouseEnter={() => {", "        hoveredRef.current = true;", "        setDismissed(false);", "        updatePosition();", "      }}", "      onMouseLeave={() => { hoveredRef.current = false; }}", "      onFocus={() => {", "        setDismissed(false);", "        updatePosition();", "      }}", "    >", "      {enrichedChild}"], "new": ["  const bubble = ("]},
+        {"start": 328, "old": [], "new": ["          ...(portal ? { top: verticalOffset } : {}),"]},
+        {"start": 332, "old": ["          'pointer-events-none absolute z-50 rounded-shape-sm px-2.5 py-1.5',"], "new": ["          'pointer-events-none z-50 rounded-shape-sm px-2.5 py-1.5',", "          portal ? 'fixed' : 'absolute',"]},
+        {"start": 338, "old": [], "new": ["          portal && 'max-w-tooltip-viewport whitespace-normal break-words',"]},
+        {"start": 349, "old": ["          'opacity-0 transition-opacity duration-fast ease-standard motion-reduce:transition-none',", "          'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',"], "new": ["          'transition-opacity duration-fast ease-standard motion-reduce:transition-none',", "          portal && active ? 'opacity-100' : 'opacity-0',", "          !portal && 'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',"]},
+        {"start": 354, "old": ["          sideClasses[side],"], "new": ["          !portal && sideClasses[side],"]},
+        {"start": 359, "old": [], "new": ["  );", "", "  return (", "    <span", "      ref={triggerRef}", "      className=\"relative inline-flex group/tip\"", "      onMouseEnter={() => {", "        hoveredRef.current = true;", "        if (portal) setActive(true);", "        setDismissed(false);", "        updatePosition();", "      }}", "      onMouseLeave={() => {", "        hoveredRef.current = false;", "        if (portal) setActive(Boolean(triggerRef.current?.contains(document.activeElement)));", "      }}", "      onFocus={() => {", "        if (portal) setActive(true);", "        setDismissed(false);", "        updatePosition();", "      }}", "      onBlur={event => {", "        if (portal) setActive(hoveredRef.current || Boolean(event.currentTarget.contains(event.relatedTarget)));", "      }}", "    >", "      {enrichedChild}", "      {portal ? <AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal> : bubble}"]}
+      ]
+    },
+    {
+      "file": "web/src/components/layout/PageHeader.tsx",
+      "before": "cfb67a250af7678a80bd115e083ca232ce3bc4be7d34b74060b63cbd846d6e88",
+      "after": "1c53ff48ecef4230ecdb0972a604cd1b33592c238b9235a7a405f7e8930b413b",
+      "predecessorMap": "full-design-runtime-frozen-dist-v6/assets/CpPhVUiT.js.map",
+      "predecessorMapSha256": "d4f226d6766b8713960fd35067c5c9ae7637e79d6649201b04bda11368681d13",
+      "predecessorMapSource": "../../src/components/layout/PageHeader.tsx",
+      "originalCallCount": 1,
+      "originalCallsSha256": "3345f6a314ac1423db8bcba816c86b40e5c6bcde2cdce5ccb2cf2d9f7b82b44b",
+      "hunks": [
+        {"start": 7, "old": ["import { Tooltip } from '../ui/Tooltip'"], "new": ["import { Tooltip, TooltipPortalContext } from '../ui/Tooltip'"]},
+        {"start": 50, "old": [], "new": ["      <TooltipPortalContext.Provider value={true}>"]},
+        {"start": 119, "old": [], "new": ["      </TooltipPortalContext.Provider>"]}
+      ]
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before": "f700c7faaa3b5efc45df9461f8ab4ab8daf2648c15c2195d91b4a98bdd3ef496",
+      "after": "9bc9516a940dfa9553acccb70cbf551c8c437f342a4fcebddb8b075a8a9759e5",
+      "predecessorMap": "full-design-runtime-frozen-dist-v6/assets/CDoirDcn.js.map",
+      "predecessorMapSha256": "925f4e2cb13d612ad1a8da096c35617941b4eea05a015ca6a846f0b2429f06b5",
+      "predecessorMapSource": "../../src/components/layout/PageContainer.tsx",
+      "originalCallCount": 2,
+      "originalCallsSha256": "84bebf4f142644d4dc53470c02460c394bf8e956aadc1902a40db300666fc9d5",
+      "hunks": [
+        {"start": 14, "old": ["import { Tooltip } from '@/components/ui/Tooltip';"], "new": ["import { Tooltip, TooltipPortalContext } from '@/components/ui/Tooltip';"]},
+        {"start": 176, "old": [], "new": ["      <TooltipPortalContext.Provider value={true}>"]},
+        {"start": 257, "old": [], "new": ["      </TooltipPortalContext.Provider>"]}
+      ]
+    },
+    {
+      "file": "web/src/components/data-display/FreshnessDot.tsx",
+      "before": "8849e193fe831818a521b705c91119d28c1873d9fd766ef79af7b02216e850f3",
+      "after": "404dc1ce0989850c500687bc12a0f99fec32b911f0091169576c8a6dd4a15c97",
+      "predecessorMap": "full-design-runtime-candidate-dist-v8/assets/D5i68Onp.js.map",
+      "predecessorMapSha256": "350c7d18ecd841bb4da6b3f5262def41d59aa92ad7647fe12ea166d204e500d6",
+      "predecessorMapSource": "../../src/components/data-display/FreshnessDot.tsx",
+      "originalCallCount": 14,
+      "originalCallsSha256": "8dfd3b9d50019db6c23a052f08cdd90ede3378207cdcfd5f5a8ef5f7e27a314a",
+      "hunks": [
+        {"start": 226, "old": [], "new": ["      focusableWhenDisabled={Boolean(onRefresh)}"]}
+      ]
+    },
+    {
+      "file": "web/src/components/ui/IconButton.tsx",
+      "before": "e7fb21de8966dfd5d1ff878dd1bc95388936eba7189d4b5182b356eb09986e9b",
+      "after": "5fe878b0912a71cdb54e03a659d903315125bf9f93bfc04754130436b49e6bb1",
+      "predecessorMap": "full-design-runtime-candidate-dist-v8/assets/ADs9yRVJ.js.map",
+      "predecessorMapSha256": "6d2d98906460693dfb453c20625c9dcc9142d23c29948c28599ae215971abfe9",
+      "predecessorMapSource": "../../src/components/ui/IconButton.tsx",
+      "originalCallCount": 0,
+      "originalCallsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "hunks": [
+        {"start": 1, "old": [], "new": ["import { LoaderCircle } from 'lucide-react';"]},
+        {"start": 7, "old": [], "new": ["import { useMotionPreference } from '@/hooks/useMotionPreference';"]},
+        {"start": 30, "old": [], "new": ["  /** Keep unavailable buttons focusable for live status; activation stays blocked. */", "  focusableWhenDisabled?: boolean;"]},
+        {"start": 64, "old": [], "new": ["  focusableWhenDisabled = false,"]},
+        {"start": 73, "old": [], "new": ["  const { reduce } = useMotionPreference();", "  const focusableDisabled = focusableWhenDisabled && (disabled || busy);"]},
+        {"start": 105, "old": ["      icon={icon}", "      loading={busy}", "      disabled={disabled}", "      onClick={activate}", "      className={cn(ICON_ONLY, restClass, className)}"], "new": ["      icon={busy && focusableDisabled", "        ? <LoaderCircle aria-hidden=\"true\" focusable=\"false\" className={cn('h-4 w-4 shrink-0 motion-reduce:animate-none', !reduce && 'animate-spin')} />", "        : icon}", "      loading={busy && !focusableDisabled}", "      disabled={disabled && !focusableDisabled}", "      aria-disabled={focusableDisabled || undefined}", "      aria-busy={busy || undefined}", "      onClick={focusableDisabled ? undefined : activate}", "      className={cn(ICON_ONLY, restClass, focusableDisabled && 'text-[var(--text-secondary)] shadow-none', className)}"]}
+      ]
+    }
+  ]
+}

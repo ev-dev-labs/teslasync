@@ -7,6 +7,7 @@ import { resolveAvailablePackId, type PackId } from '@/features/dashboard/widget
 export interface WidgetDesignPreference {
   pack_id: PackId;
   scope: string;
+  app_wide: boolean;
 }
 
 export const widgetDesignPreferenceKey = (origin: string, scope: string | null) =>
@@ -60,10 +61,12 @@ export async function widgetDesignScope(subject: string | null): Promise<string>
 }
 
 function checkedPreference(value: WidgetDesignPreference, scope: string): WidgetDesignPreference {
-  if (!value || value.scope !== scope || typeof value.pack_id !== 'string') {
+  if (!value || value.scope !== scope || typeof value.pack_id !== 'string' ||
+    (value.app_wide !== undefined && typeof value.app_wide !== 'boolean')) {
     throw new Error('Widget design preference identity mismatch');
   }
-  return { scope, pack_id: resolveAvailablePackId(value.pack_id) };
+  const pack_id = resolveAvailablePackId(value.pack_id);
+  return { scope, pack_id, app_wide: pack_id === value.pack_id && value.app_wide === true };
 }
 
 export function useWidgetDesignPreference(origin: string, scope: string | null, enabled: boolean) {
@@ -87,6 +90,7 @@ export function useWidgetDesignPreference(origin: string, scope: string | null, 
 
 interface SavePreference {
   pack_id: PackId;
+  app_wide?: boolean;
   scope: string;
   origin: string;
   signal: AbortSignal;
@@ -115,7 +119,7 @@ export function useSaveWidgetDesignPreference() {
       if (!input.isCurrent()) throw new Error('Widget design identity changed');
       return checkedPreference(await request<WidgetDesignPreference>('/settings/widget-design-pack', {
         method: 'PUT',
-        body: JSON.stringify({ pack_id: input.pack_id }),
+        body: JSON.stringify({ pack_id: input.pack_id, app_wide: input.app_wide }),
         signal: input.signal,
         cache: 'no-store',
         skipAuthRefresh: true,

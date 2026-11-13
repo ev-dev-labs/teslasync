@@ -113,7 +113,7 @@ export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewP
 
   if (initialLoading) {
     return (
-      <div
+      <div data-app-part="status"
         className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
         data-testid="system-overview-loading"
         role="status"

@@ -1,16 +1,20 @@
 import { createHash } from 'node:crypto';
 import type { Page } from '@playwright/test';
+import type { AppSettings } from '../src/api/types';
 import type { DashboardLayoutsPayload } from '../src/api/hooks/useSettings';
+import type { WatchSummary } from '../src/api/hooks/useWatch';
 import type { SavedDashboard } from '../src/features/dashboard/widgets/types';
 import { mergeDashboardSettings } from '../src/features/dashboard/widgets/types';
 import { orderedLayouts } from '../src/features/dashboard/lib/orderedLayout';
+import { DEFAULT_PINNED_NAV_PATHS } from '../src/lib/navPins';
 import { PACK_APPEARANCES, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { installDashboardWidgetSources } from './dashboardWidgetFixtures';
+import { installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { catalogueAnalyticsSources, installCatalogueRoutes } from './dashboardCatalogueRemainingSources';
 import { installCatalogueSignalSources } from './dashboardCatalogueRemainingFixtures';
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
-import { fulfillApiFixture, installApiMocks, seedBrowserState } from './mockApi';
+import { fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState, type MockApiController } from './mockApi';
 
 export const statusWidgets = [
   ['drivetrain-health', 'Drivetrain health'], ['motor-performance', 'Motor performance'],
@@ -55,8 +59,8 @@ export const reviewWidgets = [
   ...timelineWidgets,
 ] as const;
 export const packNames: Record<PackId, string> = {
-  classic: 'Classic', v1: 'Studio', v2: 'Elevated', v3: 'Precision',
-  v4: 'Owner', v5: 'Iconic', v6: 'Expressive', v7: 'Pixel',
+  classic: 'Classic', v1: 'Telemetry Studio', v2: 'Horizon Loft', v3: 'Precision Ledger',
+  v4: 'Executive Concierge', v5: 'Iconic Showroom', v6: 'Expressive Form', v7: 'Pixel Cockpit',
   motorsport: 'Motorsport', blueprint: 'Blueprint', editorial: 'Editorial',
   ambient: 'Ambient', terminal: 'Terminal', atlas: 'Atlas', analog: 'Analog',
   observatory: 'Observatory', bauhaus: 'Bauhaus', quiet: 'Quiet Form',
@@ -64,17 +68,19 @@ export const packNames: Record<PackId, string> = {
   glass: 'Glass Current', deco: 'Deco Grand', kinetic: 'Kinetic Type',
   brutal: 'Neo Brutal', cyber: 'Cyberdeck', memphis: 'Memphis Pop',
 };
-export const reviewOrigin = 'http://127.0.0.1:4189';
+export const reviewOrigin = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4189';
 const reviewIdentity = 'widget-design-review';
 
 export interface ReviewPreferenceStore {
   pack_id: PackId;
   scope: string;
+  app_wide: boolean;
 }
 
 export function createReviewPreference(subject?: string): ReviewPreferenceStore {
   return {
     pack_id: 'classic',
+    app_wide: false,
     scope: createHash('sha256').update(subject ? `forward_auth:${subject}` : 'open').digest('hex'),
   };
 }
@@ -97,6 +103,8 @@ export async function installPackReview(
   selection: readonly (readonly [string, string])[] = reviewWidgets,
   fullCatalogue = false,
   preferenceStore = createReviewPreference(),
+  allowedOrigin = reviewOrigin,
+  presentationSettings: Partial<AppSettings> = {},
 ) {
   if (process.env.E2E_MOCKS === '0') throw new Error('Widget design review requires isolated synthetic fixtures');
   await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
@@ -114,24 +122,62 @@ export async function installPackReview(
     localStorage.setItem('teslasync-dashboards', JSON.stringify([saved]));
     localStorage.setItem('teslasync-active-dashboard', saved.id);
   }, { saved: dashboard });
+  const origin = new URL(allowedOrigin).origin;
   await page.route('**/*', route => {
-    return new URL(route.request().url()).origin === reviewOrigin
+    return new URL(route.request().url()).origin === origin
       ? route.continue() : route.abort('blockedbyclient');
   });
+  await installCataloguePhotoSource(page, false, 'fallback');
   const mocks = await installApiMocks(page, 'populated', theme);
   if (!mocks) throw new Error('Missing isolated API fixtures');
+  // Review an initialized account without triggering unrelated first-login pin migration writes.
+  mocks.navPins = [...DEFAULT_PINNED_NAV_PATHS, '@navigation-initialized'].map((path, index) => ({
+    id: index + 1, item_type: 'navigation', item_id: path, position: index, pinned_at: now,
+  }));
+  mocks.nextNavPinId = mocks.navPins.length + 1;
+  await page.route(url => url.pathname === '/api/v1/settings', route => {
+    if (route.request().method() !== 'GET' || new URL(route.request().url()).search) {
+      mocks.unmatched.add(`${route.request().method()} /settings`);
+      return fulfillApiFixture(route, mocks, { status: 599, json: { error: 'Unexpected review settings request' } });
+    }
+    return fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, mode: theme, ...presentationSettings },
+    });
+  });
   await page.route('**/api/v1/settings/widget-design-pack', async route => {
-    if (route.request().method() === 'PUT') {
-      const body = route.request().postDataJSON() as { pack_id: PackId };
-      if (!Object.hasOwn(packNames, body.pack_id)) {
+    const method = route.request().method();
+    if (!['GET', 'PUT'].includes(method) || new URL(route.request().url()).search) {
+      mocks.unmatched.add(`${method} /settings/widget-design-pack`);
+      await fulfillApiFixture(route, mocks, { status: 599, json: { error: 'Unexpected design preference request' } });
+      return;
+    }
+    if (method === 'PUT') {
+      const body: unknown = route.request().postDataJSON();
+      if (body === null || typeof body !== 'object' || Array.isArray(body)
+        || !('pack_id' in body) || typeof body.pack_id !== 'string'
+        || !Object.hasOwn(packNames, body.pack_id)
+        || Object.keys(body).some(key => !['pack_id', 'app_wide'].includes(key))
+        || ('app_wide' in body && typeof body.app_wide !== 'boolean')) {
         await fulfillApiFixture(route, mocks, { status: 400, json: { error: 'Unknown design pack' } });
         return;
       }
-      preferenceStore.pack_id = body.pack_id;
+      preferenceStore.pack_id = body.pack_id as PackId;
+      if ('app_wide' in body && typeof body.app_wide === 'boolean') preferenceStore.app_wide = body.app_wide;
     }
     await fulfillApiFixture(route, mocks, { json: preferenceStore });
   });
   await installDashboardWidgetSources(page, mocks);
+  // The actual chrome-less watch page participates in profile-cleanup checks.
+  // Keep the configured session capability and supply its real read endpoint,
+  // rather than suppressing the query or accepting an unmatched request.
+  await installCatalogueRoutes(page, mocks, {
+    '/watch/summary': {
+      vehicle_name: 'Synthetic public-route review', state: 'parked',
+      battery_level: 72, range_m: 180000, is_charging: false,
+      charge_rate: 0, time_to_full: 0, is_locked: true, sentry_mode: false,
+      inside_temp_c: 20, outside_temp_c: 18, is_climate_on: false, last_updated: now,
+    } satisfies WatchSummary,
+  });
   const analytics = catalogueAnalyticsSources(now);
   await installCatalogueRoutes(page, mocks, {
     '/notifications/stats': analytics['/notifications/stats'],
@@ -194,6 +240,20 @@ export async function installPackReview(
   // Freeze after fixture creation so its observations never begin in the future.
   await page.clock.setFixedTime(new Date());
   return mocks;
+}
+
+export async function installGeofenceReviewSources(page: Page, mocks: MockApiController) {
+  // Empty saved directory, real manual drawing workflow. No inferred AI,
+  // geolocation, rates, or write capability is granted by these read fixtures.
+  for (const path of ['/geofences', '/geofences/needs-review', '/geofences/visited-candidates', '/geofences/rates/current']) {
+    await page.route(url => url.pathname === `/api/v1${path}`, route => {
+      if (route.request().method() !== 'GET' || new URL(route.request().url()).search) {
+        mocks.unmatched.add(`${route.request().method()} ${path}`);
+        return fulfillApiFixture(route, mocks, { status: 599, json: { error: 'Unexpected geofence review request' } });
+      }
+      return fulfillApiFixture(route, mocks, { json: [] });
+    });
+  }
 }
 
 export async function selectReviewPack(page: Page, packId: PackId) {

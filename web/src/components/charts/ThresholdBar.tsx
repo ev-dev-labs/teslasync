@@ -142,6 +142,8 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
     return (
       <div
         ref={ref}
+        data-app-part="chart"
+        data-chart-family="threshold"
         role="meter"
         aria-label={label || undefined}
         aria-valuenow={clamped}
@@ -154,7 +156,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
         }
         className={cn('flex w-full flex-col gap-1.5', className)}
       >
-        <div className="flex items-baseline justify-between gap-2">
+        <div data-chart-readout className="flex items-baseline justify-between gap-2">
           <Text as="span" size="xs" weight="medium" color="muted">
             {label}
           </Text>
@@ -168,10 +170,11 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
           </Text>
         </div>
 
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+        <div data-chart-gauge-track className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
           {segments.map((b, i) => (
             <div
               key={`${b.from}-${b.to}-${i}`}
+              data-chart-gauge-band
               aria-hidden="true"
               className="absolute inset-y-0"
               style={{ left: `${b.leftPct}%`, width: `${b.widthPct}%`, background: b.color }}
@@ -179,6 +182,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
           ))}
           {targetPct != null && (
             <div
+              data-chart-gauge-marker
               aria-hidden="true"
               className="absolute inset-y-0 w-px bg-[var(--border-strong)]"
               style={{ left: `${targetPct}%` }}
@@ -187,7 +191,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
         </div>
 
         {/* The reading itself: a marker on the track, not a fill of it. */}
-        <div className="relative h-3">
+        <div data-chart-gauge-pointer className="relative h-3">
           <div
             aria-hidden="true"
             className="absolute top-0 h-3 w-1 -translate-x-1/2 rounded-full bg-[var(--text-primary)] ring-2 ring-[var(--surface-1)] transition-all duration-slow"
@@ -196,7 +200,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
         </div>
 
         {!hideScale && (
-          <div className="flex items-center justify-between">
+          <div data-chart-scale className="flex items-center justify-between">
             <Text as="span" size="xs" color="muted">
               {formatScale(lo)}
               {unit}

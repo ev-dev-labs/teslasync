@@ -115,6 +115,8 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
     return (
       <div
         ref={ref}
+        data-app-part="chart"
+        data-chart-family="bipolar"
         role={hasMeter ? 'meter' : 'group'}
         aria-label={label || undefined}
         aria-valuenow={hasMeter ? reading : undefined}
@@ -126,7 +128,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
           : undefined}
         className={cn('flex w-full flex-col gap-1.5', className)}
       >
-        <div className="flex items-baseline justify-between gap-2">
+        <div data-chart-readout className="flex items-baseline justify-between gap-2">
           <Text as="span" size="xs" weight="medium" color="muted">
             {label}
           </Text>
@@ -146,9 +148,10 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
           </Text>
         </div>
 
-        <div data-bipolar-track className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)] forced-colors:[outline-style:solid] forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:!bg-[Canvas] forced-colors:[forced-color-adjust:none]">
+        <div data-chart-gauge-track data-bipolar-track className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)] forced-colors:[outline-style:solid] forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:!bg-[Canvas] forced-colors:[forced-color-adjust:none]">
           {reading !== undefined && <div
             data-bipolar-fill
+            data-chart-gauge-fill
             className="absolute inset-y-0 rounded-full transition-all duration-slow forced-colors:!bg-[Highlight] forced-colors:!bg-none forced-colors:[forced-color-adjust:none]"
             style={{
               // Anchor the fill at the zero rule and grow it outwards. A
@@ -160,6 +163,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
             }}
           />}
           <div
+            data-chart-gauge-marker
             aria-hidden="true"
             className="absolute inset-y-0 w-px bg-[var(--border-strong)] forced-colors:!bg-[CanvasText] forced-colors:[forced-color-adjust:none]"
             style={{ left: `${zeroPct}%` }}
@@ -167,7 +171,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
         </div>
 
         {(negativeLabel || positiveLabel) && (
-          <div className="flex items-center justify-between">
+          <div data-chart-scale className="flex items-center justify-between">
             <Text as="span" size="xs" color="muted">
               {negativeLabel ?? ''}
             </Text>

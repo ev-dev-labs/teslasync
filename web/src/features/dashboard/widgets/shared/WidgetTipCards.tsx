@@ -59,7 +59,7 @@ export function WidgetTipCards({
   }
 
   return (
-    <div role="list" className={cn('flex h-full min-w-0 flex-col overflow-y-auto', dashboardTokens.density.gridGap)}>
+    <div role="list" data-app-part="list" className={cn('flex h-full min-w-0 flex-col overflow-y-auto', dashboardTokens.density.gridGap)}>
       {visible.map((tip) => (
         <div
           key={tip.id}

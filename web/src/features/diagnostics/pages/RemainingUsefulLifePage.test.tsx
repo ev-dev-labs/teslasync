@@ -8,6 +8,9 @@ import type { FormatOptions } from '@/hooks/useUnits';
 import { formatDistance, type DistanceUnitPref } from '@/lib/unitConversion';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import RemainingUsefulLifePage from './RemainingUsefulLifePage';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 const sources = vi.hoisted(() => ({ board: vi.fn(), detail: vi.fn() }));
 const units = vi.hoisted((): { distance: DistanceUnitPref } => ({ distance: 'km' }));
@@ -108,6 +111,41 @@ beforeEach(() => {
 });
 
 describe('RemainingUsefulLifePage independent sources', () => {
+  it.each(PACK_IDS)('%s composes all real definition rows while retaining projection gates and selection', pack => {
+    const projected = { ...component, remaining_days: 0, remaining_km: 0, projected_eol_date: null };
+    const observation = {
+      ...component, component: 'brakes', label: 'Brakes', projection_available: false,
+      remaining_days: 0, remaining_km: 0, projected_eol_date: null,
+    };
+    sources.board.mockReturnValue(query({ vehicle_id: 7, components: [projected, observation], next_service: null }));
+    const { container } = renderPage();
+    container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(container, pack);
+    const release = observeAppDesignScopes(container);
+    try {
+      const projectedCard = screen.getByRole('button', { name: 'Show forecast for Tires' });
+      const observationCard = screen.getByRole('button', { name: 'Show forecast for Brakes' });
+      for (const card of [projectedCard, observationCard]) {
+        const list = card.querySelector('dl[data-app-list="definitions"]')!;
+        expect(list).not.toBeNull();
+        const rows = list.querySelectorAll(':scope > [data-app-part~="list-row"]');
+        expect(rows).toHaveLength(3);
+        for (const row of rows) {
+          expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]');
+          expect(row.querySelector('dt[data-app-part~="metric-label"]')).not.toBeEmptyDOMElement();
+          expect(row.querySelector('dd[data-app-part~="metric-value"]')).not.toBeEmptyDOMElement();
+        }
+      }
+      expect([...projectedCard.querySelectorAll('dl dd')].map(node => node.textContent)).toEqual(['0 days', '0 km', '—']);
+      expect([...observationCard.querySelectorAll('dl dd')].map(node => node.textContent)).toEqual(['—', '—', '—']);
+      fireEvent.click(observationCard);
+      expect(observationCard).toHaveAttribute('aria-pressed', 'true');
+      expect(projectedCard).toHaveAttribute('aria-pressed', 'false');
+      expect(sources.detail).toHaveBeenLastCalledWith(7, 'brakes');
+      expect(projected.remaining_km).toBe(0);
+    } finally { release(); }
+  });
+
   it.each([
     ['hv_battery', 'High-voltage battery'],
     ['lv_battery', 'Low-voltage battery'],

@@ -58,7 +58,7 @@ function DriftedGuidance({ drift }: { drift: SchemaDrift }) {
               ? t('admin.schemaDrift.driftedBodyHash', 'The live schema fingerprint differs from the seed even though object counts match — inspect column definitions or index expressions.')
               : t('admin.schemaDrift.driftedBodyUnknownCounts', 'The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes.')}
         </Text>
-        <ul className="list-disc space-y-1.5 ps-5">
+        <ul data-app-part="list" className="list-disc space-y-1.5 ps-5">
           <li><Text as="span" variant="bodySm">
             {t('admin.schemaDrift.remediateSeed', 'Confirm migrations are applied, then restart the API to regenerate the seed fingerprint.')}
           </Text></li>

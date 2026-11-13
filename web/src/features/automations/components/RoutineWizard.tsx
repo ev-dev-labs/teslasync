@@ -115,7 +115,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
         </Text>
       )}
       {!geofencesState.hasData && !geofencesState.fatalError && !geofencesState.isRefreshBlocked && (geofencesQuery.isLoading || geofencesQuery.isFetching) && (
-        <div role="status" aria-busy="true">
+        <div data-app-part="status" role="status" aria-busy="true">
           <Text color="secondary">{t('common.loading', 'Loading...')}</Text>
           <Skeleton className="h-10 w-full" />
         </div>
@@ -155,7 +155,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
         templatesState.isRefreshBlocked ? (
           <DataSourceNotice sources={[{ id: 'routine-templates', label: t('automations.routines.resource', 'Geofence routines'), query: templatesQuery }]} />
         ) : templatesQuery.isLoading || templatesQuery.isFetching ? (
-          <div role="status" aria-busy="true">
+          <div data-app-part="status" role="status" aria-busy="true">
             <Text color="secondary">{t('common.loading', 'Loading...')}</Text>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-hidden="true">
               {Array.from({ length: 4 }).map((_, i) => (

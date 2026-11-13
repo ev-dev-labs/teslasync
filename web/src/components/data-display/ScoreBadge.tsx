@@ -77,6 +77,8 @@ export function ScoreBadge(props: ScoreBadgeProps) {
 
   return (
     <span
+      data-app-part="metric badge"
+      data-app-metric="score"
       data-testid={testId}
       aria-label={labelText}
       className={cn(

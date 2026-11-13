@@ -40,11 +40,11 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates, sources }: Softwar
             ]}
           />
           {softwareUpdates.installed_versions.length > 0 && (
-            <ul className="space-y-1 text-xs">
+            <ul data-app-part="list" data-app-list="definitions" className="space-y-1 text-xs">
               {softwareUpdates.installed_versions.map((v, i) => (
-                <li key={`${v.version}-${i}`} className="flex flex-wrap justify-between gap-2 text-[var(--text-secondary)]">
-                  <span>{v.version}</span>
-                  <span className="text-[var(--text-muted)]">{v.installed_at ?? '—'}</span>
+                <li key={`${v.version}-${i}`} data-app-part="list-row" className="flex flex-wrap justify-between gap-2 text-[var(--text-secondary)]">
+                  <span data-app-part="metric-label">{v.version}</span>
+                  <span data-app-part="metric-reading metric-value" className="text-[var(--text-muted)]">{v.installed_at ?? '—'}</span>
                 </li>
               ))}
             </ul>

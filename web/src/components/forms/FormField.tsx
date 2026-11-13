@@ -86,7 +86,7 @@ export function FormField({
     : children
 
   return (
-    <div className={cn('min-w-0 space-y-1.5', className)}>
+    <div data-app-part="field" className={cn('min-w-0 space-y-1.5', className)}>
       <Label
         htmlFor={fieldId}
         required={required}
@@ -96,11 +96,11 @@ export function FormField({
       </Label>
       {control}
       {error ? (
-        <ErrorText id={errorId} className="break-words">
+        <ErrorText data-app-part="status" data-app-field-feedback="error" id={errorId} className="break-words">
           {error}
         </ErrorText>
       ) : hint ? (
-        <HelperText id={hintId} className="break-words">
+        <HelperText data-app-part="status" data-app-field-feedback="hint" id={hintId} className="break-words">
           {hint}
         </HelperText>
       ) : null}

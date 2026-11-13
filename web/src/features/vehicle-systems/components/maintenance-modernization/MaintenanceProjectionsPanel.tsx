@@ -28,7 +28,7 @@ export function MaintenanceProjectionsPanel({
         loading={<div className="space-y-3">{[0, 1, 2, 3, 4].map(key => <Skeleton key={key} className="h-8 rounded-lg" />)}</div>}
       >
         {projections.length === 0 ? empty : (
-          <ul className="divide-y divide-[var(--border-subtle)]">
+          <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]">
             {projections.map(projection => (
               <li key={projection.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0 flex-1">

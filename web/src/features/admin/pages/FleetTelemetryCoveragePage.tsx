@@ -212,7 +212,7 @@ export default function FleetTelemetryCoveragePage({
                 </EmbeddedChart>
                 {/* Color-independent, testable fallback for the chart above. */}
                 {sortedDestinations.length > 0 && (
-                  <ul className="mt-3 flex flex-wrap gap-2" data-testid="coverage-destinations-list">
+                  <ul data-app-part="list" className="mt-3 flex flex-wrap gap-2" data-testid="coverage-destinations-list">
                     {sortedDestinations.map(([dest, count]) => (
                       <li key={dest}>
                         <Badge variant="info" size="md" className="max-w-full whitespace-normal break-all" data-testid={`coverage-dest-${dest}`}>
@@ -235,7 +235,7 @@ export default function FleetTelemetryCoveragePage({
                 'Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean "not applicable" for that field — they are expected, not missing data.',
               )}
             </Caption>
-            <ul className="space-y-3">
+            <ul data-app-part="list" className="space-y-3">
               <li data-testid="coverage-legend-column">
                 <Text as="span" size="sm" weight="semibold" color="primary">
                   {t('coverage.legend.columnLabel', 'Column')}
@@ -299,7 +299,7 @@ export default function FleetTelemetryCoveragePage({
                 </Caption>
               </div>
             </div>
-            <ul className="flex flex-wrap gap-2">
+            <ul data-app-part="list" className="flex flex-wrap gap-2">
               {orphans.map((orphan) => (
                 <li key={orphan}>
                   <Badge variant="warning" size="sm" className="max-w-full whitespace-normal break-all font-mono">

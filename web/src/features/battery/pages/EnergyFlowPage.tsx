@@ -12,7 +12,7 @@ import {
   Text, Caption, Label, Icon,
 } from '@/components/ui';
 
-import { type StatMetric } from '@/components/data-display';
+import { KVList, type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import {
@@ -34,7 +34,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 
-import { cn } from '@/lib/cn';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { convertDistanceFromSI, convertEnergyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useEnergyStats, useEnergyFlow, type EnergyFlowSnapshot } from '@/api/hooks/useEnergy';
@@ -180,20 +179,16 @@ function FlowConnector({
   active: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div role="group" aria-label={label} className="flex min-w-0 flex-col items-center gap-1">
       <Label>{label}</Label>
-      <div
-        className={cn(
-          'flex items-center gap-1 rounded-full border px-3 py-1',
-          active
-            ? cn(neonColorMap.cyan.bg, neonColorMap.cyan.border, neonColorMap.cyan.text)
-            : cn(neonColorMap.neutral.bg, neonColorMap.neutral.border, typography.color.secondary),
-        )}
+      <Badge
+        variant={active ? 'info' : 'neutral'}
+        className="gap-1 px-3 py-1"
       >
         <Icon icon={ArrowDown} size="sm" className="flow-grid-arrow-column" />
         <Icon icon={ArrowRight} size="sm" className="flow-grid-arrow-row" />
         <Text size="xs" weight="medium" className={active ? neonColorMap.cyan.text : typography.color.secondary}>{value}</Text>
-      </div>
+      </Badge>
     </div>
   );
 }
@@ -211,37 +206,12 @@ function FlowNode({
   sublabel?: string;
 }) {
   return (
-    <GlassPanel className="flex flex-col items-center gap-2 p-4 text-center">
+    <GlassPanel role="group" aria-label={label} className="flex flex-col items-center gap-2 p-4 text-center">
       {icon}
       <Text size="xs" weight="medium" color="secondary">{label}</Text>
       {children}
       {sublabel ? <Caption>{sublabel}</Caption> : null}
     </GlassPanel>
-  );
-}
-
-/** One row in the live-power breakdown side panel. */
-function LivePowerRow({
-  icon,
-  label,
-  value,
-  unavailable = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  unavailable?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-      <div className="flex items-center gap-2">
-        {icon}
-        <Caption>{label}</Caption>
-      </div>
-      <Text size="sm" mono color={unavailable ? 'secondary' : 'primary'}>
-        {value}
-      </Text>
-    </div>
   );
 }
 
@@ -584,30 +554,35 @@ export default function EnergyFlowPage() {
               onRetry={() => { void refetchFlow(); }}
               skeletonHeight={200}
             >
-              <div className="space-y-2">
-                <LivePowerRow
-                  icon={<Icon icon={Zap} className={typography.color.secondary} />}
-                  label={t('energyFlow.livePower.dc', 'DC power')}
-                  value={flow?.dc_charging_power_w != null ? formatPower(flow.dc_charging_power_w) : DASH}
-                />
-                <LivePowerRow
-                  icon={<Icon icon={Activity} className={typography.color.secondary} />}
-                  label={t('energyFlow.livePower.ac', 'AC power')}
-                  value={flow?.ac_charging_power_w != null ? formatPower(flow.ac_charging_power_w) : DASH}
-                />
-                <LivePowerRow
-                  unavailable
-                  icon={<Icon icon={Thermometer} className={typography.color.secondary} />}
-                  label={t('energyFlow.livePower.hvac', 'HVAC')}
-                  value={t('energyFlow.na', 'N/A')}
-                />
-                <LivePowerRow
-                  unavailable
-                  icon={<Icon icon={Cpu} className={typography.color.secondary} />}
-                  label={t('energyFlow.livePower.accessories', 'Accessories')}
-                  value={t('energyFlow.na', 'N/A')}
-                />
-              </div>
+              <KVList
+                layout="responsive"
+                items={[
+                  {
+                    id: 'dc',
+                    leading: <Icon icon={Zap} className={typography.color.secondary} />,
+                    label: <Caption>{t('energyFlow.livePower.dc', 'DC power')}</Caption>,
+                    value: <Text size="sm" mono color="primary">{flow?.dc_charging_power_w != null ? formatPower(flow.dc_charging_power_w) : DASH}</Text>,
+                  },
+                  {
+                    id: 'ac',
+                    leading: <Icon icon={Activity} className={typography.color.secondary} />,
+                    label: <Caption>{t('energyFlow.livePower.ac', 'AC power')}</Caption>,
+                    value: <Text size="sm" mono color="primary">{flow?.ac_charging_power_w != null ? formatPower(flow.ac_charging_power_w) : DASH}</Text>,
+                  },
+                  {
+                    id: 'hvac',
+                    leading: <Icon icon={Thermometer} className={typography.color.secondary} />,
+                    label: <Caption>{t('energyFlow.livePower.hvac', 'HVAC')}</Caption>,
+                    value: <Text size="sm" mono color="secondary">{t('energyFlow.na', 'N/A')}</Text>,
+                  },
+                  {
+                    id: 'accessories',
+                    leading: <Icon icon={Cpu} className={typography.color.secondary} />,
+                    label: <Caption>{t('energyFlow.livePower.accessories', 'Accessories')}</Caption>,
+                    value: <Text size="sm" mono color="secondary">{t('energyFlow.na', 'N/A')}</Text>,
+                  },
+                ]}
+              />
             </SectionState>
           </LayoutCard>
           ) },

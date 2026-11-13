@@ -79,7 +79,7 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
           message={t('liveMonitor.noBuffer', 'No signals buffered yet')}
         />
       ) : (
-        <ul
+        <ul data-app-part="list"
           className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 2xl:grid-cols-3"
           aria-label={t(
             'liveMonitor.topSignalsList',

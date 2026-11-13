@@ -41,11 +41,11 @@ export default function PhysicsFirmwareEpochsSection({ physics }: { physics: Phy
     </Evidence>
     <Evidence title={t('teslaOnly.epochsChronology', 'Version observation chronology')}>
       {epochs.length === 0 && <Text as="p" variant="bodySm">{t('teslaOnly.epochsNoHistory', 'No firmware observations returned. Current version and intervening updates are unknown.')}</Text>}
-      {epochs.map((row) => <div key={`${row.version}-${row.started_at}`} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{row.version} · {time(row.started_at, t)} → {row.ended_at ? time(row.ended_at, t) : t('teslaOnly.currentEpoch', 'Latest observed version')}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.workbench.epochMeters', 'FSD counter: {{from}} → {{to}} · complete → unplug: {{dwell}}', {
+      {epochs.map((row) => <div data-app-part="card" data-app-record-kind="physics-evidence" key={`${row.version}-${row.started_at}`} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-record-slot="reading" as="p" variant="bodySm">{row.version} · {time(row.started_at, t)} → {row.ended_at ? time(row.ended_at, t) : t('teslaOnly.currentEpoch', 'Latest observed version')}</Text>
+        <Text data-app-record-slot="context" as="p" variant="caption">{t('teslaOnly.workbench.epochMeters', 'FSD counter: {{from}} → {{to}} · complete → unplug: {{dwell}}', {
           from: distance(row.fsd_meter_start_m), to: distance(row.fsd_meter_end_m), dwell: seconds(row.complete_to_unplug_s, t),
-        })}</Text><Text as="p" variant="caption">{row.honesty}</Text>
+        })}</Text><Text data-app-record-slot="context" as="p" variant="caption">{row.honesty}</Text>
       </div>)}
       <Text as="p" variant="caption">{t('teslaOnly.epochsCaution', 'The first observation of a version is not its installation timestamp. Counter changes within or across epochs are not evidence of FSD use; compare meter resets before attributing a drop to an update.')}</Text>
       <Select label={t('teslaOnly.epochsFilter', 'Filter observed firmware version')} value={selected} onChange={(event) => setFilter(event.target.value)}

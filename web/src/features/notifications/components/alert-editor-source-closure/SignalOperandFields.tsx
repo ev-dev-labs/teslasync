@@ -11,7 +11,7 @@ export function SignalOperandFields({ controller }: { controller: AlertRuleEdito
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <label className={fieldLabelCls} htmlFor="alert-signal">
+        <label data-app-part="field-label" className={fieldLabelCls} htmlFor="alert-signal">
           {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
         </label>
         <UiSelect
@@ -33,7 +33,7 @@ export function SignalOperandFields({ controller }: { controller: AlertRuleEdito
       </div>
       <div>
         <div className={fieldLabelRowCls}>
-          <label htmlFor="alert-operator">
+          <label data-app-part="field-label" htmlFor="alert-operator">
             {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
           </label>
           <HelpIcon i18nKey="help.fields.alertStudio.operator" content="The comparison applied between the live signal value and your typed value. Available operators depend on the signal's value type." for="alert-operator" />

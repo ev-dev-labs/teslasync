@@ -30,6 +30,12 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types'
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -140,7 +146,7 @@ function install(cfg: RouteConfig = {}) {
 
 let mounted = false
 
-function renderSection() {
+function renderSection(pack?: PackId) {
   mounted = true
   const qc = new QueryClient({
     defaultOptions: {
@@ -152,7 +158,7 @@ function renderSection() {
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
-          <FleetApiSection />
+          {pack ? <div data-app-design-preview="" {...getAppDesignAttributes(pack)}><FleetApiSection /></div> : <FleetApiSection />}
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -194,6 +200,42 @@ beforeEach(() => {
 })
 
 describe('FleetApiSection — scaffolding', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes actual command, fingerprint, path and instruction surfaces without invoking actions', async pack => {
+    install()
+    const view = renderSection(pack)
+    await findToolCard('Public key')
+    const host = view.container.querySelector('[data-app-design-preview]')!
+    const release = observeAppDesignScopes(host)
+    try {
+      const registration = await findToolCard('Partner reg')
+      const key = await findToolCard('Public key')
+      for (const element of [registration, key]) {
+        const bodies = [...element.querySelectorAll('[data-app-code-slot="body"]')]
+        expect(bodies).toHaveLength(2)
+        for (const body of bodies) expectAppDesignDataMode(body, APPLICATION_DESIGNS[pack].data, '[data-app-code-slot="body"]')
+      }
+      expect([...registration.querySelectorAll('[data-app-code-slot="body"]')].map(body => body.textContent))
+        .toEqual(['openssl ecparam -name prime256v1 -genkey -noout -out private.pem', 'openssl ec -in private.pem -pubout -out public.pem'])
+      expect([...key.querySelectorAll('[data-app-code-slot="body"]')].map(body => body.textContent))
+        .toEqual(['AA:BB:CC:DD', '/.well-known/appspecific/com.tesla.3p.public-key.pem'])
+      const pairing = await findToolCard('Key pairing')
+      const instructions = within(pairing).getByText('Pairing instructions').closest('[data-app-part="panel"]')!
+      const selectors: string[] = []
+      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8')).walkRules(rule => {
+        for (const selector of rule.selectors) {
+          if (selector.includes('[data-surface-variant="standalone"]') &&
+            [...document.querySelectorAll(selector)].includes(instructions)) selectors.push(selector)
+        }
+      })
+      expect(selectors.length).toBeGreaterThan(0)
+      for (const selector of selectors) expect(selector).toContain(`[data-app-design-owner~="pack-${pack}"]`)
+      expect([...instructions.querySelectorAll('li')].map(row => row.textContent)).toEqual(['Pairing Step1', 'Pairing Step2', 'Pairing Step3'])
+      expect(within(pairing).getByText(/configured application hostname is not provided/)).toBeInTheDocument()
+      expect(mockedRequest.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true)
+      expect(screen.queryByRole('dialog')).toBeNull()
+    } finally { release() }
+  })
+
   it('renders both section headers and every Fleet API tool card', async () => {
     install()
     renderSection()
@@ -218,6 +260,28 @@ describe('FleetApiSection — scaffolding', () => {
     for (const title of toolTitles) {
       expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
     }
+  })
+
+  it('owns source commands and instruction surfaces without running a key or vehicle action on mount', async () => {
+    install()
+    const registration = await findToolCard('Partner reg')
+    for (const command of [
+      'openssl ecparam -name prime256v1 -genkey -noout -out private.pem',
+      'openssl ec -in private.pem -pubout -out public.pem',
+    ]) {
+      const body = within(registration).getByText(command)
+      expect(body.textContent).toBe(command)
+      expect(body).toHaveAttribute('data-app-code-slot', 'body')
+      expect(body.closest('[data-app-panel-kind="code"]')).toHaveClass('px-3', 'py-1.5')
+    }
+    const pairing = await findToolCard('Key pairing')
+    const instructions = within(pairing).getByText('Pairing instructions').closest('[data-app-part="panel"]')!
+    expect(instructions).toHaveAttribute('data-surface-variant', 'standalone')
+    expect([...instructions.querySelectorAll('li')].map(row => row.textContent))
+      .toEqual(['Pairing Step1', 'Pairing Step2', 'Pairing Step3'])
+    expect(within(pairing).getByText(/configured application hostname is not provided/)).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
 
@@ -317,6 +381,10 @@ describe('PartnerPublicKeyTool', () => {
     expect(await within(card).findByText('Key registered')).toBeInTheDocument()
     expect(within(card).getByText('Matches local key')).toBeInTheDocument()
     expect(within(card).getByText('PEM-CONTENT-BLOCK')).toBeInTheDocument()
+    const pem = within(card).getByText('PEM-CONTENT-BLOCK')
+    expect(pem).toHaveAttribute('data-app-code-slot', 'body')
+    expect(pem).toHaveClass('max-h-48', 'overflow-auto', 'whitespace-pre-wrap', 'break-all')
+    expect(pem.closest('[data-app-panel-kind="code"]')).not.toBeNull()
     expect(mockedRequest).toHaveBeenCalledWith(
       '/dev-tools/partner-public-key?domain=myapp.example.com',
       expect.objectContaining({ method: 'GET' }),
@@ -382,6 +450,11 @@ describe('PublicKeySetupTool', () => {
 
     expect(within(card).getByText('AB:CD:EF:99')).toBeInTheDocument()
     expect(within(card).getByText('/.well-known/appspecific/com.tesla.3p.public-key.pem')).toBeInTheDocument()
+    for (const value of ['AB:CD:EF:99', '/.well-known/appspecific/com.tesla.3p.public-key.pem']) {
+      const body = within(card).getByText(value)
+      expect(body).toHaveAttribute('data-app-code-slot', 'body')
+      expect(body.closest('[data-app-panel-kind="code"]')).not.toBeNull()
+    }
     expect(within(card).getByText('Configured')).toBeInTheDocument()
 
     fireEvent.click(within(card).getByRole('button', { name: 'Generate keypair' }))
@@ -649,14 +722,66 @@ describe('VehicleDataTools', () => {
 })
 
 describe('OnboardingWorkflow', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s composes the original finite track and fill without changing progress or issuing commands', async pack => {
+    install({ publicKeyStatus: PENDING, fleetInfo: PENDING })
+    const view = renderSection(pack)
+    const host = view.container.querySelector('[data-app-design-preview]')!
+    const release = observeAppDesignScopes(host)
+    try {
+      const progress = screen.getByText('Progress').parentElement!.parentElement!
+      const track = progress.children[1] as HTMLElement
+      const fill = track.firstElementChild as HTMLElement
+      expect(progress.children).toHaveLength(2)
+      expect(track.children).toHaveLength(1)
+      expect(track).toHaveClass('h-2', 'overflow-hidden', 'rounded-full', 'bg-glass-border')
+      expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--semantic-info)]', 'transition-all', 'duration-slow', 'motion-reduce:transition-none')
+      expect(fill).toHaveStyle({ width: '0%' })
+      expect(within(progress).getByText('0 / 7 (0%)')).toBeInTheDocument()
+      expectAppDesignDataMode(track, APPLICATION_DESIGNS[pack].data, '[data-app-metric="bar"][data-metric-track]')
+      const fillRules = matchesAppDesignCss(fill, '[data-metric-fill]')
+      expect(fillRules.length).toBeGreaterThan(0)
+      for (const rule of fillRules) {
+        expect(rule.selector).toContain('[data-app-metric="bar"][data-metric-track] > [data-metric-fill]')
+        expect(rule.selector).toContain(':where([data-app-design-owner])')
+        expect(rule.declarations).toEqual({ 'box-sizing': 'border-box', 'min-inline-size': '0' })
+      }
+
+      fireEvent.click(screen.getByRole('button', { name: 'Mark complete' }))
+
+      expect(within(progress).getByText('1 / 7 (14%)')).toBeInTheDocument()
+      expect(fill).toHaveStyle({ width: '14.285714285714285%' })
+      expect(progress.children[1]).toBe(track)
+      expect(track.firstElementChild).toBe(fill)
+      expectAppDesignDataMode(track, APPLICATION_DESIGNS[pack].data, '[data-app-metric="bar"][data-metric-track]')
+      expect(await screen.findByRole('heading', { name: /Step 2: Create application/ })).toBeInTheDocument()
+      expect(JSON.parse(localStorage.getItem('devtools-onboarding') ?? '{}')).toEqual({ account: true })
+      expect(mockedRequest.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true)
+      expect(screen.queryByRole('dialog')).toBeNull()
+    } finally { release() }
+  })
+
+  it('retains fully completed local progress when upstream completion is unknown or rejected', async () => {
+    const completed = { account: true, application: true, keypair: true, register: true, auth: true, pair: true, telemetry: true }
+    localStorage.setItem('devtools-onboarding', JSON.stringify(completed))
+    install({ publicKeyStatus: REJECT, fleetInfo: {} })
+    const view = renderSection('classic')
+
+    expect((await screen.findAllByText(/Failed to load data.*boom/)).length).toBeGreaterThan(0)
+    const progress = screen.getByText('Progress').parentElement!.parentElement!
+    expect(within(progress).getByText('7 / 7 (100%)')).toBeInTheDocument()
+    expect(view.container.querySelector('[data-metric-fill]')).toHaveStyle({ width: '100%' })
+    expect(JSON.parse(localStorage.getItem('devtools-onboarding') ?? '{}')).toEqual(completed)
+  })
+
   it('auto-detects completed steps from key + auth status and persists them', async () => {
     install({
       publicKeyStatus: { configured: true },
       fleetInfo: { has_valid_token: true },
     })
-    renderSection()
+    const view = renderSection()
 
     expect(await screen.findByText(/2 \/ 7/)).toBeInTheDocument()
+    expect(view.container.querySelector('[data-metric-fill]')).toHaveStyle({ width: '28.57142857142857%' })
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('devtools-onboarding') ?? '{}')).toMatchObject({
         keypair: true,

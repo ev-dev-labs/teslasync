@@ -498,10 +498,12 @@ function VehicleJourneyPanel({ vehicleId, draft, setDraft }: {
                   {t('journey.plans.empty', 'No plans saved yet — the stop optimizer lands here.')}
                 </Text>
               ) : (
-                <ul className="space-y-2">
+                <ul data-app-part="list" className="space-y-2">
                   {safeArray(detail.plans).map((plan) => (
                     <li
                       key={plan.id}
+                      data-app-part="list-row card"
+                      data-surface-variant="standalone"
                       className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                     >
                       <Text as="span" variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">

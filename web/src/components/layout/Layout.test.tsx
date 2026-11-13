@@ -631,6 +631,23 @@ describe('Layout — unified sidebar wiring', () => {
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
   })
 
+  it('marks existing shell owners without moving navigation after the workspace or adding a second main', async () => {
+    const { container } = renderLayout('/')
+    await screen.findByTestId('command-deck')
+    const shell = container.querySelector('[data-app-part~="shell"]')
+    const navigation = container.querySelector('[data-app-part~="shell-sidebar"]')
+    const workspace = container.querySelector('[data-app-part~="shell-main"]')
+    expect(shell).toHaveAttribute('data-presentation-mode', 'standard')
+    expect(navigation).toHaveAttribute('data-role', 'sidebar')
+    expect(navigation).toHaveAttribute('data-app-part', 'shell-sidebar navigation')
+    expect(navigation?.parentElement).toBe(shell)
+    expect(workspace?.parentElement).toBe(shell)
+    expect(navigation!.compareDocumentPosition(workspace!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(workspace).toContainElement(screen.getByRole('main'))
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+  })
+
   it('mounts one step-up challenge host for sensitive actions', () => {
     renderLayout('/api-keys')
     expect(screen.getAllByTestId('reauth-root')).toHaveLength(1)

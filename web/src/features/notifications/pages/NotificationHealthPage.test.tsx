@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import type { NotificationLog } from '@/api/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import '../../../i18n';
 
 import NotificationHealthPage from './NotificationHealthPage';
@@ -184,5 +190,98 @@ describe('Notification Health', () => {
     expect(within(nav).getByRole('link', { name: 'Alert fatigue' })).not.toHaveAttribute('aria-current');
     expect(screen.getByText('Explore three independent views of notification health. Select a view to jump to its metrics, charts, and detailed breakdowns.'))
       .toHaveClass('text-[var(--text-secondary)]');
+  });
+});
+
+describe('Notification health — qualified native jump controls', () => {
+  it('activates all existing control modes and identities on the three real anchors without retagging their content', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/notifications/health#burn-rate']}><NotificationHealthPage /></MemoryRouter>,
+    );
+    const links = within(screen.getByRole('navigation', { name: 'Notification health sections' })).getAllByRole('link');
+    const sheetDirectory = resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs');
+    const controls: Rule[] = [];
+    postcss.parse(readFileSync(resolve(sheetDirectory, 'controls.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-controls=')) controls.push(rule); });
+    const matchesControl = (link: Element) => controls.filter(rule => rule.selectors.some(selector => link.matches(selector)));
+    const releaseNeutral = observeAppDesignScopes(container);
+    try {
+      for (const link of links) {
+        expect(link).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesControl(link)).toHaveLength(0);
+      }
+    } finally {
+      releaseNeutral();
+    }
+
+    container.setAttribute('data-app-design-preview', '');
+    try {
+      for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+        const release = observeAppDesignScopes(container);
+        try {
+          const identity: Rule[] = [];
+          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+            .walkRules(rule => { if (rule.selector.includes('[data-app-part~="button"]')) identity.push(rule); });
+          for (const [index, link] of links.entries()) {
+            expect(link.tagName).toBe('A');
+            expect(link).not.toHaveAttribute('role');
+            expect(link).toHaveAttribute('href', ['#fatigue', '#burn-rate', '#latency'][index]);
+            expect(link).toHaveClass('flex-col', 'p-4', 'gap-2');
+            expect(link.children).toHaveLength(3);
+            expect(link.getAttribute('data-app-design-owner')?.split(' '))
+              .toContain(`controls-${APPLICATION_DESIGNS[pack].controls}`);
+            const matching = matchesControl(link);
+            expect(matching.length, `${pack}: actual painted jump control`).toBeGreaterThan(0);
+            expect(matching.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-radius'))).toBe(true);
+            expect(identity.some(rule => rule.selectors.some(selector => link.matches(selector))),
+              `${pack}: actual jump identity consumer`).toBe(true);
+          }
+          expect(links[1]).toHaveAttribute('aria-current', 'location');
+          expect(links[0]).not.toHaveAttribute('aria-current');
+          expect(links[2]).not.toHaveAttribute('aria-current');
+        } finally {
+          release();
+        }
+      }
+    } finally {
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) container.removeAttribute(name);
+      container.removeAttribute('data-app-design-preview');
+    }
+    for (const link of links) {
+      expect(link).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesControl(link)).toHaveLength(0);
+    }
+  });
+
+  it('keeps native keyboard hash navigation, active location and the real scroll targets', async () => {
+    const originalLocation = window.location.href;
+    const originalScroll = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    window.history.replaceState(null, '', '/notifications/health');
+    const user = userEvent.setup();
+    const view = render(<BrowserRouter><NotificationHealthPage /></BrowserRouter>);
+    try {
+      const links = within(screen.getByRole('navigation', { name: 'Notification health sections' })).getAllByRole('link');
+      links[0].focus();
+      for (const [index, id] of ['fatigue', 'burn-rate', 'latency'].entries()) {
+        const link = links[index];
+        expect(link).toHaveFocus();
+        await user.keyboard('{Enter}');
+        await waitFor(() => expect(link).toHaveAttribute('aria-current', 'location'));
+        const target = document.getElementById(id);
+        expect(target).toBe(screen.getByRole('region', { name: link.getAttribute('aria-label') ?? '' }));
+        expect(scrollIntoView.mock.contexts.at(-1)).toBe(target);
+        expect(window.location.hash).toBe(`#${id}`);
+        if (index < links.length - 1) await user.tab();
+      }
+      expect(screen.getAllByRole('region', { name: /metrics/i })).toHaveLength(3);
+    } finally {
+      view.unmount();
+      window.history.replaceState(null, '', originalLocation);
+      if (originalScroll) Object.defineProperty(Element.prototype, 'scrollIntoView', originalScroll);
+      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    }
   });
 });

@@ -170,7 +170,7 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
         )}
       >
         {meta.isLoading ? (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-busy="true"
             aria-label={t('vehicles.photos.loading', 'Loading vehicle photo…')}

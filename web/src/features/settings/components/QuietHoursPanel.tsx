@@ -466,34 +466,38 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
           emptyContent={emptyWindowsContent}
         >
         {windows.length === 0 && !draft ? emptyWindowsContent : (
-          <ul className="min-w-0 space-y-3" data-testid="quiet-hours-list">
+          <ul data-app-part="list" className="min-w-0 space-y-3" data-testid="quiet-hours-list">
             {windows.map((w) => {
               const nextLabel = nextWindowChangeLabel(w, now)
               return (
                 <li
                   key={w.id}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-app-record-kind="quiet-hours-window"
+                  data-surface-variant="standalone"
                   className="min-w-0 space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
                   data-testid={`quiet-hours-row-${w.id}`}
                 >
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div data-app-part="record-header" data-app-record-slot="body" className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex min-w-0 flex-wrap items-center gap-3">
                       <Badge variant={w.enabled ? 'success' : 'neutral'}>
                         {w.enabled ? t('quietHours.enabled', 'Enabled') : t('quietHours.disabled', 'Disabled')}
                       </Badge>
-                      <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      <Text data-app-part="record-title" data-app-record-slot="label" as="span" size="sm" weight="medium" color="primary" className="min-w-0 break-words [overflow-wrap:anywhere]">
                         {summarizeWindow(w)}
                       </Text>
                       {nextLabel && (
-                        <Text as="span" variant="caption" className="min-w-0 break-words">{nextLabel}</Text>
+                        <Text data-app-part="record-context" data-app-record-slot="context" as="span" variant="caption" className="min-w-0 break-words">{nextLabel}</Text>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div data-app-record-slot="actions" className="flex items-center gap-2">
                       <IconButton icon={<Pencil className="h-3.5 w-3.5" />} label={t('quietHours.edit', 'Edit')} onClick={() => void startEdit(w)} disabled={saveInFlight || save.isPending} className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" />
                       {/* confirm-step: removeWindow asks in the shared ConfirmDialog before deleting */}
                       <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label={t('quietHours.delete', 'Delete')} onClick={() => void removeWindow(w)} busy={remove.isPending && remove.variables === w.id} className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div data-app-part="record-body" data-app-record-slot="context" className="flex flex-wrap gap-1.5">
                     {WEEKDAYS.map(({ bit, key, fallback }) => {
                       const on = (w.weekdays & bit) !== 0
                       return (
@@ -517,7 +521,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                     })}
                   </div>
                   {(w.bypass_severities ?? []).length > 0 && (
-                    <Text as="div" variant="caption">
+                    <Text data-app-part="record-context" data-app-record-slot="context" as="div" variant="caption">
                       {t('quietHours.bypassLabel', 'Always allow:')}{' '}
                       {(w.bypass_severities ?? []).map((s) => {
                         const choice = SEVERITY_CHOICES.find(({ value }) => value === s)
@@ -538,11 +542,14 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
 
         {draft && (
           <form
+            data-app-part="panel"
+            data-app-form-section
+            data-surface-variant="standalone"
             onSubmit={submit}
             className="min-w-0 space-y-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             data-testid="quiet-hours-form"
           >
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div data-app-form-heading className="flex min-w-0 flex-wrap items-center justify-between gap-3">
               <PanelTitle>
                 {editingId
                   ? t('quietHours.form.editTitle', 'Edit window')
@@ -555,122 +562,124 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label={t('quietHours.form.start', 'Start')}
-                type="time"
-                value={draft.start_local}
-                onChange={(e) => {
-                  setCurrentDraft({ ...draft, start_local: e.target.value })
-                  if (validationField === 'start_local') {
-                    setValidationError(null)
-                    setValidationField(undefined)
-                  }
-                }}
-                error={validationField === 'start_local' ? validationError ?? undefined : undefined}
-              />
-              <Input
-                label={t('quietHours.form.end', 'End')}
-                type="time"
-                value={draft.end_local}
-                onChange={(e) => {
-                  setCurrentDraft({ ...draft, end_local: e.target.value })
-                  if (validationField === 'end_local') {
-                    setValidationError(null)
-                    setValidationField(undefined)
-                  }
-                }}
-                error={validationField === 'end_local' ? validationError ?? undefined : undefined}
-              />
-            </div>
-
-            <Select
-              label={t('quietHours.form.timezone', 'Timezone (IANA)')}
-              value={draft.timezone}
-              onChange={(e) => {
-                setCurrentDraft({ ...draft, timezone: e.target.value })
-                if (validationField === 'timezone') {
-                  setValidationError(null)
-                  setValidationField(undefined)
-                }
-              }}
-              error={validationField === 'timezone' ? validationError ?? undefined : undefined}
-              options={tzOptions}
-            />
-
-            <fieldset
-              aria-describedby={validationField === 'weekdays' ? 'quiet-hours-weekdays-error' : undefined}
-            >
-              <Text as="legend" variant="caption" className="mb-2">
-                {t('quietHours.form.weekdays', 'Weekdays')}
-              </Text>
-              <div className="flex flex-wrap gap-1.5">
-                {WEEKDAYS.map(({ bit, key, fallback }) => {
-                  const on = (draft.weekdays & bit) !== 0
-                  return (
-                    <Button
-                      key={bit}
-                      type="button"
-                      onClick={() => toggleWeekday(bit)}
-                      variant={on ? 'primary' : 'outline'}
-                      size="sm"
-                      wrapLabel
-                      className="min-h-11 min-w-11"
-                      aria-pressed={on}
-                      data-testid={`qh-weekday-${bit}`}
-                    >
-                      {t(key, fallback)}
-                    </Button>
-                  )
-                })}
+            <div data-app-form-body className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label={t('quietHours.form.start', 'Start')}
+                  type="time"
+                  value={draft.start_local}
+                  onChange={(e) => {
+                    setCurrentDraft({ ...draft, start_local: e.target.value })
+                    if (validationField === 'start_local') {
+                      setValidationError(null)
+                      setValidationField(undefined)
+                    }
+                  }}
+                  error={validationField === 'start_local' ? validationError ?? undefined : undefined}
+                />
+                <Input
+                  label={t('quietHours.form.end', 'End')}
+                  type="time"
+                  value={draft.end_local}
+                  onChange={(e) => {
+                    setCurrentDraft({ ...draft, end_local: e.target.value })
+                    if (validationField === 'end_local') {
+                      setValidationError(null)
+                      setValidationField(undefined)
+                    }
+                  }}
+                  error={validationField === 'end_local' ? validationError ?? undefined : undefined}
+                />
               </div>
-              {validationField === 'weekdays' && validationError && (
-                <ErrorText id="quiet-hours-weekdays-error" className="mt-2">
+
+              <Select
+                label={t('quietHours.form.timezone', 'Timezone (IANA)')}
+                value={draft.timezone}
+                onChange={(e) => {
+                  setCurrentDraft({ ...draft, timezone: e.target.value })
+                  if (validationField === 'timezone') {
+                    setValidationError(null)
+                    setValidationField(undefined)
+                  }
+                }}
+                error={validationField === 'timezone' ? validationError ?? undefined : undefined}
+                options={tzOptions}
+              />
+
+              <fieldset data-app-part="field"
+                aria-describedby={validationField === 'weekdays' ? 'quiet-hours-weekdays-error' : undefined}
+              >
+                <Text as="legend" variant="caption" className="mb-2">
+                  {t('quietHours.form.weekdays', 'Weekdays')}
+                </Text>
+                <div className="flex flex-wrap gap-1.5">
+                  {WEEKDAYS.map(({ bit, key, fallback }) => {
+                    const on = (draft.weekdays & bit) !== 0
+                    return (
+                      <Button
+                        key={bit}
+                        type="button"
+                        onClick={() => toggleWeekday(bit)}
+                        variant={on ? 'primary' : 'outline'}
+                        size="sm"
+                        wrapLabel
+                        className="min-h-11 min-w-11"
+                        aria-pressed={on}
+                        data-testid={`qh-weekday-${bit}`}
+                      >
+                        {t(key, fallback)}
+                      </Button>
+                    )
+                  })}
+                </div>
+                {validationField === 'weekdays' && validationError && (
+                  <ErrorText id="quiet-hours-weekdays-error" className="mt-2">
+                    {validationError}
+                  </ErrorText>
+                )}
+              </fieldset>
+
+              <fieldset data-app-part="field">
+                <Text as="legend" variant="caption" className="mb-2">
+                  {t('quietHours.form.bypass', 'Always allow these severities through')}
+                </Text>
+                <div className="flex flex-wrap gap-1.5">
+                  {SEVERITY_CHOICES.map(({ value, labelKey, fallback }) => {
+                    const on = draft.bypass_severities.includes(value)
+                    return (
+                      <Button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleSeverity(value)}
+                        variant={on ? 'primary' : 'outline'}
+                        size="sm"
+                        wrapLabel
+                        className="min-h-11 min-w-11"
+                        aria-pressed={on}
+                        data-testid={`qh-severity-${value}`}
+                      >
+                        {t(labelKey, fallback)}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              {validationError && validationField == null && (
+                <ErrorText data-testid="quiet-hours-error">
                   {validationError}
                 </ErrorText>
               )}
-            </fieldset>
-
-            <fieldset>
-              <Text as="legend" variant="caption" className="mb-2">
-                {t('quietHours.form.bypass', 'Always allow these severities through')}
-              </Text>
-              <div className="flex flex-wrap gap-1.5">
-                {SEVERITY_CHOICES.map(({ value, labelKey, fallback }) => {
-                  const on = draft.bypass_severities.includes(value)
-                  return (
-                    <Button
-                      key={value}
-                      type="button"
-                      onClick={() => toggleSeverity(value)}
-                      variant={on ? 'primary' : 'outline'}
-                      size="sm"
-                      wrapLabel
-                      className="min-h-11 min-w-11"
-                      aria-pressed={on}
-                      data-testid={`qh-severity-${value}`}
-                    >
-                      {t(labelKey, fallback)}
-                    </Button>
-                  )
-                })}
-              </div>
-            </fieldset>
-
-            {validationError && validationField == null && (
-              <ErrorText data-testid="quiet-hours-error">
-                {validationError}
-              </ErrorText>
-            )}
-            {validationError && validationField != null && (
-              <VisuallyHidden
-                liveRegion
-                priority="assertive"
-                data-testid="quiet-hours-error"
-              >
-                {validationError}
-              </VisuallyHidden>
-            )}
+              {validationError && validationField != null && (
+                <VisuallyHidden
+                  liveRegion
+                  priority="assertive"
+                  data-testid="quiet-hours-error"
+                >
+                  {validationError}
+                </VisuallyHidden>
+              )}
+            </div>
 
             <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-2">
               <Button

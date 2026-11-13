@@ -91,12 +91,16 @@ export function NotificationRow({
 
   return (
     <div
+      data-app-part="card"
+      data-surface-variant="standalone"
       role="group"
       aria-label={displayTitle}
       className={cn(
         'group relative flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors duration-fast motion-reduce:transition-none',
         'border-[var(--border-default)] hover:bg-[var(--control-bg-hover)]',
         !isRead && 'bg-[var(--surface-2)] border-l-2 border-l-[var(--text-secondary)]',
+        // Pack frame borders must not erase the source-owned unread accent.
+        !isRead && 'data-[app-design-owner]:!bg-[var(--surface-2)] data-[app-design-owner]:!border-l-2 data-[app-design-owner]:!border-l-[var(--text-secondary)]',
       )}
     >
       <Checkbox
@@ -196,6 +200,9 @@ export function NotificationRow({
         )}
         {drillHref && (
           <Link
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-size="sm"
             to={drillHref}
             className={cn(BUTTON_BASE, typography.role.caption, 'px-2 py-1 hover:bg-[var(--control-bg-hover)]')}
             aria-label={t('alerts.viewContext', 'View context')}

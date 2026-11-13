@@ -2254,6 +2254,9 @@
   },
   "draft": {
     "discardDraft": "Discard draft",
+    "recovery": {
+      "fallbackLabel": "Unsaved draft"
+    },
     "restored": "Draft restored from {{when}}.",
     "restoredItem": "{{noun}} draft restored from {{when}}.",
     "unknownTime": "a moment ago",
@@ -2367,7 +2370,6 @@
     "connectionBody": "Unable to reach the server. Check your connection and try again.",
     "connectionTitle": "Connection Lost",
     "goHome": "Go Home",
-    "inlineTitle": "Component failed to load",
     "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
     "retry": "Retry",
     "retryAttempt": "Retry attempt {{count}}",

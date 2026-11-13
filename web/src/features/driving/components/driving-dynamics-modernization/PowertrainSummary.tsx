@@ -53,7 +53,7 @@ export default function PowertrainSummary({ vehicleId, historyQuery, showSourceN
         {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.powertrain.title', 'Powertrain summary')} /> : null}
         {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
         {query.isLoading && !state.hasData ? (
-          <div role="status" aria-label={t('dynamics.powertrain.loading', 'Loading selected-drive evidence')}>
+          <div data-app-part="status" role="status" aria-label={t('dynamics.powertrain.loading', 'Loading selected-drive evidence')}>
             <Skeleton className="h-24" />
           </div>
         ) : stats ? (

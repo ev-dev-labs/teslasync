@@ -12,7 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ReferenceLine,
   AREA_DEFAULTS,
 } from '@/components/charts';
@@ -68,7 +68,7 @@ export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChart
             <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <ChartLegend />
             <Area
               {...AREA_DEFAULTS}
               dataKey="torque"

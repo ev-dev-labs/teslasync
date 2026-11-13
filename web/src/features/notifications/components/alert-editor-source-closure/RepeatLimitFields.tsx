@@ -7,7 +7,7 @@ export function RepeatLimitFields({ controller }: { controller: AlertRuleEditorC
   return (
     <div className="sm:col-span-2">
       <div className={fieldLabelRowCls}>
-        <label htmlFor="alert-max-fires">
+        <label data-app-part="field-label" htmlFor="alert-max-fires">
           {t('notifications.alertStudio.editor.maxFiresLabel', 'Max alerts before condition resolves')}
         </label>
         <HelpIcon

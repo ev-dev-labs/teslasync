@@ -345,7 +345,7 @@ export default function SafetyPage() {
               </Text>
             </header>
 
-            <ul
+            <ul data-app-part="list"
               className="grid min-w-0 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]"
               data-testid="safety-settings-rows"
             >

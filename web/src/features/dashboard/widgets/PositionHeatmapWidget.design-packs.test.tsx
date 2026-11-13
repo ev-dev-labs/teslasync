@@ -308,7 +308,7 @@ it.each(Object.entries(PACK_APPEARANCES))('%s does not refetch twice while refre
   const view = render(widget(packId));
   await appearance(view.container, packAppearance);
   const refresh = screen.getByRole('button', { name: /^Refresh/i });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(refetch).not.toHaveBeenCalled();
   expectOriginalMap(2);

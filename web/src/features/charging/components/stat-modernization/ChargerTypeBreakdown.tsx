@@ -81,8 +81,8 @@ export function ChargerTypeBreakdown({
               return (
                 <div key={`${entry.name ?? 'type'}-${idx}`} className="space-y-1">
                   <Text size="xs" weight="medium" color="secondary">{entry.name ?? '—'}</Text>
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
-                    <div className="h-full rounded-full transition-all" style={{
+                  <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                    <div data-metric-fill className="h-full rounded-full transition-all" style={{
                       width: `${barWidth}%`, backgroundColor: entry.color ?? FALLBACK_COLOR,
                     }} />
                   </div>

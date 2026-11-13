@@ -100,9 +100,11 @@ function FingerprintDetails({ title, fp, generatedAt }: {
 function FingerprintStat({ label, value }: { label: string; value: number | null | undefined }) {
   const { fmtInt } = useNumberFormatting();
   return (
-    <div className="min-w-0 rounded-md bg-[var(--surface-2)] px-2 py-2 text-center">
-      <Text as="div" size="lg" weight="bold" color="primary" className="break-words tabular-nums">{value != null ? fmtInt(value) : '—'}</Text>
-      <Caption className="mt-0.5 block break-words">{label}</Caption>
+    <div data-app-part="metric" data-app-metric="tile" data-app-state={value != null ? 'value' : 'missing'} className="min-w-0 rounded-md bg-[var(--surface-2)] px-2 py-2 text-center">
+      <Text data-app-part="metric-reading" as="div" size="lg" weight="bold" color="primary" className="break-words tabular-nums">
+        <span data-app-part="metric-value">{value != null ? fmtInt(value) : '—'}</span>
+      </Text>
+      <Caption data-app-part="metric-label" className="mt-0.5 block break-words">{label}</Caption>
     </div>
   );
 }

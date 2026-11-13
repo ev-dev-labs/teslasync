@@ -92,6 +92,9 @@ export function HelpTooltip({
     <Tooltip content={tooltipBody} side={placement} multiline>
       <button
         type="button"
+        data-app-part="button"
+        data-app-variant="ghost"
+        data-app-icon-only="true"
         aria-label={label}
         // Focusable button → tooltip works for keyboard users (Tab/Enter)
         // and touch users (tap focuses the button → :focus-within reveals

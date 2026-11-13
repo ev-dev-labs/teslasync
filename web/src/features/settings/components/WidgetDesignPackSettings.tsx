@@ -19,6 +19,7 @@ export default function WidgetDesignPackSettings() {
   const [Preview, setPreview] = useState<ComponentType<WidgetDesignPackPreviewProps> | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const generation = useRef(0);
+  const previewTrigger = useRef<HTMLButtonElement | null>(null);
   const headingId = 'settings-widget-design-packs';
   const previewEntry = PACK_MANIFEST.find(entry => entry.id === previewId);
   const packName = (key: string) => t(key, { ns: 'dashboard' });
@@ -52,7 +53,7 @@ export default function WidgetDesignPackSettings() {
   }
 
   return <GlassPanel aria-labelledby={headingId} className="@container space-y-4 p-6">
-    <PanelTitle id={headingId}>{t('theme.widgetDesignPacks.title', 'Widget design packs')}</PanelTitle>
+    <PanelTitle id={headingId}>{t('theme.widgetDesignPacks.title', 'App design packs')}</PanelTitle>
     <Text variant="bodySm">{t('theme.widgetDesignPacks.scope', 'Saved on this TeslaSync server for your verified external-provider identity and restored on other machines. Deployments without login share one server selection. Other appearance settings and saved layouts stay unchanged.')}</Text>
     {!preference.isReady && !preference.error && <Text role="status">{t('theme.widgetDesignPacks.verifying', 'Verifying your identity and loading the saved selection...')}</Text>}
     {preference.error && <AlertBanner variant="warning" role="alert">
@@ -61,6 +62,17 @@ export default function WidgetDesignPackSettings() {
         {t('theme.widgetDesignPacks.retryPreference', 'Retry preference')}
       </Button>
     </AlertBanner>}
+    <Select label={t('theme.widgetDesignPacks.applyTo', 'Apply design to')}
+      value={preference.appWide ? 'app' : 'widgets'}
+      disabled={!preference.isReady || preference.isSaving}
+      onChange={event => {
+        void preference.setPackId(preference.packId, event.target.value === 'app');
+      }}
+      options={[
+        { value: 'widgets', label: t('theme.widgetDesignPacks.widgetsOnly', 'Widgets only') },
+        { value: 'app', label: t('theme.widgetDesignPacks.entireApp', 'Entire application') },
+      ]} />
+    <Text variant="bodySm">{t('theme.widgetDesignPacks.appScopeHelp', 'Entire application styles navigation, panels, controls, tables and dialogs with the same pack. Color mode, accent, fonts, density and accessibility preferences stay unchanged. This choice also syncs across machines.')}</Text>
     <div className="grid min-w-0 gap-3 @xl:grid-cols-2">
       <Select label={t('theme.widgetDesignPacks.designStyle', 'Design style')} value={designStyle}
         onChange={event => setDesignStyle(event.target.value as PackStyle | 'all')}
@@ -104,7 +116,10 @@ export default function WidgetDesignPackSettings() {
           </div>
           <Text variant="bodySm" className="grow">{packName(entry.descriptionKey)}</Text>
           <div className="mt-auto flex flex-wrap gap-2">
-            <Button size="sm" className="min-h-11" variant="secondary" onClick={() => openPreview(entry.id)}
+            <Button size="sm" className="min-h-11" variant="secondary" onClick={event => {
+              previewTrigger.current = event.currentTarget;
+              openPreview(entry.id);
+            }}
               aria-label={t('theme.widgetDesignPacks.previewNamed', 'Preview {{name}}', { name })}>
               {t('theme.widgetDesignPacks.preview', 'Preview')}
             </Button>
@@ -121,6 +136,8 @@ export default function WidgetDesignPackSettings() {
       })}
     </div>
     <Modal open={previewId != null} onClose={closePreview} size="full"
+      className="[&_[data-modal-scroll-body]]:[overflow-anchor:none]"
+      getReturnFocusTarget={() => previewTrigger.current}
       title={t('theme.widgetDesignPacks.previewNamed', 'Preview {{name}}', {
         name: previewEntry ? packName(previewEntry.nameKey) : '',
       })}

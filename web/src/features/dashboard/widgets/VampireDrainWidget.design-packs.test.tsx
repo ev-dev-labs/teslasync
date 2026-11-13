@@ -267,7 +267,7 @@ describe.each(packs)('Vampire drain %s (%s) source and controller states', (pack
     await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
     expect(screen.getByText('0.8')).toBeVisible();
     const refresh = screen.getByRole('button', { name: /Refresh data/ });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refreshEvents).not.toHaveBeenCalled();
   });

@@ -7,6 +7,9 @@ import { TelemetryPipelineCard } from '../TelemetryPipelineCard'
 import type { Vehicle } from '@/api/types'
 import type { PollEngineStatus } from '@/api/polling'
 import type { TelemetryStatus, VehicleTelemetry } from '@/types/telemetry'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
@@ -99,6 +102,48 @@ function makeMqtt(
 }
 
 describe('TelemetryPipelineCard', () => {
+  it.each(PACK_IDS)('%s owns actual connection and per-vehicle chips while retaining stream-only provenance and passive geometry', pack => {
+    const vehicle = makeVehicle()
+    mockPolling.data = { enabled: false, vehicles: {} }
+    mockMqtt.data = makeMqtt([{ vin: vehicle.vin, lastReceivedAgoSec: 12 }])
+    const view = harness(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <TelemetryPipelineCard vehicles={[vehicle]} positionCount={0} drivesCount={0}
+        chargingSessionsCount={0} signalLogCount={0} now={NOW} retained />
+    </div>)
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const row = screen.getByRole('link', { name: 'Daily Driver' }).closest('li')!
+      for (const chip of [
+        screen.getByText('Fleet Telemetry connected'),
+        screen.getByText('polling engine off (streaming-only)'),
+        within(row).getByText('sending').closest('[data-app-part~="badge"]')!,
+      ]) {
+        expect(chip).toHaveAttribute('data-app-part', 'badge')
+        expect(chip.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`)
+        expect(matchesAppDesignCss(chip, '[data-app-part~="badge"]').length).toBeGreaterThan(0)
+      }
+      expect(row).toHaveTextContent('last: 12s ago')
+      expect(within(row).getByText('stream')).toBeInTheDocument()
+      const bar = within(row).getByRole('progressbar', { name: 'Battery level' })
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-1')
+      expect(bar.querySelector('[data-metric-fill]')).toBeNull()
+      for (const [name, path, variant] of [
+        ['Open telemetry coverage', '/admin/telemetry/coverage', 'secondary'],
+        ['MQTT inspector', '/mqtt-inspector', 'ghost'],
+        ['All vehicles', '/vehicles', 'ghost'],
+      ]) {
+        const link = screen.getByRole('link', { name })
+        expect(link).toHaveAttribute('href', path)
+        expect(link).toHaveAttribute('data-app-part', 'button')
+        expect(link).toHaveAttribute('data-app-variant', variant)
+      }
+    } finally {
+      release()
+      view.unmount()
+    }
+  })
+
   beforeEach(() => {
     translated.mockClear()
     mockPolling.data = undefined
@@ -124,6 +169,7 @@ describe('TelemetryPipelineCard', () => {
       chargingSessionsCount={undefined} signalLogCount={undefined} now={NOW}
     />)
     expect(screen.getByText('Vehicle telemetry is unavailable until the vehicle list loads.')).toBeInTheDocument()
+    expect(screen.getByText('Vehicle telemetry is unavailable until the vehicle list loads.').closest('[data-app-feedback-kind="insight"]')).not.toBeNull()
     expect(screen.queryByText(/No vehicles configured yet/)).not.toBeInTheDocument()
     expect(screen.queryByText('none configured')).not.toBeInTheDocument()
   })
@@ -203,6 +249,7 @@ describe('TelemetryPipelineCard', () => {
       />,
     )
     expect(screen.getByText('Fleet Telemetry connection unknown')).toBeInTheDocument()
+    expect(screen.getByText('Fleet Telemetry connection unknown')).toHaveAttribute('data-app-part', 'badge')
     expect(screen.queryByText('MQTT broker disconnected')).toBeNull()
   })
 
@@ -406,6 +453,8 @@ describe('TelemetryPipelineCard', () => {
     // When MQTT is down AND polling is off, both warnings show
     expect(screen.getByText(/MQTT broker disconnected/)).toBeInTheDocument()
     expect(screen.getByText(/polling engine disabled/)).toBeInTheDocument()
+    expect(screen.getByText(/MQTT broker disconnected/)).toHaveAttribute('data-app-part', 'badge')
+    expect(screen.getByText(/polling engine disabled/)).toHaveAttribute('data-app-part', 'badge')
   })
 
   it('shows "Fleet Telemetry connected" neutral chip when MQTT broker is healthy', () => {

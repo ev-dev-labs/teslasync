@@ -96,11 +96,12 @@ export function DeliveryOutlookPanel({
         )}
       >
         <div className="space-y-4">
-          <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-            <Caption>
+          <div data-app-part="card metric" data-app-metric="tile" data-app-metric-kind="delivery-outlook" className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <Caption data-app-part="metric-label">
               {t('admin.teslaOrders.outlook.nextDelivery', 'Next delivery')}
             </Caption>
             <Text
+              data-app-part="metric-reading metric-value"
               as="div"
               size="lg"
               weight="bold"

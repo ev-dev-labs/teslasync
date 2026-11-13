@@ -547,7 +547,7 @@ describe('DrivesListPage — populated (km)', () => {
     expect(within(brief).getByText('100%')).toBeInTheDocument();
     // Freshness lives in the page header; the brief keeps provenance only.
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText(/just now/)).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: /just now/ })).toBeInTheDocument();
     expect(within(brief).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(within(brief).getByRole('button', { name: 'Compare drives' })).toBeInTheDocument();
   });

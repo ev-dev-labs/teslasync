@@ -356,14 +356,17 @@ export function AlertFatiguePanel() {
               message={t('alertFatigue.noRules', 'No notification rules have fired yet.')}
             />
           ) : (
-            <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
+            <ul data-app-part="list" className="grid min-w-0 gap-3 lg:grid-cols-2">
               {summary.groups.map((g) => (
                 <li
                   key={g.key}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium">{g.title}</Text>
+                  <div data-app-part="record-header" className="mb-2 flex flex-wrap items-center gap-2">
+                    <Text data-app-part="record-title" variant="body" className="min-w-0 break-words font-medium">{g.title}</Text>
                     <Badge variant={VERDICT_BADGE[g.verdict]}>
                       {t(`alertFatigue.verdict.${g.verdict}`, VERDICT_DEFAULT[g.verdict])}
                     </Badge>
@@ -373,11 +376,12 @@ export function AlertFatiguePanel() {
                       </Badge>
                     ) : null}
                   </div>
+                  <div data-app-part="record-body">
                   <Table aria-label={g.title}>
                     <tbody>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.firings', 'Firings')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.firings', 'Firings')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.firingsValue', '{{n}} · {{perDay}}/day', {
                               n: countLabel(g.total),
@@ -386,9 +390,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.burstRate', 'In bursts')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.burstRate', 'In bursts')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.burstValue', '{{pct}}% · max {{max}}', {
                               pct: isFiniteNumber(g.burstRate) ? numberLabel(g.burstRate * 100) : '—',
@@ -397,9 +401,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.ignoredRate', 'Never read')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.ignoredRate', 'Never read')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {g.ignoredRate != null
                               ? percentLabel(g.ignoredRate)
@@ -407,9 +411,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.delivery', 'Delivery')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.delivery', 'Delivery')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.deliveryValue', '{{ok}} sent · {{bad}} failed', {
                               ok: countLabel(g.delivered),
@@ -420,6 +424,7 @@ export function AlertFatiguePanel() {
                       </tr>
                     </tbody>
                   </Table>
+                  </div>
                 </li>
               ))}
             </ul>

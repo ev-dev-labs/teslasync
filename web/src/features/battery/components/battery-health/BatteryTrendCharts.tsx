@@ -124,10 +124,10 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                   <ChartLegend />
                   <ReferenceLine y={70} stroke={STATUS_COLORS.critical} strokeDasharray="8 4" />
                   <ReferenceLine y={80} stroke={STATUS_COLORS.warning} strokeDasharray="4 4" />
-                  <TimeMarker
-                    x={alertMarkerLabel}
-                    severity={alertContext.signal ? 'critical' : undefined}
-                  />
+                  {TimeMarker({
+                    x: alertMarkerLabel,
+                    severity: alertContext.signal ? 'critical' : undefined,
+                  })}
                   <Area
                     {...AREA_DEFAULTS}
                     dataKey="actual"
@@ -195,10 +195,10 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                     <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <TimeMarker
-                      x={alertMarkerLabel}
-                      severity={alertContext.signal ? 'critical' : undefined}
-                    />
+                    {TimeMarker({
+                      x: alertMarkerLabel,
+                      severity: alertContext.signal ? 'critical' : undefined,
+                    })}
                     {renderAnnotationLines(chartAnnotations, (timestamp) => timestamp)}
                     <Area
                       {...AREA_DEFAULTS}

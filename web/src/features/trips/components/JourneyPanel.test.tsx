@@ -15,6 +15,11 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
@@ -187,6 +192,53 @@ beforeEach(() => {
 });
 
 describe('JourneyPanel', () => {
+  it('keeps saved plans as ordered independent records with complete notes and timestamps', () => {
+    const plans = [
+      { ...detail.plans[0], note: 'A long saved route note without truncating the recorded plan context' },
+      { ...detail.plans[0], id: 12, version: 2, note: '', created_at: '2026-09-11T12:00:00Z' },
+    ];
+    mockDetail.mockReturnValue(idle({
+      data: { ...detail, plans }, isError: true, error: new Error('detail refresh failed'),
+    }));
+    const { container } = renderPanel();
+    const first = screen.getByText(`v1 · ${plans[0].note}`).closest('li')!;
+    const second = first.nextElementSibling!;
+    expect(first).toHaveAttribute('data-app-part', 'list-row card');
+    expect(second).toHaveAttribute('data-app-part', 'list-row card');
+    expect(first).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(second).toHaveTextContent('v2');
+    expect(first).toHaveTextContent(formatDateTime(plans[0].created_at, datePreferences));
+    expect(second).toHaveTextContent(formatDateTime(plans[1].created_at, datePreferences));
+    expect(first.parentElement).toHaveAttribute('data-app-part', 'list');
+    expect(first.parentElement).not.toHaveAttribute('data-app-list', 'ranked');
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled();
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
+        for (const row of [first, second]) {
+          let consumed = false;
+          sheet.walkRules(rule => {
+            if (rule.selector.includes('[data-app-part~="card"]') &&
+              rule.nodes.some(node => node.type === 'decl' && node.prop.startsWith('border')) &&
+              row.matches(rule.selector)) consumed = true;
+          });
+          expect(consumed, pack).toBe(true);
+          expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        }
+        expect(first.nextElementSibling).toBe(second);
+        expect(first).toHaveTextContent(plans[0].note);
+        expect(second).toHaveTextContent(formatDateTime(plans[1].created_at, datePreferences));
+        expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled();
+      } finally {
+        release();
+      }
+    }
+  });
+
   it('updates journey and plan timestamps when display locale and timezone change', () => {
     const plan = { ...detail.plans[0], created_at: '2026-09-12T01:00:00Z' };
     mockDetail.mockReturnValue(idle({ data: { ...detail, plans: [plan] } }));

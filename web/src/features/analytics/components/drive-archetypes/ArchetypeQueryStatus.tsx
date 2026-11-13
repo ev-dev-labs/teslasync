@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { cn } from '@/lib/cn';
 import type { ArchetypeSummary } from '../../lib/driveArchetypes';
 import type { ArchetypeQueryState } from './types';
 
@@ -16,6 +18,7 @@ export function ArchetypeQueryStatus({
   state,
 }: ArchetypeQueryStatusProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
 
   if (!state.vehicleSelected) {
     return (
@@ -29,22 +32,23 @@ export function ArchetypeQueryStatus({
   }
   if (state.isLoading) {
     return (
-      <div
-        className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+      <AlertBanner
+        variant="info"
+        className="mt-4 items-center gap-2 border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
         role="status"
         aria-label={t(
           'archetypes.query.loadingAria',
           'Loading drive-archetype evidence',
         )}
+        icon={<RefreshCw className={cn('h-4 w-4 text-[var(--text-muted)]', !reduce && 'motion-safe:animate-spin')} aria-hidden="true" />}
       >
-        <RefreshCw className="h-4 w-4 motion-safe:animate-spin text-[var(--text-muted)]" aria-hidden="true" />
         <Text variant="bodySm">
           {t(
             'archetypes.query.loading',
             'Loading the bounded drive-history window...',
           )}
         </Text>
-      </div>
+      </AlertBanner>
     );
   }
   if (state.isPaused) {

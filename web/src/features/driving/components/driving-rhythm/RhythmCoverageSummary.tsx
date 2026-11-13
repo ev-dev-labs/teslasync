@@ -78,14 +78,16 @@ export function RhythmCoverageSummary({
           )}
         </Text>
       )}
-      <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
-        <Text as="p" variant="caption">
-          {t(
-            'rhythm.method.coverage',
-            'All {{count}} drives in the selected dates were fetched across API pages and accounted for.',
-            { count: summary.observed },
-          )}
-        </Text>
+      <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="warning" className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
+        <div data-app-part="feedback-content">
+          <Text data-app-part="feedback-message" as="p" variant="caption">
+            {t(
+              'rhythm.method.coverage',
+              'All {{count}} drives in the selected dates were fetched across API pages and accounted for.',
+              { count: summary.observed },
+            )}
+          </Text>
+        </div>
       </div>
     </div>
   );

@@ -42,6 +42,8 @@ vi.mock('react-i18next', async () => {
 })
 
 import { HashCalculatorTool } from './HashCalculator'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils'
 
 // SHA-256("abc") — FIPS-180-2 Appendix B.1 known-answer test vector.
 const SHA256_ABC =
@@ -64,6 +66,23 @@ afterEach(() => {
 })
 
 describe('HashCalculatorTool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s frames the actual digest while keeping its bytes, live region and hue', async pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><HashCalculatorTool /></div>)
+    fireEvent.change(getTextarea(), { target: { value: 'abc' } })
+    fireEvent.click(getComputeButton())
+    const digest = await screen.findByText(SHA256_ABC)
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      expectAppDesignDataMode(digest, APPLICATION_DESIGNS[pack].data, '[data-app-code-slot="body"]')
+      expect(digest).toHaveClass('text-rose-300', 'break-all')
+      expect(digest.textContent).toBe(SHA256_ABC)
+      expect(screen.getByRole('status')).toContainElement(digest)
+      fireEvent.change(getTextarea(), { target: { value: 'abcd' } })
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull()
+    } finally { release() }
+  })
+
   it('renders the card, a label-associated input, and a compute button disabled while empty', () => {
     render(<HashCalculatorTool />)
 
@@ -106,6 +125,9 @@ describe('HashCalculatorTool', () => {
     expect(await screen.findByText(SHA256_ABC)).toBeInTheDocument()
 
     const region = screen.getByRole('status')
+    expect(region).toHaveAttribute('data-app-panel-kind', 'code')
+    expect(region.querySelector('[data-app-code-slot="body"]')?.textContent).toBe(SHA256_ABC)
+    expect(region.querySelector('code')).toHaveClass('text-rose-300', 'break-all')
     expect(region).toHaveTextContent(SHA256_ABC)
     // A copy affordance is presented for the successful result.
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()

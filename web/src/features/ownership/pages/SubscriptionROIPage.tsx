@@ -394,13 +394,19 @@ export default function SubscriptionROIPage() {
         return (
           <div className="min-w-0 space-y-2 break-words">
             <Badge variant={quality.status === 'sufficient' ? 'success' : quality.status === 'limited' ? 'warning' : 'neutral'}>{status}</Badge>
-            <dl>
-              <Text as="dt" variant="caption">{t('ownership.quality.samples', 'Samples')}</Text>
-              <Text as="dd" variant="caption">{quality.sample_count != null && Number.isFinite(quality.sample_count) ? fmtInt(quality.sample_count) : '—'}</Text>
-              <Text as="dt" variant="caption">{t('ownership.quality.coverage', 'Coverage')}</Text>
-              <Text as="dd" variant="caption">{formatPct(quality.coverage_pct)}</Text>
-              <Text as="dt" variant="caption">{t('ownership.quality.window', 'Observation window')}</Text>
-              <Text as="dd" variant="caption">{formatDateTime(quality.window_start)} → {formatDateTime(quality.window_end)}</Text>
+            <dl data-app-part="list" data-app-list="definitions">
+              <div data-app-part="list-row">
+                <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.samples', 'Samples')}</Text>
+                <Text as="dd" data-app-part="metric-value" variant="caption">{quality.sample_count != null && Number.isFinite(quality.sample_count) ? fmtInt(quality.sample_count) : '—'}</Text>
+              </div>
+              <div data-app-part="list-row">
+                <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.coverage', 'Coverage')}</Text>
+                <Text as="dd" data-app-part="metric-value" variant="caption">{formatPct(quality.coverage_pct)}</Text>
+              </div>
+              <div data-app-part="list-row">
+                <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.window', 'Observation window')}</Text>
+                <Text as="dd" data-app-part="metric-value" variant="caption">{formatDateTime(quality.window_start)} → {formatDateTime(quality.window_end)}</Text>
+              </div>
             </dl>
             {(quality.reasons ?? []).map((reason, index) => (
               <Text key={`${index}-${reason}`} as="p" variant="caption">{reason}</Text>

@@ -50,7 +50,9 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return {
     ...actual,
     ...chartTestDoubles,
-    EmbeddedChart: h.embeddedChart.mockImplementation(chartTestDoubles.EmbeddedChart),
+    EmbeddedChart: h.embeddedChart.mockImplementation(props => (
+      <><chartTestDoubles.EmbeddedChart {...props} />{props.caption}</>
+    )),
     renderAnnotationLines: h.annotationLines.mockImplementation(actual.renderAnnotationLines),
   };
 });
@@ -530,6 +532,16 @@ describe('BatteryCellsPage', () => {
     expect(significant.querySelector('svg')).toHaveClass('lucide-triangle-alert');
     expect(normal).not.toHaveAttribute('style');
     expect(normal).not.toHaveClass('hover:scale-110');
+    expect(normal).toHaveAttribute('data-chart-family', 'battery-cells');
+    expect(normal).toHaveAttribute('data-heatmap-state', 'active');
+    expect(h.embeddedChart).toHaveBeenCalledWith(expect.objectContaining({
+      ariaLabel: 'Cells colored by deviation from average',
+      data: expect.arrayContaining([expect.objectContaining({
+        cell_number: 1, voltage: 3.9, delta_from_avg: 5, status: 'Normal',
+      })]),
+      viewportClassName: expect.stringContaining('[contain:layout]'),
+      caption: expect.anything(),
+    }), undefined);
   });
 
   it('exposes every hourly spread sample and aligns annotations to the timestamp domain', () => {

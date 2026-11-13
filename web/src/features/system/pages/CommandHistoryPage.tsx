@@ -413,6 +413,9 @@ export default function CommandHistoryPage() {
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Link
             to="/commands"
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-size="sm"
             className={cn(
               'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-shape-sm px-2 transition-colors duration-fast ease-standard motion-reduce:transition-none hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]',
               typography.role.bodySm,
@@ -480,7 +483,8 @@ export default function CommandHistoryPage() {
                 className="min-h-11 pe-9 md:min-h-9"
               />
               {isSearchPending && (
-                <span
+                <span data-app-part="loading-indicator"
+                  data-app-feedback-kind="inline-spinner"
                   role="status"
                   aria-live="polite"
                   aria-label={t('filter.pending', 'Filtering…')}

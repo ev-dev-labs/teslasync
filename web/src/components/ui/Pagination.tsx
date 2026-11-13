@@ -53,7 +53,7 @@ export function Pagination({ page, pageSize, total, totalKind = 'exact', hasNext
   const edgeButtonClass = `${buttonClass} hidden @[15rem]/pagination:inline-flex`
 
   return (
-    <nav aria-label={t('a11y.pagination', 'Pagination')}
+    <nav data-app-part="pagination" aria-label={t('a11y.pagination', 'Pagination')}
       className="@container/pagination flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:justify-start">
         <Text variant="caption" className="min-w-0 break-words tabular-nums" aria-live="polite" aria-atomic="true">

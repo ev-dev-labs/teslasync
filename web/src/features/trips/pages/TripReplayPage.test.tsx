@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import type { ComponentProps, ReactNode } from 'react';
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, type ComponentProps, type ReactNode } from 'react';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
 import type { PlaybackControlsProps } from '@/components/data-display/PlaybackControls';
 import type { TripReplayMapProps } from '../components/TripReplayMap';
@@ -19,6 +19,7 @@ const { useDriveMock, captured } = vi.hoisted(() => ({
     elevation: null as ComponentProps<typeof TripReplayElevation> | null,
     summary: null as { drive?: DriveDetail; formatDriveTime: (min: number) => string } | null,
     sparkline: null as { data: number[]; color: string } | null,
+    onTransportCommit: null as (() => void) | null,
   },
 }));
 
@@ -63,6 +64,11 @@ vi.mock('../components/operationalbrief-all/TripReplaySummaryBrief', () => ({
 vi.mock('@/components/data-display', () => ({
   PlaybackControls: (props: PlaybackControlsProps) => {
     captured.playback = props;
+    useEffect(() => {
+      const onCommit = captured.onTransportCommit;
+      captured.onTransportCommit = null;
+      onCommit?.();
+    });
     return <div data-testid="transport">{props.scrubberBackground}</div>;
   },
 }));
@@ -103,18 +109,20 @@ function drive(id: number, positions: DrivePosition[]): DriveDetail {
 let currentDrive: DriveDetail;
 let navigate: ReturnType<typeof useNavigate>;
 
-function RouteProbe() {
+function RouteProbe({ onCommit }: { onCommit?: () => void }) {
   navigate = useNavigate();
   const location = useLocation();
+  useLayoutEffect(() => { onCommit?.(); }, [location, onCommit]);
   return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
-function mount(route = '/drives/7/replay') {
+function mount(route = '/drives/7/replay', onRouteCommit?: () => void) {
+  window.history.replaceState(null, '', route);
   return render(
-    <MemoryRouter initialEntries={[route]}>
-      <RouteProbe />
+    <BrowserRouter>
+      <RouteProbe onCommit={onRouteCommit} />
       <Routes><Route path="/drives/:id/replay" element={<TripReplayPage />} /></Routes>
-    </MemoryRouter>,
+    </BrowserRouter>,
   );
 }
 
@@ -130,10 +138,43 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, '', '/');
   vi.useRealTimers();
 });
 
 describe('TripReplayPage local modernization regressions', () => {
+  it('adapts the joined replay stage and transport without flattening mobile order or seek selection', () => {
+    mount();
+    const hero = screen.getByRole('region', { name: 'Route map and live position' });
+    const mapCell = screen.getByTestId('map').parentElement;
+    const readouts = screen.getByTestId('replay-current-stats');
+    const split = mapCell?.parentElement;
+    const transport = screen.getByTestId('transport').parentElement;
+    expect(hero).toHaveAttribute('data-app-part', 'panel map-stage');
+    expect(split).toHaveClass('contents', 'lg:order-first', 'lg:grid');
+    expect(mapCell).toHaveClass('order-first', 'h-[55vh]', 'lg:min-h-[440px]');
+    expect(readouts).toHaveClass('order-last', 'lg:order-none');
+    expect(split?.children[0]).toBe(mapCell);
+    expect(split?.children[1]).toBe(readouts);
+    expect(transport?.parentElement).toBe(hero);
+    expect(transport).toHaveAttribute('data-app-part', 'map-toolbar');
+    expect(transport).toHaveAttribute('data-map-control', 'playback');
+    expect(readouts.querySelectorAll('[data-app-part~="metric"]')).toHaveLength(6);
+    act(() => captured.playback?.onSeek(1));
+    expect(captured.map?.currentIndex).toBe(3);
+    expect(captured.charts?.currentIndex).toBe(3);
+    expect(captured.elevation?.currentIndex).toBe(3);
+    fireEvent.click(within(readouts).getByRole('button', { name: 'Sources' }));
+    const source = screen.getByTestId('replay-source-speed');
+    expect(source).toHaveAttribute('data-app-part', 'list-row');
+    expect(source.closest('dl')).toHaveAttribute('data-app-list', 'definitions');
+    expect(source.closest('[data-app-part~="map-sources"]')).toBe(source.closest('dl'));
+    expect(source.closest('[data-app-part~="map-sources"]')?.querySelectorAll('[data-app-part~="list-row"]')).toHaveLength(6);
+    expect(within(source).getByRole('term')).toHaveAttribute('data-app-part', 'metric-label');
+    expect(within(source).getAllByRole('definition')).toHaveLength(2);
+    expect(source.querySelector('[data-app-part~="metric-context"] time')).toHaveAttribute('dateTime', position(3).timestamp);
+  });
+
   it('distinguishes live summary enrichment, stored GPS and inferred telemetry power per winning source', () => {
     currentDrive.live = true;
     currentDrive.endTs = null;
@@ -341,6 +382,90 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(screen.getByTestId('location').textContent).toBe('/drives/8/replay?at=0.750&keep=second');
     expect(captured.map?.currentIndex).toBe(captured.charts?.currentIndex);
     expect(captured.map?.currentIndex).toBe(captured.elevation?.currentIndex);
+  });
+
+  it('does not resurrect a restored legend when a due replay write runs before passive cleanup', () => {
+    let writeDuringCommit = false;
+    mount('/drives/7/replay?hidden_trip-replay-speed-power=power&keep=original', () => {
+      if (!writeDuringCommit) return;
+      writeDuringCommit = false;
+      vi.advanceTimersByTime(300);
+    });
+    act(() => captured.playback?.onSeek(0.5));
+    writeDuringCommit = true;
+    act(() => navigate('/drives/7/replay?keep=original'));
+    expect(screen.getByTestId('location').textContent)
+      .toBe('/drives/7/replay?keep=original&at=0.500');
+  });
+
+  it('does not write a due previous-drive playhead into a newly committed drive', () => {
+    let writeDuringCommit = false;
+    mount('/drives/7/replay?at=0.25&keep=first', () => {
+      if (!writeDuringCommit) return;
+      writeDuringCommit = false;
+      vi.advanceTimersByTime(300);
+    });
+    act(() => captured.playback?.onSeek(0.4));
+    currentDrive = drive(8, [position(10), position(11), position(12), position(13)]);
+    writeDuringCommit = true;
+    act(() => navigate('/drives/8/replay?at=0.75&keep=second'));
+    expect(screen.getByTestId('location').textContent)
+      .toBe('/drives/8/replay?at=0.75&keep=second');
+    expect(captured.playback?.progress).toBe(0.75);
+  });
+
+  it.each([
+    {
+      label: 'hidden',
+      initial: '/drives/7/replay?keep=original',
+      target: '/drives/7/replay?hidden_trip-replay-speed-power=power&keep=original',
+      expected: '/drives/7/replay?hidden_trip-replay-speed-power=power&keep=original&at=0.500',
+    },
+    {
+      label: 'restored',
+      initial: '/drives/7/replay?hidden_trip-replay-speed-power=power&keep=original',
+      target: '/drives/7/replay?keep=original',
+      expected: '/drives/7/replay?keep=original&at=0.500',
+    },
+  ])('preserves a $label legend change when a due replay write runs before the navigation commit', ({ initial, target, expected }) => {
+    mount(initial);
+    act(() => captured.playback?.onSeek(0.5));
+    act(() => {
+      navigate(target);
+      vi.advanceTimersByTime(300);
+    });
+    expect(screen.getByTestId('location').textContent).toBe(expected);
+  });
+
+  it('does not overwrite a pending drive navigation before the navigation commit', () => {
+    mount('/drives/7/replay?at=0.25&keep=first');
+    act(() => captured.playback?.onSeek(0.4));
+    currentDrive = drive(8, [position(10), position(11), position(12), position(13)]);
+    act(() => {
+      navigate('/drives/8/replay?at=0.75&keep=second');
+      vi.advanceTimersByTime(300);
+    });
+    expect(screen.getByTestId('location').textContent).toBe('/drives/8/replay?at=0.75&keep=second');
+    expect(captured.playback?.progress).toBe(0.75);
+  });
+
+  it('preserves a legend navigation queued after the pending replay snapshot commits', () => {
+    mount('/drives/7/replay?keep=original');
+    act(() => captured.playback?.onSeek(0.5));
+    const target = '/drives/7/replay?hidden_trip-replay-speed-power=power&keep=original&at=0.500';
+    captured.onTransportCommit = () => navigate(target);
+    act(() => vi.advanceTimersByTime(300));
+    expect(screen.getByTestId('location').textContent).toBe(target);
+  });
+
+  it('does not navigate when replay parameters already match the URL', () => {
+    const onCommit = vi.fn();
+    mount('/drives/7/replay?at=0.500&keep=original', onCommit);
+    const commits = onCommit.mock.calls.length;
+    act(() => vi.advanceTimersByTime(300));
+    expect(onCommit).toHaveBeenCalledTimes(commits);
+    expect(screen.getByTestId('location').textContent)
+      .toBe('/drives/7/replay?at=0.500&keep=original');
   });
 
   it('preserves stored totals and empty GPS feedback when no usable coordinates remain', () => {

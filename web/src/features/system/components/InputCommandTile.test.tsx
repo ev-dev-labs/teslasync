@@ -13,6 +13,9 @@
 // activation; fireEvent also pins event cancellation. Nothing touches the network.
 
 import type { ComponentProps, ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +23,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InputCommandTile } from './InputCommandTile';
 import type { CommandDef } from '../commands';
 import type { LucideIcon } from '@/lib/icons';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const { mockT } = vi.hoisted(() => ({
   // Mirror react-i18next's `t(key, fallback)` contract: return the fallback so
@@ -108,9 +113,45 @@ describe('InputCommandTile', () => {
 
     const el = tile();
     expect(el).toHaveAttribute('role', 'button');
+    expect(el).toHaveAttribute('data-app-part', 'panel button');
+    expect(el).toHaveAttribute('data-app-choice-surface', 'command-tile');
     expect(el).toHaveAttribute('tabindex', '0');
     el.focus();
     expect(el).toHaveFocus();
+  });
+
+  it('activates real control-mode consumers for every complete profile, not for an incomplete nearest preview', () => {
+    const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    const { container } = renderTile();
+    container.setAttribute('data-app-design-preview', '');
+    const el = tile();
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(el).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        const consumers: string[] = [];
+        sheet.walkRules(rule => {
+          if (rule.selector.includes('[data-app-choice-surface]') && el.matches(rule.selector)) consumers.push(rule.selector);
+        });
+        expect(consumers, `${pack} must style the actual actionable tile`).not.toHaveLength(0);
+        expect(el).toHaveAttribute('data-app-part', 'panel button');
+        expect(favorite()).toHaveAttribute('data-app-part', 'button');
+      } finally {
+        release();
+      }
+    }
+
+    container.removeAttribute('data-app-controls');
+    const release = observeAppDesignScopes(container);
+    try {
+      expect(el).not.toHaveAttribute('data-app-design-owner');
+      sheet.walkRules(rule => {
+        if (rule.selector.includes('[data-app-choice-surface]')) expect(el.matches(rule.selector)).toBe(false);
+      });
+    } finally {
+      release();
+    }
   });
 
   it('opens the input dialog with the command def when clicked', () => {

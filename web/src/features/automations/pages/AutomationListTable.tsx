@@ -255,7 +255,7 @@ export function AutomationListTable({
       </PanelTitle>
 
       {isLoading ? (
-        <div role="status" aria-busy="true">
+        <div data-app-part="status" role="status" aria-busy="true">
           <VisuallyHidden>
             {t('automationList.loading', 'Loading automations…')}
           </VisuallyHidden>

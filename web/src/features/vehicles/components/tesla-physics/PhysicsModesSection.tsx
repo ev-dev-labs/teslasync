@@ -25,15 +25,19 @@ export default function PhysicsModesSection({ physics }: { physics: PhysicsPage 
           { metricId: 'count', occurrenceId: 'drops', label: t('teslaOnly.modesDropsLabel', 'Returned counter drops for comparison'), rawValue: meterDrops?.length, context: t('teslaOnly.modesDrops', 'Returned counter drops for comparison: {{count}}', { count: meterDrops?.length ?? unknown(t) }) },
         ]} />
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
-          <Text as="p" variant="bodySm">{t('teslaOnly.allowed', 'Allowed')}</Text>
+        <div data-app-part="card" data-app-record-kind="physics-interpretation" className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
+          <Text data-app-record-slot="label" as="p" variant="bodySm">{t('teslaOnly.allowed', 'Allowed')}</Text>
+          <div data-app-record-slot="body" className="space-y-2">
           {(modes?.allowed ?? []).length ? (modes?.allowed ?? []).map((rule, index) => <Text key={`${index}-${rule}`} as="p" variant="caption">{rule}</Text>) :
             <Text as="p" variant="caption">{t('teslaOnly.modesNoAllowed', 'No allowed interpretations returned.')}</Text>}
+          </div>
         </div>
-        <div className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
-          <Text as="p" variant="bodySm">{t('teslaOnly.forbidden', 'Forbidden')}</Text>
+        <div data-app-part="card" data-app-record-kind="physics-interpretation" className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
+          <Text data-app-record-slot="label" as="p" variant="bodySm">{t('teslaOnly.forbidden', 'Forbidden')}</Text>
+          <div data-app-record-slot="body" className="space-y-2">
           {(modes?.forbidden ?? []).length ? (modes?.forbidden ?? []).map((rule, index) => <Text key={`${index}-${rule}`} as="p" variant="caption">{rule}</Text>) :
             <Text as="p" variant="caption">{t('teslaOnly.modesNoForbidden', 'No forbidden interpretations returned.')}</Text>}
+          </div>
         </div>
       </div>
     </Evidence>

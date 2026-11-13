@@ -328,20 +328,20 @@ export default function RemainingUsefulLifePage() {
                         decimals={displayPrecision}
                         className="w-32 shrink-0"
                       />
-                      <dl className="w-full min-w-0 flex-1 space-y-1.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Text as="dt" variant="caption">{t('rul.card.remaining', 'Remaining')}</Text>
-                          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums">
+                      <dl data-app-part="list" data-app-list="definitions" className="w-full min-w-0 flex-1 space-y-1.5">
+                        <div data-app-part="list-row" className="flex flex-wrap items-center justify-between gap-2">
+                          <Text data-app-part="metric-label" as="dt" variant="caption">{t('rul.card.remaining', 'Remaining')}</Text>
+                          <Text data-app-part="metric-value" as="dd" variant="bodySm" weight="semibold" className="tabular-nums">
                             {remainingText(c)}
                           </Text>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Text as="dt" variant="caption">{t('rul.card.distanceLeft', 'Distance left')}</Text>
-                          <Text as="dd" variant="bodySm" className="tabular-nums">{remainingDistanceText(c)}</Text>
+                        <div data-app-part="list-row" className="flex flex-wrap items-center justify-between gap-2">
+                          <Text data-app-part="metric-label" as="dt" variant="caption">{t('rul.card.distanceLeft', 'Distance left')}</Text>
+                          <Text data-app-part="metric-value" as="dd" variant="bodySm" className="tabular-nums">{remainingDistanceText(c)}</Text>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Text as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>
-                          <Text as="dd" variant="bodySm" className="tabular-nums">
+                        <div data-app-part="list-row" className="flex flex-wrap items-center justify-between gap-2">
+                          <Text data-app-part="metric-label" as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>
+                          <Text data-app-part="metric-value" as="dd" variant="bodySm" className="tabular-nums">
                             {formatProjectionDate(c.projected_eol_date)}
                           </Text>
                         </div>

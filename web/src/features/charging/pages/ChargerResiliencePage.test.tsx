@@ -8,6 +8,8 @@ import type { ChartContainerProps } from '@/components/charts';
 import type { ChargingSession } from '@/types/charging';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { neonColorMap } from '@/lib/tokens';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import ChargerResiliencePage from './ChargerResiliencePage';
 
 const h = vi.hoisted(() => ({
@@ -120,6 +122,37 @@ afterEach(() => {
 });
 
 describe('charger resilience page-local modernization', () => {
+  it('owns all simulation definitions and each real site record without changing source scores or grouping', () => {
+    const { container } = mountPage();
+    const definitions = container.querySelector('dl[data-app-list="definitions"]')!;
+    const facts = definitions.querySelectorAll(':scope > [data-app-part="list-row"]');
+    expect(facts).toHaveLength(4);
+    expect(Array.from(facts, fact => fact.querySelector('[data-app-part="metric-label"]')?.textContent))
+      .toEqual(['Energy at risk', 'New top site', 'Score before', 'Score after loss']);
+    expect(facts[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('20000 Wh');
+    expect(facts[1].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('Backup station');
+    const sites = container.querySelectorAll('ul[data-app-list="definitions"] > [data-app-part="list-row"]');
+    expect(sites).toHaveLength(2);
+    expect(sites[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent(longSite);
+    expect(sites[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent('Named placeTop-site dependency');
+    expect(sites[0].querySelector('[data-app-part="metric-reading"]')).toHaveTextContent('2 sessions80.00%');
+    expect(sites[0].querySelectorAll('[data-app-part~="metric-value"]')).toHaveLength(2);
+    expect(h.chart?.data?.map(row => row.share)).toEqual([80, 20]);
+    container.setAttribute('data-app-design-preview', '');
+    const records = [...facts, ...sites];
+    expect(matchingAppDesignDataRules(records[0])).toEqual([]);
+    const original = records.map(record => record.textContent);
+    for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        records.forEach(record => expectAppDesignDataMode(record, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]'));
+        expect(records.map(record => record.textContent)).toEqual(original);
+        expect(h.chart?.data?.map(row => row.share)).toEqual([80, 20]);
+      } finally { release(); }
+    }
+  });
+
   it('localizes distinct contextual help names and preserves their explanations and preference', () => {
     h.translations = {
       'help.chargerResilience.scoreIconLabel': 'Informationen zum Resilienzwert',

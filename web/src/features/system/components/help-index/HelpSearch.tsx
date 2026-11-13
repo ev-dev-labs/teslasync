@@ -131,7 +131,7 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
           : t('helpIndex.resultCount', '{{count}} results', { count: results.length })}
       </Text>
 
-      <ul
+      <ul data-app-part="list"
         id={listboxId}
         role="listbox"
         aria-label={t('helpIndex.resultsLabel', 'Help results')}
@@ -147,6 +147,10 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
               key={entry.id}
               id={`${listboxId}-${index}`}
               role="option"
+              data-app-part="card"
+              data-app-record-kind="help-result"
+              data-surface-variant="standalone"
+              data-app-choice-surface="help-result"
               aria-selected={active}
               aria-disabled={entry.route ? undefined : true}
               data-help-entry-id={entry.id}
@@ -164,19 +168,20 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Text as="span" size="sm" weight="medium" color="primary">
+                    <Text as="span" size="sm" weight="medium" color="primary" data-app-record-slot="label">
                       {t(entry.titleKey, entry.titleFallback)}
                     </Text>
-                    <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs tracking-wide text-[var(--text-muted)]">
+                    <span data-app-part="badge" data-app-variant="neutral"
+                      className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs tracking-wide text-[var(--text-muted)]">
                       {t(kindLabel.key, kindLabel.fallback)}
                     </span>
                   </div>
                   {!entry.route && entry.id === 'troubleshooting:unavailable:filter_scope' && (
-                    <Text as="p" variant="bodySm" color="muted" className="mt-0.5">
+                    <Text as="p" variant="bodySm" color="muted" className="mt-0.5" data-app-record-slot="context">
                       {t(FILTER_SCOPE_EXPLANATION.bodyKey, FILTER_SCOPE_EXPLANATION.bodyFallback)}
                     </Text>
                   )}
-                  <Text as="p" variant="bodySm" color="muted" className="mt-0.5">
+                  <Text as="p" variant="bodySm" color="muted" className="mt-0.5" data-app-record-slot="body">
                     {t(entry.summaryKey, entry.summaryFallback)}
                   </Text>
                 </div>

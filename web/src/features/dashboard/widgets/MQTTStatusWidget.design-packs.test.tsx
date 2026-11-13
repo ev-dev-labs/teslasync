@@ -188,7 +188,7 @@ describe.each(PACKS)('MQTT %s (%s)', (packId, appearance) => {
     expect(screen.getByText('3.50')).toBeInTheDocument();
     expect(screen.getByText('1,200')).toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refresh).not.toHaveBeenCalled();
   });

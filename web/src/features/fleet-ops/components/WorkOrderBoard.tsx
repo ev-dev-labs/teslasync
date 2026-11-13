@@ -80,22 +80,22 @@ export function WorkOrderBoard({
             : { label: t('fleetOps.workOrders.add', 'Add work order'), onClick: onAdd }}
         />
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-5">
+        <div data-app-part="grid" className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-5">
           {columns.map((status) => {
             const statusItems = items.filter((item) => item.status === status);
             return (
-              <section key={status} aria-label={statusLabel(status)} className="min-w-0 rounded-xl bg-[var(--surface-2)] p-3">
+              <section key={status} data-app-part="section" aria-label={statusLabel(status)} className="min-w-0 rounded-xl bg-[var(--surface-2)] p-3">
                 <div className="mb-3 flex items-center justify-between">
                   <Subhead>{statusLabel(status)}</Subhead>
                   <Text variant="caption">{statusItems.length}</Text>
                 </div>
-                <div className="space-y-2">
+                <div data-app-part="list" className="space-y-2">
                   {statusItems.length === 0 ? (
                     <Text as="p" variant="caption" className="py-6 text-center">
                       {t('fleetOps.workOrders.noneInColumn', 'No orders')}
                     </Text>
                   ) : statusItems.map((item) => (
-                    <article key={item.id} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
+                    <article key={item.id} data-app-part="card" className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
                       <div className="flex items-start justify-between gap-2">
                         <Text as="p" weight="medium" className="min-w-0 break-words">{item.title}</Text>
                         <StatusPill color={severityColor[item.severity]}>{severityLabel(item.severity)}</StatusPill>

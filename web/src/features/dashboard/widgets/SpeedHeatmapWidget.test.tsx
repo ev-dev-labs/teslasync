@@ -279,18 +279,18 @@ describe('speedToColor', () => {
     expect(speedToColor(-4, 10)).toBe(EMPTY);
   });
 
-  it('maps the low end to teal and the top of the range to red', () => {
+  it('maps the low end to faint paint and the maximum to the selected accent', () => {
     expect(speedToColor(1e-9, 10)).toMatch(/^color-mix\(/);
-    expect(speedToColor(10, 10)).toMatch(/^color-mix\(in srgb, var\(--accent\) 100%, var\(--surface-2\)\)$/);
+    expect(speedToColor(10, 10)).toMatch(/^color-mix\(in srgb, var\(--theme-accent\) 100%, var\(--surface-2\)\)$/);
   });
 
   it('clamps a speed above the max to the hottest colour (never past 1)', () => {
-    expect(speedToColor(100, 10)).toBe('color-mix(in srgb, var(--accent) 100%, var(--surface-2))');
+    expect(speedToColor(100, 10)).toBe('color-mix(in srgb, var(--theme-accent) 100%, var(--surface-2))');
   });
 
   it('produces an interpolated rgb() colour in between the stops', () => {
     const mid = speedToColor(5, 10);
-    expect(mid).toMatch(/^color-mix\(in srgb, var\(--accent\) \d+%, var\(--surface-2\)\)$/);
+    expect(mid).toMatch(/^color-mix\(in srgb, var\(--theme-accent\) \d+%, var\(--surface-2\)\)$/);
     expect(mid).not.toBe(EMPTY);
   });
 

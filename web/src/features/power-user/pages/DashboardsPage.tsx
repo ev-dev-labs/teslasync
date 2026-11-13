@@ -256,21 +256,24 @@ export default function DashboardsPage() {
                 'Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.',
               )}
             </Text>
-            <ol className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+            <ol data-app-part="list" data-app-list="steps" className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               {workflowSteps.map((step, index) => (
                 <li
                   key={step.id}
+                  data-app-part="list-row"
+                  data-app-step-kind="dashboard-workflow"
+                  data-step-id={step.id}
                   className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                 >
-                  <IconBox color="neutral" size="sm" className="mt-0.5 h-9 w-9 rounded-lg">
+                  <IconBox data-app-part="step-indicator" color="neutral" size="sm" className="mt-0.5 h-9 w-9 rounded-lg">
                     {step.icon}
                   </IconBox>
-                  <div className="min-w-0">
-                    <Text as="div" size="sm" weight="semibold" color="primary">
+                  <div data-app-part="step-body" className="min-w-0">
+                    <Text data-app-part="step-title" as="div" size="sm" weight="semibold" color="primary">
                       <Text as="span" color="muted">{index + 1}. </Text>
                       {step.title}
                     </Text>
-                    <HelperText className="mt-0.5">
+                    <HelperText data-app-part="step-description" className="mt-0.5">
                       {step.body}
                     </HelperText>
                   </div>
@@ -354,21 +357,24 @@ export default function DashboardsPage() {
                   'These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.',
                 )}
               </HelperText>
-              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 3xl:grid-cols-2">
+              <ul data-app-part="list" className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 3xl:grid-cols-2">
                 {sortedPanels.map((panel) => (
                   <li
                     key={panel.name}
+                    data-app-part="card"
+                    data-app-card-kind="record"
+                    data-app-record-kind="dashboard-panel"
                     className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                   >
-                    <div className="flex items-center gap-2">
+                    <div data-app-part="record-header" className="flex items-center gap-2">
                       <IconBox color="neutral" size="sm" className="h-7 w-7 rounded-md">
                         {panelKindIcon(panel.name)}
                       </IconBox>
-                      <Text as="span" mono size="sm" color="primary" className="min-w-0 break-all">
+                      <Text data-app-part="record-title" as="span" mono size="sm" color="primary" className="min-w-0 break-all">
                         {panel.name}
                       </Text>
                     </div>
-                    <HelperText className="mt-1.5">
+                    <HelperText data-app-part="record-body record-context" className="mt-1.5">
                       {t(panel.descriptionKey, panel.description)}
                     </HelperText>
                   </li>

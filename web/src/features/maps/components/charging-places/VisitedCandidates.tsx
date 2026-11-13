@@ -44,7 +44,7 @@ export function VisitedCandidates({ onReview, onSelectForTemplate }: {
       >
         <div className="max-h-96 space-y-2 overflow-y-auto">
           {candidates.map((candidate) => (
-            <div key={candidate.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
+            <div key={candidate.id} data-app-part="card" data-surface-variant="standalone" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                 <Text variant="body" className="break-words font-medium">{candidate.name || `${fmtScientificNumber(candidate.latitude, 4)}, ${fmtScientificNumber(candidate.longitude, 4)}`}</Text>
                 <Text size="sm" color="muted">

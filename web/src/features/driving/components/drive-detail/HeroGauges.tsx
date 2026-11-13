@@ -219,21 +219,21 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true, map }: 
                 comparison(distanceRow, t('driveDetail.distanceVsAverage', 'distance vs your average')),
                 comparison(durationRow, t('driveDetail.durationVsAverage', 'duration vs your average')),
               ]} />
-            <dl role="group" aria-label={t('driveDetail.report.keyNumbers', 'Energy and cost')}
+            <dl data-app-part="list" role="group" aria-label={t('driveDetail.report.keyNumbers', 'Energy and cost')}
               className="grid grid-cols-3 gap-3 border-t border-[var(--border-subtle)] pt-4">
               {keyNumbers.map(stat)}
             </dl>
           </div>
         </div>
         {/* Remaining metrics: one grid, the same column count on every row. */}
-        <dl role="group" aria-label={t('driveDetail.report.performance', 'Performance and comparisons')}
+        <dl data-app-part="list" role="group" aria-label={t('driveDetail.report.performance', 'Performance and comparisons')}
           className="grid grid-cols-2 gap-4 border-t border-[var(--border-subtle)] p-4 sm:p-5 lg:grid-cols-4" data-testid="drive-overview-grid">
           {gridMetrics.map(stat)}
         </dl>
       </GlassPanel>
       <Drawer open={detailsOpen} onClose={() => setDetailsOpen(false)}
         title={t('driveDetail.report.overviewDetails', 'Overview details')}>
-        <dl className="space-y-3">
+        <dl data-app-part="list" className="space-y-3">
           {details.map((item) => (
             <div key={item.id} className="min-w-0">
               <Text as="dt" variant="label">{item.label}</Text>

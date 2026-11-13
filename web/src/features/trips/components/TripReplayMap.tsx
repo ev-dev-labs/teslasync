@@ -252,6 +252,11 @@ export function TripReplayMap({
   return (
     <Surface
       ref={setPaintContext}
+      data-app-part={embedded ? 'map' : 'panel map'}
+      data-map-kind="replay"
+      data-map-state={positions.length === 0 ? 'empty' : undefined}
+      data-route-mode={positions.length === 0 ? 'empty' : hasRoute ? 'path' : 'stationary'}
+      data-provenance={positions.length > 0 ? 'historical' : 'unknown'}
       role="region"
       aria-label={t('replay.map.ariaLabel', 'Trip route map')}
       className={`relative overflow-hidden ${className ?? ''}`}
@@ -353,7 +358,7 @@ export function TripReplayMap({
           </MapContainer>
 
           {speedSegments.some((segment) => segment.unknown) && (
-            <div className="pointer-events-none absolute left-3 top-3 z-[400]">
+            <div data-app-part="map-legend" data-map-legend="unknown-speed" data-map-state="unavailable" className="pointer-events-none absolute left-3 top-3 z-[400]">
               <Badge variant="neutral">
                 {t('common.speed', 'Speed')}: {t('common.unknown', 'Unknown')} (- -)
               </Badge>

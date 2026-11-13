@@ -22,6 +22,11 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { parse, type Rule } from 'postcss'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -47,12 +52,43 @@ vi.mock('react-i18next', async () => {
 
 import RecentPagesPanelDefault, { RecentPagesPanel } from './RecentPagesPanel'
 
+const surfaceRules: Rule[] = []
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'))
+  .walkRules(rule => { surfaceRules.push(rule) })
+
 function renderPanel(count: number, onClear = vi.fn()) {
   const utils = render(<RecentPagesPanel count={count} onClear={onClear} />)
   return { onClear, ...utils }
 }
 
 describe('RecentPagesPanel — populated', () => {
+  it.each(PACK_IDS)('%s owns the actual count/action inset without changing its live counter or clear action', pack => {
+    const onClear = vi.fn()
+    const view = render(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <RecentPagesPanel count={3} onClear={onClear} />
+      </div>,
+    )
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const count = screen.getByTestId('privacy-recent-count')
+      const frame = count.closest('[data-app-part~="card"]')!
+      expect(frame).not.toBeNull()
+      expect(frame).toHaveAttribute('data-surface-variant', 'standalone')
+      expect(frame).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+      expect(surfaceRules.some(rule => rule.selector.includes('[data-app-part~="card"]')
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-style')
+        && frame.matches(rule.selector))).toBe(true)
+      expect(count).toHaveTextContent('3 entries stored')
+      expect(count).toHaveAttribute('role', 'status')
+      expect(count).toHaveAttribute('aria-live', 'polite')
+      const clear = screen.getByTestId('privacy-clear-recent-pages')
+      expect(frame).toContainElement(clear)
+      fireEvent.click(clear)
+      expect(onClear).toHaveBeenCalledTimes(1)
+    } finally { release() }
+  })
+
   it('renders the header, description, pluralised counter, and clear button', () => {
     renderPanel(3)
 

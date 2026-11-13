@@ -215,7 +215,7 @@ export default function SharingTripsPage() {
                 )}
               />
             ) : (
-              <ul
+              <ul data-app-part="list"
                 ref={listRef}
                 className="space-y-2"
                 role="listbox"

@@ -22,7 +22,7 @@ export function ChatWelcome({ onPick }: ChatWelcomeProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
+    <div data-app-part="conversation-welcome" className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
       <div className="rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-6">
         <HelixMark className="h-12 w-12 text-[var(--text-secondary)]" aria-hidden="true" />
       </div>

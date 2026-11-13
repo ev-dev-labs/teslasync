@@ -192,6 +192,56 @@ describe('GeofenceDrawer', () => {
     expect(shared.map!.layers.length).toBe(1);
     const FakeDrawControl = (shared.L as unknown as { _classes: { FakeDrawControl: new (...a: unknown[]) => unknown } })._classes.FakeDrawControl;
     expect(shared.map!.controls[0]).toBeInstanceOf(FakeDrawControl);
+    const control = shared.map!.controls[0] as { container: HTMLElement };
+    expect(control.container).toHaveAttribute('data-app-part', 'map-toolbar');
+    expect(control.container).toHaveAttribute('data-map-control', 'geofence');
+  });
+
+  it('repaints on preview design changes without replacing drafts, persisted geometry or callbacks', async () => {
+    const onCreate = vi.fn();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    const preview = document.createElement('div');
+    preview.setAttribute('data-app-design-preview', '');
+    preview.setAttribute('data-app-design-pack', 'v3');
+    document.body.appendChild(preview);
+    const context = shared.map!.getContainer();
+    preview.appendChild(context);
+    const fences = [{ id: 'preserved', lat: 1, lng: 2, radius: 125 }];
+    const { unmount } = render(
+      <GeofenceDrawer fences={fences} onCreate={onCreate} onEdit={onEdit} onDelete={onDelete} />,
+    );
+    try {
+      const control = shared.map!.controls[0];
+      const group = shared.map!.layers[0] as { layers: unknown[] };
+      const persisted = group.layers[0];
+      shared.resolve.mockReturnValue('rgb(56, 97, 79)');
+      await act(async () => {
+        preview.setAttribute('data-app-design-pack', 'atlas');
+        preview.setAttribute('data-app-map', 'atlas');
+      });
+      expect(shared.map!.controls[0]).toBe(control);
+      expect(shared.map!.layers[0]).toBe(group);
+      expect(group.layers[0]).toBe(persisted);
+      expect(persisted).toMatchObject({
+        __teslasync_fence_id: 'preserved',
+        center: [1, 2],
+        opts: { radius: 125, color: 'rgb(56, 97, 79)', fillColor: 'rgb(56, 97, 79)' },
+      });
+      expect(control).toMatchObject({
+        _toolbars: { draw: { _modes: { circle: { handler: {
+          _shape: { options: { color: 'rgb(56, 97, 79)' } },
+          _poly: { options: { color: 'rgb(56, 97, 79)' } },
+        } } } } },
+      });
+      expect(onCreate).not.toHaveBeenCalled();
+      expect(onEdit).not.toHaveBeenCalled();
+      expect(onDelete).not.toHaveBeenCalled();
+    } finally {
+      unmount();
+      document.body.appendChild(context);
+      preview.remove();
+    }
   });
 
   it('emits onCreate with circle geometry when draw:created fires for a circle', () => {

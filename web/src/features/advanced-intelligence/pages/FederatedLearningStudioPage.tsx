@@ -10,7 +10,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Table, Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
+import { Table, Badge, Button, Card, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -136,7 +136,8 @@ export default function FederatedLearningStudioPage() {
         >
           <div className="grid gap-4 lg:grid-cols-2">
             {cards.map((card) => (
-              <article key={card.id} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4 break-words">
+              <article key={card.id} className="min-w-0 break-words">
+                <Card className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] shadow-none">
                 <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Text as="h3" variant="subhead" id={`${cardId}-${card.id}-name`}>{card.model_name}</Text>
@@ -147,29 +148,29 @@ export default function FederatedLearningStudioPage() {
                   </Badge>
                 </div>
                 <Table variant="embedded" aria-labelledby={`${cardId}-${card.id}-name`}><tbody>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.epsilon', 'Epsilon')}
                     </th>
-                    <td className="text-end">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
+                    <td data-app-part="table-cell" className="text-end">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.rounds', 'Rounds')}
                     </th>
-                    <td className="text-end">{fmtInt(card.round_count)}</td>
+                    <td data-app-part="table-cell" className="text-end">{fmtInt(card.round_count)}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.samples', 'Latest local samples')}
                     </th>
-                    <td className="text-end">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
+                    <td data-app-part="table-cell" className="text-end">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
                   </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.aggregate', 'Local aggregate')}
                     </th>
-                    <td className="text-end">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
+                    <td data-app-part="table-cell" className="text-end">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
                   </tr>
                 </tbody></Table>
                 <Button
@@ -190,6 +191,7 @@ export default function FederatedLearningStudioPage() {
                 >
                   <span id={`${cardId}-${card.id}-use`}>{t('advancedIntelligence.federated.card.use', 'Use for next local round')}</span>
                 </Button>
+                </Card>
               </article>
             ))}
           </div>

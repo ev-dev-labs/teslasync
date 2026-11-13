@@ -52,7 +52,7 @@ export function ArchetypeAssignmentDirectory({
           {t('archetypes.directory.subtitle', 'Newest-first eligible assignments, capped for display without changing assignment totals.')}
         </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="directory">
-          <ul className="space-y-3">
+          <ul data-app-part="list" data-app-list="records" className="space-y-3">
             {items.map((assignment) => {
               const cluster = summary.clusters.find(
                 (candidate) => candidate.index === assignment.clusterIndex,
@@ -79,16 +79,19 @@ export function ArchetypeAssignmentDirectory({
                 <li
                   key={assignment.driveId}
                   data-testid={`drive-archetype-assignment-${assignment.driveId}`}
+                  data-app-part="card list-row"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <Text as="h4" variant="label">
+                      <Text data-app-part="record-title" as="h4" variant="label">
                         {t('archetypes.directory.driveTitle', 'Drive {{id}}', {
                           id: fmtInt(assignment.driveId),
                         })}
                       </Text>
-                      <Text as="p" variant="caption" className="mt-1">
+                      <Text data-app-part="record-context" as="p" variant="caption" className="mt-1">
                         {display.formatDateTime(assignment.departureMs)}
                       </Text>
                     </div>
@@ -105,7 +108,7 @@ export function ArchetypeAssignmentDirectory({
                       </Badge>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-start gap-2">
+                  <div data-app-part="record-context" className="mt-3 flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                     <Text as="p" variant="bodySm">
                       {t('archetypes.directory.route', '{{start}} → {{end}}', {
@@ -114,21 +117,23 @@ export function ArchetypeAssignmentDirectory({
                       })}
                     </Text>
                   </div>
-                  <Text as="p" variant="caption" className="mt-2">
+                  <Text data-app-part="record-context" as="p" variant="caption" className="mt-2">
                     {cluster
                       ? archetypeIdentity(t, cluster.index, cluster.label)
                       : t('archetypes.directory.clusterUnavailable', 'Cluster identity unavailable')}
                   </Text>
+                  <div data-app-part="record-body">
                   <Table className="mt-3" aria-label={t('archetypes.directory.driveTitle', 'Drive {{id}}', { id: fmtInt(assignment.driveId) })}>
                     <tbody>
                     {metrics.map(([label, value]) => (
-                      <tr key={label}>
-                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
-                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      <tr data-app-part="table-row" key={label}>
+                        <th data-app-part="table-cell" scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td data-app-part="table-cell" className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
                       </tr>
                     ))}
                     </tbody>
                   </Table>
+                  </div>
                 </li>
               );
             })}

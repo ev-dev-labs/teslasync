@@ -89,7 +89,7 @@ export function DrivePhysicsDebriefPanel({
       {debrief.regenShare != null ? (
         <Text as="p" variant="caption">{t('driveDetail.report.regenRatioMethod', 'Recovered / (consumed + recovered), using drive-summary energy sources. This ratio is not a metered braking-efficiency measurement.')}</Text>
       ) : null}
-      <ol className="space-y-2">
+      <ol data-app-part="list" className="space-y-2">
         {debrief.beats.map((beat) => (
           <li key={beat.id}>
             <Text as="p" variant="bodySm">

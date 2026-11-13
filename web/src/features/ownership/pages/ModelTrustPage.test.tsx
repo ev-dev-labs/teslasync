@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import { Children, isValidElement } from 'react';
+import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const chartProbe = vi.hoisted(() => vi.fn());
 const datePreferences = vi.hoisted(() => ({
@@ -345,6 +351,83 @@ describe('ModelTrustPage financial history preservation', () => {
 });
 
 describe('ModelTrustPage scoped modernization', () => {
+  it('activates real quality definition rows and the opened outcome surface for all designs without rewriting pinned context', () => {
+    const model = scorecard();
+    const data = { ...report(), scorecards: [model] };
+    const original = structuredClone(data);
+    mockTrust.mockReturnValue(query(data));
+    const view = renderPage();
+    const quality = within(card('Calibration by prediction magnitude')).getByRole('region', { name: 'Data quality' });
+    const list = quality.querySelector('dl')!;
+    expect(list).toHaveAttribute('data-app-list', 'definitions');
+    const rows = [...list.children];
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toHaveAttribute('data-app-part', 'list-row');
+      expect(row.querySelector('dt')).toHaveAttribute('data-app-part', 'metric-label');
+      expect(row.querySelector('dd')).toHaveAttribute('data-app-part', 'metric-value');
+      expect(row).not.toHaveAttribute('data-app-design-owner');
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Score it' }));
+    const input = screen.getByRole('spinbutton', { name: 'Observed value required' });
+    const form = input.closest('form')!;
+    const surface = form.parentElement!;
+    expect(surface).toHaveAttribute('data-app-part', 'card');
+    expect(surface).not.toHaveAttribute('data-app-design-owner');
+    expect(form).toHaveClass('grid', 'gap-4', 'p-4', 'md:grid-cols-3');
+    expect(input).toHaveAccessibleDescription(/Recorded before the outcome/);
+    const before = form.textContent;
+    view.container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(view.container, pack);
+      const release = observeAppDesignScopes(view.container);
+      try {
+        const mode = getAppDesignAttributes(pack)['data-app-data'];
+        for (const row of rows) {
+          expectAppDesignDataMode(row, mode, '[data-app-list="definitions"] > [data-app-part~="list-row"]');
+        }
+        const selectors: string[] = [];
+        postcss.parse(readFileSync(resolve(
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
+        ), 'utf8')).walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="card"]')) selectors.push(rule.selector);
+        });
+        expect(selectors.some(selector => surface.matches(selector))).toBe(true);
+        expect(form.textContent).toBe(before);
+        expect(input).toHaveValue(12345);
+      } finally {
+        release();
+      }
+    }
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('spinbutton', { name: 'Observed value required' })).not.toBeInTheDocument();
+    expect(data).toEqual(original);
+    expect(mockOutcome().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { count: 0, coverage: 0, expectedCount: '0', expectedCoverage: formatPct(0) },
+    { count: NaN, coverage: Infinity, expectedCount: '—', expectedCoverage: '—' },
+    { count: null, coverage: null, expectedCount: '—', expectedCoverage: '—' },
+  ])('preserves quality zero versus unavailable readings in the actual definition anatomy ($expectedCount/$expectedCoverage)', ({
+    count, coverage, expectedCount, expectedCoverage,
+  }) => {
+    const model = scorecard();
+    mockTrust.mockReturnValue(query({
+      ...report(), scorecards: [{
+        ...model, quality: { ...model.quality, sample_count: count, coverage_pct: coverage,
+          window_start: '2026-01-02T00:00:00Z', window_end: null },
+      }],
+    }));
+    renderPage();
+    const quality = within(card('Calibration by prediction magnitude')).getByRole('region', { name: 'Data quality' });
+    const values = quality.querySelectorAll('dl > [data-app-part="list-row"] > dd');
+    expect(values).toHaveLength(3);
+    expect(values[0]).toHaveTextContent(expectedCount);
+    expect(values[1]).toHaveTextContent(expectedCoverage);
+    expect(values[2]).toHaveTextContent(`${formatDateTime('2026-01-02T00:00:00Z', { locale: 'en-US', tz: 'UTC' })} – —`);
+  });
+
   it.each([65.123456, 0, null, undefined, NaN, Infinity])(
     'labels bin coverage (%s) as a percent or unknown without changing raw chart values',
     (coverage) => {

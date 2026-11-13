@@ -11,7 +11,7 @@ import { AlertBanner, EmptyState } from '@/components/feedback';
 
 import { ChartCard, PageLayout, SourceContent, type SourceState } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Icon, Input, Text } from '@/components/ui';
+import { Badge, Button, Card, Icon, Input, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -295,12 +295,14 @@ export default function EmergencyResiliencePage() {
               {priorities.length === 0 ? <EmptyState variant="informational"
                 message={t('advancedIntelligence.panel.empty', 'No supported data is available.')}
                 description={t('advancedIntelligence.resilience.actions.prioritiesEmptyHelp', 'Priority actions appear after a supported outage plan is generated from current vehicle and energy data.')} /> : priorities.map((item) => (
-                <article key={`${item.priority}-${item.load}`} className="min-w-0 break-words rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <article key={`${item.priority}-${item.load}`} className="min-w-0 break-words">
+                  <Card padding="sm" className="rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-none">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="neutral">#{item.priority}</Badge>
                     <Text as="h3" variant="label">{item.load}</Text>
                   </div>
                   <Text as="p" variant="bodySm" className="mt-2">{item.action}</Text>
+                  </Card>
                 </article>
               ))}
             </div>

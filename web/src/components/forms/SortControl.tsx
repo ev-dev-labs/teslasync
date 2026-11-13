@@ -69,6 +69,9 @@ export function SortControl<F extends string = string>({
       />
       <button
         type="button"
+        data-app-part="button"
+        data-app-variant="secondary"
+        data-app-icon-only="true"
         onClick={flip}
         aria-label={directionAriaLabel ?? `${t('sortControl.direction', 'Sort direction')}: ${dirLabel}`}
         title={dirLabel}

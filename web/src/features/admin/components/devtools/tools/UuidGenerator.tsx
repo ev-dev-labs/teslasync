@@ -26,15 +26,18 @@ export function UuidGeneratorTool() {
           {t('devtools.utils.uuidGenerate', 'Generate')}
         </Button>
         {uuids.length > 0 ? (
-          <div role="list" aria-label={t('devtools.utils.uuidResults', 'Generated UUIDs')} className="space-y-1">
+          <div data-app-part="list" role="list" aria-label={t('devtools.utils.uuidResults', 'Generated UUIDs')} className="space-y-1">
             {uuids.map((u) => (
               <div
                 key={u}
+                data-app-part="panel"
+                data-app-panel-kind="code"
+                data-surface-variant="standalone"
                 role="listitem"
                 className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5"
               >
-                <code className="flex-1 text-xs font-mono text-purple-300">{u}</code>
-                <CopyButton text={u} />
+                <code data-app-code-slot="body" className="flex-1 text-xs font-mono text-purple-300">{u}</code>
+                <span data-app-code-slot="actions"><CopyButton text={u} /></span>
               </div>
             ))}
           </div>

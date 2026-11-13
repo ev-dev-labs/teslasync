@@ -116,7 +116,7 @@ function TirePressureContent({
         })}
       </div>
       <div className="text-center">
-        <span
+        <span data-app-part="status"
           role="status"
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',

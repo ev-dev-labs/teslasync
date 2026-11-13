@@ -183,6 +183,7 @@ describe('Grid', () => {
       </Grid>,
     );
     const el = container.firstElementChild as HTMLElement;
+    expect(el).toHaveAttribute('data-app-part', 'grid');
     expect(el.children).toHaveLength(3);
     expect(el.children[0]).toHaveTextContent('A');
     expect(el.children[2]).toHaveTextContent('C');

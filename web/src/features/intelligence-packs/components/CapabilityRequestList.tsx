@@ -23,20 +23,22 @@ export function CapabilityRequestList({ capabilityIds, granted, className }: Cap
   }
 
   return (
-    <ul className={className}>
+    <ul data-app-part="list" data-app-list="definitions" className={className}>
       {capabilityIds.map((id) => {
         const descriptor = describeCapability(id);
         const isGranted = granted?.has(id);
         return (
-          <li key={id} className="flex items-start gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
-            <div className="min-w-0 flex-1">
+          <li data-app-part="list-row" key={id} className="flex items-start gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
+            <div data-app-part="metric-label" className="min-w-0 flex-1">
               <p className="text-sm text-[var(--text-primary)]">{descriptor?.label ?? id}</p>
-              <p className="text-xs text-[var(--text-muted)]">{descriptor?.description ?? ''}</p>
+              <p data-app-part="metric-context" className="text-xs text-[var(--text-muted)]">{descriptor?.description ?? ''}</p>
             </div>
             {granted && (
-              <Badge variant={isGranted ? 'success' : 'neutral'} size="sm" className="shrink-0">
-                {isGranted ? t('intelPacks.capabilities.granted', 'Granted') : t('intelPacks.capabilities.denied', 'Denied')}
-              </Badge>
+              <span data-app-part="metric-reading" className="inline-flex shrink-0">
+                <Badge data-app-part="badge metric-value" variant={isGranted ? 'success' : 'neutral'} size="sm" className="shrink-0">
+                  {isGranted ? t('intelPacks.capabilities.granted', 'Granted') : t('intelPacks.capabilities.denied', 'Denied')}
+                </Badge>
+              </span>
             )}
           </li>
         );

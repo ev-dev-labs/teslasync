@@ -39,10 +39,10 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry, peri
               { metricId: 'number', rawValue: co2SavedKg, label: t('costAnalysis.environment.kgCo2', 'kg CO₂ saved') },
               { metricId: 'number', rawValue: treeEquiv, label: t('costAnalysis.environment.treeEquiv', 'tree-years equivalent') },
             ]} />
-          <div className="rounded-lg bg-[var(--surface-2)] p-3">
-            <div className="flex items-start gap-3">
-              <Trees className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-              <Text variant="bodySm">
+          <div data-app-part="feedback" data-app-feedback-kind="insight" className="rounded-lg bg-[var(--surface-2)] p-3">
+            <div data-app-part="feedback-layout" className="flex items-start gap-3">
+              <Trees data-app-part="feedback-icon" className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
+              <Text data-app-part="feedback-message" variant="bodySm">
                 {t('costAnalysis.environment.desc',
                   'By driving electric instead of a gas car, you have avoided the equivalent of')}{' '}
                 <Text weight="semibold" className="text-emerald-300">{text('number', co2SavedKg)} kg</Text>{' '}

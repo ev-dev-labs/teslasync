@@ -83,8 +83,8 @@ describe('WidgetComparisonCard — rendering', () => {
     render(<WidgetComparisonCard metrics={[makeMetric({ label: 'Energy', formattedCurrent: '54.2', unit: 'kWh' })]} />);
 
     const value = screen.getByText('54.2');
-    // The unit lives in a nested <span> sibling of the value text node.
-    expect(value.querySelector('span')?.textContent).toBe('kWh');
+    expect(value).toHaveAttribute('data-app-part', 'metric-value');
+    expect(value.parentElement?.querySelector('[data-app-part="metric-unit"]')).toHaveTextContent('kWh');
   });
 
   it('omits the unit span entirely when the metric has no unit', () => {
@@ -261,4 +261,25 @@ describe('WidgetComparisonCard — key robustness', () => {
     );
     expect(dupKeyWarning).toBe(false);
   });
+});
+
+it('keeps actual comparison rows, readings and previous context separate from the shared Delta', () => {
+  const { container, rerender } = render(<WidgetComparisonCard metrics={[makeMetric({
+    current: 0, previous: -5, formattedCurrent: '0,00', formattedPrevious: '−5 km', unit: 'km',
+  })]} previousLabel="Previous window" />);
+  const row = container.querySelector('[data-app-metric="comparison"]')!;
+  const reading = row.querySelector('[data-app-part="metric-reading"]')!;
+  expect(row.querySelector('[data-app-part="metric-heading"]')).toContainElement(screen.getByText('Distance'));
+  expect(row.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Previous window −5 km');
+  expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('0,00');
+  expect(reading.querySelector('[data-app-part="metric-value"]')).not.toHaveTextContent('km');
+  expect(reading.querySelector('[data-app-part="metric-unit"]')).toHaveTextContent('km');
+  expect(reading).not.toContainElement(screen.getByTestId('delta'));
+  expect(screen.getByTestId('delta')).toHaveAttribute('data-current', '0');
+  expect(screen.getByTestId('delta')).toHaveAttribute('data-previous', '-5');
+
+  rerender(<WidgetComparisonCard metrics={[makeMetric({ formattedPrevious: undefined, unit: undefined })]} />);
+  expect(row.querySelector('[data-app-part="metric-context"]')).toBeNull();
+  expect(row.querySelector('[data-app-part="metric-unit"]')).toBeNull();
+  expect(screen.getByTestId('delta')).toBeInTheDocument();
 });

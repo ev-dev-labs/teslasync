@@ -115,20 +115,23 @@ export function RateLimitBanner() {
       role="alert"
       aria-live="polite"
       data-testid="rate-limit-banner"
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-tone="warning"
       data-kind={state.kind}
       className="sticky top-0 z-50 flex shrink-0 items-center gap-3 border-b border-amber-300/30 bg-amber-300/[0.08] px-4 py-2.5 backdrop-blur-md"
     >
-      <div className="rounded-lg bg-amber-300/15 p-1.5 shrink-0">
+      <div data-app-part="feedback-icon" className="rounded-lg bg-amber-300/15 p-1.5 shrink-0">
         <Icon className="h-4 w-4 text-amber-300" aria-hidden />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--text-primary)]">
+      <div data-app-part="feedback-content" className="flex-1 min-w-0">
+        <p data-app-part="feedback-title" className="text-sm font-medium text-[var(--text-primary)]">
           {isRateLimit
             ? t('ratelimit.banner', 'Too many requests — pausing for {{n}}s', { n: remaining })
             : t('upstream.banner', 'Tesla upstream unavailable — retry in {{n}}s', { n: remaining })}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div data-app-part="feedback-actions" className="flex shrink-0 items-center gap-2">
         <Button
           size="sm"
           variant="primary"

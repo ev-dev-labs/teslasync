@@ -72,10 +72,13 @@ import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { ChargingInvoice, CreateDisputeRequest, CreateInvoiceRequest, InvoiceDispute, ReconciledLine, ReconciliationReport } from '@/types/ownership';
 import type { CsvCellValue } from '@/lib/csvExport';
-import { formatPct } from '../formatters';
+import { formatCurrencyMinor, formatPct } from '../formatters';
 import { severityTokens, typography } from '@/lib/tokens';
 import * as datePreferences from '@/hooks/useDateFormat';
 import { formatDateTime as formatSavedDateTime } from '@/lib/dateFormat';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockInvoices = useChargingInvoices as unknown as ReturnType<typeof vi.fn>;
@@ -209,12 +212,14 @@ async function exportPanel(title: string, format: 'CSV' | 'JSON') {
   await waitFor(() => expect(format === 'CSV' ? downloadCSV : downloadJSON).toHaveBeenCalledOnce());
 }
 
-function renderPage() {
+function renderPage(pack?: PackId) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const root = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <ChargingReconciliationPage />
+        {pack ? <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+          <ChargingReconciliationPage />
+        </div> : <ChargingReconciliationPage />}
       </QueryClientProvider>
     </MemoryRouter>
   );
@@ -243,6 +248,117 @@ beforeEach(() => {
   mockCreate.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
   mockReport.mockReturnValue(makeQuery(undefined));
+});
+
+describe('ChargingReconciliationPage — native design ownership', () => {
+  it.each(PACK_IDS)('%s composes the actual opened editor, digest, history and original share tracks', async (pack) => {
+    const report = makeReport();
+    report.invoice.currency = 'KWD';
+    report.dispute_packet_digest = 'Original/full:packet/with-long-byte-identity-0123456789-abcdef';
+    report.disputes = [
+      { ...report.disputes![0], claimed_minor: 12345, recovered_minor: 0, note: 'Original first note — retained in full.' },
+      { ...report.disputes![0], id: 2, status: 'disputed', claimed_minor: -123, recovered_minor: 123, note: '' },
+    ];
+    report.variance_buckets = [-10, 0, 12.5, 120].map((share_pct, index) => ({
+      reason: `original-cause-${index}`, label: `Original cause ${index}`,
+      amount_minor: index * 100, share_pct, line_count: index, recoverable: index > 0,
+    }));
+    const originalReport = JSON.stringify(report);
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage(pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      selectInvoice();
+      fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add line' }));
+      const editors = Array.from(view.container.querySelectorAll<HTMLElement>('[data-app-record-kind="invoice-line-editor"]'));
+      expect(editors).toHaveLength(2);
+      const energy = within(editors[1]).getByRole('spinbutton', { name: 'Billed energy (Wh)' });
+      fireEvent.change(energy, { target: { value: '12500' } });
+      fireEvent.change(within(editors[1]).getByRole('textbox', { name: 'Line reference' }),
+        { target: { value: 'Original second draft line' } });
+      expect(within(editors[0]).getByRole('spinbutton', { name: 'Billed energy (Wh)' })).toHaveValue(0);
+      expect(energy).toHaveValue(12500);
+      expect(within(editors[1]).getByRole('spinbutton', { name: 'Line total' })).toHaveValue(0);
+      const body = editors[1].querySelector('[data-app-record-slot="body"]')!;
+      expect(body).toHaveClass('grid', 'gap-3', 'md:grid-cols-2', 'xl:grid-cols-5');
+      expect(body.querySelectorAll('input')).toHaveLength(5);
+
+      const digest = card('Dispute desk').querySelector('[data-app-panel-kind="code"]')!;
+      const history = Array.from(card('Dispute desk').querySelectorAll('[data-app-record-kind="charging-dispute"]'));
+      expect(history).toHaveLength(2);
+      expect(digest.querySelector('[data-app-code-slot="body"]')).toHaveTextContent(report.dispute_packet_digest);
+      expect(digest.querySelector('[data-app-code-slot="body"]')).toHaveClass('break-all');
+      for (const [index, record] of history.entries()) {
+        expect(record.querySelector(':scope > [data-app-part="record-body"]')).toHaveClass('flex', 'flex-wrap', 'justify-between', 'gap-3');
+        expect(record.querySelector('[data-app-record-slot="label"]')?.textContent).toContain(
+          formatCurrencyMinor(report.disputes![index].claimed_minor, 'KWD', 'en-US'));
+        expect(record.querySelector('[data-app-record-slot="context"]')).toHaveTextContent(
+          report.disputes![index].note || '—');
+        expect(within(record as HTMLElement).getByText(index === 0 ? 'open' : 'disputed')).toBeInTheDocument();
+      }
+
+      const tracks = Array.from(card('Variance attribution').querySelectorAll<HTMLElement>('[data-metric-track]'));
+      expect(tracks).toHaveLength(4);
+      for (const [index, track] of tracks.entries()) {
+        expect(track).toHaveAttribute('data-app-part', 'metric');
+        expect(track).toHaveAttribute('data-app-metric', 'bar');
+        expect(track).toHaveClass('h-1.5', 'w-full', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-2)]');
+        expect(track).not.toHaveAttribute('role');
+        expect(track).not.toHaveAttribute('aria-valuenow');
+        const fill = track.querySelector(':scope > [data-metric-fill]')!;
+        expect(fill).toHaveClass('h-full', 'rounded-full', severityTokens.warn.dot);
+        expect(fill).toHaveStyle({ width: ['0%', '0%', '12.5%', '100%'][index] });
+        expect(track.nextElementSibling).toHaveTextContent(formatPct(report.variance_buckets[index].share_pct));
+      }
+      await waitFor(() => expect(editors[1].getAttribute('data-app-design-owner')).toContain(`pack-${pack}`));
+      const mode = APPLICATION_DESIGNS[pack].data;
+      for (const editor of editors) {
+        expectAppDesignDataMode(editor, mode, '[data-app-card-kind="record"]');
+        expectAppDesignDataMode(editor.querySelector('[data-app-record-slot="body"]')!, mode,
+          '[data-app-card-kind="record"]');
+      }
+      for (const record of history) {
+        expectAppDesignDataMode(record, mode, '[data-app-card-kind="record"]');
+        expectAppDesignDataMode(record.querySelector('[data-app-record-slot="context"]')!, mode,
+          '[data-app-card-kind="record"]');
+      }
+      expectAppDesignDataMode(digest, mode, '[data-app-panel-kind="code"]');
+      expectAppDesignDataMode(digest.querySelector('[data-app-code-slot="body"]')!, mode, '[data-app-panel-kind="code"]');
+      for (const track of tracks) {
+        expectAppDesignDataMode(track, mode, '[data-app-metric="bar"]');
+        const fills = matchesAppDesignCss(track.firstElementChild!, '[data-metric-fill]');
+        expect(fills).toEqual(expect.arrayContaining([
+          expect.objectContaining({ declarations: { 'box-sizing': 'border-box', 'min-inline-size': '0' } }),
+        ]));
+      }
+      expect(JSON.stringify(report)).toBe(originalReport);
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockDispute().mutate).not.toHaveBeenCalled();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+    } finally { release(); }
+  });
+
+  it('keeps native editor, digest and retained history neutral without an app-wide owner', () => {
+    mockReport.mockReturnValue({ ...makeQuery(makeReport()), error: new Error('Refresh failed') });
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const sources = view.container.querySelectorAll('[data-app-record-kind="invoice-line-editor"], [data-app-panel-kind="code"], [data-app-record-kind="charging-dispute"], [data-metric-track]');
+      expect(sources.length).toBeGreaterThan(3);
+      for (const source of sources) {
+        expect(source).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesAppDesignCss(source, '[data-app-card-kind="record"]')).toEqual([]);
+      }
+      expect(card('Dispute desk')).toHaveTextContent('Retained dispute note.');
+      expect(card('Dispute desk')).toHaveTextContent('Previously loaded data remains visible');
+      expect(screen.getByRole('button', { name: 'Open dispute' })).toBeEnabled();
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockDispute().mutate).not.toHaveBeenCalled();
+    } finally { release(); }
+  });
 });
 
 describe('ChargingReconciliationPage — confirm-gated delete', () => {

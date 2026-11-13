@@ -114,16 +114,18 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
               {t('journey.departure.allWarn', 'Every hour warns — delay if you can')}
             </Badge>
           )}
-          <ul className="flex min-w-0 flex-wrap gap-1.5" aria-label={t('journey.departure.slots', 'Departure hours')}>
+          <ul data-app-part="list" className="flex min-w-0 flex-wrap gap-1.5" aria-label={t('journey.departure.slots', 'Departure hours')}>
             {slots.map((slot) => (
               <Text
                 as="li"
+                data-app-part="list-row card"
+                data-surface-variant="standalone"
                 variant="caption"
                 key={slot.depart_at}
                 title={slot.level}
                 className={`rounded-md border px-2 py-1 tabular-nums ${
                   slot.depart_at === advice.recommended_at
-                    ? 'border-emerald-500/40 bg-emerald-500/10'
+                    ? '!border-emerald-500/40 !bg-emerald-500/10'
                     : 'border-[var(--border-subtle)] bg-[var(--surface-2)]'
                 }`}
               >

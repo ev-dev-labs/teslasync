@@ -296,7 +296,7 @@ it.each(packs)('retains the plot and blocks duplicate refreshes in %s / %s while
   const view = render(widget(packId));
   await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
   const refresh = screen.getByRole('button', { name: /Refresh data/ });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(api.result.refetch).not.toHaveBeenCalled();
   expect(screen.getByRole('table', { name: 'Monthly mileage — data table' })).toBeInTheDocument();

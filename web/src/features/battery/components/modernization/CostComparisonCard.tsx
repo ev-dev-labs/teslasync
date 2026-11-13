@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
-import { GlassPanel, Text, MetricLabel, HelperText } from '@/components/ui';
+import { Badge, GlassPanel, Text, MetricLabel, HelperText } from '@/components/ui';
 import { Currency } from '@/components/data-display';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { neonColorMap } from '@/lib/tokens';
+import { neonColorMap, typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 
 /** Source cost model: unavailable coverage never becomes a zero-cost saving. */
@@ -31,16 +31,16 @@ export function CostComparisonCard({
         <Text variant="subhead">{label}</Text>
       </div>
       <div className="mb-3 flex items-center gap-4">
-        <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.evCost', 'EV cost')}</MetricLabel>
-          <Text as="p" size="lg" weight="bold" className="mt-0.5 text-[var(--text-primary)]">
+        <div data-app-part="metric" data-app-metric="headline" className="min-w-0">
+          <MetricLabel data-app-part="metric-label">{t('energy.cost.evCost', 'EV cost')}</MetricLabel>
+          <Text data-app-part="metric-reading metric-value" as="p" size="lg" weight="bold" className="mt-0.5 text-[var(--text-primary)]">
             {evCost != null ? <Currency value={evCost} /> : '—'}
           </Text>
         </div>
         <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-        <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.gasEquivalent', 'Gas equivalent')}</MetricLabel>
-          <Text as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
+        <div data-app-part="metric" data-app-metric="headline" className="min-w-0">
+          <MetricLabel data-app-part="metric-label">{t('energy.cost.gasEquivalent', 'Gas equivalent')}</MetricLabel>
+          <Text data-app-part="metric-reading metric-value" as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
             {gasCost != null ? <Currency value={gasCost} /> : '—'}
           </Text>
         </div>
@@ -53,18 +53,17 @@ export function CostComparisonCard({
               : t('energy.cost.higherBy', 'Higher by')}{' '}
             <Currency value={Math.abs(savings)} />
           </Text>
-          <Text
-            as="span"
-            size="2xs"
-            weight="semibold"
+          <Badge
+            variant={isSaving ? 'success' : 'warning'}
             className={cn(
-              'rounded-full px-2 py-0.5 ring-1',
+              typography.size['2xs'], typography.weight.semibold,
+              'rounded-full border-0 px-2 py-0.5 ring-1',
               isSaving ? [green.bg, green.text, green.ring] : 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
             )}
           >
             {fmtPercent(savingsPct)}{' '}
             {isSaving ? t('energy.cost.less', 'less') : t('energy.cost.more', 'more')}
-          </Text>
+          </Badge>
         </div>
       ) : (
         <HelperText>

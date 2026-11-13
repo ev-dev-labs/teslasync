@@ -362,9 +362,10 @@ export default function SegmentsPage() {
             actions={<>
                 <Trophy className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {/* by-time / by-efficiency toggle */}
-              <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
+              <div data-app-part="tabs" className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
                   <Button
+                    data-app-part="button tab"
                     key={mode}
                     type="button"
                     variant={board === mode ? 'secondary' : 'ghost'}
@@ -654,29 +655,29 @@ function SegmentCard({ segment: s, selected, disabled, onSelect, formatDistance,
         </Text>
       </div>
 
-      <dl className="grid grid-cols-3 gap-2 pt-1">
-        <div>
-          <Text as="dt" variant="caption">{t('segments.card.distance', 'Distance')}</Text>
-          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums">
-            {formatDistance(s.distance_m)}
+      <dl data-app-part="list" data-app-list="definitions" className="grid grid-cols-3 gap-2 pt-1">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption">{t('segments.card.distance', 'Distance')}</Text>
+          <Text data-app-part="metric-reading" as="dd" variant="bodySm" weight="semibold" className="tabular-nums">
+            <span data-app-part="metric-value">{formatDistance(s.distance_m)}</span>
           </Text>
         </div>
-        <div>
-          <Text as="dt" variant="caption" className="flex items-center gap-1">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption" className="flex items-center gap-1">
             <Trophy className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('segments.card.best', 'Best')}
           </Text>
-          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
-            {clock(s.best_time?.duration_s)}
+          <Text data-app-part="metric-reading" as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
+            <span data-app-part="metric-value">{clock(s.best_time?.duration_s)}</span>
           </Text>
         </div>
-        <div>
-          <Text as="dt" variant="caption" className="flex items-center gap-1">
+        <div data-app-part="list-row">
+          <Text data-app-part="metric-label" as="dt" variant="caption" className="flex items-center gap-1">
             <Zap className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('segments.card.eff', 'Best eff.')}
           </Text>
-          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
-            {whPerKm(s.best_efficiency?.wh_per_km)}
+          <Text data-app-part="metric-reading" as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
+            <span data-app-part="metric-value">{whPerKm(s.best_efficiency?.wh_per_km)}</span>
           </Text>
         </div>
       </dl>

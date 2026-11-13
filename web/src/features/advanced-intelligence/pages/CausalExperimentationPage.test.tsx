@@ -270,7 +270,10 @@ describe('CausalExperimentationPage', () => {
     })])));
     renderPage();
     const article = screen.getByRole('article');
-    expect(article).toHaveClass('min-w-0', 'rounded-panel', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    expect(article).toHaveClass('min-w-0');
+    expect(article.firstElementChild).toHaveAttribute('data-app-part', 'card');
+    expect(article.firstElementChild).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(article.firstElementChild).toHaveClass('rounded-panel', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]');
     expect(within(article).getByLabelText('Baseline: 0.00%')).toHaveAttribute('data-state', 'value');
     expect(article.querySelector('[data-metric="percent"][data-state="missing"]')).toHaveTextContent('—');
     expect(article.querySelector('[data-metric="percent"][data-state="invalid"]')).toHaveTextContent('—');

@@ -61,8 +61,9 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
       header: t('ownership.ghost.col.score', 'Ghost score'),
       render: (row) => (
         <div className="flex min-w-[7rem] items-center gap-2">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
             <div
+              data-metric-fill
               className="h-full rounded-full bg-[var(--semantic-warning)]"
               style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
             />

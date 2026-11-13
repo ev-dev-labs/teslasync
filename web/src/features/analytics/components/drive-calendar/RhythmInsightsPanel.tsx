@@ -144,17 +144,19 @@ export function RhythmInsightsPanel({
           {insights.map(({ label, value, detail, icon: Icon }, index) => (
             <div
               key={label}
+              data-app-part="metric"
+              data-app-metric="tile"
               className={cn(
                 'rounded-xl border border-[var(--border-subtle)] bg-white/[0.025] p-3',
                 index === insights.length - 1 && 'col-span-2',
               )}
             >
-              <div className="flex items-center gap-2">
+              <div data-app-part="metric-label" className="flex items-center gap-2">
                 <Icon className="h-4 w-4 shrink-0 text-theme-accent" aria-hidden="true" />
                 <Text variant="label">{label}</Text>
               </div>
-              <MetricValue className="mt-2 text-xl">{value}</MetricValue>
-              <Caption className="mt-0.5 block">{detail}</Caption>
+              <MetricValue data-app-part="metric-reading metric-value" className="mt-2 text-xl">{value}</MetricValue>
+              <Caption data-app-part="metric-context" className="mt-0.5 block">{detail}</Caption>
             </div>
           ))}
         </div>

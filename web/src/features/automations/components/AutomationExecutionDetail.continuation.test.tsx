@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { formatDateTime } from '@/lib/dateFormat';
 import type { AutomationExecutionDetail as Detail } from '@/api/types';
 import { AutomationExecutionDetail } from './AutomationExecutionDetail';
 
@@ -11,11 +18,12 @@ const source = vi.hoisted(() => ({
   }) | null | undefined,
   error: null as Error | null,
   retry: vi.fn(),
+  isLoading: false,
 }));
 vi.mock('@/api/hooks/useAutomations', () => ({
   useAutomationExecutionDetail: () => ({
     data: source.data, error: source.error, isError: source.error != null,
-    isLoading: false, refetch: source.retry,
+    isLoading: source.isLoading, refetch: source.retry,
   }),
 }));
 vi.mock('react-i18next', () => ({
@@ -54,6 +62,92 @@ describe('Execution detail continuation retention', () => {
     source.data = detail();
     source.error = null;
     source.retry.mockClear();
+    source.isLoading = false;
+  });
+
+  it.each(PACK_IDS)('%s composes real detail surfaces and ordered full records without changing their evidence', pack => {
+    const original = detail();
+    original.actions_executed = [
+      { action: 'notification', success: false, diagnostic: 'Complete action diagnostic without truncation', value: 0 },
+      { action: 'notification', success: true, source: null, message: '<script>not executable</script>' },
+    ];
+    original.fsm_transitions = [
+      ...original.fsm_transitions,
+      { ...original.fsm_transitions[0], id: 19, ts: '2026-10-05T23:01:00Z', from_state: 'parked', to_state: 'asleep' },
+    ];
+    source.data = original;
+    const before = JSON.stringify(source.data);
+    const root = document.documentElement;
+    for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+    const onClose = renderDetail();
+    const release = observeAppDesignScopes(root);
+    try {
+      const dialog = screen.getByRole('dialog', { name: 'Execution details' });
+      const sections = dialog.querySelectorAll('section[data-app-part="panel"][data-surface-variant="standalone"]');
+      expect(sections).toHaveLength(2);
+      const identity = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
+      for (const section of sections) {
+        const matches: string[] = [];
+        identity.walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="panel"]')) {
+            matches.push(...rule.selectors.filter(selector => [...document.querySelectorAll(selector)].includes(section)));
+          }
+        });
+        expect(matches, `${pack} independent section paint`).not.toHaveLength(0);
+      }
+      const lists = dialog.querySelectorAll('ul[data-app-list="records"]');
+      expect(lists).toHaveLength(2);
+      const mode = APPLICATION_DESIGNS[pack].data;
+      for (const list of lists) {
+        expectAppDesignDataMode(list, mode, '[data-app-list="records"]');
+        expect(list.children).toHaveLength(2);
+        for (const record of list.children) {
+          expect(record.tagName).toBe('LI');
+          expectAppDesignDataMode(record, mode, '[data-app-card-kind="record"]');
+          expectAppDesignDataMode(record.querySelector('[data-app-part="record-body"]')!, mode, '[data-app-part~="record-body"]');
+        }
+      }
+      [...lists[0].children].forEach((record, index) => {
+        expect(record.querySelector('[data-app-part="record-body"]')?.textContent)
+          .toBe(JSON.stringify(original.actions_executed?.[index], null, 2));
+      });
+      expect(dialog.querySelector('script')).toBeNull();
+      expect([...lists[1].children].map(record => record.querySelector('[data-app-part="record-body"]')?.textContent))
+        .toEqual(['vehicle: charging → parked', 'vehicle: parked → asleep']);
+      expect([...lists[1].querySelectorAll('[data-app-part="record-header"]')].map(header => header.textContent))
+        .toEqual(original.fsm_transitions.map(transition => formatDateTime(transition.ts, { tz: 'UTC', locale: 'en-US' })));
+      expect(dialog).toHaveTextContent('Complete retained execution failure');
+      expect(dialog).toHaveTextContent('0/1');
+      expect(JSON.stringify(source.data)).toBe(before);
+      expect(source.retry).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog).getByRole('button', { name: /close/i }));
+      expect(onClose).toHaveBeenCalledOnce();
+    } finally {
+      release();
+      for (const name of Object.keys(getAppDesignAttributes(pack))) root.removeAttribute(name);
+    }
+  });
+
+  it('keeps native evidence neutral without an app profile and preserves loading and fatal recovery', () => {
+    source.data = undefined;
+    source.isLoading = true;
+    const onClose = vi.fn();
+    const view = render(<MemoryRouter><AutomationExecutionDetail id={91} onClose={onClose} /></MemoryRouter>);
+    expect(screen.getByRole('dialog').querySelector('[data-app-part~="skeleton"]')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Action results' })).not.toBeInTheDocument();
+    source.isLoading = false;
+    source.error = new Error('initial detail failed');
+    view.rerender(<MemoryRouter><AutomationExecutionDetail id={91} onClose={onClose} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(source.retry).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    source.data = detail();
+    source.error = null;
+    view.rerender(<MemoryRouter><AutomationExecutionDetail id={91} onClose={onClose} /></MemoryRouter>);
+    const sections = screen.getByRole('dialog').querySelectorAll('section[data-app-part="panel"]');
+    expect(sections).toHaveLength(2);
+    for (const section of sections) expect(section).not.toHaveAttribute('data-app-design-owner');
+    expect(screen.getByText('vehicle: charging → parked')).toBeInTheDocument();
   });
 
   it('retains every detail section on refresh failure and retries without closing', () => {

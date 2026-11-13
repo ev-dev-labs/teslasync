@@ -183,7 +183,7 @@ export function TrueCostFixedLedger({ vehicleId, aggregateState, totalKm, totalC
             </Text>
           )}
           {refreshError && (
-            <div role="status" className="space-y-2">
+            <div data-app-part="status" role="status" className="space-y-2">
               <Text as="p" variant="bodySm">
                 {t(
                   'tco.modernization.ledger.refreshFailed',

@@ -234,7 +234,7 @@ export default function TwinLabPage() {
         >
           <div className="grid min-w-0 gap-4 @2xl:grid-cols-2">
             {(result?.scenarios ?? []).map((scenario, scenarioIndex) => (
-              <article key={scenarioIndex} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+              <article key={scenarioIndex} data-app-part="card" data-surface-variant="standalone" className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
                 <Text as="h3" variant="label" className="break-words">{scenario.name}</Text>
                 {(scenario.sensitivity_drivers ?? []).map((driver, driverIndex) => (
                   <div key={driverIndex} className="mt-2 flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">

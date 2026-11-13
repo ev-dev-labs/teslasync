@@ -49,7 +49,7 @@ export default function RuleListTools({ rules, total, search, onSearch, selected
   return (
     <div className="@container mb-3 space-y-2">
       <div className="grid min-w-0 grid-cols-1 gap-2 @sm:grid-cols-2">
-        <fieldset disabled={pending} className="min-w-0">
+        <fieldset data-app-part="field" disabled={pending} className="min-w-0">
           <SearchInput value={search} onChange={onSearch}
             placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
             aria-label={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')} />

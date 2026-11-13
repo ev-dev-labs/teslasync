@@ -14,7 +14,7 @@ import {
   axisTick,
 } from '@/components/charts';
 import { ChartCard } from '@/components/layout';
-import { Badge, Text } from '@/components/ui';
+import { Badge, Card, Text } from '@/components/ui';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
@@ -107,7 +107,7 @@ export function ArchetypeConfidenceDistribution({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Card padding="sm" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-none">
             <Text variant="bodySm">
               {t(
                 'archetypes.confidence.ambiguousSummary',
@@ -122,7 +122,7 @@ export function ArchetypeConfidenceDistribution({
                   : 0,
               )}
             </Badge>
-          </div>
+          </Card>
         </ArchetypeSectionBody>
       </ChartCard>
     </section>

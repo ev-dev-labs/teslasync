@@ -18,6 +18,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 import { CostHeatmap, heatFill } from './CostHeatmap';
 import type { OptimizerHeatmapEntry } from '@/types/charging';
@@ -85,6 +89,48 @@ describe('heatFill — colour scale primitive', () => {
 });
 
 describe('CostHeatmap — structure & accessibility', () => {
+  it('binds the native frame and viewport to chart consumers for every complete design without touching cells', () => {
+    const viewportSelectors: string[] = [];
+    postcss.parse(readFileSync(resolve(process.cwd(),
+      'src', 'components', 'ui', 'app-designs', 'charts.css'), 'utf8')).walkRules(rule => {
+      if (!rule.selector.includes('[data-chart-viewport]')) return;
+      const parent = rule.parent;
+      if (parent?.type === 'rule') {
+        parent.selectors.forEach(owner => rule.selectors.forEach(selector => {
+          viewportSelectors.push(selector.replace(/&/g, owner));
+        }));
+      }
+    });
+    expect(viewportSelectors.length).toBeGreaterThan(0);
+    const { container } = render(<div data-app-design-preview>
+      <CostHeatmap heatmap={sampleHeatmap} peakCostPerKwh={0.3} />
+    </div>);
+    const host = container.firstElementChild!;
+    const viewport = container.querySelector('[data-app-part="chart-plot"][data-chart-viewport="native"]')!;
+    const cells = heatCells(container);
+    const originals = Array.from(cells, cell => [cell.title, cell.getAttribute('style')]);
+    expect(viewport).not.toBeNull();
+    const frame = viewport.closest('[data-app-part="chart"][data-chart-family="heatmap"]');
+    expect(frame).toHaveAttribute('data-chart-variant', 'embedded');
+    expect(frame).toHaveAttribute('data-chart-state', 'ready');
+    expect(viewport).toHaveAttribute('tabindex', '0');
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => host.setAttribute(name, value));
+      const release = observeAppDesignScopes(host);
+      try {
+        expect(viewportSelectors.some(selector => viewport.matches(selector)), pack).toBe(true);
+        expect(viewportSelectors.some(selector => selector.includes('[data-chart-variant="embedded"]') && viewport.matches(selector)), pack).toBe(true);
+        expect(Array.from(cells, cell => [cell.title, cell.getAttribute('style')])).toEqual(originals);
+        expect(cells).toHaveLength(168);
+      } finally { release(); }
+    }
+    host.removeAttribute('data-app-chart');
+    const release = observeAppDesignScopes(host);
+    try {
+      expect(viewportSelectors.some(selector => viewport.matches(selector))).toBe(false);
+    } finally { release(); }
+  });
+
   it('keeps contained scrolling keyboard reachable and exposes every slot in the shared table', async () => {
     const user = userEvent.setup();
     const { container } = render(<CostHeatmap heatmap={sampleHeatmap} peakCostPerKwh={0.3} />);
@@ -243,6 +289,7 @@ describe('CostHeatmap — empty & null-safety', () => {
     // No grid, no cells.
     expect(screen.queryByRole('img')).toBeNull();
     expect(heatCells(container)).toHaveLength(0);
+    expect(container.querySelector('[data-app-part="chart"]')).toHaveAttribute('data-chart-state', 'empty');
   });
 
   it('does not crash on an undefined heatmap and shows the empty state', () => {

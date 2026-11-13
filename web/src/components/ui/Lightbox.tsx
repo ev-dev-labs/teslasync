@@ -33,11 +33,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw, X } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
+import { AppDesignPortal } from './AppDesignPortal';
 
 const FOCUSABLE_SELECTOR =
   'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -377,6 +377,7 @@ export function Lightbox({
           regex doesn't fire on this element. */}
       <div
         aria-hidden="true"
+        data-app-part="overlay"
         onClick={onClose}
         data-testid="lightbox-backdrop"
         className={cn(
@@ -387,6 +388,8 @@ export function Lightbox({
       />
       <div
         ref={dialogRef}
+        data-app-part="dialog"
+        data-app-dialog-kind="lightbox"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -404,7 +407,7 @@ export function Lightbox({
         className="pointer-events-none fixed inset-0 z-[71] flex flex-col outline-none"
       >
       {/* Top bar — counter (left) + close (right). */}
-      <div className="pointer-events-auto flex shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-6">
+      <div data-app-part="dialog-header" className="pointer-events-auto flex shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-6">
         <span
           id={titleId}
           data-testid="lightbox-counter"
@@ -417,6 +420,9 @@ export function Lightbox({
         </span>
         <button
           type="button"
+          data-app-part="button"
+          data-app-variant="ghost"
+          data-app-icon-only="true"
           onClick={onClose}
           aria-label={t('lightbox.close', 'Close image viewer')}
           data-testid="lightbox-close"
@@ -435,7 +441,7 @@ export function Lightbox({
           the image and the screen edge falls through to the backdrop
           and closes. The <img>, prev, and next children re-enable
           pointer-events-auto. */}
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 sm:px-12">
+      <div data-app-part="dialog-body" className="relative flex flex-1 items-center justify-center overflow-hidden px-4 sm:px-12">
         {!decoded && (
           <div
             data-testid="lightbox-skeleton"
@@ -467,6 +473,9 @@ export function Lightbox({
           <>
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="secondary"
+              data-app-icon-only="true"
               onClick={goPrev}
               disabled={atFirst}
               aria-label={t('lightbox.previous', 'Previous image')}
@@ -484,6 +493,9 @@ export function Lightbox({
             </button>
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="secondary"
+              data-app-icon-only="true"
               onClick={goNext}
               disabled={atLast}
               aria-label={t('lightbox.next', 'Next image')}
@@ -504,7 +516,7 @@ export function Lightbox({
       </div>
 
       {/* Bottom bar — caption (top row) + zoom controls (bottom row). */}
-      <div className="pointer-events-auto flex shrink-0 flex-col items-center gap-2 px-4 pb-4 pt-2 sm:px-6">
+      <div data-app-part="dialog-footer" className="pointer-events-auto flex shrink-0 flex-col items-center gap-2 px-4 pb-4 pt-2 sm:px-6">
         {current.caption ? (
           <p
             data-testid="lightbox-caption"
@@ -516,6 +528,9 @@ export function Lightbox({
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--surface-1)]/70 p-1 forced-colors:border-[CanvasText]">
           <button
             type="button"
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-icon-only="true"
             onClick={zoomOut}
             disabled={!canZoomOut}
             aria-label={t('lightbox.zoomOut', 'Zoom out')}
@@ -538,6 +553,9 @@ export function Lightbox({
           </span>
           <button
             type="button"
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-icon-only="true"
             onClick={zoomIn}
             disabled={!canZoomIn}
             aria-label={t('lightbox.zoomIn', 'Zoom in')}
@@ -553,6 +571,9 @@ export function Lightbox({
           </button>
           <button
             type="button"
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-icon-only="true"
             onClick={zoomReset}
             disabled={!isZoomed && pan.x === 0 && pan.y === 0}
             aria-label={t('lightbox.zoomReset', 'Reset zoom')}
@@ -572,7 +593,7 @@ export function Lightbox({
     </>
   );
 
-  return createPortal(overlay, document.body);
+  return <AppDesignPortal>{overlay}</AppDesignPortal>;
 }
 
 Lightbox.displayName = 'Lightbox';

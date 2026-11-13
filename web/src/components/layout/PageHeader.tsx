@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn'
 import { FadeIn } from '../motion/FadeIn'
 import { Heading, Text } from '../ui/Typography'
 import { Button } from '../ui/Button'
-import { Tooltip } from '../ui/Tooltip'
+import { Tooltip, TooltipPortalContext } from '../ui/Tooltip'
 import { Icon } from '../ui/Icon'
 import { CopyLinkButton } from './CopyLinkButton'
 import { PageActions } from './PageActions'
@@ -48,6 +48,7 @@ export function PageHeader({
   const { t } = useTranslation()
   return (
     <FadeIn>
+      <TooltipPortalContext.Provider value={true}>
       <header
         className={cn(
           'relative mb-6 flex flex-col gap-4 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e1 sm:p-6 xl:flex-row xl:items-center xl:justify-between',
@@ -56,8 +57,9 @@ export function PageHeader({
           compactHeader && 'mb-3 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0',
         )}
         data-role="page-header"
+        data-app-part="page-header"
       >
-        <div className={cn('flex min-w-0 max-w-4xl gap-4', compactHeader && 'gap-3 xl:flex-auto')}>
+        <div data-app-part="page-title" className={cn('flex min-w-0 max-w-4xl gap-4', compactHeader && 'gap-3 xl:flex-auto')}>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-3">
               {icon && (
@@ -115,6 +117,7 @@ export function PageHeader({
           primary={primaryAction}
         />
       </header>
+      </TooltipPortalContext.Provider>
     </FadeIn>
   )
 }

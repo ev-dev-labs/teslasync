@@ -43,14 +43,16 @@ export function SourceFreshnessPanel({
         )}
         onRetry={onRetry}
       >
-        <ol className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <ol data-app-part="list" data-app-list="records" className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           {sources.map((source) => (
             <li
               key={source.id}
+              data-app-part="card"
+              data-app-card-kind="record"
               className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
             >
-              <div className="flex items-start justify-between gap-2">
-                <Text variant="body" weight="semibold">{source.name}</Text>
+              <div data-app-part="record-header" className="flex items-start justify-between gap-2">
+                <Text data-app-part="record-title" variant="body" weight="semibold">{source.name}</Text>
                 <Badge variant={source.status === 'available' ? 'success' : 'warning'}>
                   {source.status === 'available'
                     ? t('serviceIntelligence.sources.available', 'Available')
@@ -59,7 +61,7 @@ export function SourceFreshnessPanel({
                       : t('serviceIntelligence.sources.unavailable', 'Unavailable')}
                 </Badge>
               </div>
-              <div className="mt-3 space-y-1">
+              <div data-app-part="record-body" className="mt-3 space-y-1">
                 <Caption className="block">
                   {t('serviceIntelligence.sources.records', '{{count}} records', {
                     count: source.record_count,
@@ -77,7 +79,7 @@ export function SourceFreshnessPanel({
                   <Badge variant="neutral">{t('serviceIntelligence.sources.cache', 'Normalized cache')}</Badge>
                 )}
               </div>
-              {source.detail && <Text as="p" variant="helper" className="mt-2">{source.detail}</Text>}
+              {source.detail && <Text data-app-part="record-context" as="p" variant="helper" className="mt-2">{source.detail}</Text>}
               <a
                 href={source.source_url}
                 target="_blank"

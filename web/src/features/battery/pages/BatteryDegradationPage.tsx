@@ -565,7 +565,7 @@ export default function BatteryDegradationPage() {
                       needed since the range chart below uses a different X-axis
                       dataKey ("date" vs "label").
                     */}
-                    <ChartBrush dataKey="label" />
+                    {ChartBrush({ dataKey: 'label' })}
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -838,7 +838,7 @@ export default function BatteryDegradationPage() {
                 actionTo={activeId == null ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
                 action={activeId != null ? { label: t('common.retry', 'Retry'), onClick: () => { void healthState.retry?.(); } } : undefined} />
             ) : recommendations.length > 0 ? (
-              <ul className="space-y-3">
+              <ul data-app-part="list" className="space-y-3">
                 {recommendations.map((rec, i) => (
                   <li key={i} className="flex min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                     <Zap className={cn('mt-0.5 h-4 w-4 shrink-0', typography.color.secondary)} aria-hidden="true" />

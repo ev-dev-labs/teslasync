@@ -23,7 +23,7 @@ export function GridMetricIndicator({ children, kind, band, title, fraction, seg
   const fill = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
   const circumference = 2 * Math.PI * 5.5;
   return (
-    <div className="flex items-center justify-end gap-2" data-range={band} title={title}>
+    <div data-app-part="metric" data-app-metric="inline" className="flex items-center justify-end gap-2" data-range={band} title={title}>
       <svg aria-hidden="true" data-indicator={kind} viewBox="0 0 32 16"
         className={cn('h-4 w-8 shrink-0 opacity-80', bandColors[band])}>
         {kind === 'battery' && (
@@ -46,7 +46,7 @@ export function GridMetricIndicator({ children, kind, band, title, fraction, seg
           </>
         )}
       </svg>
-      <span>{children}</span>
+      <span data-app-part="metric-value">{children}</span>
     </div>
   );
 }

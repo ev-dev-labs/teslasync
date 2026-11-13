@@ -1711,32 +1711,32 @@
         "name": "Classic"
       },
       "v1": {
-        "description": "Instrument-led layouts with clear secondary readings.",
-        "name": "Studio"
+        "description": "Mission-control instrumentation with crisp accent-lit bays.",
+        "name": "Telemetry Studio"
       },
       "v2": {
-        "description": "Layered surfaces and generous spacing.",
-        "name": "Elevated"
+        "description": "Plush layered surfaces, soft elevation and airy spacing.",
+        "name": "Horizon Loft"
       },
       "v3": {
-        "description": "Restrained layouts and quiet visual hierarchy.",
-        "name": "Precision"
+        "description": "Architectural restraint, hairline rules and tabular clarity.",
+        "name": "Precision Ledger"
       },
       "v4": {
-        "description": "Key information and useful actions first.",
-        "name": "Owner"
+        "description": "Calm ownership sanctuary with refined tonal cards.",
+        "name": "Executive Concierge"
       },
       "v5": {
-        "description": "Clear pictograms and approachable status.",
-        "name": "Iconic"
+        "description": "Showroom poise, luminous backdrop and bold primary readouts.",
+        "name": "Iconic Showroom"
       },
       "v6": {
-        "description": "Tonal surfaces and expressive shapes.",
-        "name": "Expressive"
+        "description": "Sculptural asymmetric contours and vibrant studio energy.",
+        "name": "Expressive Form"
       },
       "v7": {
-        "description": "Pixel pictograms and segmented readings.",
-        "name": "Pixel"
+        "description": "Crisp digital instrument bays and sharp micro-framed readouts.",
+        "name": "Pixel Cockpit"
       }
     },
     "fleetPosture": {
@@ -2123,7 +2123,6 @@
     "connectionBody": "Unable to reach the server. Check your connection and try again.",
     "connectionTitle": "Connection Lost",
     "goHome": "Go Home",
-    "inlineTitle": "Component failed to load",
     "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
     "retry": "Retry",
     "retryAttempt": "Retry attempt {{count}}",
@@ -2423,6 +2422,22 @@
       "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
       "emptyHint": "Select a vehicle first.",
       "title": "Helix maintenance advisor"
+    }
+  },
+  "maps": {
+    "animatedMarker": {
+      "label": "Vehicle position"
+    },
+    "layerSwitcher": {
+      "dark": "Dark",
+      "label": "Map style",
+      "satellite": "Satellite",
+      "streets": "Streets",
+      "terrain": "Terrain"
+    },
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
     }
   },
   "mqttSseInspector": {
@@ -3305,6 +3320,9 @@
       "title": "Helix FSM narrator"
     }
   },
+  "systemStatus": {
+    "sourceUnavailable": "{{label}} is unavailable."
+  },
   "tagInput": {
     "added": "{{count}} tags added",
     "addedOne": "Tag added",
@@ -3383,6 +3401,118 @@
       "sunset-orange": "Orange",
       "tesla-red": "Red"
     },
+    "appDesignPreview": {
+      "activity": "Activity",
+      "activitySummary": "Five sample journeys are complete; one has an unavailable energy reading. Unknown is never shown as zero.",
+      "applied": "Applied in this sandbox only",
+      "applyLocal": "Apply locally",
+      "arrived": "Sample journey finished",
+      "arrivedDetail": "Review the journey alongside its source quality.",
+      "batterySeries": "Sample battery (%)",
+      "brief": "Journey brief",
+      "chart": "Sample battery trace",
+      "chartHelp": "A real SVG plot with a deliberate observation gap. Hover for values; use the legend to hide a series.",
+      "closeDetails": "Close details",
+      "complete": "Complete",
+      "coverageDetail": "Five of six energy readings are available",
+      "departed": "Sample journey started",
+      "departedDetail": "Harbor loop began with 78% battery.",
+      "detailLayout": "Detail first",
+      "dialog": "Synthetic journey details",
+      "dialogLive": "Live unavailable",
+      "dialogQuality": "Quality",
+      "dialogQualityText": "The trace includes an observation gap. Missing values are not interpolated into verified readings.",
+      "dialogSummary": "Summary",
+      "dialogSummaryText": "Harbor loop is a synthetic journey with a real plotted trace and local map geometry.",
+      "dialogTabs": "Sample journey details",
+      "disabledField": "Disabled source identifier",
+      "disclosure": "Synthetic sandbox. All readings, journeys and locations below are examples, not your vehicle data. Interactions stay here; nothing is saved and no commands are sent.",
+      "dismissHelp": "Dismiss help",
+      "distance": "Distance",
+      "elapsed": "Elapsed minutes",
+      "emptyState": "No sample alerts in this view.",
+      "energy": "Energy",
+      "errorState": "Synthetic source unavailable. Retry to demonstrate local recovery.",
+      "feedback": "Data states and recovery",
+      "form": "Local view options",
+      "formHelp": "Try validation, keyboard focus and selection. Apply updates this sandbox only and is discarded when it closes.",
+      "gap": "Sample observation gap",
+      "gapDetail": "Missing observations remain a gap in the chart.",
+      "garden": "Garden visit",
+      "harbor": "Harbor loop",
+      "includePartial": "Include partial examples",
+      "journey": "Sample journey",
+      "layout": "Sample layout",
+      "library": "Library visit",
+      "liveDisabled": "Live connection disabled",
+      "loaded": "Loaded examples",
+      "loadedOnly": "Six local examples, not a fleet total",
+      "loadingAction": "Loading example",
+      "loadingState": "Loading synthetic observations",
+      "map": "Fictional route map",
+      "mapHelp": "Local vector fixture at fictional ocean coordinates. No basemap or location service is requested. Pan, zoom and open a marker.",
+      "markerLegend": "Circles: four sample stops",
+      "market": "Market loop",
+      "mixed": "Mixed selection example",
+      "nameHint": "This name is not saved to your account.",
+      "nameRequired": "Enter a name for this local example.",
+      "navigation": "Sandbox navigation",
+      "noRows": "No sample journeys match.",
+      "notes": "Local review notes",
+      "openDialog": "Inspect sample journey",
+      "openPopover": "Preview help",
+      "overview": "Overview",
+      "overviewSummary": "A useful overview keeps totals, source quality and the next review step together.",
+      "park": "Park pause",
+      "partial": "Partial",
+      "partialState": "Five energy readings are available; one is unknown. The total is withheld.",
+      "partialTitle": "Sample partial response",
+      "partialTotal": "Total withheld: one journey is partial",
+      "popoverHelp": "Explore open, selected and focus states without changing the saved design.",
+      "quality": "Source quality",
+      "recovered": "Sample source recovered",
+      "recoveredHelp": "Local retry succeeded. No server request was made.",
+      "referenceSeries": "Sample reference (%)",
+      "resetError": "Show error again",
+      "resetMap": "Reset map",
+      "resetRetained": "Show refresh failure again",
+      "retainedHelp": "The previous readings stay visible. A failed refresh does not erase measured zero or turn an unknown reading into zero.",
+      "retainedRecovered": "Sample refresh recovered",
+      "retainedRecoveredHelp": "The local refresh completed; the same retained readings remain available.",
+      "retainedTitle": "Sample refresh failed",
+      "retainedUnknown": "Unknown sample reading",
+      "retainedZero": "Retained sample count",
+      "retryRetained": "Retry retained example",
+      "review": "Review",
+      "reviewSummary": "Review the partial journey before comparing totals. These examples do not describe the health of your vehicle.",
+      "routeLegend": "Line: fictional itinerary",
+      "sampleCoverage": "Sample source coverage",
+      "sampleDistance": "Sample distance",
+      "sampleJourneys": "Sample journeys",
+      "saveDisabled": "Server save disabled",
+      "showContext": "Show comparison context",
+      "showQuality": "Show source quality",
+      "sourceScope": "Sample source scope",
+      "staleState": "Last sample observation: 12 minutes ago. Cached readings stay visible, but are not live.",
+      "staleTitle": "Sample cached data",
+      "stop": "Fictional stop {{number}}",
+      "stopHelp": "Example marker, not a recorded vehicle position.",
+      "studio": "Studio connection",
+      "summaryLayout": "Summary first",
+      "syntheticSource": "Synthetic source",
+      "table": "Sample journey ledger",
+      "tableHelp": "Sort columns, search these six loaded rows, filter source quality and change pages. A dash means unknown; zero remains zero.",
+      "threshold": "Sample review threshold",
+      "timeline": "Sample activity timeline",
+      "toggleRoute": "Show sample route",
+      "tooltip": "Every action here is local to this synthetic preview.",
+      "tooltipTrigger": "Safety information",
+      "viewName": "Sample view name",
+      "widgets": "Original widget designs",
+      "workspace": "Explore a complete sample workspace, including open controls and recovery states.",
+      "zoomIn": "Zoom sample map in",
+      "zoomOut": "Zoom sample map out"
+    },
     "browseModes": "Browse all {{count}} modes",
     "chartPalette": {
       "cbSafe": "Color-blind safe",
@@ -3439,12 +3569,17 @@
       "activeNamed": "{{name}} active",
       "allIntensities": "All intensities",
       "allStyles": "All styles ({{count}})",
+      "appPreview": "Application preview",
+      "appPreviewHelp": "Shared navigation, headings, controls and panels use this design when applied to the entire application.",
+      "appScopeHelp": "Entire application styles navigation, panels, controls, tables and dialogs with the same pack. Color mode, accent, fonts, density and accessibility preferences stay unchanged. This choice also syncs across machines.",
+      "applyTo": "Apply design to",
       "balanced": "Balanced",
       "battery": "Battery",
       "bold": "Bold",
       "close": "Close preview",
       "commands": "Commands",
       "designStyle": "Design style",
+      "entireApp": "Entire application",
       "extreme": "Extreme",
       "history": "History",
       "inertCommands": "Preview commands are disabled.",
@@ -3478,11 +3613,12 @@
       "styleSoft": "Soft & Atmospheric ({{count}})",
       "styleTechnical": "Technical & Instrumental ({{count}})",
       "synthetic": "Synthetic examples only. Preview does not connect to a vehicle, change preferences or send commands.",
-      "title": "Widget design packs",
+      "title": "App design packs",
       "use": "Use pack",
       "useNamed": "Use {{name}} pack",
       "vehicle": "Vehicle",
-      "verifying": "Verifying your identity and loading the saved selection..."
+      "verifying": "Verifying your identity and loading the saved selection...",
+      "widgetsOnly": "Widgets only"
     }
   },
   "timeMachine": {

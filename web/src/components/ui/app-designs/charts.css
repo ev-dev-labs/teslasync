@@ -1,0 +1,764 @@
+/*
+ * Chart composition belongs to the existing shared owners, not another frame.
+ * The five modes are refined by the 27 identity sheets. Only presentation
+ * roles are styled here: never series paint, paths, domains or SVG transforms.
+ * Keeping this screen-only also leaves native print/high-contrast alternatives
+ * and the unselected application completely unchanged.
+ */
+@media screen and (forced-colors: none) {
+  /* Final-target ownership keeps nested complete/incomplete previews isolated. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-design-owner]) {
+    & :where([data-app-part~="chart"], [data-app-part~="chart-header"], [data-app-part~="chart-legend"]):where([data-app-design-owner]) {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+    }
+
+    & :where([data-app-part~="chart-header"] [data-card-title-group]):where([data-app-design-owner]) {
+      min-inline-size: 0;
+    }
+
+    & :where([data-app-part~="chart-header"] [data-card-title]):where([data-app-design-owner]) {
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+    }
+
+    & :where([data-chart-metadata]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner]) {
+      align-items: baseline;
+      color: var(--text-secondary);
+      line-height: var(--leading);
+    }
+
+    & :where([data-chart-metadata] > span):where([data-app-design-owner]) {
+      min-inline-size: 0;
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-chart-toolbar]):where([data-app-design-owner]) {
+      gap: calc(var(--density-gap, 0.75rem) / 2);
+      align-items: center;
+    }
+
+    /* No padding, borders or height overrides on the measured plot box. */
+    & :where([data-chart-viewport]):where([data-app-design-owner]) {
+      background-color: var(--surface-1);
+      box-shadow: inset 0 0 0 1px var(--border-subtle);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-axis-tick-value):where([data-app-design-owner]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-axis-line, [data-app-part~="chart-plot"] .recharts-cartesian-axis-tick-line):where([data-app-design-owner]) {
+      stroke: var(--text-muted);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line, [data-app-part~="chart-plot"] .recharts-polar-grid-angle line, [data-app-part~="chart-plot"] .recharts-polar-grid-concentric :is(path, circle)):where([data-app-design-owner]) {
+      stroke: var(--border-strong);
+      stroke-opacity: 1;
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-polar-angle-axis-tick-value, [data-app-part~="chart-plot"] .recharts-pie-label-text):where([data-app-design-owner]) {
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Native annotation/reference paint and brush geometry remain authoritative. */
+    & :where([data-app-part~="chart-plot"] .recharts-reference-line .recharts-label):where([data-app-design-owner]) {
+      font-family: var(--font-sans);
+      paint-order: stroke;
+      stroke: var(--surface-1);
+      stroke-width: 2px;
+      stroke-linejoin: round;
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-brush-texts text):where([data-app-design-owner]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-brush-traveller:focus-visible):where([data-app-design-owner]) {
+      outline: 2px solid var(--focus-ring, var(--theme-primary));
+      outline-offset: 2px;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner]) {
+      padding-block: 0.25rem;
+      color: var(--text-secondary);
+      line-height: var(--leading);
+    }
+
+    & :where([data-app-part~="chart-legend"] .recharts-legend-item):where([data-app-design-owner]) {
+      gap: 0.25rem;
+    }
+
+    & :where([data-chart-legend-label]):where([data-app-design-owner]) {
+      text-align: start;
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-app-part~="chart-tooltip"]):where([data-app-design-owner]) {
+      max-inline-size: min(24rem, calc(100vw - 2rem));
+      color: var(--text-primary);
+      background: var(--surface-elevated);
+      border-color: var(--border-strong);
+      line-height: var(--leading);
+    }
+
+    & :where([data-chart-tooltip-label]):where([data-app-design-owner]) {
+      padding-block-end: 0.5rem;
+      border-block-end: 1px solid var(--border-default);
+      color: var(--text-secondary);
+    }
+
+    & :where([data-chart-tooltip-row]):where([data-app-design-owner]) {
+      display: grid;
+      grid-template-columns: 0.625rem minmax(0, 1fr) minmax(0, 1fr);
+      align-items: baseline;
+      gap: 0.375rem 0.5rem;
+      padding-block: 0.375rem;
+    }
+
+    & :where([data-chart-tooltip-swatch]):where([data-app-design-owner]) {
+      align-self: center;
+    }
+
+    & :where([data-chart-tooltip-name], [data-chart-tooltip-value]):where([data-app-design-owner]) {
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-chart-tooltip-value]):where([data-app-design-owner]) {
+      text-align: end;
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-chart-readout], [data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner]) {
+      min-inline-size: 0;
+      flex-wrap: wrap;
+      row-gap: 0.375rem;
+    }
+
+    & :where([data-chart-readout] > *, [data-chart-scale] > *):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner]) {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-chart-scale] > *):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner]) {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    /* Track decoration never contributes to (or clips) value/target geometry. */
+    & :where([data-chart-gauge-track]):where([data-app-design-owner]) {
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner]) {
+      min-inline-size: 0;
+      background: transparent;
+    }
+
+    & :where([data-chart-family="small-multiple"][role="button"]:focus-visible):where([data-app-design-owner]) {
+      outline: 2px solid var(--focus-ring, var(--theme-primary));
+      outline-offset: 2px;
+    }
+
+    & :where([data-chart-family="small-multiple"] [data-app-part~="chart-header"] > span:last-child):where([data-app-design-owner]) {
+      white-space: normal;
+      overflow: visible;
+      overflow-wrap: anywhere;
+      text-overflow: clip;
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state="unavailable"]):where([data-app-design-owner]) {
+      border-style: dashed;
+      outline: 1px dashed var(--text-muted);
+      outline-offset: -1px;
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state="idle"]):where([data-app-design-owner]) {
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    /* Battery status paint stays at its native owner, including unknown cells. */
+    & :where([data-chart-family="battery-cells"][data-heatmap-state="unavailable"]):where([data-app-design-owner]) {
+      border-style: dashed;
+    }
+
+    /* Native matrix grids, cell paint and text metrics remain source-owned. */
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix], [data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner]) {
+      min-inline-size: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-label], [data-chart-family="condition-matrix"] [data-chart-readout]):where([data-app-design-owner]) {
+      color: var(--text-primary);
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale] > *):where([data-app-design-owner]) {
+      color: var(--text-secondary);
+      overflow-wrap: anywhere;
+    }
+
+    & :where([data-chart-state]:not([data-chart-state="ready"]) [data-chart-viewport], [data-chart-family="small-multiple"] [data-chart-state]):where([data-app-design-owner]) {
+      background: var(--surface-2);
+      box-shadow: inset 0 0 0 1px var(--border-default);
+    }
+  }
+
+  /* Precision: aligned technical header, compact reading ledger and ruled plot. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart="precision"]:where([data-app-design-owner~="chart-precision"]) {
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-precision"]) {
+      align-items: baseline;
+      column-gap: var(--density-pad-x, 1rem);
+      padding-block-end: var(--density-pad-y, 0.75rem);
+      border-block-end: 1px solid var(--text-muted);
+    }
+
+    & :where([data-chart-metadata], [data-chart-readout], [data-chart-scale]):where([data-app-design-owner~="chart-precision"]) {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-chart-summary]):where([data-app-design-owner~="chart-precision"]) {
+      padding-block: 0.5rem;
+      border-block-end: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-viewport]):where([data-app-design-owner~="chart-precision"]) {
+      background: var(--surface-1);
+      box-shadow: inset 1px 0 var(--border-strong), inset 0 -1px var(--border-strong);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line):where([data-app-design-owner~="chart-precision"]) {
+      stroke-dasharray: 2 4;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner~="chart-precision"]) {
+      border-block-start: 1px solid var(--border-default);
+      padding-block-start: 0.5rem;
+    }
+
+    & :where([data-chart-tooltip-row] + [data-chart-tooltip-row]):where([data-app-design-owner~="chart-precision"]) {
+      border-block-start: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-gauge-track], [data-chart-gauge-fill]):where([data-app-design-owner~="chart-precision"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-precision"]) {
+      padding-block-start: 0.25rem;
+      border-block-start: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner~="chart-precision"]) {
+      border: 0;
+      border-inline-start: 1px solid var(--text-muted);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state]):where([data-app-design-owner~="chart-precision"]) {
+      border-radius: 0;
+      outline-offset: -1px;
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis]):where([data-app-design-owner~="chart-precision"]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where([data-chart-family="battery-cells"][data-heatmap-state]):where([data-app-design-owner~="chart-precision"]) {
+      border-radius: 0;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-row]):where([data-app-design-owner~="chart-precision"]) {
+      border-color: var(--text-muted);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner~="chart-precision"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-readout], [data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale]):where([data-app-design-owner~="chart-precision"]) {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where(svg[data-chart-family="sparkline"], [data-chart-family="mini"] svg):where([data-app-design-owner~="chart-precision"]) {
+      background: var(--surface-2);
+      box-shadow: 0 1px var(--border-strong);
+    }
+  }
+
+  /* Editorial: title/deck then a full-width action line, with a reading key. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart="editorial"]:where([data-app-design-owner~="chart-editorial"]) {
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-editorial"]) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--density-gap, 0.75rem);
+      padding-block-end: var(--density-pad-x, 1rem);
+      border-block-end: 2px solid var(--text-secondary);
+    }
+
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"] [data-chart-toolbar]):where([data-app-design-owner~="chart-editorial"]) {
+      margin-inline-start: 0;
+      justify-content: flex-start;
+    }
+
+    & :where([data-chart-metadata]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-editorial"]) {
+      gap: 0.375rem 1rem;
+    }
+
+    & :where([data-chart-summary], [data-chart-caption]):where([data-app-design-owner~="chart-editorial"]) {
+      padding-inline-start: 0.75rem;
+      border-inline-start: 2px solid var(--text-muted);
+    }
+
+    & :where([data-chart-viewport]):where([data-app-design-owner~="chart-editorial"]) {
+      background: transparent;
+      box-shadow: inset 0 -1px var(--border-strong);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line):where([data-app-design-owner~="chart-editorial"]) {
+      stroke-dasharray: 1 6;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner~="chart-editorial"]) {
+      padding-block: 0.5rem;
+      border-block-start: 1px solid var(--text-muted);
+    }
+
+    & :where([data-chart-tooltip-row]):where([data-app-design-owner~="chart-editorial"]) {
+      grid-template-columns: 0.625rem minmax(0, 1fr);
+    }
+
+    & :where([data-chart-tooltip-value]):where([data-app-design-owner~="chart-editorial"]) {
+      grid-column: 2;
+      text-align: start;
+    }
+
+    & :where([data-chart-gauge-track], [data-chart-gauge-fill]):where([data-app-design-owner~="chart-editorial"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-readout]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-editorial"]) {
+      padding-block-end: 0.5rem;
+      border-block-end: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-editorial"]) {
+      justify-content: flex-start;
+      column-gap: 1rem;
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner~="chart-editorial"]) {
+      padding: 0.75rem;
+      border: 0;
+      border-block-start: 1px solid var(--text-muted);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state]):where([data-app-design-owner~="chart-editorial"]) {
+      border-radius: 0;
+      border-color: var(--surface-1);
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis]):where([data-app-design-owner~="chart-editorial"]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-variant-numeric: proportional-nums lining-nums;
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis="day"]):where([data-app-design-owner~="chart-editorial"]) {
+      fill: var(--text-primary);
+    }
+
+    & :where([data-chart-family="battery-cells"][data-heatmap-state]):where([data-app-design-owner~="chart-editorial"]) {
+      border-radius: 0;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-row]):where([data-app-design-owner~="chart-editorial"]) {
+      border-color: var(--text-muted);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner~="chart-editorial"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-readout], [data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale]):where([data-app-design-owner~="chart-editorial"]) {
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where(svg[data-chart-family="sparkline"], [data-chart-family="mini"] svg):where([data-app-design-owner~="chart-editorial"]) {
+      box-shadow: 0 1px var(--text-muted);
+    }
+  }
+
+  /* Instrument: an operations strip, tabular readings and clearly bounded bays. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart="instrument"]:where([data-app-design-owner~="chart-instrument"]) {
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-instrument"]) {
+      align-items: center;
+      gap: var(--density-gap, 0.75rem) var(--density-pad-x, 1rem);
+      padding-block-end: var(--density-pad-y, 0.75rem);
+      border-block-end: 0;
+    }
+
+    & :where([data-chart-toolbar]):where([data-app-design-owner~="chart-instrument"]) {
+      padding: 0.25rem;
+      background: var(--surface-2);
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    & :where([data-chart-metadata]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-instrument"]) {
+      padding-block-start: 0.375rem;
+      border-block-start: 1px solid var(--border-default);
+      font-family: var(--font-mono);
+    }
+
+    & :where([data-chart-summary]):where([data-app-design-owner~="chart-instrument"]) {
+      padding-block: 0.75rem;
+      border-block: 1px solid var(--border-strong);
+    }
+
+    & :where([data-chart-viewport]):where([data-app-design-owner~="chart-instrument"]) {
+      background: var(--surface-2);
+      box-shadow: inset 0 0 0 1px var(--text-muted);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line):where([data-app-design-owner~="chart-instrument"]) {
+      stroke-dasharray: 1 3;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner~="chart-instrument"]) {
+      background: var(--surface-1);
+      border-block: 1px solid var(--border-strong);
+    }
+
+    & :where([data-chart-tooltip-label], [data-chart-tooltip-value], [data-chart-readout], [data-chart-scale]):where([data-app-design-owner~="chart-instrument"]) {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-chart-readout]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-instrument"]) {
+      padding-block-end: 0.5rem;
+      border-block-end: 1px solid var(--border-strong);
+    }
+
+    & :where([data-chart-gauge-track], [data-chart-gauge-fill]):where([data-app-design-owner~="chart-instrument"]) {
+      border-radius: 0.125rem;
+    }
+
+    & :where([data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-instrument"]) {
+      padding-block-start: 0.375rem;
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner~="chart-instrument"]) {
+      padding: 0.75rem;
+      background: var(--surface-2);
+      border-color: var(--text-muted);
+      border-radius: 0.125rem;
+    }
+
+    & :where([data-chart-family="small-multiple"] [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-instrument"]) {
+      padding-block-end: 0.375rem;
+      border-block-end: 1px solid var(--border-strong);
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state]):where([data-app-design-owner~="chart-instrument"]) {
+      border-radius: 0.125rem;
+      border-color: var(--border-strong);
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis]):where([data-app-design-owner~="chart-instrument"]) {
+      fill: var(--text-primary);
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    & :where([data-chart-family="battery-cells"][data-heatmap-state]):where([data-app-design-owner~="chart-instrument"]) {
+      border-radius: 0.125rem;
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-row]):where([data-app-design-owner~="chart-instrument"]) {
+      border-color: var(--text-muted);
+      border-radius: 0.125rem;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner~="chart-instrument"]) {
+      border-radius: 0.125rem;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-readout], [data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale]):where([data-app-design-owner~="chart-instrument"]) {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    & :where(svg[data-chart-family="sparkline"], [data-chart-family="mini"] svg):where([data-app-design-owner~="chart-instrument"]) {
+      background: var(--surface-2);
+      outline: 1px solid var(--border-strong);
+      outline-offset: 1px;
+    }
+  }
+
+  /* Soft: open title, separate action cluster, quiet continuous plot canvas. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart="soft"]:where([data-app-design-owner~="chart-soft"]) {
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-soft"]) {
+      gap: var(--density-pad-x, 1rem);
+      padding-block-end: 0.5rem;
+      border-block-end: 0;
+    }
+
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"] > [data-card-title-group]):where([data-app-design-owner~="chart-soft"]) {
+      flex-basis: 100%;
+    }
+
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"] [data-chart-toolbar]):where([data-app-design-owner~="chart-soft"]) {
+      margin-inline-start: 0;
+      justify-content: flex-start;
+      gap: 0.5rem;
+    }
+
+    & :where([data-chart-summary]):where([data-app-design-owner~="chart-soft"]) {
+      padding-block: 0.5rem;
+    }
+
+    & :where([data-chart-viewport]):where([data-app-design-owner~="chart-soft"]) {
+      background: var(--surface-2);
+      border-radius: var(--panel-radius);
+      box-shadow: none;
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line):where([data-app-design-owner~="chart-soft"]) {
+      stroke-dasharray: 1 5;
+      stroke-linecap: round;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner~="chart-soft"]) {
+      padding-block: 0.5rem;
+      background: var(--surface-1);
+    }
+
+    & :where([data-app-part~="chart-tooltip"]):where([data-app-design-owner~="chart-soft"]) {
+      border-radius: var(--panel-radius);
+      padding: var(--density-pad-y, 0.75rem) var(--density-pad-x, 1rem);
+    }
+
+    & :where([data-chart-tooltip-label]):where([data-app-design-owner~="chart-soft"]) {
+      border-block-end: 0;
+      padding-block-end: 0;
+    }
+
+    & :where([data-chart-gauge-track], [data-chart-gauge-fill]):where([data-app-design-owner~="chart-soft"]) {
+      border-radius: 9999px;
+    }
+
+    & :where([data-chart-readout]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-soft"]) {
+      padding-block-end: 0.375rem;
+    }
+
+    & :where([data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-soft"]) {
+      padding-block-start: 0.375rem;
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner~="chart-soft"]) {
+      padding: 0.75rem;
+      background: var(--surface-2);
+      border: 0;
+      border-radius: var(--panel-radius);
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state]):where([data-app-design-owner~="chart-soft"]) {
+      border-radius: 0.25rem;
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis]):where([data-app-design-owner~="chart-soft"]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-chart-family="battery-cells"][data-heatmap-state]):where([data-app-design-owner~="chart-soft"]) {
+      border-radius: var(--radius-md, 0.375rem);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-row]):where([data-app-design-owner~="chart-soft"]) {
+      border-color: var(--border-default);
+      border-radius: var(--panel-radius);
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner~="chart-soft"]) {
+      border-radius: var(--radius-md, 0.375rem);
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-readout], [data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale]):where([data-app-design-owner~="chart-soft"]) {
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    & :where(svg[data-chart-family="sparkline"], [data-chart-family="mini"] svg):where([data-app-design-owner~="chart-soft"]) {
+      background: var(--surface-2);
+      border-radius: 0.25rem;
+    }
+  }
+
+  /* Geometric: two-column title/control shelf, explicit baseline and keyed rows. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart="geometric"]:where([data-app-design-owner~="chart-geometric"]) {
+    & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner~="chart-geometric"]) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: var(--density-gap, 0.75rem) var(--density-pad-x, 1rem);
+      padding-block-end: var(--density-pad-y, 0.75rem);
+      border-block-end: 2px solid var(--text-secondary);
+    }
+
+    & :where([data-chart-metadata] > span):where([data-app-design-owner~="chart-geometric"]) {
+      padding-inline-start: 0.5rem;
+      border-inline-start: 2px solid var(--border-strong);
+    }
+
+    & :where([data-chart-summary]):where([data-app-design-owner~="chart-geometric"]) {
+      padding-block-end: 0.75rem;
+      border-block-end: 2px solid var(--border-strong);
+    }
+
+    & :where([data-chart-viewport]):where([data-app-design-owner~="chart-geometric"]) {
+      background: var(--surface-1);
+      box-shadow: inset 0 -2px var(--text-muted);
+    }
+
+    & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line):where([data-app-design-owner~="chart-geometric"]) {
+      stroke-dasharray: 4 4;
+    }
+
+    & :where([data-app-part~="chart-legend"]):where([data-app-design-owner~="chart-geometric"]) {
+      padding-block: 0.5rem;
+      border-block: 2px solid var(--border-strong);
+    }
+
+    & :where([data-app-part~="chart-tooltip"]):where([data-app-design-owner~="chart-geometric"]) {
+      border-radius: 0;
+      border-inline-start: 3px solid var(--text-secondary);
+    }
+
+    & :where([data-chart-tooltip-row] + [data-chart-tooltip-row]):where([data-app-design-owner~="chart-geometric"]) {
+      border-block-start: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-gauge-track], [data-chart-gauge-fill]):where([data-app-design-owner~="chart-geometric"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-readout]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-geometric"]) {
+      padding-block-end: 0.5rem;
+      border-block-end: 2px solid var(--border-strong);
+    }
+
+    & :where([data-chart-scale]):where(:not([data-chart-family="condition-matrix"] *)):where([data-app-design-owner~="chart-geometric"]) {
+      padding-block-start: 0.5rem;
+      border-block-start: 1px solid var(--border-default);
+    }
+
+    & :where([data-chart-family="small-multiple"]):where([data-app-design-owner~="chart-geometric"]) {
+      padding: 0.75rem;
+      border: 0;
+      border-block-start: 2px solid var(--text-secondary);
+      border-inline-start: 2px solid var(--border-strong);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="heatmap"][data-heatmap-state]):where([data-app-design-owner~="chart-geometric"]) {
+      border-radius: 0;
+      border-color: var(--border-strong);
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis]):where([data-app-design-owner~="chart-geometric"]) {
+      fill: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where(svg[data-chart-family="speed-heatmap"] text[data-chart-axis="day"]):where([data-app-design-owner~="chart-geometric"]) {
+      fill: var(--text-primary);
+    }
+
+    & :where([data-chart-family="battery-cells"][data-heatmap-state]):where([data-app-design-owner~="chart-geometric"]) {
+      border-radius: 0;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-row]):where([data-app-design-owner~="chart-geometric"]) {
+      border-color: var(--text-secondary);
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-matrix-cell]):where([data-app-design-owner~="chart-geometric"]) {
+      border-radius: 0;
+    }
+
+    & :where([data-chart-family="condition-matrix"] [data-chart-readout], [data-chart-family="condition-matrix"] [data-chart-metadata], [data-chart-family="condition-matrix"] [data-chart-scale]):where([data-app-design-owner~="chart-geometric"]) {
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & :where(svg[data-chart-family="sparkline"], [data-chart-family="mini"] svg):where([data-app-design-owner~="chart-geometric"]) {
+      box-shadow: 0 2px var(--text-muted);
+    }
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-chart]:where([data-app-design-owner]) {
+    & :where([data-chart-variant="embedded"] [data-chart-viewport]):where([data-app-design-owner]) {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
+  }
+
+  @media (max-width: 639px) {
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-design-owner]) {
+      & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"]):where([data-app-design-owner]) {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"] [data-chart-toolbar]):where([data-app-design-owner]) {
+        max-inline-size: 100%;
+        margin-inline-start: 0;
+        justify-content: flex-start;
+      }
+
+      & :where([data-chart-variant="panel"] > [data-app-part~="chart-header"] > [data-card-title-group]):where([data-app-design-owner]) {
+        flex-basis: 100%;
+      }
+
+      & :where([data-chart-tooltip-row]):where([data-app-design-owner]) {
+        grid-template-columns: 0.625rem minmax(0, 1fr);
+      }
+
+      & :where([data-chart-tooltip-value]):where([data-app-design-owner]) {
+        grid-column: 2;
+        text-align: start;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-design-owner]) {
+      & :where([data-chart-gauge-fill], [data-chart-gauge-pointer] > *):where([data-app-design-owner]) {
+        transition: none;
+      }
+    }
+  }
+}

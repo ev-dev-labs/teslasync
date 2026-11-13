@@ -94,6 +94,7 @@ export function StaleRefreshWarning({
         <Text as="p" variant="bodySm" color="secondary">{message ?? defaultMessage}</Text>
         {!hideRetry && state.retry != null ? (
           <Button
+            data-app-part="feedback-retry"
             type="button"
             variant="ghost"
             size="sm"

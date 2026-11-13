@@ -233,7 +233,7 @@ export default function RegimeShiftsPage() {
             />
             }
           >
-            <ul className="space-y-2">
+            <ul data-app-part="list" className="space-y-2">
               {[...summary.shifts].reverse().map((s) => (
                 <li
                   key={s.weekStart}

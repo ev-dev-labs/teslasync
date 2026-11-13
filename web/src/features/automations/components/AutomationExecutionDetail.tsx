@@ -80,31 +80,33 @@ export function AutomationExecutionDetail({ id, onClose }: {
             </div>
           </div>
           {detail.error && <Text variant="bodySm" className="break-words">{detail.error}</Text>}
-            <section className="rounded-lg border border-[var(--border-subtle)] p-3">
+            <section data-app-part="panel" data-surface-variant="standalone" className="rounded-lg border border-[var(--border-subtle)] p-3">
               <PanelTitle>{t('automations.historyPage.actionResults', 'Action results')}</PanelTitle>
               {availabilityMessage(detail.action_results_availability) && <Text variant="bodySm">{availabilityMessage(detail.action_results_availability)}</Text>}
               {actions.length === 0 && detail.action_results_availability?.status === 'available' && detail.action_results_availability.complete && !detail.action_results_availability.truncated && <Text variant="bodySm">{t('automations.historyPage.availability.noActionResults', 'No action results are recorded for this execution.')}</Text>}
-              <ul className="mt-2 space-y-2">
+              <ul data-app-part="list" data-app-list="records" className="mt-2 space-y-2">
                 {actions.map((action, index) => (
-                  <li key={index} className="overflow-x-auto rounded-lg bg-[var(--surface-2)] p-3">
-                    <Text variant="bodySm" className="whitespace-pre-wrap break-words">
+                  <li key={index} data-app-part="card list-row" data-app-card-kind="record" data-surface-variant="standalone" className="overflow-x-auto rounded-lg bg-[var(--surface-2)] p-3">
+                    <Text data-app-part="record-body" variant="bodySm" className="whitespace-pre-wrap break-words">
                       {JSON.stringify(action, null, 2)}
                     </Text>
                   </li>
                 ))}
               </ul>
             </section>
-            <section className="rounded-lg border border-[var(--border-subtle)] p-3">
+            <section data-app-part="panel" data-surface-variant="standalone" className="rounded-lg border border-[var(--border-subtle)] p-3">
               <PanelTitle>{t('automations.historyPage.transitions', 'Vehicle state transitions')}</PanelTitle>
               {availabilityMessage(detail.fsm_transitions_availability) && <Text variant="bodySm">{availabilityMessage(detail.fsm_transitions_availability)}</Text>}
               {transitions.length === 0 && detail.fsm_transitions_availability?.status === 'available' && detail.fsm_transitions_availability.complete && !detail.fsm_transitions_availability.truncated && (
                 <Text variant="bodySm">{t('automations.historyPage.availability.noTransitions', 'No vehicle state transitions were recorded during this execution window.')}</Text>
               )}
-              <ul className="mt-2 space-y-2">
+              <ul data-app-part="list" data-app-list="records" className="mt-2 space-y-2">
                 {transitions.map((transition) => (
-                  <li key={transition.id} className="rounded-lg bg-[var(--surface-2)] p-3">
-                    <DateTime value={transition.ts} in="user" />
-                    <Text variant="bodySm" className="break-words">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
+                  <li key={transition.id} data-app-part="card list-row" data-app-card-kind="record" data-surface-variant="standalone" className="rounded-lg bg-[var(--surface-2)] p-3">
+                    <div data-app-part="record-header">
+                      <DateTime value={transition.ts} in="user" />
+                    </div>
+                    <Text data-app-part="record-body" variant="bodySm" className="break-words">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
                   </li>
                 ))}
               </ul>

@@ -24,6 +24,11 @@ import { render, renderHook, screen, within, fireEvent, waitFor, act } from '@te
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { ApiError } from '@/api/client';
 import * as apiClient from '@/api/client';
 import type { Automation } from '@/api/types';
@@ -1076,6 +1081,37 @@ describe('AutomationsListPage reserved phase5 presentation and source trust', ()
       expect(icon).toHaveAttribute('aria-hidden', 'true');
     }
     expect(summary.closest('details')).not.toHaveAttribute('open');
+    expect(summary).toHaveAttribute('data-app-part', 'button');
+    expect(summary).toHaveAttribute('data-app-variant', 'secondary');
+    expect(summary.tagName).toBe('SUMMARY');
+    expect(summary).not.toHaveAttribute('role');
+    expect(summary).not.toHaveAttribute('data-app-design-owner');
+    const controls = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    const root = document.documentElement;
+    try {
+      for (const pack of PACK_IDS) {
+        for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+        const release = observeAppDesignScopes(root);
+        try {
+          const mode = APPLICATION_DESIGNS[pack].controls;
+          const matches: string[] = [];
+          controls.walkRules(rule => {
+            if (rule.selector.includes(`[data-app-controls="${mode}"]`) && rule.selector.includes('[data-app-part~="button"]')) {
+              matches.push(...rule.selectors.filter(selector => [...document.querySelectorAll(selector)].includes(summary)));
+            }
+          });
+          expect(matches, `${pack} native disclosure consumer`).not.toHaveLength(0);
+          fireEvent.click(summary);
+          expect(summary.closest('details')).toHaveAttribute('open');
+          expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+          fireEvent.click(summary);
+          expect(summary.closest('details')).not.toHaveAttribute('open');
+        } finally { release(); }
+      }
+    } finally {
+      for (const name of Object.keys(getAppDesignAttributes('classic'))) root.removeAttribute(name);
+    }
+    expect(summary).not.toHaveAttribute('data-app-design-owner');
     fireEvent.click(summary);
     expect(summary.closest('details')).toHaveAttribute('open');
     expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();

@@ -65,7 +65,7 @@ export default function RideOverview({ drive }: RideOverviewProps) {
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
-          <dl className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <dl data-app-part="list" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {metrics.map((metric) => (
               <div key={metric.label} className="min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
                 <Text as="dt" variant="caption">{metric.label}</Text>

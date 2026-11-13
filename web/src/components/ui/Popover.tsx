@@ -6,9 +6,9 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { registerShellPortal } from '../layout/shellFocusTrap';
+import { AppDesignPortal } from './AppDesignPortal';
 
 export type PopoverAlign = 'start' | 'end' | 'center';
 export type PopoverSide = 'bottom' | 'top';
@@ -190,6 +190,7 @@ export function Popover({
   const content = (
     <div
       ref={contentRef}
+      data-app-part="popover"
       role={role}
       aria-label={ariaLabel}
       aria-modal={role === 'dialog' ? 'false' : undefined}
@@ -210,5 +211,5 @@ export function Popover({
     </div>
   );
 
-  return createPortal(content, document.body);
+  return <AppDesignPortal anchorRef={anchorRef}>{content}</AppDesignPortal>;
 }

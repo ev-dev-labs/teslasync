@@ -551,3 +551,18 @@ migrations:
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-09"
+
+  - version: 258
+    name: app_design_scope
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore the new false-by-default column and their pack-only writes preserve it. Existing selections remain widget-only until explicitly enabled.
+    rollback_notes: Leave applied on application rollback to retain opt-ins. Explicit down drops only the app-wide choice; pack IDs remain saved and return to widget-only behavior.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: A brief ACCESS EXCLUSIVE metadata lock adds a boolean with a constant default; modern PostgreSQL does not rewrite existing rows.
+    reversible: false
+    irreversible_justification: Explicit down loses app-wide opt-ins; export subject_scope and app_wide first if they must be retained.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-10"

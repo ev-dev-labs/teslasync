@@ -80,7 +80,7 @@ export default function SummaryStatsGrid({ stats, loading }: SummaryStatsGridPro
 
   if (loading) {
     return (
-      <div
+      <div data-app-part="status"
         className={GRID}
         role="status"
         aria-busy="true"

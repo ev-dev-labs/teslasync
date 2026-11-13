@@ -15,6 +15,15 @@ import {
 } from 'vitest';
 
 import type { Drive } from '@/types/driving';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+
+const ownershipRules: Rule[] = [];
+postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+  .walkRules(rule => { ownershipRules.push(rule); });
 
 const NOW = Date.UTC(2026, 7, 8, 12);
 const h = vi.hoisted(() => ({
@@ -339,6 +348,54 @@ beforeEach(() => {
 });
 
 describe('DriveArchetypesPage', () => {
+  it('owns complex cluster and drive records without replacing their tables or methodology in any design', () => {
+    const original = JSON.stringify(h.query);
+    const { container } = renderPage();
+    const sections = ['composition', 'profiles', 'separation', 'directory'].map(name =>
+      screen.getByTestId(`drive-archetypes-${name}`));
+    const records = sections.flatMap(section => {
+      const items = [...section.querySelectorAll('[data-app-list="records"] > li[data-app-card-kind="record"]')];
+      expect(items.length).toBeGreaterThan(0);
+      return items;
+    });
+    const originalValues = records.map(record => record.textContent);
+    for (const record of records) {
+      expect(record.querySelector('[data-app-part~="record-header"] [data-app-part~="record-title"]')).not.toBeNull();
+      expect(record.querySelector(':scope > [data-app-part~="record-body"]')).not.toBeNull();
+    }
+    for (const section of sections.slice(1)) {
+      for (const record of section.querySelectorAll('[data-app-card-kind="record"]')) {
+        expect(record.querySelector('[data-app-part~="record-body"] table')).not.toBeNull();
+      }
+    }
+    const methodCards = screen.getByTestId('drive-archetypes-methodology')
+      .querySelectorAll('article > [data-app-part~="card"]');
+    expect(methodCards).toHaveLength(6);
+    const confidenceCard = within(screen.getByTestId('drive-archetypes-confidence'))
+      .getByText(/drives fall below the 0.10 ambiguity boundary/).closest('[data-app-part~="card"]')!;
+    expect(confidenceCard).not.toBeNull();
+
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        for (const section of sections) {
+          const record = section.querySelector('[data-app-card-kind="record"]')!;
+          for (const node of [record, record.querySelector('[data-app-part~="record-body"]')!]) {
+            expect(ownershipRules.some(rule => rule.selectors.some(selector =>
+              selector.includes('[data-app-card-kind="record"]')
+              && selector.includes(`[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`)
+              && node.matches(selector))), `${pack}: complex record/body`).toBe(true);
+          }
+        }
+      } finally { release(); }
+    }
+    expect(records.map(record => record.textContent)).toEqual(originalValues);
+    expect(JSON.stringify(h.query)).toBe(original);
+    expectEverySection();
+  });
+
   it('gives the wrapping refresh action a mobile target and a decorative shared icon', () => {
     renderPage();
 

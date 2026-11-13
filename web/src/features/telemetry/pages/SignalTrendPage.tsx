@@ -251,7 +251,7 @@ export default function SignalTrendPage() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={mk?.significant ? 'success' : 'warning'}>
                     {mk?.significant ? t('signalTrend.real', 'Real') : t('signalTrend.noise', 'Not significant')}
@@ -263,7 +263,7 @@ export default function SignalTrendPage() {
                     : t('signalTrend.noiseText', 'The observed ordering does not clear the significance bar, so any apparent slope here is best treated as noise rather than a real trend.')}
                 </Text>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{summary.evidenceLimited ? t('signalTrend.limited', 'Evidence-limited') : t('signalTrend.sufficient', 'Sufficient evidence')}</Badge>
                 </div>

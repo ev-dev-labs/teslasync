@@ -37,6 +37,8 @@ export function IncidentSeverityChip({ severity, className }: IncidentSeverityCh
   const label = meta ? t(meta.key, meta.fallback) : (severity || '—')
   return (
     <span
+      data-app-part="badge"
+      data-app-variant={severity === 'critical' ? 'danger' : 'warning'}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 tracking-wide',
         typography.size.xs,

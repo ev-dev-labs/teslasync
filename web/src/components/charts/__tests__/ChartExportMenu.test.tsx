@@ -81,7 +81,9 @@ describe('ChartExportMenu', () => {
     openMenu();
     expect(screen.getByRole('menu')).toHaveClass('shadow-e2');
     expect(screen.getByRole('menu')).toHaveStyle({ position: 'fixed' });
-    expect(screen.getByRole('menu').parentElement).toBe(document.body);
+    const portal = screen.getByRole('menu').parentElement;
+    expect(portal).toHaveAttribute('data-app-design-portal');
+    expect(portal?.parentElement).toBe(document.body);
     for (const item of screen.getAllByRole('menuitem')) {
       expect(item).toHaveClass(
         'min-h-11',

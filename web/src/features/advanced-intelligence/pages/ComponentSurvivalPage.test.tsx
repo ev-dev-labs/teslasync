@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance, type i18n } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, ComponentSurvival } from '@/types/advancedIntelligence';
 import { survival } from './advancedIntelligenceClosure.fixtures';
@@ -63,6 +66,14 @@ function componentArticle(name: string) {
   return article;
 }
 
+function sensitivityReading(article: HTMLElement) {
+  const surface = within(article).getByText('Intervention sensitivity').closest('[data-app-metric="tile"]');
+  if (!surface) throw new Error('Missing intervention sensitivity surface');
+  const reading = surface.querySelector<HTMLElement>('[data-app-part="metric-reading"]');
+  if (!reading) throw new Error('Missing intervention sensitivity reading');
+  return reading;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   state.vehicleId = 7;
@@ -108,9 +119,9 @@ describe('Component survival page scoped adoption', () => {
     expect(within(article).getByRole('progressbar', { name: 'Pneus · 0 evidence' }))
       .toHaveAttribute('aria-valuenow', '0');
     expect(within(article).getByText('unknown-source-risk · 1 evidence')).toBeInTheDocument();
-    expect(within(article).getByText('Inspection de la batterie: -10.00% · adjusted P50 —')).toBeInTheDocument();
+    expect(sensitivityReading(article)).toHaveTextContent('Inspection de la batterie: -10.00% · adjusted P50 —');
     expect(screen.getByRole('region', { name: 'Batterie haute tension' })).toBeInTheDocument();
-    expect(within(componentArticle('front-bearing')).getByText(/modeled service only:/)).toBeInTheDocument();
+    expect(sensitivityReading(componentArticle('front-bearing'))).toHaveTextContent('modeled service only:');
     expect(state.query.data).toEqual(original);
   });
 
@@ -141,7 +152,7 @@ describe('Component survival page scoped adoption', () => {
       .toHaveAttribute('aria-valuenow', '0');
     expect(within(article).getByText(`${label} · 1 evidence`)).toBeInTheDocument();
     expect(within(article).getByText('unrecognized-source-risk · 0 evidence')).toBeInTheDocument();
-    expect(within(article).getByText(`${interventionText}: -10.00% · adjusted P50 —`)).toBeInTheDocument();
+    expect(sensitivityReading(article)).toHaveTextContent(`${interventionText}: -10.00% · adjusted P50 —`);
     expect(within(screen.getByRole('region', { name: label })).getByText(label)).toBeInTheDocument();
     expect(state.query.data).toEqual(original);
   });
@@ -185,7 +196,67 @@ describe('Component survival page scoped adoption', () => {
     expect(risk.querySelector('[style*="linear-gradient"]')).toBeNull();
     expect(within(article).getByText('unmeasured-corrosion · 0 evidence')).toBeInTheDocument();
     expect(within(article).getByText('Unsupported')).toBeInTheDocument();
-    expect(within(article).getByText(/modeled service only: -10.00% · adjusted P50 —/)).toBeInTheDocument();
+    expect(sensitivityReading(article)).toHaveTextContent('modeled service only: -10.00% · adjusted P50 —');
+    expect(state.query.data).toEqual(original);
+  });
+
+  it('activates all 27 existing data-mode consumers for unsupported risks and sensitivity without adding a risk bar', () => {
+    populate([{
+      ...survival,
+      competing_risks: [
+        { risk: 'known-zero', probability_pct: 0, evidence_count: 0 },
+        { risk: 'known-estimate', probability_pct: 34.5, evidence_count: 2 },
+        { risk: 'unknown-risk', probability_pct: null, evidence_count: 3 },
+      ],
+    }]);
+    const original = structuredClone(state.query.data);
+    const view = renderPage();
+    const host = view.container.firstElementChild!;
+    host.setAttribute('data-app-design-preview', '');
+    const article = componentArticle('front-bearing');
+    const missing = within(article).getByText('unknown-risk · 3 evidence').closest('[data-app-metric="tile"]')!;
+    const reading = sensitivityReading(article);
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(host, pack);
+      const release = observeAppDesignScopes(host);
+      try {
+        expect(missing).toHaveAttribute('data-app-state', 'missing');
+        expect(missing.querySelector('[data-app-part="metric-reading"]')).toHaveTextContent('Unsupported');
+        expect(missing.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('unknown-risk · 3 evidence');
+        expect(within(missing as HTMLElement).queryByRole('progressbar')).not.toBeInTheDocument();
+        const mode = APPLICATION_DESIGNS[pack].data;
+        const matches = matchesAppDesignCss(missing, `[data-app-data="${mode}"]`);
+        expect(matches.some(match => match.selector.includes('[data-app-metric="tile"]'))).toBe(true);
+        expect(matchesAppDesignCss(reading.parentElement!, `[data-app-data="${mode}"]`)
+          .some(match => match.selector.includes('[data-app-metric="tile"]'))).toBe(true);
+        expect(reading.querySelectorAll('[data-app-part="metric-context"]')).toHaveLength(2);
+        expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('-10.00%');
+        expect(within(article).getAllByRole('progressbar')).toHaveLength(2);
+        expect(within(article).getByRole('progressbar', { name: 'known-zero · 0 evidence' }))
+          .toHaveAttribute('aria-valuenow', '0');
+        expect(within(article).getByRole('progressbar', { name: 'known-estimate · 2 evidence' }))
+          .toHaveAttribute('aria-valuenow', '34.5');
+      } finally {
+        release();
+      }
+    }
+    expect(state.query.data).toEqual(original);
+  });
+
+  it.each([
+    { delta: -10, duration: null, expected: '-10.00% · adjusted P50 —' },
+    { delta: 0, duration: 0, expected: '0.00% · adjusted P50 0.00 h' },
+    { delta: 15, duration: 3600, expected: '15.00% · adjusted P50 1.00 h' },
+  ])('retains signed sensitivity $delta and adjusted duration $duration as supplied', ({ delta, duration, expected }) => {
+    const intervention = 'Long returned intervention '.repeat(8).trim();
+    populate([{ ...survival, intervention_sensitivity: {
+      intervention, assumed_hazard_delta_pct: delta, adjusted_p50_s: duration,
+    } }]);
+    const original = structuredClone(state.query.data);
+    renderPage();
+    const article = componentArticle('front-bearing');
+    expect(sensitivityReading(article)).toHaveTextContent(`${intervention}: ${expected}`);
+    expect(within(article).queryByRole('button')).not.toBeInTheDocument();
     expect(state.query.data).toEqual(original);
   });
 

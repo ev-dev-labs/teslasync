@@ -78,7 +78,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
           </Text>
           <StaleRefreshWarning state={state} label={t('driveDetail.road.title', 'Possible road-surface anomalies')} />
           {state.status === 'initial' ? (
-            <div role="status" aria-label={t('common.loading', 'Loading…')}>
+            <div data-app-part="status" role="status" aria-label={t('common.loading', 'Loading…')}>
               <Skeleton height={140} className="rounded-xl" />
             </div>
           ) : state.fatalError ? (

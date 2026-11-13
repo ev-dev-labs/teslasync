@@ -95,6 +95,9 @@ describe('TorqueHistory presentation preservation', () => {
     expect(reference).toHaveAttribute('y1', zeroTick?.getAttribute('y') ?? '');
     expect(reference).toHaveAttribute('y2', zeroTick?.getAttribute('y') ?? '');
     expect(screen.getByText('Torque (Nm)')).toBeInTheDocument();
+    const legend = container.querySelector('[data-app-part="chart-legend"]');
+    expect(legend).toHaveTextContent('Torque (Nm)');
+    expect(legend?.querySelector('button')).not.toBeInTheDocument();
     expect(container.querySelector('.recharts-cartesian-grid-horizontal line')).toHaveAttribute(
       'stroke', chartTokens.gridStroke,
     );

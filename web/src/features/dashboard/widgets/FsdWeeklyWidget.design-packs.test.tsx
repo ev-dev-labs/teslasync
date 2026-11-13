@@ -147,7 +147,7 @@ describe.each(packs)('FsdWeeklyWidget production design pack %s (%s)', (pack, ap
     fsdRangeMock.mockReturnValue(query({ isFetching: true }));
     view.rerender(widget(pack));
     const refresh = screen.getByRole('button', { name: /refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

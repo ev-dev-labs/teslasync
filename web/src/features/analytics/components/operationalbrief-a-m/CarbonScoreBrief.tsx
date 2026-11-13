@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LinearGauge } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { Text } from '@/components/ui';
+import { Card, Text } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { CarbonSectionProps } from '../carbon-intelligence/types';
 import { CarbonBriefBand } from './CarbonBriefBand';
@@ -35,11 +35,11 @@ export function CarbonScoreBrief({ analysis, states, display }: CarbonSectionPro
     title={t('carbon.score.title', 'Green timing score and evidence support')}
     description={t('carbon.source.lifetime', 'Lifetime summary')}
     scope={<span>{t('carbon.source.lifetimeScope', 'Full vehicle history')}</span>}>
-    {hasScoredSessions && score != null ? <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 text-center">
+    {hasScoredSessions && score != null ? <Card className="flex flex-1 flex-col items-center justify-center rounded-xl border-[var(--border-subtle)] bg-[var(--surface-2)] text-center shadow-none">
       <LinearGauge value={score} max={100} label={t('carbon.score.gaugeLabel', 'Lifetime green score')}
         color={score < 35 ? palette.COLOR.BAD : score < 70 ? palette.COLOR.WARN : palette.COLOR.GOOD} size={170} decimals={precision} />
       <Text as="p" variant="caption" className="mt-2">{t('carbon.score.scale', '100 maps to the model minimum; 0 maps to the model maximum.')}</Text>
-    </div> : <EmptyState message={// no-action: Missing scored sessions or an invalid score cannot be repaired by this read-only gauge; source recovery belongs to the ledger.
+    </Card> : <EmptyState message={// no-action: Missing scored sessions or an invalid score cannot be repaired by this read-only gauge; source recovery belongs to the ledger.
       hasScoredSessions
       ? t('carbon.score.unavailable', 'A timing score is unavailable because the returned score failed validation.')
       : t('carbon.score.empty', 'No scored lifetime charging sessions support a timing score.')} />}

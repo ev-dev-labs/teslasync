@@ -33,6 +33,11 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { neonColorMap } from '@/lib/tokens'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss, { type Rule } from 'postcss'
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 // ── i18n: return the fallback/default string and interpolate {{vars}} ──
 vi.mock('react-i18next', async () => {
@@ -306,9 +311,9 @@ let liveReconnect: ReturnType<typeof vi.fn<() => void>>
 let invalidateQueries: ReturnType<typeof vi.fn<(options: { queryKey: string[] }) => void>>
 let scrollSpy: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>
 
-function renderPage() {
+function renderPage(route = '/system-status') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <ToastProvider>
         <SystemStatusPage />
       </ToastProvider>
@@ -1295,6 +1300,76 @@ describe('SystemStatusPage — independent panels and restrained navigation', ()
       expect(link).toHaveAttribute('href', to)
       expect(link).toHaveClass('min-h-11', 'whitespace-normal', 'break-words')
       expect(link.className).not.toMatch(/cyan-|bg-white/)
+    }
+  })
+})
+
+describe('SystemStatusPage — native diagnostic design ownership', () => {
+  const sharedRules: Rule[] = []
+  for (const file of ['base.css', 'controls.css']) {
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', file), 'utf8'))
+      .walkRules(rule => { sharedRules.push(rule) })
+  }
+  const matches = (node: Element, rules: Rule[], part: string) => rules.filter(rule =>
+    rule.selectors.some(selector => selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector)),
+  )
+
+  it.each(PACK_IDS)('%s activates the actual native frame and summary without replacing disclosure behavior', pack => {
+    const view = renderPage()
+    view.container.setAttribute('data-app-design-preview', '')
+    for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) view.container.setAttribute(name, value)
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const details = document.getElementById('operator-details')
+      if (!(details instanceof HTMLDetailsElement)) throw new Error('Native diagnostics disclosure missing')
+      const summary = details.querySelector(':scope > summary')
+      if (!(summary instanceof HTMLElement)) throw new Error('Native diagnostics summary missing')
+      const identityRules: Rule[] = []
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+        .walkRules(rule => { identityRules.push(rule) })
+      expect(matches(details, identityRules, 'panel').length).toBeGreaterThan(0)
+      expect(matches(summary, identityRules, 'button').length).toBeGreaterThan(0)
+      expect(matches(summary, sharedRules, 'button').some(rule =>
+        rule.nodes.some(node => node.type === 'decl' && node.prop === 'touch-action'))).toBe(true)
+      expect(summary).toHaveAttribute('data-app-variant', 'ghost')
+      expect(details.open).toBe(false)
+      summary.focus()
+      expect(summary).toHaveFocus()
+      fireEvent.click(summary)
+      expect(details.open).toBe(true)
+      expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+      expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+      expect(screen.getByTestId('telemetry-card')).toHaveTextContent('positions:1000')
+      expect(screen.getByTestId('slo-card')).toBeInTheDocument()
+      expect(screen.getByTestId('scheduled-maintenance')).toBeInTheDocument()
+      view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+      expect(document.getElementById('operator-details')).toBe(details)
+      expect(details.open).toBe(true)
+      fireEvent.click(summary)
+      expect(details.open).toBe(false)
+      expect(view.container.querySelectorAll('section')).toHaveLength(16)
+    } finally {
+      release()
+    }
+  })
+
+  it('retains hash-open behavior and leaves an unselected native disclosure outside design consumers', () => {
+    const view = renderPage('/system-status#maintenance')
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const details = document.getElementById('operator-details')
+      if (!(details instanceof HTMLDetailsElement)) throw new Error('Native diagnostics disclosure missing')
+      const summary = details.querySelector(':scope > summary')!
+      expect(details.open).toBe(true)
+      expect(details.querySelector('#maintenance')).toContainElement(screen.getByTestId('scheduled-maintenance'))
+      expect(details).not.toHaveAttribute('data-app-design-owner')
+      expect(summary).not.toHaveAttribute('data-app-design-owner')
+      expect(matches(details, sharedRules, 'panel')).toHaveLength(0)
+      expect(matches(summary, sharedRules, 'button')).toHaveLength(0)
+      fireEvent.click(summary)
+      expect(details.open).toBe(false)
+    } finally {
+      release()
     }
   })
 })

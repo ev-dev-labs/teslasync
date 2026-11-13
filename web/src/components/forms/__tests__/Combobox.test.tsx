@@ -106,6 +106,35 @@ describe('Combobox', () => {
     expect(input).toHaveAttribute('aria-haspopup', 'listbox');
   });
 
+  it('exposes actual busy/open surfaces and separates keyboard activity from selection', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const view = render(<Harness selectOnly initial={ITEMS[1]} loading onChange={onChange} />);
+    const input = screen.getByRole('combobox', { name: /fruit/i });
+    expect(input).toHaveAttribute('data-app-part', 'field-control');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    await user.click(input);
+    const popup = screen.getByRole('listbox', { name: /fruit/i });
+    expect(popup).toHaveAttribute('data-app-part', 'popover');
+    expect(popup).toHaveAttribute('aria-busy', 'true');
+
+    view.rerender(<Harness selectOnly initial={ITEMS[1]} onChange={onChange} />);
+    expect(input).not.toHaveAttribute('aria-busy');
+    expect(popup).not.toHaveAttribute('aria-busy');
+    expect(screen.getByRole('option', { name: 'Banana' })).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{ArrowDown}');
+    const active = document.getElementById(input.getAttribute('aria-activedescendant') ?? '');
+    expect(active).toBe(screen.getByRole('option', { name: 'Cherry' }));
+    expect(active).toHaveAttribute('data-active', 'true');
+    expect(active).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('option', { name: 'Banana' })).not.toHaveAttribute('data-active');
+    await user.keyboard('{Escape}');
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('Banana');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('uses the semantic chevron focus color without changing the native toggle or selection', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn<(value: Item | null) => void>();

@@ -13,6 +13,13 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { severityTokens } from '@/lib/tokens';
 
 const translations = vi.hoisted(() => ({} as Record<string, string>));
 
@@ -1039,5 +1046,172 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
       warranty_id: 1, confirmed: true, title: 'Recorded claim', status: 'draft',
       amount_minor: 0, evidence_note: '',
     }, expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+});
+
+describe('WarrantyCommandPage — native readout and claim ownership', () => {
+  const feedbackRules: Rule[] = [];
+  postcss.parse(readFileSync(resolve(
+    process.cwd(), 'src', 'components', 'ui', 'app-designs', 'feedback.css',
+  ), 'utf8')).walkRules(rule => {
+    if (rule.selector.includes('[data-app-card-kind="record"]')
+      || rule.selector.includes('[data-app-metric="headline"]')
+      || rule.selector.includes('[data-app-list="definitions"]')
+      || (!rule.selector.includes('[data-app-data=') && /\[data-app-part~="metric-(?:label|value|reading|context)"\]/.test(rule.selector))) {
+      feedbackRules.push(rule);
+    }
+  });
+  const matchingRules = (node: Element, contract: string) => feedbackRules.filter(rule =>
+    rule.selectors.some(selector => selector.includes(contract) && node.matches(selector)));
+  const expectDataMode = (node: Element, mode: string, contract = '') => {
+    const selectors = feedbackRules.flatMap(rule => rule.selectors.filter(selector =>
+      selector.includes(contract) && selector.includes(`[data-app-data="${mode}"]`) && node.matches(selector)));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      expect(selector).toContain(`[data-app-data="${mode}"]`);
+      expect(selector).toContain(`[data-app-design-owner~="data-${mode}"]`);
+    }
+  };
+
+  it('binds the actual readiness, compound battery reading and open claim body to all 27 profiles', async () => {
+    const overview = makeOverview();
+    overview.coverages[0].capacity_retention_pct = 68;
+    overview.coverages[0].capacity_headroom_pct = -2;
+    overview.coverages[0].capacity_floor_breach_at = '2027-03-01T00:00:00Z';
+    mockOverview.mockReturnValue(makeQuery(overview));
+    const root = document.documentElement;
+    const original = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    for (const [name] of original) root.removeAttribute(name);
+    const view = renderPage();
+    const release = observeAppDesignScopes(root);
+    try {
+      fireEvent.click(within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' })[0]);
+      const form = screen.getByRole('button', { name: 'Record claim' }).closest('form')!;
+      const body = form.querySelector(':scope > [data-app-part="record-body"]')!;
+      const burnDown = card('Coverage burn-down');
+      const readiness = within(burnDown).getByText('Claim readiness').closest('[data-app-metric="headline"]')!;
+      const score = readiness.querySelector('[data-app-part="metric-reading"]')!;
+      const battery = within(burnDown).getByText('Battery retention vs. warranty floor').closest('dl')!;
+      const row = battery.querySelector('[data-app-part="list-row"]')!;
+      const reading = battery.querySelector('[data-app-part="metric-reading"]')!;
+      expect(form).not.toHaveAttribute('data-app-design-owner');
+      expect(body).toHaveClass('grid', 'gap-4', 'md:grid-cols-2');
+      const before = burnDown.textContent;
+
+      for (const pack of PACK_IDS) {
+        setAppDesignTestProfile(root, pack);
+        await waitFor(() => expect(form).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+        const mode = APPLICATION_DESIGNS[pack].data;
+        const surfaceRules: string[] = [];
+        postcss.parse(readFileSync(resolve(
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
+        ), 'utf8')).walkRules(rule => {
+          if (rule.nodes.some(node => node.type === 'decl' && ['background-color', 'border', 'border-radius'].includes(node.prop))) {
+            surfaceRules.push(...rule.selectors.filter(selector =>
+              selector.includes('[data-app-part~="card"]') && selector.includes(`[data-app-design-owner~="pack-${pack}"]`)));
+          }
+        });
+        expect(surfaceRules.some(selector => form.matches(selector))).toBe(true);
+        expectDataMode(form, mode, '[data-app-card-kind="record"]');
+        expectDataMode(body, mode, '[data-app-part~="record-body"]');
+        for (const rule of matchingRules(body, '[data-app-part~="record-body"]')) {
+          rule.walkDecls(declaration => {
+            expect(['display', 'grid-template-columns']).not.toContain(declaration.prop);
+          });
+        }
+        expectDataMode(readiness, mode, '[data-app-metric="headline"]');
+        expectDataMode(score, mode, '[data-app-metric="headline"]');
+        expect(score).toHaveClass('justify-end', severityTokens.success.fg);
+        expect(score).toHaveTextContent('80.00/100');
+        for (const rule of matchingRules(score, '[data-app-part~="metric-reading"]')) {
+          rule.walkDecls(declaration => { expect(declaration.prop).not.toBe('color'); });
+        }
+        expectDataMode(row, mode, '[data-app-list="definitions"]');
+        expectDataMode(reading, mode, '[data-app-part~="metric-reading"]');
+        expect(reading).toHaveTextContent(`${formatPct(68)} · ${formatPct(-2)} headroom`);
+        expect(matchingRules(battery.querySelector('dt')!, '[data-app-part~="metric-label"]')).not.toHaveLength(0);
+        expect(matchingRules(reading.querySelector('[data-app-part="metric-value"]')!, '[data-app-part~="metric-value"]')).not.toHaveLength(0);
+        const breach = burnDown.querySelector('[data-app-part="metric-context"]')!;
+        expect(breach).toHaveTextContent('Projected to reach the floor around');
+        expect(matchingRules(breach, '[data-app-part~="metric-context"]')).not.toHaveLength(0);
+        expect(battery.querySelector('[role="progressbar"], [role="meter"]')).toBeNull();
+        expect(burnDown.textContent).toBe(before);
+        expect(form).toHaveTextContent('Battery Shield · 7');
+      }
+
+      view.container.setAttribute('data-app-design-preview', '');
+      view.container.setAttribute('data-app-design-pack', 'v1');
+      await waitFor(() => expect(form).not.toHaveAttribute('data-app-design-owner'));
+      for (const [node, contract] of [
+        [form, '[data-app-card-kind="record"]'],
+        [body, '[data-app-part~="record-body"]'],
+        [readiness, '[data-app-metric="headline"]'],
+        [score, '[data-app-part~="metric-reading"]'],
+        [row, '[data-app-list="definitions"]'],
+        [reading, '[data-app-part~="metric-reading"]'],
+      ] as const) {
+        expect(matchingRules(node, contract)).toHaveLength(0);
+      }
+      expect(mockClaim().mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+      view.unmount();
+      for (const [name, value] of original) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  it.each([
+    [0, severityTokens.critical.fg],
+    [49, severityTokens.critical.fg],
+    [50, severityTokens.warn.fg],
+    [79, severityTokens.warn.fg],
+    [80, severityTokens.success.fg],
+  ])('keeps the original textual readiness threshold and denominator at %s', (value, tone) => {
+    const overview = makeOverview();
+    overview.coverages[0].readiness_score = value;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+    const metric = within(card('Coverage burn-down')).getByText('Claim readiness').closest('[data-app-metric="headline"]')!;
+    const reading = metric.querySelector('[data-app-part="metric-reading"]')!;
+    expect(reading).toHaveClass(tone);
+    expect(reading).toHaveTextContent(`${value.toFixed(2)}/100`);
+    expect(metric.querySelector('[role="progressbar"], [role="meter"]')).toBeNull();
+  });
+
+  it('retains the captured claim currency, field focus and recovery actions inside the native form surface', () => {
+    mockWarranties.mockReturnValue(makeQuery({ items: [makeWarranty({ currency: 'JPY' })] }));
+    const mutate = vi.fn();
+    mockClaim.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    fireEvent.click(within(card('Recorded coverages')).getByRole('button', { name: 'Claim' }));
+    const submit = screen.getByRole('button', { name: 'Record claim' });
+    const form = submit.closest('form')!;
+    expect(form).toHaveAttribute('data-app-card-kind', 'record');
+    const body = form.querySelector('[data-app-part="record-body"]')!;
+    const title = within(body as HTMLElement).getByRole('textbox', { name: /Claim title/ });
+    title.focus();
+    fireEvent.change(title, { target: { value: 'Original battery evidence' } });
+    expect(title).toHaveFocus();
+    expect(form).toHaveTextContent('JPY');
+    fireEvent.click(submit);
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Original battery evidence', warranty_id: 1, amount_minor: 0, confirmed: true }),
+      expect.any(Object),
+    );
+    mockClaim.mockReturnValue(makeMutation({ mutate, isPending: true }));
+    view.rerenderPage();
+    expect(submit).toBeDisabled();
+    expect(title).toHaveValue('Original battery evidence');
+    mockClaim.mockReturnValue(makeMutation({ mutate, error: new Error('Claim record unavailable') }));
+    view.rerenderPage();
+    expect(form).toHaveTextContent('Claim record unavailable');
+    expect(submit).toBeEnabled();
+    expect(title).toHaveFocus();
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(form).not.toBeInTheDocument();
+    expect(card('Claim ledger')).toBeInTheDocument();
   });
 });

@@ -160,7 +160,7 @@ export default function ChargingListPage() {
           {optimizerState.fatalError != null ? (
             <QueryError error={optimizerState.fatalError} onRetry={optimizerState.retry ?? undefined} />
           ) : optimizerQuery.isFetching && !optimizerState.isRefreshBlocked ? (
-            <div role="status" aria-busy="true" aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
+            <div data-app-part="status" role="status" aria-busy="true" aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
               <Skeleton className="h-40" />
             </div>
           ) : (

@@ -52,14 +52,15 @@ export function AlertBanner({ variant, title, children, onClose, icon, className
   const { t } = useTranslation()
   const v = alertVariantMap[variant] ?? alertVariantMap.info
   return (
-    <div className={cn('flex min-w-0 items-start gap-3 rounded-panel border p-4 shadow-none forced-colors:bg-[Canvas] forced-colors:border-[CanvasText] forced-colors:text-[CanvasText]', v.border, v.bg, className)} {...props}>
-      {icon && <div className={cn('shrink-0 mt-0.5 forced-colors:text-[CanvasText]', v.fg)} aria-hidden>{icon}</div>}
-      <div className="flex-1 min-w-0 break-words">
-        {title && <Text as="p" size="sm" weight="semibold" color="primary" className="forced-colors:text-[CanvasText]">{title}</Text>}
-        <Text as="div" variant="body" className={cn('leading-relaxed forced-colors:text-[CanvasText]', title && 'mt-1')}>{children}</Text>
+    <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone={variant} className={cn('flex min-w-0 items-start gap-3 rounded-panel border p-4 shadow-none forced-colors:bg-[Canvas] forced-colors:border-[CanvasText] forced-colors:text-[CanvasText]', v.border, v.bg, className)} {...props}>
+      {icon && <div data-app-part="feedback-icon" className={cn('shrink-0 mt-0.5 forced-colors:text-[CanvasText]', v.fg)} aria-hidden>{icon}</div>}
+      <div data-app-part="feedback-content" className="flex-1 min-w-0 break-words">
+        {title && <Text data-app-part="feedback-title" as="p" size="sm" weight="semibold" color="primary" className="forced-colors:text-[CanvasText]">{title}</Text>}
+        <Text data-app-part="feedback-message" as="div" variant="body" className={cn('leading-relaxed forced-colors:text-[CanvasText]', title && 'mt-1')}>{children}</Text>
       </div>
       {onClose && (
         <Button
+          data-app-part="feedback-dismiss"
           type="button"
           variant="ghost"
           size="sm"

@@ -127,6 +127,12 @@ describe.each(PACK_IDS)('SignalHealthWidget %s', (packId) => {
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     const meter = screen.getByRole('progressbar', { name: 'Reporting coverage' });
     expect(meter).toHaveAttribute('aria-valuenow', '67');
+    expect(meter).toHaveAttribute('data-app-part', 'metric');
+    expect(meter).toHaveAttribute('data-app-metric', 'bar');
+    expect(meter).toHaveAttribute('data-metric-track');
+    expect(meter).toHaveClass('h-1.5', 'rounded-shape-sm');
+    expect(meter.querySelector('[data-metric-fill]')).toBe(meter.firstElementChild);
+    expect(meter.firstElementChild).toHaveStyle({ width: '67%' });
     expect(container.textContent ?? '').not.toMatch(/\bUTC\b|\bGMT\b|time zone/i);
   });
 
@@ -220,12 +226,16 @@ describe.each(PACK_IDS)('SignalHealthWidget %s', (packId) => {
       expect(screen.getByText(headline)).toBeInTheDocument();
       expect(screen.getByText(status)).toBeInTheDocument();
       const meter = screen.getByRole('progressbar', { name: 'Reporting coverage' });
+      expect(meter).toHaveAttribute('data-metric-track');
       if (coverage == null) {
         expect(meter).not.toHaveAttribute('aria-valuenow');
+        expect(meter.querySelector('[data-metric-fill]')).not.toBeInTheDocument();
+        expect(meter).toBeEmptyDOMElement();
         expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
         expect(container.textContent).not.toContain('0/0');
       } else {
         expect(meter).toHaveAttribute('aria-valuenow', coverage);
+        expect(meter.querySelector('[data-metric-fill]')).toHaveStyle({ width: `${coverage}%` });
         expect(screen.getByText('StaleSignal')).toBeInTheDocument();
       }
       expect(container.textContent).not.toMatch(/NaN|Infinity/);

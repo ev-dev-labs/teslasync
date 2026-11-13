@@ -60,6 +60,8 @@ export function ChargingSummaryPanel({ summary, isLoading, error, onRetry }: Cha
           {rows.map((row) => (
             <div
               key={row.currency}
+              data-app-part="card"
+              data-surface-variant="standalone"
               className="rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3"
             >
               <div className="mb-2 flex items-center gap-2">

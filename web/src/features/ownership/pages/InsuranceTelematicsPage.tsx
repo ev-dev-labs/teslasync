@@ -25,7 +25,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle, IconButton } from '@/components/ui';
+import { Button, Card, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -34,7 +34,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-import { glassCardClasses, neonColorMap, typography } from '@/lib/tokens';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import type { InsurancePolicy, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 import {
@@ -291,8 +291,9 @@ export default function InsuranceTelematicsPage() {
       header: t('ownership.insurance.factor.contribution', 'Contribution'),
       render: (row) => (
         <div className="min-w-28">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
             <div
+              data-metric-fill
               className="h-full rounded-full bg-[var(--text-secondary)]"
               style={{ width: `${Math.min(100, Math.max(0, row.contribution_pct))}%` }}
             />
@@ -634,7 +635,7 @@ export default function InsuranceTelematicsPage() {
             />
           </div>
           {policy ? (
-            <div className={cn(glassCardClasses.md, 'mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3')}>
+            <Card className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <Text as="p" variant="label" className="break-words">
                   {policy.insurer} · {policy.policy_ref}
@@ -650,7 +651,7 @@ export default function InsuranceTelematicsPage() {
               </div>
               {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
               <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(policy)} busy={remove.isPending && remove.variables === policy.id} />
-            </div>
+            </Card>
           ) : null}
           <MutationError error={remove.error} />
         </OwnershipPanel>
@@ -678,7 +679,7 @@ export default function InsuranceTelematicsPage() {
               </AlertBanner>
             ) : null}
             <form className="space-y-5" onSubmit={submit}>
-              <fieldset disabled={upsert.isPending || formSaved} className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <fieldset data-app-part="field" disabled={upsert.isPending || formSaved} className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <Input
                   ref={editorInput}
                   label={t('ownership.insurance.form.insurer', 'Insurer')}
@@ -940,14 +941,14 @@ export default function InsuranceTelematicsPage() {
             'A risk-summary checksum is produced once a profile has been computed.',
           )}
         >
-          <div className={glassCardClasses.md}>
+          <Card>
             <Text as="p" variant="caption">
               {t('ownership.insurance.checksum.hash', 'Limited risk-summary checksum (SHA-256)')}
             </Text>
             <Code as="p" className="mt-1 break-all">
               {data?.evidence_packet_hash}
             </Code>
-          </div>
+          </Card>
         </OwnershipPanel>
       </FadeIn>
 

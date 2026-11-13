@@ -2,6 +2,7 @@ import { Fan, Lock, ShieldCheck, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Sparkline } from '@/components/charts';
 import { Button, Caption, GlassPanel, MetricValue, PanelTitle, Text } from '@/components/ui';
+import AppDesignPackPreview from './AppDesignPackPreview';
 import { usePackModule } from '@/features/dashboard/widgets/designPacks/PackBoundary';
 import { batteryGaugePresentations, vehicleHeroPresentations } from '@/features/dashboard/widgets/designPacks/presentationLoaders';
 import ClassicBatteryGauge from '@/features/dashboard/widgets/designPacks/families/ClassicBatteryGauge';
@@ -53,7 +54,8 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
     button: <Button key={id} disabled variant="secondary" icon={<Icon aria-hidden="true" />}>{label}</Button>,
   }));
   const locked = <Text>{t('theme.widgetDesignPacks.sampleLocked', 'Locked')}</Text>;
-  return <div data-widget-pack-preview={packId} className="space-y-4">
+  return <AppDesignPackPreview packId={packId}>
+    <div data-widget-pack-preview={packId} className="space-y-4 [[data-app-part~='overlay']:has(&)]:[overflow-anchor:none]">
     {packId !== 'classic' && (!BatteryPresentation || !VehiclePresentation) && (
       <Text role="status">{t('theme.widgetDesignPacks.loading', 'Loading preview...')}</Text>
     )}
@@ -84,5 +86,6 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
           : <div className="grid grid-cols-3 gap-3">{actions.map(action => action.button)}</div>}
       </GlassPanel>
     </div>
-  </div>;
+    </div>
+  </AppDesignPackPreview>;
 }

@@ -65,19 +65,22 @@ export default function InstrumentLayout({
         appearance === 'iconic' && '[&>svg]:size-10',
         appearance === 'pixel' && '[&>svg]:[shape-rendering:crispEdges]',
       )}>{icon}</span>}
-      <div className={cn('relative min-w-0', radial && 'flex size-32 shrink-0 items-center justify-center p-4')}>
-        {radial && <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border-subtle)" strokeWidth="5" />
+      <div data-app-part={radial ? 'metric' : undefined} data-app-metric={radial ? 'ring' : undefined}
+        className={cn('relative min-w-0', radial && 'flex size-32 shrink-0 items-center justify-center p-4')}>
+        {radial && <svg data-app-part="chart-gauge" data-chart-family="radial-gauge" data-chart-variant="embedded"
+          data-chart-gauge-shape={appearance === 'analog' ? 'needle' : 'arc'}
+          viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+          <circle data-chart-gauge-track cx="50" cy="50" r="45" fill="none" stroke="var(--border-subtle)" strokeWidth="5" />
           {appearance === 'analog' && Array.from({ length: 11 }, (_, tick) => {
             const angle = (tick * 27 - 225) * Math.PI / 180;
-            return <line key={tick} x1={50 + 38 * Math.cos(angle)} y1={50 + 38 * Math.sin(angle)}
+            return <line data-chart-gauge-tick key={tick} x1={50 + 38 * Math.cos(angle)} y1={50 + 38 * Math.sin(angle)}
               x2={50 + 43 * Math.cos(angle)} y2={50 + 43 * Math.sin(angle)}
               stroke="var(--text-secondary)" strokeWidth="1" />;
           })}
-          {appearance === 'analog' && needleAngle != null && <line
+          {appearance === 'analog' && needleAngle != null && <line data-chart-gauge-marker
             x1="50" y1="50" x2={50 + 35 * Math.cos(needleAngle)} y2={50 + 35 * Math.sin(needleAngle)}
             stroke={reading?.color ?? 'var(--theme-primary)'} strokeWidth="2" />}
-          {ratio != null && appearance !== 'analog' && <circle cx="50" cy="50" r="45" fill="none"
+          {ratio != null && appearance !== 'analog' && <circle data-chart-gauge-fill cx="50" cy="50" r="45" fill="none"
             stroke={reading?.color ?? 'var(--theme-primary)'} strokeWidth={appearance === 'iconic' ? 8 : 5}
             pathLength="100" strokeDasharray={`${ratio * 100} 100`} />}
         </svg>}

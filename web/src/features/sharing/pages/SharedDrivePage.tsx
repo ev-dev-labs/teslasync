@@ -92,7 +92,7 @@ function SharedDriveLoading() {
 
   return (
     <main className="min-h-screen bg-[var(--bg-primary)]">
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('share.loading', 'Loading shared drive report…')}

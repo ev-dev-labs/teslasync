@@ -16,7 +16,7 @@ vi.mock('@/hooks/useLowBandwidthMode', () => ({
 }));
 vi.mock('@/components/ui/FullscreenButton', () => ({ FullscreenButton: () => null }));
 vi.mock('react-leaflet', () => ({
-  useMap: () => ({ getContainer: () => state.container }),
+  useMap: () => ({ getContainer: () => state.container, on: vi.fn(), off: vi.fn() }),
   TileLayer: (props: { url: string; attribution: string; updateWhenIdle?: boolean }) =>
     <div data-testid="tiles" data-url={props.url} data-attribution={props.attribution}
       data-idle={String(props.updateWhenIdle)} />,

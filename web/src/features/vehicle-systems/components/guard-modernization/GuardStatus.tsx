@@ -21,7 +21,7 @@ export function GuardStatus({ model: m }: { model: GuardPageModel }) {
       <HelperText>{t('guard.modernization.policyOnly', 'Saved policy only; not confirmation of active monitoring or successful arming.')}</HelperText>
       <StaleRefreshWarning state={m.vehicleState} label={t('guard.status', 'Status')} />
       {m.vehicleState.fatalError && <QueryError error={m.vehicleState.fatalError} onRetry={m.vehicleState.retry ?? undefined} />}
-      <ul className="space-y-3">
+      <ul data-app-part="list" className="space-y-3">
         <StatusRow icon={Clock}>
           {m.guardConfig?.updated_at
             ? t('guard.modernization.policyUpdated', 'Policy updated {{time}}', { time: formatDateTime(m.guardConfig.updated_at) })

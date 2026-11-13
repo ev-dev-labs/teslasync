@@ -18,6 +18,7 @@ export function StatusDot({ severity, className, label }: StatusDotProps) {
   const hasLabel = Boolean(label)
   return (
     <span
+      data-app-part="status"
       className={cn('inline-block h-2 w-2 rounded-full', severityTokens[sev].dot, className)}
       role={hasLabel ? 'img' : undefined}
       aria-label={hasLabel ? label : undefined}

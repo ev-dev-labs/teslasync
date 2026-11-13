@@ -29,6 +29,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
@@ -76,6 +79,8 @@ import DataExportPage from './DataExportPage';
 import type { Vehicle } from '@/api/types';
 import type { ExportColumnsResponse } from '@/api/hooks/useExports';
 import type { AuthModeResponse } from '@/api/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const mockedRequest = request as unknown as Mock;
 
@@ -255,6 +260,74 @@ function renderPage(entry = '/data-export', configure?: (client: QueryClient) =>
 }
 
 describe('Data export responsive callers', () => {
+  it('adopts the real examples, catalog frame and optional choices in every complete profile without changing the export allowlist', async () => {
+    const controls = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    const { container } = renderPage();
+    const picker = await screen.findByTestId('export-column-picker');
+    await screen.findByRole('checkbox', { name: 'Distance (m)' });
+    const examples = [...container.querySelectorAll('[data-app-card-kind="code-example"]')];
+    expect(examples).toHaveLength(2);
+    const samples = examples.map(example => example.textContent);
+    expect(samples).toEqual([
+      'date,distance_m,efficiency_wh_per_m2025-01-15,45200,0.1522025-01-16,32800,0.148',
+      '[{ "date": "2025-01-15",   "distance_m": 45200,   "efficiency": 152 }]',
+    ]);
+    const frame = picker.querySelector('[data-app-field-surface="export-columns"]')!;
+    const rows = [...picker.querySelectorAll('[data-app-choice-surface="export-column"]')];
+    expect(rows).toHaveLength(3);
+    const painted = (sheet: postcss.Root, element: Element, contract: string) => {
+      const matches: string[] = [];
+      sheet.walkRules(rule => {
+        if (rule.selector.includes(contract) && element.matches(rule.selector) &&
+          rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop))) {
+          matches.push(rule.selector);
+        }
+      });
+      return matches;
+    };
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
+      const release = observeAppDesignScopes(container);
+      try {
+        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
+        for (const example of examples) {
+          expect(painted(identity, example, '[data-app-part~="card"]'), `${pack}: example paint`).not.toHaveLength(0);
+        }
+        expect(painted(identity, frame, '[data-app-part~="panel"]'), `${pack}: catalog paint`).not.toHaveLength(0);
+        expect(painted(controls, frame, `[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`)).not.toHaveLength(0);
+        for (const row of rows) {
+          expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+          expect(painted(controls, row, `[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`), `${pack}: column choice`).not.toHaveLength(0);
+          expect(row.querySelector('[data-app-part="field-label"]')).not.toBeNull();
+        }
+        expect(examples.map(example => example.textContent)).toEqual(samples);
+        expect(within(picker).getByRole('checkbox', { name: 'Started At' })).toBeChecked();
+        expect(within(picker).getByRole('checkbox', { name: 'Started At' })).toBeDisabled();
+      } finally {
+        release();
+      }
+    }
+    container.removeAttribute('data-app-controls');
+    const release = observeAppDesignScopes(container);
+    try {
+      expect(frame).not.toHaveAttribute('data-app-design-owner');
+      expect(rows.every(row => !row.hasAttribute('data-app-design-owner'))).toBe(true);
+      expect(painted(controls, frame, '[data-app-field-surface]')).toHaveLength(0);
+    } finally {
+      release();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Clear', exact: true }));
+    expect(screen.getByRole('checkbox', { name: 'Started At' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Distance (m)' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Duration (s)' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Distance (m)' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Duration (s)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    await waitFor(() => expect(lastPostBody('/export/jobs').columns).toEqual(['started_at', 'distance_m']));
+    expect(examples.map(example => example.textContent)).toEqual(samples);
+  });
+
   it('keeps mobile targets, desktop density and keyboard access to custom dates', async () => {
     const user = userEvent.setup();
     renderPage();

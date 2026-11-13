@@ -25,7 +25,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Icon, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, Card, DataTable, Icon, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -46,7 +46,7 @@ import { daysToSeconds, formatPct, formatSignedPct, formatSpan } from '../format
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { cn } from '@/lib/cn';
-import { glassCardClasses, neonColorMap } from '@/lib/tokens';
+import { neonColorMap } from '@/lib/tokens';
 
 const WINDOW_OPTIONS = [30, 60, 90, 180, 365];
 
@@ -681,18 +681,18 @@ export default function ModelTrustPage() {
                 {selectedCard.quality ? (
                   <>
                     <VerdictBadge value={selectedCard.quality.status} />
-                    <dl className="grid gap-2 sm:grid-cols-3">
-                      <div>
-                        <Text as="dt" variant="caption">{t('ownership.quality.samples', 'Samples')}</Text>
-                        <Text as="dd" variant="bodySm">{isFiniteNumber(selectedCard.quality.sample_count) ? fmtInt(selectedCard.quality.sample_count) : '—'}</Text>
+                    <dl data-app-part="list" data-app-list="definitions" className="grid gap-2 sm:grid-cols-3">
+                      <div data-app-part="list-row">
+                        <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.samples', 'Samples')}</Text>
+                        <Text as="dd" data-app-part="metric-value" variant="bodySm">{isFiniteNumber(selectedCard.quality.sample_count) ? fmtInt(selectedCard.quality.sample_count) : '—'}</Text>
                       </div>
-                      <div>
-                        <Text as="dt" variant="caption">{t('ownership.quality.coverage', 'Coverage')}</Text>
-                        <Text as="dd" variant="bodySm">{isFiniteNumber(selectedCard.quality.coverage_pct) ? formatPct(selectedCard.quality.coverage_pct) : '—'}</Text>
+                      <div data-app-part="list-row">
+                        <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.coverage', 'Coverage')}</Text>
+                        <Text as="dd" data-app-part="metric-value" variant="bodySm">{isFiniteNumber(selectedCard.quality.coverage_pct) ? formatPct(selectedCard.quality.coverage_pct) : '—'}</Text>
                       </div>
-                      <div>
-                        <Text as="dt" variant="caption">{t('ownership.quality.window', 'Observation window')}</Text>
-                        <Text as="dd" variant="bodySm">
+                      <div data-app-part="list-row">
+                        <Text as="dt" data-app-part="metric-label" variant="caption">{t('ownership.quality.window', 'Observation window')}</Text>
+                        <Text as="dd" data-app-part="metric-value" variant="bodySm">
                           {selectedCard.quality.window_start || selectedCard.quality.window_end
                             ? `${formatDateTime(selectedCard.quality.window_start)} – ${formatDateTime(selectedCard.quality.window_end)}`
                             : '—'}
@@ -884,66 +884,68 @@ export default function ModelTrustPage() {
           ) : null}
 
           {outcomeContext != null ? (
-            <form
-              className={cn('mb-6 grid gap-4 md:grid-cols-3', glassCardClasses.md)}
-              onSubmit={submitOutcome}
-            >
-              <div id="model-trust-scoring-context" className="min-w-0 space-y-1 break-words md:col-span-3">
-                <Text as="p" variant="caption">
-                  {t('common.vehicle', 'Vehicle')}: {outcomeContext.vehicle_id}
-                </Text>
-                <Text as="p" variant="label">
-                  {t('ownership.trust.pred.model', 'Model')}: {outcomeContext.model_name}
-                </Text>
-                <Text as="p" variant="bodySm">
-                  {t('ownership.trust.form.target', 'Target quantity')}: {outcomeContext.target}
-                  {' · '}{t('ownership.trust.form.unit', 'SI unit')}: {outcomeContext.si_unit}
-                </Text>
-                <Text as="p" variant="bodySm">
-                  {t('ownership.trust.pred.predicted', 'Predicted')} #{outcomeContext.id}: {String(outcomeContext.predicted_value)} {outcomeContext.si_unit}
-                </Text>
-                <Text as="p" variant="caption">
-                  {t('ownership.trust.pred.when', 'Predicted at')}: {formatDateTime(outcomeContext.predicted_at)}
-                </Text>
-                <Text as="p" variant="caption">
-                  {t('ownership.trust.form.reference', 'Reference')}: {outcomeContext.reference || '—'}
-                </Text>
-              </div>
-              {!outcomeScopeMatches ? (
-                <div className="md:col-span-3">
-                  <AlertBanner variant="warning">
-                    {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(outcomeContext.vehicle_id) })}
-                  </AlertBanner>
+            <Card className="mb-6" padding="none">
+              <form
+                className="grid gap-4 p-4 md:grid-cols-3"
+                onSubmit={submitOutcome}
+              >
+                <div id="model-trust-scoring-context" className="min-w-0 space-y-1 break-words md:col-span-3">
+                  <Text as="p" variant="caption">
+                    {t('common.vehicle', 'Vehicle')}: {outcomeContext.vehicle_id}
+                  </Text>
+                  <Text as="p" variant="label">
+                    {t('ownership.trust.pred.model', 'Model')}: {outcomeContext.model_name}
+                  </Text>
+                  <Text as="p" variant="bodySm">
+                    {t('ownership.trust.form.target', 'Target quantity')}: {outcomeContext.target}
+                    {' · '}{t('ownership.trust.form.unit', 'SI unit')}: {outcomeContext.si_unit}
+                  </Text>
+                  <Text as="p" variant="bodySm">
+                    {t('ownership.trust.pred.predicted', 'Predicted')} #{outcomeContext.id}: {String(outcomeContext.predicted_value)} {outcomeContext.si_unit}
+                  </Text>
+                  <Text as="p" variant="caption">
+                    {t('ownership.trust.pred.when', 'Predicted at')}: {formatDateTime(outcomeContext.predicted_at)}
+                  </Text>
+                  <Text as="p" variant="caption">
+                    {t('ownership.trust.form.reference', 'Reference')}: {outcomeContext.reference || '—'}
+                  </Text>
                 </div>
-              ) : null}
-              <Input
-                type="number"
-                label={t('ownership.trust.outcome.value', 'Observed value')}
-                disabled={recordOutcome.isPending}
-                aria-describedby="model-trust-scoring-context"
-                suffix={outcomeContext.si_unit}
-                value={outcomeDraft.observed_value}
-                step="any"
-                required
-                onChange={(event) =>
-                  setOutcomeDraft({ observed_value: Number(event.target.value) })
-                }
-              />
-              <div className="flex flex-wrap items-end gap-2 md:col-span-2">
-                <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={recordOutcome.isPending} disabled={!outcomeScopeMatches}>
-                  {t('ownership.trust.outcome.submit', 'Score prediction')}
-                </Button>
-                <Button type="button" variant="ghost" className="min-h-11 md:min-h-10" wrapLabel disabled={recordOutcome.isPending} onClick={() => {
-                  outcomeInstance.current += 1;
-                  setOutcomeContext(null);
-                }}>
-                  {t('ownership.action.cancel', 'Cancel')}
-                </Button>
-              </div>
-              <div className="md:col-span-3">
-                <MutationError error={recordOutcome.error} />
-              </div>
-            </form>
+                {!outcomeScopeMatches ? (
+                  <div className="md:col-span-3">
+                    <AlertBanner variant="warning">
+                      {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(outcomeContext.vehicle_id) })}
+                    </AlertBanner>
+                  </div>
+                ) : null}
+                <Input
+                  type="number"
+                  label={t('ownership.trust.outcome.value', 'Observed value')}
+                  disabled={recordOutcome.isPending}
+                  aria-describedby="model-trust-scoring-context"
+                  suffix={outcomeContext.si_unit}
+                  value={outcomeDraft.observed_value}
+                  step="any"
+                  required
+                  onChange={(event) =>
+                    setOutcomeDraft({ observed_value: Number(event.target.value) })
+                  }
+                />
+                <div className="flex flex-wrap items-end gap-2 md:col-span-2">
+                  <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={recordOutcome.isPending} disabled={!outcomeScopeMatches}>
+                    {t('ownership.trust.outcome.submit', 'Score prediction')}
+                  </Button>
+                  <Button type="button" variant="ghost" className="min-h-11 md:min-h-10" wrapLabel disabled={recordOutcome.isPending} onClick={() => {
+                    outcomeInstance.current += 1;
+                    setOutcomeContext(null);
+                  }}>
+                    {t('ownership.action.cancel', 'Cancel')}
+                  </Button>
+                </div>
+                <div className="md:col-span-3">
+                  <MutationError error={recordOutcome.error} />
+                </div>
+              </form>
+            </Card>
           ) : null}
 
           <DataTable

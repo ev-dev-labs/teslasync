@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 
@@ -24,10 +24,12 @@ interface GateProps {
 function Gate({ label, value, affected }: GateProps) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-      <Text as="p" variant="caption" className="mt-1">
+    <div data-app-part="metric" data-app-metric="tile" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+      <div data-app-part="metric-reading" className="mt-1">
+        <Text data-app-part="metric-value" as="p" variant="bodySm">{value}</Text>
+      </div>
+      <Text data-app-part="metric-context" as="p" variant="caption" className="mt-1">
         {t('hvacCycling.thresholds.affected', '{{count}} affected', {
           count: affected,
         })}
@@ -55,7 +57,7 @@ export function HvacCyclingThresholdGateMatrix({
           )}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, md: 4 }} gap={3}>
+          <Grid minItemWidth="wide" gap={3}>
             <Gate
               label={t('hvacCycling.thresholds.maxGap', 'Maximum observed gap')}
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {

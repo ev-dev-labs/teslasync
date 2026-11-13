@@ -24,6 +24,8 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
       // group so screen-reader users understand the buttons belong together.
       role="group"
       aria-label={t('maps.layerSwitcher.label', 'Map style')}
+      data-app-part="map-toolbar"
+      data-map-control="layers"
       className={cn(
         'absolute bottom-6 start-2 end-2 z-map-control grid w-fit max-w-full grid-cols-4 gap-1 rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] p-1 shadow-e2',
         // Windows High Contrast / forced-colors mode.

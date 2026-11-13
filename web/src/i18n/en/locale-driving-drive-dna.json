@@ -604,7 +604,6 @@
     "connectionBody": "Unable to reach the server. Check your connection and try again.",
     "connectionTitle": "Connection Lost",
     "goHome": "Go Home",
-    "inlineTitle": "Component failed to load",
     "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
     "retry": "Retry",
     "retryAttempt": "Retry attempt {{count}}",

@@ -16,6 +16,9 @@ import { Button } from '@/components/ui';
 import { calendarRangeToInstants } from '@/lib/dateRange';
 import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
 import type { DriveWindow } from '@/api/hooks/useDriving';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 interface QueryStub {
   data: TireDifferentialSample[] | undefined;
@@ -144,6 +147,48 @@ beforeEach(() => {
 });
 
 describe('TireDifferentialDriftPage', () => {
+  it('app-design corner records activate native record consumers without merging independent inference flags or readings', () => {
+    h.query = query({ data: samples(12, -1000, 20_000) });
+    const raw = structuredClone(h.query.data);
+    const { container } = renderPage();
+    const records = container.querySelectorAll('[data-app-part="card"][data-app-card-kind="record"]');
+    expect(records).toHaveLength(4);
+    for (const [index, record] of [...records].entries()) {
+      const title = record.querySelector(':scope > [data-app-part="record-header"] > [data-app-part="record-title"]');
+      expect(title).toHaveTextContent(['Front left', 'Front right', 'Rear left', 'Rear right'][index]);
+      const reading = record.querySelector(':scope > [data-app-part~="record-body"][data-app-part~="record-context"]');
+      expect(reading).toHaveTextContent(/slope .*\/day · confidence .* · mean offset/);
+      expect(record).toHaveClass('p-3', 'rounded-shape-lg', 'bg-[var(--surface-2)]');
+      expect(record).not.toHaveAttribute('data-app-design-owner');
+      expect(matchingAppDesignDataRules(record, '[data-app-card-kind="record"]')).toEqual([]);
+    }
+    expect(within(records[0] as HTMLElement).getByText('Leak suspect')).toBeInTheDocument();
+    expect(within(records[0] as HTMLElement).queryByText('Most offset')).not.toBeInTheDocument();
+    expect(within(records[2] as HTMLElement).getByText('Most offset')).toBeInTheDocument();
+    expect(within(records[2] as HTMLElement).queryByText('Leak suspect')).not.toBeInTheDocument();
+    expect(records[0]).toHaveTextContent('slope -0.01 bar/day · confidence 1 · mean offset -0.06 bar');
+    expect(records[2]).toHaveTextContent('slope 0.00 bar/day · confidence 1 · mean offset 0.20 bar');
+
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const mode = APPLICATION_DESIGNS[pack].data;
+        const record = records[0];
+        expectAppDesignDataMode(record, mode, '[data-app-card-kind="record"]');
+        for (const part of ['record-header', 'record-body', 'record-title', 'record-context']) {
+          const node = record.querySelector(`[data-app-part~="${part}"]`)!;
+          expectAppDesignDataMode(node, mode, `[data-app-part~="${part}"]`);
+        }
+        expect(matchingAppDesignDataRules(record, '[data-app-card-kind="record"]')
+          .some(match => match.declarations.display === 'flex')).toBe(true);
+      } finally { release(); }
+    }
+    expect(h.query.data).toEqual(raw);
+    everySection();
+  });
+
   it('sends saved-timezone day boundaries for the actual route without filtering returned evidence', () => {
     h.locale = 'de-DE'; h.tz = 'America/Los_Angeles';
     renderPage('/tire-differential-drift?from=2024-03-10&to=2024-03-10');
@@ -209,6 +254,7 @@ describe('TireDifferentialDriftPage', () => {
     expect(screen.queryByTestId('residual-plot')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
     expect(screen.getAllByText('Add a vehicle to your fleet to see data on this page.')).toHaveLength(4);
+    expect(document.querySelector('[data-app-card-kind="record"]')).not.toBeInTheDocument();
   });
 
   it('keeps every section during initial loading without fabricating readings', () => {
@@ -217,6 +263,7 @@ describe('TireDifferentialDriftPage', () => {
     expect(screen.queryByText('None detected')).not.toBeInTheDocument();
     expect(screen.queryByTestId('residual-plot')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-app-card-kind="record"]')).not.toBeInTheDocument();
   });
 
   it.each(['empty', 'unusable'] as const)('treats %s history as unknown inference while preserving raw and usable counts', mode => {
@@ -226,6 +273,7 @@ describe('TireDifferentialDriftPage', () => {
     expect(screen.queryByText('corners evenly matched')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
     expect(screen.getByText(/At least two usable four-corner samples/)).toBeInTheDocument();
+    expect(document.querySelector('[data-app-card-kind="record"]')).not.toBeInTheDocument();
     expect(within(brief()).getByText('Samples analyzed')).toBeInTheDocument();
     expectBriefDetail(new RegExp(`${mode === 'empty' ? 0 : 1} raw rows`), 'Samples analyzed');
   });
@@ -234,6 +282,7 @@ describe('TireDifferentialDriftPage', () => {
     h.query = query({ data: samples(1, 0, 5000) });
     renderPage(); everySection();
     expect(h.residuals).toHaveLength(1);
+    expect(document.querySelectorAll('[data-app-card-kind="record"]')).toHaveLength(4);
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
     expect(screen.getAllByText(/slope —\/day · confidence 0 ·/)).toHaveLength(4);
     expect(screen.getByText(/mean offset 0.05 bar/)).toBeInTheDocument();
@@ -255,6 +304,7 @@ describe('TireDifferentialDriftPage', () => {
     for (const button of buttons) fireEvent.click(button);
     expect(retry).toHaveBeenCalledTimes(buttons.length);
     expect(screen.queryByTestId('residual-plot')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-app-card-kind="record"]')).not.toBeInTheDocument();
   });
 
   it.each(['refresh-error', 'offline'] as const)('retains metrics and both plots with honest %s trust', state => {
@@ -267,6 +317,7 @@ describe('TireDifferentialDriftPage', () => {
     expect(screen.getByTestId('residual-plot')).toBeInTheDocument();
     expect(screen.getByTestId('slope-plot')).toBeInTheDocument();
     expect(h.residuals).toHaveLength(12);
+    expect(document.querySelectorAll('[data-app-card-kind="record"]')).toHaveLength(4);
   });
 
   it('converts pressure deltas only at display and reacts to saved bar/psi preferences', () => {

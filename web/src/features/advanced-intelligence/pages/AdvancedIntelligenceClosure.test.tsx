@@ -272,14 +272,28 @@ describe('returned history, details and caller-owned pagination', () => {
     state.reads.survival.data = { items: [fixtures.survival], total: 1, limit: 12, offset: 0 };
     renderSubject(<ComponentSurvivalPage />);
     const component = article('front-bearing');
-    ['Survival probability', 'P10 horizon', 'P50 horizon', 'P90 horizon', 'Competing risks', 'Intervention sensitivity']
-      .forEach(label => expect(within(component).getByText(label)).toBeInTheDocument());
-    expect(within(component).getByText('0.00 h')).toBeInTheDocument();
-    expect(within(component).getByText('2.00 h')).toBeInTheDocument();
-    expect(within(component).getByText(/observed-wear.*0 evidence/)).toBeInTheDocument();
-    expect(within(component).getByText(/unmeasured-corrosion.*0 evidence/)).toBeInTheDocument();
-    expect(within(component).getByText('Unsupported')).toBeInTheDocument();
-    expect(within(component).getByText(/modeled service only.*adjusted P50 —/)).toBeInTheDocument();
+    for (const [label, value] of [
+      ['Survival probability', /^—$/], ['P10 horizon', /^0\.00 h$/],
+      ['P50 horizon', /^—$/], ['P90 horizon', /^2\.00 h$/],
+    ] as const) {
+      const metric = within(component).getByText(label).closest('[data-stat]');
+      expect(metric).not.toBeNull();
+      expect(metric?.querySelector('[data-app-part="metric-reading"]')).toHaveTextContent(value);
+    }
+    expect(within(component).getByRole('heading', { name: 'Competing risks' })).toBeInTheDocument();
+    const zeroRisk = within(component).getByRole('progressbar', { name: 'observed-wear · 0 evidence' });
+    expect(zeroRisk).toHaveAttribute('aria-valuenow', '0');
+    expect(zeroRisk).toHaveTextContent('0.00%');
+    const unsupportedRisk = within(component).getByText('unmeasured-corrosion · 0 evidence')
+      .closest('[data-app-metric="tile"]');
+    expect(unsupportedRisk).toHaveAttribute('data-app-state', 'missing');
+    expect(unsupportedRisk).toHaveTextContent('Unsupported');
+    expect(unsupportedRisk?.querySelector('[role="progressbar"]')).toBeNull();
+    const sensitivity = within(component).getByText('Intervention sensitivity')
+      .closest('[data-app-metric="tile"]');
+    expect(sensitivity).not.toBeNull();
+    expect(sensitivity?.querySelector('[data-app-part="metric-reading"]'))
+      .toHaveTextContent(/^modeled service only: -10\.00% · adjusted P50 —$/);
   });
 
   it('preserves coarse-cell evidence and all matrix details without inventing map coordinates', () => {

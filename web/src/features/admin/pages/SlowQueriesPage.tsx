@@ -33,7 +33,7 @@ export default function SlowQueriesPage() {
   const { t, orderBy, setOrderBy, limit, setLimit, query, queryState, subsystemMissing, showError, isLoading, rows, retry, activeMetricLabel, formatMetric, axisFormat, totals, chartRows, cacheLeaders } = controller;
   const actions = (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="flex items-center gap-2">
+      <label data-app-part="field-label" className="flex items-center gap-2">
         <Caption>{t('admin.slowQueries.orderBy', 'Order by')}</Caption>
         <Select
           size="sm"
@@ -46,7 +46,7 @@ export default function SlowQueriesPage() {
           }))}
         />
       </label>
-      <label className="flex items-center gap-2">
+      <label data-app-part="field-label" className="flex items-center gap-2">
         <Caption>{t('admin.slowQueries.limit', 'Limit')}</Caption>
         <Select
           size="sm"

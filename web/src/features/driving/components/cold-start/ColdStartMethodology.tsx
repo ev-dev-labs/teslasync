@@ -2,6 +2,7 @@ import { CheckCircle2, FlaskConical, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
@@ -89,20 +90,20 @@ export function ColdStartMethodology({
           />
         ) : (
           <div className="flex min-h-64 flex-col justify-between gap-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{formatCount(summary.cold.drives)}/{formatCount(MIN_GROUP_DRIVES)}</MetricValue>
-                <MetricLabel>{t('coldStart.method.coldEvidence', 'Cold evidence')}</MetricLabel>
+            <Grid minItemWidth="wide" gap={2}>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded" className="rounded-xl bg-[var(--surface-2)] p-3">
+                <MetricValue data-app-part="metric-reading"><span data-app-part="metric-value">{formatCount(summary.cold.drives)}/{formatCount(MIN_GROUP_DRIVES)}</span></MetricValue>
+                <MetricLabel data-app-part="metric-label">{t('coldStart.method.coldEvidence', 'Cold evidence')}</MetricLabel>
               </div>
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{formatCount(summary.warm.drives)}/{formatCount(MIN_GROUP_DRIVES)}</MetricValue>
-                <MetricLabel>{t('coldStart.method.warmEvidence', 'Warm evidence')}</MetricLabel>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded" className="rounded-xl bg-[var(--surface-2)] p-3">
+                <MetricValue data-app-part="metric-reading"><span data-app-part="metric-value">{formatCount(summary.warm.drives)}/{formatCount(MIN_GROUP_DRIVES)}</span></MetricValue>
+                <MetricLabel data-app-part="metric-label">{t('coldStart.method.warmEvidence', 'Warm evidence')}</MetricLabel>
               </div>
-              <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{formatCount(classified)}</MetricValue>
-                <MetricLabel>{t('coldStart.method.classified', 'Classified')}</MetricLabel>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded" className="rounded-xl bg-[var(--surface-2)] p-3">
+                <MetricValue data-app-part="metric-reading"><span data-app-part="metric-value">{formatCount(classified)}</span></MetricValue>
+                <MetricLabel data-app-part="metric-label">{t('coldStart.method.classified', 'Classified')}</MetricLabel>
               </div>
-            </div>
+            </Grid>
 
             <div className="space-y-2">
               <div className="flex items-start gap-2">
@@ -131,8 +132,8 @@ export function ColdStartMethodology({
               </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--border-subtle)] p-3">
-              <Text as="p" variant="caption">
+            <div data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="rounded-xl border border-[var(--border-subtle)] p-3">
+              <Text data-app-part="feedback-message" as="p" variant="caption">
                 {capped
                   ? t(
                       'coldStart.method.capped',

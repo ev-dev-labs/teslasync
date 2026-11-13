@@ -966,9 +966,9 @@ export default function BackupRestorePage() {
               <>
                 {/* Success rate */}
                 <div>
-                  <div className="mb-2 flex items-baseline justify-between gap-2">
-                    <PanelTitle>{t('backup.successRate', 'Success rate')}</PanelTitle>
-                    <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
+                  <div data-app-part="metric" data-app-metric="headline" className="mb-2 flex items-baseline justify-between gap-2">
+                    <PanelTitle data-app-part="metric-label">{t('backup.successRate', 'Success rate')}</PanelTitle>
+                    <Text data-app-part="metric-reading metric-value" as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
                       {stats.totalBackups > 0 ? fmtPercent(stats.successRate) : '—'}
                     </Text>
                   </div>

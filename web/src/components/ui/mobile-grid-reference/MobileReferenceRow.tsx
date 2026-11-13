@@ -30,7 +30,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
       action={{ label: t('developerReference.mobileGrid.desktop.details', 'Open reference details and actions'), onClick: onActivate }} />
   );
   return (
-    <div className="mgr-row-wrap flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0">
+    <div data-app-part="table-row" data-selected={selected || undefined} className="mgr-row-wrap flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0">
       {selecting && (
         <Checkbox
           checked={selected}
@@ -41,6 +41,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         />
       )}
       <div
+        data-app-part="card"
         role="button"
         tabIndex={0}
         aria-label={row.title}
@@ -71,7 +72,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         {!keyValue && (
           <div className="mt-2 flex min-w-0 items-center gap-2">
             {row.meta.map(field => (
-              <div key={field.key} data-card-meta="" data-field-key={field.key} className="min-w-0 flex-1">
+              <div data-app-part="table-cell" key={field.key} data-card-meta="" data-field-key={field.key} className="min-w-0 flex-1">
                 <Text className="mgr-meta-label block truncate">{field.label}</Text>
                 <Text title={field.value} className="mgr-meta-value block truncate">{field.value}</Text>
               </div>
@@ -81,13 +82,14 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         )}
         {!keyValue && row.progress && (
           <div
+            data-app-part="metric" data-app-metric="bar" data-metric-track
             role="img"
             aria-label={row.progress.label}
             className="mgr-progress relative mt-2 overflow-hidden rounded-full bg-[var(--surface-3)]"
           >
-            <div className="absolute inset-y-0 left-0 bg-[var(--text-muted)]"
+            <div data-metric-fill className="absolute inset-y-0 left-0 bg-[var(--text-muted)]"
               style={{ width: `${safeProgress(row.progress.from)}%` }} />
-            <div className="absolute inset-y-0 bg-[var(--theme-primary)]"
+            <div data-metric-fill className="absolute inset-y-0 bg-[var(--theme-primary)]"
               style={{ left: `${safeProgress(Math.min(row.progress.from, row.progress.to))}%`,
                 width: `${Math.abs(safeProgress(row.progress.to) - safeProgress(row.progress.from))}%` }} />
           </div>

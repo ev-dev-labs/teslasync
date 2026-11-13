@@ -48,10 +48,13 @@ export function ProviderStatusPanel({ providers, loading }: ProviderStatusPanelP
           {providers.map((provider) => (
             <div
               key={provider.source_feature}
+              data-app-part="card"
+              data-app-card-kind="record"
+              data-app-record-kind="action-provider"
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Text size="sm" weight="medium" color="primary">
+              <div data-app-part="record-header" className="flex flex-wrap items-center justify-between gap-2">
+                <Text data-app-part="record-title" size="sm" weight="medium" color="primary">
                   {t(
                     `actionCenter.source.${provider.source_feature}`,
                     provider.source_feature.replace(/_/g, ' '),
@@ -61,16 +64,18 @@ export function ProviderStatusPanel({ providers, loading }: ProviderStatusPanelP
                   {t(`actionCenter.providerStatus.${provider.status}`, provider.status)}
                 </Badge>
               </div>
-              <Caption as="p" className="mt-2">
+              <div data-app-part="record-body">
+              <Caption data-app-part="record-context" as="p" className="mt-2">
                 {t('actionCenter.providers.findings', '{{count}} findings', {
                   count: provider.item_count,
                 })}
               </Caption>
               {provider.limitations.map((limitation) => (
-                <Text as="p" key={limitation} variant="caption" className="mt-1">
+                <Text data-app-part="record-context" as="p" key={limitation} variant="caption" className="mt-1">
                   {limitation}
                 </Text>
               ))}
+              </div>
             </div>
           ))}
         </div>
