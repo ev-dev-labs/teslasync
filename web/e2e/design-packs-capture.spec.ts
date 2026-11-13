@@ -5,8 +5,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator } from '@playwright/test';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
-import { test } from './app-design-test';
-import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { routeBuiltApplication, test } from './app-design-test';
+import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { cardLayoutContractPaths, resolveCardLayoutContractSource } from './cardLayoutContractSources';
@@ -37,8 +37,11 @@ const touchDevice = process.env.DESIGN_PACK_TOUCH_DEVICE === '1';
 const touchSuffix = touchDevice ? '-touch' : '';
 const captureStates = process.env.DESIGN_PACK_CAPTURE_STATES === '1';
 const viewportOnly = process.env.DESIGN_PACK_VIEWPORT_ONLY === '1';
+const checkOnly = process.env.DESIGN_PACK_CHECK_ONLY === '1';
+if (checkOnly && captureStates) throw new Error('Check-only runs cannot capture interactive states');
 const threeChargers = process.env.DESIGN_PACK_ENERGY_THREE_CHARGERS === '1';
 const chargerSuffix = threeChargers ? '-three-chargers' : '';
+const shotsRoot = resolve(process.env.DESIGN_PACK_SHOTS_ROOT ?? resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots'));
 const dashboardWidgets = [
   ['onboarding-checklist', 'Onboarding'], ['vehicle-hero', 'Vehicle card'],
   ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini'],
@@ -77,15 +80,19 @@ for (const route of routes) {
     const touchAudit = (width < 768 || touchDevice) && process.env.DESIGN_PACK_CHECK_TOUCH === '1';
     const textAudit = width < 768 && process.env.DESIGN_PACK_CHECK_TEXT_SIZE === '1';
     const selectionTouchTargets: Awaited<ReturnType<typeof findSmallTouchTargets>> = [];
-    const directory = resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots', packId, `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}${chargerSuffix}`);
+    const directory = resolve(shotsRoot, packId, `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}${chargerSuffix}`);
     const viewportPath = resolve(directory, `${route.file}.png`);
     const fullPath = resolve(directory, `${route.file}--full.png`);
     const tablePath = resolve(directory, `${route.file}--table.png`);
     const supportPath = resolve(directory, `${route.file}--support.png`);
+    const alreadyCaptured = await skipExistingCapture(viewportPath, !checkOnly && process.env.DESIGN_PACK_SKIP_EXISTING === '1');
+    test.skip(alreadyCaptured, 'Existing viewport evidence is preserved');
     let tableImage: Buffer | undefined;
     let supportImage: Buffer | undefined;
-    await mkdir(directory, { recursive: true });
-    await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates, [supportPath]);
+    if (!checkOnly) {
+      await mkdir(directory, { recursive: true });
+      await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates, [supportPath]);
+    }
     if (forcedColors) await page.emulateMedia({ forcedColors: 'active' });
     const saved = createReviewPreference();
     saved.pack_id = packId;
@@ -148,6 +155,7 @@ for (const route of routes) {
       energy.setActive(true);
       path = energyReviewPath;
     }
+    await routeBuiltApplication(page, new URL(baseURL).origin, [new URL(path, baseURL).pathname], process.env.DESIGN_PACK_DIST_DIR);
     const pageErrors: string[] = [];
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -160,7 +168,7 @@ for (const route of routes) {
     expect(activeScale).toBeCloseTo(fontScale, 2);
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
     await page.mouse.move(0, 0);
-    const viewportImage = viewportOnly ? await page.screenshot({ animations: 'disabled' }) : undefined;
+    const viewportImage = viewportOnly && !checkOnly ? await page.screenshot({ animations: 'disabled' }) : undefined;
     if (viewportImage) await writeCaptureImages(viewportPath, fullPath, [viewportImage]);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
@@ -804,8 +812,7 @@ for (const route of routes) {
     }
 
     await page.mouse.move(0, 0);
-    const first = viewportImage ?? await page.screenshot({ animations: 'disabled' });
-    const frames = [first];
+    const frames = checkOnly ? [] : [viewportImage ?? await page.screenshot({ animations: 'disabled' })];
     const horizontalScrollRegions = width < 768 ? await findHorizontalScrollRegions(page) : [];
     const smallTouchTargets = touchAudit
       ? [...selectionTouchTargets, ...await findSmallTouchTargets(page)]
@@ -825,7 +832,7 @@ for (const route of routes) {
       await waitForHarnessReady(page, mocks);
       const next = await main.evaluate(element => element.scrollTop);
       if (next <= position.top) throw new Error('Main content could not be scrolled for capture');
-      if (!viewportOnly) frames.push(await page.screenshot({ animations: 'disabled' }));
+      if (!viewportOnly && !checkOnly) frames.push(await page.screenshot({ animations: 'disabled' }));
       if (width < 768) horizontalScrollRegions.push(...await findHorizontalScrollRegions(page));
       if (touchAudit) smallTouchTargets.push(...await findSmallTouchTargets(page));
       if (textAudit) smallBodyText.push(...await findSmallBodyText(page));
@@ -863,9 +870,11 @@ for (const route of routes) {
     expect(uniqueScrollRegions, 'mobile content has horizontal scrolling regions').toEqual([]);
     expect(pageErrors, 'uncaught browser errors').toEqual([]);
     await assertMockApiComplete(page, mocks);
-    await writeCaptureImages(viewportPath, fullPath, frames);
-    if (tableImage) await writeFile(tablePath, tableImage);
-    if (supportImage) await writeFile(supportPath, supportImage);
+    if (!checkOnly) {
+      await writeCaptureImages(viewportPath, fullPath, frames);
+      if (tableImage) await writeFile(tablePath, tableImage);
+      if (supportImage) await writeFile(supportPath, supportImage);
+    }
     if (width < 768) {
       expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
       expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);

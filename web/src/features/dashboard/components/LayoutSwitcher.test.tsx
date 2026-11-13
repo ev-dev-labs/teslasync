@@ -188,6 +188,7 @@ describe('LayoutSwitcher', () => {
     const btn = trigger();
     expect(btn).toHaveAttribute('aria-haspopup', 'menu');
     expect(btn).toHaveAttribute('aria-expanded', 'false');
+    expect(btn).toHaveAccessibleDescription('Main');
     expect(within(btn).getByText('Layout')).toBeInTheDocument();
     expect(within(btn).getByText('Main')).toBeInTheDocument();
     expect(btn).toHaveAttribute('title', 'Switch, create, or edit layouts here');
@@ -489,6 +490,7 @@ describe('LayoutSwitcher', () => {
     });
 
     expect(within(trigger()).getByText('Pinned Car')).toBeInTheDocument();
+    expect(trigger()).toHaveAccessibleDescription('Main');
     expect(within(trigger()).queryByText('Selected Car')).not.toBeInTheDocument();
     first.unmount();
 

@@ -86,7 +86,9 @@ vi.mock('@/features/onboarding/components/TaskOnboardingHost', () => ({
   TaskOnboardingHost: () => null,
 }))
 vi.mock('@/components/ui/DensityApplier', () => ({ DensityApplier: () => null }))
-vi.mock('@/components/ui/AppDesignBridge', () => ({ AppDesignBridge: () => null }))
+vi.mock('@/components/ui/AppDesignBridge', () => ({
+  AppDesignBridge: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+}))
 vi.mock('@/components/ui/ContextMenu', () => ({ ContextMenuRoot: () => null }))
 vi.mock('@/components/a11y', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/components/a11y')>()),

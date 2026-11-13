@@ -6,7 +6,7 @@ import {
 
 import { PageLayout, Section, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 
-import { DataTable, type Column } from '@/components/ui';
+import { DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { MetricBar, KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -184,6 +184,19 @@ export default function MileagePage() {
     ],
     [t, distanceUnit, fmtNumber, fmtInt],
   );
+
+  const mobileMonths = useMemo<MobileDataTablePresentation<MonthRow>>(() => ({
+    roles: { month: 'title', distance: 'primary', drives: 'meta', dailyAvg: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'month': return row.month;
+        case 'distance': return row.distance == null ? '—' : `${fmtNumber(row.distance)} ${distanceUnit}`;
+        case 'drives': return row.drives == null ? '—' : fmtInt(row.drives);
+        case 'dailyAvg': return row.dailyAvg == null ? '—' : fmtNumber(row.dailyAvg);
+        default: return null;
+      }
+    },
+  }), [distanceUnit, fmtInt, fmtNumber]);
 
   // Defensive guard: no vehicle selected.
   if (vehicleId == null) {
@@ -432,6 +445,7 @@ export default function MileagePage() {
               tableId="analytics:mileage-monthly"
               caption={t('mileage.monthlySummary', 'Monthly summary')}
               columns={monthColumns}
+              mobilePresentation={mobileMonths}
               data={monthlyRows}
               keyExtractor={(r) => r.month}
               emptyMessage={t('mileage.noMonthly', 'No monthly distance yet')}

@@ -15,8 +15,8 @@ pass; the capture command's complete diagnostics remain authoritative. Use
 the explicit default font scale suffix for new spot checks to keep historical
 viewport and stitched images intact.
 Begin with eight isolated pack workers and refill each slot as it finishes.
-This keeps browser and build load bounded on the shared machine while the
-full unit suite is running; it is not an eight-pack completion gate.
+This keeps browser and build load bounded on the shared machine; it is not
+an eight-pack completion gate.
 Additional workers may implement their owned stylesheets while the browser
 slots are occupied; they must wait for an explicit capture release.
 The initial Vite process watched Playwright trace files, reloaded active
@@ -38,6 +38,12 @@ tests 4
 pass 4
 fail 0
 ```
+
+For the final matrix, `DESIGN_PACK_SHOTS_ROOT` can point at a separate
+directory so existing review images are not overwritten. Playwright's
+`--list` reports 255 eligible capture cases per viewport and pack: the
+requested 27-pack, four-width matrix therefore contains 27,540 cases before
+the excluded standalone routes. Listing cases is not a screenshot run.
 
 The shared server later exited with `EBUSY` while watching a task-owned
 Memphis browser profile under `web`. The orchestrator restarted the same
@@ -66,6 +72,21 @@ Concierge remained too similar in these saved views; Precision was sent back
 for a stronger ruled-ledger header and aligned action zone. The comparison
 images predate several subsequent fixes, so neither the new distinction nor
 the other packs' full-page distinctiveness is established by this check.
+The next eight existing phone dashboards (Atlas, Bauhaus, Material, Swiss,
+Observatory, Glass, Deco and Kinetic) were compared side by side. Material and
+Glass both read as rounded, filled floating headers with pill-like stacks.
+Glass was sent for a screenshot-free, owner-only refinement toward a lighter
+architectural sheet with a reflected edge; the saved images predate that
+refinement and cannot establish the result. Glass's subsequent dark/light
+DOM checks and 44 focused tests passed without new screenshots; see its
+review for their scope. The current-source full unit run was stopped early
+so the refinement would not change files beneath it and has been restarted
+after the stylesheet stabilized.
+The remaining Neo Brutal, Cyberdeck and Memphis phone dashboards were also
+compared with Expressive, Pixel and Motorsport. The saved views show Brutal's
+heavy frame, Cyberdeck's technical rules and Memphis's patterned geometry;
+some screenshots predate later fixes and do not establish full-page
+distinctiveness.
 Precision Ledger and Executive Concierge exceeded the 45-minute slot. Both
 were asked to stop and reported their incomplete evidence; this runtime did
 not expose an agent-kill operation. No concurrent replacement was allowed to
@@ -173,13 +194,78 @@ verification checkout exited 0:
 [source-maps] OK — no publicly reachable source maps, serving path denies .map
 ```
 
+The later combined snapshot also built successfully with the default public
+mapless output. Running `npm run perf:check` against that output failed
+because strict locality checks require `VITE_SOURCEMAP_MODE=private`; it is
+not a performance pass. A current-source private-map build then exited 0;
+its strict check stopped because the Playwright headless browser was missing.
+An isolated browser install failed after five CDN timeouts. The check was
+retried with the documented `LOCALE_PROBE_EXECUTABLE_PATH` pointing to the
+already-installed Chrome, without changing its assertions or budget. The
+retry passed:
+
+```text
+[i18n-runtime] cold NotFound: 0 deferred locale requests
+[i18n-runtime] missing namespace console errors: 0
+[i18n-runtime] fallback locality OK — every route stayed inside its grouped-bundle allowance and request budget
+[duplicate-modules] OK
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+PRIVATE_PERF_CHROME_EXIT=0
+```
+
+An actual dashboard geometry probe across the 27 packs found the saved layout
+name clipped in Classic, Studio, Showroom, Pixel, Motorsport, Swiss and Deco
+at all three phone widths; Cyberdeck also split the short caption at 360px.
+A shared, owner-scoped phone rule now permits the saved name to wrap and
+prevents the caption from shrinking. A screenshot-free recheck reached the
+end of its geometry loop without reporting a layout failure, but the overall
+browser test failed on a pending mocked auth-mode request. The gallery and
+Energy browser checks likewise reported pending mocked requests in that run;
+waiting for fixture quiescence did not resolve the accounting failure. A
+third gallery diagnostic observed `net::ERR_ABORTED` for API requests in
+the development build. Do not silence the accounting or count those runs as
+passes. Against the current-source production snapshot, the gallery,
+27-pack dashboard layout names, forced-colors Energy table, and no-flash
+startup/reload browser checks passed with strict mock accounting:
+
+```text
+  4 passed (42.5s)
+PRODUCTION_ACCEPTANCE_EXIT=0
+```
+
+The capture harness can also serve the built index and assets to the existing
+local origin using `DESIGN_PACK_DIST_DIR`; it does not start or restart the
+shared server or relax mock accounting.
+
+The single final matrix was interrupted after its first 40 Classic 360px
+cases: 27 passed and 13 failed. The failures include horizontally scrolling
+data grids, undersized timeline and map targets, small body copy, and the
+protected twins' existing phone geometry. Forty-three viewport images were
+written, including in-flight cases; images alone are not passes. Fix the
+observed breakages before continuing the uncaptured cases. The matrix includes
+the previously unstable period-comparison route, but the six standalone routes
+remain outside the identity-safe capture registry.
+
+Resuming a matrix with `DESIGN_PACK_SKIP_EXISTING=1` skips each existing
+viewport image before any cleanup or capture. The harness contract and an
+actual skipped Classic dashboard invocation verified that existing evidence
+remains byte-for-byte unchanged. These skips do not convert the interrupted
+run's failures or unfinished captures into passes.
+
+`DESIGN_PACK_CHECK_ONLY=1` reruns the same geometry, touch, text, contrast,
+mock and browser-error checks without taking or changing screenshots. The
+360px check-only run passed the 12 repaired Classic pages and retained the
+existing dashboard image unchanged; the dashboard still failed on the
+protected twins' original small controls and text. This does not establish
+the other pages or packs.
+
 The changed `app-designs` audit reported zero static inline styles, raw HTML,
 direct library imports, old API imports, double prefixes and camelCase query
 parameters; its TypeScript check passed. The hook verifier found 571 URL
 patterns and reported `ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES`.
 The capture change also passed `npx tsc --noEmit -p e2e\tsconfig.json` and
-focused ESLint. The full Vitest run started before the last CSS reset, so it
-does not independently verify the exact final source.
+focused ESLint. The full Vitest run was stopped before the next source edits,
+so it did not finish and is not a passing full run.
 
 Use restrained, accessible depth and outlines rather than decorative colored
 glows. The design contract requires semantic colors, focus visibility, reduced
@@ -290,9 +376,10 @@ scrolling the main region. Repeated navigation and chrome in that sequence are
 intentional; they do not represent a single continuous screen. Each attempt
 clears that page's previous viewport and full images; a normal capture leaves
 its separate interactive-table image intact. State captures clear the old
-table image before attempting to replace it. New images are written only after its
-mock API, browser error and overflow assertions pass, even when the subsequent
-touch or prose diagnostics fail. Those images are defect evidence, not passes.
+table image before attempting to replace it. Viewport-only matrix runs write
+their first image after initial readiness, before later mock, browser-error,
+overflow, touch and prose assertions. Other runs write after the mock,
+browser-error and overflow checks. A saved image is defect evidence, not a pass.
 The cleanup contract and a real Charging recapture verified that an existing
 table image survives an ordinary run:
 
@@ -345,10 +432,48 @@ headers; the responsive rule was extended and the production recapture
 passed in both modes. One Axe node per forced-colors capture still requires
 manual review. Incomplete Axe findings are not contrast passes.
 
+The Observatory review found a six-column chart fallback scrolling sideways
+in phone forced-colors mode. Chart fallback tables now opt into the existing
+mobile stacked-table presentation and carry the localized column label on
+each cell; native table headings and values are retained. The labels use the
+phone body-size token. A real Observatory `/energy` fixture at 360, 390 and
+430px passed its semantic, label and horizontal-overflow checks:
+
+```text
+1 passed (6.1s)
+```
+
+The live-thumbnail phone test also passed separately. A synthetic contract
+passed for all 27 profiles at 360/390/430px, three font scales, and normal and
+forced colors. These checks do not prove every route or chart is free of
+overflow or contrast defects.
+
 The current capture excludes `/connect`, `/glance`, `/onboarding`, `/s/:token`,
 `/watch` and `/year-review/:year`: those standalone routes do not all use the
 authenticated shell or its verified design bridge. Their coverage and
 identity-safe theming remain unresolved and block a full-app pass.
+
+### Final-matrix recovery
+
+The interrupted first Classic 360px matrix recorded 27 passing and 13 failing
+cases and saved 43 images, including unfinished cases. Those files remain
+evidence rather than proof of a pass. Mobile grid, typography and layout fixes
+were followed by an explicit recapture of the 12 repaired pages at 360, 430,
+768 and 1440px:
+
+```text
+48 passed (3.9m)
+REPAIRED_AUDITS=48 AUTOMATED_RULE_FAILURES=0 INCOMPLETE_NODES=184
+```
+
+The incomplete contrast nodes need manual review. A screenshot-free 360px
+diagnostic also passed those 12 pages; the protected dashboard remained a
+failure. The final matrix resumes with `DESIGN_PACK_SKIP_EXISTING=1`, which
+preserves old files but does not convert an earlier failure or interrupted
+case into a pass. Only the pages explicitly repaired were recaptured. A
+12-failure threshold stops further capture churn so new failures can be
+investigated. The previously documented period-comparison route remains
+temporarily excluded.
 
 ### Temporarily skipped: period comparison capture
 

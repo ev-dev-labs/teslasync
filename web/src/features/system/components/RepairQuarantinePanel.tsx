@@ -20,7 +20,9 @@ import {
   Text,
   Textarea,
   useTableExpansion,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useRepairQuarantineColumns } from './useRepairQuarantineColumns';
 
 interface RepairQuarantinePanelProps {
@@ -89,6 +91,27 @@ export function RepairQuarantinePanel({
     setRestoreTarget({ quarantine, ...scope.current });
     setRestoreReason('');
   });
+  const mobilePresentation = useMemo<MobileDataTablePresentation<RepairQuarantine>>(() => ({
+    roles: {
+      session: 'title', quarantined_at: 'primary', status: 'badge', reason: 'meta', actor: 'meta',
+    },
+    displayValue: (item, key) => {
+      switch (key) {
+        case 'session': return t('dataRepair.cases.sessionReference', '{{kind}} #{{id}}', {
+          kind: item.kind === 'drive' ? t('dataRepair.kind.drive', 'Drive') : t('dataRepair.kind.charging', 'Charging'),
+          id: item.session_id,
+        });
+        case 'quarantined_at': return formatDateTime(item.quarantined_at);
+        case 'status': return item.restored_at
+          ? t('dataRepair.quarantine.restored', 'Restored')
+          : t('dataRepair.quarantine.held', 'Held safely');
+        case 'reason': return item.reason ?? '—';
+        case 'actor': return item.quarantined_by ?? '—';
+        default: return null;
+      }
+    },
+    inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+  }), [columns, t]);
 
   const moveNext = () => {
     if (!responseIsCurrent || query.isFetching) return;
@@ -201,6 +224,7 @@ export function RepairQuarantinePanel({
               data={records}
               keyExtractor={(item) => item.id}
               mobileColumns={['session', 'actions']}
+              mobilePresentation={mobilePresentation}
               expandable
               expandedKeys={expandedKeys}
               onExpandedChange={setExpandedKeys}

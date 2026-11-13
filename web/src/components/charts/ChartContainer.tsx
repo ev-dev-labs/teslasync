@@ -961,6 +961,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           {hasFallbackTable ? (
             <Table
               variant="embedded"
+              data-mobile-stack-table
               className={cn(
                 'w-full border-collapse text-xs',
                 'forced-colors:text-[CanvasText]',
@@ -1005,6 +1006,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                       return (
                         <td
                           key={col.key}
+                          data-mobile-label={col.label}
                           className={cn(
                             'border border-[var(--panel-border)] px-2 py-1',
                             'forced-colors:border-[CanvasText]',

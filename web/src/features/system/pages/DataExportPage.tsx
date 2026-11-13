@@ -25,7 +25,7 @@ import {
   Label,
   Text,
   HelperText,
-  type Column, IconButton } from '@/components/ui';
+  type Column, type MobileDataTablePresentation, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import {
@@ -1117,6 +1117,29 @@ function ExportHistoryTable({
     [t, vehicleMap, onDownload, formatBytes, displayPrecision, displayLocale, formatDurationMsLong],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(() => ({
+    roles: { type: 'title', size: 'primary', status: 'badge', format: 'meta', records: 'meta', vehicle: 'meta' },
+    displayValue: (job, key) => {
+      switch (key) {
+        case 'type': {
+          const type = EXPORT_TYPES.find((entry) => entry.value === job.type);
+          return type ? t(type.labelKey, type.label) : job.type || '—';
+        }
+        case 'size': return formatBytes(job.file_size, { zeroAsEmpty: false });
+        case 'status': {
+          const status: StatusConfigEntry | undefined = (STATUS_CONFIG as Record<string, StatusConfigEntry>)[job.status];
+          return status ? t(status.labelKey, status.label) : job.status || '—';
+        }
+        case 'format': return typeof job.format === 'string' && job.format ? job.format.toUpperCase() : '—';
+        case 'records': return fmtInt(job.record_count);
+        case 'vehicle': return job.vehicle_id ? vehicleMap.get(job.vehicle_id) ?? `#${job.vehicle_id}` : '—';
+        default: return null;
+      }
+    },
+    inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),
+    canShowField: (key) => key !== 'actions',
+  }), [columns, formatBytes, t, vehicleMap]);
+
   return (
     <GlassPanel className="overflow-hidden p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
@@ -1158,6 +1181,7 @@ function ExportHistoryTable({
           <DataTable
             tableId="system:data-export-jobs"
             columns={columns}
+            mobilePresentation={mobilePresentation}
             data={sortedJobs}
             sortKey={sortKey}
             sortDir={sortDir}

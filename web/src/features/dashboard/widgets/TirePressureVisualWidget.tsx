@@ -11,10 +11,9 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { loadTirePresentation } from './designPacks/packModules';
 import { PACK_APPEARANCES } from './designPacks/types';
 import type { TireReading } from './designPacks/families/Tire.types';
-
-const loadTirePresentation = () => import('./designPacks/families/TirePressureLayout');
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 

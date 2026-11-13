@@ -28,6 +28,7 @@ import { act, render, screen, fireEvent, waitFor, within } from '@testing-librar
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils'
 
 vi.mock('@/hooks/useChartPalette', async () => {
   const { CHART_COLORS } = await vi.importActual<typeof import('@/lib/colors')>('@/lib/colors')
@@ -72,6 +73,24 @@ vi.mock('react-i18next', async () => {
 })
 
 describe('DiskForecastPage semantic and mobile adoption', () => {
+  it('keeps quota and compression measurements accessible in mobile row details', async () => {
+    const bounds = forceMobileDataTables()
+    try {
+      mockedRequest.mockResolvedValueOnce(makeResponse())
+      const { container } = renderPage()
+      await waitFor(() => expect(container.querySelector('[data-mobile-table]')).not.toBeNull())
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement
+      expect(grid.querySelector(`[data-row-key="${LONG_NAME}"]`)).toHaveTextContent('3.00 GB')
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Expand row' })[0])
+      const details = grid.querySelector('dl') as HTMLElement
+      expect(within(details).getByText('2.00 GB')).toBeInTheDocument()
+      expect(within(details).getByText('1.00 GB after compression')).toBeInTheDocument()
+      expect(within(details).getByText('5.00')).toBeInTheDocument()
+    } finally {
+      bounds.mockRestore()
+    }
+  })
+
   it('names the embedded table and keeps every measurement reachable through row expansion', async () => {
     mockedRequest.mockResolvedValueOnce(makeResponse())
     renderPage()

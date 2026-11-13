@@ -7,7 +7,7 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import {
   Text, Button, Select, Input, HelpTooltip,
-  DataTable, Icon, type Column,
+  DataTable, Icon, type Column, type MobileDataTablePresentation,
 } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
@@ -204,6 +204,23 @@ export default function TripLogbookPage() {
         ),
     },
   ], [t, formatDistance, formatCurrency, setCategory, categoryOptions]);
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<LogbookRow>>(() => ({
+    roles: { date: 'title', route: 'meta', distanceM: 'primary', category: 'meta', amount: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'date': return formatDateShort(row.date);
+        case 'route': return row.route;
+        case 'distanceM': return formatDistance(row.distanceM);
+        case 'category': return row.category == null
+          ? t('logbook.unclassified', 'Unclassified')
+          : t(CATEGORY_META[row.category].i18nKey, CATEGORY_META[row.category].fallback);
+        case 'amount': return row.category != null && row.amount > 0 ? formatCurrency(row.amount) : '—';
+        default: return null;
+      }
+    },
+    inlineActions: (row) => columns.find((column) => column.key === 'category')?.render(row),
+  }), [columns, formatCurrency, formatDistance, t]);
 
   /* ---- Rate editing (display in the user's distance unit) ---- */
   const perMile = unitPrefs.distance === 'mi';
@@ -418,6 +435,7 @@ export default function TripLogbookPage() {
                 columns={columns}
                 variant="embedded"
                 mobileColumns={['date', 'route', 'distanceM', 'category', 'amount']}
+                mobilePresentation={mobilePresentation}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('logbook.noneInFilter', 'No drives in this category yet.')}

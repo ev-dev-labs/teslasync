@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import { Button } from '@/components/ui';
 import { reportFrontendError } from '@/lib/errorReporter';
+import { cachedPackModule, resolvePackModule } from './packModules';
 import { resolveAvailablePackId } from './manifest';
 import type { PackId } from './types';
 import './experimental.css';
@@ -23,18 +24,20 @@ export function usePackModule<P extends object>(
 ): ComponentType<P> | null {
   const { revision, onFailure } = useContext(PackLoadingContext);
   const [loaded, setLoaded] = useState<{ load: typeof load; Presentation: ComponentType<P> } | null>(null);
+  const cached = packId !== 'classic' && load ? cachedPackModule(load) : null;
   useEffect(() => {
-    if (packId === 'classic' || !load) return;
+    if (packId === 'classic' || !load || cached) return;
     let active = true;
-    void load().then(module => {
-      if (active) setLoaded(current => current?.load === load && current.Presentation === module.default
-        ? current : { load, Presentation: module.default });
+    void resolvePackModule(load).then(Presentation => {
+      if (active) setLoaded(current => current?.load === load && current.Presentation === Presentation
+        ? current : { load, Presentation });
     }).catch(error => {
       if (active) onFailure(packId, error);
     });
     return () => { active = false; };
-  }, [packId, load, revision, onFailure]);
-  return packId !== 'classic' && loaded?.load === load ? loaded.Presentation : null;
+  }, [packId, load, revision, onFailure, cached]);
+  if (packId === 'classic' || !load) return null;
+  return loaded?.load === load ? loaded.Presentation : cached;
 }
 
 interface PackBoundaryProps {

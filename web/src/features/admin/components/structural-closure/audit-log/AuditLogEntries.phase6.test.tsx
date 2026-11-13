@@ -9,6 +9,7 @@ import { AuditLogEntries } from './AuditLogEntries';
 import { downloadCSV, downloadJSON, toCSV } from '@/lib/csvExport';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { ApiError } from '@/lib/resilience';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 const H = vi.hoisted(() => ({
   rows: [] as AuditLogRow[],
@@ -98,6 +99,23 @@ afterEach(() => {
 });
 
 describe('AuditLogEntries phase6 independent contracts', () => {
+  it('keeps expansion and complete export available in the mobile presentation', async () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = mount();
+      await screen.findByText(ROW.action);
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      fireEvent.click(within(grid).getByRole('button', { name: 'Expand row' }));
+      expect(screen.getByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
+      expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('with all evidence preserved');
+      await exportAs('JSON');
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith(expect.any(String), [ROW]));
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it.each([0, 100, 200])('uses 0–0 for authoritative empty rows at offset %i', async (offset) => {
     H.rows = [];
     mount(offset);

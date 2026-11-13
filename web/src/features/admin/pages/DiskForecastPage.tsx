@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Badge, DataTable, Icon, type Column } from '@/components/ui';
+import { Badge, DataTable, Icon, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -244,6 +244,24 @@ export default function DiskForecastPage() {
     ],
     [t, severityLabel, formatBytes, fmtNumber],
   );
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<HypertableSize>>(() => ({
+    roles: {
+      hypertable: 'title', total: 'primary', severity: 'badge',
+      split: 'meta', growth: 'meta', days: 'meta',
+    },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'hypertable': return row.hypertable_name;
+        case 'total': return formatBytes(row.total_bytes ?? 0);
+        case 'severity': return severityLabel[row.severity] ?? row.severity;
+        case 'split': return `${formatBytes(row.uncompressed_bytes ?? 0)} / ${formatBytes(row.compressed_bytes ?? 0)}`;
+        case 'growth': return `${formatBytes(row.growth_bytes_per_day ?? 0)}/d`;
+        case 'days': return row.est_days_to_quota == null ? '—' : fmtNumber(row.est_days_to_quota);
+        default: return null;
+      }
+    },
+  }), [formatBytes, fmtNumber, severityLabel]);
 
   const retry = () => query.refetch();
   const unmeasuredMessage = t(
@@ -520,6 +538,7 @@ export default function DiskForecastPage() {
                   variant="embedded"
                   columns={columns}
                   mobileColumns={['hypertable', 'severity', 'days']}
+                  mobilePresentation={mobilePresentation}
                   expandable
                   expandedKeys={expandedKeys}
                   onExpandedChange={setExpandedKeys}

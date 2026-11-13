@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Check, ChevronDown, Pin, RotateCcw, Save } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -80,6 +80,7 @@ export function LayoutSwitcher({
   const { confirm, dialogProps } = useConfirm();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const activeNameId = useId();
 
   const active = useMemo(
     () => (dashboards ?? []).find((d) => d.id === activeId) ?? (dashboards ?? [])[0],
@@ -229,6 +230,8 @@ export function LayoutSwitcher({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('layout.switcherLabel', 'Switch dashboard layout')}
+        aria-describedby={activeNameId}
+        data-dashboard-layout-switcher
         title={preferences.contextualHelp ? t('layout.discoveryHint', 'Switch, create, or edit layouts here') : undefined}
         className={cn(
           'h-auto items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] px-3 py-1.5',
@@ -236,10 +239,10 @@ export function LayoutSwitcher({
           'hover:border-[var(--border-strong)] hover:bg-white/[0.06]',
         )}
       >
-        <span className="text-xs tracking-wider text-[var(--text-muted)]">
+        <span data-layout-switcher-caption className="text-xs tracking-wider text-[var(--text-muted)]">
           {t('layout.label', 'Layout')}
         </span>
-        <span className="max-w-[10rem] truncate">{activeName}</span>
+        <span id={activeNameId} data-layout-switcher-name className="max-w-[10rem] truncate">{activeName}</span>
         {dirty && (
           <Badge variant="warning" className="ml-1 px-1.5 py-0 text-2xs">
             {t('layout.modified', 'modified')}

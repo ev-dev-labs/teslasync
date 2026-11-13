@@ -25,6 +25,12 @@
     font-size: var(--app-body-size);
   }
 
+  :where(p:not([data-typography-role], .text-xs, [data-app-part~="metric-label"], [data-app-part~="metric-context"]), a[href]:not(.sr-only)):not(:where([data-role="status-bar"] *, [data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
   :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
@@ -65,6 +71,28 @@
     text-overflow: clip;
   }
 
+  [data-dashboard-layout-switcher][data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  [data-dashboard-layout-switcher] > [data-layout-switcher-caption][data-app-design-owner] {
+    flex-shrink: 0;
+    max-inline-size: 35%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  [data-dashboard-layout-switcher] > [data-layout-switcher-name][data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: start;
+    text-overflow: clip;
+  }
+
   [data-role="bottom-tab-bar"][data-app-design-owner],
   [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"][data-app-design-owner] {
     gap: 0;
@@ -81,6 +109,7 @@
     gap: var(--app-phone-tab-gap);
     padding-block: var(--app-phone-tab-padding);
     padding-inline: 0;
+    font-size: var(--app-body-size);
     line-height: var(--app-phone-tab-line-height);
   }
 
@@ -157,6 +186,25 @@
     min-inline-size: var(--app-touch-size);
     min-block-size: var(--app-touch-size);
     max-inline-size: 100%;
+  }
+
+  [data-app-part~="timeline-row"] [data-app-part~="timeline-content"] > a[href][data-app-design-owner],
+  .leaflet-control-attribution a[href][data-app-design-owner] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+  }
+
+  .leaflet-marker-icon:has(> [data-map-marker="vehicle"])[data-app-design-owner] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    margin-left: calc(var(--app-touch-size) / -2) !important;
+    margin-top: calc(var(--app-touch-size) / -2) !important;
   }
 
   [data-testid="masked-value"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
@@ -369,6 +417,7 @@
     inline-size: 100%;
     text-align: start;
     overflow-wrap: break-word;
+    font-size: var(--app-body-size);
   }
 
   :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead[data-app-design-owner] {
@@ -415,7 +464,7 @@
     content: attr(data-mobile-label);
     content: attr(data-mobile-label) / "";
     color: var(--text-secondary);
-    font-size: calc(var(--app-body-size) * 0.875);
+    font-size: var(--app-body-size);
     font-weight: var(--font-weight-medium);
   }
 

@@ -16,6 +16,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
@@ -328,6 +329,29 @@ describe('SignalCatalogPanel — search, filter & sort', () => {
 
 // ── selection workflow ──────────────────────────────────────────────────────
 describe('SignalCatalogPanel — selection', () => {
+  it('preserves selection, filtering and complete details in the mobile grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const onToggle = vi.fn();
+      const { container } = renderPanel({
+        selection: { selectedSignals: ['vehicle_speed'], onToggle, max: 1 },
+      });
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      expect(within(grid).getByRole('button', { name: 'Add battery_level to selection' })).toBeDisabled();
+      fireEvent.click(within(grid).getByRole('button', { name: 'Remove vehicle_speed from selection' }));
+      expect(onToggle).toHaveBeenCalledWith('vehicle_speed');
+      fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'battery' } });
+      expect(grid.querySelectorAll('[data-row-key]')).toHaveLength(1);
+      fireEvent.click(grid.querySelector('[data-row-key="battery_level"]') as HTMLElement);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('battery_level')).toBeInTheDocument();
+      expect(within(details).getByText('80')).toBeInTheDocument();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('exposes per-row toggles and calls onToggle with the signal name', () => {
     const onToggle = vi.fn();
     renderPanel({ selection: { selectedSignals: ['vehicle_speed'], onToggle, max: 3 } });

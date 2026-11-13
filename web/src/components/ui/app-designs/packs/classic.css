@@ -764,7 +764,7 @@
     content: attr(data-mobile-label);
     content: attr(data-mobile-label) / "";
     color: var(--text-secondary);
-    font-size: calc(var(--app-body-size) * 0.875);
+    font-size: var(--app-body-size);
     font-weight: var(--font-weight-medium);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(1):where([data-app-design-owner~="pack-classic"])::before {

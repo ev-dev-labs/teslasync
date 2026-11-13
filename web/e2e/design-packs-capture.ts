@@ -1,4 +1,4 @@
-import { rm, writeFile } from 'node:fs/promises';
+import { access, rm, writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import sharp from 'sharp';
 import { ROUTE_REGISTRY } from '../src/lib/routeRegistry';
@@ -31,6 +31,17 @@ export interface CaptureRoute {
   path: string;
   file: string;
   name: string;
+}
+
+export async function skipExistingCapture(path: string, enabled: boolean): Promise<boolean> {
+  if (!enabled) return false;
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
 }
 
 export function captureRoutes(): CaptureRoute[] {

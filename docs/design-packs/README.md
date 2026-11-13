@@ -16,6 +16,10 @@ header, content, controls, data, chart, map, and feedback composition roles;
 `data-app-design-owner` confines rules to the nearest complete profile,
 including isolated previews and portals. `data-app-design-preserve` protects
 the original Digital Twin widget compositions.
+On the initial shell load, the bridge waits for the verified preference and
+its presentation modules before revealing the layout. If loading fails, users
+can retry or explicitly continue without waiting; later preference refreshes
+do not unmount an active layout.
 
 The Appearance gallery renders an isolated, synthetic application thumbnail
 for every pack. Its sample sparkline uses the saved chart palette; changing a
@@ -32,6 +36,8 @@ Pack sheets can supply four elevation roles:
 `--app-surface-canvas`, `--app-surface-panel`, `--app-surface-raised`, and
 `--app-surface-overlay`. Text, borders, accent, semantic states, and series
 colors come from the existing theme and chart palette.
+On phones, chart fallback tables use the shared stacked-table presentation
+with their original captions, headings, and localized cell labels.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,
@@ -100,8 +106,19 @@ Set-Location web
 $env:DESIGN_PACK_BROWSER_CHANNEL='msedge'
 $env:DESIGN_PACK_FONT_SCALE='1'
 $env:DESIGN_PACK_CHECK_CONTRAST='1'
-node scripts\capture-design-packs.mjs --pack classic --pages dashboard,drives,energy --viewports phone-390,desktop --base-url http://127.0.0.1:54872
+$env:DESIGN_PACK_CAPTURE_BASE_URL='http://127.0.0.1:5173'
+node scripts\capture-design-packs.mjs --pack classic --pages dashboard,drives,energy --viewports phone-390,desktop --base-url $env:DESIGN_PACK_CAPTURE_BASE_URL
 ```
 
 Images are written under `shots\<pack>\<viewport>\<page>.png`. A saved image
-does not imply that the associated diagnostics passed.
+does not imply that the associated diagnostics passed. Set the example origin
+to the actual already-running server; the runner does not start it. Set
+`DESIGN_PACK_SHOTS_ROOT` to a separate absolute directory for a final matrix
+when the default paths already contain review evidence. Optionally set
+`DESIGN_PACK_DIST_DIR` to a verified production build's absolute `dist` path
+to route its index and assets through the same local origin; fixture and
+diagnostic checks still run normally. Set `DESIGN_PACK_SKIP_EXISTING=1` to
+resume without replacing existing viewport images. Skipped images are not
+passing results; retain and inspect their original diagnostics separately.
+Use `DESIGN_PACK_CHECK_ONLY=1` to rerun diagnostics without taking, deleting,
+or replacing screenshots.

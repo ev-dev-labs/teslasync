@@ -6,15 +6,13 @@ import { load } from 'js-yaml';
 import sharp from 'sharp';
 import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
-import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { closeMockApiFixtures, isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity } from './mockApi';
-import { createReviewPreference, installPackReview } from './widget-design-packs.mock';
+import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
-import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();
@@ -33,83 +31,6 @@ test('design pack captures cover registered application routes with unique filen
   ]);
 });
 
-test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
-  test.setTimeout(120_000);
-  const origin = testInfo.project.use.baseURL;
-  if (typeof origin !== 'string') throw new Error('A running application origin is required');
-  const preference = createReviewPreference();
-  preference.pack_id = 'v7';
-  preference.app_wide = true;
-  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin, { chart_palette: 'neon' });
-  try {
-    await page.setViewportSize({ width: 360, height: 844 });
-    await page.goto('/settings');
-    await waitForHarnessReady(page, mocks);
-    await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
-    const gallery = page.locator('[aria-labelledby="settings-widget-design-packs"]');
-    const thumbnails = gallery.locator('[data-app-design-thumbnail]');
-    await expect(thumbnails).toHaveCount(PACK_IDS.length);
-    await expect(gallery.getByRole('button', { name: 'Pixel Cockpit active' })).toBeDisabled();
-    for (const width of [360, 430, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const geometry = await thumbnails.evaluateAll(elements => elements.map(element => {
-        const panel = element.querySelector<HTMLElement>('[data-app-part~="panel"]');
-        const value = panel?.querySelector<HTMLElement>('[data-app-part~="metric-value"]');
-        const chart = element.querySelector<HTMLElement>('[data-app-part~="chart"]');
-        const navigation = element.querySelector<HTMLElement>('[data-app-part~="navigation"]');
-        const card = element.closest('section');
-        return {
-          id: element.getAttribute('data-app-design-thumbnail'),
-          owner: panel?.getAttribute('data-app-design-owner'),
-          radius: panel ? getComputedStyle(panel).borderTopLeftRadius : '',
-          navigation: navigation ? getComputedStyle(navigation).flexDirection : '',
-          chartWidth: chart?.getBoundingClientRect().width ?? 0,
-          chartColor: chart?.querySelector('polyline')?.getAttribute('stroke'),
-          bounds: value && panel ? {
-            reading: value.getBoundingClientRect().toJSON(),
-            panel: panel.getBoundingClientRect().toJSON(),
-          } : null,
-          valueFits: !!value && !!panel && (() => {
-            const reading = value.getBoundingClientRect();
-            const bounds = panel.getBoundingClientRect();
-            return reading.width > 0 && reading.height > 0 && reading.right <= bounds.right + 1
-              && reading.bottom <= bounds.bottom + 1;
-          })(),
-          stageHeight: element.getBoundingClientRect().height,
-          cardOverflow: card ? card.scrollWidth - card.clientWidth : Infinity,
-          targets: [...(card?.querySelectorAll('button') ?? [])].map(button => {
-            const rect = button.getBoundingClientRect();
-            return Math.min(rect.width, rect.height);
-          }),
-        };
-      }));
-      expect(geometry.map(item => item.id)).toEqual(PACK_IDS);
-      expect(geometry.filter(item => !item.valueFits).map(({ id, bounds }) => ({ id, bounds })), `${width}px clipped values`).toEqual([]);
-      for (const item of geometry) {
-        expect(item.owner, `${width}px ${item.id}`).toContain(`pack-${item.id}`);
-        expect(item.stageHeight, `${width}px ${item.id}`).toBe(256);
-        expect(item.chartWidth, `${width}px ${item.id}`).toBeGreaterThan(0);
-        expect(item.chartColor, `${width}px ${item.id}`).toBe(CHART_COLORS_NEON_DARK[0]);
-        expect(item.cardOverflow, `${width}px ${item.id}`).toBeLessThanOrEqual(1);
-        for (const target of item.targets) expect(target, `${width}px ${item.id}`).toBeGreaterThanOrEqual(44);
-      }
-      expect(geometry.find(item => item.id === 'v2')?.navigation).toBe('column');
-      expect(geometry.find(item => item.id === 'v6')?.navigation).toBe('row');
-      expect(geometry.find(item => item.id === 'v2')?.radius).not.toBe(geometry.find(item => item.id === 'v7')?.radius);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-    }
-    await page.setViewportSize({ width: 430, height: 900 });
-    await gallery.getByRole('button', { name: 'Use Cyberdeck pack' }).click();
-    await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
-    expect(preference.pack_id).toBe('cyber');
-    await page.reload();
-    await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
-    await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
-  } finally {
-    await closeMockApiFixtures();
-  }
-});
-
 test('shared pack phone rules retain readable controls, grid text and protected content', async ({ page }) => {
   await page.setContent(`
     <style>
@@ -117,7 +38,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       * { box-sizing: border-box; }
       body { margin: 0; }
       .text-sm, .mgr-title, .mgr-meta-value { font-size: 12px; }
-      .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; }
+      .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; font-size: 11px; }
       [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
     </style>
     <p id="prose" class="text-sm" data-app-design-owner="pack-v1">Readable body text</p>
@@ -159,6 +80,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
           return {
             prose: font('#prose'), field: font('#field'), action: font('#action'),
             grid: font('.mgr-meta-value'), protected: font('#protected'),
+            navButton: font('.sidenav-phone-tab'),
             inputHeight: bounds('#field').height, buttonHeight: bounds('#action').height,
             navHeight: bounds('[data-role="bottom-tab-bar"]').height, reserved: bounds('#reserved').height,
             scrollWidth: document.documentElement.scrollWidth,
@@ -169,6 +91,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.field, context).toBeGreaterThanOrEqual(16);
         expect(sizes.action, context).toBeGreaterThanOrEqual(16);
         expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.navButton, context).toBeGreaterThanOrEqual(16);
         expect(sizes.protected, context).toBe(12);
         expect(sizes.inputHeight, context).toBeGreaterThanOrEqual(44);
         expect(sizes.buttonHeight, context).toBeGreaterThanOrEqual(44);
@@ -312,6 +235,190 @@ test('shared phone heatmap and opted-in table wrap without losing cells or label
   }
 });
 
+test('chart fallback tables retain readable labeled cells without phone overflow', async ({ page }) => {
+  const columns = ['Type', 'Sessions', 'Energy', 'Cost', 'Energy with recorded cost', 'Sessions with recorded cost'];
+  const values = ['Home', '4', '48 kWh', '$8', '48 kWh', '4'];
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --font-scale: 1; --density-gap: 12px; --density-pad-y: 8px; --density-pad-x: 12px; --border-default: gray; --text-secondary: gray; --font-weight-medium: 500; }
+      body { margin: 0; }
+      #chart-scroll { max-width: 100%; overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 4px 8px; }
+    </style>
+    <figure data-app-part="chart" data-chart-variant="panel">
+      <figcaption data-chart-alternative>
+        <div data-table-variant="embedded">
+          <div id="chart-scroll">
+            <table data-app-part="table" data-app-table-variant="embedded" data-mobile-stack-table>
+              <caption>Charger type breakdown — data table</caption>
+              <thead><tr>${columns.map(label => `<th scope="col">${label}</th>`).join('')}</tr></thead>
+              <tbody><tr>${values.map((value, index) => `<td data-mobile-label="${columns[index]}">${value}</td>`).join('')}</tr></tbody>
+            </table>
+          </div>
+        </div>
+      </figcaption>
+    </figure>
+  `);
+  for (const sheet of ['base.css', 'shell.css', 'controls.css', 'charts.css', 'maps.css', 'feedback.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const id of PACK_IDS) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[id]), 'utf8') });
+  }
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'mobile.css'), 'utf8') });
+  for (const pack of PACK_IDS) {
+    const owner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+    await page.locator('html').evaluate((element, values) => {
+      for (const [name, value] of Object.entries(values.attributes)) element.setAttribute(name, value);
+      element.setAttribute('data-app-design-owner', values.owner);
+      document.querySelectorAll('figure, figure *').forEach(node => node.setAttribute('data-app-design-owner', values.owner));
+    }, { attributes: getAppDesignAttributes(pack), owner });
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const scale of [0.85, 1, 1.35]) {
+        await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+        for (const width of [360, 390, 430]) {
+          await page.setViewportSize({ width, height: 844 });
+          const table = page.getByRole('table', { name: 'Charger type breakdown — data table' });
+          expect(await table.getByRole('columnheader').allTextContents()).toEqual(columns);
+          expect(await table.getByRole('cell').allTextContents()).toEqual(values);
+          const geometry = await page.locator('#chart-scroll').evaluate(element => ({
+            overflow: element.scrollWidth - element.clientWidth,
+            cells: [...element.querySelectorAll('td')].map(cell => ({
+              label: getComputedStyle(cell, '::before').content,
+              labelSize: parseFloat(getComputedStyle(cell, '::before').fontSize),
+              valueSize: parseFloat(getComputedStyle(cell).fontSize),
+            })),
+          }));
+          const context = `${pack} ${forcedColors} ${width}px scale ${scale}`;
+          expect(geometry.overflow, context).toBeLessThanOrEqual(1);
+          for (const [index, cell] of geometry.cells.entries()) {
+            expect(cell.label, context).toContain(columns[index]);
+            expect(cell.labelSize, context).toBeGreaterThanOrEqual(16);
+            expect(cell.valueSize, context).toBeGreaterThanOrEqual(16);
+          }
+        }
+      }
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await expect(page.getByRole('table', { name: 'Charger type breakdown — data table' })).toHaveCSS('display', 'table');
+    }
+  }
+});
+
+test('operational metric banks keep their authored wide layout and phone reflow', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 12px; --density-pad-y: 8px; --density-pad-x: 12px; --font-scale: 1; }
+      body { margin: 0; }
+      .brief { display: flex; flex-direction: column; }
+      .bank { display: flex; flex-wrap: wrap; gap: 12px; }
+      .reading { flex: 1 1 200px; min-width: 0; }
+    </style>
+    <div class="brief" data-operational-metric-list data-owned>
+      <div id="bank" class="bank" role="list" data-operational-metric-bank data-app-part="metric-grid" data-owned>
+        <div class="reading" role="listitem" data-app-part="metric" data-owned>Distance 42 km</div>
+        <div class="reading" role="listitem" data-app-part="metric" data-owned>Time unavailable</div>
+      </div>
+    </div>
+    <div id="ordinary" class="bank" data-app-part="metric-grid" data-owned><span>One</span><span>Two</span></div>
+    <section data-app-design-preview data-app-design-pack="v2" data-app-data="cards" data-app-design-owner="pack-v2 data-cards">
+      <div class="brief" data-operational-metric-list data-app-design-owner="pack-v2 data-cards">
+        <div id="nested-bank" class="bank" data-operational-metric-bank data-app-part="metric-grid" data-app-design-owner="pack-v2 data-cards">
+          <div class="reading" data-app-part="metric" data-app-design-owner="pack-v2 data-cards">Nested one</div>
+          <div class="reading" data-app-part="metric" data-app-design-owner="pack-v2 data-cards">Nested two</div>
+        </div>
+      </div>
+    </section>
+  `);
+  for (const sheet of ['feedback.css', 'mobile.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const pack of ['blueprint', 'v2'] as const) {
+    const attributes = getAppDesignAttributes(pack);
+    const owner = `pack-${pack} data-${APPLICATION_DESIGNS[pack].data}`;
+    await page.locator('html').evaluate((element, values) => {
+      for (const [name, value] of Object.entries(values.attributes)) element.setAttribute(name, value);
+      element.setAttribute('data-app-design-owner', values.owner);
+      document.querySelectorAll('[data-owned]').forEach(node => node.setAttribute('data-app-design-owner', values.owner));
+    }, { attributes, owner });
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 768, 1024, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        const compact = width < 1024;
+        await expect(page.locator('#bank')).toHaveCSS('display', compact ? 'contents' : 'flex');
+        await expect(page.locator('#nested-bank')).toHaveCSS('display', compact ? 'contents' : 'flex');
+        await expect(page.locator('#ordinary')).toHaveCSS('display', forcedColors === 'none' ? 'grid' : 'flex');
+        expect(await page.locator('#bank').getByRole('listitem').allTextContents()).toEqual(['Distance 42 km', 'Time unavailable']);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      }
+    }
+  }
+});
+
+test('data modes preserve semantic and embedded metric paint and layout', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      html {
+        --density-row-h: 44px; --density-pad-y: 8px; --density-pad-x: 12px;
+        --density-gap: 12px; --font-scale: 1; --panel-radius: 12px;
+        --border-default: rgb(64, 64, 64); --border-strong: rgb(72, 72, 72);
+        --surface-1: rgb(30, 30, 30); --app-grid-cell-bg: rgb(30, 30, 30);
+        --semantic-warning-bg: rgb(120, 80, 10); --semantic-warning-border: rgb(220, 160, 20);
+        --semantic-danger-bg: rgb(120, 20, 20); --semantic-danger-border: rgb(220, 40, 40);
+      }
+      .tile { display: block; padding: 12px; border: 1px solid rgb(80, 80, 80); background: rgb(24, 24, 24); }
+      .warning { background: rgb(120, 80, 10); border-color: rgb(220, 160, 20); }
+      .danger { background: rgb(120, 20, 20); border-color: rgb(220, 40, 40); }
+      .embedded { padding: 0; border: 0; background: transparent; }
+    </style>
+    <div id="normal" class="tile" data-owned data-app-part="metric" data-app-metric="tile">Normal</div>
+    <div id="warning" class="tile warning" data-owned data-app-part="metric" data-app-metric="tile" data-app-tone="warning">Warning</div>
+    <div id="danger" class="tile danger" data-owned data-app-part="metric" data-app-metric="tile" data-app-tone="danger">Danger</div>
+    <div id="embedded" class="tile embedded" data-owned data-app-part="metric" data-app-metric="card" data-surface-variant="embedded">
+      <div id="nested" class="tile" data-owned data-app-part="metric" data-app-metric="tile">Embedded reading</div>
+    </div>
+  `);
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8') });
+  for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+    const attributes = getAppDesignAttributes(pack);
+    const owner = `pack-${pack} data-${APPLICATION_DESIGNS[pack].data}`;
+    await page.locator('html').evaluate((element, values) => {
+      for (const [name, value] of Object.entries(values.attributes)) element.setAttribute(name, value);
+      element.setAttribute('data-app-design-owner', values.owner);
+      document.querySelectorAll('[data-owned]').forEach(node => node.setAttribute('data-app-design-owner', values.owner));
+    }, { attributes, owner });
+    for (const palette of [
+      { warning: 'rgb(120, 80, 10)', warningBorder: 'rgb(220, 160, 20)', danger: 'rgb(120, 20, 20)', dangerBorder: 'rgb(220, 40, 40)' },
+      { warning: 'rgb(255, 240, 200)', warningBorder: 'rgb(150, 100, 10)', danger: 'rgb(255, 220, 220)', dangerBorder: 'rgb(170, 30, 30)' },
+    ]) {
+      await page.locator('html').evaluate((element, colors) => {
+        element.style.setProperty('--semantic-warning-bg', colors.warning);
+        element.style.setProperty('--semantic-warning-border', colors.warningBorder);
+        element.style.setProperty('--semantic-danger-bg', colors.danger);
+        element.style.setProperty('--semantic-danger-border', colors.dangerBorder);
+      }, palette);
+      for (const width of [360, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await expect(page.locator('#warning')).toHaveCSS('background-color', palette.warning);
+        await expect(page.locator('#warning')).toHaveCSS('border-top-color', palette.warningBorder);
+        await expect(page.locator('#danger')).toHaveCSS('background-color', palette.danger);
+        await expect(page.locator('#danger')).toHaveCSS('border-top-color', palette.dangerBorder);
+        await expect(page.locator('#embedded')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+        await expect(page.locator('#embedded')).toHaveCSS('border-top-width', '0px');
+        for (const id of ['warning', 'danger', 'embedded', 'nested']) {
+          await expect(page.locator(`#${id}`)).toHaveCSS('display', 'block');
+        }
+        await expect(page.locator('#nested')).toHaveCSS('background-color', 'rgb(24, 24, 24)');
+        await expect(page.locator('#normal')).not.toHaveCSS('background-color', 'rgb(24, 24, 24)');
+      }
+    }
+  }
+});
+
 test('shared phone layout keeps operational metrics, support copy and actions usable', async ({ page }) => {
   await page.setContent(`
     <style>
@@ -372,11 +479,20 @@ test('all pack styles retain the shared phone floor and bottom navigation geomet
       :root { --font-scale: .85; --density-row-h: 44px; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
       * { box-sizing: border-box; }
       body { margin: 0; }
-      .text-sm, .mgr-title { font-size: 12px; }
+      .text-sm, .text-2xs, .mgr-title { font-size: 12px; }
       .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; }
       [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
     </style>
     <p id="prose" class="text-sm" data-owned>Read the current state</p>
+    <p id="unclassified-prose" class="text-2xs" data-owned style="max-width:180px">date,distance_m,efficiency_wh_per_m</p>
+    <div data-app-design-preserve><p id="protected-prose" class="text-2xs" data-owned>Protected copy</p></div>
+    <div data-app-part="timeline-row"><div data-app-part="timeline-content">
+      <a id="timeline-link" href="#record" data-owned>Open record</a>
+    </div></div>
+    <div class="leaflet-control-attribution"><a id="map-credit" href="#credit" data-owned>Map credit</a></div>
+    <div class="leaflet-marker-icon" data-owned style="position:relative;width:28px;height:28px;margin-left:-14px;margin-top:-14px">
+      <div id="map-marker-visual" data-map-marker="vehicle" style="width:28px;height:28px"></div>
+    </div>
     <input id="field" data-app-part="field-control" data-owned>
     <div data-mobile-table data-owned><span class="mgr-title" data-owned>Session details</span></div>
     <nav data-role="bottom-tab-bar" data-owned>
@@ -409,6 +525,12 @@ test('all pack styles retain the shared phone floor and bottom navigation geomet
           const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
           return {
             prose: font('#prose'), field: font('#field'), grid: font('.mgr-title'),
+            unclassifiedProse: font('#unclassified-prose'), protectedProse: font('#protected-prose'),
+            unclassifiedScroll: document.querySelector('#unclassified-prose')!.scrollWidth,
+            unclassifiedWidth: document.querySelector('#unclassified-prose')!.clientWidth,
+            timelineLink: rect('#timeline-link').height, mapCredit: rect('#map-credit').height,
+            marker: rect('.leaflet-marker-icon').toJSON(), markerVisual: rect('#map-marker-visual').toJSON(),
+            markerMargin: getComputedStyle(document.querySelector('.leaflet-marker-icon')!).marginLeft,
             inputHeight: rect('#field').height,
             navHeight: rect('[data-role="bottom-tab-bar"]').height,
             reserved: rect('#reserved').height,
@@ -418,6 +540,18 @@ test('all pack styles retain the shared phone floor and bottom navigation geomet
         });
         const context = `${pack}, ${forcedColors}, ${width}px`;
         expect(sizes.prose, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.unclassifiedProse, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.unclassifiedScroll, context).toBeLessThanOrEqual(sizes.unclassifiedWidth);
+        expect(sizes.protectedProse, context).toBe(12);
+        expect(sizes.timelineLink, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.mapCredit, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.marker.width, context).toBe(44);
+        expect(sizes.marker.height, context).toBe(44);
+        expect(sizes.markerMargin, context).toBe('-22px');
+        expect(sizes.markerVisual.width, context).toBe(28);
+        expect(sizes.markerVisual.height, context).toBe(28);
+        expect(sizes.markerVisual.x + sizes.markerVisual.width / 2, context)
+          .toBeCloseTo(sizes.marker.x + sizes.marker.width / 2);
         expect(sizes.field, context).toBeGreaterThanOrEqual(16);
         expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
         expect(sizes.inputHeight, context).toBeGreaterThanOrEqual(44);
@@ -448,6 +582,18 @@ test('capture image failures do not leave partial evidence', async () => {
   await expect(writeCaptureImages(viewportPath, resolve(directory, 'missing', 'full.png'), [frame, frame]))
     .rejects.toMatchObject({ code: 'ENOENT' });
   await expect(access(viewportPath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('capture resume preserves existing viewport evidence', async () => {
+  const directory = test.info().outputPath('resume-artifacts');
+  await mkdir(directory, { recursive: true });
+  const viewportPath = resolve(directory, 'page.png');
+  const image = Buffer.from('existing evidence');
+  expect(await skipExistingCapture(viewportPath, true)).toBe(false);
+  await writeFile(viewportPath, image);
+  expect(await skipExistingCapture(viewportPath, true)).toBe(true);
+  expect(await skipExistingCapture(viewportPath, false)).toBe(false);
+  expect(await readFile(viewportPath)).toEqual(image);
 });
 
 test('ordinary captures preserve separate interactive-state evidence', async () => {

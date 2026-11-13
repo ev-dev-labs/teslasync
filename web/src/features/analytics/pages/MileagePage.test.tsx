@@ -38,6 +38,7 @@ import type {
 } from '@/types/analytics';
 import type { Vehicle } from '@/types/vehicle';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 const chartEvidence = vi.hoisted(() => vi.fn());
 
@@ -273,6 +274,23 @@ describe('MileagePage — loading', () => {
 });
 
 describe('MileagePage — populated (km)', () => {
+  it('shows formatted monthly distance and full details in the mobile grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = renderPage();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      const may = grid.querySelector('[data-row-key="2024-05"]') as HTMLElement;
+      expect(may).toHaveTextContent('400.00 km');
+      fireEvent.click(may);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('Distance / drive (km)')).toBeInTheDocument();
+      expect(within(details).getByText('20.00')).toBeInTheDocument();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('derives honest KPI tiles from /mileage/stats', () => {
     renderPage();
     const kpi = kpiRegion();

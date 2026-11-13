@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import type { Drive } from '@/types/driving';
 import { makeBriefDrive as drive } from '../components/operationalbrief-n-z/drivingBrief.fixtures';
 import { parseLogbookStore, type CategoryMap } from '../lib/tripLogbook';
@@ -184,5 +185,25 @@ describe('driving-05 real logbook source-to-consumer adoption', () => {
     fireEvent.change(rate, { target: { value: '1.609344' } });
     expect(parseLogbookStore(localStorage.getItem(storageKey)).ratesPerKm.business).toBeCloseTo(1);
     expect(reimbursement(container).querySelector('[data-app-part="metric-value"]')).toHaveTextContent('CHF2.469,000');
+  });
+
+  it('keeps category editing and full drive details available in the mobile grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = renderPage();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      const row = grid.querySelector('[data-row-key="2"]') as HTMLElement;
+      expect(row).toHaveTextContent('Unclassified');
+      const category = within(grid).getAllByRole('combobox', { name: /Category for drive/ })[1];
+      fireEvent.change(category, { target: { value: 'business' } });
+      expect(parseLogbookStore(localStorage.getItem(storageKey)).categories[2]).toBe('business');
+      fireEvent.click(row);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('Route')).toBeInTheDocument();
+      expect(within(details).getByRole('combobox', { name: /Category for drive/ })).toHaveValue('business');
+    } finally {
+      bounds.mockRestore();
+    }
   });
 });
