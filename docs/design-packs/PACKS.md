@@ -96,7 +96,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a pared-back reading column with minimal interface chrome.
 - Signature: delicate separators and generous negative space.
 
-### 19. Warm Modern (`warm`) - in progress
+### 19. Warm Modern (`warm`) - passed-with-notes
 - Mood: welcoming, relaxed and domestic.
 - Distinction: soft editorial groupings with comfortable spacing.
 - Signature: rounded, layered surfaces and a gentle masthead.
