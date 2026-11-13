@@ -126,7 +126,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a compact workbench driven by strong typographic hierarchy.
 - Signature: a directional header rule; motion remains optional and restrained.
 
-### 25. Neo Brutal (`brutal`) - in progress
+### 25. Neo Brutal (`brutal`) - passed-with-notes
 - Mood: direct, candid and high-contrast.
 - Distinction: broad structural outlines and unapologetic grid alignment.
 - Signature: a solid offset edge rather than a soft shadow.
