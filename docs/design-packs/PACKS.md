@@ -106,7 +106,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a strict grid, compact headings and aligned data columns.
 - Signature: an unmistakable modular baseline and precise rules.
 
-### 21. Material Play (`material`) - in progress
+### 21. Material Play (`material`) - passed-with-notes
 - Mood: approachable and tactile.
 - Distinction: stepped elevation and clearly filled controls organize the workspace.
 - Signature: consistent tonal control surfaces and rounded groups.
