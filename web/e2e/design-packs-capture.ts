@@ -101,7 +101,7 @@ export async function findHorizontalScrollRegions(page: Page) {
 export async function findSmallTouchTargets(page: Page) {
   return page.evaluate(() => {
     const candidates = document.querySelectorAll<HTMLElement>(
-      'button, a[href], input:not([type="hidden"]), select, textarea, '
+      'button, a[href], input:not([type="hidden"]), select, textarea, summary, '
       + '[role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="switch"], '
       + '[role="radio"], [role="slider"], [role="option"], [role^="menuitem"]',
     );
@@ -136,6 +136,56 @@ export async function findSmallTouchTargets(page: Page) {
   });
 }
 
+export async function findClippedBottomNavigationLabels(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(
+    '[data-role="bottom-tab-bar"] .sidenav-tab-label',
+  )).flatMap(label => {
+    const navigation = label.closest<HTMLElement>('[data-role="bottom-tab-bar"]');
+    const button = label.closest<HTMLElement>('button');
+    if (!navigation || !button || getComputedStyle(label).visibility !== 'visible') return [];
+    const navigationBox = navigation.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    if (navigationBox.width === 0 || navigationBox.height === 0 || buttonBox.width === 0) return [];
+    const safePadding = parseFloat(getComputedStyle(navigation).paddingBottom) || 0;
+    const bounds = {
+      left: Math.max(0, navigationBox.left, buttonBox.left),
+      right: Math.min(innerWidth, navigationBox.right, buttonBox.right),
+      top: Math.max(0, navigationBox.top, buttonBox.top),
+      bottom: Math.min(innerHeight, navigationBox.bottom - safePadding, buttonBox.bottom),
+    };
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const clipped = Array.from(range.getClientRects()).filter(rect =>
+      rect.width > 0 && rect.height > 0 && (
+        rect.left < bounds.left - 0.5 || rect.right > bounds.right + 0.5
+        || rect.top < bounds.top - 0.5 || rect.bottom > bounds.bottom + 0.5
+      ));
+    if (clipped.length === 0) return [];
+    return [{
+      label: label.textContent?.trim() ?? '',
+      bounds,
+      rects: clipped.map(({ left, right, top, bottom }) => ({ left, right, top, bottom })),
+    }];
+  }));
+}
+
+export async function findSplitBottomNavigationWords(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(
+    '[data-role="bottom-tab-bar"] .sidenav-tab-label',
+  )).flatMap(label => {
+    const text = label.textContent?.trim() ?? '';
+    const box = label.getBoundingClientRect();
+    if (!/^[A-Za-z]+$/.test(text) || box.width === 0 || box.height === 0
+      || getComputedStyle(label).visibility !== 'visible') return [];
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const lines = new Set(Array.from(range.getClientRects())
+      .filter(rect => rect.width > 0 && rect.height > 0)
+      .map(rect => Math.round(rect.top)));
+    return lines.size > 1 ? [{ label: text, lines: lines.size }] : [];
+  }));
+}
+
 export const BODY_ROLE_SELECTOR = [
   '[data-typography-role="body"]',
   '[data-typography-role="bodySm"]',
@@ -153,13 +203,20 @@ export async function findSmallBodyText(page: Page) {
     + '[data-app-part~="history-route"], [data-app-part~="list-row"] [data-history-primary] > :first-child, '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"], '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"] [data-app-metric="inline"], '
+    + '[data-operational-metric-list] [data-app-part~="metric-label"], '
+    + '[data-mobile-table] :is(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value), '
+    + '[data-app-part~="dialog"] [data-app-part~="table-cell"] > :is(dt, dd), '
+    + '[data-app-part~="dialog"] [data-app-part~="table-cell"] > dd :is(span, strong, code), '
     + '[data-app-part~="field-label"], '
+    + 'a[href]:not(.sr-only), '
     + 'input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], '
     + 'select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], '
     + 'button[data-app-part~="button"]:not([data-app-icon-only="true"])',
   )).flatMap(element => {
     if (element.closest('[aria-hidden="true"]')) return [];
-    if (element.matches('[data-app-part~="metric-label"], [data-app-part~="metric-value"]')) return [];
+    if (element.matches('a[href]') && element.closest('[data-role="status-bar"]')) return [];
+    if (element.matches('[data-app-part~="metric-value"]')
+      || (element.matches('[data-app-part~="metric-label"]') && !element.closest('[data-operational-metric-list]'))) return [];
     if (element.matches('[data-app-metric-grid="inline"]')
       && !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) return [];
     const text = (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement

@@ -391,7 +391,7 @@ describe('EnergyPage', () => {
     // Recent-sessions table renders real rows with per-type badges. 'CCS' is
     // the raw type echoed only in the table; 'Supercharger' also appears in the
     // charger-breakdown legend.
-    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getAllByText('Supercharger').length).toBeGreaterThan(0)
   })
@@ -515,7 +515,7 @@ describe('EnergyPage', () => {
     expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent(
       'Unavailable sources: idle-drain history.',
     )
-    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     assertOperationalMetricUnavailable(screen.getByTestId('energy-operational-brief'), 'Charging losses')
   })
@@ -619,7 +619,7 @@ describe('EnergyPage', () => {
         'min-h-11', 'focus-visible:outline-2', 'focus-visible:outline-offset-2',
       )
     }
-    const sessionsTable = screen.getByRole('table', { name: 'battery:energy-sessions' })
+    const sessionsTable = screen.getByRole('table', { name: 'Recent charging sessions' })
     for (const name of ['Date', 'Energy', 'Battery', 'Power', 'Type', 'Cost', '$/kWh']) {
       expect(within(sessionsTable).getByRole('columnheader', { name })).toBeInTheDocument()
     }

@@ -42,6 +42,99 @@ the first screen. The desktop metric banks retain too many competing rules,
 and the restrained shell remains visually generic. These scores are not a
 substitute for the remaining page, state and viewport review.
 
+## Help and session-card refinement
+
+The revised 1440px Help captures passed in both modes. The welcome panel no
+longer stretches to match a taller neighbor; the three ways to get help now
+form a compact row. The 390px captures also show the welcome and help panels
+without horizontal overflow. These are interim judgments, not acceptance:
+
+| Page and image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Help, `desktop/help.png` | 8 | 8 | 7 | 7 | 6 | — | 5 |
+| Help, `desktop-light/help.png` | 8 | 8 | 7 | 7 | 6 | — | 5 |
+| Help, `phone-390/help.png` | 7 | 6 | 7 | 7 | 6 | 6 | 5 |
+| Help, `phone-390-light/help.png` | 7 | 6 | 7 | 7 | 6 | 6 | 5 |
+
+Five remaining defects: the two-row phone navigation takes substantial
+content space; the breadcrumb and title have excessive vertical separation;
+the first actionable help links are below the first phone viewport; panels
+share a generic border-and-card treatment; and focus, hover, other widths and
+other scroll states have not yet been visually reviewed. The desktop Axe scan
+reported no violations but left one selected-navigation label in each mode
+for manual contrast review. The visible text against its opaque selected
+surface measures 16.03:1 dark and 14.93:1 light; the decorative pseudo-element
+is a narrow leading rule, not a text overlay.
+
+The 390px Energy card preserves the session-detail link, with all seven fields
+available in Quick View. A strengthened rendered-text check exposed a cascade
+conflict: the card's six text elements were still 14px despite the token
+override. The rule and browser fixture now account for the actual `text-sm`
+class. The same check distinguished compact status-bar metadata from page body
+links and found a 14px Vehicles details link. After both corrections, the
+390px Battery, Energy, Help and Vehicles captures passed in both modes:
+
+```text
+8 passed (2.1m)
+```
+
+Those captures checked visible touch targets, body-link and card text sizes,
+horizontal scrolling, and the seven Quick View labels and values. The final
+scrolled states reported zero automated contrast violations and zero
+incomplete nodes; other scroll states still require manual contrast review.
+The Energy card is clearer, but its page-size control is stranded on a
+separate row and the preceding charger chart leaves conspicuous blank space.
+
+At 360px and 430px, the four-page dark/light matrix initially reported
+`14 passed, 2 failed`: the two failures were Battery captures waiting on a
+skeleton outside the clipped scrollport. After correcting that readiness
+check, the two 360px Battery recaptures passed. The 430px Battery scan left
+two legend labels per mode for manual contrast review; their observed
+foregrounds against the opaque chart surface measure 8.73:1 dark and
+7.31:1 light. Other states and scroll positions remain unverified.
+
+At 1.35 text scale, the 360/430px Energy, Help and Vehicles matrix returned
+`10 passed, 2 failed`. Both failures were Help at 360px, where the support
+bundle JSON had a 350px scroll width inside a 294px container. The bundle is
+now allowed to wrap without changing its text. The dark/light recapture at
+both widths checked the opened JSON and its parseability and returned:
+
+```text
+12 passed (5.2m)
+```
+
+An open-disclosure screenshot is still needed for visual review. At 0.85
+scale, Energy passed all four 360/430px dark/light cases.
+
+The latest 360px, 1.35-scale Energy screenshot exposed two further defects:
+the narrow operational-metric columns split "consumption" across lines, and
+the header truncates "Last 7 days". Neither is fixed or covered by the
+existing checks yet. The one-category chart now uses the shared bounded-height
+API instead of overriding its measured viewport; the three-category 360/430px
+dark/light captures reported `4 passed (1.8m)`. The chart still has visible
+empty space below the single category.
+
+On the current source, `npx tsc --noEmit`, `npm run build`, and `npm run lint`
+each exited 0. The Energy page regression run reported:
+
+```text
+Test Files  1 passed (1)
+     Tests  14 passed (14)
+```
+
+The focused engineering audit reported zero violations in each of its six
+categories and `TypeScript passes`. The capture harness contracts and hook
+route check reported:
+
+```text
+48 passed (14.1s)
+ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES
+```
+
+Energy's page file has 1,642 lines versus 1,620 on the source branch, with
+nine chart/panel references in each. A full Vitest run is still in progress;
+it is not a passing full-suite result.
+
 ## Phone contrast and touch findings
 
 The 390px Action center and Drives captures passed the rendered touch-target
@@ -348,6 +441,29 @@ completed with `24 passed (6.3m)`. Axe reported zero violated contrast rules
 but 0–18 incomplete nodes per capture, primarily chart text; those nodes and
 other scroll positions still require manual contrast review. These captures
 precede the latest forced-colors CSS edits.
+
+The revised navigation was captured on Geofences at 360, 390 and 430px in
+both modes, at saved text scales 0.85, 1 and 1.35. All 18 captures passed
+the scoped target, body-size, overflow, label-clipping and word-splitting
+checks. The 1.35 forced-colors matrix added six passing captures. Axe found
+no violations in the final scrolled states; the enlarged normal-color and
+forced-colors captures each left one warning badge per viewport for manual
+review. A prior measurement of the observed badge was 7.99:1 dark and
+5.88:1 light. A 390px forced-colors recapture measured white on black and
+black on white respectively (21:1); other widths have not been independently
+measured.
+The isolated browser contract also passed at 400 and 401px, in LTR and RTL,
+with three tracking settings and simulated safe-area insets.
+
+| Latest viewed image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Geofences, `phone-360-touch-scale-1-35/geofences.png` | 6 | 5 | 6 | 7 | 5 | 6 | 4 |
+| Geofences, `phone-390-light-touch-scale-1/geofences.png` | 6 | 5 | 6 | 7 | 5 | 6 | 4 |
+
+Labels are no longer visibly clipped or split, including at the largest text
+scale. The two-row bar still consumes significant content space; small metric
+labels, a sparse page header and repetitive nested panels remain defects.
+These are not a page or pack pass.
 
 | Latest viewed image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

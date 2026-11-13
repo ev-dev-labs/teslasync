@@ -6,11 +6,11 @@ import { load } from 'js-yaml';
 import sharp from 'sharp';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { isSsePath, resolveApiFixture } from './mockApi';
+import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
-import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();
@@ -84,6 +84,20 @@ test('mobile captures detect visible nested scrolling without flagging clipped c
   ]);
 });
 
+test('capture readiness ignores clipped activity but waits for visible loading', async ({ page }) => {
+  await page.setContent(`
+    <main style="height:100px;overflow:auto">
+      <div style="height:160px"></div>
+      <div id="loading" data-testid="chart-block-skeleton" style="height:30px">Loading chart</div>
+    </main>
+  `);
+  await waitForNoVisibleActivity(page);
+  await page.locator('main').evaluate(element => { element.scrollTop = 70; });
+  await page.evaluate(() => { setTimeout(() => document.getElementById('loading')?.remove(), 500); });
+  await waitForNoVisibleActivity(page);
+  expect(await page.locator('#loading').count()).toBe(0);
+});
+
 test('mobile touch audit reports visible small targets and respects labelled inputs', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.setContent(`
@@ -94,10 +108,115 @@ test('mobile touch audit reports visible small targets and respects labelled inp
     </label>
     <button id="hidden" style="display:none;width:20px;height:20px">Hidden</button>
     <button id="outside" style="position:absolute;left:500px;width:20px;height:20px">Outside</button>
+    <details><summary id="small-summary" style="display:block;width:30px;height:30px">More</summary></details>
   `);
   expect(await findSmallTouchTargets(page)).toEqual([
     expect.objectContaining({ id: 'small', width: 30, height: 30 }),
+    expect.objectContaining({ id: 'small-summary', width: 30, height: 30 }),
   ]);
+});
+
+test('mobile navigation audit checks rendered text rather than only control boxes', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setContent(`
+    <nav data-role="bottom-tab-bar" style="position:fixed;inset:auto 0 0;height:64px;overflow:hidden">
+      <button style="position:absolute;left:0;bottom:0;width:120px;height:64px">
+        <span class="sidenav-tab-label">Visible</span>
+      </button>
+      <button style="position:absolute;left:120px;bottom:0;width:120px;height:64px">
+        <span class="sidenav-tab-label" style="position:absolute;top:58px;left:0;font:16px/20px sans-serif">Clipped</span>
+      </button>
+      <button style="position:absolute;left:240px;bottom:0;width:44px;height:64px">
+        <span class="sidenav-tab-label" style="display:block;overflow-wrap:anywhere;font:16px/20px sans-serif">Charging</span>
+      </button>
+      <button style="display:none"><span class="sidenav-tab-label">Hidden</span></button>
+    </nav>
+  `);
+  expect(await findClippedBottomNavigationLabels(page)).toEqual([
+    expect.objectContaining({ label: 'Clipped' }),
+  ]);
+  expect(await findSplitBottomNavigationWords(page)).toEqual([
+    expect.objectContaining({ label: 'Charging', lines: expect.any(Number) }),
+  ]);
+});
+
+test('Classic navigation keeps labels, touch targets and shell offsets visible at phone scales', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 8px; --density-pad-y: 8px; --shell-tab-bar-height: 64px; }
+      html[data-tab-bar="off"] { --shell-tab-bar-height: 0px; }
+      body { margin: 0; font-family: Arial, sans-serif; letter-spacing: var(--tracking, 0em); }
+      button { align-items: center; justify-content: center; border: 0; font: inherit; font-weight: 500; letter-spacing: inherit; }
+      .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+      [data-role="status-bar"] { position: fixed; bottom: var(--shell-tab-bar-height); height: 44px; }
+    </style>
+    <footer data-role="status-bar"></footer>
+    <nav data-role="bottom-tab-bar" data-app-part="navigation" data-app-design-owner="pack-classic" class="sidenav-phone-tabs safe-bottom">
+      ${['Home', 'Vehicles', 'Driving', 'Charging', 'More'].map(label => `
+        <button data-app-part="button nav-item" data-app-design-owner="pack-classic" class="sidenav-phone-tab">
+          <span class="nav-phone-icon" data-app-design-owner="pack-classic" style="display:inline-flex;flex:none"><svg data-app-design-owner="pack-classic" width="22" height="22"></svg></span>
+          <span class="sidenav-tab-label" data-app-design-owner="pack-classic">${label}</span>
+        </button>
+      `).join('')}
+    </nav>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'layout', 'sidebar', 'sidenav.css'), 'utf8') });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const direction of ['ltr', 'rtl']) {
+      await page.locator('html').evaluate((element, dir) => element.setAttribute('dir', dir), direction);
+      for (const width of [360, 390, 400, 401, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const scale of [0.85, 1, 1.35]) {
+          for (const tracking of ['-0.01em', '0em', '0.03em']) {
+            for (const safe of [0, 24]) {
+              const context = `${forcedColors}, ${direction}, ${width}, ${scale}, ${tracking}, inset ${safe}`;
+              await page.locator('html').evaluate((element, values) => {
+                element.style.setProperty('--font-scale', String(values.scale));
+                element.style.setProperty('--tracking', values.tracking);
+                element.style.setProperty('--app-phone-tab-safe', `${values.safe}px`);
+              }, { scale, tracking, safe });
+              expect(await findClippedBottomNavigationLabels(page), context).toEqual([]);
+              expect(await findSmallTouchTargets(page), context).toEqual([]);
+              const geometry = await page.evaluate(() => {
+                const nav = document.querySelector<HTMLElement>('[data-role="bottom-tab-bar"]')!;
+                const status = document.querySelector<HTMLElement>('[data-role="status-bar"]')!;
+                const labels = Array.from(nav.querySelectorAll<HTMLElement>('.sidenav-tab-label'));
+                const wrapped = labels.flatMap(label => {
+                  const range = document.createRange();
+                  range.selectNodeContents(label);
+                  const lines = Array.from(range.getClientRects()).filter(rect => rect.width > 0);
+                  return lines.length > 1
+                    ? [{ label: label.textContent, button: label.parentElement?.getBoundingClientRect().width, lines: lines.map(rect => ({ width: rect.width, top: rect.top })) }] : [];
+                });
+                return {
+                  nav: nav.getBoundingClientRect().toJSON(),
+                  status: status.getBoundingClientRect().toJSON(),
+                  padding: parseFloat(getComputedStyle(nav).paddingBottom),
+                  tracking: getComputedStyle(labels[0]).letterSpacing === 'normal'
+                    ? 0 : parseFloat(getComputedStyle(labels[0]).letterSpacing),
+                  wrapped,
+                };
+              });
+              expect(geometry.wrapped, context).toEqual([]);
+              expect(geometry.tracking, context).toBeCloseTo(parseFloat(tracking) * 16, 2);
+              expect(geometry.padding).toBe(safe);
+              expect(geometry.nav.bottom).toBe(844);
+              expect(geometry.status.bottom).toBeCloseTo(geometry.nav.top, 0);
+            }
+          }
+        }
+      }
+    }
+  }
+  await page.locator('html').evaluate(element => element.setAttribute('data-tab-bar', 'off'));
+  expect(await page.locator('html').evaluate(element => getComputedStyle(element).getPropertyValue('--shell-tab-bar-height').trim())).toBe('0px');
 });
 
 test('mobile text audit reports visible small prose without flagging hidden or off-screen text', async ({ page }) => {
@@ -116,6 +235,11 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     <label id="field-label" data-app-part="field-label" style="font-size:14px">Search</label>
     <input id="field-input" data-app-part="field-control" placeholder="Search drives" style="font-size:14px" />
     <button id="field-button" data-app-part="button" style="font-size:14px">Apply</button>
+    <div data-mobile-table><span id="card-value" class="mgr-meta-value" style="font-size:14px">42 kWh</span></div>
+    <div data-app-part="dialog"><dl><div data-app-part="table-cell"><dt id="detail-label" style="font-size:12px">Energy</dt><dd id="detail-value" style="font-size:12px"><span id="detail-span" style="font-size:12px">42 kWh</span></dd></div></dl></div>
+    <div data-operational-metric-list><span id="metric-label" data-app-part="metric-label" style="font-size:12px">Total distance</span></div>
+    <a id="link" href="#details" style="font-size:12px">Details</a>
+    <footer data-role="status-bar"><a href="#status" style="font-size:12px">API status</a></footer>
     <p id="large" style="font-size:16px">Readable paragraph</p>
     <p id="hidden" style="display:none;font-size:12px">Hidden paragraph</p>
     <p id="outside" style="position:absolute;left:500px;font-size:12px">Outside paragraph</p>
@@ -131,7 +255,64 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     expect.objectContaining({ id: 'field-label', size: 14 }),
     expect.objectContaining({ id: 'field-input', size: 14 }),
     expect.objectContaining({ id: 'field-button', size: 14 }),
+    expect.objectContaining({ id: 'card-value', size: 14 }),
+    expect.objectContaining({ id: 'detail-label', size: 12 }),
+    expect.objectContaining({ id: 'detail-value', size: 12 }),
+    expect.objectContaining({ id: 'detail-span', size: 12 }),
+    expect.objectContaining({ id: 'metric-label', size: 12 }),
+    expect.objectContaining({ id: 'link', size: 12 }),
   ]);
+});
+
+test('Classic mobile grid keeps row and detail text readable without clipping', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 8px; --density-pad-y: 8px; }
+      body { margin: 0; font-family: Arial, sans-serif; }
+      .mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value { display: block; overflow: hidden; white-space: nowrap; }
+      dt, dd, dd span { font-size: 12px; }
+    </style>
+    <div class="mgr-host" style="width:100%">
+      <div class="mgr-mobile" data-mobile-table data-app-design-owner="pack-classic">
+        <div class="mgr-card" data-app-design-owner="pack-classic">
+          <span class="mgr-title text-sm" data-app-design-owner="pack-classic">November charging session</span>
+          <span class="mgr-primary text-sm" data-app-design-owner="pack-classic">42.00 kWh</span>
+          <span class="mgr-meta-label text-sm" data-app-design-owner="pack-classic">SuperchargerSessionDetails</span>
+          <span class="mgr-meta-value text-sm" data-app-design-owner="pack-classic">30% to 72%</span>
+        </div>
+      </div>
+    </div>
+    <div data-app-part="dialog"><dl><div data-app-part="table-cell"><dt data-app-design-owner="pack-classic">Energy</dt><dd data-app-design-owner="pack-classic"><span data-app-design-owner="pack-classic">42 kWh</span></dd></div></dl></div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'mobile-grid-reference', 'mobile-grid-reference.css'), 'utf8') });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  await page.addStyleTag({ content: '.text-sm { font-size: 14px; }' });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const scale of [0.85, 1.35]) {
+        await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+        const measurements = await page.locator('.mgr-card span, dt, dd, dd span').evaluateAll(elements => elements.map(element => {
+          const style = getComputedStyle(element);
+          return {
+            text: element.textContent,
+            size: parseFloat(style.fontSize),
+            overflow: element.scrollWidth - element.clientWidth,
+          };
+        }));
+        for (const item of measurements) {
+          expect(item.size, `${forcedColors}, ${width}, ${scale}: ${item.text}`).toBeGreaterThanOrEqual(15.9);
+          expect(item.overflow, `${forcedColors}, ${width}, ${scale}: ${item.text}`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  }
 });
 
 test('Classic phone prose respects its minimum without resizing protected widget content', async ({ page }) => {
@@ -152,7 +333,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
     <div data-operational-brief-compact="true">
       <div id="page-brief" class="brief-list" data-operational-metric-list data-app-design-owner="pack-classic">
         <div id="page-bank" class="brief-bank" role="list" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic">
-          <span id="page-brief-value" role="listitem" data-operational-value data-app-design-owner="pack-classic">One</span><span role="listitem">Two</span>
+          <span role="listitem"><span id="page-brief-label" class="text-xs" data-app-part="metric-label" data-app-design-owner="pack-classic">Total</span><span id="page-brief-value" data-operational-value data-app-design-owner="pack-classic">One</span></span><span role="listitem">Two</span>
         </div>
       </div>
     </div>
@@ -178,7 +359,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
       <input id="widget-field" class="text-sm" data-app-part="field-control" data-app-design-owner="pack-classic" />
       <div data-testid="widget-body"></div><div><a href="#details" id="widget-footer-link" data-app-design-owner="pack-classic">Details</a></div>
       <div id="widget-brief" class="brief-list" data-operational-metric-list data-app-design-owner="pack-classic">
-        <div id="widget-bank" class="brief-bank" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic"><span>One</span><span>Two</span></div>
+        <div id="widget-bank" class="brief-bank" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-classic"><span id="widget-brief-label" class="text-xs" data-app-part="metric-label" data-app-design-owner="pack-classic">One</span><span>Two</span></div>
       </div>
       <div id="widget-grid" class="widget-grid" data-app-part="metric-grid" data-app-design-owner="pack-classic"><span>One</span><span>Two</span></div>
       <div data-app-part="chart-tooltip" data-app-design-owner="pack-classic">
@@ -205,6 +386,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
   await expect(page.locator('#page-actions')).toHaveCSS('border-left-width', '0px');
   await expect(page.locator('#page-brief')).toHaveCSS('display', 'grid');
   await expect(page.locator('#page-bank')).toHaveCSS('display', 'contents');
+  await expect(page.locator('#page-brief-label')).toHaveCSS('font-size', '16px');
   await expect(page.locator('#page-brief-value')).toHaveCSS('font-size', '17px');
   await expect(page.locator('#page-brief').getByRole('list')).toHaveCount(1);
   await expect(page.locator('#page-brief').getByRole('listitem')).toHaveCount(2);
@@ -226,6 +408,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
   await expect(page.locator('#protected-body')).toHaveCSS('font-size', '14px');
   await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-brief-label')).toHaveCSS('font-size', '12px');
   await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
   await expect(page.locator('#widget-tooltip')).toHaveCSS('font-size', '12px');
   await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '1.35'));
@@ -241,6 +424,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
   await expect(page.locator('#page-brief')).toHaveCSS('display', 'grid');
   await expect(page.locator('#page-bank')).toHaveCSS('display', 'contents');
   await expect(page.locator('#page-brief-value')).toHaveCSS('font-size', '17px');
+  await expect(page.locator('#page-brief-label')).toHaveCSS('font-size', '16px');
   await expect(page.locator('#page-brief').getByRole('list')).toHaveCount(1);
   await expect(page.locator('#page-brief').getByRole('listitem')).toHaveCount(2);
   await expect(page.locator('#history-primary')).toHaveCSS('font-size', '16px');
@@ -249,6 +433,7 @@ test('Classic phone prose respects its minimum without resizing protected widget
   await expect(page.locator('#protected-body')).toHaveCSS('font-size', '14px');
   await expect(page.locator('#widget-brief')).toHaveCSS('display', 'flex');
   await expect(page.locator('#widget-bank')).toHaveCSS('display', 'flex');
+  await expect(page.locator('#widget-brief-label')).toHaveCSS('font-size', '12px');
   await expect(page.locator('#widget-grid')).toHaveCSS('grid-template-columns', '90px 90px');
 });
 

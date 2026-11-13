@@ -1140,12 +1140,24 @@ export async function waitForNoVisibleActivity(page: Page): Promise<void> {
     return [...activity].filter((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && rect.width > 0
-        && rect.height > 0
-        && rect.bottom > 0
-        && rect.top < innerHeight;
+      if (style.display === 'none' || style.visibility !== 'visible' || rect.width <= 0 || rect.height <= 0) return false;
+      let left = Math.max(0, rect.left);
+      let right = Math.min(innerWidth, rect.right);
+      let top = Math.max(0, rect.top);
+      let bottom = Math.min(innerHeight, rect.bottom);
+      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const ancestorStyle = getComputedStyle(ancestor);
+        const ancestorRect = ancestor.getBoundingClientRect();
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(ancestorStyle.overflowX)) {
+          left = Math.max(left, ancestorRect.left + ancestor.clientLeft);
+          right = Math.min(right, ancestorRect.left + ancestor.clientLeft + ancestor.clientWidth);
+        }
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(ancestorStyle.overflowY)) {
+          top = Math.max(top, ancestorRect.top + ancestor.clientTop);
+          bottom = Math.min(bottom, ancestorRect.top + ancestor.clientTop + ancestor.clientHeight);
+        }
+      }
+      return right > left && bottom > top;
     }).map((element) => ({
       tag: element.tagName.toLowerCase(),
       testId: element.dataset.testid ?? '',

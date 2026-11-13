@@ -6,7 +6,7 @@ import { expect, type Locator } from '@playwright/test';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { test } from './app-design-test';
-import { BODY_ROLE_SELECTOR, clearCaptureImages, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { cardLayoutContractPaths, resolveCardLayoutContractSource } from './cardLayoutContractSources';
@@ -16,6 +16,8 @@ import { chargingReviewPath } from './widget-design-packs.specialized.fixtures';
 import { installSpecializedReviewSources } from './widget-design-packs.specialized.mock';
 import { actionsFixtureState, installActionsFixtures, RULES } from './operationalbrief-contracts/actions.fixtures';
 import { expectedVerifyBody, resaleCertificate } from './operationalbrief-contracts/specialized-resale.supported.fixtures';
+import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
+import type { ChargingSession } from '../src/api/types';
 
 const requestedPack = process.env.DESIGN_PACK ?? 'classic';
 if (!PACK_IDS.some(id => id === requestedPack)) {
@@ -34,6 +36,8 @@ const forcedColorsSuffix = forcedColors ? '-forced-colors' : '';
 const touchDevice = process.env.DESIGN_PACK_TOUCH_DEVICE === '1';
 const touchSuffix = touchDevice ? '-touch' : '';
 const captureStates = process.env.DESIGN_PACK_CAPTURE_STATES === '1';
+const threeChargers = process.env.DESIGN_PACK_ENERGY_THREE_CHARGERS === '1';
+const chargerSuffix = threeChargers ? '-three-chargers' : '';
 const dashboardWidgets = [
   ['onboarding-checklist', 'Onboarding'], ['vehicle-hero', 'Vehicle card'],
   ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini'],
@@ -72,7 +76,7 @@ for (const route of routes) {
     const touchAudit = (width < 768 || touchDevice) && process.env.DESIGN_PACK_CHECK_TOUCH === '1';
     const textAudit = width < 768 && process.env.DESIGN_PACK_CHECK_TEXT_SIZE === '1';
     const selectionTouchTargets: Awaited<ReturnType<typeof findSmallTouchTargets>> = [];
-    const directory = resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots', packId, `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}`);
+    const directory = resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots', packId, `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}${chargerSuffix}`);
     const viewportPath = resolve(directory, `${route.file}.png`);
     const fullPath = resolve(directory, `${route.file}--full.png`);
     const tablePath = resolve(directory, `${route.file}--table.png`);
@@ -118,6 +122,18 @@ for (const route of routes) {
       });
     }
     if (route.path === '/geofences') await installGeofenceReviewSources(page, mocks);
+    if (route.path === '/energy' && threeChargers) {
+      const [session] = catalogueOperationalSources(new Date().toISOString())['/charging'] as ChargingSession[];
+      const sessions = [
+        session,
+        { ...session, id: 702, charger_type: 'Tesla' },
+        { ...session, id: 703, charger_type: 'CCS' },
+      ];
+      await page.route(url => url.pathname === '/api/v1/charging', request => {
+        if (request.request().method() !== 'GET') return request.fallback();
+        return fulfillApiFixture(request, mocks, { json: sessions });
+      });
+    }
     if (['/drives', '/drives/412', '/drives/412/replay', '/battery-cells',
       '/charging-heatmap', '/signal-mutual-information', '/live', '/chatbot', '/statistics'].includes(route.path)) {
       await installSpecializedReviewSources(page, mocks, mode);
@@ -141,6 +157,64 @@ for (const route of routes) {
     expect(activeScale).toBeCloseTo(fontScale, 2);
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+
+    if (route.path === '/help' && width < 768 && packId === 'classic') {
+      const code = page.getByTestId('support-bundle-json');
+      const disclosure = code.locator('..').locator('summary');
+      await disclosure.click();
+      await expect(code).toBeVisible();
+      expect(await code.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+      const json = await code.textContent();
+      expect(() => JSON.parse(json ?? '')).not.toThrow();
+      await disclosure.click();
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+
+    if (route.path === '/energy' && width < 640) {
+      if (packId === 'classic' && !forcedColors) {
+        const plot = page.locator('[data-battery-panel="energy-charger-breakdown"] [data-chart-viewport]');
+        if (threeChargers) {
+          for (const label of ['Home/AC', 'Supercharger', 'DC fast']) {
+            await expect(plot.getByText(label, { exact: true })).toBeVisible();
+          }
+        }
+        const geometry = await plot.evaluate(element => {
+          const child = element.firstElementChild;
+          if (!child) throw new Error('Charger breakdown plot has no content');
+          const bounds = element.getBoundingClientRect();
+          const content = child.getBoundingClientRect();
+          return { unusedHeight: bounds.bottom - content.bottom, clippedHeight: content.bottom - bounds.bottom };
+        });
+        expect(geometry.unusedHeight).toBeLessThanOrEqual(100);
+        expect(geometry.clippedHeight).toBeLessThanOrEqual(1);
+      }
+      const sessions = page.getByRole('group', { name: 'Recent charging sessions' });
+      await expect(sessions).toBeVisible();
+      await expect(sessions.getByRole('link', { name: /^Open session details:/ }).first())
+        .toHaveAttribute('href', '/charging/701');
+      const row = sessions.locator('[data-row-key="701"]');
+      await expect(row).toContainText('30%');
+      await expect(row).toContainText('72%');
+      await sessions.getByRole('button', { name: 'Quick view' }).first().click();
+      const details = page.getByRole('dialog', { name: 'Recent charging sessions' });
+      for (const field of ['Date', 'Energy', 'Battery', 'Power', 'Type', 'Cost', '$/kWh']) {
+        await expect(details.getByText(field, { exact: true })).toBeVisible();
+      }
+      await expect(details.locator('a[href="/charging/701"]')).toBeVisible();
+      if (textAudit) {
+        const labelSizes = await details.locator('dt').evaluateAll(elements =>
+          elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+        expect(labelSizes).toHaveLength(7);
+        for (const size of labelSizes) expect(size).toBeGreaterThanOrEqual(15.9);
+        const detailSizes = await details.locator('[data-app-part~="table-cell"] > dd, [data-app-part~="table-cell"] > dd :is(span, a, strong, code)')
+          .evaluateAll(elements => elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+        expect(detailSizes.length).toBeGreaterThanOrEqual(7);
+        for (const size of detailSizes) expect(size).toBeGreaterThanOrEqual(15.9);
+      }
+      if (captureStates) tableImage = await page.screenshot({ animations: 'disabled' });
+      await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
 
     if (process.env.DESIGN_PACK_LAYOUT_REPORT === '1') {
       const geometry = await page.evaluate(() => {
@@ -717,6 +791,10 @@ for (const route of routes) {
     await assertMockApiComplete(page, mocks);
     await writeCaptureImages(viewportPath, fullPath, frames);
     if (tableImage) await writeFile(tablePath, tableImage);
+    if (width < 768) {
+      expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
+      expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);
+    }
     if (touchAudit) {
       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
         [JSON.stringify(target), target])).values());

@@ -21374,6 +21374,7 @@
       "charging.detail.aiDiagnosis.emptyHint",
       "charging.detail.aiDiagnosis.generateButton",
       "charging.detail.aiDiagnosis.title",
+      "charging.preview.openDetails",
       "chart.a11y.fallbackTableLabel",
       "chart.a11y.metricSelector",
       "chart.a11y.summary",

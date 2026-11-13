@@ -22,6 +22,23 @@
     border-block-end: 1px solid var(--border-default);
     column-gap: calc(var(--density-gap) * 2);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href],
+    [data-battery-habit-stat] > .text-theme-accent
+  ):where([data-app-design-owner~="pack-classic"]) {
+    color: var(--text-primary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href]
+  ):where([data-app-design-owner~="pack-classic"]) {
+    text-decoration: underline;
+    text-decoration-color: var(--theme-primary);
+    text-underline-offset: 0.2em;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-classic"]) {
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
@@ -224,6 +241,22 @@
     background-color: var(--skeleton-bg);
   }
 }
+@media screen and (min-width: 1280px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"]:first-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: auto;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"] > ul[data-app-part~="list"]:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"] > ul[data-app-part~="list"] > li + li:where([data-app-design-owner~="pack-classic"]) {
+    margin-block-start: 0;
+  }
+}
 @media screen and (max-width: 1023px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     display: grid;
@@ -338,6 +371,14 @@
     --app-header-action-gap: 0px;
     --app-heatmap-day-width: max(2.5rem, calc(2.5rem * var(--font-scale, 1)));
     --app-heatmap-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-safe: env(safe-area-inset-bottom, 0px);
+    --app-phone-tab-icon-size: 1.375rem;
+    --app-phone-tab-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-padding: 0.25rem;
+    --app-phone-tab-line-height: calc(var(--app-body-size) * 1.25);
+  }
+  :root[data-app-design-pack="classic"]:not([data-tab-bar="off"]):where([data-app-design-owner~="pack-classic"]) {
+    --shell-tab-bar-height: calc(var(--app-phone-tab-icon-size) + var(--app-phone-tab-gap) + var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2 + 1px + var(--app-phone-tab-safe));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
@@ -345,6 +386,33 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-classic"]) {
+    gap: 0;
+    padding-block-start: 0;
+    padding-block-end: var(--app-phone-tab-safe);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 max-content;
+    min-inline-size: var(--app-touch-size);
+    block-size: auto;
+    gap: var(--app-phone-tab-gap);
+    padding-block: var(--app-phone-tab-padding);
+    padding-inline: 0;
+    line-height: var(--app-phone-tab-line-height);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-classic"])::before {
+    top: 2px;
+    height: 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-tab-label:where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    font-size: var(--app-body-size);
+    line-height: var(--app-phone-tab-line-height);
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] :where([data-history-primary] > :first-child, [data-app-part~="history-route"], [data-app-metric-grid="inline"] [data-app-metric="inline"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
@@ -413,6 +481,64 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"]):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-brief-copy-size);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="support-bundle-panel"] > div:first-child > div:nth-child(2):where([data-app-design-owner~="pack-classic"]) {
+    flex-shrink: 1;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-code-kind="support-bundle"]:where([data-app-design-owner~="pack-classic"]) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-battery-habit-label],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href],
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-operational-metric-list] [data-app-part~="metric-label"],
+    [data-app-part~="dialog"] [data-app-part~="table-cell"] > :is(dt, dd),
+    [data-app-part~="dialog"] [data-app-part~="table-cell"] > dd :is(span, a, strong, code)
+  ):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-testid="dashboard-preset-open-dashboard"], [data-testid="help-glossary"] a[href]):where([data-app-design-owner~="pack-classic"]) {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="masked-value"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="masked-value"] > button:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    --mgr-title-size: var(--app-body-size);
+    --mgr-primary-size: var(--app-body-size);
+    --mgr-meta-label-size: var(--app-body-size);
+    --mgr-meta-value-size: var(--app-body-size);
+    --mgr-group-header-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] :where(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value, .mgr-group-header):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] .mgr-card:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    max-height: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] :where(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    line-height: var(--app-body-leading);
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-message"], [data-testid="widget-body"] + div) a[href]:where([data-app-design-owner~="pack-classic"]) {
     display: inline-flex;
     align-items: center;
@@ -444,6 +570,34 @@
     height: var(--app-touch-size) !important;
     min-width: var(--app-touch-size) !important;
     min-height: var(--app-touch-size) !important;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  :root[data-app-design-pack="classic"]:not([data-tab-bar="off"]):where([data-app-design-owner~="pack-classic"]) {
+    --shell-tab-bar-height: calc(max(var(--app-touch-size), var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: span 2;
+    flex-direction: row;
+    padding-inline: var(--app-phone-tab-padding);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:nth-child(n + 4):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: span 3;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .nav-phone-icon:where([data-app-design-owner~="pack-classic"]) {
+    flex: none;
+    width: calc(var(--app-phone-tab-icon-size) * 0.82);
+    height: calc(var(--app-phone-tab-icon-size) * 0.82);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .nav-phone-icon svg:where([data-app-design-owner~="pack-classic"]) {
+    width: 100%;
+    height: 100%;
   }
 }
 

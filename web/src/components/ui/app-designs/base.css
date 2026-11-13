@@ -50,6 +50,14 @@
 }
 
 @media screen {
+  [data-app-design-preview] {
+    --app-phone-tab-safe: env(safe-area-inset-bottom, 0px);
+    --app-phone-tab-icon-size: 1.375rem;
+    --app-phone-tab-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-padding: 0.25rem;
+    --app-phone-tab-line-height: calc(var(--app-body-size) * 1.25);
+  }
+
   [data-app-design-owner]:where(
       [data-app-part~="shell-main"], [data-app-part~="workspace-header"],
       [data-app-part~="navigation"], [data-app-part~="page"],

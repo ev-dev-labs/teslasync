@@ -65,6 +65,26 @@ The normal data-table alternatives continue using their existing localized
 cell attributes. Chrome checks cell names and labels; cross-browser behavior
 remains unverified.
 
+On narrow phones, Classic's bottom navigation uses two rows of whole labels
+rather than splitting words or clipping them. Its reserved shell height
+includes the saved text scale and bottom safe area; the status bar sits above
+it. This trades content space for legible, thumb-reachable controls and does
+not change the saved typography preference. The tradeoff remains a visual
+defect to revisit as part of the full Classic review.
+
+Use the existing mobile data-grid presentation for Energy's recent sessions:
+retain the desktop columns, session-detail destination and data, and expose
+all seven fields in Quick View. Classic's phone text floor applies to the
+actual grid text classes as well as detail labels and values. Keep the compact
+status bar's secondary status metadata separate from page body-link checks;
+its links still participate in the touch-target and contrast diagnostics.
+For Help, use the existing page and panel boundaries to compact the desktop
+hero and enlarge contextual links without changing its source-locked markup.
+The support-bundle JSON may wrap on phones without changing the copied text.
+For a single charger category, Energy uses the existing 300px mobile chart
+height instead of overriding the chart viewport's containment contract;
+multiple categories retain the existing 420px height.
+
 ## Visual evidence
 
 Use isolated synthetic API fixtures and block external requests for screenshot
@@ -112,9 +132,16 @@ and reports incomplete checks separately; incomplete findings require manual
 review and are not passes.
 `DESIGN_PACK_CHECK_TEXT_SIZE=1` checks visible unclassified paragraphs, explicit
 body roles, feedback copy and history-row primary, route and inline metric
-text against the 16px phone minimum. Explicit captions and metric labels are
-treated as metadata. It is a diagnostic, not proof for unclassified text,
-nested styles or unopened states.
+text, page links, mobile-grid text, operational metric labels, and Quick View
+details against the 16px phone minimum. Explicit captions and other metric
+labels are treated as metadata. It is a diagnostic, not proof for all
+unclassified text, nested styles or unopened states.
+
+At 360px, a lazy Battery chart's skeleton sat below the clipped main scrollport
+but inside the browser viewport. The readiness check incorrectly waited for
+that hidden skeleton. It now intersects activity with clipping ancestors; a
+browser contract verifies that fully clipped loading is ignored and partially
+visible loading must finish. The dark and light Battery recaptures then passed.
 
 For the interactive Charging Patterns heatmap, keep every weekday/hour slot,
 the existing roving keyboard order, detail popover and data table. On phones,
