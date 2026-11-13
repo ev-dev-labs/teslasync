@@ -40,12 +40,12 @@
 
     /* No padding, borders or height overrides on the measured plot box. */
     & :where([data-chart-viewport]):where([data-app-design-owner]) {
-      background-color: var(--surface-1);
-      box-shadow: inset 0 0 0 1px var(--border-subtle);
+      background-color: var(--app-chart-surface, var(--surface-1));
+      box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-subtle));
     }
 
     & :where([data-app-part~="chart-plot"] .recharts-cartesian-axis-tick-value):where([data-app-design-owner]) {
-      fill: var(--text-secondary);
+      fill: var(--app-chart-ink, var(--text-secondary));
       font-family: var(--font-sans);
       font-variant-numeric: tabular-nums;
     }
@@ -55,7 +55,7 @@
     }
 
     & :where([data-app-part~="chart-plot"] .recharts-cartesian-grid line, [data-app-part~="chart-plot"] .recharts-polar-grid-angle line, [data-app-part~="chart-plot"] .recharts-polar-grid-concentric :is(path, circle)):where([data-app-design-owner]) {
-      stroke: var(--border-strong);
+      stroke: var(--app-chart-grid, var(--border-strong));
       stroke-opacity: 1;
     }
 

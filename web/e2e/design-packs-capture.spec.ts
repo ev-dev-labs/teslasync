@@ -159,6 +159,9 @@ for (const route of routes) {
     const activeScale = await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--font-scale')));
     expect(activeScale).toBeCloseTo(fontScale, 2);
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
+    await page.mouse.move(0, 0);
+    const viewportImage = viewportOnly ? await page.screenshot({ animations: 'disabled' }) : undefined;
+    if (viewportImage) await writeCaptureImages(viewportPath, fullPath, [viewportImage]);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
     if (route.path === '/energy' && width < 768 && packId === 'classic') {
@@ -801,7 +804,7 @@ for (const route of routes) {
     }
 
     await page.mouse.move(0, 0);
-    const first = await page.screenshot({ animations: 'disabled' });
+    const first = viewportImage ?? await page.screenshot({ animations: 'disabled' });
     const frames = [first];
     const horizontalScrollRegions = width < 768 ? await findHorizontalScrollRegions(page) : [];
     const smallTouchTargets = touchAudit

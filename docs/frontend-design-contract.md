@@ -187,6 +187,32 @@ subtrees, including their fullscreen panels, as widget-owned. App-pack
 selectors must not alter their composition or chrome; inherited theme and
 widget-pack tokens continue to apply. Ownership must update when a protected
 subtree is inserted, reparented or toggled.
+
+**Shared pack presentation roles (in progress):** The existing theme, font,
+density, semantic and chart-palette preferences remain authoritative. Within
+the verified app-design boundary, pack sheets may refine the existing
+component roles using `--app-card-radius`, `--app-card-shadow`,
+`--app-surface-canvas`, `--app-surface-panel`, `--app-surface-raised`,
+`--app-surface-overlay`,
+`--app-display-font`, `--app-display-weight`, `--app-display-tracking`,
+`--app-control-radius`, `--app-control-surface`, `--app-content-density`,
+`--app-interaction-duration`, `--app-interaction-easing`,
+`--app-chart-surface`, `--app-chart-ink`, `--app-chart-grid`,
+`--app-grid-header`, `--app-grid-rule`, `--app-conversation-surface`, and
+`--app-conversation-radius`. Unset roles fall back to their existing
+component/theme tokens; nested previews reset them before applying their own
+pack. Do not assign new colors to semantic states or series, replace the saved
+chart palette, override user font scale, or change chart/data-grid geometry.
+Reduced-motion and forced-colors behavior remain authoritative.
+Pack sheets can map the four app-surface roles onto their owner-qualified
+canvas, ordinary panels, raised controls and overlay treatments. Keep
+semantic and explicitly tinted surfaces at their existing owners rather than
+repainting every panel.
+
+The shared phone rules apply the 16px body floor, touch sizing, bottom-chrome
+reservation and the already opted-in mobile-grid and heatmap presentations
+across pack owners. They do not automatically convert native tables, alter
+protected twins or prove that every route has no overflow.
 `HistoryListRow` exposes `data-history-primary` and
 `data-history-action-rail`; `RouteDisplay` exposes the `history-route` part.
 The existing inline metric-grid marker identifies its data row. Packs may

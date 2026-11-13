@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { load } from 'js-yaml';
 import sharp from 'sharp';
+import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
+import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
 import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockApi';
@@ -27,6 +29,325 @@ test('design pack captures cover registered application routes with unique filen
   expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
     [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
   ]);
+});
+
+test('shared pack phone rules retain readable controls, grid text and protected content', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      :root { --font-scale: .85; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      .text-sm, .mgr-title, .mgr-meta-value { font-size: 12px; }
+      .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; }
+      [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
+    </style>
+    <p id="prose" class="text-sm" data-app-design-owner="pack-v1">Readable body text</p>
+    <label data-app-part="field-label" data-app-design-owner="pack-v1" for="field">Search</label>
+    <input id="field" data-app-part="field-control" data-app-design-owner="pack-v1">
+    <button id="action" data-app-part="button" data-app-design-owner="pack-v1">Apply</button>
+    <div data-mobile-table data-app-design-owner="pack-v1">
+      <div class="mgr-card" data-app-design-owner="pack-v1">
+        <span class="mgr-title" data-app-design-owner="pack-v1">Session</span>
+        <span class="mgr-meta-value" data-app-design-owner="pack-v1">LongUnbrokenSessionValueThatMustWrapOnPhones</span>
+      </div>
+    </div>
+    <div data-app-design-preserve><p id="protected" class="text-sm" data-app-design-owner="pack-v1">Protected widget</p></div>
+    <nav data-role="bottom-tab-bar" data-app-design-owner="pack-v1">
+      ${['Home', 'Drives', 'Charge', 'Alerts', 'More'].map(label => `
+        <button class="sidenav-phone-tab" data-app-part="button nav-item" data-app-design-owner="pack-v1">
+          <span class="nav-phone-icon" data-app-design-owner="pack-v1"><svg width="22" height="22" data-app-design-owner="pack-v1"></svg></span>
+          <span class="sidenav-tab-label" data-app-design-owner="pack-v1">${label}</span>
+        </button>`).join('')}
+    </nav>
+    <div id="reserved" style="height:var(--shell-tab-bar-height)"></div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'v1');
+    element.setAttribute('data-app-design-owner', 'pack-v1');
+  });
+  for (const sheet of ['base.css', 'mobile.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const scale of [0.85, 1.35]) {
+        await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+        const sizes = await page.evaluate(() => {
+          const font = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
+          const bounds = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+          return {
+            prose: font('#prose'), field: font('#field'), action: font('#action'),
+            grid: font('.mgr-meta-value'), protected: font('#protected'),
+            inputHeight: bounds('#field').height, buttonHeight: bounds('#action').height,
+            navHeight: bounds('[data-role="bottom-tab-bar"]').height, reserved: bounds('#reserved').height,
+            scrollWidth: document.documentElement.scrollWidth,
+          };
+        });
+        const context = `${forcedColors}, ${width}px, scale ${scale}`;
+        expect(sizes.prose, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.field, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.action, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.protected, context).toBe(12);
+        expect(sizes.inputHeight, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.buttonHeight, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.reserved, context).toBeGreaterThanOrEqual(sizes.navHeight);
+        expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
+      }
+    }
+  }
+});
+
+test('pack presentation roles reset at nested previews without changing protected surfaces', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      :root { --panel-radius: 10px; --panel-shadow: none; --radius-lg: 10px; --radius-md: 8px; --elevation-1: none; --font-sans: sans-serif; --font-weight-bold: 700; --font-weight-semibold: 600; --tracking: 0; --surface-1: rgb(10, 20, 30); --border-subtle: gray; --motion-duration-fast: 150ms; --motion-easing-standard: ease; }
+      .panel { border: 1px solid; background: var(--app-surface-panel, var(--surface-1)); }
+      #protected { border-radius: 3px; }
+    </style>
+    <div id="outer" class="panel" data-app-part="panel" data-surface-variant="standalone" data-app-design-owner="pack-v1"></div>
+    <div id="outer-chart" data-chart-viewport data-app-design-owner="pack-v1"></div>
+    <button id="animated" data-app-part="button" data-app-design-owner="pack-v1">Action</button>
+    <div data-app-design-preview data-app-design-pack="v2" data-app-design-owner="pack-v2">
+      <div id="inner" class="panel" data-app-part="panel" data-surface-variant="standalone" data-app-design-owner="pack-v2"></div>
+      <div id="inner-chart" data-chart-viewport data-app-design-owner="pack-v2"></div>
+    </div>
+    <div data-app-design-preserve><div id="protected" class="panel" data-app-part="panel" data-surface-variant="standalone"></div></div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'v1');
+    element.setAttribute('data-app-design-owner', 'pack-v1');
+    element.style.setProperty('--app-card-radius', '24px');
+    element.style.setProperty('--app-chart-surface', 'rgb(35, 55, 75)');
+    element.style.setProperty('--app-surface-panel', 'rgb(45, 65, 85)');
+    element.style.setProperty('--app-input-action-clearance', '3rem');
+    element.style.setProperty('--app-interaction-duration', '800ms');
+  });
+  for (const sheet of ['base.css', 'charts.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  const radius = (selector: string) => page.locator(selector).evaluate(element => getComputedStyle(element).borderRadius);
+  expect(await radius('#outer')).toBe('24px');
+  expect(await radius('#inner')).toBe('10px');
+  expect(await radius('#protected')).toBe('3px');
+  const background = (selector: string) => page.locator(selector).evaluate(element => getComputedStyle(element).backgroundColor);
+  expect(await background('#outer')).toBe('rgb(45, 65, 85)');
+  expect(await background('#inner')).toBe('rgb(10, 20, 30)');
+  expect(await background('#outer-chart')).toBe('rgb(35, 55, 75)');
+  expect(await background('#inner-chart')).toBe('rgb(10, 20, 30)');
+  expect(await page.locator('#inner').evaluate(element =>
+    getComputedStyle(element).getPropertyValue('--app-input-action-clearance').trim())).toBe('0.75rem');
+  const duration = () => page.locator('#animated').evaluate(element => getComputedStyle(element).transitionDuration);
+  expect(await duration()).toBe('0.8s');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await duration()).toBe('0s');
+});
+
+test('pack presentation roles drive existing controls, grid, flow and conversation surfaces', async ({ page }) => {
+  const instrument = getAppDesignAttributes('v1');
+  const cards = getAppDesignAttributes('v2');
+  const marker = (pack: 'v1' | 'v2') =>
+    [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+  await page.setContent(`
+    <style>
+      :root { --font-sans: sans-serif; --font-weight-bold: 700; --font-weight-semibold: 600; --tracking: 0; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; --surface-1: rgb(10, 20, 30); --surface-2: rgb(20, 30, 40); --surface-3: rgb(30, 40, 50); --border-strong: gray; --border-default: gray; --control-border: gray; --radius-md: 8px; --radius-lg: 10px; }
+    </style>
+    <input id="control" data-app-part="field-control" data-app-design-owner="${marker('v1')}">
+    <table data-app-part="table"><thead id="grid" data-app-design-owner="${marker('v1')}"><tr><th>Label</th></tr></thead></table>
+    <div data-app-part="page" class="space-y-3"><div></div><div id="flow" data-app-design-owner="${marker('v1')}">Content</div></div>
+    <div id="preview" data-app-design-preview data-app-design-owner="${marker('v2')}">
+      <div id="bubble" data-app-part="card conversation-bubble" data-app-design-owner="${marker('v2')}">Reply</div>
+    </div>
+  `);
+  await page.evaluate(({ outer, inner }) => {
+    for (const [name, value] of Object.entries(outer)) document.documentElement.setAttribute(name, value);
+    document.documentElement.setAttribute('data-app-design-owner', 'pack-v1');
+    const root = document.documentElement.style;
+    root.setProperty('--app-control-radius', '13px');
+    root.setProperty('--app-control-surface', 'rgb(41, 52, 63)');
+    root.setProperty('--app-grid-header', 'rgb(31, 42, 53)');
+    root.setProperty('--app-content-density', '1.5');
+    const preview = document.querySelector<HTMLElement>('#preview')!;
+    for (const [name, value] of Object.entries(inner)) preview.setAttribute(name, value);
+    preview.style.setProperty('--app-conversation-surface', 'rgb(42, 53, 64)');
+    preview.style.setProperty('--app-conversation-radius', '17px');
+  }, { outer: instrument, inner: cards });
+  for (const sheet of ['base.css', 'shell.css', 'controls.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  const style = (selector: string) => page.locator(selector).evaluate(element => {
+    const computed = getComputedStyle(element);
+    return { radius: computed.borderRadius, background: computed.backgroundColor, margin: computed.marginBlockStart };
+  });
+  expect(await style('#control')).toMatchObject({ radius: '13px', background: 'rgb(41, 52, 63)' });
+  expect(await style('#grid')).toMatchObject({ background: 'rgb(31, 42, 53)' });
+  expect(await style('#flow')).toMatchObject({ margin: '24px' });
+  expect(await style('#bubble')).toMatchObject({ radius: '17px', background: 'rgb(42, 53, 64)' });
+});
+
+test('shared phone heatmap and opted-in table wrap without losing cells or labels', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      :root { --font-scale: 1; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; --border-default: gray; --text-secondary: gray; --font-weight-medium: 500; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      [data-cost-heatmap-grid] { min-width: 600px; }
+    </style>
+    <div data-cost-heatmap-grid data-app-design-owner="pack-v1">
+      <div data-cost-heatmap-axis data-app-design-owner="pack-v1">${Array.from({ length: 12 }, (_, i) => `<span>${i}</span>`).join('')}</div>
+      <div data-cost-heatmap-day data-app-design-owner="pack-v1">
+        <span data-cost-heatmap-day-label data-app-design-owner="pack-v1">Mon</span>
+        ${Array.from({ length: 24 }, (_, i) => `<span data-hour="${i}">${i}</span>`).join('')}
+      </div>
+    </div>
+    <table data-mobile-stack-table data-app-design-owner="pack-v1">
+      <caption data-app-design-owner="pack-v1">Hourly costs</caption>
+      <thead data-app-design-owner="pack-v1"><tr><th>Day</th><th>Cost</th></tr></thead>
+      <tbody data-app-design-owner="pack-v1">
+        <tr data-app-design-owner="pack-v1">
+          <th data-app-design-owner="pack-v1" scope="row">Mon</th>
+          <td data-app-design-owner="pack-v1" data-mobile-label="Cost">$1.00</td>
+        </tr>
+      </tbody>
+    </table>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'v1');
+    element.setAttribute('data-app-design-owner', 'pack-v1');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'mobile.css'), 'utf8') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.locator('[data-hour]').count()).toBe(24);
+      expect(await page.locator('[data-hour]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-hour'))))
+        .toEqual(Array.from({ length: 24 }, (_, i) => String(i)));
+      expect(await page.getByRole('table', { name: 'Hourly costs' }).count()).toBe(1);
+      expect(await page.locator('td').evaluate(element => getComputedStyle(element, '::before').content)).toContain('Cost');
+      expect(await page.locator('[data-cost-heatmap-day-label]').evaluate(element => getComputedStyle(element).gridRow)).toContain('span 2');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    }
+  }
+});
+
+test('shared phone layout keeps operational metrics, support copy and actions usable', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      :root { --font-scale: 1.35; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      [data-operational-metric-list] { width: 100%; }
+      [data-app-part~="metric-label"] { font-size: 12px; }
+      [data-testid="masked-value"] { display: flex; }
+      [data-testid="masked-value"] button { width: 20px; height: 20px; }
+    </style>
+    <div data-operational-metric-list data-app-design-owner="pack-v1">
+      <div data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-v1">
+        <div data-app-part="metric-label" data-app-design-owner="pack-v1">Battery condition</div>
+        <div data-app-part="metric-label" data-app-design-owner="pack-v1">Recorded charging sessions</div>
+      </div>
+    </div>
+    <div data-testid="masked-value" data-app-design-owner="pack-v1">
+      <span>Masked value</span><button data-app-design-owner="pack-v1">Show</button>
+    </div>
+    <div data-app-part="feedback-message"><a href="#help" data-app-design-owner="pack-v1">Help</a></div>
+    <pre data-app-code-kind="support-bundle" data-app-design-owner="pack-v1">LongUnbrokenSupportInformationThatMustWrapOnPhones</pre>
+    <div data-app-design-preserve><div data-testid="masked-value"><button id="protected-action">Show</button></div></div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'v1');
+    element.setAttribute('data-app-design-owner', 'pack-v1');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'mobile.css'), 'utf8') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      const measurements = await page.evaluate(() => {
+        const bounds = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+        return {
+          metricSize: parseFloat(getComputedStyle(document.querySelector('[data-app-part~="metric-label"]')!).fontSize),
+          action: bounds('[data-testid="masked-value"] > button').height,
+          link: bounds('[data-app-part~="feedback-message"] a').height,
+          protectedAction: bounds('#protected-action').height,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+      const context = `${forcedColors}, ${width}px`;
+      expect(measurements.metricSize, context).toBeGreaterThanOrEqual(16);
+      expect(measurements.action, context).toBeGreaterThanOrEqual(44);
+      expect(measurements.link, context).toBeGreaterThanOrEqual(44);
+      expect(measurements.protectedAction, context).toBe(20);
+      expect(measurements.scrollWidth, context).toBeLessThanOrEqual(width);
+    }
+  }
+});
+
+test('all pack styles retain the shared phone floor and bottom navigation geometry', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setContent(`
+    <style>
+      :root { --font-scale: .85; --density-row-h: 44px; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      .text-sm, .mgr-title { font-size: 12px; }
+      .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; }
+      [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
+    </style>
+    <p id="prose" class="text-sm" data-owned>Read the current state</p>
+    <input id="field" data-app-part="field-control" data-owned>
+    <div data-mobile-table data-owned><span class="mgr-title" data-owned>Session details</span></div>
+    <nav data-role="bottom-tab-bar" data-owned>
+      ${['Home', 'Drives', 'Charge', 'Alerts', 'More'].map(label => `
+        <button class="sidenav-phone-tab" data-app-part="button nav-item" data-owned>
+          <span class="nav-phone-icon" data-owned><svg width="22" height="22" data-owned></svg></span>
+          <span class="sidenav-tab-label" data-owned>${label}</span>
+        </button>`).join('')}
+    </nav>
+    <div id="reserved" style="height:var(--shell-tab-bar-height)"></div>
+  `);
+  const sheets = ['base.css', 'shell.css', 'controls.css', ...PACK_IDS.map(pack => join('packs', APP_DESIGN_PACK_FILES[pack])), 'mobile.css'];
+  for (const sheet of sheets) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const pack of PACK_IDS) {
+    const attributes = getAppDesignAttributes(pack);
+    const owner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+    await page.evaluate(({ profile, marker }) => {
+      for (const [name, value] of Object.entries(profile)) document.documentElement.setAttribute(name, value);
+      document.documentElement.setAttribute('data-app-design-owner', marker);
+      document.querySelectorAll('[data-owned]').forEach(element => element.setAttribute('data-app-design-owner', marker));
+    }, { profile: attributes, marker: owner });
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        const sizes = await page.evaluate(() => {
+          const font = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
+          const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+          return {
+            prose: font('#prose'), field: font('#field'), grid: font('.mgr-title'),
+            inputHeight: rect('#field').height,
+            navHeight: rect('[data-role="bottom-tab-bar"]').height,
+            reserved: rect('#reserved').height,
+            targets: [...document.querySelectorAll('.sidenav-phone-tab')].map(element => element.getBoundingClientRect().height),
+            scrollWidth: document.documentElement.scrollWidth,
+          };
+        });
+        const context = `${pack}, ${forcedColors}, ${width}px`;
+        expect(sizes.prose, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.field, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.inputHeight, context).toBeGreaterThanOrEqual(44);
+        expect(Math.min(...sizes.targets), context).toBeGreaterThanOrEqual(44);
+        expect(sizes.reserved, context).toBeGreaterThanOrEqual(sizes.navHeight);
+        expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
+      }
+    }
+  }
 });
 
 test('capture image failures do not leave partial evidence', async () => {

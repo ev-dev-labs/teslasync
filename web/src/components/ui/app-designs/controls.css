@@ -190,10 +190,10 @@
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-filled"]) {
-    background-color: var(--control-bg);
+    background-color: var(--app-control-surface, var(--control-bg));
     border-block-end-width: 2px;
-    border-start-start-radius: var(--radius-md);
-    border-start-end-radius: var(--radius-md);
+    border-start-start-radius: var(--app-control-radius, var(--radius-md));
+    border-start-end-radius: var(--app-control-radius, var(--radius-md));
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-filled"]) {
@@ -211,7 +211,7 @@
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-filled"]) {
-    border-radius: var(--radius-md);
+    border-radius: var(--app-control-radius, var(--radius-md));
     border-block-end-width: 2px;
   }
 
@@ -257,10 +257,10 @@
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-outline"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-control-surface, var(--surface-1));
     border-width: 1px;
     border-color: var(--border-strong);
-    border-radius: var(--radius-md);
+    border-radius: var(--app-control-radius, var(--radius-md));
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-outline"]) {
@@ -279,7 +279,7 @@
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="controls-outline"]) {
     border-style: solid;
     border-width: 1px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--app-control-radius, var(--radius-sm));
     box-shadow: none;
   }
 
@@ -539,8 +539,8 @@
   /* Table: continuous header band, horizontal reading, separate action rail. */
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-table"]),
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-table"]) {
-    background-color: var(--surface-2);
-    border-block-end: 1px solid var(--control-border);
+    background-color: var(--app-grid-header, var(--surface-2));
+    border-block-end: 1px solid var(--app-grid-rule, var(--control-border));
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"]) [data-app-part~="table-toolbar"]:where(:not([data-app-toolbar-slot])):where([data-app-design-owner~="data-table"]) {
@@ -555,8 +555,8 @@
   /* Ledger: open book-like rows, vertical column rules, double closing rule. */
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-ledger"]),
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-ledger"]) {
-    background-color: var(--surface-1);
-    border-block-end: 2px solid var(--control-border);
+    background-color: var(--app-grid-header, var(--surface-1));
+    border-block-end: 2px solid var(--app-grid-rule, var(--control-border));
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"]) :where([data-app-part~="table"] > :is(thead, tbody) > tr:not([data-virtual-spacer])) > :is(th, td):where(:not(:first-child)):where([data-app-design-owner~="data-ledger"]) {
@@ -643,8 +643,8 @@
   /* Instrument: a strongly indexed header grid and bounded reading cells. */
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) table[data-app-part~="table"] > thead:where([data-app-design-owner~="data-instrument"]),
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-app-part~="table-head"]) > [data-app-part~="table-row"]:where([data-app-design-owner~="data-instrument"]) {
-    background-color: var(--surface-3);
-    border-block-end: 2px solid var(--control-border);
+    background-color: var(--app-grid-header, var(--surface-3));
+    border-block-end: 2px solid var(--app-grid-rule, var(--control-border));
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"]) :where([data-app-part~="table"] > :is(thead, tbody) > tr:not([data-virtual-spacer])) > :is(th, td):where(:not(:first-child)):where([data-app-design-owner~="data-instrument"]) {

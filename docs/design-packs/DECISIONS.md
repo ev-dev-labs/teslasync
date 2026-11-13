@@ -9,6 +9,11 @@ For pack reviews it saves one viewport image per page and project, scans the
 scrolling content without saving extra frames, and keeps each pack's test
 artifacts separate. Existing stitched images are historical evidence. The
 two-round limit applies to subsequent per-pack reviews, not past captures.
+Viewport-only reviews save the settled initial view before detailed assertions,
+so a failing geometry check can still be inspected. A saved image is not a
+pass; the capture command's complete diagnostics remain authoritative. Use
+the explicit default font scale suffix for new spot checks to keep historical
+viewport and stitched images intact.
 
 ## Identity and existing preferences
 
@@ -19,6 +24,55 @@ with the saved mode, accent, fonts, density and accessibility preferences
 rather than overwrite them. Keep the existing Card, GlassPanel, DataTable and
 ChartContainer APIs and owner isolation; add presentation roles at their
 existing token boundary where necessary.
+
+The existing chart palette preference owns actual series colors, including
+colorblind-safe and neon choices; replacing it per pack would violate the
+design contract and the instruction to preserve behavior. Pack roles therefore
+style chart framing, grid and label ink while the existing palette hook keeps
+series identities. This constraint is not proof of distinct per-pack palettes.
+The shared phone layer extends the existing opted-in mobile grid and heatmap
+patterns; it does not guess table identities, fields or privacy masks for
+tables lacking a mobile presentation.
+
+Pack sheets can compose four app-surface roles from the saved theme, alongside
+the shared card, control, grid, chart, conversation, spacing and motion
+roles. They must leave semantic surfaces, chart series and saved font settings
+with their existing owners. This is a token boundary for pack work, not a
+claim that every existing component or chart palette has been redesigned.
+
+The first preview-isolation regression run exposed four Classic phone tokens
+that were inherited by nested previews. Reset those tokens at the existing
+preview boundary before dispatching pack work. The targeted preservation run
+then reported:
+
+```text
+Test Files  4 passed (4)
+     Tests  205 passed (205)
+```
+
+The latest browser contracts, including 27 synthetic profiles at
+360/390/430px and normal/forced colors, reported:
+
+```text
+6 passed (15.5s)
+```
+
+These are component-level contracts, not rendered-route or contrast passes.
+
+After the final shared CSS changes, `cd web; npm run build` exited 0:
+
+```text
+[pwa-contract] OK — source + build contracts satisfied
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+```
+
+The changed `app-designs` audit reported zero static inline styles, raw HTML,
+direct library imports, old API imports, double prefixes and camelCase query
+parameters; its TypeScript check passed. The hook verifier found 571 URL
+patterns and reported `ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES`.
+The capture change also passed `npx tsc --noEmit -p e2e\tsconfig.json` and
+focused ESLint. The full Vitest run started before the last CSS reset, so it
+does not independently verify the exact final source.
 
 Use restrained, accessible depth and outlines rather than decorative colored
 glows. The design contract requires semantic colors, focus visibility, reduced

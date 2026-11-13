@@ -154,43 +154,43 @@
    */
   [data-app-part~="page"]:where(.space-y-3, .space-y-6):not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)
     > :not([hidden]) ~ :not([hidden])[data-app-design-owner~="content-cards"] {
-    margin-block-start: 1.25rem;
+    margin-block-start: calc(1.25rem * var(--app-content-density, 1));
     margin-block-end: 0;
   }
   [data-app-part~="page"]:where(.space-y-3, .space-y-6):not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)
     > :not([hidden]) ~ :not([hidden])[data-app-design-owner~="content-editorial"] {
-    margin-block-start: 1.75rem;
+    margin-block-start: calc(1.75rem * var(--app-content-density, 1));
     margin-block-end: 0;
   }
   [data-app-part~="page"]:where(.space-y-3, .space-y-6):not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)
     > :not([hidden]) ~ :not([hidden])[data-app-design-owner~="content-workbench"] {
-    margin-block-start: 1rem;
+    margin-block-start: calc(1rem * var(--app-content-density, 1));
     margin-block-end: 0;
   }
   [data-app-part~="page"]:where(.space-y-3, .space-y-6):not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)
     > :not([hidden]) ~ :not([hidden])[data-app-design-owner~="content-canvas"] {
-    margin-block-start: 1.5rem;
+    margin-block-start: calc(1.5rem * var(--app-content-density, 1));
     margin-block-end: 0;
   }
   [data-app-part~="page"]:where(.space-y-3, .space-y-6):not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)
     > :not([hidden]) ~ :not([hidden])[data-app-design-owner~="content-ledger"] {
-    margin-block-start: 0.875rem;
+    margin-block-start: calc(0.875rem * var(--app-content-density, 1));
     margin-block-end: 0;
   }
   [data-layout-reference][data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-cards"] {
-    gap: 1.25rem;
+    gap: calc(1.25rem * var(--app-content-density, 1));
   }
   [data-layout-reference][data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-editorial"] {
-    gap: 1.75rem;
+    gap: calc(1.75rem * var(--app-content-density, 1));
   }
   [data-layout-reference][data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-workbench"] {
-    gap: 1rem;
+    gap: calc(1rem * var(--app-content-density, 1));
   }
   [data-layout-reference][data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-canvas"] {
-    gap: 1.5rem;
+    gap: calc(1.5rem * var(--app-content-density, 1));
   }
   [data-layout-reference][data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-ledger"] {
-    gap: 0.875rem;
+    gap: calc(0.875rem * var(--app-content-density, 1));
   }
   [data-app-part~="page-content"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *) > section[data-app-part~="section"][data-app-design-owner~="content-cards"] {
     padding-block: 0.75rem;
@@ -320,7 +320,8 @@
     padding-block: var(--density-pad-y);
     padding-inline: var(--density-pad-x);
     border: 1px solid var(--border-default);
-    background-color: var(--surface-2);
+    border-radius: var(--app-conversation-radius, var(--radius-lg));
+    background-color: var(--app-conversation-surface, var(--surface-2));
   }
 
   [data-app-part~="conversation-transcript"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *)[data-app-design-owner~="content-editorial"] {

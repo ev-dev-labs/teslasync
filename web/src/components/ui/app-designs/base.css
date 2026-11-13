@@ -25,9 +25,13 @@
     --app-heatmap-day-width: 2.5rem;
     --app-heatmap-gap: 0;
     --app-brief-heading-basis: auto;
+    --app-brief-column-min-width: 9rem;
     --app-brief-copy-size: 1em;
     --app-brief-value-size: 1em;
     --app-touch-size: 2.75rem;
+    --app-input-action-clearance: 0.75rem;
+    --app-vehicle-icon-space: 2rem;
+    --app-header-title-min-width: 12rem;
     --app-header-action-gap: 0px;
     --app-heatmap-axis-size: 1em;
     --app-heatmap-touch-size: 2.75rem;
@@ -35,13 +39,52 @@
     --panel-radius: var(--radius-lg);
     --panel-shadow: var(--elevation-1);
     --panel-shadow-hover: var(--elevation-1);
+    --app-surface-canvas: initial;
+    --app-surface-panel: initial;
+    --app-surface-raised: initial;
+    --app-surface-overlay: initial;
+    --app-card-radius: initial;
+    --app-card-shadow: initial;
+    --app-display-font: initial;
+    --app-display-weight: initial;
+    --app-display-tracking: initial;
+    --app-control-radius: initial;
+    --app-control-surface: initial;
+    --app-content-density: initial;
+    --app-interaction-duration: initial;
+    --app-interaction-easing: initial;
+    --app-chart-surface: initial;
+    --app-chart-ink: initial;
+    --app-chart-grid: initial;
+    --app-grid-header: initial;
+    --app-grid-rule: initial;
+    --app-conversation-surface: initial;
+    --app-conversation-radius: initial;
   }
 
   [data-app-design-owner]:where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]) {
     border-width: var(--app-border-width);
     border-style: var(--app-rule-style);
-    border-radius: var(--panel-radius);
-    box-shadow: var(--panel-shadow);
+    border-radius: var(--app-card-radius, var(--panel-radius));
+    box-shadow: var(--app-card-shadow, var(--panel-shadow));
+  }
+
+  [data-app-design-owner]:where([data-route-focus-target], [data-card-title]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+  }
+
+  [data-app-design-owner][data-route-focus-target] {
+    font-weight: var(--app-display-weight, var(--font-weight-bold));
+  }
+
+  [data-app-design-owner][data-card-title] {
+    font-weight: var(--app-display-weight, var(--font-weight-semibold));
+  }
+
+  [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"], [data-app-part~="field-control"]) {
+    transition-duration: var(--app-interaction-duration, var(--motion-duration-fast));
+    transition-timing-function: var(--app-interaction-easing, var(--motion-easing-standard));
   }
 
   [data-app-design-owner]:where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]) {
@@ -163,7 +206,7 @@
 
 @media screen and (max-width: 767px) {
   [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]) {
-    min-block-size: max(44px, var(--density-row-h));
+    min-block-size: max(44px, var(--density-row-h, 44px));
     min-inline-size: 44px;
   }
 }
