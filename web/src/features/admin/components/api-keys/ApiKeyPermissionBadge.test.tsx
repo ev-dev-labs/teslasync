@@ -24,7 +24,7 @@ import { render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // Deterministic i18n: `t(key, fallback)` returns the English fallback so the
@@ -64,7 +64,7 @@ describe('ApiKeyPermissionBadge', () => {
     try {
       const chips = [...view.container.querySelectorAll('[data-app-part="badge"]')];
       expect(chips.map(chip => chip.textContent)).toEqual(['Read', 'Read-write', 'Admin', 'Read']);
-      const css = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+      const css = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
       for (const chip of chips) {
         const selectors: string[] = [];
         css.walkRules(rule => {

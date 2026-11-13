@@ -59,8 +59,8 @@ export const reviewWidgets = [
   ...timelineWidgets,
 ] as const;
 export const packNames: Record<PackId, string> = {
-  classic: 'Classic', v1: 'Studio', v2: 'Elevated', v3: 'Precision',
-  v4: 'Owner', v5: 'Iconic', v6: 'Expressive', v7: 'Pixel',
+  classic: 'Classic', v1: 'Telemetry Studio', v2: 'Horizon Loft', v3: 'Precision Ledger',
+  v4: 'Executive Concierge', v5: 'Iconic Showroom', v6: 'Expressive Form', v7: 'Pixel Cockpit',
   motorsport: 'Motorsport', blueprint: 'Blueprint', editorial: 'Editorial',
   ambient: 'Ambient', terminal: 'Terminal', atlas: 'Atlas', analog: 'Analog',
   observatory: 'Observatory', bauhaus: 'Bauhaus', quiet: 'Quiet Form',

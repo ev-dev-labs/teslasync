@@ -9,7 +9,7 @@ import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { StaleChargingSession, StaleDrive } from '@/api/hooks/useDataRepair';
 import type { SupportBundleSourceState, UseSupportBundleResult } from '@/api/hooks/useSupport';
 import { ToastProvider } from '@/components/feedback';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { buildSupportBundle, serializeSupportBundle } from '@/lib/supportBundle';
 import { FSM_STATES, type FSMTransition } from '@/types/fsm';
@@ -171,14 +171,14 @@ describe('system-01 actual source-to-consumer contracts (not rendered acceptance
           expect(record.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`);
           expect(consumers('feedback.css', record, dataMode), `${pack}: ${record.getAttribute('data-app-record-kind')}`)
             .not.toHaveLength(0);
-          expect(consumers(`packs\\${pack}.css`, record, '[data-app-part~="card"]')).not.toHaveLength(0);
+          expect(consumers(`packs\\${APP_DESIGN_PACK_FILES[pack]}`, record, '[data-app-part~="card"]')).not.toHaveLength(0);
           for (const slot of record.querySelectorAll('[data-app-record-slot]')) {
             expect(consumers('feedback.css', slot, dataMode)).not.toHaveLength(0);
           }
         }
         for (const id of ['owned-drive-editor', 'owned-charging-editor']) {
           const editor = document.getElementById(id)!;
-          expect(consumers(`packs\\${pack}.css`, editor, '[data-app-part~="panel"]')).not.toHaveLength(0);
+          expect(consumers(`packs\\${APP_DESIGN_PACK_FILES[pack]}`, editor, '[data-app-part~="panel"]')).not.toHaveLength(0);
           expect(consumers('controls.css', editor, '[data-app-form-section]')).not.toHaveLength(0);
           expect(consumers('controls.css', editor.querySelector('[data-app-form-body]')!, '[data-app-form-body]')).not.toHaveLength(0);
         }
@@ -209,7 +209,7 @@ describe('system-01 actual source-to-consumer contracts (not rendered acceptance
           expect(rule.properties.some(property => /^(?:white-space|overflow|font|width|height|padding|color|background)/.test(property))).toBe(false);
         }
         const severity = screen.getByText('Critical');
-        expect(consumers(`packs\\${pack}.css`, severity, '[data-app-part~="badge"]')).not.toHaveLength(0);
+        expect(consumers(`packs\\${APP_DESIGN_PACK_FILES[pack]}`, severity, '[data-app-part~="badge"]')).not.toHaveLength(0);
         expect(severity).toHaveAttribute('data-app-variant', 'danger');
         expect(severity.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
         expect(screen.getByTestId('fsm-node-driving')).toHaveAttribute('aria-current', 'true');
@@ -258,7 +258,7 @@ describe('system-01 actual source-to-consumer contracts (not rendered acceptance
         expect(skeletons).toHaveLength(2);
         for (const skeleton of skeletons) {
           expect(consumers('feedback.css', skeleton, '[data-app-part~="skeleton"]')).not.toHaveLength(0);
-          expect(consumers(`packs\\${pack}.css`, skeleton, '[data-app-part~="skeleton"]')).not.toHaveLength(0);
+          expect(consumers(`packs\\${APP_DESIGN_PACK_FILES[pack]}`, skeleton, '[data-app-part~="skeleton"]')).not.toHaveLength(0);
         }
         expect(screen.getByRole('status', { name: 'Loading' })).toBeVisible();
         expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();

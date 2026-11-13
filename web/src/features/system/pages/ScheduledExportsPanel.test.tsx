@@ -35,7 +35,7 @@ import type { ReactNode } from 'react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 import type { ScheduledExport } from '@/api/hooks/useExports';
@@ -275,7 +275,7 @@ describe('Scheduled export responsive callers', () => {
       const release = observeAppDesignScopes(container);
       try {
         const rules: postcss.Rule[] = [];
-        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
           .walkRules(rule => { if (rule.selector.includes('[data-app-part~="card"]')) rules.push(rule); });
         expect(rules.some(rule => form.matches(rule.selector)), pack).toBe(true);
         expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('Unsubmitted draft');

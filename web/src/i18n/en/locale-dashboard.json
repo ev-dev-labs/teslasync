@@ -1873,32 +1873,32 @@
         "name": "Classic"
       },
       "v1": {
-        "description": "Instrument-led layouts with clear secondary readings.",
-        "name": "Studio"
+        "description": "Mission-control instrumentation with crisp accent-lit bays.",
+        "name": "Telemetry Studio"
       },
       "v2": {
-        "description": "Layered surfaces and generous spacing.",
-        "name": "Elevated"
+        "description": "Plush layered surfaces, soft elevation and airy spacing.",
+        "name": "Horizon Loft"
       },
       "v3": {
-        "description": "Restrained layouts and quiet visual hierarchy.",
-        "name": "Precision"
+        "description": "Architectural restraint, hairline rules and tabular clarity.",
+        "name": "Precision Ledger"
       },
       "v4": {
-        "description": "Key information and useful actions first.",
-        "name": "Owner"
+        "description": "Calm ownership sanctuary with refined tonal cards.",
+        "name": "Executive Concierge"
       },
       "v5": {
-        "description": "Clear pictograms and approachable status.",
-        "name": "Iconic"
+        "description": "Showroom poise, luminous backdrop and bold primary readouts.",
+        "name": "Iconic Showroom"
       },
       "v6": {
-        "description": "Tonal surfaces and expressive shapes.",
-        "name": "Expressive"
+        "description": "Sculptural asymmetric contours and vibrant studio energy.",
+        "name": "Expressive Form"
       },
       "v7": {
-        "description": "Pixel pictograms and segmented readings.",
-        "name": "Pixel"
+        "description": "Crisp digital instrument bays and sharp micro-framed readouts.",
+        "name": "Pixel Cockpit"
       }
     },
     "done": "Done",

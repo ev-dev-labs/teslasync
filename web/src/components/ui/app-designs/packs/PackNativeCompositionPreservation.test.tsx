@@ -17,10 +17,10 @@ import { WidgetGaugeHero } from '@/features/dashboard/widgets/shared/WidgetGauge
 import InstrumentLayout from '@/features/dashboard/widgets/designPacks/families/InstrumentLayout';
 import LineTelemetryLayout from '@/features/dashboard/widgets/designPacks/families/LineTelemetryLayout';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '../designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../designs';
 
 const sheets = PACK_IDS.map(pack => {
-  const root = postcss.parse(readFileSync(new URL(`./${pack}.css`, import.meta.url), 'utf8'));
+  const root = postcss.parse(readFileSync(new URL(`./${APP_DESIGN_PACK_FILES[pack]}`, import.meta.url), 'utf8'));
   const rules: postcss.Rule[] = [];
   root.walkRules(rule => { rules.push(rule); });
   return { pack, rules };

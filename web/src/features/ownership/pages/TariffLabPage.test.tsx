@@ -17,9 +17,7 @@ import { Children, cloneElement, isValidElement, type ComponentProps, type React
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss, { type Rule } from 'postcss';
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
@@ -1233,7 +1231,7 @@ describe('TariffLabPage — native replay and draft record ownership', () => {
         const mode = APPLICATION_DESIGNS[pack].data;
         const surfaceRules: string[] = [];
         postcss.parse(readFileSync(resolve(
-          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
         ), 'utf8')).walkRules(rule => {
           if (rule.nodes.some(node => node.type === 'decl' && ['background-color', 'border', 'border-radius'].includes(node.prop))) {
             surfaceRules.push(...rule.selectors.filter(selector =>

@@ -5,7 +5,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'postcss';
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from './app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from './app-designs/designs';
 import { AppDesignBridge } from './AppDesignBridge';
 
 const selection = vi.hoisted((): { packId: PackId; appWide: boolean; isReady: boolean } => ({
@@ -27,7 +27,7 @@ const quietStyles = readFileSync(resolve(packDirectory, 'quiet.css'), 'utf8');
 const designSources = [
   ...['base', 'shell', 'controls', 'charts', 'maps', 'feedback'].map(name =>
     readFileSync(resolve(packDirectory, '..', `${name}.css`), 'utf8')),
-  ...PACK_IDS.map(id => readFileSync(resolve(packDirectory, `${id}.css`), 'utf8')),
+  ...PACK_IDS.map(id => readFileSync(resolve(packDirectory, APP_DESIGN_PACK_FILES[id]), 'utf8')),
 ];
 
 function installStyles(text: string) {

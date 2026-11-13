@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import { Children, isValidElement } from 'react';
 import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const chartProbe = vi.hoisted(() => vi.fn());
@@ -388,7 +388,7 @@ describe('ModelTrustPage scoped modernization', () => {
         }
         const selectors: string[] = [];
         postcss.parse(readFileSync(resolve(
-          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
         ), 'utf8')).walkRules(rule => {
           if (rule.selector.includes('[data-app-part~="card"]')) selectors.push(rule.selector);
         });

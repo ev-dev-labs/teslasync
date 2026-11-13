@@ -5,7 +5,7 @@ import postcss from 'postcss'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
-import { getAppDesignAttributes } from '@/components/ui/app-designs/designs'
+import { getAppDesignAttributes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { previewProblemReport, type ProblemReportInput } from '@/lib/problemReport'
 import { buildSupportBundle, type SupportBundle } from '@/lib/supportBundle'
 import { expectAppDesignDataMode, matchingAppDesignDataRules } from './appDesignCss.test-utils'
@@ -62,7 +62,7 @@ describe('ProblemReportModal source-owned context and exact payload', () => {
     expect(context).toHaveAttribute('data-surface-variant', 'standalone')
     expect(context.getAttribute('data-app-design-owner')).toContain(`pack-${packId}`)
     const identitySelectors: string[] = []
-    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[packId]), 'utf8'))
       .walkRules(rule => {
         identitySelectors.push(...rule.selectors.filter(selector => selector.includes('[data-app-part~="card"]')))
       })

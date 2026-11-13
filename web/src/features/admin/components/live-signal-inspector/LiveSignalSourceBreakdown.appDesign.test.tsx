@@ -6,11 +6,9 @@ import { MemoryRouter } from 'react-router-dom';
 import postcss, { type Rule } from 'postcss';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  APPLICATION_DESIGNS,
+import { APPLICATION_DESIGNS,
   getAppDesignAttributes,
-  observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+  observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { LiveSignalSourceBreakdown } from './LiveSignalSourceBreakdown';
 import { computeStats, type LiveSignalStats } from './liveSignalStats';
@@ -35,7 +33,7 @@ function rules(name: string): Rule[] {
 
 const feedbackRules = rules('feedback.css');
 const baseRules = rules('base.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))] as const));
+const packRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', APP_DESIGN_PACK_FILES[pack]))] as const));
 
 function selectors(rule: Rule): string[] {
   const parent = rule.parent;

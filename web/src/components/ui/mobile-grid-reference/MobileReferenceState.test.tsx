@@ -5,7 +5,7 @@ import postcss from 'postcss';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@/i18n';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '../app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../app-designs/designs';
 import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 import { MobileReferenceState } from './MobileReferenceState';
 import { MobileGridReference } from './MobileGridReference';
@@ -65,7 +65,7 @@ describe('mobile states and retained-data behavior', () => {
       const header = well?.querySelector('[data-group-header]');
       if (!well || !header) throw new Error('Missing mobile group surface or header');
       const identitySelectors: string[] = [];
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[packId]), 'utf8'))
         .walkRules(rule => { identitySelectors.push(...rule.selectors); });
       expect(well?.matches('[data-app-part~="panel"][data-surface-variant="standalone"]')).toBe(true);
       expect(identitySelectors.some(selector => selector.includes('[data-app-part~="panel"]') && well.matches(selector))).toBe(true);

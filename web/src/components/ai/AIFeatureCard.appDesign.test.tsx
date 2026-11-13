@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import postcss from 'postcss'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { matchingAppDesignDataRules, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 import { AIFeatureCard, type AIFeatureStream } from './AIFeatureCard'
@@ -30,7 +30,7 @@ describe('AIFeatureCard real output/loading/evidence consumers', () => {
       const output = screen.getByTestId('ai-output-panel')
       await waitFor(() => expect(output.getAttribute('data-app-design-owner')).toContain(`pack-${packId}`))
       const surfaceSelectors: string[] = []
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[packId]), 'utf8'))
         .walkRules(rule => {
           surfaceSelectors.push(...rule.selectors.filter(selector => selector.includes('[data-app-part~="card"]')))
         })

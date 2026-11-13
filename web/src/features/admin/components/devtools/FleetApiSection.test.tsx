@@ -33,7 +33,7 @@ import type { ReactNode } from 'react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import postcss from 'postcss'
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types'
 
@@ -221,7 +221,7 @@ describe('FleetApiSection — scaffolding', () => {
       const pairing = await findToolCard('Key pairing')
       const instructions = within(pairing).getByText('Pairing instructions').closest('[data-app-part="panel"]')!
       const selectors: string[] = []
-      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8')).walkRules(rule => {
+      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8')).walkRules(rule => {
         for (const selector of rule.selectors) {
           if (selector.includes('[data-surface-variant="standalone"]') &&
             [...document.querySelectorAll(selector)].includes(instructions)) selectors.push(selector)

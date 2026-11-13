@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -85,7 +85,7 @@ describe('Execution detail continuation retention', () => {
       const dialog = screen.getByRole('dialog', { name: 'Execution details' });
       const sections = dialog.querySelectorAll('section[data-app-part="panel"][data-surface-variant="standalone"]');
       expect(sections).toHaveLength(2);
-      const identity = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+      const identity = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
       for (const section of sections) {
         const matches: string[] = [];
         identity.walkRules(rule => {

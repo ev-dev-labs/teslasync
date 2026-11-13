@@ -124,7 +124,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAlertRules, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 import type { NotificationLog, Vehicle, AlertRule } from '@/api/types';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const mockVehicles = vi.mocked(useVehicles);
@@ -505,7 +505,7 @@ describe('InboxPage — qualified native archive navigation', () => {
           expect(matching.length, `${pack}: actual painted archive control`).toBeGreaterThan(0);
           expect(matching.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-radius'))).toBe(true);
           const identity: Rule[] = [];
-          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', `${pack}.css`), 'utf8'))
+          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
             .walkRules(rule => {
               if (rule.selector.includes('[data-app-part~="button"]')
                 && rule.selectors.some(selector => link.matches(selector))) identity.push(rule);

@@ -9,9 +9,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import {
   expectAppDesignDataMode, matchesAppDesignCss,
 } from '@/components/feedback/appDesignCss.test-utils';
@@ -108,7 +106,7 @@ function harness(children: ReactNode) {
 }
 const identityRules = new Map(PACK_IDS.map(pack => {
   const rules: Rule[] = [];
-  postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+  postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
     .walkRules(rule => { rules.push(rule); });
   return [pack, rules];
 }));

@@ -3,9 +3,7 @@ import { resolve } from 'node:path';
 import { render, screen, within } from '@testing-library/react';
 import postcss, { type Rule } from 'postcss';
 import { describe, expect, it } from 'vitest';
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { Evidence } from '@/types/advancedIntelligence';
 import { EvidencePanel } from './EvidencePanel';
@@ -51,7 +49,7 @@ describe('EvidencePanel actual design consumers (source-only)', () => {
       for (const [index, record] of Array.from(records).entries()) {
         expect(record).toHaveAttribute('data-surface-variant', 'standalone');
         expect(consumes(record, baseRules, '[data-app-part~="card"]', 'border-radius')).toBe(true);
-        expect(consumes(record, stylesheet('packs', `${pack}.css`), '[data-app-part~="card"]')).toBe(true);
+        expect(consumes(record, stylesheet('packs', APP_DESIGN_PACK_FILES[pack]), '[data-app-part~="card"]')).toBe(true);
         expect(consumes(record, feedbackRules, `[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`, 'display')).toBe(true);
         expect(within(record as HTMLElement).getByRole('term')).toHaveTextContent(evidence[index].source);
         const summary = record.querySelector('[data-app-part~="metric-reading"]')!;

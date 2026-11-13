@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import postcss, { type Rule } from 'postcss';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataTable, type Column } from './DataTable';
-import { getAppDesignAttributes, observeAppDesignScopes } from './app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from './app-designs/designs';
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 import AuditLogPage from '@/features/notifications/pages/AuditLogPage';
 import { NotificationInboxTable } from '@/features/notifications/components/NotificationInboxTable';
@@ -34,7 +34,7 @@ function surfaceRules(name: string) {
 }
 
 const baseRules = surfaceRules('base.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, surfaceRules(join('packs', `${pack}.css`))]));
+const packRules = new Map(PACK_IDS.map(pack => [pack, surfaceRules(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
 function matchingRules(node: Element, rules: readonly Rule[]) {
   return rules.filter(rule => rule.selectors.some(selector => node.matches(selector)));
 }

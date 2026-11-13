@@ -18,7 +18,7 @@ import { RadioCard } from '@/components/ui/RadioCard';
 import { Toggle } from '@/components/ui/Toggle';
 import { Table } from '@/components/ui/Table';
 import { Card } from '@/components/ui/Card';
-import { getAppDesignAttributes, observeAppDesignScopes } from '../designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../designs';
 
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
@@ -76,7 +76,7 @@ function fixture(pack: typeof packs[number]) {
   );
   const release = observeAppDesignScopes(doc.documentElement);
   const rules: postcss.Rule[] = [];
-  postcss.parse(readFileSync(new URL(`./${pack}.css`, import.meta.url), 'utf8')).walkRules(rule => { rules.push(rule); });
+  postcss.parse(readFileSync(new URL(`./${APP_DESIGN_PACK_FILES[pack]}`, import.meta.url), 'utf8')).walkRules(rule => { rules.push(rule); });
   const declarations = (element: Element) => rules.filter(rule => element.matches(rule.selector))
     .flatMap(rule => rule.nodes.filter((node): node is postcss.Declaration => node.type === 'decl')
       .map(node => ({ property: node.prop, value: node.value, selector: rule.selector })));

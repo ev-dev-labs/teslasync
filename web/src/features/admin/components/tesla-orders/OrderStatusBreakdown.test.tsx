@@ -42,7 +42,7 @@ import type {
   OrderBucketCount,
 } from './teslaOrderStats';
 import { ORDER_BUCKET_META, ORDER_BUCKET_ORDER } from './teslaOrderStats';
-import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
@@ -212,7 +212,7 @@ describe('OrderStatusBreakdown — ready (populated)', () => {
           expect(Object.keys(rule.declarations).every(property => ['outline', 'outline-offset'].includes(property))).toBe(true);
         }
         const packRules = postcss.parse(readFileSync(
-          resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8',
+          resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8',
         ));
         packRules.walkRules(rule => {
           for (const selector of rule.selectors.filter(candidate => candidate.includes('[data-app-part~="metric"]'))) {

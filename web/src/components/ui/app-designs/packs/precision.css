@@ -1,5 +1,9 @@
 /* Precision: aligned ledger rules, baseline readings and low-chrome controls. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v3"]) {
+    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 55%, transparent), transparent 14rem);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v3"]) {
     background-color: var(--surface-1);
     border-inline-end: 1px solid var(--border-strong);
@@ -14,29 +18,33 @@
     padding-block: var(--density-pad-y);
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-v3"]) {
     border-radius: var(--radius-xs);
     border-inline-start: 2px solid transparent;
     column-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-v3"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-v3"]) {
     border-inline-start-color: var(--theme-accent);
+    background-color: var(--surface-2);
+    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v3"]) {
     align-items: baseline;
     gap: var(--density-gap) calc(var(--density-gap) * 2);
     padding-block-end: var(--density-pad-y);
     border-block-end: 2px solid var(--border-strong);
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v3"]) {
-    text-wrap: balance;
     font-variant-numeric: tabular-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
     align-items: baseline;
     gap: calc(var(--density-gap) / 2) var(--density-gap);
     padding-inline-start: var(--density-pad-x);
-    border-inline-start: 1px solid var(--border-default);
+    margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-v3"]) {
     row-gap: calc(var(--density-gap) * 1.5);
@@ -240,13 +248,18 @@
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v3"]) {
-    border-inline-start: 0;
+    inline-size: 100%;
     padding-inline-start: 0;
+    border-inline-start-width: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v3"]) {
-    padding-inline-end: 0;
-    border-inline-end: 0;
-    padding-block-end: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-subtle);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v3"]) {
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v3"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.375rem), 1fr));
+    gap: var(--density-gap);
   }
 }
+
+

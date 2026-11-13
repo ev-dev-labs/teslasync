@@ -6,7 +6,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import {
   UsageCard,
   type UsageCardBand,
@@ -272,7 +272,7 @@ describe('UsageCard', () => {
     const packs = Object.keys(APPLICATION_DESIGNS) as Array<Parameters<typeof getAppDesignAttributes>[0]>
     for (const pack of packs) {
       const rules: postcss.Rule[] = []
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
         .walkRules(rule => { rules.push(rule) })
       const surfaceRules = rules.filter(rule => rule.selector.includes('[data-app-part~="card"]')
         && rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop)))

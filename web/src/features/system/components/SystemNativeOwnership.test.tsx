@@ -9,9 +9,7 @@ import type { RepairCase, RepairImpactPreview, RepairSuggestion } from '@/api/ho
 import { deriveDataState } from '@/api/dataState';
 import type { FSMTransition } from '@/types/fsm';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { RepairCaseEvidencePanel } from './RepairCaseEvidencePanel';
 import { RepairEvidenceTimeline } from './RepairEvidenceTimeline';
 import { RepairImpactSummary } from './RepairImpactSummary';
@@ -129,7 +127,7 @@ describe('owned system native design consumers (source-only)', () => {
     const release = observeAppDesignScopes(view.container);
     try {
       const mode = APPLICATION_DESIGNS[pack];
-      const identity = `packs\\${pack}.css`;
+      const identity = `packs\\${APP_DESIGN_PACK_FILES[pack]}`;
       for (const frame of [
         screen.getByTestId('live-controls'), screen.getByRole('region', { name: 'Evidence timeline' }),
       ]) {

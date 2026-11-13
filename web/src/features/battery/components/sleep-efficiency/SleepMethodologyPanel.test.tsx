@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import postcss from 'postcss';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { analyzeSleepEfficiency } from '../../lib/sleepEfficiencyAnalysis';
 import { SleepMethodologyPanel } from './SleepMethodologyPanel';
@@ -50,7 +50,7 @@ describe('SleepMethodologyPanel native surfaces', () => {
       for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
       const release = observeAppDesignScopes(container);
       try {
-        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
         const consumed = new Set<Element>();
         sheet.walkRules(rule => {
           if (!rule.selector.includes('[data-app-part~="card"]') ||

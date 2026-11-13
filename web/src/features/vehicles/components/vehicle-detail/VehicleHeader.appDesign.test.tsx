@@ -5,9 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import postcss from 'postcss'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs'
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 import { RecentChargesSection } from './RecentChargesSection'
 import { RecentDrivesSection } from './RecentDrivesSection'
@@ -45,7 +43,7 @@ describe('vehicle-detail native navigation design adoption', () => {
     const host = view.container.firstElementChild!
     const release = observeAppDesignScopes(host)
     const identity = postcss.parse(readFileSync(
-      resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8',
+      resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8',
     ))
     try {
       const links = within(host as HTMLElement).getAllByRole('link')

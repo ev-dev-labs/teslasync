@@ -13,7 +13,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 
 // The global setup stubs useSettings to en-US/UTC defaults, which ignores the
 // per-test /settings payload this suite installs. Restore the real hook (a
@@ -45,7 +45,7 @@ function buttonSelectors(filename: string, neutralOnly = false) {
 }
 
 const neutralControlSelectors = buttonSelectors('controls.css', true);
-const packButtonSelectors = new Map(PACK_IDS.map(id => [id, buttonSelectors(join('packs', `${id}.css`))]));
+const packButtonSelectors = new Map(PACK_IDS.map(id => [id, buttonSelectors(join('packs', APP_DESIGN_PACK_FILES[id]))]));
 
 function readExport(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

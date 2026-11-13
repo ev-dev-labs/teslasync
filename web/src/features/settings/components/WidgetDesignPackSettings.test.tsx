@@ -96,11 +96,11 @@ describe('Widget design pack settings', () => {
     mocks.mode.mockResolvedValue({ isSuccess: false });
     renderSettings();
     const retry = await screen.findByRole('button', { name: 'Retry preference' });
-    expect(screen.getByRole('button', { name: 'Use Owner pack' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Use Executive Concierge pack' })).toBeDisabled();
     mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'open' } });
     mocks.scope = createHash('sha256').update('open').digest('hex');
     await act(async () => fireEvent.click(retry));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Use Owner pack' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Use Executive Concierge pack' })).toBeEnabled());
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
   it('does not claim an active preference or allow writes before identity is verified', async () => {
@@ -216,8 +216,8 @@ describe('Widget design pack settings', () => {
     localStorage.setItem('unrelated-appearance-preference', 'unchanged');
     renderSettings();
     await ready();
-    fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
-    await screen.findByRole('button', { name: 'Owner active' });
+    fireEvent.click(screen.getByRole('button', { name: 'Use Executive Concierge pack' }));
+    await screen.findByRole('button', { name: 'Executive Concierge active' });
     expect(mocks.request).toHaveBeenCalledWith('/settings/widget-design-pack', expect.objectContaining({
       method: 'PUT', body: JSON.stringify({ pack_id: 'v4' }),
     }));
@@ -233,10 +233,10 @@ describe('Widget design pack settings', () => {
     renderSettings();
     await ready();
     const write = vi.spyOn(Storage.prototype, 'setItem');
-    const opener = screen.getByRole('button', { name: 'Preview Owner' });
+    const opener = screen.getByRole('button', { name: 'Preview Executive Concierge' });
     opener.focus();
     fireEvent.click(opener);
-    const dialog = await screen.findByRole('dialog', { name: 'Preview Owner' });
+    const dialog = await screen.findByRole('dialog', { name: 'Preview Executive Concierge' });
     await within(dialog).findByRole('alert');
     expect(within(dialog).getByRole('button', { name: 'Retry preview' })).toBeEnabled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close preview' }));
@@ -274,13 +274,13 @@ describe('Widget design pack settings', () => {
     renderSettings();
     await ready();
     mocks.failSave = true;
-    fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use Executive Concierge pack' }));
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
     await waitFor(() => expect(screen.getAllByRole('alert').some(alert =>
       alert.textContent?.includes('Your last confirmed selection remains visible.'))).toBe(true));
     mocks.failSave = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
-    await screen.findByRole('button', { name: 'Owner active' });
+    fireEvent.click(screen.getByRole('button', { name: 'Use Executive Concierge pack' }));
+    await screen.findByRole('button', { name: 'Executive Concierge active' });
     expect(screen.queryByText('Your last confirmed selection remains visible.')).not.toBeInTheDocument();
   });
 
@@ -294,10 +294,10 @@ describe('Widget design pack settings', () => {
     ]);
     expect(screen.queryByRole('combobox', { name: 'Collection' })).not.toBeInTheDocument();
     const groups = [
-      ['minimal', ['Classic', 'Precision', 'Owner', 'Editorial', 'Quiet Form', 'Swiss Grid']],
-      ['soft', ['Elevated', 'Iconic', 'Ambient', 'Warm Modern', 'Glass Current']],
-      ['technical', ['Studio', 'Pixel', 'Motorsport', 'Blueprint', 'Terminal', 'Atlas', 'Analog', 'Observatory', 'Cyberdeck']],
-      ['geometric', ['Expressive', 'Bauhaus', 'Material Play', 'Deco Grand', 'Kinetic Type', 'Neo Brutal', 'Memphis Pop']],
+      ['minimal', ['Classic', 'Precision Ledger', 'Executive Concierge', 'Editorial', 'Quiet Form', 'Swiss Grid']],
+      ['soft', ['Horizon Loft', 'Iconic Showroom', 'Ambient', 'Warm Modern', 'Glass Current']],
+      ['technical', ['Telemetry Studio', 'Pixel Cockpit', 'Motorsport', 'Blueprint', 'Terminal', 'Atlas', 'Analog', 'Observatory', 'Cyberdeck']],
+      ['geometric', ['Expressive Form', 'Bauhaus', 'Material Play', 'Deco Grand', 'Kinetic Type', 'Neo Brutal', 'Memphis Pop']],
     ] as const;
     for (const [value, names] of groups) {
       fireEvent.change(style, { target: { value } });

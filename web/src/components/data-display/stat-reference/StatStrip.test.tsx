@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { getFormatterPreferences, setGlobalPrecision } from '@/lib/numberFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { StatGroup, StatStrip } from './index';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
@@ -46,7 +46,7 @@ describe('single StatStrip renderer contract', () => {
       const unowned = container.querySelector('#unowned');
       if (!standalone || !embedded || !unowned) throw new Error('Missing stat strip');
       const surfaceSelectors: string[] = [];
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[packId]), 'utf8'))
         .walkRules(rule => {
           surfaceSelectors.push(...rule.selectors.filter(selector => selector.includes('[data-app-part~="panel"]')));
         });

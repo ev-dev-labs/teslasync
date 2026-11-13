@@ -18,7 +18,7 @@ import type { ReactNode } from 'react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { getStateColor } from '@/types/fsm';
 import { formatDurationMsCompact } from '@/lib/dateConvert';
@@ -127,7 +127,7 @@ describe('StateMachineDebuggerPage — timeline detail association', () => {
       const release = observeAppDesignScopes(container);
       try {
         const rules: postcss.Rule[] = [];
-        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
           .walkRules(rule => { if (rule.selector.includes('[data-app-part~="badge"]')) rules.push(rule); });
         for (const chip of chips) {
           expect(rules.some(rule => chip.matches(rule.selector)), pack).toBe(true);

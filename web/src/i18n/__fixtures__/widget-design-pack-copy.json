@@ -17,6 +17,41 @@
     "current": "Entire application styles navigation, panels, controls, tables and dialogs with the same pack. Color mode, accent, fonts, density and accessibility preferences stay unchanged. This choice also syncs across machines."
   },
   {
+    "path": "dashboard.designPacks.v1",
+    "current": { "name": "Telemetry Studio", "description": "Mission-control instrumentation with crisp accent-lit bays." },
+    "previous": { "name": "Studio", "description": "Instrument-led layouts with clear secondary readings." }
+  },
+  {
+    "path": "dashboard.designPacks.v2",
+    "current": { "name": "Horizon Loft", "description": "Plush layered surfaces, soft elevation and airy spacing." },
+    "previous": { "name": "Elevated", "description": "Layered surfaces and generous spacing." }
+  },
+  {
+    "path": "dashboard.designPacks.v3",
+    "current": { "name": "Precision Ledger", "description": "Architectural restraint, hairline rules and tabular clarity." },
+    "previous": { "name": "Precision", "description": "Restrained layouts and quiet visual hierarchy." }
+  },
+  {
+    "path": "dashboard.designPacks.v4",
+    "current": { "name": "Executive Concierge", "description": "Calm ownership sanctuary with refined tonal cards." },
+    "previous": { "name": "Owner", "description": "Key information and useful actions first." }
+  },
+  {
+    "path": "dashboard.designPacks.v5",
+    "current": { "name": "Iconic Showroom", "description": "Showroom poise, luminous backdrop and bold primary readouts." },
+    "previous": { "name": "Iconic", "description": "Clear pictograms and approachable status." }
+  },
+  {
+    "path": "dashboard.designPacks.v6",
+    "current": { "name": "Expressive Form", "description": "Sculptural asymmetric contours and vibrant studio energy." },
+    "previous": { "name": "Expressive", "description": "Tonal surfaces and expressive shapes." }
+  },
+  {
+    "path": "dashboard.designPacks.v7",
+    "current": { "name": "Pixel Cockpit", "description": "Crisp digital instrument bays and sharp micro-framed readouts." },
+    "previous": { "name": "Pixel", "description": "Pixel pictograms and segmented readings." }
+  },
+  {
     "path": "dashboard.designPacks.motorsport",
     "current": { "name": "Motorsport", "description": "Race-board hierarchy, slanted readings and chart-led telemetry." }
   },

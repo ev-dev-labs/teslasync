@@ -6971,32 +6971,32 @@
         "description": "Original widget presentation and familiar controls."
       },
       "v1": {
-        "name": "Studio",
-        "description": "Instrument-led layouts with clear secondary readings."
+        "name": "Telemetry Studio",
+        "description": "Mission-control instrumentation with crisp accent-lit bays."
       },
       "v2": {
-        "name": "Elevated",
-        "description": "Layered surfaces and generous spacing."
+        "name": "Horizon Loft",
+        "description": "Plush layered surfaces, soft elevation and airy spacing."
       },
       "v3": {
-        "name": "Precision",
-        "description": "Restrained layouts and quiet visual hierarchy."
+        "name": "Precision Ledger",
+        "description": "Architectural restraint, hairline rules and tabular clarity."
       },
       "v4": {
-        "name": "Owner",
-        "description": "Key information and useful actions first."
+        "name": "Executive Concierge",
+        "description": "Calm ownership sanctuary with refined tonal cards."
       },
       "v5": {
-        "name": "Iconic",
-        "description": "Clear pictograms and approachable status."
+        "name": "Iconic Showroom",
+        "description": "Showroom poise, luminous backdrop and bold primary readouts."
       },
       "v6": {
-        "name": "Expressive",
-        "description": "Tonal surfaces and expressive shapes."
+        "name": "Expressive Form",
+        "description": "Sculptural asymmetric contours and vibrant studio energy."
       },
       "v7": {
-        "name": "Pixel",
-        "description": "Pixel pictograms and segmented readings."
+        "name": "Pixel Cockpit",
+        "description": "Crisp digital instrument bays and sharp micro-framed readouts."
       },
       "motorsport": {
         "name": "Motorsport",

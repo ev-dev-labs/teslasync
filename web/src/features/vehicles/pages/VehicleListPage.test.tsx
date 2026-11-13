@@ -193,7 +193,7 @@ import { maskFor } from '@/lib/maskValue';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { batteryColor } from '@/lib/colors';
 import { prefetchRoute } from '@/lib/routePrefetch';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
@@ -1920,7 +1920,7 @@ describe('VehicleListPage — native app-design consumers (source-only)', () => 
   const designDirectory = resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs');
   const sheets = [
     ...['base', 'controls', 'feedback'].map(sheet => resolve(designDirectory, `${sheet}.css`)),
-    ...Object.keys(APPLICATION_DESIGNS).map(pack => resolve(designDirectory, 'packs', `${pack}.css`)),
+    ...Object.keys(APPLICATION_DESIGNS).map(pack => resolve(designDirectory, 'packs', APP_DESIGN_PACK_FILES[pack])),
   ];
   for (const sheet of sheets) {
     postcss.parse(readFileSync(sheet, 'utf8')).walkRules(rule => { rules.push(rule); });

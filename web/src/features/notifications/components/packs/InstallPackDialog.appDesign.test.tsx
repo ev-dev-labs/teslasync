@@ -7,7 +7,7 @@ import postcss, { type Rule } from 'postcss'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AlertPack } from '@/api/hooks/useAlertPacks'
 import { NavigationGuardProvider } from '@/components/feedback'
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 import InstallPackDialog from './InstallPackDialog'
@@ -40,7 +40,7 @@ const pack: AlertPack = {
 }
 const identities = new Map(PACK_IDS.map(id => {
   const rules: Rule[] = []
-  postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${id}.css`), 'utf8'))
+  postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[id]), 'utf8'))
     .walkRules(rule => { rules.push(rule) })
   return [id, rules]
 }))

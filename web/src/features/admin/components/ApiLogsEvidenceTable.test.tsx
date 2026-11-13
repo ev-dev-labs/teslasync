@@ -6,7 +6,7 @@ import { ApiLogsEvidenceTable, type ApiLogsServerFilters } from './ApiLogsEviden
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('react-i18next', () => ({
@@ -82,7 +82,7 @@ describe('ApiLogsEvidenceTable server column filters', () => {
     try {
       const surface = view.container.querySelector('[data-expanded-content="true"] > td > [data-app-part="panel"]')!;
       const selectors: string[] = [];
-      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8')).walkRules(rule => {
+      postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8')).walkRules(rule => {
         for (const selector of rule.selectors) {
           if (selector.includes('[data-surface-variant="standalone"]') &&
             [...document.querySelectorAll(selector)].includes(surface)) selectors.push(selector);

@@ -8,9 +8,7 @@ import postcss, { type Rule } from 'postcss'
 import { request } from '@/api/client'
 import { exportKeys, type ExportJobSummary } from '@/api/hooks/useExports'
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types'
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '../../ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../../ui/app-designs/designs'
 import { ApiError } from '@/lib/resilience'
 import { ErrorDisplay } from '../ErrorDisplay'
 import { ErrorHelpLinks } from '../ErrorHelpLinks'
@@ -47,7 +45,7 @@ function readRules(...segments: string[]) {
 
 const feedbackRules = readRules('feedback.css')
 const controlRules = readRules('controls.css')
-const packRules = Object.fromEntries(PACK_IDS.map(pack => [pack, readRules('packs', `${pack}.css`)]))
+const packRules = Object.fromEntries(PACK_IDS.map(pack => [pack, readRules('packs', APP_DESIGN_PACK_FILES[pack])]))
 
 function matchingRules(node: Element, rules: Rule[], contract: string) {
   return rules.filter(rule => rule.selector.includes(contract)

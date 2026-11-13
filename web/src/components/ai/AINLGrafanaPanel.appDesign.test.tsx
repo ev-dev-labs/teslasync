@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import postcss from 'postcss'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 import { useSettings } from '@/hooks/useSettings'
 import { appSettingsPayload } from '@/test/fixtures/appSettings'
@@ -90,7 +90,7 @@ describe.each(candidates)('$kind native proposal surface', candidate => {
       const preview = await screen.findByTestId(candidate.previewId)
       await waitFor(() => expect(preview.getAttribute('data-app-design-owner')).toContain(`pack-${packId}`))
       const surfaceSelectors: string[] = []
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${packId}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[packId]), 'utf8'))
         .walkRules(rule => {
           surfaceSelectors.push(...rule.selectors.filter(selector => selector.includes('[data-app-part~="card"]')))
         })

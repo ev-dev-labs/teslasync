@@ -11,7 +11,7 @@ import { Stepper, type OnboardingStep } from '@/features/onboarding/components/S
 import DashboardsPage from '@/features/power-user/pages/DashboardsPage';
 import { WidgetRankedList } from '@/features/dashboard/widgets/shared/WidgetRankedList';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '../designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../designs';
 
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
@@ -44,7 +44,7 @@ function nativeMarkup() {
 const markup = nativeMarkup();
 const sheets = PACK_IDS.map(pack => {
   const rules: postcss.Rule[] = [];
-  postcss.parse(readFileSync(new URL(`./${pack}.css`, import.meta.url), 'utf8'))
+  postcss.parse(readFileSync(new URL(`./${APP_DESIGN_PACK_FILES[pack]}`, import.meta.url), 'utf8'))
     .walkRules(rule => { rules.push(rule); });
   return { pack, rules };
 });

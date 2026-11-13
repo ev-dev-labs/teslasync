@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VehicleHeroCard, type VehicleHeroCardProps } from './VehicleHeroCard';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 
 const units = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F', power: 'kW' as 'W' | 'kW' }));
 
@@ -195,7 +195,7 @@ describe('VehicleHeroCard redesigned contract', () => {
       try {
         expect(headlines.some(rule => range.matches(rule.selector)), pack).toBe(true);
         const rules: postcss.Rule[] = [];
-        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
           .walkRules(rule => { rules.push(rule); });
         const badgeRules = rules.filter(rule => rule.selector.includes('[data-app-part~="badge"]')
           && rule.nodes.some(node => node.type === 'decl' && /^(border|background|box-shadow)/.test(node.prop)));

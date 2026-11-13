@@ -1,8 +1,13 @@
 /* Scientific monitoring: separate scope, readings, plots and evidence rails. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-observatory"]) {
+    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
+    background-image: radial-gradient(var(--border-default) 0.75px, transparent 0.75px);
+    background-size: 1.5rem 1.5rem;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"]:where([data-app-design-owner~="pack-observatory"]) {
-    --app-rule-style: solid; --app-nav-radius: var(--radius-pill); --app-shadow: none;
-    --panel-radius: var(--radius-lg); --panel-shadow: none; --panel-shadow-hover: none;
+    --app-rule-style: solid; --app-nav-radius: var(--radius-pill); --app-shadow: var(--elevation-1);
+    --panel-radius: var(--radius-lg); --panel-shadow: var(--elevation-1); --panel-shadow-hover: var(--elevation-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-observatory"]) {
     border-inline-end: 1px solid var(--border-strong); background-color: var(--surface-1);
@@ -11,15 +16,14 @@
     border-block-end: 1px solid var(--border-strong); background-color: var(--surface-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px dotted var(--border-strong); padding-block: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-observatory"]) {
     border-radius: var(--radius-pill); border: 1px solid transparent;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-color: var(--control-border); background-color: var(--surface-2);
-    text-decoration-line: underline; text-decoration-color: var(--theme-accent);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-observatory"]) {
+    border-color: var(--border-strong); background-color: var(--surface-2); background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1)); font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-observatory"]) {
     display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
@@ -27,22 +31,19 @@
     border-block-end: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-observatory"]) {
-    max-inline-size: 30ch; text-wrap: balance;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-observatory"]) {
-    display: flex; flex-wrap: wrap; align-items: center; gap: var(--density-gap);
-    padding: var(--density-pad-y) var(--density-pad-x);
-    border-inline-start: 2px solid var(--border-strong); background-color: var(--surface-2);
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--density-gap); margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-observatory"]) {
     row-gap: calc(var(--density-gap) * 2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="section"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-start: 1px dashed var(--border-strong); padding-block: var(--density-pad-y);
+    border-block-start: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid var(--border-strong); background-color: var(--surface-1);
-    border-radius: var(--radius-lg); box-shadow: none;
+    border-radius: var(--radius-lg); box-shadow: var(--elevation-1); background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 5%, var(--surface-1)), var(--surface-1) 5.5rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-observatory"]) {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
@@ -55,7 +56,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-label"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     max-inline-size: 34ch; padding-block-end: calc(var(--density-gap) / 2);
-    border-block-end: 1px dashed var(--border-strong);
+    border-block-end: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-value"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-gap);
@@ -68,14 +69,16 @@
     border-inline-start: 2px solid var(--border-strong); padding-inline-start: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--control-border); border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
     background-color: var(--surface-1); box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-radius: var(--radius-sm); box-shadow: none;
+    border-radius: var(--radius-sm);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-observatory"]) { box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--control-border); background-color: var(--surface-1);
+    border: 1px solid var(--border-strong); background-color: var(--surface-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid var(--border-strong); border-radius: var(--radius-md);
@@ -85,8 +88,7 @@
     border: 1px solid transparent; border-radius: var(--radius-sm);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-color: var(--control-border); background-color: var(--surface-2);
-    text-decoration-line: underline; text-decoration-color: var(--theme-accent);
+    border-color: var(--border-strong); background-color: var(--surface-2); font-weight: var(--font-weight-semibold); box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-observatory"]) {
     background-color: var(--surface-2); border: 1px solid var(--border-strong);
@@ -101,13 +103,13 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-observatory"]) {
     padding: var(--density-pad-y) var(--density-pad-x); border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px dotted var(--border-default);
+    border-inline-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="table-row"][aria-selected="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    outline: 1px solid var(--control-border); outline-offset: -1px; background-color: var(--surface-2);
+    outline: 1px solid var(--border-strong); outline-offset: -1px; background-color: var(--surface-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-observatory"]) {
-    padding-block: var(--density-pad-y); border-block-start: 1px dashed var(--border-strong); gap: var(--density-gap);
+    padding-block: var(--density-pad-y); border-block-start: 1px solid var(--border-strong); gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-observatory"]) {
     background-color: var(--surface-1); border: 1px solid var(--border-strong);
@@ -120,19 +122,18 @@
     padding-block: var(--density-pad-x);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-start: 1px dashed var(--border-strong); background-color: var(--surface-2);
+    border-block-start: 1px solid var(--border-strong); background-color: var(--surface-2);
     padding-block: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--control-border); border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-observatory"]) {
     border: 1px solid transparent; border-radius: var(--radius-sm);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):is([aria-selected="true"], [aria-checked="true"]):where([data-app-design-owner~="pack-observatory"]) {
-    border-color: var(--control-border); background-color: var(--surface-2);
-    text-decoration-line: underline;
+    border-color: var(--border-strong); background-color: var(--surface-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):focus-visible:where([data-app-design-owner~="pack-observatory"]) {
     outline: 2px solid var(--focus-ring); outline-offset: -2px;
@@ -142,7 +143,7 @@
     border-radius: var(--radius-md); box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-block-end: 1px dashed var(--border-strong); padding-block-end: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-strong); padding-block-end: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-observatory"]) {
     background-color: var(--surface-1); box-shadow: inset 0 0 0 1px var(--border-default);
@@ -164,21 +165,21 @@
     border: 1px solid var(--border-strong); border-radius: var(--radius-md);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--control-border); border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
     background-color: var(--surface-1); gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-observatory"]) {
     outline: 2px solid var(--surface-1); outline-offset: 1px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px solid var(--border-strong); border-block-start-style: dashed;
+    border: 1px solid var(--border-strong); border-block-start-style: solid;
     background-color: var(--surface-1); padding: var(--density-pad-y); gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-observatory"]) {
-    padding-block: var(--density-pad-y); border-block-end: 1px dotted var(--border-strong);
+    padding-block: var(--density-pad-y); border-block-end: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-start: 1px dashed var(--border-strong); padding-inline-start: var(--density-pad-x);
+    border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
     row-gap: calc(var(--density-gap) * 2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-observatory"]) {
@@ -196,26 +197,25 @@
     border-inline-start: 2px solid var(--semantic-danger); padding-inline-start: var(--density-pad-x);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-start: 2px dotted var(--border-strong); padding-inline-start: var(--density-pad-x);
+    border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-observatory"]) {
-    border: 1px dotted var(--border-strong); border-radius: var(--radius-sm); background-color: var(--skeleton-bg);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background-color: var(--skeleton-bg);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="error"] [data-app-part~="button"]:where([data-app-design-owner~="pack-observatory"]) {
-    text-decoration-line: underline; text-underline-offset: .25em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="error"] [data-app-part~="button"]:where([data-app-design-owner~="pack-observatory"]) { text-underline-offset: .25em;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="field-control"], [data-app-part~="nav-item"], [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-observatory"]) {
     outline: 2px solid var(--focus-ring); outline-offset: 2px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-observatory"]) {
     border: 2px solid var(--semantic-danger);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :is([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :is([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-observatory"]) {
     box-shadow: none; border-style: dotted;
     background-color: var(--surface-2); color: var(--text-secondary);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-style: dashed; cursor: progress;
+    border-style: solid; cursor: progress;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-observatory"]) {
     background-color: var(--control-bg-hover); border-block-end-width: 2px;
@@ -223,10 +223,10 @@
 }
 @media screen and (forced-colors: none) and (hover: hover) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):not([aria-disabled="true"]):hover:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--control-bg-hover); text-decoration-line: underline;
+    background-color: var(--control-bg-hover);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="nav-item"], [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-observatory"]) {
-    background-color: var(--surface-2); text-decoration-line: underline;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--surface-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-observatory"]) {
     border-color: var(--control-border-hover); background-color: var(--control-bg-hover);
@@ -239,11 +239,19 @@
   }
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-observatory"]) {
-    flex-direction: column; align-items: stretch; gap: var(--density-gap);
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-observatory"]) {
-    border-inline-start: 0; border-block-start: 2px solid var(--border-strong);
-    padding-inline: var(--density-pad-y);
+    inline-size: 100%;
+    padding-inline-start: 0;
+    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-observatory"]) {
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-observatory"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.375rem), 1fr));
+    gap: var(--density-gap);
   }
 }
+
+

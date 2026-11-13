@@ -5,7 +5,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { FsdDriveAnalyticsPanels } from './FsdDriveAnalyticsPanels';
 import { FsdObservatoryJournalTable } from './FsdObservatoryJournalTable';
 import { fsdInsights } from './__tests__/fixtures';
@@ -104,7 +104,7 @@ describe('FSD native source-to-consumer contracts (source-only)', () => {
       expect(within(resets[1]).queryByRole('link')).toBeNull();
       const links = host.querySelectorAll('a[href^="/drives/"]');
       expect(links).toHaveLength(5);
-      const packRules = rules(join('packs', `${pack}.css`));
+      const packRules = rules(join('packs', APP_DESIGN_PACK_FILES[pack]));
       for (const link of links) {
         expect(link).toHaveAttribute('data-app-part', 'button');
         expect(link).toHaveAttribute('data-app-variant', 'ghost');

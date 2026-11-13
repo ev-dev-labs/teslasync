@@ -5,9 +5,7 @@ import type { ReactNode } from 'react';
 import postcss, { type Rule } from 'postcss';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { formatDuration, formatTemperatureDelta, type UnitPref } from '@/lib/unitConversion';
 import { summarizeComfortConsistency } from '../../lib/comfortConsistency';
@@ -108,7 +106,7 @@ postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'ba
   .walkRules(rule => { surfaceRules.push(rule); });
 const identityRules = new Map(PACK_IDS.map(pack => {
   const rules: Rule[] = [];
-  postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+  postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
     .walkRules(rule => { rules.push(rule); });
   return [pack, rules] as const;
 }));

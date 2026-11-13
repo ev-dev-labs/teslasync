@@ -14,7 +14,7 @@ import { setLowBandwidthMode } from '@/hooks/useLowBandwidthMode';
 import { severityTokens } from '@/lib/tokens';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { ComboboxMulti } from '../../forms/ComboboxMulti';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from './designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from './designs';
 
 const deferredSearch = vi.hoisted(() => ({ held: null as string | null }));
 vi.mock('react', async importOriginal => {
@@ -288,7 +288,7 @@ describe('native feedback followup (source selectors, not browser geometry accep
           expect(property).not.toMatch(/^(?:padding|border|display|position|width|height|inline-size|block-size|color|background|animation|transition|transform|inset|top|right|left|bottom)/);
         }
         const identity: Rule[] = [];
-        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
           .walkRules(rule => { if (rule.selector.includes('[data-app-part~="loading"]')) identity.push(rule); });
         expect(identity.length).toBeGreaterThan(0);
         expect(identity.some(rule => rule.selectors.some(selector => ring.matches(selector)))).toBe(false);

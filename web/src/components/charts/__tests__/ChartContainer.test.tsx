@@ -28,7 +28,7 @@ import { neonColorMap, typography } from '@/lib/tokens';
 import { LayoutCard } from '../../layout/layout-reference/LayoutCard';
 import { Button } from '../../ui/Button';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '../../ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '../../ui/app-designs/designs';
 
 const { requestMock, toastSuccess, toastError, invalidateMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
@@ -110,7 +110,7 @@ describe('ChartContainer original mobile annotation chips', () => {
   ];
   const badgeRules = PACK_IDS.flatMap(pack => {
     const rules: Rule[] = [];
-    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
       .walkRules(rule => {
         if (rule.selector.includes('[data-app-part~="badge"]')
           && rule.nodes.some(node => node.type === 'decl' && node.prop.startsWith('border-') && node.prop.endsWith('radius'))) rules.push(rule);

@@ -79,7 +79,7 @@ import DataExportPage from './DataExportPage';
 import type { Vehicle } from '@/api/types';
 import type { ExportColumnsResponse } from '@/api/hooks/useExports';
 import type { AuthModeResponse } from '@/api/types';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const mockedRequest = request as unknown as Mock;
@@ -290,7 +290,7 @@ describe('Data export responsive callers', () => {
       Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
       const release = observeAppDesignScopes(container);
       try {
-        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
         for (const example of examples) {
           expect(painted(identity, example, '[data-app-part~="card"]'), `${pack}: example paint`).not.toHaveLength(0);
         }

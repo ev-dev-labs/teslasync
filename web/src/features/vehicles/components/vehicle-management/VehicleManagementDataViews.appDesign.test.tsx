@@ -4,9 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter } from 'react-router-dom'
 import postcss from 'postcss'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import {
   expectAppDesignDataMode, matchesAppDesignCss,
 } from '@/components/feedback/appDesignCss.test-utils'
@@ -65,7 +63,7 @@ describe('typed vehicle-management source surfaces', () => {
     const mode = APPLICATION_DESIGNS[pack].data
     try {
       const identity = postcss.parse(readFileSync(
-        resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8',
+        resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8',
       ))
       const cards = host.querySelectorAll('[data-app-part="card"][data-surface-variant="standalone"]')
       expect(cards).toHaveLength(7)

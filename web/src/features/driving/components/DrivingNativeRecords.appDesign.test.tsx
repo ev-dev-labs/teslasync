@@ -12,7 +12,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { DriveDetail, DriveTelemetryPoint, DrivingCoachData } from '@/types/driving';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { useUnits } from '@/hooks/useUnits';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { forecastDepartures } from '../lib/departureForecast';
 import { buildDestinationTransitions } from '../lib/destinationTransitions';
 import { buildDriveDnaModel } from '../lib/driveDNA';
@@ -79,7 +79,7 @@ function rules(name: string): Rule[] {
 const baseRules = rules('base.css');
 const feedbackRules = rules('feedback.css');
 const chartRules = rules('charts.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))] as const));
+const packRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', APP_DESIGN_PACK_FILES[pack]))] as const));
 function selectors(rule: Rule): string[] {
   const parent = rule.parent;
   return parent?.type === 'rule'

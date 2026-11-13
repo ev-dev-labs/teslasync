@@ -1,5 +1,9 @@
 /* Motorsport: directional pitwall hierarchy; live data, not decoration, leads. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 5%, transparent), transparent 45%);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-motorsport"]) {
     background-color: var(--surface-2);
     border-inline-end: 2px solid var(--border-strong);
@@ -14,33 +18,35 @@
     gap: calc(var(--density-gap) / 2);
     border-block-end: 2px solid var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-motorsport"]) {
     border-radius: var(--radius-xs);
     border-inline-start: 3px solid transparent;
     column-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-inline-start-color: var(--theme-accent);
     font-weight: var(--font-weight-semibold);
+    background-color: var(--surface-2);
+    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-motorsport"]) {
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
     border-block-end: 3px solid var(--border-strong);
     align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-motorsport"]) {
-    border-inline-start: 4px solid var(--theme-accent);
+    border-inline-start: 2px solid var(--theme-accent);
     padding-inline-start: var(--density-pad-x);
     font-style: italic;
-    text-wrap: balance;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-2);
-    border-inline-start: 3px solid var(--border-strong);
     padding-inline: var(--density-pad-x);
     gap: calc(var(--density-gap) / 2);
     align-items: stretch;
+    margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-motorsport"]) {
     row-gap: calc(var(--density-gap) * 1.5);
@@ -53,7 +59,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="section"][data-widget-pack="motorsport"]:where([data-app-design-owner~="pack-motorsport"]) {
     /* The existing widget detail role follows the saved accent app-wide. */
     --pack-detail: var(--theme-accent);
-    border-block-start: 4px solid var(--pack-detail);
+    border-block-start: 2px solid var(--pack-detail);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-motorsport"]) {
     gap: var(--density-gap);
@@ -238,7 +244,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-radius: var(--radius-xs);
-    border-inline-start-width: 4px;
+    border-inline-start-width: 2px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-block: 2px solid var(--border-default);
@@ -247,7 +253,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="error"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-radius: var(--radius-xs);
-    border-inline-start-width: 4px;
+    border-inline-start-width: 2px;
     row-gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -262,8 +268,18 @@
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-motorsport"]) {
-    border-inline-start: 0;
-    padding-inline: calc(var(--density-pad-x) / 2);
-    max-inline-size: 100%;
+    inline-size: 100%;
+    padding-inline-start: 0;
+    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-motorsport"]) {
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-motorsport"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.375rem), 1fr));
+    gap: var(--density-gap);
   }
 }
+
+

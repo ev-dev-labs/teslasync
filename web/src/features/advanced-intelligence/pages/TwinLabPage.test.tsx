@@ -9,7 +9,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
-import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { TwinLabRequest, TwinLabResponse } from '@/types/advancedIntelligence';
 import { twin } from './advancedIntelligenceClosure.fixtures';
@@ -100,7 +100,7 @@ describe('TwinLabPage restrained source adoption', () => {
     const before = records.map(record => record.textContent);
     const rules: string[] = [];
     postcss.parse(readFileSync(resolve(
-      process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+      process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
     ), 'utf8')).walkRules(rule => {
       if (rule.selector.includes('[data-app-part~="card"]')) rules.push(rule.selector);
     });

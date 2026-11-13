@@ -7,7 +7,7 @@ import postcss, { type Rule } from 'postcss';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AlertRule, NotificationChannel, NotificationLog, PushSubscriptionRow, WebhookTestResult } from '@/api/types';
 import { deriveDataState } from '@/api/dataState';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { AlertFatiguePanel } from './AlertFatiguePanel';
@@ -68,7 +68,7 @@ function css(file: string): Rule[] {
     .walkRules(rule => { result.push(rule); });
   return result;
 }
-const identities = new Map(PACK_IDS.map(pack => [pack, css(join('packs', `${pack}.css`))]));
+const identities = new Map(PACK_IDS.map(pack => [pack, css(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
 function expectIdentity(node: Element, pack: typeof PACK_IDS[number], part: string) {
   expect(identities.get(pack)!.some(rule => rule.selectors.some(selector =>
     selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector)))).toBe(true);

@@ -129,7 +129,7 @@ import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { ApiError } from '@/lib/resilience';
 import { setLowBandwidthMode } from '@/hooks/useLowBandwidthMode';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -503,7 +503,7 @@ describe('CommandHistoryPage — filters & interactions', () => {
       Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
       const release = observeAppDesignScopes(container);
       try {
-        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
         const links: string[] = [];
         identity.walkRules(rule => {
           if (rule.selector.includes('[data-app-part~="button"]') && commands.matches(rule.selector)) links.push(rule.selector);

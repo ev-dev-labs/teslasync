@@ -1,5 +1,9 @@
 /* Studio: connected workstation bands, inset instruments and separated actions. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v1"]) {
+    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 4.5%, var(--surface-2)), transparent 18rem);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v1"]) {
     border-inline-end: 2px solid var(--border-strong);
     background-color: var(--surface-2);
@@ -14,31 +18,35 @@
     row-gap: calc(var(--density-gap) / 2);
     border-block-end: 1px solid var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="nav-item"]:where([data-app-design-owner~="pack-v1"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-v1"]) {
     border-radius: var(--radius-xs);
     column-gap: var(--density-gap);
     border-inline-start: 2px solid transparent;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="nav-item"][aria-current="page"]:where([data-app-design-owner~="pack-v1"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-v1"]) {
     border-inline-start-color: var(--theme-accent);
     font-weight: var(--font-weight-semibold);
+    background-color: var(--surface-2);
+    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v1"]) {
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
     border-block: 1px solid var(--border-strong);
     background-color: var(--surface-2);
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v1"]) {
     padding-inline-start: var(--density-pad-x);
     border-inline-start: 3px solid var(--theme-accent);
-    text-wrap: balance;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v1"]) {
     gap: calc(var(--density-gap) / 2);
     padding-inline: var(--density-pad-x);
-    border-inline-start: 1px solid var(--border-strong);
     align-items: stretch;
+    margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-v1"]) {
     row-gap: calc(var(--density-gap) * 1.5);
@@ -144,7 +152,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-v1"]) {
     border: 1px solid var(--border-strong);
-    border-block-start-width: 3px;
+    border-block-start-width: 2px;
     border-radius: var(--radius-xs);
     box-shadow: var(--elevation-2);
   }
@@ -201,7 +209,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-v1"]) {
     border: 1px solid var(--border-strong);
-    border-inline-start-width: 3px;
+    border-inline-start-width: 2px;
     border-radius: var(--radius-xs);
     background-color: var(--surface-2);
   }
@@ -219,7 +227,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-v1"]) {
     border-radius: var(--radius-xs);
-    border-inline-start-width: 3px;
+    border-inline-start-width: 2px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-v1"]) {
     border-block: 1px dashed var(--border-strong);
@@ -227,7 +235,7 @@
     row-gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="error"]:where([data-app-design-owner~="pack-v1"]) {
-    border-inline-start-width: 3px;
+    border-inline-start-width: 2px;
     row-gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-v1"]) {
@@ -242,8 +250,18 @@
 }
 @media screen and (forced-colors: none) and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v1"]) {
-    border-inline-start: 0;
-    border-block-start: 1px solid var(--border-default);
-    padding-block-start: var(--density-pad-y);
+    inline-size: 100%;
+    padding-inline-start: 0;
+    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v1"]) {
+    padding-block: var(--density-pad-y);
+    gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v1"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.25rem), 1fr));
+    gap: var(--density-gap);
   }
 }
+
+

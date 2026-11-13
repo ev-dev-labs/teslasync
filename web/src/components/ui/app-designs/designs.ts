@@ -48,6 +48,36 @@ export const APPLICATION_DESIGNS: Readonly<Record<PackId, ApplicationDesign>> = 
   memphis: { navigation: 'hybrid', header: 'split', content: 'canvas', controls: 'segmented', data: 'cards', chart: 'geometric', map: 'atlas', feedback: 'callout' },
 };
 
+export const APP_DESIGN_PACK_FILES: Readonly<Record<PackId, string>> = {
+  classic: 'classic.css',
+  v1: 'studio.css',
+  v2: 'elevated.css',
+  v3: 'precision.css',
+  v4: 'concierge.css',
+  v5: 'iconic.css',
+  v6: 'expressive.css',
+  v7: 'pixel.css',
+  motorsport: 'motorsport.css',
+  blueprint: 'blueprint.css',
+  editorial: 'editorial.css',
+  ambient: 'ambient.css',
+  terminal: 'terminal.css',
+  atlas: 'atlas.css',
+  analog: 'analog.css',
+  observatory: 'observatory.css',
+  bauhaus: 'bauhaus.css',
+  quiet: 'quiet.css',
+  warm: 'warm.css',
+  swiss: 'swiss.css',
+  material: 'material.css',
+  glass: 'glass.css',
+  deco: 'deco.css',
+  kinetic: 'kinetic.css',
+  brutal: 'brutal.css',
+  cyber: 'cyber.css',
+  memphis: 'memphis.css',
+};
+
 /** Also usable on an isolated preview host, without mounting the bridge. */
 export function getAppDesignAttributes(packId: PackId) {
   const design = APPLICATION_DESIGNS[packId];

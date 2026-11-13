@@ -5,7 +5,7 @@ import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 import type { RepairCase, RepairImpactPreview, RepairSuggestion } from '@/api/hooks/useDataRepair';
 import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { RepairCaseEvidencePanel } from './RepairCaseEvidencePanel';
 import { RepairEvidenceTimeline } from './RepairEvidenceTimeline';
@@ -63,7 +63,7 @@ describe('Repair evidence source frames', () => {
       expect(screen.queryByText('Last in-session observation')).toBeNull();
       const timeline = screen.getByRole('region', { name: 'Evidence timeline' });
       expect(timeline).toHaveAttribute('data-app-part', 'panel');
-      const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+      const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
       const rules: string[] = [];
       identity.walkRules(rule => {
         rules.push(...rule.selectors.filter(selector =>

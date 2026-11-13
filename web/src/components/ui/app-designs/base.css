@@ -13,7 +13,7 @@
     --app-heading-style: normal;
     --app-pattern: none;
     --app-nav-radius: var(--radius-md);
-    --app-shadow: none;
+    --app-shadow: var(--elevation-1);
   }
 
   /* Reset only app-owned inherited treatments, including neutral widget
@@ -109,12 +109,13 @@
   }
 
   [data-app-design-owner]:where([data-app-part~="nav-item"], [data-app-part~="tab"]) {
+    text-decoration-line: none;
     text-underline-offset: 0.2em;
     text-decoration-thickness: 2px;
   }
 
   [data-app-design-owner]:where([data-app-part~="nav-item"][aria-current="page"], [data-app-part~="tab"][aria-selected="true"]) {
-    text-decoration-line: underline;
+    font-weight: var(--font-weight-semibold);
   }
 
   [data-app-design-owner]:where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"], [data-app-part~="nav-item"]):is(:disabled, [aria-disabled="true"]) {

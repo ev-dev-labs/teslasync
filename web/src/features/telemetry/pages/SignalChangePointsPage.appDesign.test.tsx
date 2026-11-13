@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
 import type { SignalHistoryResponse } from '@/types/telemetry';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import SignalChangePointsPage from './SignalChangePointsPage';
 import SignalTrendPage from './SignalTrendPage';
@@ -94,7 +94,7 @@ describe('real signal interpretation surface consumers', () => {
       for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
       const release = observeAppDesignScopes(container);
       try {
-        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
         for (const card of cards) {
           let consumed = false;
           sheet.walkRules(rule => {

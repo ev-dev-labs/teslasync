@@ -8,7 +8,7 @@ import postcss, { type Rule } from 'postcss';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
-import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type {
   ChargingSiteTwinRequest, ChargingSiteTwinResponse, ResiliencePlanRequest,
@@ -76,7 +76,7 @@ function stylesheet(...names: string[]) {
 
 const baseRules = stylesheet('base.css');
 const feedbackRules = stylesheet('feedback.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, stylesheet('packs', `${pack}.css`)]));
+const packRules = new Map(PACK_IDS.map(pack => [pack, stylesheet('packs', APP_DESIGN_PACK_FILES[pack])]));
 
 function consumes(node: Element, rules: readonly Rule[], contract: string, property?: string) {
   return rules.some(rule => rule.selector.includes(contract) && node.matches(rule.selector)

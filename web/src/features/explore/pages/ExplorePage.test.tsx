@@ -40,11 +40,9 @@ import ExplorePage from './ExplorePage';
 import { buildFeatureCatalog, filterFeatureCatalog } from '../featureCatalog';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import {
-  APPLICATION_DESIGNS,
+import { APPLICATION_DESIGNS,
   getAppDesignAttributes,
-  observeAppDesignScopes,
-} from '@/components/ui/app-designs/designs';
+  observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 
 // ── Hoisted, per-test controllable gating state ──────────────────────
 const state = vi.hoisted(() => ({
@@ -1156,7 +1154,7 @@ describe('ExplorePage — restrained discovery adoption', () => {
           'data-app-design-owner', expect.stringContaining(`pack-${pack}`),
         ));
         const sheet = postcss.parse(readFileSync(resolve(
-          'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+          'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
         ), 'utf8'));
         const surfaces: Rule[] = [];
         const buttons: Rule[] = [];

@@ -36,7 +36,7 @@ import { neonColorMap } from '@/lib/tokens'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import postcss, { type Rule } from 'postcss'
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 // ── i18n: return the fallback/default string and interpolate {{vars}} ──
@@ -1325,7 +1325,7 @@ describe('SystemStatusPage — native diagnostic design ownership', () => {
       const summary = details.querySelector(':scope > summary')
       if (!(summary instanceof HTMLElement)) throw new Error('Native diagnostics summary missing')
       const identityRules: Rule[] = []
-      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
         .walkRules(rule => { identityRules.push(rule) })
       expect(matches(details, identityRules, 'panel').length).toBeGreaterThan(0)
       expect(matches(summary, identityRules, 'button').length).toBeGreaterThan(0)

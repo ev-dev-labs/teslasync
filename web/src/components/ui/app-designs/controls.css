@@ -239,8 +239,9 @@
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) > [data-app-part~="dialog-footer"]:where([data-app-design-owner~="controls-filled"]) {
     background-color: var(--surface-2);
-    border-block-start-style: double;
-    border-block-start-width: 3px;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-color: var(--border-default);
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="filled"]) [data-app-part~="popover"]:where([data-app-design-owner~="controls-filled"]) {
@@ -252,13 +253,14 @@
   /* Outline: open forms, ruled group headings, independently framed actions. */
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) [data-app-form-heading]:where([data-app-design-owner~="controls-outline"]) {
     padding-block-end: var(--density-pad-y);
-    border-block-end: 1px solid var(--control-border);
+    border-block-end: 1px solid var(--border-default);
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="submit"], [type="reset"], [type="button"], [type="image"], [data-app-control-kind="composite"])):where([data-app-design-owner~="controls-outline"]) {
-    background-color: transparent;
+    background-color: var(--surface-1);
     border-width: 1px;
-    border-radius: var(--radius-sm);
+    border-color: var(--border-strong);
+    border-radius: var(--radius-md);
   }
 
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-controls="outline"]) :is([data-app-field-surface], [data-app-control-kind="tree"]):where([data-app-design-owner~="controls-outline"]) {

@@ -9,7 +9,7 @@ import type { FeedbackEntry } from '@/api/types';
 import type { RedisSignalsMeta } from '@/api/devtools';
 import type { DLQEntryFull } from '@/types/admin-diagnostics';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import RequestBuilder from './RequestBuilder';
 import { RegexTesterTool } from './devtools/tools/RegexTester';
 import { TimestampTool } from './devtools/tools/TimestampTool';
@@ -44,7 +44,7 @@ function rules(name: string): Rule[] {
   return result;
 }
 const feedbackRules = rules('feedback.css');
-const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))]));
+const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
 const initialAttributes = Object.keys(getAppDesignAttributes('classic'))
   .map(name => [name, document.documentElement.getAttribute(name)] as const);
 const releases: Array<() => void> = [];

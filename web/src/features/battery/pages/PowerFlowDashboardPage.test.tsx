@@ -42,7 +42,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
 import { ApiError } from '@/lib/resilience';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { TeslaEnergyLiveStatus } from '@/types/energy';
@@ -465,7 +465,7 @@ describe('PowerFlowDashboardPage — populated (charging / importing)', () => {
     }
     for (const pack of PACK_IDS) {
       const identity = postcss.parse(readFileSync(resolve(
-        process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`,
+        process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
       ), 'utf8'));
       Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => root.setAttribute(name, value));
       const release = observeAppDesignScopes(root);

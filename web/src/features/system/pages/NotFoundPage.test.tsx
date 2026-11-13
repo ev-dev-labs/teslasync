@@ -33,7 +33,7 @@ import type { ReactNode } from 'react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import postcss from 'postcss'
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types'
 
 const navigateMock = vi.fn()
@@ -154,7 +154,7 @@ describe('NotFoundPage — route suggestions', () => {
       const release = observeAppDesignScopes(container)
       try {
         const rules: postcss.Rule[] = []
-        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
+        postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
           .walkRules(rule => { if (rule.selector.includes('[data-app-part~="button"]')) rules.push(rule) })
         expect(rules.some(rule => link.matches(rule.selector)), pack).toBe(true)
         expect(link).toHaveAttribute('data-app-design-owner', container.getAttribute('data-app-design-owner'))

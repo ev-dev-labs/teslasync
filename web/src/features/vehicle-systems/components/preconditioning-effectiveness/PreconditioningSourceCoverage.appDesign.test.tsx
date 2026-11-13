@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import postcss, { type Rule } from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { formatDateTime } from '@/lib/dateFormat';
 import { formatDuration, formatTemperatureDelta, type UnitPref } from '@/lib/unitConversion';
@@ -83,7 +83,7 @@ function rules(file: string) {
 
 const baseRules = rules('base.css');
 const feedbackRules = rules('feedback.css');
-const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))]));
+const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
 const releases: Array<() => void> = [];
 
 function mount(children: ReactNode, pack?: PackId) {

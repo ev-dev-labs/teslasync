@@ -7,7 +7,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { Drive } from '@/types/driving';
 import type { PeriodStats, ScoredDrive } from '../pages/DriveScorePage';
 import { analyzeArrivalReliability } from '../lib/arrivalReliability';
@@ -102,7 +102,7 @@ const cold: ColdStartSummary = {
 const baseCss = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'));
 const feedbackCss = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'));
 const identityCss = new Map<PackId, postcss.Root>(PACK_IDS.map(pack => [
-  pack, postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8')),
+  pack, postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8')),
 ]));
 
 function show(children: ReactNode) {

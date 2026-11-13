@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import type { NotificationLog } from '@/api/types';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import '../../../i18n';
 
@@ -221,7 +221,7 @@ describe('Notification health — qualified native jump controls', () => {
         const release = observeAppDesignScopes(container);
         try {
           const identity: Rule[] = [];
-          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', `${pack}.css`), 'utf8'))
+          postcss.parse(readFileSync(resolve(sheetDirectory, 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
             .walkRules(rule => { if (rule.selector.includes('[data-app-part~="button"]')) identity.push(rule); });
           for (const [index, link] of links.entries()) {
             expect(link.tagName).toBe('A');

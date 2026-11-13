@@ -14,7 +14,7 @@ import { formatTime } from '@/lib/dateFormat';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
@@ -121,7 +121,7 @@ describe('DeparturePanel', () => {
       for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
       const release = observeAppDesignScopes(container);
       try {
-        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'));
+        const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
         for (const row of rows) {
           let consumed = false;
           sheet.walkRules(rule => {
