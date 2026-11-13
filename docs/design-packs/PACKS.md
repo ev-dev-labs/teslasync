@@ -71,7 +71,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a compact, linear ledger with explicit operational feedback.
 - Signature: prompt-like leading markers and monochrome rules.
 
-### 14. Atlas (`atlas`) - in progress
+### 14. Atlas (`atlas`) - passed-with-notes
 - Mood: exploration and route planning.
 - Distinction: map-forward cards and a hybrid navigation frame.
 - Signature: coordinate-inspired labels and framed map regions.
