@@ -339,3 +339,32 @@
     gap: var(--density-gap);
   }
 }
+
+/* Gallery keylines sit inside existing boxes and do not allocate layout space. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-header"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 -3px var(--app-surface-canvas, var(--bg-app)), inset 0 -4px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-route-focus-target]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    letter-spacing: calc(var(--tracking, 0em) + 0.02em);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-strong);
+    box-shadow: inset 0 0 0 1px var(--border-strong), inset 0 0 0 4px var(--surface-1), inset 0 0 0 5px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-widget-id] > .dashboard-widget-panel, [data-operational-brief-surface="standalone"]):not(:hover):not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 0 0 1px var(--border-strong), inset 0 0 0 4px var(--surface-1), inset 0 0 0 5px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-role="widget-shell-header"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    background-image: linear-gradient(90deg, var(--border-strong) 18%, var(--border-default) 18%);
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-vehicle-hero-pack="v5"] > :nth-child(2):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 0 0 3px var(--app-surface-panel, var(--surface-1)), inset 0 0 0 4px var(--border-strong), inset 0 0 0 7px var(--app-surface-raised, var(--surface-2)), inset 0 0 0 8px var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-chart-caption], [data-vehicle-hero-pack="v5"] > :nth-child(3)):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 1px var(--border-default), inset 0 -1px var(--border-default);
+  }
+}

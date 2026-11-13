@@ -102,3 +102,98 @@ stylesheets. It exited 0:
 ```
 
 The build does not resolve the failed captures or incomplete contrast checks.
+
+## Showroom distinctness follow-up — 2026-11-13
+
+The earlier phone comparisons predate later v2 and v5 refinements; they do not
+establish what either pack currently looks like. To distinguish Showroom's
+composition without moving components, v5 now uses a double inset gallery
+frame on neutral dashboard exhibits and standalone briefs, a segmented neutral
+placard rule on widget headers, a double-mat vehicle hero, and fine inset
+caption and page-header keylines. The page title uses slightly wider tracking
+relative to the saved tracking token; it retains the selected font. Frames
+use existing palette tokens, allocate no layout space, and exclude protected
+Digital Twin subtrees. Forced colors retain their existing system treatment.
+
+Screenshot-free validation:
+
+```text
+> npx vitest run src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx -t v5
+Test Files  1 passed (1)
+     Tests  4 passed | 107 skipped (111)
+
+> npx tsc --noEmit
+[no output; exit 0]
+
+> node -  [PostCSS selector/color check]
+PASS: PostCSS parsed 75 owner-qualified rules; no literal colors.
+
+> node -  [synthetic browser comparison with the pre-follow-up stylesheet]
+PASS: 36 synthetic phone cases; geometry, protected/preview content, palette/font, overflow and keyboard interaction preserved; frames applied only in normal colors.
+
+> git diff --check -- web\src\components\ui\app-designs\packs\iconic.css
+[no output; exit 0]
+```
+
+The synthetic comparison covered 360/390/430px, .85/1/1.35 font scales,
+light/dark palettes and normal/forced colors. It checked representative boxes,
+vehicle-image attributes, a protected subtree, a differently owned preview,
+semantic text, and a keyboard action. It is not a real-route or full
+accessibility audit. No screenshots were taken and no server was started or
+stopped. The visual distinctness of the current production render remains
+unverified; earlier capture failures and shared requests remain as documented
+above.
+
+## Standalone DataTable frame repair — 2026-11-13
+
+The v5 standalone DataTable frame has `shadow-e1`, not `shadow-panel`, so
+the existing pack panel selectors missed it. Its owner-qualified standalone
+frame now receives the showroom's token-derived neutral border and inset
+gallery shadow. Embedded and protected frames are excluded; no table, scroll,
+row, selection or layout properties are changed.
+
+Before the repair, the focused DataTable command exited 1 with
+`expected 0 to be greater than 0` for the v5 identity rule:
+`Test Files 1 failed (1); Tests 1 failed | 34 skipped (35)`.
+
+After the repair, from `web`:
+
+```text
+> npx vitest run src\components\ui\DataTable.appDesign.test.tsx src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx --testNamePattern='v5'
+ RUN  v4.1.12 D:/repos/teslasync/web
+
+ ✓ src/components/ui/DataTable.appDesign.test.tsx (35 tests | 34 skipped) 398ms
+     ✓ v5 binds only the painted frame to existing base and identity surface rules  395ms
+ ✓ src/components/ui/app-designs/packs/PackNativeCompositionPreservation.test.tsx (111 tests | 107 skipped) 1826ms
+     ✓ keeps the native host, inline bank and specialized metrics outside generic card restructuring at every breakpoint  457ms
+     ✓ honors nearest complete and incomplete previews, widget-only neutrality and final-target ownership  1135ms
+
+ Test Files  2 passed (2)
+      Tests  5 passed | 141 skipped (146)
+   Start at  12:45:14
+   Duration  20.83s (transform 20.38s, setup 1.45s, import 32.41s, tests 2.22s, environment 2.93s)
+
+> node -  [synthetic browser comparison with the rule removed]
+PASS: 12 synthetic browser cases (360/430/1280px, light/dark, normal/forced colors); standalone paint changed only in normal colors; frame/table/scroll geometry, selection, focus, embedded/protected/other-owner paint preserved.
+
+> npx tsc --noEmit
+[no output; exit 0]
+
+> audit_code D:\repos\teslasync\web\src\components\ui\app-designs\packs\iconic.css
+✅ web/src/components/ui/app-designs/packs/iconic.css: No violations found.
+
+> git diff --check -- web\src\components\ui\app-designs\packs\iconic.css docs\design-packs\REVIEW-v5.md
+PASS: git diff --check
+```
+
+The DataTable test also checks the actual standalone and embedded markup,
+retained rows, selected values, sort and selection callbacks. The browser
+comparison uses synthetic markup, not an actual route. No images were captured
+and no server was managed; current visual appearance and the earlier
+accessibility notes remain unverified.
+
+The orchestrator subsequently ran `npm run build` in the verification snapshot
+with the repaired v5, v6 and Atlas stylesheets: **exit 0**. All three SHA-256
+hashes matched the working files. The combined native-composition, ordered-step
+and DataTable contracts reported **3 files passed, 200 tests passed**. This
+does not establish the post-capture appearance or contrast.
