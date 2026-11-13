@@ -1,10 +1,12 @@
 # Design pack register
 
 Order follows the existing manifest. `todo` means not yet redesigned or
-reviewed; `in progress` is not a pass. A pass requires the complete visual,
-mobile and verification loop in the corresponding review.
+reviewed; `in progress` is not a pass. `passed-with-notes` records a
+completed bounded review with unresolved or unverified requirements; it is
+not a full visual or accessibility pass. See each review for the evidence.
+A full pass requires the complete visual, mobile and verification loop.
 
-### 1. Classic (`classic`) - in progress
+### 1. Classic (`classic`) - passed-with-notes
 - Mood: calm, confident and familiar.
 - Distinction: balanced cards and a simple reading rhythm provide the neutral baseline.
 - Signature: a fine frame with a restrained active-navigation underline.
@@ -44,27 +46,27 @@ mobile and verification loop in the corresponding review.
 - Distinction: squared instrument panels and a compact technical grid.
 - Signature: crisp stepped corners and small calibration marks.
 
-### 9. Motorsport (`motorsport`) - todo
+### 9. Motorsport (`motorsport`) - in progress
 - Mood: focused pit-wall telemetry.
 - Distinction: fast-scanning instrument groups and decisive action hierarchy.
 - Signature: a short directional rule at the leading edge of key readings.
 
-### 10. Blueprint (`blueprint`) - todo
+### 10. Blueprint (`blueprint`) - in progress
 - Mood: architectural drafting room.
 - Distinction: technical workbench composition with measured whitespace.
 - Signature: subtle construction lines and annotation-like labels.
 
-### 11. Editorial (`editorial`) - todo
+### 11. Editorial (`editorial`) - in progress
 - Mood: independent automotive journal.
 - Distinction: a masthead and long-form reading hierarchy replace cockpit density.
 - Signature: strong section rules and generous headline spacing.
 
-### 12. Ambient (`ambient`) - todo
+### 12. Ambient (`ambient`) - in progress
 - Mood: tranquil, atmospheric and unhurried.
 - Distinction: floating islands of content with ample separation.
 - Signature: a restrained surface wash that never obscures data.
 
-### 13. Terminal (`terminal`) - todo
+### 13. Terminal (`terminal`) - in progress
 - Mood: purposeful command-line workstation.
 - Distinction: a compact, linear ledger with explicit operational feedback.
 - Signature: prompt-like leading markers and monochrome rules.

@@ -1,6 +1,7 @@
 # Classic review
 
-Status: **in progress**. These are partial visual judgments, not acceptance
+Status: **passed-with-notes** (bounded review only, not a visual or accessibility
+pass). These are partial visual judgments, not acceptance
 scores. Phone contrast findings and incomplete checks are recorded below;
 remaining routes and interaction states are unreviewed.
 The first two score tables record earlier captures; some screenshot paths
@@ -662,3 +663,146 @@ Vitest run is still in progress and has not established a passing suite.
   the pack clearly from other restrained profiles.
 - Tap-target, composed contrast, safe-area, open-control, loading and error
   states have not been verified by this visual sample.
+
+## 2026-11-13 bounded Classic review
+
+Classic now uses the existing theme-derived canvas, panel, raised and overlay
+roles, a fine card frame, regular density-token spacing, restrained motion,
+outlined controls, readable metric labels and a quiet navigation underline.
+The selected font, tracking, theme, accent, semantic colors and chart palette
+remain their existing owners. Helix gets a framed composer and distinct
+user/assistant surfaces. All Classic targets retain the nearest-owner marker;
+the Digital Twin preserve boundary was not changed.
+
+### First round: interrupted
+
+The prescribed Edge command for Dashboard, Drives and Energy at 390px and
+desktop exited **1**: `5 failed, 1 passed (5.4m)`. I inspected both images
+that were actually written:
+
+- `shots/classic/phone-390-scale-1/dashboard--round-1.png`
+- `shots/classic/phone-390-scale-1/drives--round-1.png`
+
+These are preserved copies of the original viewport captures, not additional
+screenshots. Phone Energy and all three desktop images were not captured:
+their requests failed with `ERR_CONNECTION_REFUSED` after the shared server
+went down. The coordinator subsequently recovered it. Do not interpret the
+missing images as reviewed.
+
+The phone Dashboard diagnostic failed on the protected Digital Twin's
+36 × 36px Open link, 10 × 28px refresh control and 14px title/body text.
+It also found two unprotected footer links at 12px. Dashboard's automated Axe
+run reported `0 violated rules, 0 nodes require manual review`. Phone Drives
+passed its capture diagnostics and reported `0 violated rules, 1 nodes require
+manual review`: the result-count text partially overlapped other elements, so
+its contrast was not established.
+
+### Findings and owned refinements
+
+1. **Phone spacing:** the breadcrumb and page heading have an unnecessarily
+   large intervening gap. The compact breadcrumb now uses the saved-density
+   gap rather than a fixed 20px margin; the title and commands still wrap
+   naturally when their minimum widths do not fit.
+2. **Dashboard hierarchy:** the disconnected warning, layout selector and
+   three-row header push the dismissed setup widget into the first screen,
+   while its reserved grid footprint delays vehicle information. Shrinking
+   or reordering the saved widget grid is not a pack-safe fix. The requested
+   shared decision is recorded in `requests/classic.md`.
+3. **Metric rhythm:** the historical Drives view had duplicate rules and
+   undersized labels. The new brief treatment removes the extra bank frame,
+   keeps one row separator, and scales labels from 14px on desktop to the
+   phone body floor without changing values, status colors or data layout.
+4. **Footer typography:** the observed “All drives” and “Open vehicle”
+   links were 12px despite already having phone-sized hit areas. The
+   owner-qualified widget-footer and feedback links now use the scalable
+   16px body floor and may wrap; protected widgets remain excluded.
+5. **Signature:** the first phone image showed the active marker above the
+   navigation item rather than an underline. Its 2px accent mark now sits
+   beneath the selected item. The shared two-row navigation still needs a
+   clipping and target-size decision, recorded below.
+
+The footer, breadcrumb and underline refinements were made after the first
+round and require the final screenshots to judge visually. The protected
+Digital Twin failures remain unresolved and are specified, with acceptance
+criteria and the geometry conflict, in `requests/classic.md`.
+
+### Second and final round
+
+The same bounded command was run in both rounds:
+
+```powershell
+Set-Location web
+$env:DESIGN_PACK_BROWSER_CHANNEL='msedge'
+$env:DESIGN_PACK_FONT_SCALE='1'
+$env:DESIGN_PACK_CHECK_CONTRAST='1'
+node scripts\capture-design-packs.mjs --pack classic --pages dashboard,drives,energy --viewports phone-390,desktop --base-url http://127.0.0.1:54872
+```
+
+The final invocation exited **1**: `1 failed, 5 passed (4.2m)`. All six
+default-scale dark-mode images were written and individually inspected:
+
+- `shots/classic/phone-390-scale-1/dashboard.png`
+- `shots/classic/phone-390-scale-1/drives.png`
+- `shots/classic/phone-390-scale-1/energy.png`
+- `shots/classic/desktop-scale-1/dashboard.png`
+- `shots/classic/desktop-scale-1/drives.png`
+- `shots/classic/desktop-scale-1/energy.png`
+
+The phone Dashboard still fails on the protected Digital Twin's 36 × 36px
+Open link, 10 × 28px refresh button and 14px title/body text. The two
+unprotected footer links no longer appear in the small-text failures. Phone
+Drives and Energy, and all three desktop captures, passed their runner
+diagnostics. Axe reported zero violated contrast rules, but also reported
+incomplete nodes requiring manual contrast review:
+
+| Viewport | Dashboard | Drives | Energy |
+| --- | ---: | ---: | ---: |
+| Phone | 0 | 1 | 0 |
+| Desktop | 1 | 7 | 13 |
+
+These 22 incomplete nodes are not contrast passes. They include the selected
+desktop rail label behind a pseudo-element, partly obscured navigation/table
+text, and chart labels or legends whose backgrounds Axe could not determine.
+The phone Drives result-count label remains incomplete because of overlap.
+
+The final screenshots show a consistent fine frame and readable two-column
+phone metrics, with the selected underline below the active navigation item.
+The desktop views retain the familiar sidebar and restrained card rhythm.
+The Dashboard's dismissed setup panel still dominates the first screen, and
+the phone's second navigation row is cut by the bottom viewport edge. These
+are shared-layout decisions, not fixes safely achievable in this pack. The
+screenshots are viewport-only dark-mode evidence; they do not establish the
+appearance of light mode, below-the-fold content or interactive states.
+
+### Other checks and remaining scope
+
+- The scoped guideline audit returned zero findings in its six categories;
+  its `npx tsc --noEmit` check passed. The separate `audit_code` check also
+  reported no violations in `classic.css`.
+- `AppDesignBridge.test.tsx`: `13 passed`. Screenshot-free Classic and
+  preview browser contracts: `13 passed`. Fixture-level Edge checks covered
+  360/390/430px, two palettes, scales 0.85/1/1.35, protected and preview
+  isolation, forced colors and reduced motion; they are not substitutes for
+  full-route visual review.
+- The standalone `/connect`, `/glance`, `/onboarding`, `/s/:token`, `/watch`
+  and `/year-review/:year` routes lack verified bridge coverage.
+  `/period-compare` was previously skipped because it would not settle and
+  repeatedly read settings; neither gap is resolved by this pack review.
+- The worker ran no build or full test suite. Page section counts, line-count
+  comparisons and API-hook checks do not apply to this stylesheet-only change.
+  The phone failure, incomplete contrast nodes and shared layout requests
+  prevent a full-app or accessibility pass.
+
+### Coordinator build
+
+The coordinator copied the completed Classic stylesheet into a separate
+checkout of the committed shared foundation and ran `npm run build` in its
+`web` directory. It exited 0:
+
+```text
+[pwa-precache] OK — route chunks remain on-demand
+[pwa-contract] OK — source + build contracts satisfied
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+```
+
+The build does not resolve the failed phone capture or establish contrast.
