@@ -121,7 +121,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: formal mastheads and symmetrical editorial sections.
 - Signature: paired fine rules and carefully proportioned corners.
 
-### 24. Kinetic Type (`kinetic`) - in progress
+### 24. Kinetic Type (`kinetic`) - passed-with-notes
 - Mood: purposeful motion and momentum.
 - Distinction: a compact workbench driven by strong typographic hierarchy.
 - Signature: a directional header rule; motion remains optional and restrained.
