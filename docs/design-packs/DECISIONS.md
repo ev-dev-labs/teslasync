@@ -50,6 +50,9 @@ not expose an agent-kill operation. No concurrent replacement was allowed to
 edit either owned stylesheet while its worker was still active. Concierge's
 single retry is screenshot-free because both capture invocations were spent;
 the original Ledger owner is doing the distinctness follow-up.
+Horizon Loft's original worker also exceeded its slot and was asked to stop
+and report. This runtime exposes no agent-kill operation; its stylesheet
+remains exclusively owned until that worker actually stops.
 
 The real phone bar was clipped when the lazy-loaded `sidenav.css` applied its
 60px minimum after the app-design styles. The shared mobile layer now
