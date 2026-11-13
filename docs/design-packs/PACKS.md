@@ -11,7 +11,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: balanced cards and a simple reading rhythm provide the neutral baseline.
 - Signature: a fine frame with a restrained active-navigation underline.
 
-### 2. Telemetry Studio (`v1`) - in progress
+### 2. Telemetry Studio (`v1`) - passed-with-notes
 - Mood: precise engineering studio.
 - Distinction: dense instruments and a narrow rail prioritize live measurements.
 - Signature: calibrated rules around instrument groups.
@@ -71,17 +71,17 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a compact, linear ledger with explicit operational feedback.
 - Signature: prompt-like leading markers and monochrome rules.
 
-### 14. Atlas (`atlas`) - todo
+### 14. Atlas (`atlas`) - in progress
 - Mood: exploration and route planning.
 - Distinction: map-forward cards and a hybrid navigation frame.
 - Signature: coordinate-inspired labels and framed map regions.
 
-### 15. Analog (`analog`) - todo
+### 15. Analog (`analog`) - in progress
 - Mood: tactile instrument bench.
 - Distinction: physical-looking measurement groupings with clear labels.
 - Signature: concentric rings and understated inset borders.
 
-### 16. Observatory (`observatory`) - todo
+### 16. Observatory (`observatory`) - in progress
 - Mood: patient scientific observation.
 - Distinction: expansive plots and carefully separated reference readings.
 - Signature: fine crosshair-like alignment marks around instruments.
