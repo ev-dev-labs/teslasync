@@ -160,7 +160,7 @@ describe('driving-01 native ownership', () => {
       for (const frame of frames) {
         expect(frame).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
         expect(hasConsumer(frame, baseCss, 'border-radius', '[data-app-part~="card"]')).toBe(true);
-        expect(hasConsumer(frame, identityCss.get(pack)!, 'border', '[data-app-part~="card"]')).toBe(true);
+        expect(hasConsumer(frame, identityCss.get(pack)!, 'border', '[data-app-part~="card"]'), frame.outerHTML).toBe(true);
       }
       const records = host.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"], [data-app-list="ranked"] > [data-app-part="list-row"]');
       expect(records.length).toBeGreaterThanOrEqual(8 + forecast.rankedWindows.length);
@@ -172,7 +172,7 @@ describe('driving-01 native ownership', () => {
       const tiles = host.querySelectorAll('[data-app-metric="tile"], [data-app-metric="stat"]');
       expect(tiles).toHaveLength(3 + 3 + 6 + 22 + 4);
       for (const tile of tiles) {
-        expect(hasConsumer(tile, feedbackCss, 'padding', `[data-app-data="${design.data}"]`)).toBe(true);
+        expect(hasConsumer(tile, feedbackCss, 'padding', `[data-app-data="${design.data}"]`), tile.outerHTML).toBe(true);
         expect(tile.querySelector('[data-app-part="metric-label"]')).not.toBeEmptyDOMElement();
         const reading = tile.querySelector('[data-app-part="metric-reading"]')!;
         expect(reading).not.toBeEmptyDOMElement();

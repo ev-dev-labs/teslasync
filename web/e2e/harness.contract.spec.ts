@@ -8,7 +8,7 @@ import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } fr
 import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockApi';
+import { isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -29,6 +29,42 @@ test('design pack captures cover registered application routes with unique filen
   expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
     [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
   ]);
+});
+
+test('harness detects a quiet interval between normal polling requests', async ({ page }) => {
+  await page.setContent('<main>Ready</main>');
+  const controller: MockApiController = {
+    unmatched: new Set(), seen: new Set(), sse: new Set(), delayed: new Set(),
+    sseRequests: 0, pending: 0, lastActivityAt: Date.now(), requests: [],
+    requestIndex: new WeakMap(), invalidRum: [], navPins: [], nextNavPinId: 1,
+  };
+  let recurring: ReturnType<typeof setInterval> | undefined;
+  const firstPoll = setTimeout(() => {
+    controller.lastActivityAt = Date.now();
+    recurring = setInterval(() => { controller.lastActivityAt = Date.now(); }, 1_000);
+  }, 500);
+  try {
+    await waitForHarnessReady(page, controller);
+    expect(await page.evaluate(() => (window as Window & { __TESLASYNC_E2E_READY__?: boolean }).__TESLASYNC_E2E_READY__)).toBe(true);
+  } finally {
+    clearTimeout(firstPoll);
+    clearInterval(recurring);
+  }
+});
+
+test('harness does not accept continuously active mock requests', async ({ page }) => {
+  await page.setContent('<main>Ready</main>');
+  const controller: MockApiController = {
+    unmatched: new Set(), seen: new Set(), sse: new Set(), delayed: new Set(),
+    sseRequests: 0, pending: 0, lastActivityAt: Date.now(), requests: [],
+    requestIndex: new WeakMap(), invalidRum: [], navPins: [], nextNavPinId: 1,
+  };
+  const recurring = setInterval(() => { controller.lastActivityAt = Date.now(); }, 100);
+  try {
+    await expect(waitForHarnessReady(page, controller)).rejects.toThrow('mock API requests did not settle');
+  } finally {
+    clearInterval(recurring);
+  }
 });
 
 test('pack density tokens resolve to usable spacing without changing Kinetic action gaps', async ({ page }) => {
@@ -67,6 +103,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       * { box-sizing: border-box; }
       body { margin: 0; }
       .text-sm, .mgr-title, .mgr-meta-value { font-size: 12px; }
+      #interactive-badge { display: inline-flex; }
       .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; font-size: 11px; }
       [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
     </style>
@@ -74,6 +111,8 @@ test('shared pack phone rules retain readable controls, grid text and protected 
     <label data-app-part="field-label" data-app-design-owner="pack-v1" for="field">Search</label>
     <input id="field" data-app-part="field-control" data-app-design-owner="pack-v1">
     <button id="action" data-app-part="button" data-app-design-owner="pack-v1">Apply</button>
+    <span id="interactive-badge" role="button" data-app-part="badge" data-app-design-owner="pack-v1">Step</span>
+    <p id="metric-context" class="text-sm" data-app-part="metric-context" data-app-design-owner="pack-v1">Forecast context</p>
     <div data-mobile-table data-app-design-owner="pack-v1">
       <div class="mgr-card" data-app-design-owner="pack-v1">
         <span class="mgr-title" data-app-design-owner="pack-v1">Session</span>
@@ -108,9 +147,11 @@ test('shared pack phone rules retain readable controls, grid text and protected 
           const bounds = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
           return {
             prose: font('#prose'), field: font('#field'), action: font('#action'),
+            context: font('#metric-context'),
             grid: font('.mgr-meta-value'), protected: font('#protected'),
             navButton: font('.sidenav-phone-tab'),
             inputHeight: bounds('#field').height, buttonHeight: bounds('#action').height,
+            badgeWidth: bounds('#interactive-badge').width, badgeHeight: bounds('#interactive-badge').height,
             navHeight: bounds('[data-role="bottom-tab-bar"]').height, reserved: bounds('#reserved').height,
             scrollWidth: document.documentElement.scrollWidth,
           };
@@ -119,11 +160,14 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.prose, context).toBeGreaterThanOrEqual(16);
         expect(sizes.field, context).toBeGreaterThanOrEqual(16);
         expect(sizes.action, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.context, context).toBeGreaterThanOrEqual(16);
         expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
         expect(sizes.navButton, context).toBeGreaterThanOrEqual(16);
         expect(sizes.protected, context).toBe(12);
         expect(sizes.inputHeight, context).toBeGreaterThanOrEqual(44);
         expect(sizes.buttonHeight, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.badgeWidth, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.badgeHeight, context).toBeGreaterThanOrEqual(44);
         expect(sizes.reserved, context).toBeGreaterThanOrEqual(sizes.navHeight);
         expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
       }

@@ -280,6 +280,17 @@ export default function StateMachineDebuggerPage() {
     ],
     [t, fsmType, fmtInt, formatDurationMsCompact],
   );
+  const summaryMobilePresentation = useMemo<MobileDataTablePresentation<StatSummaryRow>>(() => ({
+    roles: { to_state: 'title', count: 'primary', avg_interval: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'to_state': return row.to_state;
+        case 'count': return fmtInt(row.count);
+        case 'avg_interval': return formatDurationMsCompact(row.avg_interval_sec == null ? null : row.avg_interval_sec * 1000);
+        default: return null;
+      }
+    },
+  }), [fmtInt, formatDurationMsCompact]);
 
   /* ─── DataTable columns — transition timeline with color-coded state badges ─── */
   const timelineColumns: Column<FSMTransition>[] = useMemo(
@@ -944,6 +955,7 @@ export default function StateMachineDebuggerPage() {
                 tableId="system:fsm-summary"
                 enableValueFilters={false}
                 columns={summaryColumns}
+                mobilePresentation={summaryMobilePresentation}
                 mobileColumns={['to_state', 'count', 'avg_interval']}
                 data={summaryRows}
                 keyExtractor={(row) => row.to_state}

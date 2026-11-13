@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout';
-import { Badge, Caption, DataTable, Text, type Column } from '@/components/ui';
+import { Badge, Caption, DataTable, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { FleetTelemetryCategoryCoverage, FleetTelemetryFieldCoverage } from '@/api/types';
 
@@ -70,6 +70,20 @@ export function CoverageCategory({ category, filter }: CoverageCategoryProps) {
     },
   ], [t]);
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<FleetTelemetryFieldCoverage>>(() => ({
+    roles: { field: 'title', destination: 'primary', column: 'meta', also_signal_log: 'meta', subscribed: 'badge' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'field': return row.field;
+        case 'destination': return row.destination;
+        case 'column': return row.column ?? '—';
+        case 'also_signal_log': return row.also_signal_log ? t('coverage.dualWrite.yes', 'signal_log') : '—';
+        case 'subscribed': return row.subscribed ? t('coverage.subscribed.yes', 'yes') : t('coverage.subscribed.no', 'no');
+        default: return null;
+      }
+    },
+  }), [t]);
+
   return (
     <div className="h-full min-w-0" data-testid={`coverage-category-${category.category}`}>
       <LayoutCard title={category.category}>
@@ -101,6 +115,7 @@ export function CoverageCategory({ category, filter }: CoverageCategoryProps) {
               enableValueFilters
               filterData={fields}
               columns={columns}
+              mobilePresentation={mobilePresentation}
               keyExtractor={row => `${category.category}:${row.field}`}
               emptyMessage={t('coverage.category.empty', 'This category has no routed fields.')}
             />

@@ -36,6 +36,16 @@
     line-height: var(--app-body-leading);
   }
 
+  p[data-app-part~="metric-context"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-app-part~="badge"][role="button"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+
   :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     min-block-size: var(--app-touch-size);
   }

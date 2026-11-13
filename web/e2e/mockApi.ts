@@ -1098,6 +1098,7 @@ export async function waitForHarnessReady(
     }), {
       message: 'mock API requests did not settle',
       timeout: 10_000,
+      intervals: [100],
     }).toEqual({ pending: 0, quiet: true });
   }
   await page.evaluate(async () => {

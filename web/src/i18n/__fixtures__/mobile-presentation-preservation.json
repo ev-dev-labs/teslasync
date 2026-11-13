@@ -1,0 +1,733 @@
+[
+  {
+    "file": "web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx",
+    "before": "7a3b3594e6e350f6fd7c89f533dc41e6a5ee596bed97f6b15faafe84e2c4215e",
+    "after": "8895e6b4494f14d8b101cbd9a02efc04d1fb583ecc4738ffc9986675fe6914b8",
+    "hunks": [
+      {
+        "start": 3,
+        "old": [
+          "import { Badge, Caption, DataTable, Text, type Column } from '@/components/ui';"
+        ],
+        "new": [
+          "import { Badge, Caption, DataTable, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';"
+        ]
+      },
+      {
+        "start": 72,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<FleetTelemetryFieldCoverage>>(() => ({",
+          "    roles: { field: 'title', destination: 'primary', column: 'meta', also_signal_log: 'meta', subscribed: 'badge' },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'field': return row.field;",
+          "        case 'destination': return row.destination;",
+          "        case 'column': return row.column ?? '—';",
+          "        case 'also_signal_log': return row.also_signal_log ? t('coverage.dualWrite.yes', 'signal_log') : '—';",
+          "        case 'subscribed': return row.subscribed ? t('coverage.subscribed.yes', 'yes') : t('coverage.subscribed.no', 'no');",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [t]);",
+          ""
+        ]
+      },
+      {
+        "start": 117,
+        "old": [],
+        "new": [
+          "              mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
+    "before": "6b45963b06e163faf7d4c26f4c9f5b9b33817d874504899c564701e8ab1b3d60",
+    "after": "c7ecc6a66b6cba652679550f0b18bf4af7969bd2621c37b2305fdba2d0a1ac09",
+    "hunks": [
+      {
+        "start": 21,
+        "old": [],
+        "new": [
+          "  type MobileDataTablePresentation,"
+        ]
+      },
+      {
+        "start": 180,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<LiveSignalRow>>(() => ({",
+          "    roles: { name: 'title', value: 'primary', kind: 'badge' },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'name': return row.name;",
+          "        case 'value': return renderValue(row.value).text;",
+          "        case 'kind': {",
+          "          const category = classifyKind(row.kind, row.value);",
+          "          return t(KIND_LABELS[category].key, KIND_LABELS[category].fallback);",
+          "        }",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [t]);",
+          ""
+        ]
+      },
+      {
+        "start": 218,
+        "old": [],
+        "new": [
+          "        mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/notifications/pages/AuditLogPage.tsx",
+    "before": "6fd0ab7154bbaa0cfad0bf1b3ef05b066e96dae681463bc91af4ee1ad65f63f7",
+    "after": "1873b94bc851028a7734e11c64c0468c71c9f1355fecc67341ee86091ca8030d",
+    "hunks": [
+      {
+        "start": 14,
+        "old": [
+          "import { DataTable, GlassPanel, Icon, PanelTitle, Text, type Column } from '@/components/ui';"
+        ],
+        "new": [
+          "import { DataTable, GlassPanel, Icon, PanelTitle, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';"
+        ]
+      },
+      {
+        "start": 85,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<AuditLogEntry>>(() => ({",
+          "    roles: { action: 'title', time: 'primary', resource: 'meta', details: 'meta' },",
+          "    displayValue: (log, key) => {",
+          "      switch (key) {",
+          "        case 'time': return formatDateTime(log.createdAt);",
+          "        case 'action': return log.action ?? '—';",
+          "        case 'resource': return log.resource ?? '—';",
+          "        case 'details': return log.details ?? '—';",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), []);"
+        ]
+      },
+      {
+        "start": 170,
+        "old": [],
+        "new": [
+          "                  mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+    "before": "60f366b8bf2b49d984df4097e352f1bbe91eb61c258365d8a3382f799f459f36",
+    "after": "d2997a0c4ed39b3d68b662232c069bb5d57bab2c6c0a5cdd286cd4337b2c6476",
+    "hunks": [
+      {
+        "start": 282,
+        "old": [],
+        "new": [
+          "  const summaryMobilePresentation = useMemo<MobileDataTablePresentation<StatSummaryRow>>(() => ({",
+          "    roles: { to_state: 'title', count: 'primary', avg_interval: 'meta' },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'to_state': return row.to_state;",
+          "        case 'count': return fmtInt(row.count);",
+          "        case 'avg_interval': return formatDurationMsCompact(row.avg_interval_sec == null ? null : row.avg_interval_sec * 1000);",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [fmtInt, formatDurationMsCompact]);"
+        ]
+      },
+      {
+        "start": 957,
+        "old": [],
+        "new": [
+          "                mobilePresentation={summaryMobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/pages/DiskForecastPage.tsx",
+    "before": "1804eb79dd581063b235e777589af4261512be2f8a099c849386190a2aaa8965",
+    "after": "9c51399f16a26831f57bbfd39ed1bdc105f274dbc46dc53a7648e688486b8822",
+    "hunks": [
+      {
+        "start": 22,
+        "old": [
+          "import { Badge, DataTable, Icon, type Column } from '@/components/ui';"
+        ],
+        "new": [
+          "import { Badge, DataTable, Icon, type Column, type MobileDataTablePresentation } from '@/components/ui';"
+        ]
+      },
+      {
+        "start": 246,
+        "old": [],
+        "new": [
+          "",
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<HypertableSize>>(() => ({",
+          "    roles: {",
+          "      hypertable: 'title', total: 'primary', severity: 'badge',",
+          "      split: 'meta', growth: 'meta', days: 'meta',",
+          "    },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'hypertable': return row.hypertable_name;",
+          "        case 'total': return formatBytes(row.total_bytes ?? 0);",
+          "        case 'severity': return severityLabel[row.severity] ?? row.severity;",
+          "        case 'split': return `${formatBytes(row.uncompressed_bytes ?? 0)} / ${formatBytes(row.compressed_bytes ?? 0)}`;",
+          "        case 'growth': return `${formatBytes(row.growth_bytes_per_day ?? 0)}/d`;",
+          "        case 'days': return row.est_days_to_quota == null ? '—' : fmtNumber(row.est_days_to_quota);",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [formatBytes, fmtNumber, severityLabel]);"
+        ]
+      },
+      {
+        "start": 540,
+        "old": [],
+        "new": [
+          "                  mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/components/LayoutSwitcher.tsx",
+    "before": "c8c00f916edcb77ba871d7fd49abc692575c239c798b6222d86a374fd2eaf208",
+    "after": "c28e171ed070cc43c9fd97d5a32e49516d623c0cb4efd9134e46bb57dcddd0ba",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { useCallback, useEffect, useMemo, useRef, useState } from 'react';"
+        ],
+        "new": [
+          "import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';"
+        ]
+      },
+      {
+        "start": 82,
+        "old": [],
+        "new": [
+          "  const activeNameId = useId();"
+        ]
+      },
+      {
+        "start": 232,
+        "old": [],
+        "new": [
+          "        aria-describedby={activeNameId}",
+          "        data-dashboard-layout-switcher"
+        ]
+      },
+      {
+        "start": 241,
+        "old": [
+          "        <span className=\"text-xs tracking-wider text-[var(--text-muted)]\">"
+        ],
+        "new": [
+          "        <span data-layout-switcher-caption className=\"text-xs tracking-wider text-[var(--text-muted)]\">"
+        ]
+      },
+      {
+        "start": 244,
+        "old": [
+          "        <span className=\"max-w-[10rem] truncate\">{activeName}</span>"
+        ],
+        "new": [
+          "        <span id={activeNameId} data-layout-switcher-name className=\"max-w-[10rem] truncate\">{activeName}</span>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/system/pages/DataExportPage.tsx",
+    "before": "286acc8606f4ef4c2739a74e0e9f5b7abdfcc55ba3d68fe65e2a01390106527e",
+    "after": "963199300b7f371131da6f17fd99e19051920dd0e004823f7144b2c9712bf127",
+    "hunks": [
+      {
+        "start": 27,
+        "old": [
+          "  type Column, IconButton } from '@/components/ui';"
+        ],
+        "new": [
+          "  type Column, type MobileDataTablePresentation, IconButton } from '@/components/ui';"
+        ]
+      },
+      {
+        "start": 1119,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(() => ({",
+          "    roles: { type: 'title', size: 'primary', status: 'badge', format: 'meta', records: 'meta', vehicle: 'meta' },",
+          "    displayValue: (job, key) => {",
+          "      switch (key) {",
+          "        case 'type': {",
+          "          const type = EXPORT_TYPES.find((entry) => entry.value === job.type);",
+          "          return type ? t(type.labelKey, type.label) : job.type || '—';",
+          "        }",
+          "        case 'size': return formatBytes(job.file_size, { zeroAsEmpty: false });",
+          "        case 'status': {",
+          "          const status: StatusConfigEntry | undefined = (STATUS_CONFIG as Record<string, StatusConfigEntry>)[job.status];",
+          "          return status ? t(status.labelKey, status.label) : job.status || '—';",
+          "        }",
+          "        case 'format': return typeof job.format === 'string' && job.format ? job.format.toUpperCase() : '—';",
+          "        case 'records': return fmtInt(job.record_count);",
+          "        case 'vehicle': return job.vehicle_id ? vehicleMap.get(job.vehicle_id) ?? `#${job.vehicle_id}` : '—';",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "    inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),",
+          "    canShowField: (key) => key !== 'actions',",
+          "  }), [columns, formatBytes, t, vehicleMap]);",
+          ""
+        ]
+      },
+      {
+        "start": 1183,
+        "old": [],
+        "new": [
+          "            mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/structural-closure/audit-log/AuditLogEntries.tsx",
+    "before": "6cf4c75bd9a103b5620e7c997ddbfe96ab4644f6efe0aee731c880d0ad05896d",
+    "after": "d9d85c725a26764b1aea83fcc751ee01a4a24863cddbeca9d1fc7ffe80a1d881",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { useCallback } from 'react';"
+        ],
+        "new": [
+          "import { useCallback, useMemo } from 'react';"
+        ]
+      },
+      {
+        "start": 3,
+        "old": [
+          "import { Button, DataTable, Caption } from '@/components/ui';"
+        ],
+        "new": [
+          "import { Button, DataTable, Caption, type MobileDataTablePresentation } from '@/components/ui';"
+        ]
+      },
+      {
+        "start": 8,
+        "old": [],
+        "new": [
+          "import { useDateFormat } from '@/hooks/useDateFormat';"
+        ]
+      },
+      {
+        "start": 17,
+        "old": [],
+        "new": [
+          "  const { formatDateTime } = useDateFormat();"
+        ]
+      },
+      {
+        "start": 19,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<AuditLogRow>>(() => ({",
+          "    roles: { action: 'title', ts: 'primary', success: 'badge', actor: 'meta', category: 'meta', entity: 'meta' },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'action': return row.action;",
+          "        case 'ts': return formatDateTime(row.ts);",
+          "        case 'success': return row.success === true",
+          "          ? t('admin.auditLog.statusOk', 'OK')",
+          "          : row.success === false ? t('admin.auditLog.statusFail', 'Fail') : '—';",
+          "        case 'actor': return row.actor || '—';",
+          "        case 'category': return row.category || '—';",
+          "        case 'entity': return row.entity_id == null ? row.entity_type : `${row.entity_type} #${row.entity_id}`;",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [formatDateTime, t]);"
+        ]
+      },
+      {
+        "start": 118,
+        "old": [],
+        "new": [
+          "                mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/WidgetDesignPackSettings.tsx",
+    "before": "a96aa22c8a33cd2b222e49e62ccdeccbc14d4598fe476fa800ab35fd30f3ef9d",
+    "after": "fbf9b5b91bb1c1b54760ccdb98836066ff72a64090c7f500af4105d046d15bf2",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { useEffect, useRef, useState, type ComponentType } from 'react';"
+        ],
+        "new": [
+          "import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react';"
+        ]
+      },
+      {
+        "start": 4,
+        "old": [],
+        "new": [
+          "import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';"
+        ]
+      },
+      {
+        "start": 13,
+        "old": [
+          "export default function WidgetDesignPackSettings() {"
+        ],
+        "new": [
+          "export default function WidgetDesignPackSettings({ chartColor }: { chartColor: string }) {"
+        ]
+      },
+      {
+        "start": 23,
+        "old": [],
+        "new": [
+          "  const galleryRef = useRef<HTMLDivElement | null>(null);"
+        ]
+      },
+      {
+        "start": 32,
+        "old": [],
+        "new": [
+          "",
+          "  useLayoutEffect(() => {",
+          "    const gallery = galleryRef.current;",
+          "    return gallery ? observeAppDesignScopes(gallery) : undefined;",
+          "  }, []);"
+        ]
+      },
+      {
+        "start": 109,
+        "old": [
+          "    <div className=\"grid auto-rows-fr min-w-0 gap-4 @xl:grid-cols-2 @5xl:grid-cols-4\" aria-busy={preference.isSaving}>"
+        ],
+        "new": [
+          "    <div ref={galleryRef} className=\"grid auto-rows-fr min-w-0 gap-4 @xl:grid-cols-2 @5xl:grid-cols-4\" aria-busy={preference.isSaving}>"
+        ]
+      },
+      {
+        "start": 118,
+        "old": [
+          "          <WidgetDesignPackThumbnail packId={entry.id} />"
+        ],
+        "new": [
+          "          <WidgetDesignPackThumbnail packId={entry.id} chartColor={chartColor} />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/AppearanceSettings.tsx",
+    "before": "a5fd46d22394cc8c9df9819876c2ddb57a9cabd1f349f86affb765f2394fd8a1",
+    "after": "25fcd0f36e6341301dbf5ccb4dc4187ee216551089852136aa27fad0643849e1",
+    "hunks": [
+      {
+        "start": 3,
+        "old": [],
+        "new": [
+          "import { useTheme } from '@/components/ui/ThemeProvider'"
+        ]
+      },
+      {
+        "start": 15,
+        "old": [],
+        "new": [
+          "import { resolveChartPalette } from '@/hooks/useChartPalette'"
+        ]
+      },
+      {
+        "start": 27,
+        "old": [],
+        "new": [
+          "  const { theme, mode } = useTheme()"
+        ]
+      },
+      {
+        "start": 129,
+        "old": [
+          "      <WidgetDesignPackSettings />"
+        ],
+        "new": [
+          "      <WidgetDesignPackSettings chartColor={resolveChartPalette(chartPalette, { theme, mode })[0] ?? 'var(--theme-primary)'} />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/ClimateStatusWidget.tsx",
+    "before": "b9f41056411a2d7ee97e80a2a5ff5e0e12eff4a6c8237f567f37ddd1d9f2ccfa",
+    "after": "b41f582e0f044d19c27f34fe87c10dc1f26d82c911f16bca7696ac55a9dfc920",
+    "hunks": [
+      {
+        "start": 18,
+        "old": [],
+        "new": [
+          "import { loadClimatePresentation } from './designPacks/packModules';"
+        ]
+      },
+      {
+        "start": 20,
+        "old": [
+          "",
+          "const loadClimatePresentation = () => import('./designPacks/families/ClimateStatusLayout');"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/CommandQuickActionsWidget.tsx",
+    "before": "d7e46e53aff1bf384fc0f88167679c99aa7ecc3cbb8121fc97151539ab8506a7",
+    "after": "556f61bcccc3e85b60794667e7784d2973e178f1f7a49c2a1ee915f10c07703d",
+    "hunks": [
+      {
+        "start": 15,
+        "old": [],
+        "new": [
+          "import { loadActionsPresentation } from './designPacks/packModules';"
+        ]
+      },
+      {
+        "start": 18,
+        "old": [
+          "",
+          "const loadActionsPresentation = () => import('./designPacks/families/CommandActionsLayout');"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/DriveTelemetryWidget.tsx",
+    "before": "76b895ba2f93a91614df5868128e7ee179e984a76b335a0c46e7abeb20a48082",
+    "after": "9a3e925b93905432be4378a4d3b2ab4590037834ab57b214e3acfad970fbfcc0",
+    "hunks": [
+      {
+        "start": 18,
+        "old": [],
+        "new": [
+          "import { loadLinePresentation } from './designPacks/packModules';"
+        ]
+      },
+      {
+        "start": 26,
+        "old": [
+          "",
+          "const loadLinePresentation = () => import('./designPacks/families/LineTelemetryLayout');"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/TirePressureVisualWidget.tsx",
+    "before": "36c95206e874e9a8aacb53dc87d0ed70e7a7955cf8bdd95a497a46999f0c405b",
+    "after": "dd7b1dc44b529cf1f6e1e021393c0d7d697ea03ef39889bcd0accd10cacfc7a5",
+    "hunks": [
+      {
+        "start": 13,
+        "old": [],
+        "new": [
+          "import { loadTirePresentation } from './designPacks/packModules';"
+        ]
+      },
+      {
+        "start": 16,
+        "old": [
+          "",
+          "const loadTirePresentation = () => import('./designPacks/families/TirePressureLayout');"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/charts/ChartContainer.tsx",
+    "before": "beaef9bec78ad0320c60da69b137f2c4a48aacb14c800e22bcadbe571a7f09d9",
+    "after": "b027825fd9102979415727d25fbbb48fc0933e18c843eebd21d6c303a7e7191d",
+    "hunks": [
+      {
+        "start": 963,
+        "old": [],
+        "new": [
+          "              data-mobile-stack-table"
+        ]
+      },
+      {
+        "start": 1008,
+        "old": [],
+        "new": [
+          "                          data-mobile-label={col.label}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/WidgetDesignPackThumbnail.tsx",
+    "before": "7e424ae0b6f2322800610b7c5ceba51bef710bd2afc8a5464dadba44e268725e",
+    "after": "cd9407b007d35e8a65146934084bfff06ea682ab9a244ff8c06579065b82cb84",
+    "hunks": [
+      {
+        "start": 1,
+        "old": [
+          "import { MetricBar } from '@/components/data-display';",
+          "import { MetricValue } from '@/components/ui';",
+          "import InstrumentLayout from '@/features/dashboard/widgets/designPacks/families/InstrumentLayout';",
+          "import { PACK_APPEARANCES, type PackId } from '@/features/dashboard/widgets/designPacks/types';"
+        ],
+        "new": [
+          "import { Sparkline } from '@/components/charts';",
+          "import { GlassPanel, MetricValue, Text } from '@/components/ui';",
+          "import { APPLICATION_DESIGNS, getAppDesignAttributes } from '@/components/ui/app-designs/designs';",
+          "import type { PackId } from '@/features/dashboard/widgets/designPacks/types';",
+          "import { cn } from '@/lib/cn';"
+        ]
+      },
+      {
+        "start": 7,
+        "old": [
+          "export default function WidgetDesignPackThumbnail({ packId }: { packId: PackId }) {"
+        ],
+        "new": [
+          "const SAMPLE_TREND = [3, 5, 4, 7, 6, 9];",
+          "",
+          "export default function WidgetDesignPackThumbnail({ packId, chartColor }: { packId: PackId; chartColor: string }) {"
+        ]
+      },
+      {
+        "start": 11,
+        "old": [
+          "  const label = t('theme.widgetDesignPacks.sampleBattery', 'Sample battery level');",
+          "  const headline = <MetricValue>72%</MetricValue>;",
+          "  return <div aria-hidden=\"true\" data-widget-pack={packId} className=\"@container pointer-events-none flex h-48 min-w-0 shrink-0 items-center rounded-shape-md bg-[var(--surface-1)] p-3\">",
+          "    <div className=\"w-full min-w-0\">",
+          "      {packId === 'classic'",
+          "        ? <div className=\"space-y-3\">{headline}<MetricBar value={72} max={100} color=\"var(--theme-primary)\" ariaLabel={label} showHeader={false} /></div>",
+          "        : <InstrumentLayout appearance={PACK_APPEARANCES[packId]} family=\"ring\" compact",
+          "            headline={headline} reading={{ value: 72, max: 100, label }} />}"
+        ],
+        "new": [
+          "  const verticalNavigation = ['rail', 'sidebar'].includes(APPLICATION_DESIGNS[packId].navigation);",
+          "  return <div aria-hidden=\"true\" data-app-design-thumbnail={packId} data-app-design-preview=\"\"",
+          "    {...getAppDesignAttributes(packId)}",
+          "    className=\"@container pointer-events-none h-64 min-w-0 w-full shrink-0 overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--bg-app)]\">",
+          "    <div data-app-part=\"shell\" className={cn('flex h-full min-w-0', !verticalNavigation && 'flex-col')}>",
+          "      <div data-app-part=\"shell-sidebar navigation\" className={cn(",
+          "        'flex shrink-0 gap-1 border-[var(--border-default)] bg-[var(--surface-1)] p-1',",
+          "        verticalNavigation ? 'w-10 flex-col border-e' : 'border-b',",
+          "      )}>",
+          "        {[0, 1, 2].map(item => (",
+          "          <div key={item} data-app-part=\"nav-item\" aria-current={item === 0 ? 'page' : undefined}",
+          "            className=\"flex min-h-4 min-w-0 items-center rounded-shape-sm px-1\">",
+          "            <span className=\"h-1 w-5 rounded-pill bg-[var(--text-secondary)]\" />",
+          "          </div>",
+          "        ))}",
+          "      </div>",
+          "      <div data-app-part=\"shell-main page\" className=\"flex min-h-0 min-w-0 flex-1 flex-col gap-1 p-2\">",
+          "        <div data-app-part=\"page-header\" className=\"flex min-w-0 items-center\">",
+          "          <Text data-app-part=\"page-title\" size=\"sm\" weight=\"semibold\" color=\"primary\" className=\"truncate\">",
+          "            {t('theme.appDesignPreview.overview', 'Overview')}",
+          "          </Text>",
+          "        </div>",
+          "        <div data-app-part=\"page-content grid\" className=\"grid min-h-0 min-w-0 flex-1 grid-cols-2 gap-1\">",
+          "          <GlassPanel data-app-part=\"panel metric\" data-app-metric=\"stat-card\" padding=\"sm\"",
+          "            className=\"flex min-h-0 min-w-0 flex-col justify-between gap-1 overflow-hidden\">",
+          "            <Text data-app-part=\"metric-label\" variant=\"caption\" className=\"truncate\">",
+          "              {t('theme.widgetDesignPacks.battery', 'Battery')}",
+          "            </Text>",
+          "            <MetricValue data-app-part=\"metric-value\">72%</MetricValue>",
+          "            <div data-app-part=\"metric\" data-app-metric=\"bar\" className=\"h-1 rounded-pill bg-[var(--surface-2)]\">",
+          "              <div data-metric-fill className=\"h-full w-3/4 rounded-pill bg-[var(--theme-primary)]\" />",
+          "            </div>",
+          "          </GlassPanel>",
+          "          <GlassPanel data-app-part=\"panel chart\" padding=\"sm\"",
+          "            className=\"flex min-h-0 min-w-0 flex-col justify-between gap-1 overflow-hidden\">",
+          "            <Text variant=\"caption\" className=\"truncate\">{t('theme.widgetDesignPacks.history', 'History')}</Text>",
+          "            <Sparkline data={SAMPLE_TREND} color={chartColor} />",
+          "          </GlassPanel>",
+          "        </div>",
+          "      </div>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/designPacks/PackBoundary.tsx",
+    "before": "f62b1f714dae2b1837f8c9e524a4738acc09991dc66e55154ec07414e31c3285",
+    "after": "9effdae1d6a33708ec51d95ba8c67426a8dd6826434487f572fb9a03201da006",
+    "hunks": [
+      {
+        "start": 5,
+        "old": [],
+        "new": [
+          "import { cachedPackModule, resolvePackModule } from './packModules';"
+        ]
+      },
+      {
+        "start": 26,
+        "old": [],
+        "new": [
+          "  const cached = packId !== 'classic' && load ? cachedPackModule(load) : null;"
+        ]
+      },
+      {
+        "start": 28,
+        "old": [
+          "    if (packId === 'classic' || !load) return;"
+        ],
+        "new": [
+          "    if (packId === 'classic' || !load || cached) return;"
+        ]
+      },
+      {
+        "start": 30,
+        "old": [
+          "    void load().then(module => {",
+          "      if (active) setLoaded(current => current?.load === load && current.Presentation === module.default",
+          "        ? current : { load, Presentation: module.default });"
+        ],
+        "new": [
+          "    void resolvePackModule(load).then(Presentation => {",
+          "      if (active) setLoaded(current => current?.load === load && current.Presentation === Presentation",
+          "        ? current : { load, Presentation });"
+        ]
+      },
+      {
+        "start": 37,
+        "old": [
+          "  }, [packId, load, revision, onFailure]);",
+          "  return packId !== 'classic' && loaded?.load === load ? loaded.Presentation : null;"
+        ],
+        "new": [
+          "  }, [packId, load, revision, onFailure, cached]);",
+          "  if (packId === 'classic' || !load) return null;",
+          "  return loaded?.load === load ? loaded.Presentation : cached;"
+        ]
+      }
+    ]
+  }
+]

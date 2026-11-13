@@ -19,6 +19,7 @@ import {
   Caption,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { TimeStamp, SourceLayerBadge } from '@/components/data-display';
 
@@ -177,6 +178,21 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
     },
   ];
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<LiveSignalRow>>(() => ({
+    roles: { name: 'title', value: 'primary', kind: 'badge' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'name': return row.name;
+        case 'value': return renderValue(row.value).text;
+        case 'kind': {
+          const category = classifyKind(row.kind, row.value);
+          return t(KIND_LABELS[category].key, KIND_LABELS[category].fallback);
+        }
+        default: return null;
+      }
+    },
+  }), [t]);
+
   return (
     <div className="min-w-0 space-y-4">
       <div className="relative max-w-md">
@@ -200,6 +216,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
         tableId="admin:live-signals"
         name="live-signals"
         columns={columns}
+        mobilePresentation={mobilePresentation}
         data={sorted}
         enableValueFilters
         filterData={rows ?? EMPTY_ROWS}

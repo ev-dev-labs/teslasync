@@ -159,7 +159,18 @@ for (const route of routes) {
     const pageErrors: string[] = [];
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(path, { waitUntil: 'domcontentloaded' });
-    await waitForHarnessReady(page, mocks);
+    try {
+      await waitForHarnessReady(page, mocks);
+    } catch (error) {
+      const requests = mocks?.requests ?? [];
+      const settings = requests.filter(request => request.path === '/api/v1/settings').length;
+      const liveSignals = requests.filter(request => /^\/api\/v1\/signals\/[^/]+\/live$/.test(request.path)).length;
+      await testInfo.attach('mock-activity-counts', {
+        body: `settings=${settings} live-signals=${liveSignals} total=${requests.length}`,
+        contentType: 'text/plain',
+      });
+      throw error;
+    }
     for (const [attribute, value] of Object.entries(getAppDesignAttributes(packId))) {
       await expect(page.locator('html')).toHaveAttribute(attribute, value);
     }

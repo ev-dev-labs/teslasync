@@ -35,6 +35,7 @@ import { act, render, screen, within, fireEvent, type RenderResult } from '@test
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 import {
   formatTemperature as libFormatTemperature,
@@ -410,6 +411,22 @@ describe('TemperatureImpactPage — measured values and preserved alternatives',
     const legendDot = Array.from(container.querySelectorAll('[aria-hidden="true"]'))
       .find((element) => element instanceof HTMLElement && element.style.backgroundColor === 'var(--series-cold)');
     expect(legendDot).toBeDefined();
+  });
+
+  it('retains the selected units and full drive values in phone details', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      mockUnits.mockReturnValue(units('mi', '°F'));
+      const { container } = renderPage();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent('Wh/mi');
+      expect(grid).toHaveTextContent('mi');
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      const detail = screen.getByRole('dialog');
+      expect(detail).toHaveTextContent('°F');
+      expect(detail).toHaveTextContent('Wh/mi');
+      expect(detail).toHaveTextContent('mi');
+    } finally { bounds.mockRestore(); }
   });
 
   it('distinguishes authoritative empty points from an absent point series and retains paused source data', () => {

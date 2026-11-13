@@ -88,6 +88,19 @@
     grid-column: 1 / -1;
   }
 
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="table"] :where([data-app-metric="tile"], [data-app-metric="stat"]):is([data-surface-variant="embedded"], [data-surface-variant="embedded"] *):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="data-table"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] :where([data-app-metric="tile"], [data-app-metric="stat"]):is([data-surface-variant="embedded"], [data-surface-variant="embedded"] *):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="data-ledger"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="cards"] :where([data-app-metric="tile"], [data-app-metric="stat"]):is([data-surface-variant="embedded"], [data-surface-variant="embedded"] *):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="data-cards"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="instrument"] :where([data-app-metric="tile"], [data-app-metric="stat"]):is([data-surface-variant="embedded"], [data-surface-variant="embedded"] *):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="data-instrument"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+
   /* Table: aligned numeric columns, shared rules, compact label/readout cells. */
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="data-table"]) {
     gap: 0;
@@ -153,6 +166,10 @@
   }
 
   /* Ledger: one fact per ruled line; context and comparisons stay below it. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] [data-app-part~="metric-grid"][data-operational-metric-bank]:where([data-app-design-owner~="data-ledger"]) {
+    min-inline-size: 0;
+  }
+
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
     [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]):not([data-operational-metric-bank]),
     [data-app-list="definitions"]

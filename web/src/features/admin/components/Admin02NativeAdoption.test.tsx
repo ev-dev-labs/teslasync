@@ -45,6 +45,14 @@ function rules(name: string): Rule[] {
 }
 const feedbackRules = rules('feedback.css');
 const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
+const nativeIdentityRules = PACK_IDS.flatMap(pack => {
+  const source = readFileSync(resolve(directory, 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8');
+  const marker = '/* Native surfaces retain semantic colors while consuming this pack. */';
+  if (!source.includes(marker)) return [];
+  const native: Rule[] = [];
+  parse(source.split(marker)[1]).walkRules(rule => { native.push(rule); });
+  return [[pack, native] as const];
+});
 const initialAttributes = Object.keys(getAppDesignAttributes('classic'))
   .map(name => [name, document.documentElement.getAttribute(name)] as const);
 const releases: Array<() => void> = [];
@@ -95,6 +103,43 @@ afterEach(() => {
 });
 
 describe('admin-02 actual native targets to existing CSS consumers (source-only)', () => {
+  it.each(nativeIdentityRules)('does not repaint semantic-tone surfaces or descendants in %s', (pack, candidates) => {
+    const host = document.createElement('section');
+    host.setAttribute('data-app-design-preview', '');
+    host.setAttribute('data-app-design-pack', pack);
+    const container = document.createElement('div');
+    const surface = document.createElement('div');
+    surface.setAttribute('data-app-part', 'card panel metric button loading');
+    surface.setAttribute('data-app-card-kind', 'record');
+    surface.setAttribute('data-app-panel-kind', 'code');
+    surface.setAttribute('data-app-metric', 'tile');
+    surface.setAttribute('data-app-variant', 'primary');
+    surface.setAttribute('data-surface-variant', 'standalone');
+    surface.setAttribute('data-app-design-owner', `pack-${pack}`);
+    surface.className = 'border border-[var(--border-subtle)] border-white/[0.06] bg-white/[0.02]';
+    const value = document.createElement('span');
+    value.setAttribute('data-app-part', 'metric-value');
+    value.setAttribute('data-app-design-owner', `pack-${pack}`);
+    host.append(container);
+    container.append(surface);
+    surface.append(value);
+    document.body.append(host);
+    try {
+      expect(candidates.length).toBeGreaterThan(0);
+      for (const rule of candidates) {
+        const target = [surface, value].find(node => node.matches(rule.selector));
+        expect(target, rule.selector).toBeDefined();
+        if (!target) continue;
+        target.setAttribute('data-app-tone', 'warning');
+        expect(target.matches(rule.selector), rule.selector).toBe(false);
+        target.removeAttribute('data-app-tone');
+        container.setAttribute('data-app-tone', 'danger');
+        expect(target.matches(rule.selector), rule.selector).toBe(false);
+        container.removeAttribute('data-app-tone');
+      }
+    } finally { host.remove(); }
+  });
+
   it.each(PACK_IDS)('binds real opened outputs, records and controls for %s without changing actions or geometry', async pack => {
     const onSend = vi.fn();
     const onReplay = vi.fn();

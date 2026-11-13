@@ -146,12 +146,12 @@ describe('vehicle-systems-01 native adoption', () => {
         const value = reading?.querySelector('[data-app-part="metric-value"]');
         expect(label).not.toBeNull();
         expect(value).not.toBeNull();
-        expect(matchingRules(host, dataRules, item, '[data-app-metric="tile"]', owner).length).toBeGreaterThan(0);
+        expect(matchingRules(host, dataRules, item, '[data-app-metric="tile"]', owner).length, item.outerHTML).toBeGreaterThan(0);
         expect(matchingRules(host, dataRules, reading!, '[data-app-part~="metric-reading"]').length).toBeGreaterThan(0);
         expect(matchingRules(host, dataRules, label!, '[data-app-part~="metric-label"]').length).toBeGreaterThan(0);
         expect(matchingRules(host, dataRules, value!, '[data-app-part~="metric-value"]').length).toBeGreaterThan(0);
         if (!item.closest('[data-surface-variant="embedded"]')) {
-          expect(matchingRules(host, identityRules.get(pack)!, value!, '[data-app-part~="metric-value"]', `pack-${pack}`).length).toBeGreaterThan(0);
+          expect(matchingRules(host, identityRules.get(pack)!, value!, '[data-app-part~="metric-value"]', `pack-${pack}`).length, value!.outerHTML).toBeGreaterThan(0);
         }
         const context = item.querySelector(':scope > [data-app-part="metric-context"]');
         if (context) {
@@ -159,7 +159,7 @@ describe('vehicle-systems-01 native adoption', () => {
         }
       }
       for (const bank of host.querySelectorAll('[data-app-part~="metric-grid"]')) {
-        expect(matchingRules(host, dataRules, bank, '[data-app-part~="metric-grid"]', owner).length).toBeGreaterThan(0);
+        expect(matchingRules(host, dataRules, bank, '[data-app-part~="metric-grid"]', owner).length, bank.outerHTML).toBeGreaterThan(0);
       }
       const records = [...host.querySelectorAll('[data-app-card-kind="record"]')];
       expect(records).toHaveLength(comfort.windowDirectory.displayed + hvac.runDirectory.displayed + 12);

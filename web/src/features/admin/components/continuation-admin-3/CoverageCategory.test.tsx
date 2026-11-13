@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { FleetTelemetryCategoryCoverage } from '@/api/types';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { CoverageCategory } from './CoverageCategory';
 
 vi.mock('react-i18next', async () => {
@@ -34,6 +35,21 @@ function renderCategory(filter = '', categoryOverride = category) {
 }
 
 describe('CoverageCategory preservation', () => {
+  it('keeps field metadata in mobile summaries and details', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = renderCategory();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent('BrakePedal');
+      expect(grid).toHaveTextContent('drive_telemetry');
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[1]);
+      const detail = screen.getByRole('dialog');
+      expect(detail).toHaveTextContent('brake_pedal');
+      expect(detail).toHaveTextContent('signal_log');
+      expect(detail).toHaveTextContent('no');
+    } finally { bounds.mockRestore(); }
+  });
+
   it('keeps explicit unit_history destinations for Setting*Unit fields without per-field columns', () => {
     const fields = ['SettingChargeUnit', 'SettingDistanceUnit', 'SettingTemperatureUnit', 'SettingTirePressureUnit']
     renderCategory('', {

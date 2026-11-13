@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NotificationLog } from '@/api/types';
 import type { FormatOptions } from '@/lib/dateFormat';
 import type { ReactNode } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { NotificationLatencyPanel } from './NotificationLatencyPanel';
 import { AlertFatiguePanel } from './AlertFatiguePanel';
 import { NotificationBurnRatePanel } from './NotificationBurnRatePanel';
@@ -76,6 +77,24 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     datePreferences.locale = 'en-US';
     datePreferences.tz = 'America/Los_Angeles';
   });
+  it('preserves latency and delivery metadata in the phone grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      state.logs = [{
+        id: 1, channel_id: 1, alert_id: null, title: 'Clock delivery', message: '',
+        status: 'sent', severity: 'warn', error: '', latency_ms: 1250,
+        created_at: '2024-01-01T00:30:00Z', sent_at: null,
+      }];
+      const { container } = render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent('Clock delivery');
+      expect(grid).toHaveTextContent('1,250.00 ms');
+      fireEvent.click(within(grid).getByRole('button', { name: 'Quick view' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('Dec 31, 2023, 04:30 PM');
+      expect(screen.getByRole('dialog')).toHaveTextContent('warn');
+    } finally { bounds.mockRestore(); }
+  });
+
   it('updates populated delivery timestamps with locale and zone without changing latency', () => {
     state.logs = [{
       id: 1, channel_id: 1, alert_id: null, title: 'Clock delivery', message: '',

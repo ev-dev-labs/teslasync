@@ -451,3 +451,9 @@
     box-shadow: inset 0 -2px 0 var(--theme-accent);
   }
 }
+
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="cyber"] [data-app-part~="panel"][data-app-feedback-kind="notice"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-cyber"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+}
