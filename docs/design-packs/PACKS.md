@@ -101,7 +101,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: soft editorial groupings with comfortable spacing.
 - Signature: rounded, layered surfaces and a gentle masthead.
 
-### 20. Swiss Grid (`swiss`) - in progress
+### 20. Swiss Grid (`swiss`) - passed-with-notes
 - Mood: objective and typographically disciplined.
 - Distinction: a strict grid, compact headings and aligned data columns.
 - Signature: an unmistakable modular baseline and precise rules.

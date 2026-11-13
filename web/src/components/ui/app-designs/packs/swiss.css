@@ -1,235 +1,329 @@
-/* Exact ledgers and shared alignment rules; hierarchy comes from space, not effects. */
+/* Swiss Grid: a neutral modular field, aligned type and precise rules. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-swiss"]) {
+    --app-brief-column-min-width: 12rem;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-swiss"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-widget-pack] :is(
+    [data-role="widget-header-title"],
+    [data-app-part~="metric-context"],
+    [data-app-metric="headline"] [data-app-part~="metric-unit"],
+    [data-app-metric="stat-card"] [data-app-part~="metric-unit"]
+  ):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-widget-pack] [data-role="widget-header-title"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-swiss"]) {
+    overflow: visible;
+    overflow-wrap: break-word;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-widget-pack] a[href]:not(.sr-only, [data-app-icon-only="true"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-swiss"]) {
+    min-inline-size: var(--app-touch-size, 2.75rem);
+    min-block-size: var(--app-touch-size, 2.75rem);
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
+}
+
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"]:where([data-app-design-owner~="pack-swiss"]) {
+    --app-surface-canvas: var(--bg-app, var(--surface-1));
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2, var(--surface-1));
+    --app-surface-overlay: var(--surface-3, var(--surface-elevated));
+    --app-card-radius: 0px;
+    --app-card-shadow: none;
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-bold);
+    --app-display-tracking: var(--tracking, 0em);
+    --app-control-radius: 0px;
+    --app-control-surface: var(--control-bg, var(--surface-2));
+    --app-content-density: 0.95;
+    --app-interaction-duration: var(--motion-duration-fast, 150ms);
+    --app-interaction-easing: var(--motion-easing-standard, ease);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-strong);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: 0px;
+    --app-nav-radius: 0px;
+  }
+
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-swiss"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 50%, transparent), transparent 12rem);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-swiss"]) {
-    background: var(--surface-1);
+    background-color: var(--app-surface-panel, var(--surface-1));
     border-block-end: 2px solid var(--border-strong);
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="navigation"]:not(.sidenav-phone-tabs):where([data-app-design-owner~="pack-swiss"]) {
     gap: 0;
     align-items: stretch;
     border-block-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
-    border-inline-start: 1px solid var(--border-default);
-    border-block-end: 3px solid transparent;
+    border-radius: var(--app-nav-radius, 0px);
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-selected="true"], [data-active="true"]):where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end-color: var(--theme-accent);
-    background: var(--surface-2);
-    text-underline-offset: .25em;
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"], [aria-selected="true"], [data-active="true"], .is-selected):where([data-app-design-owner~="pack-swiss"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: inset 0 -3px 0 var(--theme-accent);
     font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] .sidenav-rail-scroll:where([data-app-design-owner~="pack-swiss"]) {
+    gap: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] .sidenav-rail-item.is-selected:where([data-app-design-owner~="pack-swiss"])::before {
+    display: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] .is-selected .sidenav-icon:where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] .sidenav-short-label:where([data-app-design-owner~="pack-swiss"]) {
+    font-size: calc(0.75rem * var(--font-scale, 1));
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+    line-height: 1.3;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-swiss"]) {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: var(--density-gap);
-    border-block-start: 2px solid var(--border-strong);
+    border-radius: 0;
+    border-block-start: 2px solid var(--text-primary);
     border-block-end: 1px solid var(--border-default);
-    padding-block: var(--density-pad-x);
-    background: var(--surface-1);
+    padding-block: var(--density-pad-y);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-swiss"]) {
     text-align: start;
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-route-focus-target], [data-card-title]):where([data-app-design-owner~="pack-swiss"]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    font-weight: var(--app-display-weight, var(--font-weight-semibold));
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+    text-wrap: pretty;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-route-focus-target]:where([data-app-design-owner~="pack-swiss"]) {
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading, 1.5);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-swiss"]) {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     gap: var(--density-gap);
-    padding-inline-start: var(--density-pad-x);
     min-inline-size: 0;
+    max-inline-size: 100%;
     margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-swiss"]) {
-    row-gap: calc(var(--density-gap) * 2);
+    row-gap: calc(var(--density-gap) * 1.5);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="section"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="section"]:not([data-surface-variant="embedded"], [data-operational-brief]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     padding-block-start: var(--density-pad-x);
     border-block-start: 1px solid var(--border-strong);
     min-inline-size: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):not(:where([data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
-    border: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not([data-app-tone], [data-app-variant]):not(:where([data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-widget-pack], [data-widget-pack] *, [class*="border-[var(--semantic-"], [class*="border-neon-"], [class*="bg-[var(--semantic-"], [class*="bg-neon-"])):where([data-app-design-owner~="pack-swiss"]) {
+    border: 1px solid var(--panel-border, var(--border-default));
     border-block-start: 2px solid var(--border-strong);
-    background: var(--panel-bg);
-    box-shadow: var(--elevation-1);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 3.5%, var(--surface-1)), var(--surface-1) 5.5rem);
+    border-radius: var(--app-card-radius, 0px);
+    box-shadow: var(--app-card-shadow, none);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where(
+    [data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"],
+    [data-operational-brief-surface="standalone"]
+  ):not([data-app-tone]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-card-header]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-widget-pack] *)):where([data-app-design-owner~="pack-swiss"]) {
+    align-items: baseline;
+    padding-block-end: calc(var(--density-pad-y) / 2);
+    border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-stat-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-    gap: 0;
-    border-block: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
     gap: var(--density-gap);
-    padding: var(--density-pad-x);
+    border-block-start: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
     min-inline-size: 0;
-    border-radius: 0;
-    border-inline-start: 1px solid var(--border-strong);
+    border-radius: var(--app-card-radius, 0px);
+    border-inline-start: 1px solid var(--border-default);
     border-block-end: 1px solid var(--border-default);
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-widget-pack] *)):where([data-app-design-owner~="pack-swiss"]) {
     text-align: start;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-widget-pack] *)):where([data-app-design-owner~="pack-swiss"]) {
     font-variant-numeric: tabular-nums lining-nums;
     overflow-wrap: anywhere;
-    align-self: stretch;
-    text-align: end;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="field"]:not([data-app-field-kind="choice"]):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="field"]:not([data-app-field-kind="choice"]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-block-start: 1px solid var(--border-default);
     padding-block: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     display: inline-block;
-    margin-block-end: .5em;
+    margin-block-end: 0.5em;
+    font-weight: var(--font-weight-medium);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [role="switch"], [data-app-control-kind="composite"]), [data-app-field-surface]):where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where(
+    :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [data-app-control-kind="composite"]),
+    [data-app-field-surface]:not([data-app-control-kind="dropzone"])
+  ):not(:where([data-app-field-kind="choice"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
     border: 0;
-    border-block-end: 2px solid var(--border-strong);
-    background: var(--control-bg);
+    border-block-end: 2px solid var(--control-border, var(--border-strong));
+    background-color: var(--app-control-surface, var(--control-bg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="button"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
-    text-underline-offset: .25em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="button"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
+    text-underline-offset: 0.25em;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-swiss"]) {
-    box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-choice-surface="radio"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-choice-surface="radio"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
     border-block-end-width: 2px;
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-choice-indicator], [data-app-switch-track]):where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tabs"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     gap: 0;
-    padding-block: .25em;
+    padding-block: 0.25em;
     border-block-end: 1px solid var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tab"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
     border-inline-start: 1px solid var(--border-default);
-    border-block-end: 3px solid transparent;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-current="page"]):where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end-color: var(--theme-accent);
-    text-underline-offset: .25em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-current="page"], [aria-pressed="true"], [aria-checked="true"]):not([data-app-variant="primary"], [data-app-variant="danger"]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
     font-weight: var(--font-weight-semibold);
-    box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
+    box-shadow: inset 0 -3px 0 var(--theme-accent);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-toolbar"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-toolbar"]:not([data-app-toolbar-slot]):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
-    border-block: 1px solid var(--border-strong);
-    background: var(--surface-1);
+    border-block-end: 2px solid var(--app-grid-rule, var(--border-strong));
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    border-collapse: separate;
-    border-spacing: 0;
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end: 2px solid var(--border-strong);
-    background: var(--surface-1);
-    text-align: start;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-table-variant="embedded"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
+    box-shadow: inset 0 -2px 0 var(--app-grid-rule, var(--border-strong));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px solid var(--border-subtle);
-    padding-block: var(--density-pad-y);
-    vertical-align: baseline;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-row"]:not([data-virtual-spacer], [data-expanded-content], [data-row-group]) > [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset 0 -1px 0 var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="pagination"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-block-start: 2px solid var(--border-strong);
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-row"][aria-selected="true"] > [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    box-shadow: inset 0 -2px var(--theme-accent);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-row"]:is([aria-selected="true"], [data-selected="true"]) > [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset 0 -2px 0 var(--theme-accent);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-row"]:is([aria-selected="true"], [data-selected="true"]) > [data-app-part~="table-cell"]:first-child:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset 3px 0 0 var(--theme-accent), inset 0 -2px 0 var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-row"]:is([aria-selected="true"], [data-selected="true"]) > [data-app-part~="table-cell"]:first-child:dir(rtl):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset -3px 0 0 var(--theme-accent), inset 0 -2px 0 var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="table-cell"]:is([aria-sort="ascending"], [aria-sort="descending"]):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset 0 -3px 0 var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-card-radius, 0px);
     border: 1px solid var(--border-strong);
-    background: var(--surface-1);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-swiss"]) {
     border-block-start: 2px solid var(--border-strong);
     border-block-end: 1px solid var(--border-strong);
     align-items: baseline;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-swiss"]) {
     min-inline-size: 0;
     overscroll-behavior: contain;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"])) [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-swiss"]) {
     border-block-start: 2px solid var(--border-strong);
-    background: var(--surface-1);
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="popover"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
     border: 1px solid var(--border-strong);
     border-block-start-width: 2px;
-    background: var(--surface-1);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
     color: var(--text-primary);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-radius: 0;
-    border-block: 1px solid var(--border-strong);
-    box-shadow: none;
-    background: var(--panel-bg);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tooltip"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart"][data-chart-variant="panel"]:where([data-app-design-owner~="pack-swiss"]) {
+    border: 1px solid var(--panel-border, var(--border-default));
+    border-block-start: 2px solid var(--border-strong);
+    border-radius: var(--app-card-radius, 0px);
+    box-shadow: var(--app-card-shadow, none);
+    background-color: var(--app-surface-panel, var(--panel-bg));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart-header"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-block-end: 2px solid var(--border-strong);
     padding-block-end: var(--density-pad-y);
     align-items: baseline;
     gap: var(--density-gap);
     flex-wrap: wrap;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="chart-plot"], [data-chart-viewport]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     min-inline-size: 0;
-    background: var(--surface-1);
+    background-color: var(--app-chart-surface, var(--surface-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-chart-viewport]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-chart-variant="embedded"] :where([data-app-part~="chart-plot"], [data-chart-viewport]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    background: transparent;
+    box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="chart-legend"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
@@ -238,18 +332,18 @@
     border-block-start: 1px solid var(--border-strong);
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="map"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="map"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     box-shadow: inset 0 0 0 1px var(--text-secondary);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     border: 1px solid var(--border-strong);
-    background: var(--surface-1);
+    background-color: var(--app-surface-raised, var(--surface-2));
     box-shadow: none;
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="map-marker"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     outline: 1px solid var(--text-primary);
     outline-offset: 2px;
   }
@@ -261,32 +355,32 @@
     padding-block: var(--density-pad-y);
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="timeline-content"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="timeline-content"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     padding-block-end: var(--density-pad-y);
     border-block-end: 1px solid var(--border-default);
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="status"], [data-app-part~="badge"]):not([data-app-metric="score"]):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="status"], [data-app-part~="badge"]):not([data-app-metric="score"]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="feedback"]:not([data-app-tone]):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     border-inline-start-width: 2px;
     border-inline-start-style: solid;
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="empty"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-block: 1px solid var(--border-strong);
     padding-block: calc(var(--density-pad-y) * 2);
     text-align: start;
     align-items: flex-start;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="error"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="error"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-inline-start-color: var(--semantic-danger);
     border-block-end: 1px solid var(--semantic-danger-border);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="feedback-actions"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="feedback-actions"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     display: flex;
     flex-wrap: wrap;
     gap: var(--density-gap);
@@ -294,54 +388,108 @@
     padding-block-start: var(--density-pad-y);
     border-block-start: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="loading"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="skeleton"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
     border-radius: 0;
     background-color: var(--surface-2);
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):focus-visible:where([data-app-design-owner~="pack-swiss"]) {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="nav-item"], [data-app-part~="tab"]):focus-visible:where([data-app-design-owner~="pack-swiss"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-field-surface]:focus-within:where([data-app-design-owner~="pack-swiss"]) {
+    outline: var(--focus-ring-width, 2px) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset, 2px);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [role="switch"])[aria-invalid="true"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end: 1px solid var(--semantic-danger);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [role="switch"]):is([aria-invalid="true"], [aria-invalid="grammar"], [aria-invalid="spelling"], [data-invalid="true"]):not(:where([data-app-field-kind="choice"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-field-surface]:not([data-app-control-kind="dropzone"]):is([aria-invalid="true"], [data-invalid="true"], .border-red-500, :has([aria-invalid="true"])):not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-block-end-color: var(--semantic-danger);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"]):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-swiss"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [role="switch"], [data-app-control-kind="composite"]):is(:disabled, [aria-disabled="true"]):not(:where([data-app-field-kind="choice"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    background-color: var(--surface-2);
+    color: var(--text-secondary);
     border-block-end-style: dashed;
-    box-shadow: none;
+    cursor: not-allowed;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-swiss"]) {
-    border-block-end: 1px solid currentColor;
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-swiss"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-inline-start: 2px solid var(--border-strong);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="conversation"]:where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-conversation-radius, 0px);
+    background-color: var(--app-surface-panel, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="conversation-sessions-header"]:where([data-app-design-owner~="pack-swiss"]) {
+    border-block-end: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-swiss"]) {
+    border-block-start: 2px solid var(--border-strong);
+    background-color: var(--app-conversation-surface, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="conversation-composer-actions"]:where([data-app-design-owner~="pack-swiss"]) {
+    margin-inline-start: auto;
+  }
+
   @media (hover: hover) {
-    :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"], [data-app-part~="table-row"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-current="page"], [data-active="true"], [data-selected="true"]):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-      background-color: var(--surface-2);
-      background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
-      font-weight: var(--font-weight-semibold);
-      box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
-    }
-    :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="button"]:not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-swiss"]) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] :where([data-app-part~="nav-item"]:not(.sidenav-phone-tab), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"], [data-active="true"], .is-selected):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+      background-color: var(--control-bg-hover, var(--surface-2));
+      box-shadow: inset 0 -2px 0 var(--theme-accent);
     }
   }
 }
+@media screen and (forced-colors: none) and (min-width: 1280px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell"][data-presentation-mode="standard"] [data-app-nav-slot="pages"] > :not(:empty):where([data-app-design-owner~="pack-swiss"]) {
+    border-block: 0;
+    border-inline-start: 1px solid var(--border-default);
+    border-inline-end: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+}
 @media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-swiss"]) {
+    flex: 1 0 max-content;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-swiss"]) {
-    inline-size: 100%;
+    flex: 0 1 auto;
+    inline-size: auto;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
+    justify-content: flex-end;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-swiss"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.25rem), 1fr));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-stat-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(11.25rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-phone-tabs:where([data-app-design-owner~="pack-swiss"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-start-color: var(--border-strong);
+    box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-phone-tab:where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-nav-radius, 0px);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-swiss"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: inset 0 3px 0 var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-swiss"])::before {
+    display: none;
   }
 }
 
-
-
+@media screen and (forced-colors: active) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="nav-item"]:is([aria-current="true"], [aria-current="page"], .is-selected):where([data-app-design-owner~="pack-swiss"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):where([data-app-design-owner~="pack-swiss"]) {
+    text-decoration: underline;
+    text-decoration-color: Highlight;
+    text-underline-offset: 0.2em;
+  }
+}
