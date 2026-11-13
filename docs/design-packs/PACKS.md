@@ -46,7 +46,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: squared instrument panels and a compact technical grid.
 - Signature: crisp stepped corners and small calibration marks.
 
-### 9. Motorsport (`motorsport`) - in progress
+### 9. Motorsport (`motorsport`) - passed-with-notes
 - Mood: focused pit-wall telemetry.
 - Distinction: fast-scanning instrument groups and decisive action hierarchy.
 - Signature: a short directional rule at the leading edge of key readings.
@@ -116,27 +116,27 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: layered transparent-looking surfaces without obscuring content.
 - Signature: a crisp reflected edge instead of a heavy shadow.
 
-### 23. Deco Grand (`deco`) - todo
+### 23. Deco Grand (`deco`) - in progress
 - Mood: refined architectural grandeur.
 - Distinction: formal mastheads and symmetrical editorial sections.
 - Signature: paired fine rules and carefully proportioned corners.
 
-### 24. Kinetic Type (`kinetic`) - todo
+### 24. Kinetic Type (`kinetic`) - in progress
 - Mood: purposeful motion and momentum.
 - Distinction: a compact workbench driven by strong typographic hierarchy.
 - Signature: a directional header rule; motion remains optional and restrained.
 
-### 25. Neo Brutal (`brutal`) - todo
+### 25. Neo Brutal (`brutal`) - in progress
 - Mood: direct, candid and high-contrast.
 - Distinction: broad structural outlines and unapologetic grid alignment.
 - Signature: a solid offset edge rather than a soft shadow.
 
-### 26. Cyberdeck (`cyber`) - todo
+### 26. Cyberdeck (`cyber`) - in progress
 - Mood: futuristic, technical and controlled.
 - Distinction: instrument-first canvas with segmented actions and dense status.
 - Signature: clipped-looking framed corners and circuit-like rules.
 
-### 27. Memphis Pop (`memphis`) - todo
+### 27. Memphis Pop (`memphis`) - in progress
 - Mood: playful, confident and surprising.
 - Distinction: irregular geometric groupings within an accessible grid.
 - Signature: small patterned accents used sparingly around section headings.

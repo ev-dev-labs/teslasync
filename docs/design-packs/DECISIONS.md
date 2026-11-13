@@ -17,8 +17,8 @@ viewport and stitched images intact.
 Begin with eight isolated pack workers and refill each slot as it finishes.
 This keeps browser and build load bounded on the shared machine while the
 full unit suite is running; it is not an eight-pack completion gate.
-Four additional workers may implement their owned stylesheets while the
-browser slots are occupied; they must wait for an explicit capture release.
+Additional workers may implement their owned stylesheets while the browser
+slots are occupied; they must wait for an explicit capture release.
 The initial Vite process watched Playwright trace files, reloaded active
 reviews and exited with `EBUSY` on a locked `.network` trace. The orchestrator
 restarted the same local origin with the transient capture-artifact directory
@@ -50,9 +50,21 @@ not expose an agent-kill operation. No concurrent replacement was allowed to
 edit either owned stylesheet while its worker was still active. Concierge's
 single retry is screenshot-free because both capture invocations were spent;
 the original Ledger owner is doing the distinctness follow-up.
-Horizon Loft's original worker also exceeded its slot and was asked to stop
-and report. This runtime exposes no agent-kill operation; its stylesheet
-remains exclusively owned until that worker actually stops.
+Horizon Loft's original worker also exceeded its slot and was asked to stop;
+it has now reported. This runtime exposes no agent-kill operation.
+Motorsport, Blueprint, Editorial and Ambient were likewise asked to stop or
+finish their in-flight bounded command and report at 45 minutes. No
+replacement can edit their stylesheets while they remain active.
+Terminal, Atlas, Analog and Observatory also exceeded their slots and were
+asked to stop or finish their current bounded command and report. The old
+full Vitest process was stopped after running for over 100 minutes against
+an earlier source snapshot; it did not provide a complete final result.
+Observatory's first worker stopped without taking screenshots or writing a
+review; its one permitted retry owns the existing stylesheet and both
+remaining capture invocations.
+Atlas's original worker stopped after one failed capture round, without
+finishing its review or fixes. Its single retry owns the stylesheet and may
+use only the one remaining capture invocation.
 
 The real phone bar was clipped when the lazy-loaded `sidenav.css` applied its
 60px minimum after the app-design styles. The shared mobile layer now

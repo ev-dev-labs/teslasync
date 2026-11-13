@@ -1,18 +1,49 @@
-/* Motorsport: directional pitwall hierarchy; live data, not decoration, leads. */
+/* Motorsport: pit-wall readings, a compact action rail and a directional index. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"]:where([data-app-design-owner~="pack-motorsport"]) {
+    --app-brief-column-min-width: 10rem;
+    --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"]) {
+    font-size: var(--app-brief-value-size);
+  }
+}
+
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"]:where([data-app-design-owner~="pack-motorsport"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-elevated, var(--surface-3));
+    --app-card-radius: var(--radius-sm);
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-bold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: var(--radius-xs);
+    --app-control-surface: var(--control-bg, var(--surface-2));
+    --app-content-density: 1;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-strong);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-sm);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--bg-app);
-    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 5%, transparent), transparent 45%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-2);
+    background-color: var(--app-surface-panel, var(--surface-1));
     border-inline-end: 2px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-2);
-    border-block-end: 3px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-end: 2px solid var(--border-strong);
     gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -28,24 +59,26 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-inline-start-color: var(--theme-accent);
     font-weight: var(--font-weight-semibold);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    background-color: color-mix(in srgb, var(--theme-accent) 7%, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-motorsport"]) {
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
-    border-block-end: 3px solid var(--border-strong);
+    border-block-end: 2px solid var(--border-strong);
     align-items: stretch;
     flex-wrap: wrap;
     justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-motorsport"]) {
-    border-inline-start: 2px solid var(--theme-accent);
-    padding-inline-start: var(--density-pad-x);
     font-style: italic;
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-title"] p:where([data-app-design-owner~="pack-motorsport"]) {
+    font-style: normal;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-motorsport"]) {
-    padding-inline: var(--density-pad-x);
+    padding-inline-start: var(--density-pad-x);
     gap: calc(var(--density-gap) / 2);
     align-items: stretch;
     margin-inline-start: auto;
@@ -55,50 +88,70 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="section"]:where([data-app-design-owner~="pack-motorsport"]) {
     row-gap: var(--density-gap);
-    border-block-start: 2px solid var(--border-strong);
+    border-block-start: 1px solid var(--border-default);
     padding-block-start: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="section"][data-widget-pack="motorsport"]:where([data-app-design-owner~="pack-motorsport"]) {
-    /* The existing widget detail role follows the saved accent app-wide. */
-    --pack-detail: var(--theme-accent);
-    border-block-start: 2px solid var(--pack-detail);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-motorsport"]) {
     gap: var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-motorsport"]) {
     border: 1px solid var(--border-strong);
-    border-inline-start-width: 3px;
-    border-radius: var(--radius-xs);
-    box-shadow: var(--elevation-0);
+    border-block-start-width: 2px;
+    border-radius: var(--app-card-radius, var(--radius-sm));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where(
+    [data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"],
+    [data-operational-brief-surface="standalone"]
+  ):where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-operational-metric-bank]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
     gap: var(--density-gap);
     align-items: stretch;
-    padding-block: var(--density-pad-y);
-    border-block: 2px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-motorsport"]) {
-    border-inline-start: 3px solid var(--border-strong);
-    padding-inline-start: var(--density-pad-x);
     row-gap: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-motorsport"]) {
     color: var(--text-secondary);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-semibold);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-operational-metric-list] [data-app-metric="brief"] > [data-app-part~="metric-label"]:where([data-app-design-owner~="pack-motorsport"]) {
+    font-size: max(calc(0.875rem * var(--font-scale, 1)), var(--app-body-size, 0px));
+    line-height: 1.35;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-motorsport"]) {
     font-variant-numeric: tabular-nums slashed-zero;
     font-weight: var(--font-weight-bold);
     overflow-wrap: anywhere;
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where(
+    [data-app-metric="brief"] > [data-app-part~="metric-label"],
+    [data-app-metric="stat-card"] [data-app-part~="metric-heading"] > [data-app-part~="metric-label"],
+    [data-app-metric="card"] [data-app-part~="metric-label"]
+  ):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"])::before {
+    content: "";
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 3px;
+    margin-block-end: 0.375rem;
+    margin-inline-start: 0.125rem;
+    background-color: var(--theme-accent);
+    transform: skewX(-20deg);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where(
+    [data-app-metric="brief"] > [data-app-part~="metric-label"],
+    [data-app-metric="stat-card"] [data-app-part~="metric-heading"] > [data-app-part~="metric-label"],
+    [data-app-metric="card"] [data-app-part~="metric-label"]
+  ):dir(rtl):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"])::before {
+    transform: skewX(20deg);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="field"]:where([data-app-design-owner~="pack-motorsport"]) {
     gap: calc(var(--density-gap) / 2);
-    padding-block-end: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-default);
     align-content: start;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="field-label"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -106,7 +159,13 @@
     font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where([data-app-part~="field-control"], [data-app-part~="button"]):not(:where([type="radio"], [type="checkbox"], [type="range"], [type="color"], [role="switch"])):where([data-app-design-owner~="pack-motorsport"]) {
-    border-radius: var(--radius-xs);
+    border-radius: var(--app-control-radius, var(--radius-xs));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="button"][data-app-variant="primary"]:where(:not(:disabled, [aria-disabled="true"])):where([data-app-design-owner~="pack-motorsport"]) {
+    font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):where(:not(:disabled, [aria-disabled="true"])):where([data-app-design-owner~="pack-motorsport"]) {
+    border-block-end-width: 2px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-motorsport"]) {
     gap: calc(var(--density-gap) / 2);
@@ -118,7 +177,7 @@
     padding-inline: var(--density-pad-x);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-2);
+    background-color: var(--app-surface-raised, var(--surface-2));
     border-block-end: 2px solid var(--border-strong);
     padding: var(--density-pad-y) var(--density-pad-x);
     gap: var(--density-gap);
@@ -129,15 +188,14 @@
     font-variant-numeric: tabular-nums slashed-zero;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-2);
+    background-color: var(--app-grid-header, var(--surface-2));
     font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="table-row"]:where([data-app-design-owner~="pack-motorsport"]) {
     vertical-align: middle;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-motorsport"]) {
-    border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px solid var(--border-subtle);
+    border-block-end-color: var(--app-grid-rule, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-motorsport"]) {
     gap: var(--density-gap);
@@ -148,6 +206,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-motorsport"]) {
     border: 1px solid var(--border-strong);
     border-inline-start-width: 3px;
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -167,13 +226,14 @@
     border: 1px solid var(--border-strong);
     border-inline-start-width: 3px;
     border-radius: var(--radius-xs);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-motorsport"]) {
     border-radius: var(--radius-xs);
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-motorsport"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="chart"]:not([data-chart-variant="embedded"]):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"]) {
     border-radius: var(--radius-xs);
     outline: 1px solid var(--border-strong);
     outline-offset: -1px;
@@ -185,7 +245,7 @@
     border-block-end: 2px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-motorsport"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-chart-surface, var(--surface-1));
     box-shadow: inset 0 -2px var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -198,7 +258,7 @@
     border: 1px solid var(--border-strong);
     border-inline-start-width: 3px;
     border-radius: var(--radius-xs);
-    background-color: var(--surface-elevated);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
     font-variant-numeric: tabular-nums slashed-zero;
   }
@@ -221,7 +281,7 @@
     border: 1px solid var(--border-strong);
     border-inline-start-width: 3px;
     border-radius: var(--radius-xs);
-    background-color: var(--surface-1);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-motorsport"]) {
@@ -267,22 +327,72 @@
     border-radius: var(--radius-xs);
     background-color: var(--skeleton-bg);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    border-inline-start: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--app-control-surface, var(--control-bg));
+    border-block-start: 2px solid var(--border-strong);
+    border-radius: var(--app-control-radius, var(--radius-xs));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-block-start: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="conversation-message"][data-role="user"] [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--app-conversation-surface, var(--surface-2));
+    border-radius: var(--app-conversation-radius, var(--radius-sm));
+  }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (max-width: 1023px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"]) {
+    row-gap: calc(var(--density-gap) / 2);
+  }
+}
+@media screen and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-motorsport"]) {
-    inline-size: 100%;
+    inline-size: auto;
+    max-inline-size: 100%;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-motorsport"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-motorsport"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.375rem), 1fr));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-header"].flex-row:where([data-app-design-owner~="pack-motorsport"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-motorsport"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="page-title"] div:has(> [data-route-focus-target]):where([data-app-design-owner~="pack-motorsport"]) {
+    column-gap: calc(var(--density-gap) / 3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-operational-metric-bank]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-motorsport"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(9.75rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="conversation-composer-actions"]:where([data-app-design-owner~="pack-motorsport"]) {
+    margin-inline-start: auto;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-motorsport"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where(
+    [data-testid="widget-body"] [data-app-metric="headline"] > [data-app-part~="metric-context"].text-sm,
+    [data-testid="widget-body"] [data-app-part~="metric-unit"].text-sm,
+    [data-testid="widget-body"] + div a[href]
+  ):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *, [data-app-metric="ring"] *)):where([data-app-design-owner~="pack-motorsport"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-testid="widget-body"] [data-app-part~="metric-unit"].text-sm:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *, [data-app-metric="ring"] *)):where([data-app-design-owner~="pack-motorsport"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+  }
 }
-
-
-
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-role="bottom-tab-bar"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-motorsport"]) {
+    border-radius: var(--radius-xs);
+    box-shadow: inset 0 -2px var(--theme-accent);
+  }
+}
