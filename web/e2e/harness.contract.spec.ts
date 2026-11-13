@@ -31,6 +31,35 @@ test('design pack captures cover registered application routes with unique filen
   ]);
 });
 
+test('pack density tokens resolve to usable spacing without changing Kinetic action gaps', async ({ page }) => {
+  await page.setContent(`
+    <style>:root { --density-gap: 12px; }</style>
+    <div data-app-part="page" class="space-y-6">
+      <div></div><div id="section" data-app-design-owner="content-workbench"></div>
+    </div>
+    <div id="actions" data-app-part="page-actions" data-app-design-owner="pack-kinetic"></div>
+  `);
+  const styles = resolve('src', 'components', 'ui', 'app-designs');
+  await page.addStyleTag({ content: await readFile(resolve(styles, 'shell.css'), 'utf8') });
+  for (const file of Object.values(APP_DESIGN_PACK_FILES)) {
+    await page.addStyleTag({ content: await readFile(resolve(styles, 'packs', file), 'utf8') });
+  }
+  for (const pack of PACK_IDS) {
+    await page.locator('html').evaluate((element, value) => {
+      element.setAttribute('data-app-design-pack', value);
+      element.setAttribute('data-app-design-owner', `pack-${value}`);
+    }, pack);
+    const density = await page.locator('html').evaluate(element =>
+      Number(getComputedStyle(element).getPropertyValue('--app-content-density').trim()));
+    expect(density, pack).toBeGreaterThan(0);
+    expect(Number.isFinite(density), pack).toBe(true);
+    if (pack === 'kinetic') {
+      await expect(page.locator('#section')).toHaveCSS('margin-block-start', '16px');
+      await expect(page.locator('#actions')).toHaveCSS('gap', '12px');
+    }
+  }
+});
+
 test('shared pack phone rules retain readable controls, grid text and protected content', async ({ page }) => {
   await page.setContent(`
     <style>

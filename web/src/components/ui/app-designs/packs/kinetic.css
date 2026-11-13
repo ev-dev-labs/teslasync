@@ -12,7 +12,7 @@
     --app-display-tracking: var(--tracking, 0em);
     --app-control-radius: var(--radius-xs, .25rem);
     --app-control-surface: var(--control-bg, var(--surface-2));
-    --app-content-density: var(--density-gap, .75rem);
+    --app-content-density: 1;
     --app-interaction-duration: var(--motion-duration-fast, 150ms);
     --app-interaction-easing: var(--motion-easing-standard, ease);
     --app-chart-surface: var(--surface-1, var(--bg-app));
@@ -101,7 +101,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
     min-inline-size: 0;
     margin-inline-start: auto;
   }
@@ -129,11 +129,11 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * max(1, var(--font-scale, 1)))), 1fr));
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
     align-items: stretch;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone], [data-operational-metric]):not(:where([data-app-metric-grid="native-gauge"] *, [data-app-metric-grid="inline"] *, [data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-surface-variant="embedded"] *, [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
     padding: var(--density-pad-y) var(--density-pad-x);
     min-inline-size: 0;
     border: 1px solid var(--border-default);
@@ -203,7 +203,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="pagination"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
     border-block-start: 1px solid var(--app-grid-rule, var(--border-default));
     padding-block: var(--density-pad-y);
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-kinetic"]) {
     border-color: var(--border-strong);
@@ -277,14 +277,14 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="feedback-actions"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
     flex-wrap: wrap;
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="skeleton"]:not(:where([data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
     border-radius: var(--app-control-radius, var(--radius-xs));
   }
 
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="conversation-layout"]:where([data-app-design-owner~="pack-kinetic"]) {
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="conversation"]:where([data-app-design-owner~="pack-kinetic"]) {
     border-color: var(--border-strong);
@@ -306,7 +306,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-role="helix-composer"] > div:last-child:where([data-app-design-owner~="pack-kinetic"]) {
     flex-wrap: wrap;
-    gap: var(--app-content-density, var(--density-gap));
+    gap: var(--density-gap, .75rem);
   }
   @media (hover: hover) {
     :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-current="page"], [aria-current="true"], [data-active="true"]):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {

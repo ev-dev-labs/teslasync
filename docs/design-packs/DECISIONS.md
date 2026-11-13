@@ -475,6 +475,23 @@ case into a pass. Only the pages explicitly repaired were recaptured. A
 investigated. The previously documented period-comparison route remains
 temporarily excluded.
 
+The resumed Classic run stopped at its 12-failure threshold: 40 passed,
+42 existing images were skipped, three cases were interrupted and 919 did
+not run. The failures include several horizontally scrolling tables, an
+overflowing heatmap, small interactive targets, one contrast failure, one
+small body-text finding and a live-signals fixture that did not settle.
+These are not full-pack passes.
+
+Kinetic had assigned a length to the unitless `--app-content-density`
+multiplier, invalidating shared spacing calculations. Its multiplier is now
+unitless while its existing local gaps still use the density-gap length.
+Quiet now explicitly supplies its previous default multiplier. A browser
+contract checked all 27 multipliers and Kinetic's computed spacing:
+
+```text
+1 passed (5.4s)
+```
+
 ### Temporarily skipped: period comparison capture
 
 The initial 390px probe, a targeted phone/desktop retry, and an isolated

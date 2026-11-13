@@ -20,6 +20,7 @@
     --app-display-tracking: calc(var(--tracking, 0em) - 0.01em);
     --app-control-radius: var(--radius-sm);
     --app-control-surface: var(--surface-2);
+    --app-content-density: 1;
     --app-interaction-duration: var(--motion-duration-normal);
     --app-interaction-easing: var(--motion-easing-standard);
     --app-chart-surface: var(--surface-1);
