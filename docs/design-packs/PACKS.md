@@ -31,7 +31,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: a structured sidebar and curated card summaries emphasize decisions.
 - Signature: a discreet vertical guide beside key summaries.
 
-### 6. Iconic Showroom (`v5`) - in progress
+### 6. Iconic Showroom (`v5`) - passed-with-notes
 - Mood: polished automotive showroom.
 - Distinction: spacious canvas compositions give existing vehicle imagery room to lead.
 - Signature: framed hero surfaces and inset captions.
