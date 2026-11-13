@@ -111,7 +111,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: stepped elevation and clearly filled controls organize the workspace.
 - Signature: consistent tonal control surfaces and rounded groups.
 
-### 22. Glass Current (`glass`) - in progress
+### 22. Glass Current (`glass`) - passed-with-notes
 - Mood: light, contemporary and fluid.
 - Distinction: layered transparent-looking surfaces without obscuring content.
 - Signature: a crisp reflected edge instead of a heavy shadow.
