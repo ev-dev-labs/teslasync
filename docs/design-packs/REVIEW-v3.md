@@ -54,3 +54,34 @@ No further screenshots were taken. The prior screenshots precede this refinement
 The orchestrator subsequently ran `npm run build` in the isolated verification
 worktree with the final Precision Ledger stylesheet: **exit 0**. Its SHA-256
 matched the working stylesheet; the visual and accessibility gaps remain.
+
+## Ledger header and layout selector follow-up — 2026-11-13
+
+The later 390px comparison found Precision too close to Quiet and Concierge, and the selected layout name truncated. The v3 header now uses a measured two-level horizontal rule in existing border tokens, with a system-color double border in forced colors. The layout selector's selected name can wrap while its “Layout” label remains intact; its button retains the touch-size floor. Rules are scoped to v3-owned targets, without changing fonts, palette, saved settings or protected/native content.
+
+An Edge DOM fixture loaded the actual Vite-served `index.css` and `appDesignPacks.css` without taking screenshots. At 360/390/430px it reported `documentWidth` equal to the viewport, one “Layout” line, two selected-name lines, and a 269.8×58.8px layout button. The fixture also checked the other 44px action targets, no action overlap, an inherited Georgia test font, a 1.35× label size of 21.6px, a `3px double` forced-colors border and visible keyboard focus. Its representative protected element and native gauge retained their test dimensions; a nested v4 preview retained its own truncation. Output: `REAL_CSS_DOM_EXIT=0`. This is a representative DOM check, not a live-dashboard or visual pass.
+
+Focused verification: `cd web; npx vitest run src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx src\components\ui\app-designs\packs\PackNativeStepsPreservation.test.tsx src\components\ui\DataTable.appDesign.test.tsx src\components\ui\DataTable.mobile-adapter.test.tsx -t 'v3|honors compact and comfortable density|keeps typed desktop identities|selects one mounted surface' --maxWorkers=2` reported `Test Files  4 passed (4)`, `Tests  10 passed | 213 skipped (223)` and `VITEST_LEDGER_HEADER_EXIT=0`. No additional screenshots or build were run; earlier protected-twin and incomplete-contrast findings remain open.
+
+After moving the forced-colors rule out of the phone-only media query, a second synthetic real-CSS check reported `3px double` on v3 and `0px solid` on nested v4 at 360, 390, 430 and 1440px: `FORCED_COLORS_REAL_CSS_EXIT=0`. The focused Vitest run above was repeated afterward. The scoped audit script's output was:
+
+```text
+▸ [1/7] Static inline styles (var(--*))...
+  ✅ 0 violations
+▸ [2/7] Raw HTML elements...
+  ✅ 0 violations
+▸ [3/7] Direct library imports...
+  ✅ 0 violations
+▸ [4/7] Old API imports...
+  ✅ 0 violations
+▸ [5/7] Double /api/v1/ prefix...
+  ✅ 0 violations
+▸ [6/7] camelCase query params (vehicleId=)...
+  ✅ 0 violations
+▸ [7/7] TypeScript compilation...
+  ✅ TypeScript passes
+  ✅ ALL CHECKS PASSED — 0 total violations
+AUDIT_LEDGER_HEADER_EXIT=0
+```
+
+The separate `audit_code` check on the final stylesheet returned `No violations found`. These checks do not resolve the earlier capture or accessibility findings and are not a visual pass.
