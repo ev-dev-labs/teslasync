@@ -26,7 +26,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: compact ledger rows, aligned figures and understated controls.
 - Signature: fine horizontal rules and tabular numeric alignment.
 
-### 5. Executive Concierge (`v4`) - in progress
+### 5. Executive Concierge (`v4`) - passed-with-notes
 - Mood: composed, personal and assured.
 - Distinction: a structured sidebar and curated card summaries emphasize decisions.
 - Signature: a discreet vertical guide beside key summaries.

@@ -1,0 +1,64 @@
+
+Running 3 tests using 1 worker
+
+PHONE_NAV {"clipped":[],"split":[],"geometry":{"paddingTop":"0px","paddingBottom":"0px","rowGap":"2px","buttons":[{"text":"Home","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Vehicles","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Driving","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Charging","buttonFont":"11px","labelFont":"16px","top":797,"bottom":857,"height":60},{"text":"More","buttonFont":"11px","labelFont":"16px","top":797,"bottom":857,"height":60}]}}
+  ✓  1 ..\docs\design-packs\shots\v4\dom-review.spec.cjs:34:1 › phone labels fit after v4 navigation correction (7.4s)
+PHONE_HIT_AREAS [{"top":748,"bottom":808,"height":60},{"top":748,"bottom":808,"height":60},{"top":748,"bottom":808,"height":60},{"top":797,"bottom":857,"height":60},{"top":797,"bottom":857,"height":60}]
+  ✘  2 ..\docs\design-packs\shots\v4\dom-review.spec.cjs:63:1 › phone bottom tab hit areas do not overlap or leave viewport (6.9s)
+DESKTOP_HEADER {"headerHeight":73,"tracks":"265px 371px 424px","controls":[{"label":"Last 7 days","top":18,"bottom":54,"width":127.34375},{"label":"Select vehicle","top":12,"bottom":60,"width":160},{"label":"<div class=\"relative inline-block\" data-role=\"notification-bell-popover\" data-app-design-owner=\"pack","top":18,"bottom":54,"width":36},{"label":"<div class=\"relative inline-block \" data-role=\"theme-popover\" data-app-design-owner=\"pack-v4 navigat","top":18,"bottom":54,"width":36}]}
+  ✓  3 ..\docs\design-packs\shots\v4\dom-review.spec.cjs:75:1 › desktop workspace controls stay on one row (7.4s)
+
+
+  1) ..\docs\design-packs\shots\v4\dom-review.spec.cjs:63:1 › phone bottom tab hit areas do not overlap or leave viewport 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 797
+    Received:    808
+
+      69 |     }));
+      70 |   console.log('PHONE_HIT_AREAS', JSON.stringify(bounds));
+    > 71 |   expect.soft(bounds[0].bottom).toBeLessThanOrEqual(bounds[3].top);
+         |                                 ^
+      72 |   expect.soft(bounds[4].bottom).toBeLessThanOrEqual(844);
+      73 | });
+      74 |
+        at D:\repos\teslasync\docs\design-packs\shots\v4\dom-review.spec.cjs:71:33
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 844
+    Received:    857
+
+      70 |   console.log('PHONE_HIT_AREAS', JSON.stringify(bounds));
+      71 |   expect.soft(bounds[0].bottom).toBeLessThanOrEqual(bounds[3].top);
+    > 72 |   expect.soft(bounds[4].bottom).toBeLessThanOrEqual(844);
+         |                                 ^
+      73 | });
+      74 |
+      75 | test('desktop workspace controls stay on one row', async ({ page }) => {
+        at D:\repos\teslasync\docs\design-packs\shots\v4\dom-review.spec.cjs:72:33
+
+    attachment #1: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Drive history — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site heade...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\v4\dom-review-results\dom-review-phone-bottom-ta-12392-t-overlap-or-leave-viewport\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\v4\dom-review-results\dom-review-phone-bottom-ta-12392-t-overlap-or-leave-viewport\error-context.md
+
+  1 failed
+    ..\docs\design-packs\shots\v4\dom-review.spec.cjs:63:1 › phone bottom tab hit areas do not overlap or leave viewport 
+  2 passed (37.5s)
