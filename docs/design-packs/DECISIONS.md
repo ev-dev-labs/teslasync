@@ -72,6 +72,16 @@ it. This trades content space for legible, thumb-reachable controls and does
 not change the saved typography preference. The tradeoff remains a visual
 defect to revisit as part of the full Classic review.
 
+Classic's operational metric columns use a pack-owned minimum width that
+scales with the saved font preference, falling back to one column rather
+than breaking words inside narrow labels. The mobile workspace range trigger
+shares the available width with vehicle selection and may grow vertically
+for long or compared range labels. Its input keeps enough space for enlarged
+action targets and the leading icon; both controls retain their existing
+selection behavior. The 360/390/430px Energy captures exercise these controls
+in both modes at 1.35 scale, including comparison and custom-range changes.
+Longer vehicle names can still be truncated and need further review.
+
 Use the existing mobile data-grid presentation for Energy's recent sessions:
 retain the desktop columns, session-detail destination and data, and expose
 all seven fields in Quick View. Classic's phone text floor applies to the
@@ -94,6 +104,12 @@ production routes and known detail fixtures; missing fixtures, runtime errors,
 overflow and incomplete captures are failures, not visual passes. Do not mark
 a pack passed until its screenshots have been inspected and all requested
 gates have actually run.
+
+The API-hook verifier's route lookup used `grep -q` behind a pipe with
+`pipefail`, occasionally treating a successful match as a failure when the
+producer received SIGPIPE. A large-route-table regression reproduces the old
+failure; feeding the matcher without that pipeline preserves genuine missing
+route failures. No application endpoint or hook behavior was changed.
 
 The application scrolls its `main` element rather than the document, so a
 normal Playwright full-page screenshot only captures the first screen. Save

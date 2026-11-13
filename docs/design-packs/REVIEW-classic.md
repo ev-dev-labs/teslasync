@@ -106,13 +106,13 @@ both widths checked the opened JSON and its parseability and returned:
 An open-disclosure screenshot is still needed for visual review. At 0.85
 scale, Energy passed all four 360/430px dark/light cases.
 
-The latest 360px, 1.35-scale Energy screenshot exposed two further defects:
+The earlier 360px, 1.35-scale Energy screenshot exposed two further defects:
 the narrow operational-metric columns split "consumption" across lines, and
-the header truncates "Last 7 days". Neither is fixed or covered by the
-existing checks yet. The one-category chart now uses the shared bounded-height
-API instead of overriding its measured viewport; the three-category 360/430px
-dark/light captures reported `4 passed (1.8m)`. The chart still has visible
-empty space below the single category.
+the header truncated "Last 7 days". The subsequent workspace refinement and
+recaptures are recorded below. The one-category chart now uses the shared
+bounded-height API instead of overriding its measured viewport; the
+three-category 360/430px dark/light captures reported `4 passed (1.8m)`.
+The chart still has visible empty space below the single category.
 
 On the current source, `npx tsc --noEmit`, `npm run build`, and `npm run lint`
 each exited 0. The Energy page regression run reported:
@@ -132,8 +132,10 @@ ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES
 ```
 
 Energy's page file has 1,642 lines versus 1,620 on the source branch, with
-nine chart/panel references in each. A full Vitest run is still in progress;
-it is not a passing full-suite result.
+nine chart/panel references in each. The initial full Vitest run was stopped
+before completion and restarted from an isolated worktree at commit
+`143c362a40` so subsequent edits cannot alter its source. That run remains
+in progress and is not a passing full-suite result.
 
 ## Phone contrast and touch findings
 
@@ -581,6 +583,68 @@ one incomplete node for Charging and Drives and 18 for Charging Patterns in
 each mode. Those findings and other scroll positions still need manual
 review. The subsequent source-preserving freshness and chart-label changes
 require a new production capture.
+
+## Enlarged-text workspace refinement
+
+The actual 360px Energy image first exposed a 16px overlap between the
+vehicle text area and its enlarged action, then a fractional-width truncation
+of "Aurora" despite a permissive measurement tolerance. The revised spacing
+and stricter measurement show the full sample name and "Last 7 days" without
+splitting the metric label. Longer names and non-Latin metric labels have not
+been established as readable. The browser fixture checks LTR and RTL, one
+and two actions, forced colors and both saved-scale extremes.
+
+| Inspected image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Energy, 360px dark/light | 7 | 6 | 7 | 7 | 6 | 6 | 5 |
+| Energy, 390px dark | 7 | 6 | 7 | 7 | 6 | 6 | 5 |
+| Energy, 430px light | 7 | 6 | 7 | 7 | 6 | 6 | 5 |
+| Help open support, 360px dark and 390px light | 6 | 6 | 6 | 7 | 6 | 6 | 5 |
+| Vehicles, 360px dark | 6 | 5 | 7 | 7 | 6 | 6 | 4 |
+| Action center, 360px dark | 7 | 6 | 7 | 7 | 6 | 6 | 4 |
+| Drives, 360px dark | 6 | 6 | 7 | 7 | 6 | 6 | 4 |
+
+These are partial judgments, not acceptance scores or WCAG certification.
+The title and a lone bookmark still consume separate rows; two-row navigation
+occupies substantial phone space; the Vehicles first screen is mostly
+repetitive status cards; the Help JSON breaks long strings across lines; and
+the pages still share generic surfaces. Loading, error, hover and additional
+scroll positions remain unreviewed.
+
+The 1.35-scale touch-device captures cover Energy, Help and Vehicles at
+360/390/430px in both modes, with the support disclosure open and the workspace
+comparison/custom-range interactions exercised. Action center and Drives
+were recaptured at the same widths and modes:
+
+```text
+18 passed (4.5m)
+12 passed (3.1m)
+51 passed (19.3s)  # capture harness contracts
+```
+
+The final scrolled states had no automated Axe contrast violations, but each
+Energy, Help and Vehicles capture had one incomplete warning badge; the Drives
+captures also had an incomplete result-count label. A 360px dark/light context
+recapture returned `6 passed (2.1m)`. The visible warning badge measures
+7.99:1 dark and 5.88:1 light against its opaque background. After scrolling
+the Drives label into view, its colors measure 8.73:1 dark and 7.31:1 light.
+This does not resolve its original partial-overlap finding or certify other
+viewport and scroll states.
+
+Current `npx tsc --noEmit` exited 0 with no output; `npm run build` and
+`npm run lint` both exited 0. Lint printed an upstream JSXEmptyExpression
+diagnostic without failing. The Energy guideline audit reported zero
+violations in all six categories and `TypeScript passes`. EnergyPage remains
+1,620 → 1,642 lines
+against `feature/app-design-themes`, with 0 → 0 `GlassPanel`/`ChartContainer`
+matches, 4 → 4 `BatteryPanelGrid`, 4 → 4 `ChartCard` and 1 → 1
+`OperationalBrief`.
+
+A subsequent hook check initially reported two false missing routes although
+both are registered. Its `grep -q` pipeline could return SIGPIPE under
+`pipefail`; the fixed checker passed the full hook scan, and the large-route
+regression passed while failing against the prior script. The isolated full
+Vitest run is still in progress and has not established a passing suite.
 
 ## Initial defects
 

@@ -6,7 +6,7 @@ import { expect, type Locator } from '@playwright/test';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { test } from './app-design-test';
-import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { cardLayoutContractPaths, resolveCardLayoutContractSource } from './cardLayoutContractSources';
@@ -80,9 +80,11 @@ for (const route of routes) {
     const viewportPath = resolve(directory, `${route.file}.png`);
     const fullPath = resolve(directory, `${route.file}--full.png`);
     const tablePath = resolve(directory, `${route.file}--table.png`);
+    const supportPath = resolve(directory, `${route.file}--support.png`);
     let tableImage: Buffer | undefined;
+    let supportImage: Buffer | undefined;
     await mkdir(directory, { recursive: true });
-    await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates);
+    await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates, [supportPath]);
     if (forcedColors) await page.emulateMedia({ forcedColors: 'active' });
     const saved = createReviewPreference();
     saved.pack_id = packId;
@@ -158,6 +160,43 @@ for (const route of routes) {
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
+    if (route.path === '/energy' && width < 768 && packId === 'classic'
+      && process.env.DESIGN_PACK_CHECK_WORKSPACE === '1') {
+      const vehicle = page.locator('[data-role="mobile-workspace-controls"] [data-role="vehicle-picker-control"] input');
+      await expect(vehicle).toHaveValue('Aurora');
+      const vehicleText = await vehicle.evaluate((input: HTMLInputElement) => {
+        const style = getComputedStyle(input);
+        const canvas = document.createElement('canvas').getContext('2d')!;
+        canvas.font = style.font;
+        const spacing = parseFloat(style.letterSpacing) || 0;
+        return {
+          available: input.getBoundingClientRect().width - parseFloat(style.borderLeftWidth)
+            - parseFloat(style.borderRightWidth) - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+          required: canvas.measureText(input.value).width + spacing * Math.max(0, input.value.length - 1),
+        };
+      });
+      expect(vehicleText.available - 1, JSON.stringify(vehicleText)).toBeGreaterThanOrEqual(vehicleText.required);
+      const trigger = page.locator('[data-role="mobile-workspace-controls"] [data-active-range]');
+      await trigger.click();
+      const settings = page.getByRole('dialog', { name: 'View settings' });
+      await expect(settings).toBeVisible();
+      if (touchAudit) selectionTouchTargets.push(...await findSmallTouchTargets(page));
+      const compare = settings.getByRole('switch', { name: 'Compare to previous period' });
+      await compare.click();
+      await expect(trigger).toHaveAttribute('data-active-range', /Compare/);
+      expect(await findClippedWorkspaceRangeLabels(page)).toEqual([]);
+      await compare.click();
+      await settings.getByRole('button', { name: 'Custom', exact: true }).click();
+      await settings.getByRole('button', { name: 'Apply custom range' }).click();
+      await expect(trigger).toHaveAttribute('data-active-range', 'Custom');
+      expect(await findClippedWorkspaceRangeLabels(page)).toEqual([]);
+      await trigger.click();
+      await settings.getByRole('button', { name: '7 days', exact: true }).click();
+      await settings.getByRole('button', { name: 'Close view settings' }).click();
+      await expect(trigger).toHaveAttribute('data-active-range', 'Last 7 days');
+      await waitForHarnessReady(page, mocks);
+    }
+
     if (route.path === '/help' && width < 768 && packId === 'classic') {
       const code = page.getByTestId('support-bundle-json');
       const disclosure = code.locator('..').locator('summary');
@@ -166,6 +205,10 @@ for (const route of routes) {
       expect(await code.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
       const json = await code.textContent();
       expect(() => JSON.parse(json ?? '')).not.toThrow();
+      if (captureStates) {
+        await disclosure.scrollIntoViewIfNeeded();
+        supportImage = await page.screenshot({ animations: 'disabled' });
+      }
       await disclosure.click();
       await page.locator('main').evaluate(element => { element.scrollTop = 0; });
     }
@@ -264,6 +307,9 @@ for (const route of routes) {
     if (packId === 'classic' && width < 1024 && ['/action-center', '/drives'].includes(route.path)) {
       const list = page.locator('[data-operational-metric-list]').first();
       await expect(list.getByRole('listitem')).toHaveCount(6);
+      const columns = await list.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+      expect(columns).toBeGreaterThanOrEqual(1);
+      expect(columns).toBeLessThanOrEqual(2);
       const bounds = await list.locator('[data-operational-metric]').evaluateAll(items =>
         items.map(item => {
           const rect = item.getBoundingClientRect();
@@ -276,11 +322,13 @@ for (const route of routes) {
           };
         }));
       expect(bounds).toHaveLength(6);
-      for (let index = 0; index < bounds.length; index += 2) {
+      for (let index = 0; index < bounds.length; index++) {
         expect(bounds[index].width, JSON.stringify(bounds)).toBeGreaterThanOrEqual(120);
-        expect(bounds[index + 1].width, JSON.stringify(bounds)).toBeGreaterThanOrEqual(120);
-        expect(Math.abs(bounds[index].top - bounds[index + 1].top), JSON.stringify(bounds)).toBeLessThan(1);
-        if (index > 0) expect(bounds[index].top, JSON.stringify(bounds)).toBeGreaterThan(bounds[index - 1].top);
+        if (index % columns === 0 && index > 0) {
+          expect(bounds[index].top, JSON.stringify(bounds)).toBeGreaterThan(bounds[index - 1].top);
+        } else if (index % columns !== 0) {
+          expect(Math.abs(bounds[index].top - bounds[index - 1].top), JSON.stringify(bounds)).toBeLessThan(1);
+        }
       }
     }
     if (packId === 'classic' && ['/action-center', '/drives'].includes(route.path)) {
@@ -739,6 +787,7 @@ for (const route of routes) {
       ? [...selectionTouchTargets, ...await findSmallTouchTargets(page)]
       : [];
     const smallBodyText = textAudit ? await findSmallBodyText(page) : [];
+    const splitMetricWords = width < 768 ? await findSplitOperationalMetricWords(page) : [];
     const main = page.locator('main');
     for (;;) {
       const position = await main.evaluate(element => ({
@@ -756,6 +805,7 @@ for (const route of routes) {
       if (width < 768) horizontalScrollRegions.push(...await findHorizontalScrollRegions(page));
       if (touchAudit) smallTouchTargets.push(...await findSmallTouchTargets(page));
       if (textAudit) smallBodyText.push(...await findSmallBodyText(page));
+      if (width < 768) splitMetricWords.push(...await findSplitOperationalMetricWords(page));
     }
     await expectNoHorizontalOverflow(page);
     const uniqueScrollRegions = Array.from(new Map(horizontalScrollRegions.map(region =>
@@ -791,9 +841,15 @@ for (const route of routes) {
     await assertMockApiComplete(page, mocks);
     await writeCaptureImages(viewportPath, fullPath, frames);
     if (tableImage) await writeFile(tablePath, tableImage);
+    if (supportImage) await writeFile(supportPath, supportImage);
     if (width < 768) {
       expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
       expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);
+      expect.soft(await findClippedWorkspaceRangeLabels(page), 'workspace range text must remain visible').toEqual([]);
+      expect.soft(await findOverlappingWorkspaceInputActions(page), 'workspace actions must not overlap input text').toEqual([]);
+      const uniqueSplitWords = Array.from(new Map(splitMetricWords.map(word =>
+        [JSON.stringify(word), word])).values());
+      expect.soft(uniqueSplitWords, 'operational metric words must remain readable').toEqual([]);
     }
     if (touchAudit) {
       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>

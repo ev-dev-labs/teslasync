@@ -10,7 +10,7 @@ import { isSsePath, resolveApiFixture, waitForNoVisibleActivity } from './mockAp
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
-import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findHorizontalScrollRegions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
+import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, writeCaptureImages } from './design-packs-capture';
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();
@@ -56,16 +56,19 @@ test('ordinary captures preserve separate interactive-state evidence', async () 
   const viewportPath = resolve(directory, 'page.png');
   const fullPath = resolve(directory, 'page--full.png');
   const tablePath = resolve(directory, 'page--table.png');
+  const supportPath = resolve(directory, 'page--support.png');
   const image = Buffer.from('existing evidence');
-  await Promise.all([viewportPath, fullPath, tablePath].map(path => writeFile(path, image)));
+  await Promise.all([viewportPath, fullPath, tablePath, supportPath].map(path => writeFile(path, image)));
 
-  await clearCaptureImages(viewportPath, fullPath, tablePath, false);
+  await clearCaptureImages(viewportPath, fullPath, tablePath, false, [supportPath]);
   await expect(access(viewportPath)).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(access(fullPath)).rejects.toMatchObject({ code: 'ENOENT' });
   expect(await readFile(tablePath)).toEqual(image);
+  expect(await readFile(supportPath)).toEqual(image);
 
-  await clearCaptureImages(viewportPath, fullPath, tablePath, true);
+  await clearCaptureImages(viewportPath, fullPath, tablePath, true, [supportPath]);
   await expect(access(tablePath)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(access(supportPath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 test('mobile captures detect visible nested scrolling without flagging clipped content or text inputs', async ({ page }) => {
@@ -138,6 +141,143 @@ test('mobile navigation audit checks rendered text rather than only control boxe
   expect(await findSplitBottomNavigationWords(page)).toEqual([
     expect.objectContaining({ label: 'Charging', lines: expect.any(Number) }),
   ]);
+});
+
+test('phone text diagnostics detect clipped workspace ranges and words split inside metric labels', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setContent(`
+    <div data-role="mobile-workspace-controls">
+      <button data-active-range="Last 7 days" style="width:60px">
+        <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Last 7 days</span>
+      </button>
+      <button data-active-range="Today" style="width:100px"><span>Today</span></button>
+    </div>
+    <div data-operational-metric-list>
+      <span data-app-part="metric-label" style="display:block;width:45px;overflow-wrap:anywhere">consumption</span>
+      <span data-app-part="metric-label" style="display:block;width:110px;overflow-wrap:anywhere">Drive consumption</span>
+      <span data-app-part="metric-label" style="display:none;width:1px">Hidden</span>
+    </div>
+  `);
+  expect(await findClippedWorkspaceRangeLabels(page)).toEqual([
+    expect.objectContaining({ label: 'Last 7 days' }),
+  ]);
+  expect(await findSplitOperationalMetricWords(page)).toEqual([
+    expect.objectContaining({ label: 'consumption', word: 'consumption' }),
+  ]);
+});
+
+test('phone workspace diagnostics detect controls over the vehicle text area', async ({ page }) => {
+  await page.setContent(`
+    <div data-role="mobile-workspace-controls">
+      <div style="position:relative;width:160px">
+        <input data-app-part="field-control" value="Aurora" style="box-sizing:border-box;width:160px;height:44px;padding-right:36px">
+        <div style="position:absolute;right:8px;top:0"><button style="width:44px;height:44px"></button></div>
+      </div>
+    </div>
+  `);
+  expect(await findOverlappingWorkspaceInputActions(page)).toEqual([
+    expect.objectContaining({ value: 'Aurora', overlap: 16 }),
+  ]);
+});
+
+test('Classic phone metrics and workspace range remain readable as text scales', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 8px; --density-pad-y: 8px; }
+      body { margin: 0; font: 16px Arial, sans-serif; }
+      [data-role="mobile-workspace-controls"] { display: flex; width: calc(100vw - 32px); gap: 8px; }
+      [data-active-range] { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+        width: 160px; max-width: 160px; height: 44px; padding: 0 8px; border: 0; font: inherit; }
+      [data-active-range] svg { flex: none; width: 16px; height: 16px; }
+      [data-active-range] span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      [data-vehicle] { flex: 1; min-width: 0; height: 44px; }
+      [data-vehicle] input { box-sizing: border-box; width: 100%; height: 44px; padding-inline: 40px 36px; font: inherit; }
+      [data-vehicle] [data-actions] { position: absolute; inset-inline-end: 8px; top: 0; display: flex; gap: 4px; }
+      [data-vehicle] [data-actions] button { width: 44px; height: 44px; }
+      [data-operational-metric-list] { width: calc(100vw - 64px); }
+      [data-app-part~="metric-label"] { display: block; }
+    </style>
+    <div data-role="mobile-workspace-controls" data-app-design-owner="pack-classic">
+      <button data-active-range="Last 7 days" data-app-part="button" data-app-design-owner="pack-classic">
+        <svg></svg><span data-app-design-owner="pack-classic">Last 7 days</span><svg></svg>
+      </button>
+      <div data-vehicle data-role="vehicle-picker-control">
+        <div style="position:relative;width:100%">
+          <input data-app-part="field-control" data-app-design-owner="pack-classic" value="Aurora">
+          <div data-actions><button></button></div>
+        </div>
+      </div>
+    </div>
+    <div data-operational-metric-list data-columns="2" data-app-design-owner="pack-classic">
+      <div data-operational-metric-bank data-app-part="metric-grid" data-app-design-owner="pack-classic">
+        <div data-app-part="metric" data-app-design-owner="pack-classic">
+          <span data-app-part="metric-label" data-app-design-owner="pack-classic">Drive consumption</span>
+        </div>
+        <div data-app-part="metric" data-app-design-owner="pack-classic">
+          <span data-app-part="metric-label" data-app-design-owner="pack-classic">Efficiency</span>
+        </div>
+      </div>
+    </div>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'classic');
+    element.setAttribute('data-app-design-owner', 'pack-classic');
+  });
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'classic.css'), 'utf8') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const direction of ['ltr', 'rtl'] as const) {
+      await page.locator('html').evaluate((element, value) => { element.dir = value; }, direction);
+      for (const width of [360, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const scale of [0.85, 1.35]) {
+          await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+          for (const label of ['Last 7 days', 'Full year 2025 · Compare', 'AnExceptionallyLongRangeName']) {
+            await page.locator('[data-active-range] span').evaluate((element, text) => { element.textContent = text; }, label);
+            const context = `${forcedColors}, ${direction}, ${width}, ${scale}, ${label}`;
+            expect(await findClippedWorkspaceRangeLabels(page), context).toEqual([]);
+            expect(await findOverlappingWorkspaceInputActions(page), context).toEqual([]);
+            expect(await findSplitOperationalMetricWords(page), context).toEqual([]);
+            const geometry = await page.evaluate(() => {
+              const row = document.querySelector<HTMLElement>('[data-role="mobile-workspace-controls"]')!;
+              const trigger = document.querySelector<HTMLElement>('[data-active-range]')!.getBoundingClientRect();
+              const vehicle = document.querySelector<HTMLElement>('[data-vehicle]')!.getBoundingClientRect();
+              const input = document.querySelector<HTMLInputElement>('[data-vehicle] input')!;
+              const inputStyle = getComputedStyle(input);
+              const canvas = document.createElement('canvas').getContext('2d')!;
+              canvas.font = inputStyle.font;
+              const grid = document.querySelector<HTMLElement>('[data-operational-metric-list]')!;
+              return {
+                trigger: { width: trigger.width, height: trigger.height, left: trigger.left, right: trigger.right },
+                vehicle: { width: vehicle.width, left: vehicle.left, right: vehicle.right },
+                inputAvailable: input.getBoundingClientRect().width - parseFloat(inputStyle.borderLeftWidth)
+                  - parseFloat(inputStyle.borderRightWidth) - parseFloat(inputStyle.paddingLeft) - parseFloat(inputStyle.paddingRight),
+                inputText: canvas.measureText(input.value).width,
+                rowOverflow: row.scrollWidth - row.clientWidth,
+                gridOverflow: grid.scrollWidth - grid.clientWidth,
+                columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+              };
+            });
+            expect(geometry.trigger.width, context).toBeGreaterThanOrEqual(44);
+            expect(geometry.trigger.height, context).toBeGreaterThanOrEqual(44);
+            expect(geometry.vehicle.width, context).toBeGreaterThanOrEqual(44);
+            expect(direction === 'ltr' ? geometry.trigger.right <= geometry.vehicle.left : geometry.vehicle.right <= geometry.trigger.left, context).toBe(true);
+            expect(geometry.inputAvailable - 1, `${context}: ${JSON.stringify(geometry)}`).toBeGreaterThanOrEqual(geometry.inputText);
+            expect(geometry.rowOverflow, context).toBeLessThanOrEqual(1);
+            expect(geometry.gridOverflow, context).toBeLessThanOrEqual(1);
+            expect(geometry.columns, context).toBe(scale < 1 ? 2 : 1);
+          }
+        }
+      }
+      await page.locator('[data-actions]').evaluate((actions) => {
+        const second = actions.firstElementChild!.cloneNode(true) as HTMLElement;
+        actions.append(second);
+      });
+      expect(await findOverlappingWorkspaceInputActions(page), `${forcedColors}, ${direction}, two actions`).toEqual([]);
+      await page.locator('[data-actions] button').last().evaluate((element) => element.remove());
+    }
+  }
 });
 
 test('Classic navigation keeps labels, touch targets and shell offsets visible at phone scales', async ({ page }) => {

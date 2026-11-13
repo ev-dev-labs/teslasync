@@ -2,6 +2,9 @@
 @media screen {
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
     --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+    --app-brief-column-min-width: 9rem;
+    --app-input-action-clearance: 0.75rem;
+    --app-vehicle-icon-space: 2rem;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-brief-value-size);
@@ -260,7 +263,7 @@
 @media screen and (max-width: 1023px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(var(--app-brief-column-min-width) * max(1, var(--font-scale, 1))))), 1fr));
     gap: 0 var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list][data-columns="1"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
@@ -379,6 +382,19 @@
   }
   :root[data-app-design-pack="classic"]:not([data-tab-bar="off"]):where([data-app-design-owner~="pack-classic"]) {
     --shell-tab-bar-height: calc(var(--app-phone-tab-icon-size) + var(--app-phone-tab-gap) + var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="mobile-workspace-controls"] > [data-active-range]:where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 0;
+    max-inline-size: none;
+    block-size: auto;
+    padding-block: calc(var(--density-pad-y) / 2);
+    padding-inline: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="mobile-workspace-controls"] [data-active-range] > span:where([data-app-design-owner~="pack-classic"]) {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
@@ -555,6 +571,15 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--app-input-action-clearance));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button:nth-of-type(2)):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) * 2 + var(--app-input-action-clearance));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="vehicle-picker-control"] input[data-app-part~="field-control"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-start: var(--app-vehicle-icon-space);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] label[data-app-field-kind="choice"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     min-inline-size: var(--app-touch-size);

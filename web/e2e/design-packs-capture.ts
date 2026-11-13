@@ -186,6 +186,79 @@ export async function findSplitBottomNavigationWords(page: Page) {
   }));
 }
 
+export async function findSplitOperationalMetricWords(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(
+    '[data-operational-metric-list] [data-app-part~="metric-label"]',
+  )).flatMap(label => {
+    const box = label.getBoundingClientRect();
+    const style = getComputedStyle(label);
+    if (box.width <= 0 || box.height <= 0 || style.visibility !== 'visible') return [];
+    const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+    const split: Array<{ label: string; word: string; lines: number }> = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (const match of text.matchAll(/[\p{Script=Latin}\p{Number}]+/gu)) {
+        const range = document.createRange();
+        range.setStart(node, match.index);
+        range.setEnd(node, match.index + match[0].length);
+        const lines = new Set(Array.from(range.getClientRects())
+          .filter(rect => rect.width > 0 && rect.height > 0)
+          .map(rect => Math.round(rect.top)));
+        if (lines.size > 1) {
+          split.push({ label: label.textContent?.trim() ?? '', word: match[0], lines: lines.size });
+        }
+      }
+    }
+    return split;
+  }));
+}
+
+export async function findClippedWorkspaceRangeLabels(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(
+    '[data-role="mobile-workspace-controls"] [data-active-range] > span',
+  )).flatMap(label => {
+    const style = getComputedStyle(label);
+    const box = label.getBoundingClientRect();
+    const button = label.closest<HTMLElement>('[data-active-range]');
+    if (!button || style.visibility !== 'visible' || box.width <= 0 || box.height <= 0) return [];
+    const bounds = button.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const outside = Array.from(range.getClientRects()).some(rect => rect.width > 0 && rect.height > 0 && (
+      rect.left < bounds.left - 1 || rect.right > bounds.right + 1
+      || rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1
+    ));
+    if (!outside && label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1) return [];
+    return [{
+      label: label.textContent?.trim() ?? '',
+      width: Math.round(box.width),
+      scrollWidth: label.scrollWidth,
+      height: Math.round(box.height),
+      scrollHeight: label.scrollHeight,
+    }];
+  }));
+}
+
+export async function findOverlappingWorkspaceInputActions(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll<HTMLInputElement>(
+    '[data-role="mobile-workspace-controls"] input[data-app-part~="field-control"]',
+  )).flatMap(input => {
+    const actions = input.nextElementSibling;
+    if (!actions) return [];
+    const style = getComputedStyle(input);
+    const box = input.getBoundingClientRect();
+    if (box.width <= 0 || box.height <= 0 || style.visibility !== 'visible') return [];
+    return Array.from(actions.querySelectorAll<HTMLElement>('button')).flatMap(button => {
+      const action = button.getBoundingClientRect();
+      if (action.width <= 0 || action.height <= 0 || getComputedStyle(button).visibility !== 'visible') return [];
+      const overlap = style.direction === 'rtl'
+        ? action.right - (box.left + parseFloat(style.paddingLeft))
+        : box.right - parseFloat(style.paddingRight) - action.left;
+      return overlap > 0.5 ? [{ value: input.value, overlap: Math.round(overlap * 10) / 10 }] : [];
+    });
+  }));
+}
+
 export const BODY_ROLE_SELECTOR = [
   '[data-typography-role="body"]',
   '[data-typography-role="bodySm"]',
@@ -241,8 +314,11 @@ export async function findSmallBodyText(page: Page) {
 
 export async function clearCaptureImages(
   viewportPath: string, fullPath: string, tablePath: string, captureStates: boolean,
+  additionalStatePaths: string[] = [],
 ): Promise<void> {
-  const paths = captureStates ? [viewportPath, fullPath, tablePath] : [viewportPath, fullPath];
+  const paths = captureStates
+    ? [viewportPath, fullPath, tablePath, ...additionalStatePaths]
+    : [viewportPath, fullPath];
   await Promise.all(paths.map(path => rm(path, { force: true })));
 }
 
