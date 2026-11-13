@@ -1,6 +1,8 @@
 /* Motorsport: directional pitwall hierarchy; live data, not decoration, leads. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-motorsport"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 5%, transparent), transparent 45%);
   }
@@ -281,5 +283,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

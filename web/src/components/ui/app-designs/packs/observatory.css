@@ -1,6 +1,8 @@
 /* Scientific monitoring: separate scope, readings, plots and evidence rails. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-observatory"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: radial-gradient(var(--border-default) 0.75px, transparent 0.75px);
     background-size: 1.5rem 1.5rem;
@@ -253,5 +255,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

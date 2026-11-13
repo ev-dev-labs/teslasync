@@ -1,6 +1,8 @@
 /* A command ledger, not a forced monospace/green-screen theme. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-terminal"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 3.5%, var(--surface-2)), transparent 15rem);
   }
@@ -249,5 +251,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

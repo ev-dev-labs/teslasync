@@ -478,7 +478,7 @@
     display: flex;
     flex: none;
     inline-size: auto;
-    max-inline-size: 17.625rem;
+    max-inline-size: 19.5rem;
     min-block-size: 0;
     padding-block-end: var(--shell-status-bar-height);
   }
@@ -495,8 +495,8 @@
     padding-block-end: 0;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column[data-app-design-owner~="navigation-sidebar"] {
-    flex: 0 0 12.625rem;
-    inline-size: 12.625rem;
+    flex: 0 0 14.5rem;
+    inline-size: 14.5rem;
     min-block-size: 0;
     padding-block-end: 0;
   }
@@ -507,6 +507,12 @@
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"][data-app-design-owner~="navigation-sidebar"] {
     padding-inline: 0.625rem;
+  }
+  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"] button[data-app-design-owner~="navigation-sidebar"] {
+    min-inline-size: 2rem;
+    inline-size: 2rem;
+    min-block-size: 2rem;
+    block-size: 2rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-rail[data-app-design-owner~="navigation-sidebar"] {
     inline-size: 100%;
@@ -554,11 +560,14 @@
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column .sidenav-panel[data-app-design-owner~="navigation-top"],
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column .sidenav-panel[data-app-design-owner~="navigation-hybrid"] {
+    --sidenav-row-height: 1.875rem;
+    --sidenav-group-height: 1.75rem;
+    --sidenav-filter-height: 2rem;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
     grid-template-rows: auto minmax(0, 1fr);
     block-size: auto;
-    max-block-size: min(24dvh, 13.5rem);
+    max-block-size: 10.5rem;
     padding-inline: 0.5rem;
     border-inline-width: 0;
     border-block-end: 1px solid var(--border-default);
@@ -568,13 +577,20 @@
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"][data-app-design-owner~="navigation-top"],
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"][data-app-design-owner~="navigation-hybrid"] {
     block-size: auto;
-    min-block-size: 2.5rem;
+    min-block-size: 2.25rem;
     border-block-end-width: 0;
     padding-inline: 0.5rem;
   }
+  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"] button[data-app-design-owner~="navigation-top"],
+  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="heading"] button[data-app-design-owner~="navigation-hybrid"] {
+    min-inline-size: 2rem;
+    inline-size: 2rem;
+    min-block-size: 2rem;
+    block-size: 2rem;
+  }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="filter"][data-app-design-owner~="navigation-top"],
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="filter"][data-app-design-owner~="navigation-hybrid"] {
-    padding-block: 0.25rem;
+    padding-block: 0.1875rem;
     padding-inline: 0.5rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"][data-app-design-owner~="navigation-top"],
@@ -582,19 +598,20 @@
     grid-column: 1 / -1;
     display: flex;
     align-items: flex-start;
-    gap: 0.625rem;
+    gap: 0.5rem;
     overflow: auto;
     padding-block: 0.375rem 0.5rem;
     padding-inline: 0.5rem;
     border-block-start: 1px solid var(--border-subtle);
     scroll-padding-inline: 1rem;
+    scroll-padding-block: 0.5rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"] > [data-app-design-owner~="navigation-top"],
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"] > [data-app-design-owner~="navigation-hybrid"] {
-    flex: 0 0 min(15.5rem, 76vw);
+    flex: 0 0 min(14.75rem, 76vw);
     min-inline-size: 0;
     margin-block: 0;
-    padding: 0.25rem;
+    padding: 0.25rem 0.375rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
     background-color: var(--surface-1);

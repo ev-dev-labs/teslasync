@@ -1,6 +1,8 @@
 /* Architectural mastheads, paired rules and axial instruments without ornament over data. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--theme-accent) 4.5%, var(--surface-2)), transparent 60%);
   }
@@ -340,5 +342,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

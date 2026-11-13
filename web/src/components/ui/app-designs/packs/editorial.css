@@ -1,6 +1,8 @@
 /* Masthead, reading intervals and caption rules; no imposed serif font. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-editorial"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 3%, var(--surface-2)), transparent 20rem);
   }
@@ -82,7 +84,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-editorial"]) { box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"], [data-app-variant="ghost"]):where([data-app-design-owner~="pack-editorial"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-editorial"]) {
     border: 0; border-block-end: 1px solid var(--border-strong);
     background-color: var(--surface-1);
   }
@@ -217,7 +219,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-editorial"]) {
     border-block-end-style: solid; cursor: progress;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"], [data-app-variant="ghost"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-editorial"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-editorial"]) {
     border-block-end-width: 2px; background-color: var(--control-bg-hover);
   }
 }
@@ -227,7 +229,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-editorial"]) { background-color: var(--surface-2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"], [data-app-variant="ghost"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-editorial"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-editorial"]) {
     background-color: var(--control-bg-hover);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-editorial"]) {
@@ -252,5 +254,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

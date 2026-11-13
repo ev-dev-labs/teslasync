@@ -1,6 +1,8 @@
 /* Precision: aligned ledger rules, baseline readings and low-chrome controls. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v3"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 55%, transparent), transparent 14rem);
   }
@@ -261,5 +263,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 

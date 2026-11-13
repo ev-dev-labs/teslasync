@@ -1,6 +1,8 @@
 /* Technical instrumentation: segmented rails, datum rules and neutral readouts. */
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="cyber"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-cyber"]) {
+    background-color: var(--bg-app);
+    background-color: color-mix(in srgb, var(--surface-2) 48%, var(--bg-app));
     background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
     background-image: repeating-linear-gradient(180deg, transparent 0, transparent 7px, var(--border-subtle) 7px, var(--border-subtle) 8px);
   }
@@ -370,5 +372,6 @@
     gap: var(--density-gap);
   }
 }
+
 
 
