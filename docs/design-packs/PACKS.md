@@ -86,22 +86,22 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: expansive plots and carefully separated reference readings.
 - Signature: fine crosshair-like alignment marks around instruments.
 
-### 17. Bauhaus (`bauhaus`) - todo
+### 17. Bauhaus (`bauhaus`) - in progress
 - Mood: disciplined modernist workshop.
 - Distinction: bold geometric grouping and an intentionally modular grid.
 - Signature: a simple shape-led emphasis at section boundaries.
 
-### 18. Quiet Form (`quiet`) - todo
+### 18. Quiet Form (`quiet`) - in progress
 - Mood: contemplative and editorial.
 - Distinction: a pared-back reading column with minimal interface chrome.
 - Signature: delicate separators and generous negative space.
 
-### 19. Warm Modern (`warm`) - todo
+### 19. Warm Modern (`warm`) - in progress
 - Mood: welcoming, relaxed and domestic.
 - Distinction: soft editorial groupings with comfortable spacing.
 - Signature: rounded, layered surfaces and a gentle masthead.
 
-### 20. Swiss Grid (`swiss`) - todo
+### 20. Swiss Grid (`swiss`) - in progress
 - Mood: objective and typographically disciplined.
 - Distinction: a strict grid, compact headings and aligned data columns.
 - Signature: an unmistakable modular baseline and precise rules.

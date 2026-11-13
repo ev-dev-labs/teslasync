@@ -17,6 +17,8 @@ viewport and stitched images intact.
 Begin with eight isolated pack workers and refill each slot as it finishes.
 This keeps browser and build load bounded on the shared machine while the
 full unit suite is running; it is not an eight-pack completion gate.
+Four additional workers may implement their owned stylesheets while the
+browser slots are occupied; they must wait for an explicit capture release.
 The initial Vite process watched Playwright trace files, reloaded active
 reviews and exited with `EBUSY` on a locked `.network` trace. The orchestrator
 restarted the same local origin with the transient capture-artifact directory

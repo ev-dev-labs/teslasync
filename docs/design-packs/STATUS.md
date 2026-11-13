@@ -2,7 +2,7 @@
 
 - Branch: `design-packs-v2`, based on `feature/app-design-themes`.
 - Classic has a bounded review with unresolved accessibility and layout notes.
-- Work has started on the first sixteen packs; the other 11 remain at source baseline.
+- Work has started on the first twenty packs; the other seven remain at source baseline.
 - The first eight reviews have findings; later pack work is underway.
 - Shared Phase 1 foundation builds; the full test suite is still running.
 - Shared phone rules and preview isolation have passed focused browser and unit contracts.
