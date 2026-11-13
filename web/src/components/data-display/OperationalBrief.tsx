@@ -185,8 +185,8 @@ export function OperationalBrief({
       <section data-app-part="section" aria-labelledby={hideHeading ? undefined : titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
         <BriefSurface variant={variant} className={className}>
           <div className={cn(variant === 'embedded' ? 'min-w-0' : compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1', wrapTitle ? 'whitespace-normal break-words' : 'truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              {!hideHeading && <PanelTitle id={titleId} className={cn('min-w-0 flex-1 basis-full sm:basis-auto', wrapTitle ? 'whitespace-normal break-words' : 'whitespace-normal break-words sm:truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>}
               {showRange && scope && <span data-app-part="badge" className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
               <div className="flex shrink-0 items-center gap-2">
                 {actions}
