@@ -51,7 +51,7 @@ A full pass requires the complete visual, mobile and verification loop.
 - Distinction: fast-scanning instrument groups and decisive action hierarchy.
 - Signature: a short directional rule at the leading edge of key readings.
 
-### 10. Blueprint (`blueprint`) - in progress
+### 10. Blueprint (`blueprint`) - passed-with-notes
 - Mood: architectural drafting room.
 - Distinction: technical workbench composition with measured whitespace.
 - Signature: subtle construction lines and annotation-like labels.

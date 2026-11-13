@@ -1,0 +1,32 @@
+(node:47260) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:20568) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 12 nodes require manual review
+  Manual contrast review: .relative.min-w-0 > .text-xl — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .\@lg\:grid-cols-2.items-start.grid > .\@lg\:col-span-2.p-3.border-dashed > .block — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: h3[title="Fleet posture"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .mt-1\.5.justify-between.text-\[var\(--text-muted\)\] > .tabular-nums — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-end — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number[data-app-metric="headline"][data-app-part="metric"] > .leading-snug.text-\[var\(--text-secondary\)\][data-app-part="metric-label"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number[data-app-metric="headline"][data-app-part="metric"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > span[data-app-part="metric-value"] > .\@sm\:text-3xl.tracking-tight.break-all — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number[data-app-metric="headline"][data-app-part="metric"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > .text-\[var\(--text-muted\)\].text-xs[data-app-part="metric-unit"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: div[data-widget-family="meter"] > .\@lg\:grid-cols-2.items-start.grid > .\@lg\:col-span-2.p-3.border-dashed > .widget-detail-list > .\@\[24rem\]\/kv-list\:grid-cols-2.gap-x-3[data-app-part="list-row"] > dt > .gap-2.items-center.flex > span:nth-child(2) > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: span:nth-child(2) > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(2) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.gap-2.items-center > .truncate.text-\[var\(--text-muted\)\].text-xs — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-\[var\(--accent-primary\)\].hover\:underline[href$="vehicles/7"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient

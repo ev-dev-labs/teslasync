@@ -364,4 +364,4 @@ non-protected dashboard targets and prose in the observed fixture improved,
 but the protected-subtree boundary deliberately prevents their rules from
 altering the twins. Do not waive these findings or change the preserved
 design without a compatible token-only solution. Revisit at the final gate;
-Classic remains in progress.
+Classic remains passed-with-notes, not a full pass.
