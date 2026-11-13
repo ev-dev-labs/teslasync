@@ -297,6 +297,19 @@
   }
 }
 @media screen and (max-width: 767px) {
+  /* The dashboard layout trigger keeps its caption intact and shows saved names in full. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack="quiet"] [data-action-group="context"] button[data-app-part~="button"][aria-haspopup="menu"]:has(> span[class~="max-w-[10rem]"].truncate) > span:first-child:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-quiet"]) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="quiet"] [data-action-group="context"] button[data-app-part~="button"][aria-haspopup="menu"] > span[class~="max-w-[10rem]"].truncate:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-quiet"]) {
+    min-inline-size: 0;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-align: start;
+    text-overflow: clip;
+    white-space: normal;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="quiet"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-quiet"]) {
     font-size: var(--app-body-size, 1rem);
   }
