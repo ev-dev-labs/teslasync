@@ -981,6 +981,19 @@ asset and auth proxy return 200. Actual-browser checks at 360, 430 and
 The existing backend health endpoint still returns 503. These are smoke
 checks, not a full mobile or visual acceptance.
 
+All 32 Windows visual snapshot shards passed on `0966cdb7b28f`. A
+screenshot-free recheck against the current Docker image covered the five
+late mobile routes repaired after the earlier `b6750e2fff` diagnostic:
+
+```text
+> node scripts\capture-design-packs.mjs --pack classic --pages service-intelligence,settings--safety,sharing--trips,vehicles--7,vehicles--7--access --viewports phone-360,phone-430 --base-url http://127.0.0.1:3120 --workers 2
+10 passed (1.3m)
+LATE_MOBILE_RECHECK_EXIT=0
+```
+
+That command used `DESIGN_PACK_CHECK_ONLY=1` and did not verify contrast or
+save or inspect screenshots.
+
 At the final-gate revisit, a screenshot-free Classic 360px check of
 `/period-compare` again failed because the mocked requests did not become
 quiet (`PERIOD_REVISIT_EXIT=1`). The pre-existing request churn remains
