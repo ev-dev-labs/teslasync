@@ -221,6 +221,46 @@ test('harness does not accept continuously active mock requests', async ({ page 
   }
 });
 
+test('harness tracks DOM changes after replacing the main content', async ({ page }) => {
+  await page.setContent('<main><span>Starting</span></main>');
+  await page.evaluate(() => {
+    const state = window as Window & { __DOM_CHANGE_COUNT__?: number };
+    state.__DOM_CHANGE_COUNT__ = 0;
+    const timer = setInterval(() => {
+      const count = (state.__DOM_CHANGE_COUNT__ ?? 0) + 1;
+      state.__DOM_CHANGE_COUNT__ = count;
+      if (count === 5) {
+        const replacement = document.createElement('main');
+        const content = document.createElement('span');
+        content.textContent = 'Replacement';
+        replacement.append(content);
+        document.querySelector('main')?.replaceWith(replacement);
+      }
+      document.querySelector('main > span')?.setAttribute('data-growing', 'x'.repeat(count));
+      if (count === 20) clearInterval(timer);
+    }, 100);
+  });
+  await waitForHarnessReady(page, null);
+  expect(await page.evaluate(() => (window as Window & { __DOM_CHANGE_COUNT__?: number }).__DOM_CHANGE_COUNT__)).toBe(20);
+});
+
+test('harness rejects continuously changing DOM content', async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.setContent('<main><span>Changing</span></main>');
+  await page.evaluate(() => {
+    let count = 0;
+    const timer = window.setInterval(() => {
+      document.querySelector('main > span')?.setAttribute('data-growing', 'x'.repeat(++count));
+    }, 100);
+    (window as Window & { __DOM_CHANGE_TIMER__?: number }).__DOM_CHANGE_TIMER__ = timer;
+  });
+  try {
+    await expect(waitForHarnessReady(page, null)).rejects.toThrow('Timeout');
+  } finally {
+    await page.evaluate(() => window.clearInterval((window as Window & { __DOM_CHANGE_TIMER__?: number }).__DOM_CHANGE_TIMER__));
+  }
+});
+
 test('harness distinguishes cancelled tracked reads from unreviewed API requests', async ({ page }) => {
   await page.route('http://127.0.0.1:54321/', route =>
     route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));

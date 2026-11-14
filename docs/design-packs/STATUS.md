@@ -6,5 +6,5 @@
 - Mocked Recent drives context passes 360/390/430px checks in all 27 packs, both themes and three font scales; other mobile coverage remains incomplete.
 - The eight Vitest shards and merged coverage passed in CI on `ced744f586c9`; later changes have focused local coverage.
 - Draft PR #259 targets `feature/app-design-themes`; its checks are the source for current CI status.
-- Local Firefox/WebKit verification is blocked by browser-download timeouts; CI provides separate browser coverage.
+- Targeted Firefox/WebKit regressions pass in an isolated Linux container; broader CI is pending.
 - The Docker preview is healthy at `localhost:3120`; the existing backend health still reports Tesla API degraded.

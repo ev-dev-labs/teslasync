@@ -398,10 +398,10 @@ export async function isolationAppearance(host: Locator) {
 }
 
 /** Prove real owner-guarded rules are active, not merely that two unstyled
- * specimens look alike. The removal/read/restore is one synchronous task, so
- * the scope observer cannot repair the specimen between the measurements. */
+ * specimens look alike. Removal, unowned capture and restoration are synchronous;
+ * the restored geometry is read after the browser has laid out the preview. */
 export async function assertOwnerGuardActivation(preview: Locator) {
-  const activation = await preview.evaluate(element => {
+  const activation = await preview.evaluate(async element => {
     const nodes = [element, ...element.querySelectorAll('[data-app-part], .leaflet-pane, svg, svg path')];
     const properties = ['display', 'grid-template-columns', 'flex-direction', 'padding', 'gap',
       'font-size', 'font-weight', 'line-height', 'border-width', 'border-style',
@@ -435,8 +435,14 @@ export async function assertOwnerGuardActivation(preview: Locator) {
         if (owner !== null) node.setAttribute('data-app-design-owner', owner);
       }
     }
-    return { applied, unowned, restored: capture() };
+    const ownersRestored = owners.every(({ node, owner }) => node.getAttribute('data-app-design-owner') === owner);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return {
+      applied, unowned, restored: capture(),
+      ownersRestored: ownersRestored && owners.every(({ node, owner }) => node.getAttribute('data-app-design-owner') === owner),
+    };
   });
+  expect(activation.ownersRestored, 'activation probe restores every owner').toBe(true);
   expect(activation.applied, 'real final-target owner guards change computed preview composition/treatment')
     .not.toEqual(activation.unowned);
   expect(activation.restored, 'activation probe restores the actual sandbox exactly').toEqual(activation.applied);

@@ -1499,3 +1499,60 @@ The local Firefox run could not start because its Playwright browser was
 missing. A retry of the browser download timed out on three CDN endpoints;
 the installation was stopped. Edge results do not establish a Firefox pass,
 so the Firefox CI job remains the cross-browser verification.
+
+### Isolated Linux browser follow-up
+
+A matching Playwright container made Firefox and WebKit available without
+changing the local browser installation. Against assets copied from the
+`7402197cfc2f` Docker candidate, the first run passed both Firefox checks and
+one WebKit check; WebKit timed out while sampling a large charging page.
+After a DOM-sampling optimization, WebKit still timed out under load and a
+second run also found a preview geometry mismatch before layout settled.
+These failures were not counted as passes.
+
+The harness now caches the serialized markup length until the observed main
+content changes, while continuing to require five stable samples. The DOM
+deadline is 20 seconds rather than eight for slow browser renders. Its
+contracts also check replacement of `main` and rejection of continuously
+changing content. The preview owner probe still removes and restores owners
+in one synchronous task, verifies every owner, and compares the fully laid-out
+geometry after two animation frames.
+
+With the same isolated assets and no screenshots:
+
+```text
+npx playwright test widget-design-packs.app.spec.ts --project=app-design-firefox --project=app-design-webkit --grep="charging detail follows|nested preview comparison" --workers=1 --reporter=line
+  4 passed (2.2m)
+BROWSER_PROBE_HTTP=200
+BROWSER_PROBE_API_ESCAPE=0
+FIREFOX_WEBKIT_FINAL_EXIT=0
+
+npx playwright test --config=playwright.contract.config.ts --grep="harness tracks DOM changes after replacing the main content|harness rejects continuously changing DOM content" --workers=1
+  2 passed (28.7s)
+DOM_READINESS_CONTRACTS_EXIT=0
+```
+
+The container used `--network none`, synthetic fixtures and a local asset
+server that rejects unexpected API calls. The main-replacement contract also
+passed separately in Firefox and WebKit (`2 passed`). This is focused engine
+coverage, not a full visual or mobile pass. The container's dependency
+installation reported four low-severity audit findings; no manifests changed.
+
+The complete Edge harness and frontend type check subsequently reported:
+
+```text
+npx playwright test --config=playwright.contract.config.ts --workers=1
+  85 passed (2.8m)
+HARNESS_FULL_EXIT=0
+
+npx tsc --noEmit
+FRONTEND_TSC_EXIT=0
+
+npm run lint
+FULL_LINT_EXIT=0
+```
+
+The full lint emitted an existing `jsx-ast-utils` diagnostic for a
+`JSXEmptyExpression`; the command still exited successfully. Scoped
+engineering audits reported no violations in `mockApi.ts`,
+`harness.contract.spec.ts`, or `widget-design-packs.acceptance.ts`.

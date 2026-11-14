@@ -1222,16 +1222,36 @@ export async function waitForHarnessReady(
   await expect.poll(
     () => page.evaluate(() => Boolean((window as Window & { __TESLASYNC_E2E_READY__?: boolean }).__TESLASYNC_E2E_READY__)),
   ).toBe(true);
-  const state = await page.evaluateHandle(() => ({ previous: '', stableSamples: 0 }));
+  // Large chart tables are expensive to serialize on every WebKit poll.
+  const state = await page.evaluateHandle(() => {
+    const main = document.querySelector('main');
+    const sample = {
+      main, previous: '', stableSamples: 0, dirty: true, markupLength: 0,
+      observer: null as MutationObserver | null,
+    };
+    sample.observer = new MutationObserver(() => { sample.dirty = true; });
+    if (main) sample.observer.observe(main, { subtree: true, childList: true, attributes: true, characterData: true });
+    return sample;
+  });
   try {
-    // Keep the five 150ms samples inside the browser; tracing round trips must not consume the 8s DOM budget.
+    // Keep the five 150ms samples inside the browser, even with tracing enabled.
     const settled = await page.waitForFunction(sample => {
       const main = document.querySelector('main');
-      const signature = `${main?.innerHTML.length ?? 0}:${main?.scrollHeight ?? 0}`;
+      if (main !== sample.main) {
+        sample.observer?.disconnect();
+        sample.main = main;
+        if (main) sample.observer?.observe(main, { subtree: true, childList: true, attributes: true, characterData: true });
+        sample.dirty = true;
+      }
+      if (sample.dirty) {
+        sample.markupLength = main?.innerHTML.length ?? 0;
+        sample.dirty = false;
+      }
+      const signature = `${sample.markupLength}:${main?.scrollHeight ?? 0}`;
       sample.stableSamples = signature === sample.previous ? sample.stableSamples + 1 : 0;
       sample.previous = signature;
       return sample.stableSamples >= 5 ? sample.stableSamples : false;
-    }, state, { polling: 150, timeout: 8_000 });
+    }, state, { polling: 150, timeout: 20_000 });
     try {
       expect(await settled.jsonValue(), 'application DOM settles after mocked requests complete')
         .toBeGreaterThanOrEqual(5);
@@ -1239,6 +1259,7 @@ export async function waitForHarnessReady(
       await settled.dispose();
     }
   } finally {
+    await state.evaluate(sample => sample.observer?.disconnect()).catch(() => undefined);
     await state.dispose();
   }
 }
