@@ -385,3 +385,10 @@ DIFF_CHECK_EXIT=0
 web\src\components\ui\app-designs\packs\concierge.css trailing_whitespace_lines=0
 docs\design-packs\REVIEW-v4.md trailing_whitespace_lines=0
 ```
+
+## Phone metric follow-up
+
+Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
+The owned ordinary headline context and units now use the phone body token;
+protected and specialized surfaces remain excluded. See `DECISIONS.md` for
+the screenshot-free regression results and remaining limitations.
