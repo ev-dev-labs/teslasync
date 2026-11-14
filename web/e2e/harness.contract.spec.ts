@@ -1,19 +1,150 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createServer, type Server } from 'node:http';
 import { join, resolve } from 'node:path';
 import { load } from 'js-yaml';
 import sharp from 'sharp';
 import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
+import { test as appDesignTest } from './app-design-test';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
+import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, prepareMockApiNavigation, resolveApiFixture, seedBrowserState, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
 import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
 import { unexpectedNeutralScopes } from './widget-design-packs.acceptance';
+
+appDesignTest.describe('application design teardown', () => {
+  appDesignTest.describe.configure({ mode: 'serial' });
+  let server: Server;
+  let origin: string;
+  let previousApi: MockApiController | null = null;
+  const escaped: string[] = [];
+
+  appDesignTest.beforeAll(async () => {
+    server = createServer((request, response) => {
+      if (request.url?.startsWith('/api/')) {
+        escaped.push(`${request.method} ${request.url}`);
+        response.writeHead(599).end();
+      } else {
+        response.writeHead(200, { 'Content-Type': 'text/html' }).end('<main>Ready</main>');
+      }
+    });
+    await new Promise<void>((resolveServer, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolveServer);
+    });
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Test server did not bind');
+    origin = `http://127.0.0.1:${address.port}`;
+  });
+
+  appDesignTest.afterAll(async () => {
+    await closeMockApiFixtures();
+    await new Promise<void>((resolveServer, reject) => {
+      server.close(error => error ? reject(error) : resolveServer());
+      server.closeIdleConnections();
+    });
+  });
+
+  appDesignTest('captures a pagehide error report during actual navigation', async ({ page }) => {
+    previousApi = await installApiMocks(page);
+    if (!previousApi) throw new Error('Mock API is required');
+    await page.goto(origin);
+    await assertMockApiComplete(page, previousApi);
+    await page.evaluate(() => {
+      window.addEventListener('pagehide', () => {
+        void fetch('/api/v1/web-errors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'E2EContract', message: 'Late report', route: '/',
+            userAgent: 'TeslaSync E2E', occurredAt: '2026-08-26T16:00:00.000Z',
+          }),
+          keepalive: true,
+        }).catch(() => undefined);
+      }, { once: true });
+    });
+  });
+
+  appDesignTest('accounts for the report without escaping after page teardown', async () => {
+    expect(previousApi?.requests.filter(request => request.path === '/api/v1/web-errors'))
+      .toEqual([expect.objectContaining({ method: 'POST', disposition: 'fulfilled' })]);
+    expect(previousApi?.invalidRum).toEqual([]);
+    expect(escaped).toEqual([]);
+  });
+
+  test('rejects invalid and unreviewed requests during actual navigation', async ({ page }) => {
+    for (const [path, message] of [
+      ['/api/v1/web-errors', 'invalid fetch/xhr RUM payloads after navigation'],
+      ['/api/v1/unreviewed', 'unmatched E2E API requests after navigation'],
+    ]) {
+      const controller = await installApiMocks(page);
+      if (!controller) throw new Error('Mock API is required');
+      await page.goto(origin);
+      await page.evaluate(destination => {
+        window.addEventListener('pagehide', () => {
+          void fetch(destination, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+            keepalive: true,
+          }).catch(() => undefined);
+        }, { once: true });
+      }, path);
+      await prepareMockApiNavigation(page);
+      await page.goto('about:blank');
+      await expect(assertMockApiAfterNavigation(page, origin)).rejects.toThrow(message);
+    }
+    expect(escaped).toEqual([]);
+  });
+
+  test('validates beacons sent during actual navigation', async ({ page }) => {
+    await seedBrowserState(page, 'dark', '/');
+    for (const [path, body, valid] of [
+      ['/api/v1/web-errors', JSON.stringify({
+        name: 'E2EContract', message: 'Late report', route: '/',
+        userAgent: 'TeslaSync E2E', occurredAt: '2026-08-26T16:00:00.000Z',
+      }), true],
+      ['/api/v1/web-errors', '{}', false],
+      ['/api/v1/unreviewed', '{}', false],
+    ] as const) {
+      const controller = await installApiMocks(page);
+      if (!controller) throw new Error('Mock API is required');
+      await page.goto(origin);
+      await page.evaluate(({ destination, payload }) => {
+        window.addEventListener('pagehide', () => {
+          navigator.sendBeacon(destination, new Blob([payload], { type: 'application/json' }));
+        }, { once: true });
+      }, { destination: path, payload: body });
+      await prepareMockApiNavigation(page);
+      await page.goto('about:blank');
+      const result = assertMockApiAfterNavigation(page, origin);
+      if (valid) await expect(result).resolves.toBeUndefined();
+      else await expect(result).rejects.toThrow('invalid or unreviewed navigator.sendBeacon requests after navigation');
+    }
+    expect(escaped).toEqual([]);
+  });
+
+  test('blocks unmocked beacons during actual navigation', async ({ page }) => {
+    const controller = await installApiMocks(page);
+    if (!controller) throw new Error('Mock API is required');
+    await page.goto(origin);
+    await page.evaluate(() => {
+      window.addEventListener('pagehide', () => {
+        navigator.sendBeacon('/api/v1/unreviewed', '{}');
+      }, { once: true });
+    });
+    await prepareMockApiNavigation(page);
+    await page.goto('about:blank');
+    await expect(assertMockApiAfterNavigation(page, origin))
+      .rejects.toThrow('invalid or unreviewed navigator.sendBeacon requests after navigation');
+    expect(escaped).toEqual([]);
+  });
+});
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();

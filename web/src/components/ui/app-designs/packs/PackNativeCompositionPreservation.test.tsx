@@ -216,26 +216,34 @@ describe.each(sheets)('$pack native composition preservation', ({ pack, rules })
   });
 });
 
-it('keeps Expressive phone metric typography outside protected and native gauge surfaces', async () => {
-  const view = fixture('v6');
+it.each(['classic', 'v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus', 'brutal'] as const)(
+  'keeps %s phone metric typography outside protected and native gauge surfaces', async pack => {
+  const view = fixture(pack);
   try {
-    const sheet = sheets.find(({ pack }) => pack === 'v6')!;
-    const metric = renderToStaticMarkup(<WidgetBigNumber value={12} unit="km" subtitle="Recent context" animated={false} />);
+    const sheet = sheets.find(candidate => candidate.pack === pack)!;
+    const metric = pack === 'classic'
+      ? '<div class="widget-detail-list"><span class="text-xs">Recent context</span></div>'
+      : renderToStaticMarkup(<WidgetBigNumber value={12} unit="km" subtitle="Recent context" animated={false} />);
     const widget = view.doc.createElement('section');
-    widget.setAttribute('data-widget-pack', 'v6');
+    widget.setAttribute('data-widget-pack', pack);
     widget.innerHTML = `
       <div data-case="ordinary">${metric}</div>
       <div data-case="protected" data-app-design-preserve>${metric}</div>
       <div data-case="gauge" data-app-metric-grid="native-gauge">${metric}</div>
+      <div data-case="bar" data-app-metric="bar">${metric}</div>
       <div data-case="ring" data-app-metric="ring">${metric}</div>
+      <div data-case="composition" data-app-metric="composition">${metric}</div>
+      <div data-case="score" data-app-metric="score">${metric}</div>
+      <div data-case="segments" data-app-metric="segments">${metric}</div>
       <div data-case="report" data-presentation-mode="report">${metric}</div>
       <div data-case="kiosk" data-presentation-mode="kiosk">${metric}</div>`;
     view.doc.body.append(widget);
     await Promise.resolve();
-    for (const kind of ['ordinary', 'protected', 'gauge', 'ring', 'report', 'kiosk']) {
-      for (const part of ['metric-context', 'metric-unit']) {
-        const element = widget.querySelector(`[data-case="${kind}"] [data-app-part~="${part}"]`)!;
-        if (kind === 'protected') element.setAttribute('data-app-design-owner', 'pack-v6');
+    for (const kind of ['ordinary', 'protected', 'gauge', 'bar', 'ring', 'composition', 'score', 'segments', 'report', 'kiosk']) {
+      const parts = pack === 'classic' ? ['.text-xs'] : ['[data-app-part~="metric-context"]', '[data-app-part~="metric-unit"]'];
+      for (const part of parts) {
+        const element = widget.querySelector(`[data-case="${kind}"] ${part}`)!;
+        if (kind === 'protected') element.setAttribute('data-app-design-owner', `pack-${pack}`);
         const typography = declarations(element, sheet.rules).filter(({ property }) => property === 'font-size');
         if (kind === 'ordinary') {
           expect(typography, `${kind} ${part}`).toEqual(expect.arrayContaining([

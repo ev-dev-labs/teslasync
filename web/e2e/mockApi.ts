@@ -830,6 +830,8 @@ const CANCELLABLE_READ_PATHS: readonly string[] = [
   '/api/v1/system/audit',
 ];
 const MAX_BEACON_BYTES = 64 * 1024;
+const UNLOAD_REQUESTS_KEY = '__TESLASYNC_E2E_UNLOAD_REQUESTS__';
+const UNLOAD_BEACONS_KEY = '__TESLASYNC_E2E_UNLOAD_BEACONS__';
 const mockPageStates = new WeakMap<Page, {
   controller: MockApiController;
   requestOwners: WeakMap<PlaywrightRequest, MockApiController>;
@@ -1344,6 +1346,163 @@ export async function assertMockApiComplete(
     timeout: 5_000,
   }).toEqual([]);
   await cleanupServiceWorkers(page);
+}
+
+export async function prepareMockApiNavigation(page: Page): Promise<void> {
+  if (!mockPageStates.has(page) || !/^https?:/.test(page.url())) return;
+  await page.evaluate(({ storageKey, beaconKey, maxBytes }) => {
+    const records: Array<{
+      origin: string;
+      path: string;
+      hasSearch: boolean;
+      hasHash: boolean;
+      method: string;
+      contentType: string;
+      body: string | null;
+      size: number;
+    }> = [];
+    localStorage.setItem(storageKey, '[]');
+    const lateBeacons: CapturedBeacon[] = [];
+    localStorage.setItem(beaconKey, '[]');
+    const seededBeacons = (window as Window & { __TESLASYNC_E2E_BEACONS__?: CapturedBeacon[] })
+      .__TESLASYNC_E2E_BEACONS__;
+    const originalBeacon = Array.isArray(seededBeacons) ? navigator.sendBeacon.bind(navigator) : null;
+    Object.defineProperty(navigator, 'sendBeacon', {
+      configurable: true,
+      value: (rawUrl: string | URL, data?: BodyInit | null): boolean => {
+        const previousCount = seededBeacons?.length ?? 0;
+        const accepted = originalBeacon?.(rawUrl, data) ?? false;
+        const recorded = seededBeacons?.slice(previousCount) ?? [];
+        if (recorded.length === 0) {
+          let url: URL | null = null;
+          try {
+            url = new URL(String(rawUrl), location.href);
+          } catch {
+            // An invalid destination is recorded as an unreviewed beacon.
+          }
+          recorded.push({
+            method: 'POST',
+            sameOrigin: url?.origin === location.origin,
+            path: url?.pathname ?? '[invalid-url]',
+            hasSearch: Boolean(url?.search),
+            hasHash: Boolean(url?.hash),
+            size: 0,
+            contentType: '',
+            body: null,
+            accepted: false,
+            violations: ['missing-beacon-fixture'],
+          });
+        }
+        lateBeacons.push(...recorded);
+        localStorage.setItem(beaconKey, JSON.stringify(lateBeacons));
+        return accepted;
+      },
+    });
+    const originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+      const request = input instanceof Request ? input : undefined;
+      if (!(init?.keepalive ?? request?.keepalive ?? false)) {
+        return originalFetch.call(window, input, init);
+      }
+      let url: URL | null = null;
+      try {
+        url = new URL(request?.url ?? input.toString(), location.href);
+      } catch {
+        // An invalid destination is recorded as an unreviewed request.
+      }
+      const body = typeof init?.body === 'string' ? init.body : null;
+      const size = body == null ? 0 : new TextEncoder().encode(body).byteLength;
+      const headers = new Headers(init?.headers ?? request?.headers);
+      records.push({
+        origin: url?.origin ?? '',
+        path: url?.pathname ?? '[invalid-url]',
+        hasSearch: Boolean(url?.search),
+        hasHash: Boolean(url?.hash),
+        method: (init?.method ?? request?.method ?? 'GET').toUpperCase(),
+        contentType: headers.get('content-type') ?? '',
+        body: size <= maxBytes ? body : null,
+        size,
+      });
+      localStorage.setItem(storageKey, JSON.stringify(records));
+      return Promise.resolve(new Response(null, { status: 200 }));
+    };
+  }, { storageKey: UNLOAD_REQUESTS_KEY, beaconKey: UNLOAD_BEACONS_KEY, maxBytes: MAX_BEACON_BYTES });
+}
+
+export async function assertMockApiAfterNavigation(page: Page, origin: string): Promise<void> {
+  const controller = mockPageStates.get(page)?.controller;
+  if (!controller) return;
+  const storage = await page.context().storageState();
+  const originStorage = storage.origins.find(entry => entry.origin === origin)?.localStorage;
+  const rawRecords = originStorage?.find(entry => entry.name === UNLOAD_REQUESTS_KEY)?.value;
+  const records = rawRecords == null ? [] : JSON.parse(rawRecords) as Array<{
+    origin: string;
+    path: string;
+    hasSearch: boolean;
+    hasHash: boolean;
+    method: string;
+    contentType: string;
+    body: string | null;
+    size: number;
+  }>;
+  for (const record of records) {
+    const path = record.path.replace(/^\/api\/v1/, '');
+    const reviewed = record.origin === origin && record.method === 'POST'
+      && ALLOWED_BEACON_PATHS.some(allowed => allowed === record.path)
+      && !record.hasSearch && !record.hasHash;
+    if (!reviewed) {
+      controller.unmatched.add(`${record.method} ${record.origin === origin ? record.path : '[off-origin]'}`);
+      continue;
+    }
+    const violations = validateRumBody(path, record.contentType, record.body);
+    if (record.size > MAX_BEACON_BYTES && !violations.includes('payload-too-large')) {
+      violations.push('payload-too-large');
+    }
+    controller.seen.add(`${record.method} ${path}`);
+    controller.requests.push({
+      method: record.method,
+      origin: record.origin,
+      path: record.path,
+      resourceType: 'fetch',
+      disposition: 'fulfilled',
+    });
+    if (violations.length > 0) {
+      controller.invalidRum.push({ path, size: record.size, contentType: record.contentType, violations });
+    }
+  }
+  const navigatedAt = Date.now();
+  await expect.poll(() => ({
+    pending: controller.pending,
+    quiet: Date.now() - Math.max(navigatedAt, controller.lastActivityAt) >= 150,
+    incomplete: controller.requests
+      .filter(request => request.disposition === 'pending' || request.disposition === 'aborted')
+      .map(request => ({
+        method: request.method,
+        origin: request.origin === origin ? 'same-origin' : 'off-origin',
+        path: request.path,
+        resourceType: request.resourceType,
+        disposition: request.disposition,
+        failure: request.failure,
+      })),
+  }), {
+    message: 'late navigation API activity escaped or did not settle',
+    timeout: 5_000,
+  }).toEqual({ pending: 0, quiet: true, incomplete: [] });
+  expect([...controller.unmatched], 'unmatched E2E API requests after navigation').toEqual([]);
+  expect(controller.invalidRum, 'invalid fetch/xhr RUM payloads after navigation').toEqual([]);
+  const rawBeacons = originStorage?.find(entry => entry.name === UNLOAD_BEACONS_KEY)?.value;
+  const beacons = rawBeacons == null ? [] : JSON.parse(rawBeacons) as CapturedBeacon[];
+  const beaconViolations = beacons.filter(beacon => !beacon.accepted).map(beacon => ({
+    method: beacon.method,
+    origin: beacon.sameOrigin ? 'same-origin' : 'off-origin',
+    path: beacon.path,
+    hasSearch: beacon.hasSearch,
+    hasHash: beacon.hasHash,
+    size: beacon.size,
+    contentType: beacon.contentType,
+    violations: beacon.violations,
+  }));
+  expect(beaconViolations, 'invalid or unreviewed navigator.sendBeacon requests after navigation').toEqual([]);
 }
 
 export async function readCapturedBeacons(page: Page): Promise<CapturedBeacon[]> {
