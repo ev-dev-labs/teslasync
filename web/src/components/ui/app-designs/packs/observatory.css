@@ -84,6 +84,14 @@
     background-color: var(--app-surface-panel, var(--surface-1));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] li[data-app-part~="card"][data-surface-variant="standalone"]:is([class~="bg-white/[0.02]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="panel"][data-app-list="definitions"][data-surface-variant="standalone"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+    box-shadow: inset 0 0 0 var(--app-border-width) var(--border-default);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-observatory"]) {
     border-color: var(--border-default);
     border-radius: var(--app-card-radius, var(--radius-md));

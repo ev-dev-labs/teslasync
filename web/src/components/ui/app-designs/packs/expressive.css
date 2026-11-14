@@ -99,6 +99,13 @@
     border-end-start-radius: var(--radius-sm);
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] li[data-app-part~="card"][data-surface-variant="standalone"]:is([class~="bg-white/[0.02]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v6"]) {
+    border-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-sm);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="panel"][data-app-list="definitions"][data-surface-variant="standalone"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v6"]) {
+    border-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-sm);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v6"]) {
     border-color: var(--border-default);
     border-block-end-width: 2px;

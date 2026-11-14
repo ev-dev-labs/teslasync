@@ -92,6 +92,9 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-atlas"]) {
     border-radius: var(--app-control-radius);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] a[data-app-part~="button"][data-app-variant="ghost"]:not(:where([data-app-design-preserve] *, [data-widget-pack] *, [data-vehicle-twin] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-atlas"]) {
     border-block-end-color: var(--border-strong);
   }
