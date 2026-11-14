@@ -692,6 +692,100 @@ test('operational metric banks keep their authored wide layout and phone reflow'
   }
 });
 
+test('embedded metric labels have room without overriding the selected pack density', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --density-gap: 12px; --font-scale: 1; }
+      body { margin: 0; }
+      #brief { width: calc(100vw - 50px); --app-brief-content-min-width: 10rem; }
+      .bank { display: flex; flex-wrap: wrap; }
+      .reading { min-width: 0; }
+    </style>
+    <div id="brief" data-operational-metric-list data-app-design-owner="pack-classic">
+      <div class="bank" data-operational-metric-bank data-app-part="metric-grid" data-app-design-owner="pack-classic">
+        <div class="reading" data-app-part="metric" data-app-design-owner="pack-classic">Communications</div>
+        <div class="reading" data-app-part="metric" data-app-design-owner="pack-classic">Symptom matches</div>
+      </div>
+    </div>
+  `);
+  for (const sheet of ['mobile.css', 'packs/classic.css', 'packs/terminal.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const pack of ['classic', 'terminal'] as const) {
+    await page.locator('html').evaluate((element, value) => {
+      element.setAttribute('data-app-design-pack', value);
+      element.setAttribute('data-app-design-owner', `pack-${value}`);
+      document.querySelectorAll('[data-app-design-owner]:not(html)')
+        .forEach(node => node.setAttribute('data-app-design-owner', `pack-${value}`));
+    }, pack);
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 430, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        const boxes = await page.locator('.reading').evaluateAll(nodes =>
+          nodes.map(node => {
+            const box = node.getBoundingClientRect();
+            return { left: box.left, top: box.top, width: box.width };
+          }));
+        const sameRow = Math.abs(boxes[0].top - boxes[1].top) < 1;
+        expect(sameRow, `${pack} ${forcedColors} ${width}px`)
+          .toBe(width === 768 || (width === 430 && (pack === 'classic' || forcedColors === 'active')));
+        expect(boxes[0].width, `${pack} ${forcedColors} ${width}px`).toBeGreaterThanOrEqual(160);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      }
+    }
+  }
+});
+
+test('native outline cards retain their pack hover and pressed treatments', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      html {
+        --density-gap: 12px; --app-border-width: 1px;
+        --border-default: rgb(40, 40, 40); --border-strong: rgb(96, 96, 96);
+        --border-subtle: rgb(64, 64, 64); --surface-1: rgb(24, 24, 24);
+        --radius-xs: 4px; --radius-md: 8px; --radius-lg: 16px;
+        --panel-radius: 12px; --panel-shadow: 0 1px 2px rgb(0, 0, 0);
+        --elevation-1: 0 1px 2px rgb(0, 0, 0);
+      }
+      .card { display: block; width: 200px; margin: 60px; padding: 16px; }
+    </style>
+    <a id="card" class="card bg-[var(--surface-1)]" href="#card"
+       data-app-part="card button" data-app-variant="outline"
+       data-surface-variant="standalone">Open</a>
+  `);
+  for (const sheet of ['analog.css', 'memphis.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', sheet), 'utf8') });
+  }
+  const card = page.locator('#card');
+  for (const pack of ['analog', 'memphis'] as const) {
+    await page.mouse.move(0, 0);
+    await page.locator('html').evaluate((element, value) => {
+      element.setAttribute('data-app-design-pack', value);
+      element.setAttribute('data-app-design-owner', `pack-${value}`);
+      document.querySelector('#card')?.setAttribute('data-app-design-owner', `pack-${value}`);
+    }, pack);
+    const idle = await card.evaluate(element => ({
+      shadow: getComputedStyle(element).boxShadow,
+      radius: getComputedStyle(element).borderRadius,
+    }));
+    await card.hover();
+    expect(await card.evaluate(element => getComputedStyle(element).borderRadius)).toBe(idle.radius);
+    if (pack === 'memphis') {
+      const hovered = await card.evaluate(element => getComputedStyle(element).boxShadow);
+      expect(hovered).not.toBe(idle.shadow);
+      expect(hovered).toContain('0px 2px 0px');
+    } else {
+      await page.mouse.down();
+      const pressed = await card.evaluate(element => getComputedStyle(element).boxShadow);
+      expect(pressed).not.toBe(idle.shadow);
+      expect(pressed).toContain('1px 2px');
+      await page.mouse.up();
+    }
+  }
+});
+
 test('data modes preserve semantic and embedded metric paint and layout', async ({ page }) => {
   await page.setContent(`
     <style>

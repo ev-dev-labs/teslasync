@@ -330,6 +330,9 @@
 
 /* Native surfaces retain semantic colors while consuming this pack. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="bauhaus"] form[data-app-part~="card"][data-app-card-kind="record"][data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-bauhaus"]) {
+    border-radius: var(--app-card-radius, 0px);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="bauhaus"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="border-[var(--border-subtle)]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-bauhaus"]) {
     border: 1px solid var(--border-subtle);
     border-radius: var(--app-card-radius, var(--radius-lg));

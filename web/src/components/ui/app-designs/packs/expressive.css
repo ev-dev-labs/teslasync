@@ -90,6 +90,11 @@
     border-end-start-radius: var(--radius-sm);
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] :is(details[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v6"]) {
+    border-block-end-width: calc(var(--app-border-width, 1px) * 2);
+    border-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-sm);
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"])):where([data-app-design-owner~="pack-v6"]) {
     background-color: var(--app-surface-panel, var(--panel-bg, var(--surface-1)));
     border-color: var(--border-default);

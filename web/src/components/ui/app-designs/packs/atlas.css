@@ -72,6 +72,10 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not([data-app-tone], [data-app-part~="feedback"], [data-app-part~="conversation"]):where([data-app-design-owner~="pack-atlas"]) {
     border-block-start: 2px solid var(--border-strong);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"][data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
     background-color: var(--app-surface-panel, var(--panel-bg, var(--surface-1)));
     box-shadow: inset 0 0 0 1px var(--border-default), var(--app-card-shadow, var(--elevation-1));
@@ -92,7 +96,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-atlas"]) {
     border-radius: var(--app-control-radius);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] a[data-app-part~="button"][data-app-variant="ghost"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-atlas"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :is(a, summary)[data-app-part~="button"][data-app-variant="ghost"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-atlas"]) {
     border-radius: var(--app-control-radius);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-atlas"]) {
@@ -301,6 +305,9 @@
 
 /* Native surfaces retain semantic colors while consuming this pack. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] form[data-app-part~="card"][data-app-card-kind="record"][data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="border-[var(--border-subtle)]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
     border: 1px solid var(--border-subtle);
     border-radius: var(--app-card-radius, var(--radius-lg));
