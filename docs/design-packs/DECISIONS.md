@@ -1083,6 +1083,27 @@ The routes were Admin Feedback, Battery Degradation, Charging Detail,
 Charging Schedule, Energy Orchestrator, Guard Mode and Navigation. The
 separately protected Digital Twin failure remains unresolved.
 
+The fail-fast full-suite snapshot at `9a066c635c` stopped on the same
+embedded-metric expectation in the driving consumer. Its contract now
+separately verifies preserved embedded geometry and ordinary data-mode tile
+treatment. The focused run below passed; the full suite remains incomplete.
+
+```text
+Test Files  1 failed | 6 passed (2947)
+Tests       1 failed | 526 passed | 194 skipped (777)
+
+> npx vitest run src\features\driving\components\driving-01.native-adoption.test.tsx --maxWorkers=2
+Test Files  1 passed (1)
+Tests       57 passed (57)
+DRIVING_TEST_EXIT=0
+```
+
+The next Classic 360px diagnostic stopped at its failure limit: 84 passed,
+8 failed, one interrupted and 21 did not run. Failures included overflowing
+safety, security and signal-history tables; undersized physics navigation
+links; a missing trip-detail fixture; and two navigation-context errors.
+These are not visual or contrast approvals.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
