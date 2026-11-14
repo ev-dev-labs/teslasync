@@ -1,5 +1,64 @@
 [
   {
+    "file": "web/src/features/admin/pages/RedisSignalViewerPage.tsx",
+    "before": "4374da5448e942cb004a46977e7c056de261238cc5c0d4a7f5c04ebe1701c93b",
+    "after": "21eaeaa70d2417b6be94e07a58baf80faea2856cd0b43f5251d71a18340b12d7",
+    "hunks": [
+      {
+        "start": 28,
+        "old": [],
+        "new": [
+          "  type MobileDataTablePresentation,"
+        ]
+      },
+      {
+        "start": 48,
+        "old": [],
+        "new": [
+          "import { maskFor } from '@/lib/maskValue'"
+        ]
+      },
+      {
+        "start": 126,
+        "old": [],
+        "new": [
+          "              className=\"max-w-full flex-wrap max-md:[&_button]:!h-11 max-md:[&_button]:!min-h-11 max-md:[&_button]:!min-w-11\""
+        ]
+      },
+      {
+        "start": 328,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<SignalRow>>(() => ({",
+          "    roles: { name: 'title', value: 'primary', type: 'badge', category: 'meta' },",
+          "    displayValue: (row, key) => {",
+          "      switch (key) {",
+          "        case 'name': return row.name",
+          "        case 'value':",
+          "          if (row.value === undefined) return t('common.unknown', 'Unknown')",
+          "          if (row.value === null || typeof row.value === 'object') return JSON.stringify(row.value)",
+          "          if (isLocationSignal(row.name) && (typeof row.value === 'number' || typeof row.value === 'string')) {",
+          "            return maskFor(String(row.value), 'coords')",
+          "          }",
+          "          return String(row.value)",
+          "        case 'type': return row.type",
+          "        case 'category': return t(`redis.categoryName.${row.category}`, row.category)",
+          "        default: return undefined",
+          "      }",
+          "    },",
+          "  }), [t])"
+        ]
+      },
+      {
+        "start": 516,
+        "old": [],
+        "new": [
+          "                  mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
     "file": "web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx",
     "before": "7a3b3594e6e350f6fd7c89f533dc41e6a5ee596bed97f6b15faafe84e2c4215e",
     "after": "8895e6b4494f14d8b101cbd9a02efc04d1fb583ecc4738ffc9986675fe6914b8",
