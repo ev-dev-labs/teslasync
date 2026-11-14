@@ -13,6 +13,7 @@ import {
   QUALITY_ROUTES,
 } from './routeRegistry';
 import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
+import { unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 
 test('design pack captures cover registered application routes with unique filenames', () => {
   const routes = captureRoutes();
@@ -34,6 +35,23 @@ test('design pack captures cover registered application routes with unique filen
   expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
     [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
   ]);
+});
+
+test('neutral-scope checks allow only settings thumbnails, not stale previews or portals', async ({ page }) => {
+  await page.setContent(`
+    <section aria-labelledby="settings-widget-design-packs">
+      <div data-app-design-thumbnail="classic" data-app-design-pack="classic">
+        <div data-app-design-owner="pack-classic"></div>
+      </div>
+    </section>
+    <div id="stale-portal" data-app-design-portal data-app-design-pack="v1" data-app-design-owner="pack-v1"></div>
+    <div id="orphan-preview" data-app-design-preview data-app-design-pack="v2"></div>
+    <div id="orphan-thumbnail" data-app-design-thumbnail="v3" data-app-design-pack="v3"></div>
+  `);
+  expect(await unexpectedNeutralScopes(page, 'data-app-design-pack').evaluateAll(nodes => nodes.map(node => node.id)))
+    .toEqual(['stale-portal', 'orphan-preview', 'orphan-thumbnail']);
+  expect(await unexpectedNeutralScopes(page, 'data-app-design-owner').evaluateAll(nodes => nodes.map(node => node.id)))
+    .toEqual(['stale-portal']);
 });
 
 test('harness detects a quiet interval between normal polling requests', async ({ page }) => {
@@ -72,7 +90,7 @@ test('harness does not accept continuously active mock requests', async ({ page 
   }
 });
 
-test('harness distinguishes cancelled shell reads from unreviewed API requests', async ({ page }) => {
+test('harness distinguishes cancelled tracked reads from unreviewed API requests', async ({ page }) => {
   await page.route('http://127.0.0.1:54321/', route =>
     route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
   const controller = await installApiMocks(page);
@@ -95,6 +113,10 @@ test('harness distinguishes cancelled shell reads from unreviewed API requests',
       const unexpected = new AbortController();
       const cancelledAfterFailure = new AbortController();
       const vehiclesCancelledAfterFailure = new AbortController();
+      const additionalReads = [
+        '/api/v1/onboarding/status', '/api/v1/system/version',
+        '/api/v1/settings', '/api/v1/system/audit',
+      ].map(path => ({ path, controller: new AbortController() }));
       const delayed = fetch('/api/v1/system/auth-mode', {
         signal: cancelled.signal, headers: { 'x-test-wait': '1' },
       }).catch(() => undefined);
@@ -105,7 +127,10 @@ test('harness distinguishes cancelled shell reads from unreviewed API requests',
         .catch(() => undefined).then(() => cancelledAfterFailure.abort());
       const blockedVehicles = fetch('/api/v1/vehicles', { signal: vehiclesCancelledAfterFailure.signal })
         .catch(() => undefined).then(() => vehiclesCancelledAfterFailure.abort());
-      setTimeout(() => { cancelled.abort(); cancelledVehicles.abort(); unexpected.abort(); }, 100);
+      setTimeout(() => {
+        cancelled.abort(); cancelledVehicles.abort(); unexpected.abort();
+        additionalReads.forEach(({ controller }) => controller.abort());
+      }, 100);
       const unreviewed = { signal: unexpected.signal, headers: { 'x-test-wait': '1' } };
       await Promise.all([
         delayed, delayedVehicles, blocked, blockedVehicles,
@@ -117,14 +142,18 @@ test('harness distinguishes cancelled shell reads from unreviewed API requests',
         fetch('/api/v1/vehicles', { ...unreviewed, method: 'POST' }).catch(() => undefined),
         fetch('/api/v1/unreviewed', unreviewed).catch(() => undefined),
         fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }).catch(() => undefined),
+        ...additionalReads.map(({ path, controller }) =>
+          fetch(path, { signal: controller.signal, headers: { 'x-test-wait': '1' } }).catch(() => undefined)),
       ]);
     });
-    await expect.poll(() => controller.requests.length).toBe(12);
-    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(2);
+    await expect.poll(() => controller.requests.length).toBe(16);
+    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(6);
     expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(10);
     expect(controller.requests.filter(record => record.disposition === 'cancelled')).toEqual(expect.arrayContaining([
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch' }),
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/vehicles', resourceType: 'fetch' }),
+      ...['/api/v1/onboarding/status', '/api/v1/system/version', '/api/v1/settings', '/api/v1/system/audit']
+        .map(path => expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path, resourceType: 'fetch' })),
     ]));
     expect(await page.evaluate(async () => {
       try {
@@ -135,6 +164,52 @@ test('harness distinguishes cancelled shell reads from unreviewed API requests',
       }
     })).toBe(false);
     await expect(assertMockApiComplete(page, controller)).rejects.toThrow('API requests escaped or were blocked by Playwright routing');
+  } finally {
+    await closeMockApiFixtures();
+  }
+});
+
+test('reinstalling mock fixtures keeps request accounting and in-flight cancellations isolated', async ({ page }) => {
+  await page.route('http://127.0.0.1:54321/', route =>
+    route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
+  const failures: { error: string | undefined; id: string | undefined }[] = [];
+  page.on('requestfailed', request => failures.push({
+    error: request.failure()?.errorText,
+    id: request.headers()['x-teslasync-e2e-request-id'],
+  }));
+  const first = await installApiMocks(page);
+  if (!first) throw new Error('Mock API is required');
+  let markRouted: () => void = () => undefined;
+  const routed = new Promise<void>(resolve => { markRouted = resolve; });
+  await page.route('**/api/v1/system/auth-mode', async route => {
+    markRouted();
+    await new Promise(resolve => setTimeout(resolve, 1_000));
+    await route.fulfill({ json: { mode: 'open' } }).catch(() => undefined);
+  });
+  try {
+    await page.goto('http://127.0.0.1:54321/');
+    expect(await page.evaluate(async () => (await fetch('/api/v1/settings')).status)).toBe(200);
+    const requestStarted = page.waitForRequest(request => request.url().endsWith('/api/v1/system/auth-mode'));
+    const pending = page.evaluate(async () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 500);
+      await fetch('/api/v1/system/auth-mode', { signal: controller.signal }).catch(() => undefined);
+    });
+    await requestStarted;
+    await routed;
+    const second = await installApiMocks(page, 'error');
+    if (!second) throw new Error('Mock API is required');
+    await pending;
+    expect(await page.evaluate(async () => (await fetch('/api/v1/settings')).status)).toBe(503);
+    await expect.poll(() => ({
+      dispositions: first.requests.map(record => record.disposition), failures,
+    })).toEqual({
+      dispositions: ['fulfilled', 'cancelled'],
+      failures: [{ error: 'net::ERR_ABORTED', id: expect.any(String) }],
+    });
+    expect(second.requests.map(record => record.disposition)).toEqual(['fulfilled']);
+    await assertMockApiComplete(page, first);
+    await assertMockApiComplete(page, second);
   } finally {
     await closeMockApiFixtures();
   }
@@ -480,6 +555,65 @@ test('pack presentation roles reset at nested previews without changing protecte
   expect(await duration()).toBe('0s');
 });
 
+test('pack treatments preserve repair warnings and power-flow semantic colors', async ({ page }) => {
+  const formPacks = ['v5', 'v6', 'analog', 'observatory', 'quiet', 'kinetic', 'memphis'] as const;
+  const flowPacks = ['v1', 'blueprint', 'bauhaus', 'warm', 'swiss', 'brutal', 'cyber'] as const;
+  await page.setContent(`
+    <style>
+      :root { --radius-xs: 2px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px; }
+      .warning { background-color: rgb(120, 70, 20); box-shadow: 0 0 0 1px rgb(240, 160, 30); border-radius: 11px; }
+      .flow { background-color: rgb(10, 30, 50); border: 2px solid rgb(30, 180, 210); border-radius: 11px; }
+    </style>
+    <div id="warning" class="warning bg-amber-500/[0.04] ring-amber-400/20" data-app-part="panel" data-app-form-section data-surface-variant="standalone"></div>
+    <div id="flow" class="flow border-neon-cyan/20" data-app-part="card metric" data-app-metric="inline" data-surface-variant="standalone"></div>
+    <div data-app-design-preserve><div id="protected-flow" class="flow border-neon-cyan/20" data-app-part="card metric" data-app-metric="inline" data-surface-variant="standalone"></div></div>
+    <div data-app-design-preserve><div id="protected-generic" class="flow" data-app-part="card" data-surface-variant="standalone"></div></div>
+  `);
+  const style = (selector: string) => page.locator(selector).evaluate(element => {
+    const computed = getComputedStyle(element);
+    return {
+      background: computed.backgroundColor,
+      border: computed.borderTopColor,
+      shadow: computed.boxShadow,
+      radius: computed.borderRadius,
+    };
+  });
+  const warning = await style('#warning');
+  const flow = await style('#flow');
+  const protectedFlow = await style('#protected-flow');
+  const protectedGeneric = await style('#protected-generic');
+  for (const pack of [...formPacks, ...flowPacks]) {
+    await page.evaluate(id => {
+      document.documentElement.setAttribute('data-app-design-pack', id);
+      document.documentElement.setAttribute('data-app-design-owner', `pack-${id}`);
+      for (const element of document.querySelectorAll('#warning, #flow, #protected-flow, #protected-generic')) {
+        element.setAttribute('data-app-design-owner', `pack-${id}`);
+      }
+    }, pack);
+    const sheet = await page.addStyleTag({
+      content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'),
+    });
+    if ((formPacks as readonly string[]).includes(pack)) {
+      expect(await style('#warning'), `${pack} repair warning`).toMatchObject({
+        background: warning.background,
+        shadow: warning.shadow,
+      });
+      expect((await style('#warning')).radius, `${pack} repair treatment`).not.toBe(warning.radius);
+    }
+    if ((flowPacks as readonly string[]).includes(pack)) {
+      expect(await style('#flow'), `${pack} flow colors`).toMatchObject({
+        background: flow.background,
+        border: flow.border,
+        shadow: flow.shadow,
+      });
+      expect((await style('#flow')).radius, `${pack} flow treatment`).not.toBe(flow.radius);
+      expect(await style('#protected-flow'), `${pack} protected flow`).toEqual(protectedFlow);
+      if (pack === 'v1') expect(await style('#protected-generic'), 'Studio protected generic card').toEqual(protectedGeneric);
+    }
+    await sheet.evaluate(element => element.parentNode?.removeChild(element));
+  }
+});
+
 test('pack presentation roles drive existing controls, grid, flow and conversation surfaces', async ({ page }) => {
   const instrument = getAppDesignAttributes('v1');
   const cards = getAppDesignAttributes('v2');
@@ -569,6 +703,7 @@ test('shared phone heatmap and opted-in table wrap without losing cells or label
 });
 
 test('chart fallback tables retain readable labeled cells without phone overflow', async ({ page }) => {
+  test.setTimeout(120_000);
   const columns = ['Type', 'Sessions', 'Energy', 'Cost', 'Energy with recorded cost', 'Sessions with recorded cost'];
   const values = ['Home', '4', '48 kWh', '$8', '48 kWh', '4'];
   await page.setContent(`
@@ -2027,6 +2162,20 @@ test('shared shell fixture resolves the server-backed widget preference', () => 
     body: { pack_id: 'classic', scope: expect.stringMatching(/^[a-f0-9]{64}$/) },
   });
   expect(resolveApiFixture('/settings/unknown-preference', 'GET', 'populated').matched).toBe(false);
+});
+
+test('error scenarios keep appearance startup available while failing feature data', async ({ page }) => {
+  await page.route('http://127.0.0.1:54321/', route =>
+    route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
+  const controller = await installApiMocks(page, 'error');
+  if (!controller) throw new Error('Mock API is required');
+  await page.goto('http://127.0.0.1:54321/');
+  const statuses = await page.evaluate(async () => Promise.all(
+    ['/api/v1/settings/widget-design-pack', '/api/v1/analytics/battery-health']
+      .map(async path => (await fetch(path)).status),
+  ));
+  expect(statuses).toEqual([200, 503]);
+  await assertMockApiComplete(page, controller);
 });
 
 test('browser globals are not monkeypatched by state seeding', () => {

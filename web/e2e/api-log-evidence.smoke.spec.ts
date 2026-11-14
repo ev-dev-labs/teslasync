@@ -57,7 +57,27 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(path);
       await waitForHarnessReady(page, mocks);
       const main = page.locator('main');
-      const table = main.getByRole('table', { name: 'API call log', exact: true });
+      if (width === 390) {
+        for (const phoneWidth of [360, 390, 430]) {
+          await page.setViewportSize({ width: phoneWidth, height: 900 });
+          for (const name of ['Request activity', 'Last 24h']) {
+            const brief = main.getByRole('region', { name, exact: true });
+            const heading = brief.locator('[data-operational-brief-heading]');
+            const action = brief.getByRole('button', { name: 'Review details', exact: true });
+            const titleBox = await heading.boundingBox();
+            const actionBox = await action.boundingBox();
+            expect(titleBox).not.toBeNull();
+            expect(actionBox).not.toBeNull();
+            expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(actionBox!.x + 1);
+            expect(Math.abs((titleBox!.y + titleBox!.height / 2) - (actionBox!.y + actionBox!.height / 2)))
+              .toBeLessThanOrEqual(1);
+          }
+          await expectNoHorizontalOverflow(page);
+        }
+        await page.setViewportSize({ width, height: 900 });
+      }
+      const mobile = await main.getByRole('group', { name: 'API call log', exact: true }).count() > 0;
+      const table = main.getByRole(mobile ? 'group' : 'table', { name: 'API call log', exact: true });
       await expect(table).toContainText('/synthetic/diagnostic');
       await expect.poll(() => requests.some(params => params.get('offset') === '75')).toBe(true);
       await expectIntegratedGridFooter(table);
@@ -79,9 +99,11 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(table).toContainText('"recorded": true');
       await expect(table.getByRole('button', { name: 'Copy Request body', exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
-      await page.screenshot({ path: test.info().outputPath(`api-inspection-${width}-${theme}.png`), fullPage: true });
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: test.info().outputPath(`api-inspection-${width}-${theme}.png`), fullPage: true });
+      }
       const methodTrigger = table.getByRole('button', { name: 'Method filter', exact: true });
-      expect(await methodTrigger.evaluate(element => element.closest('th') != null)).toBe(true);
+      expect(await methodTrigger.evaluate(element => element.closest('th') != null)).toBe(!mobile);
       await methodTrigger.click();
       const methodFilter = page.getByRole('dialog', { name: 'Method filter', exact: true });
       await methodFilter.getByRole('combobox', { name: 'Method', exact: true }).selectOption('POST');
@@ -115,7 +137,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(table).toContainText('/synthetic/diagnostic');
       await expectNoHorizontalOverflow(page);
       expect(diagnostics.pageErrors).toEqual([]);
-      await page.screenshot({ path: test.info().outputPath(`api-header-evidence-${width}-${theme}.png`), fullPage: true });
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: test.info().outputPath(`api-header-evidence-${width}-${theme}.png`), fullPage: true });
+      }
       await assertMockApiComplete(page, mocks);
     });
   }

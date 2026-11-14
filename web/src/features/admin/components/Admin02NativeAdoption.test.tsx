@@ -120,14 +120,20 @@ describe('admin-02 actual native targets to existing CSS consumers (source-only)
     const value = document.createElement('span');
     value.setAttribute('data-app-part', 'metric-value');
     value.setAttribute('data-app-design-owner', `pack-${pack}`);
+    const form = document.createElement('form');
+    form.setAttribute('data-app-part', 'card');
+    form.setAttribute('data-app-card-kind', 'record');
+    form.setAttribute('data-surface-variant', 'standalone');
+    form.setAttribute('data-app-design-owner', `pack-${pack}`);
+    form.className = 'bg-[var(--surface-1)]';
     host.append(container);
-    container.append(surface);
+    container.append(surface, form);
     surface.append(value);
     document.body.append(host);
     try {
       expect(candidates.length).toBeGreaterThan(0);
       for (const rule of candidates) {
-        const target = [surface, value].find(node => node.matches(rule.selector));
+        const target = [surface, value, form].find(node => node.matches(rule.selector));
         expect(target, rule.selector).toBeDefined();
         if (!target) continue;
         target.setAttribute('data-app-tone', 'warning');

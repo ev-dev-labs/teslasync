@@ -1190,3 +1190,61 @@ but the protected-subtree boundary deliberately prevents their rules from
 altering the twins. Do not waive these findings or change the preserved
 design without a compatible token-only solution. Revisit at the final gate;
 Classic remains passed-with-notes, not a full pass.
+
+## Draft PR CI repair evidence
+
+The previous PR head failed frontend unit shards, several responsive browser
+shards, application-design scope checks, Windows visual baselines, route
+discovery and the secret scan. Repairs in the working tree restore scoped
+native treatments, keep thumbnail scopes separate from the page, reinstall
+mock fixtures safely, and supply identity-scoped ForwardAuth preferences.
+The browser harness only accepts a reviewed cancelled read when both the
+client abort and its matching network failure are present.
+
+The focused unit rerun reported `16` files and `1,116` tests passed; the mock
+asset tests reported `5 passed`. The provider identity and MFA browser
+contracts reported `10 passed`; the real 27-pack native-interaction and
+thumbnail checks reported `2 passed`. A separate responsive-grid run reported
+`49 passed, 1 failed` before cancellation accounting was extended; the failed
+case then passed five repeats. These are targeted results, not a full-suite
+or visual acceptance.
+
+The complete browser harness run reported `75 passed, 1 failed`: the
+486-combination chart-table contract exceeded the default 30-second test
+timeout. Its explicit timeout is now 120 seconds without reducing coverage
+or changing any assertion; the focused rerun reported `1 passed (55.2s)`.
+
+The current isolated frontend build and its four postbuild checks completed:
+
+```text
+[bundle-size] OK (transitive startup ≤ 400 KB, vendor ≤ 140 KB, route ≤ 100 KB, locale ≤ 67 KB, per-namespace locale fallback ≤ 20 KB)
+[pwa-precache] OK — route chunks remain on-demand
+[pwa-contract] OK — source + build contracts satisfied
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+POSTBUILD_EXIT=0
+```
+
+The full frontend lint reported `FULL_LINT_EXIT=0`; the later heading and
+browser-test edits also passed their focused ESLint run. Frontend and E2E
+TypeScript reported `FRONTEND_TSC_EXIT=0` and `E2E_TSC_EXIT=0`.
+
+The PWA and build identity contracts reported `92 passed`; the output-path
+contracts reported `27 passed`. Browser installation was attempted in a
+task-owned cache after the missing-executable failures, but all five Firefox
+download attempts timed out, so local Firefox and WebKit pack checks remain
+unverified. The previous Windows CI images predate the current heading fix;
+their differences have not been accepted as current baselines.
+
+The old long-content battery image exposed a real desktop defect: the brief
+review action wrapped below its heading. A screenshot-free regression first
+failed with a `38px` vertical center mismatch. Giving the desktop heading a
+zero flex basis kept the action alongside it; the same regression then
+reported `1 passed`, and the API evidence flow reported `3 passed` at
+390/1024/1440px.
+
+The redacted filesystem scan over the shared working directory reported
+`232` matches, which is not equivalent to CI's clean checkout. No findings
+were printed or removed. A redacted scan of the 51 tracked edits reported
+`SCANNER_EXIT=0` and `FINDINGS=0`; a separate full tracked-file candidate
+scan is pending. The earlier CI scan reported one finding; the corresponding
+non-secret fingerprint variable was renamed rather than allowlisted.

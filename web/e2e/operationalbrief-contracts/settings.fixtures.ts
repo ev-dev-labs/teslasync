@@ -5,7 +5,7 @@ import type { FleetApiInfo, PublicKeyStatus } from '../../src/api/hooks/useFleet
 import type { OnboardingStatus } from '../../src/api/hooks/useOnboarding'
 import { CONSENT_STORAGE_KEY } from '../../src/lib/cookieConsent'
 import { RECENT_PAGES_STORAGE_KEY, type RecentEntry } from '../../src/lib/recentPages'
-import { fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState } from '../mockApi'
+import { fulfillApiFixture, installApiMocks, installForwardAuthDesignFixture, mockAppSettings, seedBrowserState } from '../mockApi'
 
 export type SettingsTheme = 'dark' | 'light'
 export type SettingsWire = Omit<AppSettings, 'base_cost_per_kwh'> & { base_cost_per_kwh?: number | null }
@@ -149,6 +149,10 @@ export async function installSettingsFixtures(
   }
   const api = await installApiMocks(page, 'populated', theme)
   if (!api) throw new Error('Settings OperationalBrief contracts require the strict mocked API harness')
+  const subject = options.authModeState === 'open' ? undefined : (options.authMode ?? providerPolicy).subject
+  if ((options.authMode || options.authModeState) && subject) {
+    await installForwardAuthDesignFixture(page, api, subject)
+  }
   const state = {
     usage: options.usage ?? usageToday,
     usageState: options.usageState ?? 'available',

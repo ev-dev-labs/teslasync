@@ -221,7 +221,7 @@ describe('notifications-late-01 real source-to-consumer adoption (source-only)',
     try {
       const link = screen.getByRole('link', { name: 'View context' });
       const selectors = identities.get(pack)!.flatMap(rule => rule.selectors)
-        .filter(selector => selector.includes('a[data-app-part~="button"][data-app-variant="ghost"]'));
+        .filter(selector => selector.includes('[data-app-part~="button"][data-app-variant="ghost"]'));
       const isThemed = () => selectors.some(selector => link.matches(selector));
       expect(isThemed()).toBe(true);
       for (const attribute of ['data-app-design-preserve', 'data-widget-pack', 'data-vehicle-twin']) {

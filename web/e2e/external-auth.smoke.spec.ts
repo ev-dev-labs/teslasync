@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, fulfillApiFixture, installApiMocks, installForwardAuthDesignFixture, seedBrowserState, waitForHarnessReady } from './mockApi';
 
 const policy = {
   mode: 'forward_auth', subject_header: 'X-Forwarded-User', subject: 'synthetic-provider-owner',
@@ -19,6 +19,7 @@ test.describe('external browser authentication', () => {
           await seedBrowserState(page, theme, path);
           const api = await installApiMocks(page, 'populated', theme);
           if (!api) throw new Error('Missing synthetic API fixtures');
+          await installForwardAuthDesignFixture(page, api, policy.subject);
           await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, { json: policy }));
           const errors: string[] = [];
           page.on('pageerror', error => errors.push(error.message));
@@ -32,9 +33,13 @@ test.describe('external browser authentication', () => {
           expect(api.requests.filter(request => retiredBrowserAuth.test(request.path))).toEqual([]);
           expect(errors).toEqual([]);
           expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
-          await page.screenshot({ path: testInfo.outputPath('provider-guidance.png'), fullPage: true });
+          if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+            await page.screenshot({ path: testInfo.outputPath('provider-guidance.png'), fullPage: true });
+          }
           await page.getByRole('heading', { name: 'Access policy', exact: true }).scrollIntoViewIfNeeded();
-          await page.screenshot({ path: testInfo.outputPath('provider-access-policy.png'), fullPage: true });
+          if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+            await page.screenshot({ path: testInfo.outputPath('provider-access-policy.png'), fullPage: true });
+          }
           await assertMockApiComplete(page, api);
         });
       }
@@ -49,6 +54,8 @@ test.describe('external browser authentication', () => {
       status: 501, json: { error: 'Policy unavailable' },
     }));
     await page.goto('/account/sessions');
+    await expect(page.getByRole('alert')).toContainText('Could not finish loading your saved appearance.');
+    await page.getByRole('button', { name: 'Continue with default appearance' }).click();
     await waitForHarnessReady(page, api);
     for (const name of ['Connection identity', 'Sign-in, MFA and device sessions', 'Access policy']) {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
@@ -64,6 +71,7 @@ test.describe('external browser authentication', () => {
     await seedBrowserState(page, 'dark', '/settings');
     const api = await installApiMocks(page, 'populated', 'dark');
     if (!api) throw new Error('Missing synthetic API fixtures');
+    await installForwardAuthDesignFixture(page, api, policy.subject);
     await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, { json: policy }));
     await page.goto('/settings#reset');
     await waitForHarnessReady(page, api);

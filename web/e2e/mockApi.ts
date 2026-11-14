@@ -817,11 +817,26 @@ export interface ApiRequestRecord {
   path: string;
   resourceType: string;
   disposition: 'pending' | 'fulfilled' | 'continued' | 'aborted' | 'cancelled';
+  failure?: string;
 }
 
 const ALLOWED_BEACON_PATHS = ['/api/v1/web-vitals', '/api/v1/web-errors'] as const;
-const CANCELLED_SHELL_READ_PATHS: readonly string[] = ['/api/v1/system/auth-mode', '/api/v1/vehicles'];
+const CANCELLABLE_READ_PATHS: readonly string[] = [
+  '/api/v1/system/auth-mode',
+  '/api/v1/vehicles',
+  '/api/v1/onboarding/status',
+  '/api/v1/system/version',
+  '/api/v1/settings',
+  '/api/v1/system/audit',
+];
 const MAX_BEACON_BYTES = 64 * 1024;
+const mockPageStates = new WeakMap<Page, {
+  controller: MockApiController;
+  requestOwners: WeakMap<PlaywrightRequest, MockApiController>;
+  requestIndex: WeakMap<PlaywrightRequest, ApiRequestRecord>;
+  clientCancellations: Set<string>;
+  failedCancellations: Map<string, ApiRequestRecord>;
+}>();
 
 function requestRecord(
   controller: MockApiController,
@@ -954,6 +969,7 @@ async function fulfill(
       path === '/vehicles' ||
       path === '/auth/status' ||
       path === '/auth/session' ||
+      path === '/settings/widget-design-pack' ||
       path.startsWith('/system/auth-mode');
     if (request.method() === 'POST' && (path === '/web-vitals' || path === '/web-errors')) {
       const contentType = request.headers()['content-type'] ?? '';
@@ -1056,6 +1072,18 @@ export async function fulfillApiMock(
   }
 }
 
+export async function installForwardAuthDesignFixture(
+  page: Page,
+  controller: MockApiController,
+  subject: string,
+): Promise<void> {
+  const scope = createHash('sha256').update(`forward_auth:${subject}`).digest('hex');
+  await page.route(url => url.pathname === '/api/v1/settings/widget-design-pack' && !url.search, route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return fulfillApiMock(route, controller, { json: { pack_id: 'classic', scope, app_wide: false } });
+  });
+}
+
 export async function installApiMocks(
   page: Page,
   scenario: DataScenario = 'populated',
@@ -1079,74 +1107,90 @@ export async function installApiMocks(
     navPins: [],
     nextNavPinId: 1,
   };
-  const clientCancellations = new Set<string>();
-  const failedCancellations = new Map<string, ApiRequestRecord>();
-  await page.exposeBinding('__teslasyncE2EShellReadCancelled', (_source, id: string) => {
-    clientCancellations.add(id);
-    const record = failedCancellations.get(id);
-    if (record?.disposition === 'pending') record.disposition = 'cancelled';
-  });
-  await page.addInitScript((allowedPaths: readonly string[]) => {
-    const originalFetch = window.fetch;
-    let sequence = 0;
-    window.fetch = function (input, init) {
-      const request = input instanceof Request ? input : undefined;
-      let url: URL;
-      try {
-        url = new URL(request?.url ?? input.toString(), window.location.href);
-      } catch {
-        return originalFetch.call(window, input, init);
-      }
-      const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
-      const signal = init?.signal === undefined ? request?.signal : init.signal;
-      if (!signal || method !== 'GET' || url.origin !== window.location.origin
-        || !allowedPaths.includes(url.pathname) || url.search || url.hash) {
-        return originalFetch.call(window, input, init);
-      }
-      const id = `${Date.now()}-${Math.random()}-${sequence++}`;
-      const headers = new Headers(init?.headers ?? request?.headers);
-      headers.set('x-teslasync-e2e-request-id', id);
-      let pending = true;
-      const report = () => {
-        if (!pending) return;
-        const notify = (window as Window & {
-          __teslasyncE2EShellReadCancelled?: (requestId: string) => Promise<void>;
-        }).__teslasyncE2EShellReadCancelled;
-        if (notify) void notify(id).catch(() => undefined);
-      };
-      signal.addEventListener('abort', report, { once: true });
-      const result = originalFetch.call(window, input, { ...init, headers });
-      const finish = () => {
-        pending = false;
-        signal.removeEventListener('abort', report);
-      };
-      void result.then(finish, finish);
-      if (signal.aborted) report();
-      return result;
+  let state = mockPageStates.get(page);
+  if (state) {
+    state.controller = controller;
+  } else {
+    state = {
+      controller, requestOwners: new WeakMap(), requestIndex: new WeakMap(),
+      clientCancellations: new Set(), failedCancellations: new Map(),
     };
-  }, CANCELLED_SHELL_READ_PATHS);
-  page.on('request', (request) => {
-    requestRecord(controller, request);
-  });
-  page.on('requestfailed', request => {
-    const record = controller.requestIndex.get(request);
-    const url = new URL(request.url());
-    const id = request.headers()['x-teslasync-e2e-request-id'];
-    // Both the client abort signal and the matching network failure are required.
-    if (record?.disposition === 'pending'
-      && id
-      && request.failure()?.errorText === 'net::ERR_ABORTED'
-      && request.method() === 'GET'
-      && request.resourceType() === 'fetch'
-      && url.origin === new URL(page.url()).origin
-      && CANCELLED_SHELL_READ_PATHS.includes(url.pathname)
-      && !url.search && !url.hash) {
-      failedCancellations.set(id, record);
-      if (clientCancellations.has(id)) record.disposition = 'cancelled';
-    }
-  });
-  await page.route('**/api/**', (route) =>
-    fulfill(route, scenario, controller, theme, density, sseServer.origin, accentTheme));
+    mockPageStates.set(page, state);
+    const pageState = state;
+    await page.exposeBinding('__teslasyncE2EReadCancelled', (_source, id: string) => {
+      pageState.clientCancellations.add(id);
+      const record = pageState.failedCancellations.get(id);
+      if (record?.disposition === 'pending') record.disposition = 'cancelled';
+    });
+    await page.addInitScript((allowedPaths: readonly string[]) => {
+      const originalFetch = window.fetch;
+      let sequence = 0;
+      window.fetch = function (input, init) {
+        const request = input instanceof Request ? input : undefined;
+        let url: URL;
+        try {
+          url = new URL(request?.url ?? input.toString(), window.location.href);
+        } catch {
+          return originalFetch.call(window, input, init);
+        }
+        const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
+        const signal = init?.signal === undefined ? request?.signal : init.signal;
+        if (!signal || method !== 'GET' || url.origin !== window.location.origin
+          || !allowedPaths.includes(url.pathname) || url.search || url.hash) {
+          return originalFetch.call(window, input, init);
+        }
+        const id = `${Date.now()}-${Math.random()}-${sequence++}`;
+        const headers = new Headers(init?.headers ?? request?.headers);
+        headers.set('x-teslasync-e2e-request-id', id);
+        let pending = true;
+        const report = () => {
+          if (!pending) return;
+          const notify = (window as Window & {
+            __teslasyncE2EReadCancelled?: (requestId: string) => Promise<void>;
+          }).__teslasyncE2EReadCancelled;
+          if (notify) void notify(id).catch(() => undefined);
+        };
+        signal.addEventListener('abort', report, { once: true });
+        const result = originalFetch.call(window, input, { ...init, headers });
+        const finish = () => {
+          pending = false;
+          signal.removeEventListener('abort', report);
+        };
+        void result.then(finish, finish);
+        if (signal.aborted) report();
+        return result;
+      };
+    }, CANCELLABLE_READ_PATHS);
+    page.on('request', request => {
+      const record = requestRecord(pageState.controller, request);
+      if (record) {
+        pageState.requestOwners.set(request, pageState.controller);
+        pageState.requestIndex.set(request, record);
+      }
+    });
+    page.on('requestfailed', request => {
+      const record = pageState.requestIndex.get(request);
+      if (record) record.failure = request.failure()?.errorText ?? 'unknown';
+      const url = new URL(request.url());
+      const id = request.headers()['x-teslasync-e2e-request-id'];
+      // Both the client abort signal and the matching network failure are required.
+      if (record?.disposition === 'pending'
+        && id
+        && request.failure()?.errorText === 'net::ERR_ABORTED'
+        && request.method() === 'GET'
+        && request.resourceType() === 'fetch'
+        && url.origin === new URL(page.url()).origin
+        && CANCELLABLE_READ_PATHS.includes(url.pathname)
+        && !url.search && !url.hash) {
+        pageState.failedCancellations.set(id, record);
+        if (pageState.clientCancellations.has(id)) record.disposition = 'cancelled';
+      }
+    });
+  }
+  const pageState = state;
+  await page.route('**/api/**', route =>
+    fulfill(route, scenario, pageState.requestOwners.get(route.request()) ?? controller,
+      theme, density, sseServer.origin, accentTheme));
   return controller;
 }
 
@@ -1293,6 +1337,7 @@ export async function assertMockApiComplete(
       path: request.path,
       resourceType: request.resourceType,
       disposition: request.disposition,
+      failure: request.failure,
     }));
   await expect.poll(incompleteRequests, {
     message: 'API requests escaped or were blocked by Playwright routing',

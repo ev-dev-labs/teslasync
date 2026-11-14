@@ -1,5 +1,24 @@
 /* Kinetic Type uses a directional rule and typographic hierarchy, not moving data. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-dialog-kind="onboarding"] > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-kinetic"]) {
+    box-shadow: inset 0 -2px var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-dialog-kind="onboarding"] > [data-app-part~="dialog-body"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-kinetic"]) {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] :is(section[data-app-part~="panel"][data-surface-variant="standalone"][class~="border-[var(--border-subtle)]"], div[data-app-part~="card"][data-surface-variant="standalone"][class~="bg-[var(--surface-2)]"]:has(> [data-app-part~="list-heading"] + ul[data-app-list="ranked"])):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-kinetic"]) {
+    border-radius: var(--app-card-radius, var(--radius-sm));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="panel"][data-app-form-section][data-surface-variant="standalone"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-kinetic"]) {
+    border-radius: var(--app-card-radius, var(--radius-sm));
+  }
+}
+@media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"]:where([data-app-design-owner~="pack-kinetic"]) {
     --app-surface-canvas: var(--bg-app, var(--surface-0));
     --app-surface-panel: var(--panel-bg, var(--surface-1));
@@ -120,7 +139,7 @@
     box-shadow: var(--app-card-shadow, var(--elevation-1));
     background-color: var(--app-surface-panel, var(--panel-bg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] :is(details[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-kinetic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] :is(details[data-app-part~="panel"], div[data-app-part~="panel"], section[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"]:is([class~="bg-[var(--surface-1)]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-kinetic"]) {
     border-block-start: calc(var(--app-border-width, 1px) * 2) solid var(--border-strong);
     border-radius: var(--app-card-radius, var(--radius-sm));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
@@ -251,6 +270,11 @@
     border-radius: var(--app-card-radius, var(--radius-sm));
     background-color: var(--app-surface-panel, var(--panel-bg));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="chart"][data-chart-family="state-timeline"][data-chart-variant="panel"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-kinetic"]) {
+    border-color: var(--border-strong);
+    border-radius: var(--app-card-radius, var(--radius-sm));
+    box-shadow: inset 0 -2px 0 var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-kinetic"]) {
     border-radius: var(--app-control-radius, var(--radius-xs));

@@ -1,4 +1,9 @@
 /* Telemetry Studio: a quiet workbench with calibrated instrument boundaries. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] [data-app-part~="card"][data-app-metric="inline"][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v1"]) {
+    border-radius: var(--app-control-radius, var(--radius-xs));
+  }
+}
 @media screen {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v1"]:where([data-app-design-owner~="pack-v1"]) {
     --app-brief-column-min-width: 10.5rem;
@@ -80,7 +85,7 @@
     row-gap: var(--density-gap);
     border-block-start: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-metric="stat-card"])[data-surface-variant="standalone"]:not([data-app-tone], [data-app-variant], [class*="border-[var(--semantic"], [class*="border-theme"], [class*="border-neon"]):where([data-app-design-owner~="pack-v1"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-metric="stat-card"])[data-surface-variant="standalone"]:not([data-app-tone], [data-app-variant], [class*="border-[var(--semantic"], [class*="border-theme"], [class*="border-neon"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-v1"]) {
     border: 1px solid var(--border-strong);
     border-block-start-width: 2px;
     border-radius: var(--app-card-radius, var(--radius-xs));

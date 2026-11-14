@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { routeBuiltApplication, test } from './app-design-test';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
-import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes } from './widget-design-packs.acceptance';
+import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
@@ -521,7 +521,7 @@ async function expectNeutral(page: Page, noLocalScopes = false) {
   await expect(page.locator('html')).not.toHaveAttribute('data-app-design-owner');
   if (noLocalScopes) {
     for (const attribute of [...profileAttributes, 'data-app-design-owner']) {
-      await expect(page.locator(`[${attribute}]`), `neutral document retains no ${attribute} on stale local/portal targets`).toHaveCount(0);
+      await expect(unexpectedNeutralScopes(page, attribute), `neutral document retains no ${attribute} on stale local/portal targets`).toHaveCount(0);
     }
   }
 }

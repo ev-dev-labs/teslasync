@@ -1,5 +1,11 @@
 /* Executive Concierge: a composed workspace, with a quiet guide for summaries. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v4"] [data-app-part~="table-head"][data-group-header]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack] *, [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v4"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
+    box-shadow: inset 0 -1px var(--app-grid-rule, var(--border-default));
+  }
+}
+@media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v4"]:where([data-app-design-owner~="pack-v4"]) {
     --app-surface-canvas: var(--bg-app);
     --app-surface-canvas: color-mix(in srgb, var(--bg-app) 78%, var(--surface-2));

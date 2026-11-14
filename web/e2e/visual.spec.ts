@@ -111,6 +111,13 @@ for (const route of VISUAL_ROUTES) {
     const mockApi = await installApiMocks(page, scenario, theme, density);
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await waitForHarnessReady(page, mockApi);
+    if (scenario === 'error') {
+      const continueWithDefault = page.getByRole('button', { name: 'Continue with default appearance', exact: true });
+      if (await continueWithDefault.isVisible()) {
+        await continueWithDefault.click();
+        await waitForHarnessReady(page, mockApi);
+      }
+    }
     await expectThemeApplied(page, theme);
     await expect(page.locator('body')).toHaveAttribute('data-density', density);
     const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -151,6 +158,15 @@ for (const route of VISUAL_ROUTES) {
       await page.evaluate(() => new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       }));
+      if (route.name === 'battery') {
+        const brief = page.locator('[data-operational-brief]').first();
+        const heading = await brief.locator('[data-operational-brief-heading]').boundingBox();
+        const review = await brief.getByRole('button', { name: 'Review details', exact: true }).boundingBox();
+        expect(heading).not.toBeNull();
+        expect(review).not.toBeNull();
+        expect(Math.abs((heading!.y + heading!.height / 2) - (review!.y + review!.height / 2)))
+          .toBeLessThanOrEqual(1);
+      }
     }
     await page.addStyleTag({
       content: `
@@ -173,18 +189,20 @@ for (const route of VISUAL_ROUTES) {
         }
       `,
     });
-    await expect(page).toHaveScreenshot(`${route.name}.png`, {
-      animations: 'disabled',
-      fullPage: true,
-      mask: [
-        page.locator('time'),
-        page.locator('[data-testid*="timestamp"], [data-testid*="relative-time"]'),
-        page.locator('[aria-label^="API connection status"], [aria-label^="Refresh data"], [aria-label^="Data freshness:"]'),
-        page.locator('.recharts-tooltip-wrapper'),
-      ],
-      threshold: 0.1,
-      maxDiffPixels: 500,
-    });
+    if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+      await expect(page).toHaveScreenshot(`${route.name}.png`, {
+        animations: 'disabled',
+        fullPage: true,
+        mask: [
+          page.locator('time'),
+          page.locator('[data-testid*="timestamp"], [data-testid*="relative-time"]'),
+          page.locator('[aria-label^="API connection status"], [aria-label^="Refresh data"], [aria-label^="Data freshness:"]'),
+          page.locator('.recharts-tooltip-wrapper'),
+        ],
+        threshold: 0.1,
+        maxDiffPixels: 500,
+      });
+    }
     await assertMockApiComplete(page, mockApi);
   });
 }

@@ -1,5 +1,14 @@
 /* Deco Grand: a symmetrical architectural frame, paired rules and measured type. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-dialog-kind="onboarding"] > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-deco"]) {
+    box-shadow: inset 0 -2px var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-dialog-kind="onboarding"] > [data-app-part~="dialog-body"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-deco"]) {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+}
+@media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"]:where([data-app-design-owner~="pack-deco"]) {
     --app-surface-canvas: var(--bg-app);
     --app-surface-panel: var(--panel-bg, var(--surface-1));
@@ -268,6 +277,10 @@
     border-block-start-style: double;
     border-radius: var(--app-card-radius, var(--radius-lg));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart"][data-chart-family="state-timeline"][data-chart-variant="panel"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: inset 0 1px 0 var(--border-default), inset 0 3px 0 var(--border-subtle);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] figure[data-chart-variant="panel"] [data-app-part~="chart-header"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
     border-block-end: 3px double var(--border-default);

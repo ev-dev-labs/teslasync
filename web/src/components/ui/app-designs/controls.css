@@ -27,6 +27,12 @@
     color-scheme: inherit;
   }
 
+  :where(:is(:root, [data-app-design-preview])[data-app-design-pack]) a[data-app-part~="button"][data-app-variant="ghost"][href^="/vehicles/"][class~="text-[var(--theme-primary)]"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack] *, [data-vehicle-twin] *)):where([data-app-design-owner]) {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+  }
+
   /* Style native field chrome, not OS-owned dialogs, swatches or range thumbs. */
   :where(:is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]) input[data-app-part~="field-control"]:where([type="range"]):where([data-app-design-owner]) {
     accent-color: var(--theme-primary);

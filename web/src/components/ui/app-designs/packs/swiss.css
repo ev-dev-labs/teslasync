@@ -1,4 +1,9 @@
 /* Swiss Grid: a neutral modular field, aligned type and precise rules. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="card"][data-app-metric="inline"][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-swiss"]) {
+    border-radius: var(--app-control-radius, 0px);
+  }
+}
 @media screen {
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-swiss"]) {
     --app-brief-column-min-width: 12rem;

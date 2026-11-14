@@ -1,5 +1,15 @@
 /* Iconic Showroom: quiet canvas, framed exhibits and inset reading shelves. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is(section[data-app-part~="panel"][data-surface-variant="standalone"][class~="border-[var(--border-subtle)]"], div[data-app-part~="card"][data-surface-variant="standalone"][class~="bg-[var(--surface-2)]"]:has(> [data-app-part~="list-heading"] + ul[data-app-list="ranked"])):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-form-section][data-surface-variant="standalone"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+}
+@media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"]:where([data-app-design-owner~="pack-v5"]) {
     --app-surface-canvas: var(--bg-app);
     --app-surface-panel: var(--surface-1);
@@ -84,7 +94,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"][class~="rounded-panel"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--app-card-radius, var(--radius-xl));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is(details[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is(details[data-app-part~="panel"], div[data-app-part~="panel"], section[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"]:is([class~="bg-[var(--surface-1)]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--app-card-radius, var(--radius-xl));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }

@@ -15,8 +15,8 @@
  *      pixel sizes, a maskable pair, an `id`/`scope`/`start_url` that agree,
  *      and the iOS meta tags Safari needs for a standalone launch.
  *
- * Pass `--source-only` to skip the build contracts (used by CI steps that run
- * before `vite build`).
+ * Pass `--source-only` to skip the build contracts, or `--dist <dir>` to
+ * inspect an isolated build instead of web/dist.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { execSync } from 'node:child_process'
@@ -30,7 +30,17 @@ import { releaseIdentityProblems, resolveBuildIdentity } from './buildIdentity.m
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
 const REPO_ROOT = resolve(WEB_ROOT, '..')
-const DIST_ROOT = join(WEB_ROOT, 'dist')
+
+export function resolveDistRoot(argv = process.argv.slice(2)) {
+  const distFlagIndex = argv.indexOf('--dist')
+  const distArgument = distFlagIndex === -1 ? 'dist' : argv[distFlagIndex + 1]
+  if (!distArgument || distArgument.startsWith('--')) {
+    throw new Error('--dist requires a directory argument')
+  }
+  return resolve(WEB_ROOT, distArgument)
+}
+
+const DIST_ROOT = resolveDistRoot()
 const SOURCE_ONLY = process.argv.includes('--source-only')
 
 const failures = []

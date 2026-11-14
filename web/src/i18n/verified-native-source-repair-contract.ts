@@ -10,7 +10,7 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
 const mobileFingerprint = '83543e52518859d67e10b0e351986676ee4b5c8395ec70b0b751859c965cd084';
 const touchTokenFile = 'web/src/lib/tokens.ts';
-const touchTokenSuccessor = '95f986e34f191508c59e89e79afd47fe090972bd8f3bcb36c3979e3f8e0935cb';
+const touchTargetSuccessor = '95f986e34f191508c59e89e79afd47fe090972bd8f3bcb36c3979e3f8e0935cb';
 const touchTokenAdditions = [
   'export const touchTargetPixels = 44\n\n',
   '    touchSize: touchTargetPixels,\n',
@@ -74,7 +74,7 @@ export const actualRepairSource = (file: string): string =>
 
 function restoreRepairDependency(file: string, source: string): string {
   if (file !== touchTokenFile) return source;
-  expect(hash(source), file + ': exact touch target successor').toBe(touchTokenSuccessor);
+  expect(hash(source), file + ': exact touch target successor').toBe(touchTargetSuccessor);
   let previous = source;
   for (const addition of touchTokenAdditions) {
     expect(previous.split(addition), file + ': unique touch target addition').toHaveLength(2);

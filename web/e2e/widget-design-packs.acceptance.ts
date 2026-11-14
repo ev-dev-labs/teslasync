@@ -1,5 +1,10 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 
+export function unexpectedNeutralScopes(page: Page, attribute: string): Locator {
+  const thumbnail = '[aria-labelledby="settings-widget-design-packs"] [data-app-design-thumbnail]';
+  return page.locator(`[${attribute}]:not(${thumbnail}, ${thumbnail} *)`);
+}
+
 export const profileAttributes = [
   'data-app-design-pack', 'data-app-navigation', 'data-app-header', 'data-app-content',
   'data-app-controls', 'data-app-data', 'data-app-chart', 'data-app-map', 'data-app-feedback',
