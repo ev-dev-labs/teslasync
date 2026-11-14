@@ -72,13 +72,14 @@ test('harness does not accept continuously active mock requests', async ({ page 
   }
 });
 
-test('harness distinguishes a cancelled startup read from unreviewed API requests', async ({ page }) => {
+test('harness distinguishes cancelled shell reads from unreviewed API requests', async ({ page }) => {
   await page.route('http://127.0.0.1:54321/', route =>
     route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
   const controller = await installApiMocks(page);
   if (!controller) throw new Error('Mock API is required');
   await page.route('**/api/**', async route => {
-    if (route.request().headers()['x-test-wait'] === '1') {
+    if (route.request().headers()['x-test-wait'] === '1'
+      || new URL(route.request().url()).port === '54322') {
       await new Promise(resolve => setTimeout(resolve, 300));
       await route.fulfill({ json: { mode: 'open' } }).catch(() => undefined);
     } else {
@@ -89,30 +90,42 @@ test('harness distinguishes a cancelled startup read from unreviewed API request
     await page.goto('http://127.0.0.1:54321/');
     await page.evaluate(async () => {
       const cancelled = new AbortController();
+      const cancelledVehicles = new AbortController();
       const stillActive = new AbortController();
+      const unexpected = new AbortController();
       const cancelledAfterFailure = new AbortController();
+      const vehiclesCancelledAfterFailure = new AbortController();
       const delayed = fetch('/api/v1/system/auth-mode', {
         signal: cancelled.signal, headers: { 'x-test-wait': '1' },
       }).catch(() => undefined);
+      const delayedVehicles = fetch('/api/v1/vehicles', {
+        signal: cancelledVehicles.signal, headers: { 'x-test-wait': '1' },
+      }).catch(() => undefined);
       const blocked = fetch('/api/v1/system/auth-mode', { signal: cancelledAfterFailure.signal })
         .catch(() => undefined).then(() => cancelledAfterFailure.abort());
-      setTimeout(() => cancelled.abort(), 100);
+      const blockedVehicles = fetch('/api/v1/vehicles', { signal: vehiclesCancelledAfterFailure.signal })
+        .catch(() => undefined).then(() => vehiclesCancelledAfterFailure.abort());
+      setTimeout(() => { cancelled.abort(); cancelledVehicles.abort(); unexpected.abort(); }, 100);
+      const unreviewed = { signal: unexpected.signal, headers: { 'x-test-wait': '1' } };
       await Promise.all([
-        delayed, blocked,
+        delayed, delayedVehicles, blocked, blockedVehicles,
         fetch('/api/v1/system/auth-mode').catch(() => undefined),
         fetch('/api/v1/system/auth-mode', { signal: stillActive.signal }).catch(() => undefined),
-        fetch('/api/v1/system/auth-mode?unreviewed=1').catch(() => undefined),
-        fetch('/api/v1/system/auth-mode', { method: 'POST' }).catch(() => undefined),
-        fetch('/api/v1/unreviewed').catch(() => undefined),
-        fetch('http://127.0.0.1:54322/api/v1/system/auth-mode').catch(() => undefined),
+        fetch('/api/v1/system/auth-mode?unreviewed=1', unreviewed).catch(() => undefined),
+        fetch('/api/v1/system/auth-mode', { ...unreviewed, method: 'POST' }).catch(() => undefined),
+        fetch('/api/v1/vehicles?unreviewed=1', unreviewed).catch(() => undefined),
+        fetch('/api/v1/vehicles', { ...unreviewed, method: 'POST' }).catch(() => undefined),
+        fetch('/api/v1/unreviewed', unreviewed).catch(() => undefined),
+        fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }).catch(() => undefined),
       ]);
     });
-    await expect.poll(() => controller.requests.length).toBe(8);
-    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(1);
-    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(7);
-    expect(controller.requests.find(record => record.disposition === 'cancelled')).toMatchObject({
-      method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch',
-    });
+    await expect.poll(() => controller.requests.length).toBe(12);
+    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(2);
+    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(10);
+    expect(controller.requests.filter(record => record.disposition === 'cancelled')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch' }),
+      expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/vehicles', resourceType: 'fetch' }),
+    ]));
     expect(await page.evaluate(async () => {
       try {
         await fetch('http://[').catch(() => undefined);

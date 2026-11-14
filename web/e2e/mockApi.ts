@@ -820,6 +820,7 @@ export interface ApiRequestRecord {
 }
 
 const ALLOWED_BEACON_PATHS = ['/api/v1/web-vitals', '/api/v1/web-errors'] as const;
+const CANCELLED_SHELL_READ_PATHS: readonly string[] = ['/api/v1/system/auth-mode', '/api/v1/vehicles'];
 const MAX_BEACON_BYTES = 64 * 1024;
 
 function requestRecord(
@@ -1080,12 +1081,12 @@ export async function installApiMocks(
   };
   const clientCancellations = new Set<string>();
   const failedCancellations = new Map<string, ApiRequestRecord>();
-  await page.exposeBinding('__teslasyncE2EAuthModeCancelled', (_source, id: string) => {
+  await page.exposeBinding('__teslasyncE2EShellReadCancelled', (_source, id: string) => {
     clientCancellations.add(id);
     const record = failedCancellations.get(id);
     if (record?.disposition === 'pending') record.disposition = 'cancelled';
   });
-  await page.addInitScript(() => {
+  await page.addInitScript((allowedPaths: readonly string[]) => {
     const originalFetch = window.fetch;
     let sequence = 0;
     window.fetch = function (input, init) {
@@ -1099,7 +1100,7 @@ export async function installApiMocks(
       const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
       const signal = init?.signal === undefined ? request?.signal : init.signal;
       if (!signal || method !== 'GET' || url.origin !== window.location.origin
-        || url.pathname !== '/api/v1/system/auth-mode' || url.search || url.hash) {
+        || !allowedPaths.includes(url.pathname) || url.search || url.hash) {
         return originalFetch.call(window, input, init);
       }
       const id = `${Date.now()}-${Math.random()}-${sequence++}`;
@@ -1109,8 +1110,8 @@ export async function installApiMocks(
       const report = () => {
         if (!pending) return;
         const notify = (window as Window & {
-          __teslasyncE2EAuthModeCancelled?: (requestId: string) => Promise<void>;
-        }).__teslasyncE2EAuthModeCancelled;
+          __teslasyncE2EShellReadCancelled?: (requestId: string) => Promise<void>;
+        }).__teslasyncE2EShellReadCancelled;
         if (notify) void notify(id).catch(() => undefined);
       };
       signal.addEventListener('abort', report, { once: true });
@@ -1123,7 +1124,7 @@ export async function installApiMocks(
       if (signal.aborted) report();
       return result;
     };
-  });
+  }, CANCELLED_SHELL_READ_PATHS);
   page.on('request', (request) => {
     requestRecord(controller, request);
   });
@@ -1138,7 +1139,7 @@ export async function installApiMocks(
       && request.method() === 'GET'
       && request.resourceType() === 'fetch'
       && url.origin === new URL(page.url()).origin
-      && url.pathname === '/api/v1/system/auth-mode'
+      && CANCELLED_SHELL_READ_PATHS.includes(url.pathname)
       && !url.search && !url.hash) {
       failedCancellations.set(id, record);
       if (clientCancellations.has(id)) record.disposition = 'cancelled';
