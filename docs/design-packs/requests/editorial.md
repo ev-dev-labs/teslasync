@@ -13,7 +13,9 @@ change the protected widgets through pack CSS.
    14px recent-drive context, and a 12px metric unit. Inspect the existing
    app-owned WidgetShell footer and recent-drive text roles and apply the phone
    text floor where these are body content, without touching widget-only
-   previews or protected subtrees.
+   previews or protected subtrees. The ordinary headline context and unit
+   now have a pack-owned phone treatment and focused regression; the links
+   still need independent verification.
 3. The protected Digital Twin composition still reports a 36×36 “Open” target,
    a 10×28 refresh target, and 14px heading/content. Resolve these through an
    approved protected-widget approach that preserves its geometry and imagery;
