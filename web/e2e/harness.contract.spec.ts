@@ -286,7 +286,7 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
       const vehiclesCancelledAfterFailure = new AbortController();
       const additionalReads = [
         '/api/v1/onboarding/status', '/api/v1/system/version',
-        '/api/v1/settings', '/api/v1/system/audit',
+        '/api/v1/settings', '/api/v1/system/audit', '/api/v1/pinned?type=navigation',
       ].map(path => ({ path, controller: new AbortController() }));
       const delayed = fetch('/api/v1/system/auth-mode', {
         signal: cancelled.signal, headers: { 'x-test-wait': '1' },
@@ -311,20 +311,24 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
         fetch('/api/v1/system/auth-mode', { ...unreviewed, method: 'POST' }).catch(() => undefined),
         fetch('/api/v1/vehicles?unreviewed=1', unreviewed).catch(() => undefined),
         fetch('/api/v1/vehicles', { ...unreviewed, method: 'POST' }).catch(() => undefined),
+        fetch('/api/v1/pinned?type=automation', unreviewed).catch(() => undefined),
+        fetch('/api/v1/pinned?type=navigation&unreviewed=1', unreviewed).catch(() => undefined),
+        fetch('/api/v1/pinned?type=navigation', { ...unreviewed, method: 'POST' }).catch(() => undefined),
         fetch('/api/v1/unreviewed', unreviewed).catch(() => undefined),
         fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }).catch(() => undefined),
         ...additionalReads.map(({ path, controller }) =>
           fetch(path, { signal: controller.signal, headers: { 'x-test-wait': '1' } }).catch(() => undefined)),
       ]);
     });
-    await expect.poll(() => controller.requests.length).toBe(16);
-    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(6);
-    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(10);
+    await expect.poll(() => controller.requests.length).toBe(20);
+    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(7);
+    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(13);
     expect(controller.requests.filter(record => record.disposition === 'cancelled')).toEqual(expect.arrayContaining([
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch' }),
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/vehicles', resourceType: 'fetch' }),
       ...['/api/v1/onboarding/status', '/api/v1/system/version', '/api/v1/settings', '/api/v1/system/audit']
         .map(path => expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path, resourceType: 'fetch' })),
+      expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/pinned', resourceType: 'fetch' }),
     ]));
     expect(await page.evaluate(async () => {
       try {

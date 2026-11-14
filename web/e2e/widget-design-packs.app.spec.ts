@@ -87,6 +87,156 @@ for (const mode of ['dark', 'light'] as const) {
   });
 }
 
+function commandAxisFixture(anchor: number) {
+  return Array.from({ length: 28 }, (_, index) => ({
+    id: index + 1,
+    vehicle_id: 7,
+    command: 'flash_lights',
+    params: '{}',
+    status: index % 4 === 0 ? 'failed' : 'success',
+    error: '',
+    created_at: new Date(anchor - Math.floor(index / 4) * 86_400_000).toISOString(),
+  }));
+}
+
+async function assertCommandAxisGeometry(chart: Locator, scale: number, label: string) {
+  await expect.poll(async () => chart.evaluate((figure, expectedScale) => {
+    const svg = figure.querySelector<SVGSVGElement>('svg.recharts-surface');
+    const dimensions = () => {
+      const viewport = figure.querySelector<HTMLElement>('[data-chart-viewport]')?.getBoundingClientRect();
+      const ancestors: string[] = [];
+      for (let node: Element | null = figure; node && ancestors.length < 7; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        ancestors.push(`${node.tagName}:${Math.round(node.getBoundingClientRect().width)}:${style.display}:${style.gridTemplateColumns}`);
+      }
+      return `state=${figure.getAttribute('data-chart-state')}, viewport=${viewport?.width}x${viewport?.height}, ancestors=${ancestors.join('/')}`;
+    };
+    if (!svg) return [`missing chart SVG (${dimensions()})`];
+    const bounds = svg.getBoundingClientRect();
+    const labels = [...svg.querySelectorAll<SVGTextElement>('.recharts-cartesian-axis-tick-value')].map(node => ({
+      text: node.textContent ?? '',
+      axis: node.closest('.recharts-xAxis') ? 'x' : 'y',
+      size: parseFloat(getComputedStyle(node).fontSize),
+      rect: node.getBoundingClientRect(),
+    }));
+    const issues: string[] = [];
+    if (labels.filter(node => node.axis === 'x').length < 2) issues.push('fewer than two date ticks');
+    if (labels.filter(node => node.axis === 'y').length < 2) issues.push(`fewer than two count ticks (${dimensions()}, svg=${bounds.width}x${bounds.height})`);
+    for (const [index, node] of labels.entries()) {
+      if (node.size < Math.max(16, 16 * expectedScale) - 0.1) issues.push(`${node.axis}:${node.text} is ${node.size}px`);
+      if (node.rect.left < bounds.left - 1 || node.rect.right > bounds.right + 1
+        || node.rect.top < bounds.top - 1 || node.rect.bottom > bounds.bottom + 1) {
+        issues.push(`${node.axis}:${node.text} is clipped`);
+      }
+      for (const other of labels.slice(index + 1)) {
+        if (node.rect.left < other.rect.right - 1 && node.rect.right > other.rect.left + 1
+          && node.rect.top < other.rect.bottom - 1 && node.rect.bottom > other.rect.top + 1) {
+          issues.push(`${node.axis}:${node.text} overlaps ${other.axis}:${other.text}`);
+        }
+      }
+    }
+    if (document.documentElement.scrollWidth > innerWidth + 1) issues.push('page scrolls horizontally');
+    return issues;
+  }, scale), { message: label, timeout: 15_000 }).toEqual([]);
+}
+
+for (const [mode, scenario, customFont] of [
+  ['dark', 'recent', false], ['dark', 'year-boundary', false],
+  ['light', 'recent', false], ['light', 'year-boundary', false],
+  ['dark', 'year-boundary', true],
+] as const) {
+  test(`Command History phone axes remain legible and contained in ${mode} (${scenario}${customFont ? ', custom font and locale' : ''})`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin,
+      customFont ? { ...customReviewSettings, locale: 'de-DE' } : {});
+    const year = new Date().getUTCFullYear();
+    const anchor = scenario === 'year-boundary' ? Date.UTC(year, 0, 4, 12) : Date.now();
+    await page.route(url => url.pathname === '/api/v1/vehicles/7/commands/history', route =>
+      fulfillApiFixture(route, mocks, { json: commandAxisFixture(anchor) }));
+    await routeBuiltApplication(page, new URL(origin).origin, ['/command-history'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/command-history');
+    await waitForHarnessReady(page, mocks);
+    const chart = page.locator('[data-chart-key="system-command-daily-activity"]');
+    await expect(chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()).toBeVisible();
+    if (customFont) {
+      await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
+        .evaluate(node => getComputedStyle(node).fontFamily)).toContain('Georgia');
+    }
+    await chart.scrollIntoViewIfNeeded();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
+      .evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+    await waitForHarnessReady(page, mocks);
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const scale of [0.85, 1, 1.35]) {
+        await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+        await assertCommandAxisGeometry(chart, scale, `${mode} ${width}px scale ${scale}`);
+        if (scenario === 'year-boundary') {
+          const dateTicks = chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value');
+          await expect(dateTicks.first()).toContainText(String(year - 1));
+          await expect(dateTicks.last()).toContainText(String(year));
+        }
+      }
+    }
+    await expect(chart.locator('table tbody tr')).toHaveCount(7);
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+for (const mode of ['dark', 'light'] as const) {
+  test(`Command History year-spanning phone axes fit all packs in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin);
+    const year = new Date().getUTCFullYear();
+    await page.route(url => url.pathname === '/api/v1/vehicles/7/commands/history', route =>
+      fulfillApiFixture(route, mocks, { json: commandAxisFixture(Date.UTC(year, 0, 4, 12)) }));
+    await routeBuiltApplication(page, new URL(origin).origin, ['/command-history'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.setViewportSize({ width: 360, height: 900 });
+    await page.goto('/command-history');
+    await waitForHarnessReady(page, mocks);
+    const chart = page.locator('[data-chart-key="system-command-daily-activity"]');
+    await expect(chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()).toBeVisible();
+    await page.evaluate(() => document.documentElement.style.setProperty('--font-scale', '1.35'));
+    for (const pack of PACK_IDS) {
+      await selectReviewPack(page, pack);
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+      for (const width of [360, 430]) {
+        await page.setViewportSize({ width, height: 900 });
+        await assertCommandAxisGeometry(chart, 1.35, `${pack} ${mode} ${width}px`);
+      }
+      const ticks = chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value');
+      await expect(ticks.first()).toContainText(String(year - 1));
+      await expect(ticks.last()).toContainText(String(year));
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+test('Command History keeps its original chart without an application-wide pack', async ({ page }, testInfo) => {
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  const mocks = await installPackReview(page, 'dark', 390, false, [], true, createReviewPreference(), origin);
+  await routeBuiltApplication(page, new URL(origin).origin, ['/command-history'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/command-history');
+  await waitForHarnessReady(page, mocks);
+  const tick = page.locator('[data-chart-key="system-command-daily-activity"] .recharts-xAxis .recharts-cartesian-axis-tick-value').first();
+  await expect(tick).toBeVisible();
+  await expect(tick).toContainText(String(new Date().getUTCFullYear()));
+  expect(await tick.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+  await assertMockApiComplete(page, mocks);
+});
+
 for (const mode of ['dark', 'light'] as const) {
   test(`Expressive Form phone headings have room for short titles in ${mode}`, async ({ page }, testInfo) => {
     test.setTimeout(120_000);

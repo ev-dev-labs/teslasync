@@ -1410,7 +1410,7 @@ SW_TSC_EXIT=0
 LINT_EXIT=0
 ```
 
-## Command History phone axes: unresolved
+## Command History phone axes: earlier attempt
 
 The Classic Command History chart still renders 11px axis labels on phones.
 A screenshot-free browser regression with populated synthetic data was
@@ -1428,9 +1428,9 @@ light 360px scale 1.35: overlapping ticks
 AXIS_AFTER_EXIT=1
 ```
 
-The tentative changes and failing test were removed rather than shipped.
-Axis legibility remains skipped after these attempts; the existing chart is
-unchanged and this does not establish phone compliance.
+The tentative changes and failing test were removed rather than shipped at
+that point. The later phone-axis follow-up below supersedes this attempt; it
+does not establish general phone compliance.
 
 ## Dashboard phone context follow-up
 
@@ -1556,3 +1556,68 @@ The full lint emitted an existing `jsx-ast-utils` diagnostic for a
 `JSXEmptyExpression`; the command still exited successfully. Scoped
 engineering audits reported no violations in `mockApi.ts`,
 `harness.contract.spec.ts`, or `widget-design-packs.acceptance.ts`.
+
+## Command History phone-axis follow-up
+
+The application-wide phone chart now measures its date and count labels using
+the current font and body-size token. Multi-year dates use two lines and a
+taller shared chart preset; the tooltip and accessible table keep full dates.
+Desktop and unowned charts retain their previous treatment.
+
+An initial isolated WebKit run found a transient zero-width chart after
+resizing and, independently, only one count tick at 360px with the German
+locale, Georgia and scale 1.35. Waiting longer did not fix the count tick at
+the standard height. The multi-year chart now uses the `detail` preset; the
+same custom-font case passed against an isolated production build. Geometry
+polling allows 15 seconds for the slow isolated browser to settle, while
+still requiring two ticks per axis, the body-size floor, no overlap or
+clipping, and no document overflow.
+
+During the phone-legend retry, a cancelled navigation-pins read was reported
+as an escaped request. The fixture now recognizes only the exact
+`GET /api/v1/pinned?type=navigation` target when both the client abort signal
+and matching browser failure are witnessed. The contract still rejects
+different queries, writes, unreviewed traffic and unwitnessed failures.
+
+```text
+npx playwright test --config=playwright.contract.config.ts --workers=1
+  85 passed (2.5m)
+FINAL_CANCELLATION_HARNESS_EXIT=0
+
+npx playwright test --config=playwright.v6-mobile.local.config.ts --project=local-v6 --grep="hidden chart legends stay readable" --workers=1 --repeat-each=3
+  6 passed (1.0m)
+REPEATED_PHONE_LEGEND_EXIT=0
+
+npx playwright test --config=playwright.v6-mobile.local.config.ts --project=local-v6 --grep="Command History" --workers=1
+  8 passed (1.9m)
+EDGE_DETAIL_AXIS_EXIT=0
+
+npx vitest run src\features\system\pages\CommandHistoryPage.test.tsx --reporter=dot --maxWorkers=1
+  Tests 26 passed (26)
+POST_DETAIL_COMMAND_VITEST_EXIT=0
+
+npx tsc --noEmit
+POST_DETAIL_FRONTEND_TSC_EXIT=0
+npx tsc --noEmit -p e2e\tsconfig.json
+CANCELLATION_E2E_TSC_EXIT=0
+npx eslint e2e\mockApi.ts e2e\harness.contract.spec.ts e2e\widget-design-packs.app.spec.ts src\features\system\pages\CommandHistoryPage.tsx
+FINAL_CHANGED_FILES_ESLINT_EXIT=0
+
+npx vite build --outDir <isolated-session-directory>
+VITE_AXIS_DETAIL_BUILD_EXIT=0
+DETAIL_BUNDLE_EXIT=0
+DETAIL_PRECACHE_EXIT=0
+DETAIL_PWA_CONTRACT_EXIT=0
+DETAIL_SOURCE_MAPS_EXIT=0
+```
+
+The page has 806 lines versus 714 on the base, and six panel/chart openings
+in both versions. The scoped engineering audit reported zero in its six
+categories; the Command History hook verifier matched all three extracted
+paths. The Vitest run emitted the existing JSDOM/Recharts zero-size warnings.
+The Edge axis cases cover recent and year-spanning dates, 360/390/430px,
+three scales and both themes in Classic, plus all 27 packs at 360/430px,
+scale 1.35 and both themes. They also check a German/Georgia preference and
+desktop/unowned preservation. The broader Firefox/WebKit run is pending.
+These focused checks do not establish full-page mobile, contrast, visual or
+cross-pack acceptance.

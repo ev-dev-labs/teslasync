@@ -13,7 +13,7 @@
  * pagination, while the KPI band reflects the complete selected window.
  */
 
-import { useDeferredValue, useMemo } from 'react';
+import { useDeferredValue, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageLayout } from '@/components/layout';
@@ -27,21 +27,23 @@ import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/compone
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend,
-  ResponsiveContainer, ChartTooltip, axisTickSm, EmbeddedChart,
+  ResponsiveContainer, ChartTooltip, axisTickSm, EmbeddedChart, measureAxisLabelWidth,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCommandReliabilityHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
-import { formatDateTime, formatRelative, formatDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatRelative, formatDayKey, getFormatter } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { gaugeTone, typography } from '@/lib/tokens';
 import { localDayKey } from '@/lib/drivesAggregation';
+import { getChartFontFamily, getChartFontScale } from '@/lib/chartTypography';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   CheckCircle, XCircle, Terminal, History,
@@ -106,6 +108,36 @@ const COMMAND_LABELS: Record<string, string> = {
 
 /** Component `t` function type — lets module-level helpers resolve i18n keys. */
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+function usePhoneChartTypography() {
+  const [typography, setTypography] = useState({ owned: false, size: 16, family: '', revision: 0 });
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    let active = true;
+    const update = (fontLoaded = false) => {
+      const rootSize = parseFloat(getComputedStyle(root).fontSize) || 16;
+      const next = {
+        owned: root.hasAttribute('data-app-design-pack') && root.hasAttribute('data-app-design-owner'),
+        size: rootSize * Math.max(1, getChartFontScale()),
+        family: getChartFontFamily(),
+      };
+      setTypography(previous => !fontLoaded && previous.owned === next.owned && previous.size === next.size && previous.family === next.family
+        ? previous : { ...next, revision: previous.revision + (fontLoaded ? 1 : 0) });
+    };
+    const observer = new MutationObserver(() => update());
+    observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-app-design-pack', 'data-app-design-owner'] });
+    const onFontsLoaded = () => update(true);
+    document.fonts?.addEventListener('loadingdone', onFontsLoaded);
+    void document.fonts?.ready.then(() => { if (active) onFontsLoaded(); });
+    update();
+    return () => {
+      active = false;
+      observer.disconnect();
+      document.fonts?.removeEventListener('loadingdone', onFontsLoaded);
+    };
+  }, []);
+  return typography;
+}
 
 /** Curated English fallback, with sentence case for unknown commands. */
 function commandFallbackLabel(cmd: string): string {
@@ -194,6 +226,8 @@ export default function CommandHistoryPage() {
   const { t } = useTranslation();
   const { fmtPercent, fmtInt, precision, locale } = useNumberFormatting();
   const { reduce } = useMotionPreference();
+  const phone = useMediaQuery('(max-width: 767px)');
+  const chartTypography = usePhoneChartTypography();
   const pctLabel = (n: number, total: number): string =>
     fmtPercent(total > 0 ? (n / total) * 100 : 0);
   usePageTitle(t('commandHistory.title', 'Command history'));
@@ -329,6 +363,35 @@ export default function CommandHistoryPage() {
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
   }, [allCommands, timeZone, locale]);
+
+  const phoneAxes = useMemo(() => {
+    if (!phone || !chartTypography.owned || dailyActivity.length === 0) return null;
+    const yearFormatter = getFormatter({ timeZone: 'UTC', year: 'numeric' }, locale);
+    const labels = new Map(dailyActivity.map(({ day, label }) => [
+      label, {
+        date: formatDayKey(day, { locale, style: 'short' }),
+        year: yearFormatter.format(new Date(`${day}T12:00:00Z`)),
+      },
+    ]));
+    const multiYear = new Set([...labels.values()].map(({ year }) => year)).size > 1;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) context.font = `${chartTypography.size}px ${chartTypography.family}`;
+    const measure = (label: string) => context?.measureText(label).width ?? label.length * chartTypography.size;
+    const maxCount = dailyActivity.reduce((max, row) => Math.max(max, row.success + row.failed), 0);
+    const countDigits = String(maxCount).length + 1;
+    const countLabels = Array.from({ length: 10 }, (_, digit) => String(digit).repeat(countDigits));
+    const countWidth = measureAxisLabelWidth(countLabels, measure);
+    const dateWidth = measureAxisLabelWidth([...labels.values()].flatMap(({ date, year }) => [date, year]), measure, 0, 0);
+    return {
+      labels,
+      multiYear,
+      countWidth,
+      datePadding: Math.ceil(dateWidth / 2 + chartTypography.size / 8),
+      fontSize: chartTypography.size,
+      fontFamily: chartTypography.family,
+    };
+  }, [phone, chartTypography, dailyActivity, locale]);
 
   // Top commands — most-used commands in the range, for the breakdown rail.
   const topCommands = useMemo(() => {
@@ -510,6 +573,8 @@ export default function CommandHistoryPage() {
             </PanelTitle>
             <EmbeddedChart
               chartKey="system-command-daily-activity"
+              size={phoneAxes ? (phoneAxes.multiYear ? 'detail' : 'standard') : 'compact'}
+              className={phoneAxes ? '[&_.recharts-cartesian-axis-tick-value]:!text-[length:var(--app-body-size)]' : undefined}
               title={t('commandHistory.dailyActivity', 'Daily activity')}
               ariaLabel={t('commandHistory.dailyActivityAria', 'Stacked bar chart of daily command success and failure counts')}
               loading={isLoading}
@@ -526,10 +591,37 @@ export default function CommandHistoryPage() {
             >
               {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyActivity}>
+                  <BarChart data={dailyActivity}
+                    margin={phoneAxes ? { top: Math.ceil(phoneAxes.fontSize * 0.75), right: Math.ceil(phoneAxes.fontSize / 4), bottom: 0, left: 0 } : undefined}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="label" tick={axisTickSm} />
-                    <YAxis tick={axisTickSm} allowDecimals={false} />
+                    <XAxis key={phoneAxes ? `phone-x-${phoneAxes.fontSize}-${phoneAxes.fontFamily}` : 'desktop-x'}
+                      dataKey="label"
+                      tick={phoneAxes?.multiYear ? ({ x, y, payload }: {
+                        x: number; y: number; payload: { value: string };
+                      }) => {
+                        const label = phoneAxes.labels.get(String(payload.value))
+                          ?? { date: String(payload.value), year: '' };
+                        return (
+                          <text x={x} y={y} textAnchor="middle" fill={axisTickSm.fill}
+                            fontSize={phoneAxes.fontSize} fontFamily={phoneAxes.fontFamily}
+                            className="recharts-text recharts-cartesian-axis-tick-value"
+                            aria-label={String(payload.value)}>
+                            <tspan x={x} dy="0.71em">{label.date}</tspan>
+                            <tspan x={x} dy="1.2em">{label.year}</tspan>
+                          </text>
+                        );
+                      } : phoneAxes ? { ...axisTickSm, fontSize: phoneAxes.fontSize, fontFamily: phoneAxes.fontFamily } : axisTickSm}
+                      {...(phoneAxes ? {
+                        tickFormatter: (label: string) => phoneAxes.labels.get(String(label))?.date ?? String(label),
+                        height: Math.ceil(phoneAxes.fontSize * (phoneAxes.multiYear ? 3.6 : 2.3)),
+                        tickMargin: Math.ceil(phoneAxes.fontSize / 2),
+                        padding: { left: phoneAxes.datePadding, right: phoneAxes.datePadding },
+                        interval: 'preserveStartEnd' as const,
+                      } : {})} />
+                    <YAxis key={phoneAxes ? `phone-y-${phoneAxes.fontSize}-${phoneAxes.fontFamily}` : 'desktop-y'}
+                      tick={phoneAxes ? { ...axisTickSm, fontSize: phoneAxes.fontSize, fontFamily: phoneAxes.fontFamily } : axisTickSm}
+                      {...(phoneAxes ? { width: phoneAxes.countWidth, minTickGap: Math.ceil(phoneAxes.fontSize / 2) } : {})}
+                      allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <ChartLegend />
                     <Bar dataKey="success" name={t('commandHistory.success', 'Success')} stackId="a" fill={SUCCESS_COLOR} fillOpacity={0.85} hide={hiddenSeries?.isHidden('success') ?? false} />

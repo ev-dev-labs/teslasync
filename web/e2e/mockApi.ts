@@ -821,13 +821,14 @@ export interface ApiRequestRecord {
 }
 
 const ALLOWED_BEACON_PATHS = ['/api/v1/web-vitals', '/api/v1/web-errors'] as const;
-const CANCELLABLE_READ_PATHS: readonly string[] = [
+const CANCELLABLE_READ_TARGETS: readonly string[] = [
   '/api/v1/system/auth-mode',
   '/api/v1/vehicles',
   '/api/v1/onboarding/status',
   '/api/v1/system/version',
   '/api/v1/settings',
   '/api/v1/system/audit',
+  '/api/v1/pinned?type=navigation',
 ];
 const MAX_BEACON_BYTES = 64 * 1024;
 const UNLOAD_REQUESTS_KEY = '__TESLASYNC_E2E_UNLOAD_REQUESTS__';
@@ -1124,7 +1125,7 @@ export async function installApiMocks(
       const record = pageState.failedCancellations.get(id);
       if (record?.disposition === 'pending') record.disposition = 'cancelled';
     });
-    await page.addInitScript((allowedPaths: readonly string[]) => {
+    await page.addInitScript((allowedTargets: readonly string[]) => {
       const originalFetch = window.fetch;
       let sequence = 0;
       window.fetch = function (input, init) {
@@ -1138,7 +1139,7 @@ export async function installApiMocks(
         const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
         const signal = init?.signal === undefined ? request?.signal : init.signal;
         if (!signal || method !== 'GET' || url.origin !== window.location.origin
-          || !allowedPaths.includes(url.pathname) || url.search || url.hash) {
+          || !allowedTargets.includes(`${url.pathname}${url.search}`) || url.hash) {
           return originalFetch.call(window, input, init);
         }
         const id = `${Date.now()}-${Math.random()}-${sequence++}`;
@@ -1162,7 +1163,7 @@ export async function installApiMocks(
         if (signal.aborted) report();
         return result;
       };
-    }, CANCELLABLE_READ_PATHS);
+    }, CANCELLABLE_READ_TARGETS);
     page.on('request', request => {
       const record = requestRecord(pageState.controller, request);
       if (record) {
@@ -1182,8 +1183,8 @@ export async function installApiMocks(
         && request.method() === 'GET'
         && request.resourceType() === 'fetch'
         && url.origin === new URL(page.url()).origin
-        && CANCELLABLE_READ_PATHS.includes(url.pathname)
-        && !url.search && !url.hash) {
+        && CANCELLABLE_READ_TARGETS.includes(`${url.pathname}${url.search}`)
+        && !url.hash) {
         pageState.failedCancellations.set(id, record);
         if (pageState.clientCancellations.has(id)) record.disposition = 'cancelled';
       }

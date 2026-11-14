@@ -45,6 +45,8 @@ shared mobile grid and retain their original columns in Quick View.
 Interactive chart legends use `--app-chart-hidden-legend-opacity` to keep
 hidden-series labels readable while retaining their strike-through and pressed
 state. Protected widgets and unowned charts retain their existing dimming.
+The Command History chart measures phone-axis labels using the shared body
+font size; its tooltip and data table retain the complete localized dates.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,
