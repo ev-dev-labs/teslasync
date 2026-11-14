@@ -244,3 +244,31 @@ hashes matched the working files. The combined native-composition, ordered-step
 and DataTable contracts reported **3 files passed, 200 tests passed**. This
 does not resolve the post-capture or contrast limitations above. The stopped
 worker's Atlas-owned browser scratch was removed after inspection.
+
+## Ordinary phone metric follow-up
+
+A screenshot-free real-route regression reproduced the Recent drives context
+at **11.9px** in both themes at 360px and font scale 0.85. Atlas now uses the
+body-size token for ordinary owned headline context and units, while excluding
+protected twins, native gauges, specialized metrics, and report/kiosk modes.
+The simulated dashboard covered 360/390/430px, font scales 0.85/1/1.35 and
+normal/forced colors; it checks containment, context overlap and page overflow.
+This does not verify other routes, localized strings, or the protected twin
+defects above.
+
+The local Edge configuration below was temporary and disabled screenshots,
+video and traces; CI runs the same regression through its normal projects.
+
+```text
+npx playwright test --config playwright.v6-mobile.local.config.ts --project local-v6 --grep "dashboard metric context remains readable"
+  4 passed (53.2s)
+PHONE_METRIC_TEST_EXIT=0
+
+npx vitest run src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx --reporter=dot --maxWorkers=1
+ Test Files  1 passed (1)
+      Tests  113 passed (113)
+PRESERVATION_TEST_EXIT=0
+
+npx tsc --noEmit -p e2e\tsconfig.json
+E2E_TYPESCRIPT_EXIT=0
+```

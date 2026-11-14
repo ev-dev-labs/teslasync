@@ -292,6 +292,15 @@
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
+    [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-atlas"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] a[href].inline-flex:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
     min-inline-size: var(--app-touch-size);
     min-block-size: var(--app-touch-size);

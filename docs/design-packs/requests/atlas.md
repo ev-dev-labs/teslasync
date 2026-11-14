@@ -14,15 +14,15 @@ and the unknown-state dash, were reported at 14px in the synthetic review;
 please check the 16px phone body-text requirement without changing imagery,
 status meaning, or the protected scene geometry.
 
-## Native metric context on phones
+## Native metric context on phones — addressed for Atlas
 
-The Recent drives widget's native `WidgetBigNumber` subtitle, for example
-“Today … · 30 min”, is 14px at 390px. Shared mobile typography excludes
-headline-metric descendants, and native composition preservation tests
-explicitly keep pack sheets from styling those slots. Please make the shared
-metric-context typography readable at 16px on phones, retaining native
-numeric paint, sizing, readings, layout and protected-widget boundaries, and
-add a shared regression. This is not a pack-level accessibility pass.
+The ordinary Recent drives subtitle was 14px at the default scale and 11.9px
+at scale 0.85. Atlas now applies the body-size token to owned headline context
+and units on phones, excluding protected twins, native gauges, specialized
+metrics, and report/kiosk presentations. Real-route mocked-data checks cover
+360/390/430px, both themes, forced colors and three font scales; selector
+tests cover the exclusions and ownership. This is not a pack-level
+accessibility pass or a change to the shared metric component.
 
 ## Capture harness pending request
 
