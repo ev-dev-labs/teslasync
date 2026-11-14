@@ -1007,6 +1007,29 @@ assets and mocked preference API. They took no screenshots. The width checks
 cover only the initial live route, and the full Vitest run remains incomplete;
 neither result establishes full-app visual or mobile acceptance.
 
+The fail-fast full Vitest run subsequently stopped on an embedded-metric
+preservation failure:
+
+```text
+Test Files  1 failed | 20 passed (2947)
+Tests       1 failed | 3523 passed (3586)
+FULL_VITEST_EXIT=1
+```
+
+Four data modes applied density padding inside embedded metric surfaces,
+overriding their component-owned geometry. Removing those broad rules restores
+the existing embedded-surface contract while retaining ordinary tile
+treatments. A focused rerun and a screenshot-free browser check reported:
+
+```text
+Test Files  2 passed (2)
+Tests       126 passed (126)
+1 passed (5.6s)
+```
+
+The full suite has not been rerun to completion, and this fix has not received
+visual acceptance on the previously captured pages.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle

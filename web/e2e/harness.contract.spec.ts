@@ -746,6 +746,8 @@ test('data modes preserve semantic and embedded metric paint and layout', async 
           await expect(page.locator(`#${id}`)).toHaveCSS('display', 'block');
         }
         await expect(page.locator('#nested')).toHaveCSS('background-color', 'rgb(24, 24, 24)');
+        await expect(page.locator('#nested')).toHaveCSS('padding-top', '12px');
+        await expect(page.locator('#nested')).toHaveCSS('padding-right', '12px');
         await expect(page.locator('#normal')).not.toHaveCSS('background-color', 'rgb(24, 24, 24)');
       }
     }
