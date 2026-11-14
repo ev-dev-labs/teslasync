@@ -252,6 +252,7 @@ E2E_TSC_FINAL_EXIT=0
 E2E_ESLINT_FINAL_EXIT=0
 ISOLATED_BUILD_EXIT=0
 V6_AUDIT_EXIT=0
+FULL_LINT_EXIT=0
 ```
 
 The isolated Vite build included all four normal postbuild checks. The pack's
