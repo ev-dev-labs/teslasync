@@ -1050,6 +1050,24 @@ AUTH_HTTP=200
 PREVIEW_BROWSER_HTTP=200 ERRORS=0 OVERFLOW=0
 ```
 
+The next full-suite snapshot stopped at a second, incompatible expectation:
+the comfort-consistency consumer required data-mode tile framing even for
+explicitly embedded metrics. Its contract now checks that embedded metrics
+retain their paint and layout while ordinary tiles receive their data-mode
+treatment. Nested-profile isolation is verified on their enclosing record;
+the selector matcher also checks the owner on the matching selector itself,
+not on an unrelated selector in the same CSS rule.
+
+```text
+Test Files  2 passed (2)
+Tests       99 passed (99)
+1 passed (3.8s)
+ESLINT_EXIT=0
+```
+
+The browser check covers semantic and embedded paint and padding in the four
+data modes at 360px and 1440px. A full-suite pass is still outstanding.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
