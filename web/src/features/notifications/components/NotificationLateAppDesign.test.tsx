@@ -198,25 +198,41 @@ describe('notifications-late-01 real source-to-consumer adoption (source-only)',
             .filter(selector => selector.includes(fragment));
           const isThemed = () => selectors.some(selector => node.matches(selector));
           expect(isThemed(), fragment).toBe(true);
-          node.setAttribute('data-app-tone', 'warning');
-          expect(isThemed(), fragment).toBe(false);
-          node.removeAttribute('data-app-tone');
           for (const [attribute, value] of [
             ['data-app-tone', 'warning'], ['data-app-design-preserve', ''], ['data-widget-pack', ''],
             ['data-vehicle-twin', ''], ['data-surface-variant', 'embedded'],
-            ['data-app-card-kind', 'conversation'], ['data-mobile-table', ''],
+            ['data-app-card-kind', 'conversation'], ['data-app-list', 'conversation'], ['data-mobile-table', ''],
           ]) {
-            const ancestor = node.parentElement!;
-            const previous = ancestor.getAttribute(attribute);
-            ancestor.setAttribute(attribute, value);
-            expect(isThemed(), `${fragment}: ${attribute}`).toBe(false);
-            if (previous === null) ancestor.removeAttribute(attribute);
-            else ancestor.setAttribute(attribute, previous);
+            for (const target of [node, node.parentElement!]) {
+              const previous = target.getAttribute(attribute);
+              target.setAttribute(attribute, value);
+              expect(isThemed(), `${fragment}: ${attribute}`).toBe(false);
+              if (previous === null) target.removeAttribute(attribute);
+              else target.setAttribute(attribute, previous);
+            }
           }
         }
       } finally { view.release(); view.unmount(); }
     },
   );
+
+  it.each(['analog', 'atlas'] as const)('%s keeps ghost-link treatments outside protected boundaries', pack => {
+    const view = mount(<NotificationRow log={state.logs[0]} rule={rule} selected onSelectionChange={vi.fn()} onActivate={vi.fn()} />, pack);
+    try {
+      const link = screen.getByRole('link', { name: 'View context' });
+      const selectors = identities.get(pack)!.flatMap(rule => rule.selectors)
+        .filter(selector => selector.includes('a[data-app-part~="button"][data-app-variant="ghost"]'));
+      const isThemed = () => selectors.some(selector => link.matches(selector));
+      expect(isThemed()).toBe(true);
+      for (const attribute of ['data-app-design-preserve', 'data-widget-pack', 'data-vehicle-twin']) {
+        for (const target of [link, link.parentElement!]) {
+          target.setAttribute(attribute, '');
+          expect(isThemed(), attribute).toBe(false);
+          target.removeAttribute(attribute);
+        }
+      }
+    } finally { view.release(); view.unmount(); }
+  });
 
   it.each(PACK_IDS)('%s owns actual unsupported, loader, key-failure, action-failure and webhook feedback branches', async pack => {
     state.supported = false;
