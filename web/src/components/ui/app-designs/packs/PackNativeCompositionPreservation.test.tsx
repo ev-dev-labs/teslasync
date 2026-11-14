@@ -216,6 +216,41 @@ describe.each(sheets)('$pack native composition preservation', ({ pack, rules })
   });
 });
 
+it('keeps Expressive phone metric typography outside protected and native gauge surfaces', async () => {
+  const view = fixture('v6');
+  try {
+    const sheet = sheets.find(({ pack }) => pack === 'v6')!;
+    const metric = renderToStaticMarkup(<WidgetBigNumber value={12} unit="km" subtitle="Recent context" animated={false} />);
+    const widget = view.doc.createElement('section');
+    widget.setAttribute('data-widget-pack', 'v6');
+    widget.innerHTML = `
+      <div data-case="ordinary">${metric}</div>
+      <div data-case="protected" data-app-design-preserve>${metric}</div>
+      <div data-case="gauge" data-app-metric-grid="native-gauge">${metric}</div>
+      <div data-case="ring" data-app-metric="ring">${metric}</div>
+      <div data-case="report" data-presentation-mode="report">${metric}</div>
+      <div data-case="kiosk" data-presentation-mode="kiosk">${metric}</div>`;
+    view.doc.body.append(widget);
+    await Promise.resolve();
+    for (const kind of ['ordinary', 'protected', 'gauge', 'ring', 'report', 'kiosk']) {
+      for (const part of ['metric-context', 'metric-unit']) {
+        const element = widget.querySelector(`[data-case="${kind}"] [data-app-part~="${part}"]`)!;
+        if (kind === 'protected') element.setAttribute('data-app-design-owner', 'pack-v6');
+        const typography = declarations(element, sheet.rules).filter(({ property }) => property === 'font-size');
+        if (kind === 'ordinary') {
+          expect(typography, `${kind} ${part}`).toEqual(expect.arrayContaining([
+            expect.objectContaining({ value: expect.stringContaining('--app-body-size') }),
+          ]));
+          element.removeAttribute('data-app-design-owner');
+          expect(declarations(element, sheet.rules).filter(({ property }) => property === 'font-size')).toEqual([]);
+        } else {
+          expect(typography, `${kind} ${part}`).toEqual([]);
+        }
+      }
+    }
+  } finally { view.dispose(); }
+});
+
 it('retains a same-property Ambient atmosphere fallback before the color-mix enhancement', () => {
   const view = fixture('ambient');
   try {

@@ -159,6 +159,75 @@ for (const mode of ['dark', 'light'] as const) {
   });
 }
 
+for (const mode of ['dark', 'light'] as const) {
+  test(`Expressive Form dashboard metric context remains readable on phones in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'v6';
+    preference.app_wide = true;
+    const widgets = [['recent-drives', 'Recent drives'], ['battery-gauge', 'Battery'],
+      ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini']] as const;
+    const mocks = await installPackReview(page, mode, 390, false, widgets, true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+    try {
+      await page.setViewportSize({ width: 390, height: 900 });
+      await page.goto('/');
+      await waitForHarnessReady(page, mocks);
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'v6');
+      const recent = page.getByRole('heading', { name: 'Recent drives', exact: true })
+        .locator('xpath=ancestor::*[@data-widget-pack][1]');
+      const battery = page.getByRole('heading', { name: 'Battery', exact: true })
+        .locator('xpath=ancestor::*[@data-widget-pack][1]');
+      const context = recent.locator('[data-app-metric="headline"] [data-app-part~="metric-context"]');
+      const unit = battery.locator('[data-app-metric="headline"] [data-app-part~="metric-unit"]');
+      await expect(context).toBeVisible();
+      await expect(unit).toBeVisible();
+      for (const forcedColors of ['none', 'active'] as const) {
+        await page.emulateMedia({ forcedColors });
+        for (const width of [360, 390, 430]) {
+          await page.setViewportSize({ width, height: 900 });
+          for (const scale of [0.85, 1, 1.35]) {
+            await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+            for (const [name, slot] of [['context', context], ['unit', unit]] as const) {
+              const geometry = await slot.evaluate(element => {
+                const bounds = element.getBoundingClientRect();
+                const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
+                if (!body) throw new Error('Metric widget body is missing');
+                return {
+                  fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+                  overflow: element.scrollWidth - element.clientWidth,
+                  width: bounds.width,
+                  contained: bounds.left >= body.left - 1 && bounds.right <= body.right + 1,
+                };
+              });
+              const label = `${mode} ${forcedColors} ${width}px scale ${scale} ${name}`;
+              expect(geometry.fontSize, `${label} font size`).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.02);
+              expect(geometry.width, `${label} width`).toBeGreaterThan(0);
+              expect(geometry.contained, `${label} widget containment`).toBe(true);
+              expect(geometry.overflow, `${label} overflow`).toBeLessThanOrEqual(1);
+            }
+            const overlap = await context.evaluate(element => {
+              const reading = element.closest('[data-app-metric="headline"]')
+                ?.querySelector('[data-app-part~="metric-reading"]')?.getBoundingClientRect();
+              if (!reading) throw new Error('Metric reading is missing');
+              const text = element.getBoundingClientRect();
+              return text.left < reading.right - 1 && text.right > reading.left + 1
+                && text.top < reading.bottom - 1 && text.bottom > reading.top + 1;
+            });
+            expect(overlap, `${mode} ${forcedColors} ${width}px scale ${scale} context overlap`).toBe(false);
+            expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+          }
+        }
+      }
+      await assertMockApiComplete(page, mocks);
+    } finally {
+      await closeMockApiFixtures();
+    }
+  });
+}
+
 test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const origin = testInfo.project.use.baseURL;

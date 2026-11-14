@@ -387,6 +387,15 @@
     font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
     line-height: var(--app-body-leading, 1.4);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-widget-pack] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *,
+    [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *,
+    [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-v6"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v6"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, max(9.5rem, calc(9.5rem * var(--font-scale, 1)))), 1fr));

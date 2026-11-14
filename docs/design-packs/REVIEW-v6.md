@@ -258,3 +258,34 @@ FULL_LINT_EXIT=0
 The isolated Vite build included all four normal postbuild checks. The pack's
 engineering audit reported zero in all six pattern categories and `TypeScript
 passes`; those pattern checks do not certify CSS contrast.
+
+## Phone metric follow-up
+
+A screenshot-free real-dashboard regression reproduced the Recent Drives
+context at **11.9px** at 360px and font scale 0.85 in both modes. On phones,
+ordinary owned Expressive headline context and units now use the body-size
+token. Preserved widgets, native gauges and rings, and report/kiosk
+presentations are excluded.
+
+The same check passed for actual Recent Drives context and Battery units at
+360/390/430px, scales 0.85/1/1.35, both modes and normal/forced colors. It
+checks text size, widget containment, overlap and document overflow; it does
+not approve the appearance or other widget layouts. A separate selector
+contract covers protected, gauge, ring, report and kiosk boundaries:
+
+```text
+2 passed (28.7s)
+V6_METRIC_FINAL_EXIT=0
+Test Files  1 passed (1)
+     Tests  5 passed | 107 skipped (112)
+V6_METRIC_BOUNDARY_FINAL_EXIT=0
+V6_METRIC_LINT_FINAL_EXIT=0
+V6_METRIC_E2E_TSC_FINAL_EXIT=0
+Test Files  5 passed (5)
+     Tests  244 passed (244)
+V6_METRIC_CONTRACTS_EXIT=0
+V6_METRIC_AUDIT_EXIT=0
+```
+
+No new screenshots were taken. The saved dashboard images predate this
+change; protected Digital Twin text and controls remain unresolved.
