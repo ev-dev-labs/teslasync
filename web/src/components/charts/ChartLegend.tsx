@@ -91,8 +91,9 @@ export interface LegendSeriesLabelProps {
  * `formatter` so its dimming / a11y branches can be asserted directly in
  * jsdom (recharts never paints its legend without a layout engine).
  *
- * Hidden series render dimmed (40% opacity, line-through). When a toggle
- * source is present the item advertises its pressed (hidden) state via
+ * Hidden series use a line-through and 40% opacity unless a presentation
+ * token overrides it. When a toggle source is present the item advertises
+ * its pressed (hidden) state via
  * `aria-pressed`; passive legends omit it so assistive tech doesn't announce
  * a non-interactive control.
  */
@@ -102,7 +103,7 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
   const dimmed = interactive ? resolved.isHidden(seriesKey) : false
   const sharedProps = {
     style: {
-      opacity: dimmed ? 0.4 : 1,
+      opacity: dimmed ? 'var(--app-chart-hidden-legend-opacity, 0.4)' : 1,
       textDecoration: dimmed ? 'line-through' : 'none',
       cursor: interactive ? 'pointer' : 'default',
     },
@@ -191,8 +192,8 @@ function ChartLegendContent({ notifyLayoutChange, ...props }: ChartLegendContent
  * Recharts `<Legend>` wrapper that toggles series visibility on click and
  * persists the hidden set via the supplied (or context-resolved) state.
  *
- * Hidden series render dimmed (40% opacity, line-through) in the legend so
- * users can find and re-enable them later.
+ * Hidden series retain a line-through in the legend so users can find and
+ * re-enable them later. Their default dimming can be overridden by a pack.
  *
  * Note: this component does NOT hide the rendered series itself — that's the
  * caller's responsibility via `<Line hide={state.isHidden(key)} />`. We can't

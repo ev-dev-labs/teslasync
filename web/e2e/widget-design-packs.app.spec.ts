@@ -25,6 +25,66 @@ const acceptanceFamilies = [
   'responsive-accessibility', 'real-page-adoption', 'distinct-rendered-identity',
 ] as const;
 
+for (const mode of ['dark', 'light'] as const) {
+  test(`hidden chart legends stay readable and reversible in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'classic';
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/command-history'], process.env.DESIGN_PACK_DIST_DIR);
+    try {
+      await page.goto('/command-history');
+      await waitForHarnessReady(page, mocks);
+      const legend = page.locator('button[data-chart-legend-label][data-series-key="success"]').first();
+      for (const width of [360, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await legend.scrollIntoViewIfNeeded();
+        await expect(legend).toHaveAttribute('aria-pressed', 'false');
+        await legend.click();
+        await expect(legend).toHaveAttribute('aria-pressed', 'true');
+        const appearance = await legend.evaluate(element => {
+          const color = (value: string) => value.match(/[\d.]+/g)?.map(Number) ?? [];
+          const style = getComputedStyle(element);
+          const foreground = color(style.color);
+          let background: number[] = [];
+          let opacity = 1;
+          for (let node: Element | null = element; node; node = node.parentElement) {
+            const current = getComputedStyle(node);
+            opacity *= Number(current.opacity);
+            const candidate = color(current.backgroundColor);
+            if (candidate.length >= 3 && (candidate.length === 3 || candidate[3] === 1)) {
+              background = candidate;
+              break;
+            }
+          }
+          if (foreground.length < 3 || background.length < 3) throw new Error('Chart legend colors are unavailable');
+          const blended = foreground.slice(0, 3).map((value, index) => value * opacity + background[index] * (1 - opacity));
+          const luminance = (values: number[]) => values.map(value => {
+            const channel = value / 255;
+            return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+          const a = luminance(blended);
+          const b = luminance(background.slice(0, 3));
+          return {
+            ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+            decoration: style.textDecorationLine,
+          };
+        });
+        expect(appearance.ratio, `${mode} ${width}px hidden legend contrast`).toBeGreaterThanOrEqual(4.5);
+        expect(appearance.decoration).toContain('line-through');
+        await legend.click();
+        await expect(legend).toHaveAttribute('aria-pressed', 'false');
+      }
+      await assertMockApiComplete(page, mocks);
+    } finally {
+      await closeMockApiFixtures();
+    }
+  });
+}
+
 test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const origin = testInfo.project.use.baseURL;

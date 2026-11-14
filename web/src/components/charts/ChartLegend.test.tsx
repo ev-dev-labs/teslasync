@@ -165,7 +165,11 @@ describe('LegendSeriesLabel', () => {
     const button = screen.getByRole('button', { name: 'Speed' })
     expect(button).toHaveAttribute('aria-pressed', 'true')
     expect(button).toHaveAttribute('data-series-hidden', 'true')
-    expect(button).toHaveStyle({ opacity: '0.4', textDecoration: 'line-through', cursor: 'pointer' })
+    expect(button).toHaveStyle({
+      opacity: 'var(--app-chart-hidden-legend-opacity, 0.4)',
+      textDecoration: 'line-through',
+      cursor: 'pointer',
+    })
   })
 
   it('marks a visible interactive series un-dimmed + not pressed', () => {

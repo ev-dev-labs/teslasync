@@ -42,6 +42,9 @@ copy immediately before or after an operational brief uses `--app-body-size`;
 chart subtitles use the same body-size token, while compact metadata inside
 the brief keeps its existing typography. Opted-in evidence tables use the
 shared mobile grid and retain their original columns in Quick View.
+Interactive chart legends use `--app-chart-hidden-legend-opacity` to keep
+hidden-series labels readable while retaining their strike-through and pressed
+state. Protected widgets and unowned charts retain their existing dimming.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,

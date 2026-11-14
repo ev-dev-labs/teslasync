@@ -769,6 +769,42 @@ test('phone chart legends keep readable labels without changing protected widget
   await expect(page.locator('[data-app-part="chart-legend"] [data-chart-legend-label]').first()).toHaveCSS('font-size', '12px');
 });
 
+test('hidden legend treatment respects ownership, protected widgets and preview boundaries', async ({ page }) => {
+  await page.setContent(`
+    <button id="owned" data-app-design-owner="pack-classic" data-chart-legend-label data-series-hidden="true"
+      style="opacity: var(--app-chart-hidden-legend-opacity, 0.4); text-decoration: line-through">Owned</button>
+    <div data-app-design-preserve>
+      <button id="protected" data-app-design-owner="pack-classic" data-chart-legend-label data-series-hidden="true"
+        style="opacity: var(--app-chart-hidden-legend-opacity, 0.4)">Protected</button>
+    </div>
+    <button id="unowned" data-chart-legend-label data-series-hidden="true"
+      style="opacity: var(--app-chart-hidden-legend-opacity, 0.4)">Unowned</button>
+    <div style="--app-chart-hidden-legend-opacity: 0.8">
+      <div data-app-design-preview>
+        <button id="neutral-preview" data-chart-legend-label data-series-hidden="true"
+          style="opacity: var(--app-chart-hidden-legend-opacity, 0.4)">Neutral preview</button>
+        <button id="owned-preview" data-app-design-owner="pack-v2" data-chart-legend-label data-series-hidden="true"
+          style="opacity: var(--app-chart-hidden-legend-opacity, 0.4)">Owned preview</button>
+      </div>
+    </div>
+  `);
+  for (const sheet of ['base.css', 'charts.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const width of [360, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator('#owned')).toHaveCSS('opacity', '1');
+      await expect(page.locator('#owned')).toHaveCSS('text-decoration-line', 'line-through');
+      await expect(page.locator('#protected')).toHaveCSS('opacity', '0.4');
+      await expect(page.locator('#unowned')).toHaveCSS('opacity', '0.4');
+      await expect(page.locator('#neutral-preview')).toHaveCSS('opacity', '0.4');
+      await expect(page.locator('#owned-preview')).toHaveCSS('opacity', '1');
+    }
+  }
+});
+
 test('chart fallback tables retain readable labeled cells without phone overflow', async ({ page }) => {
   test.setTimeout(120_000);
   const columns = ['Type', 'Sessions', 'Energy', 'Cost', 'Energy with recorded cost', 'Sessions with recorded cost'];

@@ -94,6 +94,7 @@
 
 @media screen {
   [data-app-design-preview] {
+    --app-chart-hidden-legend-opacity: initial;
     --app-phone-tab-safe: env(safe-area-inset-bottom, 0px);
     --app-phone-tab-icon-size: 1.375rem;
     --app-phone-tab-gap: calc(var(--density-gap) / 4);
