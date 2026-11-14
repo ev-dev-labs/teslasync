@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from 'i18next';
@@ -303,6 +303,39 @@ beforeEach(() => {
 });
 
 describe('RangeBufferPage', () => {
+  it('keeps all low-arrival fields available in the mobile quick view', () => {
+    const observers: Array<{ callback: ResizeObserverCallback; target: Element }> = [];
+    class NarrowObserver {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) { observers.push({ callback: this.callback, target }); }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', NarrowObserver);
+    const page = renderPage();
+    try {
+      const section = screen.getByTestId('range-buffer-low-arrivals');
+      const observer = observers.find(({ target }) =>
+        section.contains(target) && target.hasAttribute('data-app-table-frame'));
+      expect(observer).toBeDefined();
+      act(() => {
+        observer?.callback([{
+          target: observer.target, contentRect: { width: 360, height: 500 },
+        } as ResizeObserverEntry], {} as ResizeObserver);
+      });
+      fireEvent.click(within(section).getAllByRole('button', { name: 'Quick view' })[0]);
+      const dialog = screen.getByRole('dialog', { name: 'driving:range-buffer-low-arrivals' });
+      for (const label of ['Completed', 'Destination', 'Distance', 'Start SoC', 'Drive drop', 'Arrival SoC']) {
+        expect(within(dialog).getByText(label, { exact: true })).toBeInTheDocument();
+      }
+      expect(dialog).toHaveTextContent('15.00%');
+      expect(dialog).toHaveTextContent('20.0 km');
+    } finally {
+      page.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('isolates a failed distribution widget and retries without losing sibling evidence or threshold actions', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     h.distributionThrows = true;

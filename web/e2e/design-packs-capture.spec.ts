@@ -17,6 +17,7 @@ import { installSpecializedReviewSources } from './widget-design-packs.specializ
 import { actionsFixtureState, installActionsFixtures, RULES } from './operationalbrief-contracts/actions.fixtures';
 import { expectedVerifyBody, resaleCertificate } from './operationalbrief-contracts/specialized-resale.supported.fixtures';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
+import type { RedisSignalsResponse } from '../src/api/devtools';
 import type { ChargingSession } from '../src/api/types';
 
 const requestedPack = process.env.DESIGN_PACK ?? 'classic';
@@ -129,6 +130,26 @@ for (const route of routes) {
           return fulfillApiFixture(route, mocks, { body: json, contentType: 'application/yaml' });
         }
         return fulfillApiFixture(route, mocks, { json });
+      });
+    }
+    if (route.path === '/redis-signals' && width < 768) {
+      await page.route(url => url.pathname === '/api/v1/dev-tools/redis-signals', request => {
+        if (request.request().method() !== 'GET') return request.fallback();
+        const baseline = resolveCardLayoutContractSource(new URL(request.request().url())) as RedisSignalsResponse | undefined;
+        if (!baseline) return request.fallback();
+        const latitude = { ...baseline.signals.BatteryLevel, value: 37.123456 };
+        return fulfillApiFixture(request, mocks, {
+          json: {
+            ...baseline,
+            signal_count: 2,
+            signals: { ...baseline.signals, Latitude: latitude },
+            meta: { ...baseline.meta, redis_field_count: 2, l1_signal_count: 2 },
+          },
+        });
+      });
+      await page.route(url => url.pathname === '/api/v1/audit/reveal', request => {
+        if (request.request().method() !== 'POST') return request.fallback();
+        return fulfillApiFixture(request, mocks, { status: 204 });
       });
     }
     if (route.path === '/geofences') await installGeofenceReviewSources(page, mocks);
@@ -531,6 +552,39 @@ for (const route of routes) {
         await expect(details.getByText('Destination', { exact: true })).toBeVisible();
         await details.getByRole('button', { name: 'Close', exact: true }).last().click();
       }
+    }
+    if (width < 768 && route.path === '/range-buffer') {
+      const mobile = page.getByRole('group', { name: 'driving:range-buffer-low-arrivals' });
+      await expect(mobile).toHaveAttribute('data-mobile-table');
+      await mobile.getByRole('button', { name: 'Quick view' }).first().click();
+      const details = page.getByRole('dialog', { name: 'driving:range-buffer-low-arrivals' });
+      for (const label of ['Completed', 'Destination', 'Distance', 'Start SoC', 'Drive drop', 'Arrival SoC']) {
+        await expect(details.getByText(label, { exact: true })).toBeVisible();
+      }
+      await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+    if (width < 768 && route.path === '/redis-signals') {
+      const mobile = page.getByRole('group', { name: 'admin:redis-signals' });
+      await expect(mobile).toHaveAttribute('data-mobile-table');
+      const coordinate = mobile.getByRole('button', { name: 'Latitude', exact: true });
+      await expect(coordinate).not.toContainText('37.123456');
+      await expect(coordinate.locator('[data-card-primary]')).toHaveAttribute('title', /\u2022/);
+      await coordinate.click();
+      const details = page.getByRole('dialog', { name: 'admin:redis-signals' });
+      await expect(details).not.toContainText('37.123456');
+      for (const label of ['Reveal value', 'Copy value']) {
+        const box = await details.getByRole('button', { name: label }).boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(43.9);
+        expect(box!.height).toBeGreaterThanOrEqual(43.9);
+      }
+      await details.getByRole('button', { name: 'Reveal value' }).click();
+      await expect(details).toContainText('37.123456');
+      await details.getByRole('button', { name: 'Hide value' }).click();
+      await expect(details).not.toContainText('37.123456');
+      await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
     }
     if (packId === 'classic' && width < 768 && route.path === '/drives') {
       const header = page.locator('[data-app-part~="page-header"]').first();
