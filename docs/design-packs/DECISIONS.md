@@ -1030,6 +1030,26 @@ Tests       126 passed (126)
 The full suite has not been rerun to completion, and this fix has not received
 visual acceptance on the previously captured pages.
 
+The fixed source snapshot was independently built and preflighted before
+replacing the local Docker preview. The previous preview is retained for
+rollback. The screenshot-free checks covered the initial route only:
+
+```text
+PREVIEW_BUILD_EXIT=0
+FIX_LINT_EXIT=0
+CANDIDATE_HEALTH=healthy
+INDEX_HTTP=200 ASSET_HTTP=200
+/api/v1/system/auth-mode CANDIDATE=200 BACKEND=200
+/api/v1/system/health CANDIDATE=503 BACKEND=503
+WIDTH=360 HTTP=200 PAGE_ERRORS=0 OVERFLOW=0
+WIDTH=430 HTTP=200 PAGE_ERRORS=0 OVERFLOW=0
+WIDTH=1440 HTTP=200 PAGE_ERRORS=0 OVERFLOW=0
+PREVIEW=running HEALTH=healthy IMAGE=teslasync-web:design-packs-v2-84413e2fe493
+PREVIEW_INDEX=200 ASSET=200
+AUTH_HTTP=200
+PREVIEW_BROWSER_HTTP=200 ERRORS=0 OVERFLOW=0
+```
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
