@@ -18,7 +18,9 @@ These are previously documented shared findings, not Bauhaus capture results.
 - The Bauhaus 390px dashboard capture also reported non-Twin widget-owned
   body content below 16px: the recent-drive context, “All drives” link,
   metric unit, and fleet-posture “Open vehicle” link. Review their shared
-  widget owners without changing the native metric compositions.
+  widget owners without changing the native metric compositions. The ordinary
+  headline context and unit now have a pack-owned phone treatment and
+  focused regression; the links still need independent verification.
 - The first Bauhaus desktop dashboard capture failed because the mocked
   `/api/v1/pinned` request remained pending at fixture completion. This did
   not recur in round two, but the intermittent fixture completion deserves

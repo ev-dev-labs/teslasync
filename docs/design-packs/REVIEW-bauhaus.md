@@ -97,3 +97,10 @@ passed `npm run build`; the stylesheet hash matched the working tree:
 BAUHAUS_SNAPSHOT_BUILD=PASS
 BAUHAUS_HASH_MATCH=True
 ```
+
+## Phone metric follow-up
+
+Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
+The owned ordinary headline context and units now use the phone body token;
+protected and specialized surfaces remain excluded. See `DECISIONS.md` for
+the screenshot-free regression results and remaining limitations.
