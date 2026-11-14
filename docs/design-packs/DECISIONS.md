@@ -1248,3 +1248,79 @@ were printed or removed. A redacted scan of the 51 tracked edits reported
 `SCANNER_EXIT=0` and `FINDINGS=0`; a separate full tracked-file candidate
 scan is pending. The earlier CI scan reported one finding; the corresponding
 non-secret fingerprint variable was renamed rather than allowlisted.
+
+## Phone legends and current Windows baselines
+
+The Classic phone contrast audit found passive chart legend labels at 12px.
+The shared phone rule now uses the existing body-size and leading tokens for
+owned legend labels, wraps long text and excludes preserved widgets. The
+mobile text audit also reports undersized legend labels. A focused browser
+contract first failed at `12px`, then reported `2 passed` after the fix,
+covering all 27 packs at 360/390/430px in normal and forced colors, plus
+representative font scales and protected content. Screenshot-free checks of
+command reliability and charging curves
+reported `4 passed` each for Classic and Terminal at 360/430px. These checks
+do not establish full chart or app-wide acceptance.
+
+The legend unit suites reported `Test Files 2 passed (2)`, `Tests 42 passed
+(42)`. Frontend, E2E and service-worker TypeScript each exited 0. An isolated
+Vite build and the four normal postbuild checks also exited 0; the full lint
+rerun reported `FULL_LINT_EXIT=0`.
+
+The earlier 26 Classic route/width contrast checks had zero automated
+violations but left 26 chart nodes requiring manual assessment. Their recorded
+dark-mode text colors against the nearest opaque CSS background give 8.73:1
+for legends and 5.66:1 for axes; SVG overlaps and other backgrounds still
+need review. A new Classic dark/light check of two chart pages reported
+`4 passed` and zero automated violations, but left 16 chart nodes for manual
+review. A separate light-mode DOM check of the eight Command Reliability
+nodes gave 7.31:1 for legend text and 4.59:1 for axes against their nearest
+opaque CSS background, without resolving possible SVG overlaps. The observed
+11px SVG axis labels remain a legibility concern.
+Raising axis font size without remeasuring tick layout risks overlaps, so
+this is not treated as a completed fix.
+
+For CI run `43594099353` at `ced744f586c9`, each updated Windows image was
+reviewed against its tracked expected image. The mobile Battery, Drives and
+Fleet briefs show complete headings rather than truncated headings, while
+Charging shows larger explanatory text in the mobile and desktop profiles.
+Actual images were identical across all retries and the expected images
+matched the tracked baselines. All 32 Windows visual shards completed: 24
+passed and the eight failing shards are covered by the reviewed images.
+Other browser jobs and later code changes are not assumed to pass.
+
+On `ced744f586c9`, GitHub's aggregate frontend lint, eight Vitest shards,
+merged coverage and build check passed, as did the Security Scan workflow.
+This does not establish a full-suite result for the later legend commit or
+resolve the still-running browser and visual jobs.
+
+The actual Command History chart's hidden interactive legend label measured
+2.42:1 in Classic dark and 1.92:1 in Classic light at 360px. Its original
+40% opacity caused the failure. Opted-in, non-preserved chart labels now use
+full opacity when hidden, retain their strike-through and pressed state, and
+remain reversible; the existing 40% fallback is unchanged for unowned and
+protected content. The new token is reset at preview boundaries. Forced-color
+mode receives the same scoped readability treatment.
+
+Before the fix, the two real-chart checks failed at the ratios above. After
+the fix, the same dark/light checks at 360/1440px and an ownership,
+preview-boundary, protected-widget and forced-color contract reported:
+
+```text
+3 passed (29.0s)
+HIDDEN_LEGEND_AFTER_EXIT=0
+```
+
+The chart legend unit suites again reported `Test Files 2 passed (2)`,
+`Tests 42 passed (42)`. These checks do not prove contrast for all packs or
+all chart axes.
+
+The local frontend, E2E and service-worker TypeScript checks and full lint
+finished on the new code:
+
+```text
+TSC_EXIT=0
+E2E_TSC_EXIT=0
+SW_TSC_EXIT=0
+LINT_EXIT=0
+```
