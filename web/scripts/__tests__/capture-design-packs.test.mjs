@@ -6,10 +6,18 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { PACK_IDS } from '../../src/features/dashboard/widgets/designPacks/types.ts';
+import { capturePackIds } from '../capture-design-packs.mjs';
 
 const script = fileURLToPath(new URL('../capture-design-packs.mjs', import.meta.url));
 const webRoot = fileURLToPath(new URL('../../', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
+
+test('all-pack capture uses the canonical registry and preserves individual IDs', () => {
+  assert.deepEqual(capturePackIds('all'), PACK_IDS);
+  assert.deepEqual(capturePackIds('v1'), ['v1']);
+  assert.throws(() => capturePackIds('missing-pack'), /Unknown design pack/);
+});
 
 test('capture runner requires a pack, page list, viewport list and server', () => {
   const result = run('--pack', 'classic');
@@ -27,6 +35,10 @@ test('capture runner rejects non-local servers and malformed projects before con
     '--viewports', '../desktop', '--base-url', 'http://127.0.0.1:49873');
   assert.equal(project.status, 1);
   assert.match(project.stderr, /Playwright project names/);
+
+  const workers = run(...common, '--workers', '0', '--base-url', 'http://127.0.0.1:49873');
+  assert.equal(workers.status, 1);
+  assert.match(workers.stderr, /Workers must be an integer/);
 });
 
 test('capture configuration never manages the server lifecycle', async () => {
@@ -43,7 +55,7 @@ test('capture output stays outside Vite and cleans only its own directory after 
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     assert.ok(address && typeof address !== 'string');
-    const args = ['--pack', 'not-a-pack', '--pages', 'dashboard', '--viewports', 'phone-390',
+    const args = ['--pack', 'classic', '--pages', 'not-a-page', '--viewports', 'phone-390',
       '--base-url', `http://127.0.0.1:${address.port}`];
     const runWithRoot = outputRoot => {
       const child = spawn(process.execPath, [script, ...args], {
