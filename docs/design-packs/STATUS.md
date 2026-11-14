@@ -5,6 +5,6 @@
 - Nine repaired Classic routes passed and were inspected at 360/430px on the updated snapshot.
 - Energy Orchestrator (four widths) and API Logs (360/430) passed on the Docker image.
 - Classic trip, modes and expanded physics evidence passed phone diagnostics at 360/430px; broader coverage remains incomplete.
-- The prior image build and full lint passed; current TypeScript and 383 focused tests pass; full Vitest remains incomplete.
+- The current image build, full frontend build and lint passed; 383 focused tests pass; full Vitest is running.
 - Phase 1 remains incomplete: token coverage, protected twin hotspots and standalone routes remain unresolved.
-- Docker preview `localhost:3120` is healthy on image `84413e2fe493`; the existing backend health reports Tesla API degraded.
+- Docker preview `localhost:3120` is healthy on image `b6750e2fff`; the existing backend health reports Tesla API degraded.

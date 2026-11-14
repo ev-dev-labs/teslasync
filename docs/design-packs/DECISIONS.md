@@ -1143,6 +1143,25 @@ The separate security-access check still fails at both phone widths: seven
 existing shared Digital Twin hotspots measure approximately 11-14px. The
 history grid repair does not resolve or waive that protected-design conflict.
 
+The committed `b6750e2fff` frontend passed the full lint and production
+build, and was built into the local Docker preview. A separate loopback
+candidate was healthy and served its index, entry asset and auth-mode proxy
+before replacement. The previous preview is retained as a stopped rollback.
+The installed Chrome browser was used after the bundled Chromium executable
+was unavailable; no browser was installed. The replacement checks reported:
+
+```text
+INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200
+HEALTH=healthy
+{"width":360,"http":200,"body":true,"main":1,"overflow":0,"pageErrors":0}
+{"width":1440,"http":200,"body":true,"main":1,"overflow":0,"pageErrors":0}
+PROXY_HEALTH_HTTP=503 BACKEND_HEALTH_HTTP=503
+```
+
+These are live initial-route checks, not all-page acceptance. The pre-existing
+backend health failure remains unchanged. A full Vitest run is in progress
+in a separate checkout; it is not yet a passing result.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
