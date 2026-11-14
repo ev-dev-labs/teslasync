@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Lightbulb, Shield } from 'lucide-react';
-import { Badge, Card, GlassPanel } from '@/components/ui';
+import { Badge, Card, GlassPanel, Text } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
@@ -103,13 +103,13 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               }
               size={150}
             />
-            <p className="mt-2 text-xs text-[var(--text-secondary)]">
+            <Text as="p" variant="bodySm" className="mt-2">
               {score >= 75
                 ? t('charging.optimizer.scoreGood', 'Your habits are battery-friendly')
                 : score >= 50
                 ? t('charging.optimizer.scoreFair', 'Room for improvement')
                 : t('charging.optimizer.scorePoor', 'Consider adjusting your habits')}
-            </p>
+            </Text>
           </GlassPanel>
         </FadeIn>
 
@@ -166,7 +166,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)]">{rec.detail}</p>
+                    <Text as="p" variant="bodySm">{rec.detail}</Text>
                   </div>
                 </Card>
               ))}

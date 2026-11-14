@@ -33,6 +33,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -260,8 +261,31 @@ function renderPage(entry = '/data-export', configure?: (client: QueryClient) =>
 }
 
 describe('Data export responsive callers', () => {
+  it('retains ready downloads and failed-job details in the mobile history', async () => {
+    const bounds = forceMobileDataTables();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    try {
+      const { container } = renderPage();
+      const grid = await waitFor(() => {
+        const element = container.querySelector('[data-mobile-table]');
+        expect(element).not.toBeNull();
+        return element as HTMLElement;
+      });
+      const download = await within(grid).findByRole('button', { name: 'Download' });
+      expect(within(grid).getByText('disk full')).toBeInTheDocument();
+      fireEvent.click(download);
+      expect(open).toHaveBeenCalledWith('/api/v1/export/jobs/job-ready/download', '_blank');
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      expect(within(screen.getByRole('dialog')).getByText('1,200')).toBeInTheDocument();
+    } finally {
+      open.mockRestore();
+      bounds.mockRestore();
+    }
+  });
+
   it('adopts the real examples, catalog frame and optional choices in every complete profile without changing the export allowlist', async () => {
     const controls = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    const base = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'));
     const { container } = renderPage();
     const picker = await screen.findByTestId('export-column-picker');
     await screen.findByRole('checkbox', { name: 'Distance (m)' });
@@ -286,15 +310,25 @@ describe('Data export responsive callers', () => {
       return matches;
     };
     container.setAttribute('data-app-design-preview', '');
+    const unpainted: string[] = [];
     for (const pack of PACK_IDS) {
       Object.entries(getAppDesignAttributes(pack)).forEach(([name, value]) => container.setAttribute(name, value));
       const release = observeAppDesignScopes(container);
       try {
         const identity = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'));
+        const surfaceTokens = new Set<string>();
+        identity.walkDecls(declaration => {
+          if (declaration.prop === '--app-card-radius' || declaration.prop === '--app-card-shadow') {
+            surfaceTokens.add(declaration.prop);
+          }
+        });
+        expect(surfaceTokens, `${pack}: shared surface tokens`).toEqual(new Set(['--app-card-radius', '--app-card-shadow']));
         for (const example of examples) {
-          expect(painted(identity, example, '[data-app-part~="card"]'), `${pack}: example paint`).not.toHaveLength(0);
+          if (!painted(identity, example, '[data-app-part~="card"]').length &&
+              !painted(base, example, '[data-app-part~="card"]').length) unpainted.push(`${pack}: example`);
         }
-        expect(painted(identity, frame, '[data-app-part~="panel"]'), `${pack}: catalog paint`).not.toHaveLength(0);
+        if (!painted(identity, frame, '[data-app-part~="panel"]').length &&
+            !painted(base, frame, '[data-app-part~="panel"]').length) unpainted.push(`${pack}: catalog`);
         expect(painted(controls, frame, `[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`)).not.toHaveLength(0);
         for (const row of rows) {
           expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
@@ -308,6 +342,7 @@ describe('Data export responsive callers', () => {
         release();
       }
     }
+    expect(unpainted).toEqual([]);
     container.removeAttribute('data-app-controls');
     const release = observeAppDesignScopes(container);
     try {

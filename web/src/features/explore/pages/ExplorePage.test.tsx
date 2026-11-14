@@ -1165,10 +1165,10 @@ describe('ExplorePage — restrained discovery adoption', () => {
             !rule.selector.includes(':hover') && !rule.selector.includes(':active')) buttons.push(rule);
         });
         const matched = (rules: Rule[]) => rules.filter(rule => card.matches(rule.selector));
-        expect(matched(surfaces).some(rule => rule.nodes.some(node =>
+        expect.soft(matched(surfaces).some(rule => rule.nodes.some(node =>
           node.type === 'decl' && /^(?:border(?:-(?:block|inline))?|background(?:-color)?|box-shadow)$/.test(node.prop),
         )), pack).toBe(true);
-        expect(matched(buttons).length, pack).toBeGreaterThan(0);
+        expect.soft(matched(buttons).length, pack).toBeGreaterThan(0);
         const controls = buttons.filter(rule => rule.selector.includes('[data-app-variant="outline"]'));
         expect(matched(controls), pack).toHaveLength(controls.length);
         card.focus();

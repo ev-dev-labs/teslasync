@@ -1,0 +1,598 @@
+/* Shared phone geometry. Owner-qualified targets exclude preserved widgets. */
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-owner] {
+    --app-body-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    --app-body-leading: 1.4;
+    --app-touch-size: 2.75rem;
+    --app-input-action-clearance: 0.75rem;
+    --app-brief-heading-basis: 12rem;
+    --app-vehicle-icon-space: 2rem;
+    --app-header-title-min-width: 12rem;
+    --app-heatmap-day-width: max(2.5rem, calc(2.5rem * var(--font-scale, 1)));
+    --app-heatmap-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-safe: env(safe-area-inset-bottom, 0px);
+    --app-phone-tab-icon-size: 1.375rem;
+    --app-phone-tab-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-padding: 0.25rem;
+    --app-phone-tab-line-height: calc(var(--app-body-size) * 1.25);
+  }
+
+  :root[data-app-design-owner]:not([data-tab-bar="off"]) {
+    --shell-tab-bar-height: calc(var(--app-phone-tab-icon-size) + var(--app-phone-tab-gap) + var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+
+  :where(p.text-sm, [data-typography-role="body"].text-sm, [data-typography-role="bodySm"].text-sm, [class~="text-[var(--text-primary)]"].text-sm, [class~="text-[var(--text-secondary)]"].text-sm, [class~="text-[var(--text-muted)]"].text-sm):not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"], [data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+  }
+
+  :where(p:not([data-typography-role], .text-xs, [data-app-part~="metric-label"], [data-app-part~="metric-context"]), a[href]:not(.sr-only)):not(:where([data-role="status-bar"] *, [data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
+  :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  p[data-app-part~="metric-context"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  :where([data-operational-brief] + :is(span, p, div).text-xs, :is(span, p, div).text-xs:has(+ [data-operational-brief])):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
+  [data-chart-subtitle]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
+  [data-chart-legend-label]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
+  [data-app-part~="badge"][role="button"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    min-block-size: var(--app-touch-size);
+    font-size: var(--app-body-size) !important;
+  }
+
+  input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    padding-inline-end: calc(var(--app-touch-size) + var(--app-input-action-clearance));
+  }
+
+  input[data-app-part~="field-control"]:has(+ div > button:nth-of-type(2)):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    padding-inline-end: calc(var(--app-touch-size) * 2 + var(--app-input-action-clearance));
+  }
+
+  button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner],
+  [data-role="widget-shell-header"] button[data-app-part~="status"][data-app-icon-only="true"]:not(:disabled):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+
+  [data-role="mobile-workspace-controls"] > [data-active-range][data-app-design-owner] {
+    flex: 1 1 0;
+    max-inline-size: none;
+    block-size: auto;
+    padding-block: calc(var(--density-pad-y) / 2);
+    padding-inline: 0;
+  }
+
+  [data-role="mobile-workspace-controls"] [data-active-range] > span[data-app-design-owner] {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+
+  [data-dashboard-layout-switcher][data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  [data-dashboard-layout-switcher] > [data-layout-switcher-caption][data-app-design-owner] {
+    flex-shrink: 0;
+    max-inline-size: 35%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  [data-dashboard-layout-switcher] > [data-layout-switcher-name][data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: start;
+    text-overflow: clip;
+  }
+
+  [data-role="bottom-tab-bar"][data-app-design-owner],
+  [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"][data-app-design-owner] {
+    gap: 0;
+    padding-block-start: 0;
+    padding-block-end: var(--app-phone-tab-safe);
+  }
+
+  [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner],
+  [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner] {
+    flex: 1 1 max-content;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    block-size: auto;
+    gap: var(--app-phone-tab-gap);
+    padding-block: var(--app-phone-tab-padding);
+    padding-inline: 0;
+    font-size: var(--app-body-size);
+    line-height: var(--app-phone-tab-line-height);
+  }
+
+  [data-role="bottom-tab-bar"] .sidenav-tab-label[data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    font-size: var(--app-body-size);
+    line-height: var(--app-phone-tab-line-height);
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [data-mobile-table][data-app-design-owner] {
+    --mgr-title-size: var(--app-body-size);
+    --mgr-primary-size: var(--app-body-size);
+    --mgr-meta-label-size: var(--app-body-size);
+    --mgr-meta-value-size: var(--app-body-size);
+    --mgr-group-header-size: var(--app-body-size);
+  }
+
+  [data-mobile-table] :where(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value, .mgr-group-header):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
+  [data-mobile-table] .mgr-card[data-app-design-owner] {
+    max-height: none;
+  }
+
+  :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"], [data-app-part~="chart-tooltip"] [data-chart-tooltip-label], [data-app-part~="chart-tooltip"] [data-chart-tooltip-name], [data-app-part~="chart-tooltip"] [data-chart-tooltip-value], [data-app-part~="chart-tooltip"] [data-chart-tooltip-copy]):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-app-part~="list-row"] :where([data-history-primary] > :first-child, [data-app-part~="history-route"], [data-app-metric-grid="inline"] [data-app-metric="inline"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-app-part~="list-row"] :where([data-app-part~="history-route"], [data-app-part~="history-route"] > span)[data-app-design-owner] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [data-app-part~="list-row"] [data-history-action-rail="true"] [data-history-primary]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    padding-inline-end: calc(var(--app-touch-size) + var(--density-gap));
+  }
+
+  [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    flex: 1 1 min(100%, calc(var(--app-header-title-min-width) * max(1, var(--font-scale, 1))));
+  }
+
+  [data-app-part~="page-actions"][data-app-design-owner] {
+    max-inline-size: 100%;
+    padding-inline-start: 0;
+  }
+
+  [data-operational-brief-heading][data-app-design-owner] {
+    flex-basis: var(--app-brief-heading-basis);
+  }
+
+  :where([data-battery-habit-label], [data-operational-metric-list] [data-app-part~="metric-label"], [data-app-part~="dialog"] [data-app-part~="table-cell"] > :is(dt, dd), [data-app-part~="dialog"] [data-app-part~="table-cell"] > dd :is(span, a, strong, code)):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  :where([data-app-part~="feedback-message"], [data-testid="widget-body"] + div) a[href]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+  }
+
+  a[data-app-action-link]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [data-drive-report-nav][data-app-design-owner] {
+    position: static;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  [data-weekly-punchcard-frame][data-app-design-owner] {
+    min-inline-size: 0;
+  }
+
+  [data-weekly-punchcard][data-app-design-owner],
+  [data-weekly-punchcard] :is(caption, tbody)[data-app-design-owner] {
+    display: block;
+    inline-size: 100%;
+  }
+
+  [data-weekly-punchcard] thead[data-app-design-owner] {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  [data-weekly-punchcard] tbody tr[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+    padding-block: var(--density-pad-y);
+  }
+
+  [data-weekly-punchcard] tbody th[data-app-design-owner] {
+    grid-column: 1 / -1;
+    inline-size: auto;
+  }
+
+  [data-weekly-punchcard] tbody td[data-app-design-owner] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-inline-size: 0;
+    padding: calc(var(--density-pad-y) / 2) 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-weekly-punchcard] tbody td[data-app-design-owner]::before {
+    content: attr(data-punchcard-hour);
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-weekly-punchcard] tbody :is(th, td) [data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-app-part~="timeline-row"] [data-app-part~="timeline-content"] > a[href][data-app-design-owner],
+  .leaflet-control-attribution a[href][data-app-design-owner] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+  }
+
+  .leaflet-marker-icon:has(> [data-map-marker="vehicle"])[data-app-design-owner] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    margin-left: calc(var(--app-touch-size) / -2) !important;
+    margin-top: calc(var(--app-touch-size) / -2) !important;
+  }
+
+  [data-testid="masked-value"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+  }
+
+  [data-testid="masked-value"] > button:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+
+  [data-role="vehicle-picker-control"] input[data-app-part~="field-control"][data-app-design-owner] {
+    padding-inline-start: var(--app-vehicle-icon-space);
+  }
+
+  label[data-app-field-kind="choice"][data-app-design-owner] {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+
+  [data-app-code-kind="support-bundle"][data-app-design-owner] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  [data-cost-heatmap-grid]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    min-inline-size: 0;
+  }
+
+  [data-cost-heatmap-axis]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+    margin-inline-start: calc(var(--app-heatmap-day-width) + var(--app-heatmap-gap));
+  }
+
+  [data-cost-heatmap-day]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: var(--app-heatmap-day-width) repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+  }
+
+  [data-cost-heatmap-day-label]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    grid-row: span 2;
+    inline-size: auto;
+    margin-inline: 0;
+  }
+
+  [data-app-part~="tabs"][data-app-design-owner] {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  [data-app-part~="tabs"] > [data-app-part~="tab"][data-app-design-owner] {
+    block-size: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+
+  [data-role="helix-side-panel"][data-app-design-owner] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}
+
+@media screen and (max-width: 1023px) {
+  [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(max(var(--app-brief-column-min-width, 9rem), var(--app-brief-content-min-width, 0px)) * max(1, var(--font-scale, 1))))), 1fr));
+    gap: 0 var(--density-gap);
+  }
+
+  [data-operational-metric-list][data-columns="1"]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-app-part~="metric-grid"][data-operational-metric-bank]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    display: contents;
+  }
+
+  [data-operational-metric-list] > [data-app-part~="feedback"]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  :root[data-app-design-owner]:not([data-tab-bar="off"]) {
+    --shell-tab-bar-height: calc(max(var(--app-touch-size), var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+
+  [data-operational-metric="guard-unacknowledged"][data-app-design-owner] {
+    grid-column: 1 / -1;
+  }
+
+  [data-role="bottom-tab-bar"][data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-role="bottom-tab-bar"] .sidenav-phone-tab[data-app-design-owner] {
+    grid-column: span 2;
+    flex-direction: row;
+    padding-inline: var(--app-phone-tab-padding);
+  }
+
+  [data-role="bottom-tab-bar"] .sidenav-phone-tab:nth-child(n + 4)[data-app-design-owner] {
+    grid-column: span 3;
+  }
+
+  [data-role="bottom-tab-bar"] .nav-phone-icon[data-app-design-owner] {
+    flex: none;
+    width: calc(var(--app-phone-tab-icon-size) * 0.82);
+    height: calc(var(--app-phone-tab-icon-size) * 0.82);
+  }
+
+  [data-role="bottom-tab-bar"] .nav-phone-icon svg[data-app-design-owner] {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media screen and (min-width: 768px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-owner] {
+    --app-body-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    --app-body-leading: 1.4;
+    --app-touch-size: 2.75rem;
+  }
+
+  :where(button[data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), select, textarea):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    min-inline-size: 2.75rem;
+    min-block-size: 2.75rem;
+  }
+}
+
+@media screen and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-owner] {
+    --app-body-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    --app-body-leading: 1.4;
+    --app-touch-size: 2.75rem;
+  }
+
+  [data-heatmap-grid]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
+    grid-template-columns: repeat(6, minmax(var(--app-touch-size), 1fr));
+  }
+
+  [data-heatmap-grid] :is([data-heatmap-axis-spacer], [data-heatmap-axis-hour]):not(:where([data-widget-pack] *))[data-app-design-owner] {
+    display: none;
+  }
+
+  [data-heatmap-day-label]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+    grid-column: 1 / -1;
+    padding-block-start: var(--density-gap);
+  }
+
+  [data-heatmap-slot]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+    height: var(--app-touch-size);
+    min-width: var(--app-touch-size);
+    min-height: var(--app-touch-size);
+    transform: none;
+  }
+
+  [data-heatmap-hour-label]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+    display: inline;
+    font-size: var(--app-body-size);
+  }
+
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-viewport]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    contain: layout;
+    container: app-heatmap / inline-size;
+  }
+
+  @container app-heatmap (min-width: 24rem) {
+    [data-heatmap-grid]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+      grid-template-columns: repeat(8, minmax(var(--app-touch-size), 1fr));
+    }
+  }
+
+  @container app-heatmap (min-width: 36rem) {
+    [data-heatmap-grid]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+      grid-template-columns: repeat(12, minmax(var(--app-touch-size), 1fr));
+    }
+  }
+
+  @container app-heatmap (min-width: 72rem) {
+    [data-heatmap-grid]:not(:where([data-widget-pack] *))[data-app-design-owner] {
+      grid-template-columns: repeat(24, minmax(var(--app-touch-size), 1fr));
+    }
+  }
+}
+
+@media screen and (max-width: 639px), screen and (min-width: 640px) and (any-pointer: coarse) {
+  [data-heatmap-label-day][data-app-design-owner] {
+    --heatmap-label-day: attr(data-heatmap-label-day);
+    --heatmap-label-hour: attr(data-heatmap-label-hour);
+    --heatmap-label-sessions: attr(data-heatmap-label-sessions);
+    --heatmap-label-energy: attr(data-heatmap-label-energy);
+    --heatmap-label-status: attr(data-heatmap-label-status);
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table)[data-app-design-owner] {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  [data-chart-key="drive-archetype-candidates"] [data-chart-viewport][data-app-design-owner] {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    contain: layout;
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption[data-app-design-owner] {
+    display: block;
+    inline-size: 100%;
+    text-align: start;
+    overflow-wrap: break-word;
+    font-size: var(--app-body-size);
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead[data-app-design-owner] {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody[data-app-design-owner] {
+    display: block;
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--density-gap);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-block-end: 1px solid var(--border-default);
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody :is(th, td)[data-app-design-owner] {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :is(:first-child, :last-child)[data-app-design-owner] {
+    grid-column: 1 / -1;
+  }
+
+  :is([data-mobile-stack-table] tbody td[data-mobile-label], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table tbody td)[data-app-design-owner]::before {
+    content: attr(data-mobile-label);
+    content: attr(data-mobile-label) / "";
+    color: var(--text-secondary);
+    font-size: var(--app-body-size);
+    font-weight: var(--font-weight-medium);
+  }
+
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(1)[data-app-design-owner]::before {
+    content: var(--heatmap-label-day) / "";
+  }
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(2)[data-app-design-owner]::before {
+    content: var(--heatmap-label-hour) / "";
+  }
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(3)[data-app-design-owner]::before {
+    content: var(--heatmap-label-sessions) / "";
+  }
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(4)[data-app-design-owner]::before {
+    content: var(--heatmap-label-energy) / "";
+  }
+  [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(5)[data-app-design-owner]::before {
+    content: var(--heatmap-label-status) / "";
+  }
+}

@@ -1,0 +1,305 @@
+(node:53616) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:3984) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 11 nodes require manual review
+  Manual contrast review: .\@lg\:grid-cols-2.gap-4.grid > .p-3.border-\[var\(--border-default\)\].rounded-xl > .block — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: h3[title="Fleet posture"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .leading-snug.text-\[var\(--text-secondary\)\][data-app-part="metric-label"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > span[data-app-part="metric-value"] > .\@sm\:text-3xl.tracking-tight.break-all — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > .text-\[var\(--text-muted\)\].text-xs[data-app-part="metric-unit"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .mt-1\.5.justify-between.text-\[var\(--text-muted\)\] > .tabular-nums — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-end — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: div[data-widget-family="meter"] > .\@lg\:grid-cols-2.gap-4.grid > .p-3.border-\[var\(--border-default\)\].rounded-xl > .widget-detail-list > .\@\[24rem\]\/kv-list\:grid-cols-2.gap-x-3[data-app-part="list-row"] > dt > .gap-2.items-center.flex > span:nth-child(2) > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: span:nth-child(2) > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(2) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.gap-2.items-center > .truncate.text-\[var\(--text-muted\)\].text-xs — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-\[var\(--accent-primary\)\].hover\:underline[href$="vehicles/7"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  ✘  1 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (32.6s)
+(node:17808) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 1 nodes require manual review
+  Manual contrast review: .text-start.whitespace-normal.gap-3 > .text-\[var\(--text-secondary\)\].text-xs:nth-child(7) — Fix any of the following:
+  Element's background color could not be determined because it partially overlaps other elements
+  ✓  2 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (18.5s)
+Contrast: 0 violated rules, 0 nodes require manual review
+  ✓  3 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (18.4s)
+(node:37028) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 15 nodes require manual review
+  Manual contrast review: .is-selected > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined due to a pseudo element
+  Manual contrast review: button[aria-label="Advanced intelligence"] > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  Manual contrast review: h3[title="Quick navigation"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .relative.min-w-0 > .text-xl — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: div[data-widget-family="actions"] > .\@lg\:grid-cols-2.gap-4.grid > .p-3.border-\[var\(--border-default\)\].rounded-xl > .block — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: h3[title="Fleet posture"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .leading-snug.text-\[var\(--text-secondary\)\][data-app-part="metric-label"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > .min-w-0[data-app-part="metric-value"] > .\@sm\:text-3xl.tracking-tight.break-all — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .items-start.justify-between.flex-wrap > .widget-big-number.items-start[data-app-metric="headline"] > .gap-x-1\.5.items-baseline[data-app-part="metric-reading"] > .text-\[var\(--text-muted\)\].text-xs[data-app-part="metric-unit"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .mt-1\.5.justify-between.text-\[var\(--text-muted\)\] > .tabular-nums — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-end — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: div[data-widget-family="meter"] > .\@lg\:grid-cols-2.gap-4.grid > .p-3.border-\[var\(--border-default\)\].rounded-xl > .widget-detail-list > .\@\[24rem\]\/kv-list\:grid-cols-2.gap-x-3[data-app-part="list-row"] > dt > .gap-2.flex.items-center > .min-w-0 > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .p-3.border-\[var\(--border-default\)\].rounded-xl > .widget-detail-list > .\@\[24rem\]\/kv-list\:grid-cols-2.gap-x-3[data-app-part="list-row"] > dt > .gap-2.flex.items-center > .min-w-0 > .block.\[overflow-wrap\:anywhere\].whitespace-normal:nth-child(2) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.gap-2.flex > .truncate.text-\[var\(--text-muted\)\].text-xs — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-\[var\(--accent-primary\)\].hover\:underline[href$="vehicles/7"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  ✓  4 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (21.1s)
+  ✘  5 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (17.1s)
+(node:9928) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 20 nodes require manual review
+  Manual contrast review: button[aria-label="Advanced intelligence"] > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  Manual contrast review: .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > .recharts-legend-wrapper > .\[\&_\.recharts-default-legend\]\:grid.\[\&_\.recharts-default-legend\]\:grid-cols-\[repeat\(auto-fit\,minmax\(min\(100\%\,9rem\)\,1fr\)\)\].\[\&_\.recharts-default-legend\]\:gap-1 > ul > .legend-item-0 > .recharts-legend-item-text > button[data-series-key="energy"][data-series-hidden="false"][data-chart-legend-label=""] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="cost"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="efficiency"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="distance"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="195.875"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="370.375"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="156"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="118.25"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="80.5"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="42.75"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(6) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(5) > text[y="12"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="156"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="118.25"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="80.5"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="42.75"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(7) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(5) > text[y="12"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .h-44 > .recharts-responsive-container > .recharts-wrapper > .recharts-legend-wrapper > .\[\&_\.recharts-default-legend\]\:grid.\[\&_\.recharts-default-legend\]\:grid-cols-\[repeat\(auto-fit\,minmax\(min\(100\%\,9rem\)\,1fr\)\)\].\[\&_\.recharts-default-legend\]\:gap-1 > ul > .legend-item-0 > .recharts-legend-item-text > button[data-series-key="energy"][data-series-hidden="false"][data-chart-legend-label=""] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="count"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .mx-1 — Fix any of the following:
+  Element content contains only non-text characters
+  ✓  6 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (12.5s)
+
+
+  1) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ───────────────────
+
+    Error: visible touch targets must be at least 44 by 44 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 24
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent",
+    +     "controlId": null,
+    +     "height": 36,
+    +     "id": "",
+    +     "label": "Open",
+    +     "part": "button",
+    +     "role": null,
+    +     "tag": "a",
+    +     "width": 36,
+    +   },
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 transition-none bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] text-sm h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent !h-7 !min-h-0 !min-w-0 !p-0 !w-2.5",
+    +     "controlId": null,
+    +     "height": 28,
+    +     "id": "",
+    +     "label": "Refresh data · Up to date · just now",
+    +     "part": "status",
+    +     "role": null,
+    +     "tag": "button",
+    +     "width": 10,
+    +   },
+    + ]
+
+      879 |       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+      880 |         [JSON.stringify(target), target])).values());
+    > 881 |       expect.soft(uniqueTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+          |                                                                                                ^
+      882 |     }
+      883 |     if (textAudit) {
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:881:96
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 26
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "h3",
+    +     "text": "Digital twin",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "p",
+    +     "text": "—",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Aurora",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Fleet operations — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site he...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-dashboard--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-dashboard--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ──────────────────
+
+    Error: API requests escaped or were blocked by Playwright routing
+
+    API requests escaped or were blocked by Playwright routing
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "disposition": "pending",
+    +     "method": "GET",
+    +     "origin": "same-origin",
+    +     "path": "/api/v1/pinned",
+    +     "resourceType": "fetch",
+    +   },
+    + ]
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+       at mockApi.ts:1235
+
+      1233 |     message: 'API requests escaped or were blocked by Playwright routing',
+      1234 |     timeout: 5_000,
+    > 1235 |   }).toEqual([]);
+           |      ^
+      1236 |   await cleanupServiceWorkers(page);
+      1237 | }
+      1238 |
+        at assertMockApiComplete (D:\repos\teslasync\web\e2e\mockApi.ts:1235:6)
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:865:5
+
+    attachment #1: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Drive history — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Sections and shortcuts":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving" [expanded]
+        - button "Charging"
+        - button "Battery"
+    ...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-drives-drives--desktop\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-drives-drives--desktop\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-drives-drives--desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\docs\design-packs\shots\observatory\teslasync-design-pack-capture-0e7664f3-e7a0-4b8c-991f-05f66c607dff\design-packs-capture-capture-drives-drives--desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ────────────────────
+    [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ───────────────────
+  4 passed (2.7m)

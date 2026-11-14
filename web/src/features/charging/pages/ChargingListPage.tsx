@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +7,7 @@ import {
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageLayout, PageHeaderSticky } from '@/components/layout';
-import { Badge, Button, Caption, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
+import { Badge, Button, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   DataStateNotice, QueryError, StaleRefreshWarning,
@@ -80,6 +80,11 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 const COLLECTIONS = ['all', 'home', 'supercharger', 'dc', 'free', 'anomalies', 'notable', 'tagged'] as const;
 type Collection = typeof COLLECTIONS[number];
+
+function SummaryItem({ children }: { children: ReactNode }) {
+  return <span className="inline-flex min-w-0 max-w-full items-baseline gap-2"><span>·</span>{children}</span>;
+}
+
 const TREND_METRICS = ['sessions', 'energy', 'cost', 'power'] as const;
 const SORT_FIELDS = ['date', 'energy', 'cost', 'duration', 'power'] as const;
 type SortField = typeof SORT_FIELDS[number];
@@ -585,28 +590,27 @@ export default function ChargingListPage() {
           dc: currentStats.byCategory.dc,
         })}
       </span>
-      <span className="opacity-50">·</span>
-      <span>{t('charging.freeCount', '{{count}} free', { count: currentStats.freeCount })}</span>
+      <SummaryItem>
+        <span>{t('charging.freeCount', '{{count}} free', { count: currentStats.freeCount })}</span>
+      </SummaryItem>
       {currentStats.batteryFriendlyScore != null && (
-        <>
-          <span className="opacity-50">·</span>
+        <SummaryItem>
           <span>
             {t('charging.batteryScore', 'Battery score')}{' '}
             <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
-        </>
+        </SummaryItem>
       )}
       {currentStats.mostCommonStartHour != null && (
-        <>
-          <span className="opacity-50">·</span>
+        <SummaryItem>
           <span>
             {t('charging.mostCommon', 'Most common start: {{hour}}', {
               hour: formatHour(currentStats.mostCommonStartHour, unitPrefs.locale),
             })}
           </span>
-        </>
+        </SummaryItem>
       )}
     </span>
   ) : null;
@@ -629,21 +633,17 @@ export default function ChargingListPage() {
       <Text as="span" color="secondary" className="truncate">
         {t('charging.list.title', 'Charging sessions')}
       </Text>
-      <span className="opacity-50">·</span>
-      <span className="truncate">{periodLabel}</span>
-      <span className="opacity-50">·</span>
-      <Text as="span" color="primary" weight="medium">{collectionLabel}</Text>
-      <span className="opacity-50">·</span>
-      <span>{fmtCompact(filteredSessions.length)} {t('charging.results', 'results')}</span>
+      <SummaryItem><span className="min-w-0 truncate">{periodLabel}</span></SummaryItem>
+      <SummaryItem><Text as="span" color="primary" weight="medium">{collectionLabel}</Text></SummaryItem>
+      <SummaryItem><span>{fmtCompact(filteredSessions.length)} {t('charging.results', 'results')}</span></SummaryItem>
       {currentStats.batteryFriendlyGrade.label !== '—' && (
-        <>
-          <span className="opacity-50">·</span>
+        <SummaryItem>
           <span>{t('charging.avgScore', 'avg')}{' '}
             <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
-        </>
+        </SummaryItem>
       )}
     </>
   );
@@ -1029,7 +1029,7 @@ export default function ChargingListPage() {
         {/* Trend chart */}
           <FadeIn>
             <section aria-label={t('charging.section.trend', 'Charging over time')}>
-            <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+            <Text as="p" variant="bodySm">{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Text>
             {isLoading ? (
               <GlassPanel className="p-4">
                 <SectionTitle>{t('charging.overTime', 'Charging over time')}</SectionTitle>
@@ -1109,7 +1109,7 @@ export default function ChargingListPage() {
               </div>
             )}
             {!isDesktopEvidence && (
-              <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+              <Text as="p" variant="bodySm">{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Text>
             )}
 
             <BulkActionsToolbar
@@ -1153,7 +1153,7 @@ export default function ChargingListPage() {
                 toolbarHeading={
                   <div>
                     <SectionTitle>{t('charging.allSessions', 'All sessions')} ({fmtCompact(sortedSessions.length)})</SectionTitle>
-                    <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+                    <Text as="p" variant="bodySm">{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Text>
                   </div>
                 }
                 controls={{

@@ -15,7 +15,7 @@ import type { BatterySummaryMetric } from '../components/modernization/BatterySp
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import {
   DataTable, Badge, Text, Caption, Icon, BUTTON_BASE, BUTTON_VARIANTS,
-  HelperText, type Column,
+  HelperText, type Column, type MobileDataTablePresentation,
 } from '@/components/ui';
 import {
   ThresholdBar, ChartLegend, ChartTooltip, ChartGradient,
@@ -551,6 +551,22 @@ export default function EnergyPage() {
   })), [chargerBreakdown]);
 
   /* ── Table columns ────────────────────────────────────────────── */
+  const sessionDisplayValue = useCallback((s: ChargingSession, key: string): string => {
+    switch (key) {
+      case 'date': return formatDateShort(s.started_at);
+      case 'energy': return formatEnergy(s.total_energy_added_wh ?? 0);
+      case 'battery': return `${s.start_soc_pct}% → ${s.end_soc_pct ?? '—'}%`;
+      case 'power': return s.peak_power_w != null ? `${fmtNumber(convertPowerFromSI(s.peak_power_w, 'kW'))} kW` : '—';
+      case 'type': return s.charger_type?.toLowerCase().includes('tesla')
+        ? t('energy.chargerType.supercharger', 'Supercharger')
+        : s.charger_type || t('energy.chargerType.ac', 'AC');
+      case 'cost': return typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—';
+      case 'perKwh': return typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
+        ? formatCurrency(s.cost_decimal / convertEnergyFromSI(s.total_energy_added_wh, 'kWh')) : '—';
+      default: return '—';
+    }
+  }, [t, formatCurrency, formatEnergy, fmtNumber]);
+
   const sessionColumns: Column<ChargingSession>[] = useMemo(() => [
     {
       key: 'date',
@@ -560,7 +576,7 @@ export default function EnergyPage() {
           BUTTON_BASE, 'min-h-11 justify-start whitespace-normal text-start md:min-h-6',
           typography.color.secondary,
         )}>
-          {formatDateShort(s.started_at)}
+          {sessionDisplayValue(s, 'date')}
         </Link>
       ),
     },
@@ -570,7 +586,7 @@ export default function EnergyPage() {
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <Text weight="medium">
-          {formatEnergy(s.total_energy_added_wh ?? 0)}
+          {sessionDisplayValue(s, 'energy')}
         </Text>
       ),
     },
@@ -591,24 +607,18 @@ export default function EnergyPage() {
       key: 'power',
       align: 'right',
       header: t('energy.table.power', 'Power'),
-      render: (s) => <>{s.peak_power_w != null ? `${fmtNumber(convertPowerFromSI(s.peak_power_w, 'kW'))} kW` : '—'}</>,
+      render: (s) => <>{sessionDisplayValue(s, 'power')}</>,
     },
     {
       key: 'type',
       header: t('energy.table.type', 'Type'),
-      render: (s) => {
-        const isTesla = s.charger_type?.toLowerCase().includes('tesla');
-        const label = isTesla
-          ? t('energy.chargerType.supercharger', 'Supercharger')
-          : s.charger_type || t('energy.chargerType.ac', 'AC');
-        return <Badge variant="neutral" size="sm">{label}</Badge>;
-      },
+      render: (s) => <Badge variant="neutral" size="sm">{sessionDisplayValue(s, 'type')}</Badge>,
     },
     {
       key: 'cost',
       align: 'right',
       header: t('energy.table.cost', 'Cost'),
-      render: (s) => <>{typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—'}</>,
+      render: (s) => <>{sessionDisplayValue(s, 'cost')}</>,
     },
     {
       key: 'perKwh',
@@ -616,13 +626,23 @@ export default function EnergyPage() {
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
         <Text color="muted">
-          {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
-            ? formatCurrency(s.cost_decimal / convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))
-            : '—'}
+          {sessionDisplayValue(s, 'perKwh')}
         </Text>
       ),
     },
-  ], [t, formatCurrency, formatEnergy, fmtNumber]);
+  ], [t, sessionDisplayValue]);
+  const sessionMobilePresentation = useMemo<MobileDataTablePresentation<ChargingSession>>(() => ({
+    variant: 'cards',
+    roles: { date: 'title', energy: 'primary', battery: 'meta', cost: 'meta' },
+    displayValue: sessionDisplayValue,
+    inlineActions: (session) => (
+      <Link to={`/charging/${session.id}`} data-app-part="button" data-app-variant="ghost"
+        aria-label={`${t('charging.preview.openDetails', 'Open session details')}: ${sessionDisplayValue(session, 'date')}`}
+        className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-0 max-w-full whitespace-normal text-start')}>
+        {t('charging.preview.openDetails', 'Open session details')}
+      </Link>
+    ),
+  }), [sessionDisplayValue, t]);
 
   /* ── KPI band definition ──────────────────────────────────────── */
   const recordedCostValue =
@@ -1490,7 +1510,7 @@ export default function EnergyPage() {
           </ChartCard>
 
           <ChartCard
-            toolbar size="standard" height={300} mobileHeight={420}
+            toolbar size="standard" height={300} mobileHeight={chargerBreakdown.length === 1 ? 300 : 420}
             title={t('energy.chart.chargerBreakdown', 'Charger type breakdown')}
             ariaLabel={t('energy.chart.chargerBreakdownAria', 'Charger type share pie chart')}
             exportable
@@ -1600,8 +1620,10 @@ export default function EnergyPage() {
           ) : sessions.length > 0 ? (
             <DataTable
               tableId="battery:energy-sessions"
+              caption={t('energy.sessions.title', 'Recent charging sessions')}
               columns={sessionColumns}
               mobileColumns={['date', 'energy', 'cost']}
+              mobilePresentation={sessionMobilePresentation}
               data={sessions.slice(0, 15)}
               keyExtractor={(s) => s.id}
               pagination

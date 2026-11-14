@@ -372,7 +372,7 @@ describe('FeedbackQueuePage', () => {
     },
   )
 
-  it('uses restrained issue-link roles and retains every column in the contained mobile table', () => {
+  it('uses restrained issue-link roles and retains every desktop column', () => {
     renderPage()
     const link = screen.getByRole('link', { name: /Open issue/i })
     expect(link).toHaveClass('text-[var(--theme-primary)]', 'min-h-11')
@@ -385,6 +385,42 @@ describe('FeedbackQueuePage', () => {
       expect(header).not.toHaveClass('md:table-cell')
     }
     expect(screen.getByText('/drives')).toBeInTheDocument()
+  })
+
+  it('keeps feedback selection, expansion and full details on phones', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = []
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }) }
+      unobserve() {}
+      disconnect() {}
+    })
+    try {
+      renderPage()
+      act(() => observers.filter(({ element }) => element.matches('[data-app-table-frame]'))
+        .forEach(({ element, callback }) => callback(
+          [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry], {} as ResizeObserver,
+        )))
+      const mobile = screen.getByRole('group', { name: 'admin:feedback' })
+      expect(mobile).toHaveTextContent('Timeline cuts off early')
+      expect(mobile).toHaveTextContent('/drives')
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Select', exact: true }))
+      fireEvent.click(within(mobile).getByRole('checkbox', { name: /Select bug: Timeline cuts off early/i }))
+      expect(within(mobile).getByRole('checkbox', { name: /Deselect bug: Timeline cuts off early/i })).toBeChecked()
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Expand row' })[0])
+      expect(mobile).toHaveTextContent('Body A — the drive timeline ends 30 minutes early.')
+      fireEvent.change(within(mobile).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).toHaveBeenCalledWith({ id: 101, update: { status: 'closed' } })
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[1])
+      const detail = screen.getByRole('dialog')
+      for (const label of ['Created', 'Category', 'Title', 'Page', 'Reporter', 'Status', 'GitHub']) {
+        expect(within(detail).getByText(label, { exact: true })).toBeInTheDocument()
+      }
+      expect(within(detail).getByRole('link', { name: /Open issue/i }))
+        .toHaveAttribute('href', 'https://github.com/ev-dev-labs/teslasync/issues/42')
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   describe('manual feedback request protection', () => {

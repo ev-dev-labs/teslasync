@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { usePackModule, usePackPresentation } from './PackBoundary';
 import { PACK_APPEARANCES } from './types';
+import { loadTimeline } from './packModules';
 import type { TimelinePresentationProps } from './families/Timeline.types';
-
-const loadTimeline = () => import('./families/TimelineLayout');
 
 interface TimelineProps extends Partial<Pick<TimelinePresentationProps, 'render' | 'compact'>> {
   children: ReactNode;

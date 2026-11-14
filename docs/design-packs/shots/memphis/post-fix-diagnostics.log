@@ -1,0 +1,558 @@
+
+Running 2 tests using 1 worker
+
+[
+  {
+    "text": "km",
+    "size": "16px",
+    "protected": false,
+    "ancestors": [
+      {
+        "tag": "SPAN",
+        "className": "text-xs font-normal text-[var(--text-secondary)]",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "P",
+        "className": "text-xl font-semibold tabular-nums text-[var(--text-primary)]",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "text-right",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-wrap items-end justify-between gap-3 py-1",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-tl-[2rem] rounded-br-[2rem] border-b-4 border-[var(--pack-detail)] bg-[var(--surface-2)] p-4",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "grid items-center gap-4 @lg:grid-cols-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex min-w-0 flex-col gap-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "@container min-w-0 flex-1 min-h-0 overflow-x-clip overflow-y-auto break-words [&>*]:min-w-0 px-4 pb-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "dashboard-widget relative flex h-full min-w-0 flex-col min-h-0 flex-1",
+        "part": "section",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": "memphis",
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      }
+    ]
+  },
+  {
+    "text": "Aurora",
+    "size": "14px",
+    "protected": true,
+    "ancestors": [
+      {
+        "tag": "SPAN",
+        "className": "text-sm font-medium text-[var(--text-secondary)] break-words",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "flex min-w-0 flex-col gap-1",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "relative min-w-0",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "relative min-w-0",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-tl-[2rem] rounded-br-[2rem] border-b-4 border-[var(--pack-detail)] bg-[var(--surface-2)] p-4",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 grid items-center gap-4 @lg:grid-cols-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "flex h-full min-w-0 flex-col gap-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "@container min-w-0 flex-1 min-h-0 overflow-x-clip overflow-y-auto break-words [&>*]:min-w-0 px-4 pb-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": null
+      },
+      {
+        "tag": "DIV",
+        "className": "dashboard-widget relative flex h-full min-w-0 flex-col min-h-0 flex-1",
+        "part": "section",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": "memphis",
+        "preserve": false,
+        "owner": null
+      }
+    ]
+  },
+  {
+    "text": "km",
+    "size": "16px",
+    "protected": false,
+    "ancestors": [
+      {
+        "tag": "SPAN",
+        "className": "text-sm text-[var(--text-muted)]",
+        "part": "metric-unit",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex items-baseline gap-1",
+        "part": "metric-reading",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-primary)] shadow-panel forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] flex min-h-28 flex-col gap-2 p-5 !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none [&_.text-2xl]:text-xl [&_.text-2xl]:font-semibold [&>div:first-child>span:first-child]:text-xs [&>div:first-child>span:first-child]:text-[var(--text-muted)] [&>div:nth-child(2)>div]:text-lg [&>div:nth-child(2)>span]:text-xs [&>div:nth-child(2)]:[overflow-wrap:normal] [&>div:nth-child(2)]:[word-break:normal] [&>div:first-child>span[aria-hidden=true]]:hidden",
+        "part": "metric",
+        "metric": "stat-card",
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "grid min-w-0 widget-stat-rail gap-x-3.5 gap-y-3 grid-cols-1 @xs:grid-cols-2",
+        "part": "metric-grid",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 [&>.widget-stat-rail]:gap-y-1 [&>.widget-stat-rail]:py-1 [&>.widget-stat-rail>div]:gap-1",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 rounded-tr-3xl rounded-bl-3xl border-2 border-[var(--border-strong)] p-4 @lg:col-span-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 flex flex-col gap-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex h-full min-w-0 flex-col gap-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "@container min-w-0 flex-1 min-h-0 overflow-x-clip overflow-y-auto break-words [&>*]:min-w-0 px-4 pb-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      }
+    ]
+  },
+  {
+    "text": "Aurora",
+    "size": "16px",
+    "protected": false,
+    "ancestors": [
+      {
+        "tag": "SPAN",
+        "className": "block whitespace-normal text-sm font-medium text-[var(--text-primary)] [overflow-wrap:anywhere]",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "SPAN",
+        "className": "min-w-0",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "SPAN",
+        "className": "flex min-w-0 items-center gap-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DT",
+        "className": "text-sm text-[var(--text-muted)] min-w-0 max-w-full whitespace-normal [overflow-wrap:anywhere]",
+        "part": "metric-label",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "py-2 grid min-w-0 grid-cols-1 gap-x-3 gap-y-1 @[24rem]/kv-list:grid-cols-2",
+        "part": "list-row",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DL",
+        "className": "divide-y divide-gray-200 dark:divide-gray-700 @container/kv-list widget-detail-list h-full overflow-y-auto",
+        "part": "list",
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 rounded-tr-3xl rounded-bl-3xl border-2 border-[var(--border-strong)] p-4 @lg:col-span-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "min-w-0 grid items-center gap-4 @lg:grid-cols-2",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex h-full min-w-0 flex-col gap-3",
+        "part": null,
+        "metric": null,
+        "grid": null,
+        "role": null,
+        "widget": null,
+        "preserve": false,
+        "owner": "pack-memphis navigation-hybrid header-split content-canvas controls-segmented data-cards chart-geometric map-atlas feedback-callout"
+      }
+    ]
+  }
+]
+FULL_PHONE_TEXT=[{"tag":"h3","id":"","role":null,"part":null,"text":"Digital twin","size":14},{"tag":"p","id":"","role":null,"part":null,"text":"—","size":14},{"tag":"span","id":"","role":null,"part":null,"text":"Aurora","size":14}]
+FULL_PHONE_TARGETS=[{"tag":"a","id":"","role":null,"part":"button","className":"inline-flex items-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent","controlId":null,"label":"Open","width":36,"height":36},{"tag":"button","id":"","role":null,"part":"status","className":"inline-flex items-center gap-2 rounded-shape-sm font-medium duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 transition-none bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] text-sm h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent !h-7 !min-h-0 !min-w-0 !p-0 !w-2.5","controlId":null,"label":"Refresh data · Up to date · just now","width":10,"height":28}]
+  ✘  1 ..\docs\design-packs\shots\memphis\memphis-diagnostics.spec.cjs:17:1 › inspect remaining diagnostic text without screenshots (16.9s)
+{"route":"/","width":360,"scale":0.85,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":360,"scale":1,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":360,"scale":1.35,"headerHeight":287,"titleLines":2,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":117.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":390,"scale":0.85,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":390,"scale":1,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":390,"scale":1.35,"headerHeight":247,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":127.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":430,"scale":0.85,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":430,"scale":1,"headerHeight":201,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/","width":430,"scale":1.35,"headerHeight":216,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":66.359375,"navMinHeight":87,"documentOverflow":0,"mainOverflow":0,"layout":{"text":"Implementation review - synthetic data","whiteSpace":"normal","overflow":0},"headingDecoration":"none"}
+{"route":"/drives","width":360,"scale":0.85,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":360,"scale":1,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":360,"scale":1.35,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":117.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":390,"scale":0.85,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":390,"scale":1,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":390,"scale":1.35,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":127.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":430,"scale":0.85,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":430,"scale":1,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/drives","width":430,"scale":1.35,"headerHeight":130,"titleLines":1,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":66.359375,"navMinHeight":87,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":360,"scale":0.85,"headerHeight":74,"titleLines":1,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":360,"scale":1,"headerHeight":92,"titleLines":2,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":117.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":360,"scale":1.35,"headerHeight":170,"titleLines":2,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":117.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":390,"scale":0.85,"headerHeight":74,"titleLines":1,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":390,"scale":1,"headerHeight":74,"titleLines":1,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":127.328125,"navMinHeight":48,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":390,"scale":1.35,"headerHeight":170,"titleLines":2,"sameRow":false,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":127.328125,"navMinHeight":62,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":430,"scale":0.85,"headerHeight":74,"titleLines":1,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":430,"scale":1,"headerHeight":74,"titleLines":1,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[16,16,16,16,16],"navMinWidth":71.015625,"navMinHeight":73,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+{"route":"/energy","width":430,"scale":1.35,"headerHeight":114,"titleLines":2,"sameRow":true,"overlap":0,"titleWithin":true,"actionWithin":true,"navSizes":[21.6,21.6,21.6,21.6,21.6],"navMinWidth":66.359375,"navMinHeight":87,"documentOverflow":0,"mainOverflow":0,"layout":null,"headingDecoration":"none"}
+  ✓  2 ..\docs\design-packs\shots\memphis\memphis-probe.spec.cjs:18:1 › Memphis phone layout, labels and ownership remain usable without screenshots (26.9s)
+
+
+  1) ..\docs\design-packs\shots\memphis\memphis-diagnostics.spec.cjs:17:1 › inspect remaining diagnostic text without screenshots 
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 26
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "h3",
+    +     "text": "Digital twin",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "p",
+    +     "text": "—",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Aurora",
+    +   },
+    + ]
+
+      79 |     console.log(`FULL_PHONE_TEXT=${JSON.stringify(smallText)}`);
+      80 |     console.log(`FULL_PHONE_TARGETS=${JSON.stringify(smallTargets)}`);
+    > 81 |     expect.soft(smallText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+         |                                                                                ^
+      82 |     expect.soft(smallTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+      83 |   } finally {
+      84 |     await page.goto('about:blank');
+        at D:\repos\teslasync\docs\design-packs\shots\memphis\memphis-diagnostics.spec.cjs:81:80
+
+    Error: visible touch targets must be at least 44 by 44 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 24
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent",
+    +     "controlId": null,
+    +     "height": 36,
+    +     "id": "",
+    +     "label": "Open",
+    +     "part": "button",
+    +     "role": null,
+    +     "tag": "a",
+    +     "width": 36,
+    +   },
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 transition-none bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] text-sm h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent !h-7 !min-h-0 !min-w-0 !p-0 !w-2.5",
+    +     "controlId": null,
+    +     "height": 28,
+    +     "id": "",
+    +     "label": "Refresh data · Up to date · just now",
+    +     "part": "status",
+    +     "role": null,
+    +     "tag": "button",
+    +     "width": 10,
+    +   },
+    + ]
+
+      80 |     console.log(`FULL_PHONE_TARGETS=${JSON.stringify(smallTargets)}`);
+      81 |     expect.soft(smallText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+    > 82 |     expect.soft(smallTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+         |                                                                                             ^
+      83 |   } finally {
+      84 |     await page.goto('about:blank');
+      85 |     await context.close();
+        at D:\repos\teslasync\docs\design-packs\shots\memphis\memphis-diagnostics.spec.cjs:82:93
+
+    Error Context: ..\docs\design-packs\shots\memphis\memphis-probe-results\memphis-diagnostics-inspec-7711e-ic-text-without-screenshots\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\memphis\memphis-probe-results\memphis-diagnostics-inspec-7711e-ic-text-without-screenshots\error-context.md
+
+  1 failed
+    ..\docs\design-packs\shots\memphis\memphis-diagnostics.spec.cjs:17:1 › inspect remaining diagnostic text without screenshots 
+  1 passed (46.1s)
+DIAGNOSTICS_EXIT=1

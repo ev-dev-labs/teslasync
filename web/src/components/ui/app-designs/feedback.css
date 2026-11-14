@@ -58,7 +58,7 @@
     overflow-wrap: anywhere;
   }
 
-  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"])):where([data-app-design-owner]) {
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]):not([data-operational-metric-bank])):where([data-app-design-owner]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
     grid-auto-rows: auto;
@@ -97,7 +97,7 @@
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="table"] :where(
     [data-app-metric="card"], [data-app-metric="stat-card"],
     [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
-  ):where([data-app-design-owner~="data-table"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-table"]) {
     min-block-size: var(--density-row-h);
     padding: var(--density-pad-y) var(--density-pad-x);
     border-radius: 0;
@@ -113,7 +113,7 @@
     [data-app-metric="card"] > [data-app-part~="metric-body"],
     [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"],
     [data-app-metric="tile"], [data-app-metric="stat-card"]
-  ):where([data-app-design-owner~="data-table"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-table"]) {
     display: flex;
     flex-direction: column;
     gap: 0.5em;
@@ -126,7 +126,7 @@
     [data-app-metric="tile"] > [data-app-part~="metric-reading"],
     [data-app-metric="stat-card"] > [data-app-part~="metric-reading"],
     [data-app-metric="stat"] > [data-app-part~="metric-reading"]
-  ):where([data-app-design-owner~="data-table"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-table"]) {
     align-self: stretch;
     justify-content: flex-end;
     text-align: end;
@@ -153,8 +153,12 @@
   }
 
   /* Ledger: one fact per ruled line; context and comparisons stay below it. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack][data-app-data="ledger"] [data-app-part~="metric-grid"][data-operational-metric-bank]:where([data-app-design-owner~="data-ledger"]) {
+    min-inline-size: 0;
+  }
+
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
-    [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]),
+    [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not([data-app-metric-grid="native-gauge"]):not([data-operational-metric-bank]),
     [data-app-list="definitions"]
   ):where([data-app-design-owner~="data-ledger"]) {
     display: grid;
@@ -165,7 +169,7 @@
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="ledger"] :where(
     [data-app-metric="card"], [data-app-metric="stat-card"],
     [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
-  ):where([data-app-design-owner~="data-ledger"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-ledger"]) {
     min-block-size: var(--density-row-h);
     border: 0;
     border-block-end: 1px solid var(--border-default);
@@ -183,7 +187,7 @@
     [data-app-metric="stat"], [data-app-metric="brief"],
     [data-app-list="definitions"] > [data-app-part~="list-row"],
     [data-app-list="ranked"] > [data-app-part~="list-row"]
-  ):where([data-app-design-owner~="data-ledger"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-ledger"]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: baseline;
@@ -196,7 +200,7 @@
     [data-app-metric="tile"] > [data-app-part~="metric-label"],
     [data-app-metric="stat-card"] > [data-app-part~="metric-heading"],
     [data-app-metric="brief"] > [data-app-part~="metric-label"]
-  ):where([data-app-design-owner~="data-ledger"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-ledger"]) {
     grid-column: 1;
     grid-row: 1;
     min-block-size: 0;
@@ -209,7 +213,7 @@
     [data-app-metric="stat-card"] > [data-app-part~="metric-reading"],
     [data-app-metric="stat"] > [data-app-part~="metric-reading"],
     [data-app-metric="brief"] > [data-app-part~="metric-value"]
-  ):where([data-app-design-owner~="data-ledger"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-ledger"]) {
     grid-column: 2;
     grid-row: 1;
     margin-block-start: 0;
@@ -229,7 +233,7 @@
     [data-app-metric="tile"] > [data-app-part~="metric-context"],
     [data-app-metric="stat"] > [data-app-part~="metric-context"],
     [data-app-metric="stat"] > [data-app-part~="metric-comparison"]
-  ):where([data-app-design-owner~="data-ledger"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-ledger"]) {
     grid-column: 1 / -1;
     grid-row: auto;
     margin-block-start: 0.25em;
@@ -262,7 +266,7 @@
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="cards"] :where(
     [data-app-metric="card"], [data-app-metric="stat-card"],
     [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
-  ):where([data-app-design-owner~="data-cards"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-cards"]) {
     padding: var(--density-pad-y) var(--density-pad-x);
     border: 1px solid var(--border-default);
     border-radius: var(--panel-radius);
@@ -308,7 +312,7 @@
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-data="instrument"] :where(
     [data-app-metric="card"], [data-app-metric="stat-card"],
     [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]
-  ):where([data-app-design-owner~="data-instrument"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-instrument"]) {
     padding: var(--density-pad-y) var(--density-pad-x);
     border: 1px solid var(--border-strong);
     border-block-start-width: 3px;
@@ -322,7 +326,7 @@
     [data-app-metric="card"] > [data-app-part~="metric-frame"] > [data-app-part~="metric-body"],
     [data-app-metric="stat-card"], [data-app-metric="tile"],
     [data-app-metric="stat"], [data-app-metric="brief"]
-  ):where([data-app-design-owner~="data-instrument"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-instrument"]) {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -338,7 +342,7 @@
     [data-app-metric="tile"] > [data-app-part~="metric-reading"],
     [data-app-metric="stat"] > [data-app-part~="metric-reading"],
     [data-app-metric="brief"] > [data-app-part~="metric-value"]
-  ):where([data-app-design-owner~="data-instrument"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-instrument"]) {
     margin-block-start: 0;
     font-size: calc(1.5rem * var(--font-scale));
   }
@@ -350,7 +354,7 @@
     [data-app-metric="stat-card"] > [data-app-part~="metric-context"],
     [data-app-metric="tile"] > [data-app-part~="metric-context"],
     [data-app-metric="stat"] > [data-app-part~="metric-context"]
-  ):where([data-app-design-owner~="data-instrument"]) {
+  ):not(:where([data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *)):where([data-app-design-owner~="data-instrument"]) {
     border-block-start: 1px solid var(--border-subtle);
     padding-block-start: 0.5em;
   }

@@ -105,6 +105,10 @@ describe('FreshnessDot widget variant', () => {
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, onRefresh, edgeAligned }
     const { rerender } = render(<FreshnessDot {...props} />)
     const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    if (edgeAligned) {
+      expect(refresh).toHaveClass('!h-7', '!w-2.5', '!min-h-0', '!min-w-0')
+      expect(refresh).not.toHaveClass('!h-11', '!w-11')
+    }
     await user.tab()
     expect(refresh).toHaveFocus()
 
@@ -397,7 +401,6 @@ describe('FreshnessDot', () => {
       />,
     )
     const refresh = screen.getByRole('button')
-    // Fixed icon-button footprint (compact shrinks to !h-5 !w-5).
     expect(refresh).toHaveClass(...(compact
       ? ['!h-5', '!w-5', '!min-h-0', '!min-w-0', '!p-0']
       : ['!h-7', '!w-7', '!min-h-0', '!min-w-0', '!p-0']))

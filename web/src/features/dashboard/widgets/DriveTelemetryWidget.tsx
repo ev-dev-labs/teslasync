@@ -16,6 +16,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import { Caption } from '@/components/ui';
 import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { loadLinePresentation } from './designPacks/packModules';
 import { PACK_APPEARANCES } from './designPacks/types';
 import { WidgetChartSummary } from './shared';
 import { knownNumber } from '@/api/dataState';
@@ -23,8 +24,6 @@ import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
-
-const loadLinePresentation = () => import('./designPacks/families/LineTelemetryLayout');
 
 interface ChartDatum extends ChartDataRow {
   time: string;

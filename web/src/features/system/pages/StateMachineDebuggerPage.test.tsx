@@ -63,7 +63,16 @@ describe('StateMachineDebuggerPage — mobile field access', () => {
         details: { guard: 'safe_guard', nested: { reason: 'full evidence' } } }],
       total: 1,
     } }));
-    renderPage();
+    const { container } = renderPage();
+
+    const summary = Array.from(container.querySelectorAll<HTMLElement>('[data-mobile-table]'))
+      .find(grid => grid.textContent?.includes('Avg interval'));
+    expect(summary).toBeDefined();
+    expect(summary).toHaveTextContent('driving');
+    fireEvent.click(within(summary!).getByRole('button', { name: 'Quick view' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Transitions');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     const log = await screen.findByRole('group', { name: 'Transition log' });
     const row = within(log).getByRole('button', { name: /Jan 7, 2026/ });

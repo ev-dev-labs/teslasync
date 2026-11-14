@@ -1,4 +1,14 @@
-import { test as base } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
+import { resolve } from 'node:path';
+import { assertMockApiAfterNavigation, prepareMockApiNavigation } from './mockApi';
+
+export async function routeBuiltApplication(page: Page, origin: string, paths: string[], dist?: string) {
+  if (!dist) return;
+  await page.route(url => url.origin === origin && (paths.includes(url.pathname) || url.pathname.startsWith('/assets/')), async route => {
+    const path = new URL(route.request().url()).pathname;
+    await route.fulfill({ path: resolve(dist, paths.includes(path) ? 'index.html' : path.slice(1)) });
+  });
+}
 
 export const test = base.extend({
   page: async ({ page }, runTest, testInfo) => {
@@ -6,6 +16,7 @@ export const test = base.extend({
       await runTest(page);
     } finally {
       if (!page.isClosed()) {
+        const origin = new URL(page.url()).origin;
         try {
           if (testInfo.status !== testInfo.expectedStatus) {
             await testInfo.attach('application-before-teardown', {
@@ -15,7 +26,14 @@ export const test = base.extend({
           }
         } finally {
           // Stop the document's polling before Playwright removes its API routes.
-          await page.goto('about:blank');
+          try {
+            await prepareMockApiNavigation(page);
+          } finally {
+            await page.goto('about:blank');
+          }
+          if (testInfo.status === testInfo.expectedStatus) {
+            await assertMockApiAfterNavigation(page, origin);
+          }
         }
       }
     }

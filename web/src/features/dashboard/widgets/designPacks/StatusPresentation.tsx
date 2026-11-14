@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { usePackModule, usePackPresentation } from './PackBoundary';
 import { PACK_APPEARANCES } from './types';
+import { loadStatus } from './packModules';
 import type { StatusPresentationProps } from './families/Status.types';
-
-const loadStatus = () => import('./families/SecurityStatusLayout');
 
 interface StatusProps extends Omit<StatusPresentationProps, 'appearance'> {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GearTheaterPanel } from './GearTheaterPanel';
@@ -40,6 +40,36 @@ vi.mock('@/api/hooks/useTeslaPhysics', () => ({
 }));
 
 describe('GearTheaterPanel', () => {
+  it('keeps gear, latch, port state and timestamps available on phones', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      render(<GearTheaterPanel driveId="295" />);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = screen.getByRole('group', { name: 'drive-gear-events' });
+      expect(mobile).toHaveTextContent('Port closed');
+      expect(mobile).toHaveTextContent('Engaged');
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('Gear');
+      expect(dialog).toHaveTextContent('Charge-port latch');
+      expect(dialog).toHaveTextContent('Port closed');
+      expect(dialog).toHaveTextContent(formatDateTime('2026-03-03T10:00:00Z', {
+        locale: 'de-DE', tz: 'America/Los_Angeles',
+      }));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('uses saved locale and timezone across day boundaries and guards missing or invalid dates', () => {
     const { container } = render(<GearTheaterPanel driveId="295" />);
     for (const at of ['2026-04-02T00:30:00Z', '2026-04-02T08:30:00Z', 'invalid', '']) {

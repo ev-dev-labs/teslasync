@@ -71,4 +71,17 @@ describe('RawRows native expanded evidence', () => {
     expect(view.container.querySelector('dl[data-app-list="definitions"]')).toBeNull();
     expect(screen.getByRole('table')).toHaveTextContent('zero');
   });
+
+  it('can preserve desktop row expansion when a mobile presentation is supplied', () => {
+    const view = render(<RawRows title="Synthetic evidence" rows={rows} columns={columns} tableId="vehicles-01:expandable"
+      keyExtractor={row => row.id} t={(_key, fallback) => fallback} disclosureLabel="Inspect expandable evidence" expandable
+      mobilePresentation={{ roles: { id: 'title', reading: 'primary' }, displayValue: (row, key) =>
+        key === 'id' ? row.id : key === 'reading' ? row.reading : key === 'status' ? String(row.status) : row.timestamp }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect expandable evidence' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row: zero' }));
+    const definitions = view.container.querySelector('dl[data-app-list="definitions"]');
+    expect(definitions).toHaveTextContent('0');
+    expect(definitions).toHaveTextContent('false');
+    expect(definitions).toHaveTextContent('—');
+  });
 });

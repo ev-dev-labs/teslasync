@@ -15,7 +15,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, Filter, Plus, RefreshCw, X } from 'lucide-react';
 
-import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { TimeStamp, type StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
@@ -244,6 +244,30 @@ export function SignalCatalogPanel({
     return cols;
   }, [selection, selectedSet, selectionMax, t, displayPrecision, displayLocale]);
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<CatalogRow>>(() => ({
+    roles: {
+      signal: 'title', value: 'primary', status: 'badge',
+      lastUpdated: 'meta', timeSince: 'meta', select: 'hidden',
+    },
+    displayValue: (signal, key) => {
+      switch (key) {
+        case 'signal': return signal.name;
+        case 'value': return signal.value;
+        case 'status': {
+          const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
+          return t(`signalCatalog.staleness.${style.key}`, style.label);
+        }
+        case 'lastUpdated': return signal.timestamp ? formatDateTime(signal.timestamp) : '—';
+        case 'timeSince': return signal.timestamp ? formatStaleness(signal.staleness) : '—';
+        default: return null;
+      }
+    },
+    canShowField: (key) => key !== 'select',
+    inlineActions: selection
+      ? (signal) => columns.find((column) => column.key === 'select')?.render(signal)
+      : undefined,
+  }), [columns, selection, t]);
+
   return (
     <div className={cn('min-w-0 max-w-full space-y-4', className)}>
       {showSummary ? (
@@ -340,6 +364,7 @@ export function SignalCatalogPanel({
                 enableValueFilters
                 filterData={signals}
                 columns={columns}
+                mobilePresentation={mobilePresentation}
                 data={filtered}
                 keyExtractor={(signal) => signal.name}
                 compact

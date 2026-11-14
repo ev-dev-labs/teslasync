@@ -306,6 +306,7 @@ it('shares native-row header and plot tracks between standalone chart panels', (
     expect(figure.querySelector('[data-card-slot="header"]')).toContainElement(screen.getByRole('heading', { name: title }));
     expect(figure.querySelector('[data-card-slot="plot"]')).toBeInTheDocument();
   }
+  expect(screen.getByText('Complete descriptive source context')).toHaveAttribute('data-chart-subtitle');
 });
 
 it('keeps embedded export actions beside the host title and restores them inside the fullscreen figure', () => {

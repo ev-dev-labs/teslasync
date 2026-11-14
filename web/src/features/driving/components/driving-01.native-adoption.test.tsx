@@ -160,7 +160,7 @@ describe('driving-01 native ownership', () => {
       for (const frame of frames) {
         expect(frame).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
         expect(hasConsumer(frame, baseCss, 'border-radius', '[data-app-part~="card"]')).toBe(true);
-        expect(hasConsumer(frame, identityCss.get(pack)!, 'border', '[data-app-part~="card"]')).toBe(true);
+        expect(hasConsumer(frame, identityCss.get(pack)!, 'border', '[data-app-part~="card"]'), frame.outerHTML).toBe(true);
       }
       const records = host.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"], [data-app-list="ranked"] > [data-app-part="list-row"]');
       expect(records.length).toBeGreaterThanOrEqual(8 + forecast.rankedWindows.length);
@@ -171,13 +171,26 @@ describe('driving-01 native ownership', () => {
       }
       const tiles = host.querySelectorAll('[data-app-metric="tile"], [data-app-metric="stat"]');
       expect(tiles).toHaveLength(3 + 3 + 6 + 22 + 4);
+      let embeddedTiles = 0;
+      let ordinaryTiles = 0;
       for (const tile of tiles) {
-        expect(hasConsumer(tile, feedbackCss, 'padding', `[data-app-data="${design.data}"]`)).toBe(true);
+        const dataMode = `[data-app-data="${design.data}"]`;
+        if (tile.closest('[data-surface-variant="embedded"]')) {
+          embeddedTiles++;
+          for (const property of ['background', 'border', 'padding', 'display', 'align-items', 'gap', 'grid-template-columns', 'font-size', 'text-align']) {
+            expect(hasConsumer(tile, feedbackCss, property, dataMode), `${property}: ${tile.outerHTML}`).toBe(false);
+          }
+        } else {
+          ordinaryTiles++;
+          expect(hasConsumer(tile, feedbackCss, 'padding', dataMode), tile.outerHTML).toBe(true);
+        }
         expect(tile.querySelector('[data-app-part="metric-label"]')).not.toBeEmptyDOMElement();
         const reading = tile.querySelector('[data-app-part="metric-reading"]')!;
         expect(reading).not.toBeEmptyDOMElement();
         expect(hasConsumer(reading, feedbackCss, 'font-variant-numeric', '[data-app-part~="metric-reading"]')).toBe(true);
       }
+      expect(embeddedTiles).toBeGreaterThan(0);
+      expect(ordinaryTiles).toBeGreaterThan(0);
       for (const insight of host.querySelectorAll('[data-app-feedback-kind="insight"]')) {
         expect(hasConsumer(insight, feedbackCss, 'border', `[data-app-feedback="${design.feedback}"]`)).toBe(true);
         expect(hasConsumer(insight.querySelector('[data-app-part="feedback-message"]')!, feedbackCss, 'white-space')).toBe(true);

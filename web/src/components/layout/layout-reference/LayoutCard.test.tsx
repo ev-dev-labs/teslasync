@@ -7,14 +7,17 @@ import { Card } from '@/components/ui/Card';
 import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { LayoutCard } from './LayoutCard';
 
-const surfaceRules: Rule[] = [];
+const surfaceRules: Rule[][] = [];
 for (const segments of [['base.css'], ['packs', 'blueprint.css']]) {
+  const rules: Rule[] = [];
   postcss.parse(readFileSync(
     resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', ...segments), 'utf8',
   )).walkRules(rule => {
     if (rule.selector.includes('[data-app-part~="card"]')
-      && rule.selector.includes(':not([data-surface-variant="embedded"])')) surfaceRules.push(rule);
+      && (rule.selector.includes(':not([data-surface-variant="embedded"])')
+        || rule.selector.includes('[data-surface-variant="standalone"]'))) rules.push(rule);
   });
+  surfaceRules.push(rules);
 }
 
 describe('LayoutCard compatible surface ownership (source-only)', () => {
@@ -36,17 +39,17 @@ describe('LayoutCard compatible surface ownership (source-only)', () => {
       expect(card).toHaveAttribute('data-card-size', 'full');
       expect(card).toHaveClass('flex', 'h-full', 'min-w-0', 'flex-col', 'gap-3', 'p-3', '@container');
       expect(card.matches('[data-app-part~="card"][data-app-part~="section"]')).toBe(true);
-      expect(surfaceRules.filter(rule => card.matches(rule.selector)).length).toBeGreaterThanOrEqual(2);
+      for (const rules of surfaceRules) expect(rules.some(rule => card.matches(rule.selector))).toBe(true);
       expect(card.querySelector('[data-card-content]')).toHaveAttribute('data-card-slot', delegated ? 'delegate' : 'body');
       expect(card.querySelector('[data-card-footer]')).toHaveTextContent('Original footer');
       expect(screen.getByText('Source-owned analysis')).toBeInTheDocument();
       const unrelated = screen.getByText('Unrelated public override');
       expect(unrelated).toHaveAttribute('data-app-part', 'section');
-      expect(surfaceRules.some(rule => unrelated.matches(rule.selector))).toBe(false);
+      expect(surfaceRules.every(rules => rules.every(rule => !unrelated.matches(rule.selector)))).toBe(true);
       const embedded = screen.getByText('Embedded default');
       expect(embedded).toHaveAttribute('data-surface-variant', 'embedded');
       expect(embedded).toHaveClass('bg-transparent', 'border-0', 'shadow-none');
-      expect(surfaceRules.some(rule => embedded.matches(rule.selector))).toBe(false);
+      expect(surfaceRules.every(rules => rules.every(rule => !embedded.matches(rule.selector)))).toBe(true);
     } finally {
       release();
     }
@@ -64,7 +67,7 @@ describe('LayoutCard compatible surface ownership (source-only)', () => {
     try {
       const card = container.querySelector('[data-card]')!;
       expect(card).not.toHaveAttribute('data-app-design-owner');
-      expect(surfaceRules.some(rule => card.matches(rule.selector))).toBe(false);
+      expect(surfaceRules.every(rules => rules.every(rule => !card.matches(rule.selector)))).toBe(true);
       expect(card).toHaveClass('rounded-panel', 'border', 'bg-[var(--panel-bg)]', 'shadow-panel');
       expect(card.getAttribute('aria-labelledby')).toBe(screen.getByRole('heading', { name: 'Neutral analysis' }).id);
       expect(screen.getByText('Original evidence')).toBeInTheDocument();

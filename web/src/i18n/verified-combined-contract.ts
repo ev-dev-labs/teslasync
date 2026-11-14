@@ -86,6 +86,13 @@ const themePolishAdditions = [
   ['theme.saveFailed', 'Could not save your theme to the server. Your current selection is still applied.'],
 ] as const
 
+export const designProfileCopy = [
+  ['designProfileLoading', 'Loading your saved appearance...'],
+  ['designProfileUnavailable', 'Could not finish loading your saved appearance. Retry or continue without waiting.'],
+  ['designProfileContinue', 'Continue with default appearance'],
+  ['designProfileContinueLoading', 'Continue without waiting'],
+] as const
+
 const themePresetAdditions = {
   'neon-cyan': 'Signal Blue',
   'tesla-red': 'Tesla Red',
@@ -112,6 +119,11 @@ const themePresetAdditions = {
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
   const beforeExternalAuth = catalogBeforeAppDesign(catalog)
+  const common = beforeExternalAuth.common as Record<string, unknown>
+  for (const [key, expected] of designProfileCopy) {
+    expect(common[key], 'common.' + key).toBe(expected)
+    delete common[key]
+  }
   for (const [namespace, expected] of Object.entries(externalAuthCopy.added)) {
     expect(beforeExternalAuth[namespace], namespace).toEqual(expected)
     delete beforeExternalAuth[namespace]

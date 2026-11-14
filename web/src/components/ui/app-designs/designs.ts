@@ -96,6 +96,7 @@ export function getAppDesignAttributes(packId: PackId) {
 
 const OWNER_ATTRIBUTE = 'data-app-design-owner';
 const PREVIEW_ATTRIBUTE = 'data-app-design-preview';
+const PRESERVE_ATTRIBUTE = 'data-app-design-preserve';
 const scopeObservers = new WeakMap<Document, {
   users: number;
   refresh: (scope: Element) => void;
@@ -135,11 +136,19 @@ export function observeAppDesignScopes(scope: Element): () => void {
       writeOwner(doc.documentElement, applicationOwner);
       const root = start === doc.documentElement ? doc.body : start;
       if (!root) return;
+      if (root.parentElement?.closest(`[${PRESERVE_ATTRIBUTE}]`)) {
+        clear(root);
+        return;
+      }
       const boundary = root.parentElement?.closest(`[${PREVIEW_ATTRIBUTE}]`);
       const inherited = boundary ? readOwner(boundary) : applicationOwner;
       const pending: Array<[Element, string | null]> = [[root, inherited]];
       while (pending.length) {
         const [element, parentOwner] = pending.pop()!;
+        if (element.hasAttribute(PRESERVE_ATTRIBUTE)) {
+          clear(element);
+          continue;
+        }
         const owner = element.hasAttribute(PREVIEW_ATTRIBUTE) ? readOwner(element) : parentOwner;
         // Widget-only trees do not need a traversal on every live DOM update.
         if (owner === null && !element.hasAttribute(OWNER_ATTRIBUTE) &&
@@ -170,7 +179,7 @@ export function observeAppDesignScopes(scope: Element): () => void {
     });
     observer.observe(doc.documentElement, {
       subtree: true, childList: true, attributes: true,
-      attributeFilter: [PREVIEW_ATTRIBUTE, ...profileAttributes],
+      attributeFilter: [PREVIEW_ATTRIBUTE, PRESERVE_ATTRIBUTE, ...profileAttributes],
     });
     shared = {
       users: 0, refresh,

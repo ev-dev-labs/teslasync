@@ -303,19 +303,36 @@ export async function inspectSpecializedRoute(
     evidence.partialZero = await compositionGeometry(detail);
     await detail.screenshot({ path: testInfo.outputPath(`${prefix}-partial-zero.png`), animations: 'disabled' });
     const before = await detail.boundingBox();
+    const previousAnchor = await recorded.boundingBox();
     const recordedSlot = Number(await recorded.getAttribute('data-heatmap-slot'));
     await recorded.press('ArrowRight');
     const signed = grid.locator(`[data-heatmap-slot="${recordedSlot + 1}"]`);
     await expect(signed).toBeFocused();
     await expect(detail).toContainText('1 sessions');
     await expect(detail).toContainText(/[−-]1\.25/);
-    const anchor = await signed.boundingBox();
-    expect(anchor).not.toBeNull();
+    const viewportWidth = await page.evaluate(() => innerWidth);
+    const expectedLeft = (anchor: { x: number; width: number }, popup: { width: number }) =>
+      Math.max(8, Math.min(
+        anchor.x + anchor.width / 2 - popup.width / 2,
+        viewportWidth - popup.width - 8,
+      ));
     await expect.poll(async () => {
+      const anchor = await signed.boundingBox();
       const popup = await detail.boundingBox();
-      return popup && anchor ? Math.abs(popup.x + popup.width / 2 - (anchor.x + anchor.width / 2)) : Infinity;
+      if (!popup || !anchor) return Infinity;
+      return Math.abs(popup.x - expectedLeft(anchor, popup));
     }, { message: 'real shared portaled placement follows the keyboard-selected cell' }).toBeLessThan(3);
-    expect((await detail.boundingBox())?.x).not.toBe(before?.x);
+    const anchor = await signed.boundingBox();
+    const after = await detail.boundingBox();
+    expect(anchor).not.toBeNull();
+    expect(previousAnchor).not.toBeNull();
+    expect(before).not.toBeNull();
+    expect(after).not.toBeNull();
+    expect(anchor!.x).toBeGreaterThan(previousAnchor!.x);
+    const desiredAfter = expectedLeft(anchor!, after!);
+    if (Math.abs(desiredAfter - before!.x) >= 3) {
+      expect(Math.abs(after!.x - before!.x)).toBeGreaterThan(2);
+    }
     evidence.slotDetail = await inspectOpenDialog(page, detail, packId, testInfo, `${prefix}-signed-slot.png`);
     await expect(signed).toBeFocused();
     await signed.press('End');

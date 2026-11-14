@@ -7,6 +7,7 @@ import { RepairDiagnosticsWorkspace } from './RepairDiagnosticsWorkspace';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 const mocks = vi.hoisted(() => ({
   query: {
@@ -141,6 +142,22 @@ beforeEach(() => {
 });
 
 describe('RepairQuarantinePanel scope and write authority', () => {
+  it('keeps restore authorization and the confirmation dialog on mobile', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const view = render(<RepairQuarantinePanel vehicleId={7} canWrite={false} />);
+      const grid = view.container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      expect(within(grid).getByRole('button', { name: 'Restore' })).toBeDisabled();
+      view.rerender(<RepairQuarantinePanel vehicleId={7} canWrite />);
+      fireEvent.click(within(grid).getByRole('button', { name: 'Restore' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('Restore quarantined session?');
+      expect(mocks.mutation.mutate).not.toHaveBeenCalled();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('labels old-scope populated rows and blocks restore while retaining same-scope pagination', () => {
     const view = render(<RepairQuarantinePanel vehicleId={7} canWrite />);
     mocks.query.isPlaceholderData = true;

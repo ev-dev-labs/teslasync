@@ -21,10 +21,12 @@ import {
   Text,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -44,6 +46,7 @@ function formatBytes(n: number): string {
 export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
   const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { sortKey, sortDir, onSort } = useSortToggle('arrived_at', 'desc');
 
   const sorted = useMemo(() => {
@@ -171,6 +174,25 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
     [t, onInspect, fmtInt, displayPrecision, displayLocale],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<DLQEntrySummary>>(() => ({
+    roles: {
+      parsed_reason: 'title', arrived_at: 'primary', replayable: 'badge',
+      raw_payload_size: 'meta', parsed_redeliveries: 'meta',
+    },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'parsed_reason': return row.parsed_reason || '—';
+        case 'arrived_at': return row.arrived_at ? formatDateTime(row.arrived_at) : '—';
+        case 'replayable': return row.replayable ? t('common.yes', 'Yes') : t('common.no', 'No');
+        case 'raw_payload_size': return formatBytes(row.raw_payload_size);
+        case 'parsed_redeliveries': return row.parsed_redeliveries == null ? '—' : fmtInt(row.parsed_redeliveries);
+        default: return null;
+      }
+    },
+    onOpenRow: onInspect,
+    inlineActions: (row) => columns.find((column) => column.key === 'actions')?.render(row),
+  }), [columns, fmtInt, formatDateTime, onInspect, t]);
+
   return (
     <DataTable<DLQEntrySummary>
       tableId="admin:dlq-entries"
@@ -189,6 +211,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       }
       pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
       mobileColumns={['arrived_at', 'parsed_reason', 'actions']}
+      mobilePresentation={mobilePresentation}
     />
   );
 }

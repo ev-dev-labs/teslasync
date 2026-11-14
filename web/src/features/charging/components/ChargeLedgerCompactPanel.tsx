@@ -38,6 +38,7 @@ export function ChargeLedgerCompactPanel({ sessionId }: { sessionId: string | un
           <Text as="p" size="sm" color="secondary">
             <Link
               to="/tesla-physics/ledger"
+              data-app-action-link
               className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
             >
               {t('charging.ledger.openFull', 'Open the full physics ledger')}

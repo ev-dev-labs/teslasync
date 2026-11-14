@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
-import { DataTable, Select, Text } from '@/components/ui';
+import { DataTable, Select, Text, type MobileDataTablePresentation } from '@/components/ui';
+import type { Nerve } from '@/types/teslaPhysics';
 
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, pagination } from './PhysicsPageShell';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+
+const nerveMobilePresentation: MobileDataTablePresentation<Nerve> = {
+  roles: { field: 'title', status: 'primary', detail: 'meta' },
+  displayValue: (row, key) => key === 'field' || key === 'status' || key === 'detail' ? row[key] : null,
+};
 
 export default function PhysicsNervousSystemSection({ physics }: { physics: PhysicsPage }) {
   const { fmtNumber } = useNumberFormatting();
@@ -46,7 +52,8 @@ export default function PhysicsNervousSystemSection({ physics }: { physics: Phys
       {nerves.length === 0 && <Text as="p" variant="bodySm">{t('teslaOnly.nervousNoFields', 'No signal status rows returned; there is no basis to assess signal freshness.')}</Text>}
       <Text as="p" variant="bodySm">{t('teslaOnly.nervousAttention', 'Signals needing attention')}</Text>
       <DataTable tableId="physics:nerves-attention" data={[...conflicting, ...other]} columns={columns} pagination={pagination}
-        mobileColumns={['field', 'status']} keyExtractor={(r) => r.field} emptyMessage={t('teslaOnly.nervousNone', 'No non-alive signals returned in this frame.')} />
+        mobileColumns={['field', 'status']} mobilePresentation={nerveMobilePresentation}
+        keyExtractor={(r) => r.field} emptyMessage={t('teslaOnly.nervousNone', 'No non-alive signals returned in this frame.')} />
       {matchedBudgets.length ? matchedBudgets.slice(0, 5).map(({ nerve, budget }) =>
         <Text key={nerve.field} as="p" variant="caption">{t('teslaOnly.nervousBudgetReading', '{{field}}: {{status}} now; {{hours}} h unknown in returned budget', {
           field: nerve.field, status: nerve.status, hours: fmtNumber(budget.hours),
@@ -55,7 +62,8 @@ export default function PhysicsNervousSystemSection({ physics }: { physics: Phys
         options={[{ value: '', label: t('teslaOnly.nervousAll', 'All returned statuses') }, ...statuses.map((status) => ({ value: status, label: status }))]} />
       <Text as="p" variant="caption">{t('teslaOnly.nervousScope', 'Only returned signal fields can be filtered. Status is a freshness/consistency classification, not proof that a vehicle component failed.')}</Text>
       <RawRows title={physics.title} rows={visible} columns={columns} tableId="physics:nerves" t={t}
-        mobileColumns={['field', 'status']} keyExtractor={(r) => r.field} />
+        mobileColumns={['field', 'status']} mobilePresentation={nerveMobilePresentation} expandable
+        keyExtractor={(r) => r.field} />
     </Evidence>
   </>;
 }

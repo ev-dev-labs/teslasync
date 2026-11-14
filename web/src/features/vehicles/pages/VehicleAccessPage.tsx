@@ -17,6 +17,7 @@ import {
   IconButton,
   type BadgeProps,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
@@ -236,6 +237,17 @@ export default function VehicleAccessPage() {
     },
   ], [t]);
 
+  const driverMobilePresentation = useMemo<MobileDataTablePresentation<VehicleDriver>>(() => ({
+    roles: { name: 'title', role: 'primary', email: 'meta' },
+    displayValue: (row, key) => {
+      if (key === 'name') return row.driver_name;
+      if (key === 'email') return row.driver_email;
+      if (key === 'role') return row.role;
+      return null;
+    },
+    inlineActions: (row) => driverColumns.find((column) => column.key === 'actions')?.render(row),
+  }), [driverColumns]);
+
   // ── Invitation columns ──────────────────────────────────────────
 
   const invitationColumns: Column<VehicleInvitation>[] = useMemo(() => [
@@ -298,6 +310,24 @@ export default function VehicleAccessPage() {
       className: 'w-12',
     },
   ], [t]);
+
+  const invitationMobilePresentation = useMemo<MobileDataTablePresentation<VehicleInvitation>>(() => ({
+    roles: { createdBy: 'title', status: 'primary' },
+    displayValue: (row, key) => {
+      if (key === 'createdBy') return row.created_by;
+      if (key === 'status') return t(`vehicleAccess.status.${row.status}`, row.status);
+      return null;
+    },
+    inlineActions: (row) => (
+      <>
+        <Text as="span" variant="bodySm">
+          {t('vehicleAccess.invitations.expires', 'Expires')}: <TimeStamp value={row.expires_at} />
+        </Text>
+        {row.invite_url && invitationColumns.find((column) => column.key === 'link')?.render(row)}
+        {invitationColumns.find((column) => column.key === 'actions')?.render(row)}
+      </>
+    ),
+  }), [invitationColumns, t]);
 
   return (
     <PageLayout
@@ -375,6 +405,7 @@ export default function VehicleAccessPage() {
                 enableValueFilters
                 columns={driverColumns}
                 mobileColumns={['name', 'email', 'role', 'actions']}
+                mobilePresentation={driverMobilePresentation}
                 data={driversList}
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('vehicleAccess.drivers.empty', 'No drivers found')}
@@ -455,6 +486,7 @@ export default function VehicleAccessPage() {
               enableValueFilters
               columns={invitationColumns}
               mobileColumns={['status', 'createdBy', 'expires', 'link', 'actions']}
+              mobilePresentation={invitationMobilePresentation}
               data={invitationsList}
               keyExtractor={(row) => row.id}
               emptyMessage={t('vehicleAccess.invitations.empty', 'No invitations found')}

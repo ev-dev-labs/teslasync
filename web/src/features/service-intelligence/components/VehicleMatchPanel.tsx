@@ -134,6 +134,7 @@ export function VehicleMatchPanel({
           <OperationalBrief
             compact
             variant="embedded"
+            className="[--app-brief-content-min-width:10rem]"
             testId="service-intelligence-summary"
             eyebrow={t('serviceIntelligence.page.title', 'Recall & service intelligence')}
             title={t('serviceIntelligence.brief.title', 'Service match summary')}

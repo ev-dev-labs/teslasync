@@ -1,14 +1,16 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
-import { test } from './app-design-test';
-import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
+import { resolve } from 'node:path';
+import { routeBuiltApplication, test } from './app-design-test';
+import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
-import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes } from './widget-design-packs.acceptance';
+import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
-import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
+import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
+import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
 import { inspectSpecializedRoute, specializedReviewRoutes } from './widget-design-packs.specialized';
 import { installSpecializedReviewSources } from './widget-design-packs.specialized.mock';
-import { specializedDrives } from './widget-design-packs.specialized.fixtures';
+import { chargingReviewPath, specializedDrives } from './widget-design-packs.specialized.fixtures';
 import { inspectEnergyReview } from './widget-design-packs.energy';
 import { energyReviewPath, installEnergyReviewSources } from './widget-design-packs.energy.mock';
 
@@ -17,11 +19,570 @@ const packIds = Object.keys(packNames) as PackId[];
 const preservedVariables = ['--theme-accent', '--surface-1', '--font-sans', '--font-mono',
   '--font-scale', '--leading', '--tracking', '--font-weight-bold', '--semantic-danger', '--semantic-success'];
 const publicPaths = ['/watch', '/onboarding'] as const;
+const customReviewSettings = {
+  theme: 'custom', custom_primary: '#9c6ade', custom_accent: '#c0842b',
+  font_family: 'custom', font_custom_sans: 'Georgia', font_mono: 'custom', font_custom_mono: 'Consolas',
+  font_scale: 1.15, font_leading: 1.75, font_tracking: '0.015em', font_heading_weight: 600,
+  unit_of_length: 'mi', unit_of_temp: 'F', unit_of_pressure: 'psi', chart_palette: 'neon',
+} as const;
 const acceptanceFamilies = [
   'shell-navigation', 'page-composition', 'controls-forms', 'tables-lists', 'dialogs-popovers',
   'metrics-timelines', 'charts-gauges', 'maps-geofences', 'feedback-all-states',
   'responsive-accessibility', 'real-page-adoption', 'distinct-rendered-identity',
 ] as const;
+
+for (const mode of ['dark', 'light'] as const) {
+  test(`hidden chart legends stay readable and reversible in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'classic';
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/command-history'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/command-history');
+    await waitForHarnessReady(page, mocks);
+    const legend = page.locator('button[data-chart-legend-label][data-series-key="success"]').first();
+    for (const width of [360, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await legend.scrollIntoViewIfNeeded();
+      await expect(legend).toHaveAttribute('aria-pressed', 'false');
+      await legend.click();
+      await expect(legend).toHaveAttribute('aria-pressed', 'true');
+      const appearance = await legend.evaluate(element => {
+        const color = (value: string) => value.match(/[\d.]+/g)?.map(Number) ?? [];
+        const style = getComputedStyle(element);
+        const foreground = color(style.color);
+        let background: number[] = [];
+        let opacity = 1;
+        for (let node: Element | null = element; node; node = node.parentElement) {
+          const current = getComputedStyle(node);
+          opacity *= Number(current.opacity);
+          const candidate = color(current.backgroundColor);
+          if (candidate.length >= 3 && (candidate.length === 3 || candidate[3] === 1)) {
+            background = candidate;
+            break;
+          }
+        }
+        if (foreground.length < 3 || background.length < 3) throw new Error('Chart legend colors are unavailable');
+        const blended = foreground.slice(0, 3).map((value, index) => value * opacity + background[index] * (1 - opacity));
+        const luminance = (values: number[]) => values.map(value => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+        const a = luminance(blended);
+        const b = luminance(background.slice(0, 3));
+        return {
+          ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+          decoration: style.textDecorationLine,
+        };
+      });
+      expect(appearance.ratio, `${mode} ${width}px hidden legend contrast`).toBeGreaterThanOrEqual(4.5);
+      expect(appearance.decoration).toContain('line-through');
+      await legend.click();
+      await expect(legend).toHaveAttribute('aria-pressed', 'false');
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+for (const mode of ['dark', 'light'] as const) {
+  test(`Expressive Form phone headings have room for short titles in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'v6';
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin);
+    await installSpecializedReviewSources(page, mocks, mode);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/drives'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/drives');
+    await waitForHarnessReady(page, mocks);
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'v6');
+    const heading = page.getByRole('heading', { name: 'Drive history', exact: true });
+    const help = page.getByRole('button', { name: 'More info: Drive history', exact: true });
+    await expect(heading).toBeVisible();
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430, 768, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+          const geometry = await heading.evaluate(element => {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const lines = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length;
+            const title = element.closest('[data-app-part~="page-title"]')?.getBoundingClientRect();
+            const header = element.closest('[data-app-part~="page-header"]')?.getBoundingClientRect();
+            const actions = element.closest('[data-app-part~="page-header"]')
+              ?.querySelector('[data-app-part~="page-actions"]')?.getBoundingClientRect();
+            if (!title || !header || !actions) throw new Error('Page heading geometry is missing');
+            return {
+              lines,
+              titleWithinHeader: title.left >= header.left - 1 && title.right <= header.right + 1,
+              actionsWithinHeader: actions.left >= header.left - 1 && actions.right <= header.right + 1,
+              overlapping: title.left < actions.right - 1 && title.right > actions.left + 1
+                && title.top < actions.bottom - 1 && title.bottom > actions.top + 1,
+              overflow: element.scrollWidth - element.clientWidth,
+            };
+          });
+          const label = `${mode} ${forcedColors} ${width}px scale ${scale}`;
+          if (scale === 1) expect(geometry.lines, `${label} title lines`).toBe(1);
+          expect(geometry.titleWithinHeader, `${label} title containment`).toBe(true);
+          expect(geometry.actionsWithinHeader, `${label} action containment`).toBe(true);
+          expect(geometry.overlapping, `${label} overlapping actions`).toBe(false);
+          expect(geometry.overflow, `${label} title overflow`).toBeLessThanOrEqual(1);
+          if (width < 768) {
+            const helpSize = await help.boundingBox();
+            expect(helpSize && Math.min(helpSize.width, helpSize.height), `${label} help target`).toBeGreaterThanOrEqual(44);
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${label} page overflow`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+    await page.emulateMedia({ forcedColors: 'none' });
+    await page.setViewportSize({ width: 390, height: 900 });
+    const container = page.locator('[data-app-part~="page"]').first();
+    const header = page.locator('[data-app-part~="page-header"]').first();
+    for (const presentation of ['report', 'kiosk']) {
+      await container.evaluate((element, value) => element.setAttribute('data-presentation-mode', value), presentation);
+      const titleMinimum = await header.evaluate(element =>
+        getComputedStyle(element).getPropertyValue('--app-header-title-min-width').trim());
+      expect(titleMinimum, `${mode} ${presentation} title token`).toBe('12rem');
+    }
+    await container.evaluate(element => element.removeAttribute('data-presentation-mode'));
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+const phoneMetricPacks = ['v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus', 'brutal'] as const;
+for (const [pack, mode] of phoneMetricPacks.flatMap(
+  pack => (['dark', 'light'] as const).map(mode => [pack, mode] as const),
+)) {
+  test(`${packNames[pack]} dashboard metric context remains readable on phones in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = pack;
+    preference.app_wide = true;
+    const widgets = [['recent-drives', 'Recent drives'], ['battery-gauge', 'Battery'],
+      ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini']] as const;
+    const mocks = await installPackReview(page, mode, 390, false, widgets, true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/');
+    await waitForHarnessReady(page, mocks);
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+    const recent = page.getByRole('heading', { name: 'Recent drives', exact: true })
+      .locator('xpath=ancestor::*[@data-widget-pack][1]');
+    const battery = page.getByRole('heading', { name: 'Battery', exact: true })
+      .locator('xpath=ancestor::*[@data-widget-pack][1]');
+    const context = recent.locator('[data-app-metric="headline"] [data-app-part~="metric-context"]');
+    const unit = battery.locator('[data-app-metric="headline"] [data-app-part~="metric-unit"]');
+    await expect(context).toBeVisible();
+    await expect(unit).toBeVisible();
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+          for (const [name, slot] of [['context', context], ['unit', unit]] as const) {
+            const geometry = await slot.evaluate(element => {
+              const bounds = element.getBoundingClientRect();
+              const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
+              if (!body) throw new Error('Metric widget body is missing');
+              return {
+                fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+                overflow: element.scrollWidth - element.clientWidth,
+                width: bounds.width,
+                contained: bounds.left >= body.left - 1 && bounds.right <= body.right + 1,
+              };
+            });
+            const label = `${mode} ${forcedColors} ${width}px scale ${scale} ${name}`;
+            expect(geometry.fontSize, `${label} font size`).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.02);
+            expect(geometry.width, `${label} width`).toBeGreaterThan(0);
+            expect(geometry.contained, `${label} widget containment`).toBe(true);
+            expect(geometry.overflow, `${label} overflow`).toBeLessThanOrEqual(1);
+          }
+          const overlap = await context.evaluate(element => {
+            const reading = element.closest('[data-app-metric="headline"]')
+              ?.querySelector('[data-app-part~="metric-reading"]')?.getBoundingClientRect();
+            if (!reading) throw new Error('Metric reading is missing');
+            const text = element.getBoundingClientRect();
+            return text.left < reading.right - 1 && text.right > reading.left + 1
+              && text.top < reading.bottom - 1 && text.bottom > reading.top + 1;
+          });
+          expect(overlap, `${mode} ${forcedColors} ${width}px scale ${scale} context overlap`).toBe(false);
+          expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+for (const mode of ['dark', 'light'] as const) {
+  test(`recent-drive context is readable across design packs in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false,
+      [['recent-drives', 'Recent drives']], true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/');
+    await waitForHarnessReady(page, mocks);
+    for (const pack of PACK_IDS) {
+      await selectReviewPack(page, pack);
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+      const recent = page.getByRole('heading', { name: 'Recent drives', exact: true })
+        .locator('xpath=ancestor::*[@data-widget-pack][1]');
+      await expect(recent).toHaveAttribute('data-widget-pack', pack);
+      const context = pack === 'classic'
+        ? recent.locator('.widget-detail-list .text-xs')
+        : recent.locator('[data-app-metric="headline"] [data-app-part~="metric-context"]');
+      await expect.poll(() => context.count(), { message: `${pack} context` }).toBeGreaterThan(0);
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+          const results = await context.evaluateAll(elements => elements.map(element => {
+            const bounds = element.getBoundingClientRect();
+            const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
+            return {
+              fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+              overflow: element.scrollWidth - element.clientWidth,
+              contained: Boolean(body && bounds.left >= body.left - 1 && bounds.right <= body.right + 1),
+            };
+          }));
+          for (const result of results) {
+            const label = `${pack} ${mode} ${width}px scale ${scale}`;
+            expect(result.fontSize, `${label} font size`).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.02);
+            expect(result.overflow, `${label} overflow`).toBeLessThanOrEqual(1);
+            expect(result.contained, `${label} widget containment`).toBe(true);
+          }
+        }
+      }
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+test('charging detail follows the focused cell while respecting viewport edges', async ({ page }, testInfo) => {
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+  const preference = createReviewPreference();
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin, customReviewSettings);
+  await installSpecializedReviewSources(page, mocks, 'dark');
+  await routeBuiltApplication(page, new URL(origin).origin, ['/charging-heatmap'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.goto(chargingReviewPath);
+  await waitForHarnessReady(page, mocks);
+  const grid = page.locator('[data-heatmap-grid]');
+  const recorded = grid.getByRole('button', { name: /— 2 sessions$/ });
+  await page.mouse.move(1, 1);
+  await recorded.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'center' }));
+  await recorded.focus();
+  await recorded.press('Enter');
+  const detail = page.getByRole('dialog').filter({ has: page.locator('[data-chart-tooltip-label]') });
+  await expect(detail).toContainText('2 sessions');
+  const slot = Number(await recorded.getAttribute('data-heatmap-slot'));
+  await recorded.press('ArrowRight');
+  const selected = grid.locator(`[data-heatmap-slot="${slot + 1}"]`);
+  await expect(selected).toBeFocused();
+  await expect(detail).toContainText(/[−-]1\.25/);
+  await expect.poll(async () => {
+    const anchor = await selected.boundingBox();
+    const popup = await detail.boundingBox();
+    if (!anchor || !popup) return Infinity;
+    const centered = anchor.x + anchor.width / 2 - popup.width / 2;
+    return Math.abs(popup.x - Math.max(8, Math.min(centered, 390 - popup.width - 8)));
+  }).toBeLessThan(3);
+  await assertContained(detail, 'focused charging detail');
+  await assertMockApiComplete(page, mocks);
+});
+
+test('nested preview comparison settles map control hover independently of the outer pack', async ({ page }, testInfo) => {
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+  const preference = createReviewPreference();
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin, customReviewSettings);
+  await routeBuiltApplication(page, new URL(origin).origin, ['/settings'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.goto('/settings');
+  await waitForHarnessReady(page, mocks);
+  const picker = await appearance(page, 390);
+  const appearances: unknown[] = [];
+  for (const outer of ['memphis', 'blueprint'] as const) {
+    await selectReviewPack(page, outer);
+    await expectProfile(page, outer);
+    await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
+    const preview = dialog.locator('[data-preview-synthetic="true"]');
+    await expect(preview).toBeVisible();
+    await preview.evaluate(element => { element.style.width = '320px'; });
+    await assertPlotAndMap(preview);
+    await assertOwnerGuardActivation(preview);
+    const control = preview.getByRole('button', { name: 'Zoom sample map in', exact: true });
+    await control.hover();
+    const hovered = await control.evaluate(element => getComputedStyle(element).backgroundColor);
+    await settlePointer(preview);
+    const settled = await control.evaluate(element => getComputedStyle(element).backgroundColor);
+    expect(settled).not.toBe(hovered);
+    appearances.push(await isolationAppearance(preview));
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  }
+  expect(appearances[0]).toEqual(appearances[1]);
+  await assertMockApiComplete(page, mocks);
+});
+
+test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  const preference = createReviewPreference();
+  preference.pack_id = 'v7';
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin, { chart_palette: 'neon' });
+  await routeBuiltApplication(page, new URL(origin).origin, ['/settings'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.goto('/settings');
+  await waitForHarnessReady(page, mocks);
+  await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
+  const gallery = page.locator('[aria-labelledby="settings-widget-design-packs"]');
+  const thumbnails = gallery.locator('[data-app-design-thumbnail]');
+  await expect(thumbnails).toHaveCount(PACK_IDS.length);
+  await expect(gallery.getByRole('button', { name: 'Pixel Cockpit active' })).toBeDisabled();
+  for (const width of [360, 430, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const geometry = await thumbnails.evaluateAll(elements => elements.map(element => {
+      const panel = element.querySelector<HTMLElement>('[data-app-part~="panel"]');
+      const value = panel?.querySelector<HTMLElement>('[data-app-part~="metric-value"]');
+      const chart = element.querySelector<HTMLElement>('[data-app-part~="chart"]');
+      const navigation = element.querySelector<HTMLElement>('[data-app-part~="navigation"]');
+      const card = element.closest('section');
+      return {
+        id: element.getAttribute('data-app-design-thumbnail'),
+        owner: panel?.getAttribute('data-app-design-owner'),
+        radius: panel ? getComputedStyle(panel).borderTopLeftRadius : '',
+        navigation: navigation ? getComputedStyle(navigation).flexDirection : '',
+        chartWidth: chart?.getBoundingClientRect().width ?? 0,
+        chartColor: chart?.querySelector('polyline')?.getAttribute('stroke'),
+        bounds: value && panel ? {
+          reading: value.getBoundingClientRect().toJSON(),
+          panel: panel.getBoundingClientRect().toJSON(),
+        } : null,
+        valueFits: !!value && !!panel && (() => {
+          const reading = value.getBoundingClientRect();
+          const bounds = panel.getBoundingClientRect();
+          return reading.width > 0 && reading.height > 0 && reading.right <= bounds.right + 1
+            && reading.bottom <= bounds.bottom + 1;
+        })(),
+        stageHeight: element.getBoundingClientRect().height,
+        cardOverflow: card ? card.scrollWidth - card.clientWidth : Infinity,
+        targets: [...(card?.querySelectorAll('button') ?? [])].map(button => {
+          const rect = button.getBoundingClientRect();
+          return Math.min(rect.width, rect.height);
+        }),
+      };
+    }));
+    expect(geometry.map(item => item.id)).toEqual(PACK_IDS);
+    expect(geometry.filter(item => !item.valueFits).map(({ id, bounds }) => ({ id, bounds })), `${width}px clipped values`).toEqual([]);
+    for (const item of geometry) {
+      expect(item.owner, `${width}px ${item.id}`).toContain(`pack-${item.id}`);
+      expect(item.stageHeight, `${width}px ${item.id}`).toBe(256);
+      expect(item.chartWidth, `${width}px ${item.id}`).toBeGreaterThan(0);
+      expect(item.chartColor, `${width}px ${item.id}`).toBe(CHART_COLORS_NEON_DARK[0]);
+      expect(item.cardOverflow, `${width}px ${item.id}`).toBeLessThanOrEqual(1);
+      for (const target of item.targets) expect(target, `${width}px ${item.id}`).toBeGreaterThanOrEqual(44);
+    }
+    expect(geometry.find(item => item.id === 'v2')?.navigation).toBe('column');
+    expect(geometry.find(item => item.id === 'v6')?.navigation).toBe('row');
+    expect(geometry.find(item => item.id === 'v2')?.radius).not.toBe(geometry.find(item => item.id === 'v7')?.radius);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({ width: 430, height: 900 });
+  await gallery.getByRole('button', { name: 'Use Cyberdeck pack' }).click();
+  await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
+  expect(preference.pack_id).toBe('cyber');
+  await waitForHarnessReady(page, mocks);
+  await page.reload();
+  await waitForHarnessReady(page, mocks);
+  await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
+  await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
+  await assertMockApiComplete(page, mocks);
+});
+
+test('all pack dashboard layout names remain readable on phones', async ({ page }, testInfo) => {
+  test.setTimeout(180_000);
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  const preference = createReviewPreference();
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false,
+    [['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini']], true, preference, origin);
+  await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForHarnessReady(page, mocks);
+  const trigger = page.getByRole('button', { name: 'Switch dashboard layout' });
+  await expect(trigger).toBeVisible();
+  const failures: string[] = [];
+  for (const pack of PACK_IDS) {
+    await selectReviewPack(page, pack);
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+    await expect(trigger).toHaveAttribute('data-app-design-owner', new RegExp(`(?:^|\\s)pack-${pack}(?:\\s|$)`));
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      const geometry = await trigger.evaluate(button => {
+        const caption = button.querySelector<HTMLElement>('[data-layout-switcher-caption]');
+        const name = button.querySelector<HTMLElement>('[data-layout-switcher-name]');
+        if (!caption || !name) throw new Error('Dashboard layout labels are missing');
+        const range = document.createRange();
+        range.selectNodeContents(caption);
+        const lines = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length;
+        const bounds = button.getBoundingClientRect();
+        return {
+          caption: caption.textContent,
+          captionLines: lines,
+          name: name.textContent,
+          nameClipped: name.scrollWidth > name.clientWidth + 1 || name.scrollHeight > name.clientHeight + 1,
+          buttonWidth: bounds.width,
+          buttonHeight: bounds.height,
+          overflow: document.documentElement.scrollWidth - innerWidth,
+        };
+      });
+      if (geometry.caption !== 'Layout' || geometry.captionLines !== 1
+        || geometry.name !== 'Implementation review - synthetic data' || geometry.nameClipped
+        || geometry.buttonWidth < 44 || geometry.buttonHeight < 44 || geometry.overflow > 1) {
+        failures.push(`${pack} ${width}px: ${JSON.stringify(geometry)}`);
+      }
+    }
+  }
+  expect(failures).toEqual([]);
+  await waitForHarnessReady(page, mocks);
+  await assertMockApiComplete(page, mocks);
+});
+
+test('energy chart fallback remains readable in phone forced colors', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const origin = testInfo.project.use.baseURL;
+  if (typeof origin !== 'string') throw new Error('A running application origin is required');
+  const preference = createReviewPreference();
+  preference.pack_id = 'observatory';
+  preference.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, preference, origin);
+  await routeBuiltApplication(page, new URL(origin).origin, ['/energy'], process.env.DESIGN_PACK_DIST_DIR);
+  await page.emulateMedia({ forcedColors: 'active' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/energy');
+  await waitForHarnessReady(page, mocks);
+  const table = page.getByRole('table', { name: 'Charger type breakdown — data table' });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole('columnheader')).toHaveCount(6);
+  await expect(table.getByRole('cell').first()).toBeVisible();
+  const headings = await table.getByRole('columnheader').allTextContents();
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    const geometry = await table.evaluate(element => {
+      const scroll = element.closest('[data-table-variant="embedded"]')?.firstElementChild;
+      if (!(scroll instanceof HTMLElement)) throw new Error('Chart fallback scroll container missing');
+      return {
+        overflow: scroll.scrollWidth - scroll.clientWidth,
+        cells: [...element.querySelectorAll('tbody tr:first-child td')].map(cell => ({
+          label: cell.getAttribute('data-mobile-label'),
+          visibleLabel: getComputedStyle(cell, '::before').content,
+          labelSize: parseFloat(getComputedStyle(cell, '::before').fontSize),
+          valueSize: parseFloat(getComputedStyle(cell).fontSize),
+        })),
+      };
+    });
+    expect(geometry.overflow, `${width}px`).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px document`).toBeLessThanOrEqual(1);
+    expect(geometry.cells.map(cell => cell.label)).toEqual(headings);
+    for (const [index, cell] of geometry.cells.entries()) {
+      expect(cell.visibleLabel).toContain(headings[index]);
+      expect(cell.labelSize).toBeGreaterThanOrEqual(16);
+      expect(cell.valueSize).toBeGreaterThanOrEqual(16);
+    }
+  }
+  await assertMockApiComplete(page, mocks);
+});
+
+test.describe('saved appearance startup', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('applies the verified pack before the shell appears and persists on reload', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const baseURL = testInfo.project.use.baseURL;
+    if (!baseURL) throw new Error('A running application origin is required');
+    const origin = new URL(baseURL).origin;
+    const dist = process.env.DESIGN_PACK_DIST_DIR
+      ? resolve(process.env.DESIGN_PACK_DIST_DIR)
+      : resolve('e2e', '.app-dist');
+    const preference = createReviewPreference();
+    preference.pack_id = 'v7';
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, 'dark', 390, false,
+      [['vehicle-hero', 'Vehicle card'], ['battery-gauge', 'Battery']], false, preference, origin);
+
+    await routeBuiltApplication(page, origin, ['/'], dist);
+
+    let release!: () => void;
+    const gate = new Promise<void>(resolveGate => { release = resolveGate; });
+    let reads = 0;
+    await page.route('**/api/v1/settings/widget-design-pack', async route => {
+      if (route.request().method() !== 'GET' || new URL(route.request().url()).search) {
+        mocks.unmatched.add(`${route.request().method()} /settings/widget-design-pack`);
+        return fulfillApiFixture(route, mocks, { status: 599, json: { error: 'Unexpected design preference request' } });
+      }
+      reads++;
+      await gate;
+      await fulfillApiFixture(route, mocks, { json: preference });
+    });
+    await page.addInitScript(() => {
+      const state = { flashes: 0 };
+      Object.assign(window, { __appearanceCheck: state });
+      const check = () => {
+        if (document.querySelector('[data-app-part~="shell"]')
+          && document.documentElement.getAttribute('data-app-design-pack') !== 'v7') state.flashes++;
+      };
+      new MutationObserver(check).observe(document, { subtree: true, childList: true, attributes: true });
+    });
+    try {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(origin, { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => reads).toBeGreaterThan(0);
+      await expect(page.getByTestId('page-load-skeleton')).toBeVisible();
+      await expect(page.locator('[data-app-part~="shell"]')).toHaveCount(0);
+      release();
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'v7');
+      await expect(page.locator('[data-app-part~="shell"]')).toBeVisible();
+      await expect(page.locator('[data-vehicle-hero-pack="v7"]')).toBeVisible();
+      expect(await page.evaluate(() => (window as unknown as { __appearanceCheck: { flashes: number } }).__appearanceCheck.flashes)).toBe(0);
+      await waitForHarnessReady(page, mocks);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'v7');
+      await expect(page.locator('[data-vehicle-hero-pack="v7"]')).toBeVisible();
+      expect(reads).toBeGreaterThan(1);
+      expect(await page.evaluate(() => (window as unknown as { __appearanceCheck: { flashes: number } }).__appearanceCheck.flashes)).toBe(0);
+      await waitForHarnessReady(page, mocks);
+      await assertMockApiComplete(page, mocks);
+    } finally {
+      release();
+    }
+  });
+});
 
 async function auditPreview(page: Page, testInfo: TestInfo, file: string) {
   const results = await new AxeBuilder({ page })
@@ -146,15 +707,16 @@ async function inspectRetainedAndNativeControls(preview: Locator) {
   return { retainedError: before, retainedRecovery: recovery, quantitative };
 }
 
+async function settlePointer(host: Locator) {
+  await host.page().mouse.move(0, 0);
+  await host.evaluate(async element => {
+    await Promise.all(element.getAnimations({ subtree: true })
+      .filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+      .map(animation => animation.finished.catch(() => {})));
+  });
+}
+
 async function inspectIncompletePreview(page: Page, preview: Locator) {
-  const settlePointer = async (host: Locator) => {
-    await page.mouse.move(0, 0);
-    await host.evaluate(async element => {
-      await Promise.all(element.getAnimations({ subtree: true })
-        .filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime))
-        .map(animation => animation.finished.catch(() => {})));
-    });
-  };
   await preview.evaluate(element => element.removeAttribute('data-app-data'));
   await expect(preview).not.toHaveAttribute('data-app-design-owner');
   await expect(preview.locator('[data-app-design-owner]')).toHaveCount(0);
@@ -268,7 +830,7 @@ async function expectNeutral(page: Page, noLocalScopes = false) {
   await expect(page.locator('html')).not.toHaveAttribute('data-app-design-owner');
   if (noLocalScopes) {
     for (const attribute of [...profileAttributes, 'data-app-design-owner']) {
-      await expect(page.locator(`[${attribute}]`), `neutral document retains no ${attribute} on stale local/portal targets`).toHaveCount(0);
+      await expect(unexpectedNeutralScopes(page, attribute), `neutral document retains no ${attribute} on stale local/portal targets`).toHaveCount(0);
     }
   }
 }
@@ -381,12 +943,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       const saved = createReviewPreference();
       const mocks = await installPackReview(page, mode, width, false,
         [['vehicle-hero', 'Vehicle card'], ['battery-gauge', 'Battery'], ['speed-heatmap', 'Speed heatmap']], false, saved,
-        testInfo.project.use.baseURL, theme === 'custom' ? {
-          theme: 'custom', custom_primary: '#9c6ade', custom_accent: '#c0842b',
-          font_family: 'custom', font_custom_sans: 'Georgia', font_mono: 'custom', font_custom_mono: 'Consolas',
-          font_scale: 1.15, font_leading: 1.75, font_tracking: '0.015em', font_heading_weight: 600,
-          unit_of_length: 'mi', unit_of_temp: 'F', unit_of_pressure: 'psi', chart_palette: 'neon',
-        } : {});
+        testInfo.project.use.baseURL, theme === 'custom' ? customReviewSettings : {});
       await installGeofenceReviewSources(page, mocks);
       const specializedSources = await installSpecializedReviewSources(page, mocks, mode);
       const energySources = await installEnergyReviewSources(page, mocks);
@@ -770,6 +1327,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await assertPlotAndMap(preview);
           await assertOwnerGuardActivation(preview);
           await expectProfile(page, outerPack);
+          await settlePointer(preview);
           const inline = await isolationAppearance(preview);
           const portaled = await inspectPortaledIsolation(page, preview);
           isolated[outerPack] = { inline, portaled };

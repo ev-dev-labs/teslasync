@@ -1,6 +1,6 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Caption } from '@/components/ui';
+import { Button, Caption, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { formatTime } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -31,10 +31,8 @@ function heatColor(ratio: number): string {
 
 /**
  * Tariff price / grid-import utilization / grid-export utilization / vehicle
- * charging / Powerwall SoC as a dense per-slot heatmap row set, scrollable
- * horizontally for long horizons. Cell color and column count are
- * data-driven so a static Tailwind class cannot express them — the sanctioned
- * `style={{}}` exception (see `HeatmapGrid.tsx` precedent).
+ * charging / Powerwall SoC as a per-slot heatmap. Phone layouts wrap the
+ * complete horizon; wider layouts keep the continuous, scrollable timeline.
  */
 export function TariffConstraintHeatmap({ slots, grid, hasPowerwall, slotMinutes = DEFAULT_SLOT_MINUTES }: TariffConstraintHeatmapProps) {
   const { t } = useTranslation();
@@ -52,7 +50,9 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall, slotMinutes
     [slots],
   );
 
-  const columnStyle = { gridTemplateColumns: `repeat(${Math.max(1, slots.length)}, max-content)` };
+  const columnStyle = {
+    '--tariff-heatmap-columns': `repeat(${Math.max(1, slots.length)}, max-content)`,
+  } as CSSProperties;
 
   const rows: Array<{ key: string; label: string; ratio: (s: SlotResult) => number; format: (s: SlotResult) => string }> = [
     {
@@ -103,12 +103,18 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall, slotMinutes
       {slots.length === 0 ? (
         <Caption>{t('homeEnergy.heatmap.empty', 'No plan slots to display yet.')}</Caption>
       ) : (
-        <div className="overflow-x-auto p-1">
-          <div className="w-max">
+        <div data-tariff-heatmap className="min-w-0 p-1 md:overflow-x-auto">
+          <div className="min-w-0 md:w-max">
             {rows.map((row) => (
-              <div key={row.key} className="mb-1.5 flex items-center gap-2">
-                <Caption className="w-32 shrink-0 break-words whitespace-normal">{row.label}</Caption>
-                <div role="group" aria-label={row.label} className="grid gap-2" style={columnStyle}>
+              <div key={row.key} className="mb-1.5 flex flex-col items-start gap-2 md:flex-row md:items-center">
+                <Text as="div" variant="bodySm" className="w-full shrink-0 break-words whitespace-normal md:w-32">{row.label}</Text>
+                <div
+                  data-tariff-heatmap-cells
+                  role="group"
+                  aria-label={row.label}
+                  className="grid w-full grid-cols-[repeat(auto-fit,minmax(var(--app-touch-size,2.75rem),1fr))] justify-items-center gap-[var(--app-heatmap-gap,0.25rem)] md:w-auto md:grid-cols-[var(--tariff-heatmap-columns)] md:gap-2"
+                  style={columnStyle}
+                >
                   {slots.map((s, i) => (
                     <Button
                       key={i}
@@ -136,11 +142,12 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall, slotMinutes
         </div>
       )}
       {activeSlot && (
-        <Caption as="div" id={detailId} className="mt-2 break-words">
+        <Text as="div" variant="bodySm" id={detailId} data-tariff-heatmap-detail
+          className="sticky bottom-[var(--shell-chrome-bottom)] z-10 break-words rounded-shape-sm bg-[var(--surface-1)] px-d-pad-x py-d-pad-y shadow-e1 md:static md:bg-transparent md:p-0 md:shadow-none">
           {`${activeRow.label}: ${rowTime(activeRow.key, activeSlot)} — ${activeRow.format(activeSlot)}`}
-        </Caption>
+        </Text>
       )}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <Caption>{t('homeEnergy.heatmap.less', 'Less')}</Caption>
         {HEAT_LEGEND.map((c) => (
           <span key={c} aria-hidden="true" className="h-3 w-6 rounded-sm" style={{ backgroundColor: c }} />

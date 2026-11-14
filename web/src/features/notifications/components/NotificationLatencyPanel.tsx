@@ -10,7 +10,7 @@ import {
 import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
 import { DataSourceNotice, resolveDataSourceStatus, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { chartTokens } from '@/lib/tokens';
@@ -68,6 +68,19 @@ export function NotificationLatencyPanel() {
       render: record => <Text variant="body" mono className="font-medium">{latencyLabel(record.latencyMs)}</Text>,
     },
   ], [latencyLabel, t, formatDateTime]);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<(typeof summary.slowest)[number]>>(() => ({
+    roles: { notification: 'title', latency: 'primary', source: 'badge' },
+    displayValue: (record, key) => {
+      switch (key) {
+        case 'notification': return record.title;
+        case 'latency': return latencyLabel(record.latencyMs);
+        case 'source': return record.source === 'measured'
+          ? t('notificationLatency.slowest.measured', 'Measured')
+          : t('notificationLatency.slowest.derived', 'Derived');
+        default: return null;
+      }
+    },
+  }), [latencyLabel, t]);
   const histogramData = useMemo(
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null
@@ -296,6 +309,7 @@ export function NotificationLatencyPanel() {
               tableId="notifications:slow-deliveries"
               caption={t('notificationLatency.slowest.title', 'Slowest delivery records')}
               columns={slowestColumns}
+              mobilePresentation={mobilePresentation}
               data={summary.slowest}
               keyExtractor={record => record.id}
               rowLabel={record => record.title}

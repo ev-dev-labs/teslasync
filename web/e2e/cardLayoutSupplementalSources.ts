@@ -5,7 +5,7 @@ import { causal, survival, storm, stormEvents } from '../src/features/advanced-i
 import { split, park, passport } from './operationalbrief-contracts/battery.fixtures';
 import { accountSessions, fleetApiInfo, publicKey } from './operationalbrief-contracts/settings.fixtures';
 import { ACTION_CENTER } from './operationalbrief-contracts/actions.fixtures';
-import { tripDetail, journeyDetail } from './operationalbrief-contracts/trips.fixtures';
+import { tripDetail, nextPageTrips, journeyDetail } from './operationalbrief-contracts/trips.fixtures';
 import { billVariance } from './operationalbrief-contracts/charging.fixtures';
 import { mockDrive } from './mockApi';
 import { electrochemFixture, thermalFixture, weatherFixture, tiresFixture, notebookFixture } from './operationalbrief-contracts/science.fixtures';
@@ -54,6 +54,18 @@ const sources: Record<string, unknown> = {
   '/drives/101': mockDrive,
   '/charging/bill-variance': billVariance,
   '/trips/1': { ...tripDetail, id: 1 } satisfies TripDetail,
+  '/trips/603': {
+    ...nextPageTrips[0],
+    energy_used_wh: nextPageTrips[0].total_energy_wh,
+    drives: [{
+      ...tripDetail.drives[0],
+      started_at: nextPageTrips[0].started_at,
+      ended_at: nextPageTrips[0].ended_at,
+      distance_m: nextPageTrips[0].total_distance_m,
+      energy_used_wh: nextPageTrips[0].total_energy_wh,
+      duration_s: nextPageTrips[0].total_duration_s,
+    }],
+  } satisfies TripDetail,
   '/science/electrochem': electrochemFixture,
   '/science/thermal': thermalFixture,
   '/science/weather': weatherFixture,
@@ -74,6 +86,7 @@ export const cardLayoutSupplementalPaths = [
 
 export function resolveCardLayoutSupplementalSource(url: URL): unknown | undefined {
   const pathname = url.pathname.replace(/^\/api\/v1/, '');
+  if (pathname === '/trips/603' && url.search) return undefined;
   if (Object.hasOwn(sources, pathname)) return sources[pathname];
   if (pathname === '/chatbot/history') {
     return url.searchParams.get('session_id') === sessionId ? messages : undefined;

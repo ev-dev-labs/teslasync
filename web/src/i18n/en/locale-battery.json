@@ -3231,6 +3231,9 @@
         "generateButton": "Generate diagnosis",
         "title": "Charging diagnosis"
       }
+    },
+    "preview": {
+      "openDetails": "Open session details"
     }
   },
   "chart": {
@@ -4249,6 +4252,11 @@
       "promptLabel": "Filter request",
       "promptPlaceholder": "e.g. show me battery level for yesterday",
       "title": "Helix natural-language filter"
+    }
+  },
+  "signalQuery": {
+    "preset": {
+      "aria": "{{label}} time range"
     }
   },
   "softwareUpdates": {

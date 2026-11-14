@@ -26,6 +26,7 @@ import {
   Toggle,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui'
 import {
   FreshnessDotAuto,
@@ -45,6 +46,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
 
 import { isApiError } from '@/lib/resilience'
+import { maskFor } from '@/lib/maskValue'
 import { gaugeTone } from '@/lib/tokens'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -122,6 +124,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
               ariaLabel={t('redis.maskedCoord', 'Coordinate, click to reveal')}
               copyable
               auditOnReveal
+              className="max-w-full flex-wrap max-md:[&_button]:!h-11 max-md:[&_button]:!min-h-11 max-md:[&_button]:!min-w-11"
             />
           )
         }
@@ -323,6 +326,24 @@ export default function RedisSignalViewerPage() {
   }, [rows])
 
   const columns = useMemo(() => buildColumns(t), [t])
+  const mobilePresentation = useMemo<MobileDataTablePresentation<SignalRow>>(() => ({
+    roles: { name: 'title', value: 'primary', type: 'badge', category: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'name': return row.name
+        case 'value':
+          if (row.value === undefined) return t('common.unknown', 'Unknown')
+          if (row.value === null || typeof row.value === 'object') return JSON.stringify(row.value)
+          if (isLocationSignal(row.name) && (typeof row.value === 'number' || typeof row.value === 'string')) {
+            return maskFor(String(row.value), 'coords')
+          }
+          return String(row.value)
+        case 'type': return row.type
+        case 'category': return t(`redis.categoryName.${row.category}`, row.category)
+        default: return undefined
+      }
+    },
+  }), [t])
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
   const meta = signalData?.meta
@@ -493,6 +514,7 @@ export default function RedisSignalViewerPage() {
                   filterData={rows}
                   columns={columns}
                   mobileColumns={['name', 'value', 'type', 'category']}
+                  mobilePresentation={mobilePresentation}
                   keyExtractor={(row) => row.name}
                   sortKey={sortKey}
                   sortDir={sortDir}

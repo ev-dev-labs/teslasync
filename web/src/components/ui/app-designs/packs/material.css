@@ -1,336 +1,402 @@
-/* Purposeful layers: banner, grouped tasks, filled fields and connected cards. */
+/* Material Play: four tonal levels, rounded groups and tactile action wells. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-dialog-kind="onboarding"] > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-material"]) {
+    box-shadow: inset 0 -1px var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-dialog-kind="onboarding"] > [data-app-part~="dialog-body"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-material"]) {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-head"][data-group-header]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack] *, [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
+    box-shadow: inset 0 -1px var(--app-grid-rule, var(--border-default));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="badge"]:not(:where([data-app-metric="score"], [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--radius-md);
+    overflow-wrap: anywhere;
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"]:where([data-app-design-owner~="pack-material"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-3, var(--surface-elevated));
+    --app-card-radius: calc(var(--radius-xl) * 1.4);
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: var(--radius-lg);
+    --app-control-surface: var(--control-bg, var(--surface-2));
+    --app-content-density: 1;
+    --app-interaction-duration: var(--motion-duration-normal);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-2);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-strong);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-xl);
+    --app-nav-radius: var(--radius-pill);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-material"]) {
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 70% 0, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 64%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-material"]) {
     border-inline-end: 1px solid var(--border-default);
-    background: var(--surface-2);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-1);
+    background-color: var(--app-surface-panel, var(--surface-1));
     border-block-end: 1px solid var(--border-default);
     box-shadow: var(--elevation-1);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-material"]) {
-    gap: .5em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-material"]) {
+    row-gap: calc(var(--density-gap) / 2);
     padding-block: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1.5rem;
-    border: 1px solid transparent;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    border-radius: var(--app-nav-radius, var(--radius-pill));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-selected="true"], [data-active="true"]):where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-3);
-    border-color: var(--border-strong);
-    border-inline-start: 3px solid var(--theme-accent);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"], [aria-selected="true"], [data-active="true"]):where([data-app-design-owner~="pack-material"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: inset 0 0 0 1px var(--control-border);
     font-weight: var(--font-weight-semibold);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: calc(var(--density-gap) * 2);
-    padding: calc(var(--density-pad-x) * 1.5);
-    background: var(--surface-2);
-    border-radius: 1.5rem 1.5rem 1.5rem .5rem;
-    border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-material"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-start-color: var(--border-default);
+    box-shadow: var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-material"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-header"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *):where([data-app-design-owner~="pack-material"]) {
+    align-items: center;
+    gap: var(--density-gap) calc(var(--density-gap) * 1.5);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: var(--elevation-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-material"]) {
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-route-focus-target]:where([data-app-design-owner~="pack-material"]) {
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: var(--density-gap);
-    border-radius: 1rem;
+    border-radius: var(--app-control-radius, var(--radius-lg));
     min-inline-size: 0;
     margin-inline-start: auto;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-material"]) {
-    gap: calc(var(--density-gap) * 1.5);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="section"]:where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-action-zone="context"] .relative:has(> [data-app-part~="button"][aria-haspopup="menu"]):where([data-app-design-owner~="pack-material"]) {
     min-inline-size: 0;
-    padding-block: var(--density-pad-y);
-    scroll-margin-block-start: var(--density-pad-x);
+    max-inline-size: 100%;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):not(:where([data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    border: 1px solid var(--border-default);
-    border-radius: 1.5rem 1.5rem 1.5rem .5rem;
-    background: var(--panel-bg);
-    box-shadow: var(--elevation-1);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 6%, var(--surface-1)), var(--surface-1) 5.5rem);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-action-zone="context"] .relative > [data-app-part~="button"][aria-haspopup="menu"]:where([data-app-design-owner~="pack-material"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-action-zone="context"] .relative > [data-app-part~="button"][aria-haspopup="menu"] > .truncate:where([data-app-design-owner~="pack-material"]) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-align: start;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-material"]) {
+    row-gap: calc(var(--density-gap) * 1.5);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not([data-app-tone]):not(:where([data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where(
+    [data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"],
+    [data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"],
+    [data-operational-brief-surface="standalone"]
+  ):not([data-app-tone]):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-material"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg, var(--surface-1)));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-stat-bank], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(13rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--density-gap);
-    min-inline-size: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-metric="stat-card"][data-surface-variant="standalone"]:not([data-app-tone]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *, [data-surface-variant="embedded"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    gap: calc(var(--density-gap) * 0.75);
     padding: var(--density-pad-x);
-    border-radius: 1.5rem 1.5rem 1.5rem .5rem;
-    border: 1px solid var(--border-default);
-    border-block-end-width: 2px;
-    background: var(--surface-2);
-    box-shadow: none;
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
-    overflow-wrap: anywhere;
-    padding-block-end: .25em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-metric="stat-card"], [data-app-metric="card"]) [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-metric="stat-card"], [data-app-metric="card"]) [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="field"]:not([data-app-field-kind="choice"]):where([data-app-design-owner~="pack-material"]) {
-    padding-block: var(--density-pad-y);
-    min-inline-size: 0;
+    row-gap: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-material"]) {
-    display: inline-block;
-    padding-block-end: .25em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-material"]) {
+    font-weight: var(--font-weight-medium);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [role="switch"], [data-app-control-kind="composite"]), [data-app-field-surface]):where([data-app-design-owner~="pack-material"]) {
-    border-radius: .75rem .75rem 0 0;
-    background: var(--control-bg);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :is(input, select, textarea)[data-app-part~="field-control"]:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [data-app-control-kind], .border-0, [data-app-field-kind="choice"] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-control-surface, var(--control-bg));
     border-block-end-width: 2px;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1.5rem;
-    gap: .625em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"]:not(:where([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--radius-pill);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-choice-surface="radio"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1rem;
-    border-block-end-width: 2px;
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-material"]) {
+    border-color: var(--control-border);
+    background-color: var(--app-control-surface, var(--control-bg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-choice-indicator]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: .375rem;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tabs"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    gap: calc(var(--density-gap) / 2);
+    padding: calc(var(--density-gap) / 2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-material"]) {
-    gap: .25em;
-    background: var(--surface-2);
-    padding: .375em;
-    border-radius: 1.25rem;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tab"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--radius-pill);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1rem;
-    border: 1px solid transparent;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-current="page"]):where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-1);
-    border-color: var(--border-strong);
-    border-block-end: 3px solid var(--theme-accent);
-    box-shadow: var(--elevation-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"]):not([data-app-variant="primary"], [data-app-variant="danger"]):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-primary);
     font-weight: var(--font-weight-semibold);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-toolbar"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-wrap: wrap;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-toolbar"]:not([data-app-toolbar-slot]):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
     align-items: center;
     gap: var(--density-gap);
-    padding: var(--density-pad-x);
-    background: var(--surface-2);
-    border-radius: 1.25rem 1.25rem 0 0;
-    border-block-end: 1px solid var(--border-default);
+    padding: var(--density-pad-y);
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    border-collapse: separate;
-    border-spacing: 0;
-    font-variant-numeric: tabular-nums;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] thead[data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-table-variant="embedded"] *)):where([data-app-design-owner~="pack-material"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-2);
-    border-block-end: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    padding-block: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-default);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-mobile-table] [data-app-part~="table-row"]:not([data-selected="true"]):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="pagination"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
     gap: var(--density-gap);
-    padding: var(--density-pad-y);
-    background: var(--surface-2);
-    border-radius: 0 0 1.25rem 1.25rem;
+    border-radius: var(--app-control-radius, var(--radius-lg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="table-row"][aria-selected="true"] > [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    box-shadow: inset 0 -3px var(--theme-accent);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1.5rem;
-    border: 1px solid var(--border-strong);
-    background: var(--surface-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    border-color: var(--control-border);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-material"]) {
-    align-items: flex-start;
-    background: var(--surface-2);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog-header"]:not(:where([data-app-dialog-kind="lightbox"] *)):where([data-app-design-owner~="pack-material"]) {
     border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-material"]) {
-    min-inline-size: 0;
-    overscroll-behavior: contain;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="dialog-footer"]:not(:where([data-app-dialog-kind="lightbox"] *)):where([data-app-design-owner~="pack-material"]) {
     border-block-start: 1px solid var(--border-default);
-    background: var(--surface-2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-material"]) {
-    border-radius: .75rem;
-    border: 1px solid var(--border-strong);
-    background: var(--surface-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    border-color: var(--control-border);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
-    color: var(--text-primary);
-    overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1.5rem;
-    border: 1px solid var(--border-default);
-    background: var(--panel-bg);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-material"]) {
-    border-radius: .75rem;
-    padding-block: var(--density-pad-y);
+    border-radius: var(--app-control-radius, var(--radius-lg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-2);
-    border-radius: 1rem 1rem .5rem .5rem;
-    padding: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="chart"][data-chart-variant="panel"]:where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-chart-variant="panel"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-material"]) {
+    border-block-end-color: var(--border-default);
     gap: var(--density-gap);
-    flex-wrap: wrap;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-material"]) {
-    min-inline-size: 0;
-    background: var(--surface-1);
-    border-radius: .75rem;
+    background-color: var(--app-chart-surface, var(--surface-2));
+    border-radius: var(--app-control-radius, var(--radius-lg));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-wrap: wrap;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-chart-variant="embedded"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-material"]) {
+    background-color: transparent;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-chart-variant="panel"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-material"]) {
     gap: var(--density-gap);
-    padding-block: var(--density-pad-y);
-    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="map"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1.25rem;
-    box-shadow: inset 0 0 0 2px var(--border-strong);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    outline: 1px solid var(--border-default);
+    outline-offset: -1px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1rem;
-    border: 1px solid var(--border-strong);
-    background: var(--surface-1);
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    border-color: var(--border-default);
+    background-color: var(--app-surface-panel, var(--surface-1));
     box-shadow: var(--elevation-2);
-    gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-material"]) {
-    outline: 2px solid var(--surface-1);
-    outline-offset: 2px;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-list="ranked"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    row-gap: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="list"]:not(:where([data-app-list="legend"], [data-app-list="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-list="steps"], [data-app-list="steps"] *)):where([data-app-design-owner~="pack-material"]) {
-    row-gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="list-row"]:not(:where([data-app-list="legend"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-list="steps"] *)):where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-list="ranked"] > [data-app-part~="list-row"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
     border-block-end: 1px solid var(--border-default);
-    padding-block: var(--density-pad-y);
-    min-inline-size: 0;
+    padding-block: calc(var(--density-pad-y) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="timeline-content"]:where([data-app-design-owner~="pack-material"]) {
-    border-inline-start: 2px solid var(--border-default);
-    padding-inline-start: var(--density-pad-y);
-    padding-block-end: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-feedback-kind="empty"]:not([data-app-tone]):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="status"], [data-app-part~="badge"]):not([data-app-metric="score"]):where([data-app-design-owner~="pack-material"]) {
-    border-radius: .5rem;
-    overflow-wrap: anywhere;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-instrument-family="empty"][data-instrument-appearance="material"] > div:last-child > div:has(> [data-app-part~="button"]):where([data-app-design-owner~="pack-material"]) {
+    grid-column: auto;
+    padding: 0;
+    background-color: transparent;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: 1rem;
-    border-inline-start-width: 2px;
-    border-inline-start-style: solid;
-    box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-material"]) {
-    background: var(--surface-2);
-    border: 1px solid var(--border-strong);
-    padding-block: calc(var(--density-pad-y) * 2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="error"]:where([data-app-design-owner~="pack-material"]) {
-    border-inline-start-color: var(--semantic-danger);
-    border-block-end: 1px solid var(--semantic-danger-border);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="feedback-actions"]:where([data-app-design-owner~="pack-material"]) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--density-gap);
-    padding-block-start: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-material"]) {
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-instrument-family="empty"][data-instrument-appearance="material"] > div:last-child > div:last-child:not(:has(> [data-app-part~="button"])):where([data-app-design-owner~="pack-material"]) {
+    grid-column: 1 / -1;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-material"]) {
-    border-radius: .75rem .75rem .75rem .25rem;
-    background-color: var(--surface-2);
+    border-radius: var(--app-control-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="conversation"], [data-app-part~="conversation-sessions"]):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="conversation-session"]:where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-material"]) {
+    border-block-start-color: var(--border-default);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-material"]) {
+    border-color: var(--border-default);
+    background-color: var(--app-surface-panel, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-control-radius, var(--radius-lg));
+    background-color: var(--app-control-surface, var(--control-bg));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):focus-visible:where([data-app-design-owner~="pack-material"]) {
     outline: var(--focus-ring-width) solid var(--focus-ring);
     outline-offset: var(--focus-ring-offset);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [role="switch"])[aria-invalid="true"]:where([data-app-design-owner~="pack-material"]) {
-    border-block-end: 1px solid var(--semantic-danger);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"]):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-material"]) {
-    border-style: dashed;
-    box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-material"]) {
-    box-shadow: none;
-    border-block-end: 1px solid currentColor;
-  }
   @media (hover: hover) {
-    :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"], [data-app-part~="table-row"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-current="page"], [data-active="true"], [data-selected="true"]):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-      background-color: var(--surface-3);
-      background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
-      font-weight: var(--font-weight-semibold);
-      box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
+    :is(:root, [data-app-design-preview])[data-app-design-pack="material"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"], [data-active="true"]):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+      background-color: var(--control-bg-hover);
     }
-    :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"]:not(:disabled, [aria-disabled="true"], [data-app-variant="primary"], [data-app-variant="danger"]):hover:where([data-app-design-owner~="pack-material"]) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-material"]) {
+      background-color: var(--control-bg-hover);
+      border-color: var(--control-border-hover);
       box-shadow: var(--elevation-1);
     }
   }
 }
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] .sidenav-short-label:where([data-app-design-owner~="pack-material"]) {
+    font-size: calc(0.75rem * var(--font-scale, 1));
+    line-height: 1.3;
+  }
+}
 @media screen and (forced-colors: none) and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-material"]) {
-    inline-size: 100%;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-material"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-header"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *):where([data-app-design-owner~="pack-material"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
-    gap: var(--density-gap);
+}
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"]:where([data-app-design-owner~="pack-material"]) {
+    --app-brief-value-size: max(1.125rem, calc(1.125rem * var(--font-scale, 1)));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-material"]) {
+    font-size: var(--app-body-size, 1rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-material"]) {
+    font-size: var(--app-brief-value-size);
+    line-height: 1.25;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-action-zone="context"] .relative > [data-app-part~="button"][aria-haspopup="menu"] > span:first-child:where([data-app-design-owner~="pack-material"]) {
+    flex: 0 0 auto;
+    font-size: var(--app-body-size, 1rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-unit"].text-sm:not(:where([data-app-metric="inline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="inline"] *, [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:not(:where([data-widget-pack] *, [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)):where([data-app-design-owner~="pack-material"]) {
+    flex: 1 1 min(100%, calc(19rem * max(1, var(--font-scale, 1))));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-widget-pack] [data-testid="widget-body"] + div a[href]:where([data-app-design-owner~="pack-material"]),
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-widget-pack] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-material"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-widget-pack] [data-testid="widget-body"] + div a[href]:where([data-app-design-owner~="pack-material"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-stat-bank], [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(10rem * max(1, var(--font-scale, 1)))), 1fr));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="conversation-composer"] > [data-app-form-body] > :not([data-app-part~="conversation-composer-actions"]):where([data-app-design-owner~="pack-material"]) {
+    flex-basis: min(100%, 10rem);
   }
 }
 
 
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="panel"][data-app-feedback-kind="notice"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+}
 
+/* Native surfaces retain semantic colors while consuming this pack. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="border-[var(--border-subtle)]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="metric"][data-app-metric="tile"][data-surface-variant="standalone"][class~="border-white/[0.06]"][class~="bg-white/[0.02]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    border-color: var(--border-subtle);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-metric="tile"]:not([data-surface-variant="embedded"]) [data-app-part~="metric-value"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-material"]) {
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] [data-app-part~="loading"]:not([data-app-feedback-kind="inline-spinner"]):not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-material"]) {
+    gap: var(--density-gap);
+  }
+}

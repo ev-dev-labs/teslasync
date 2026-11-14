@@ -8,7 +8,7 @@ import previewOverlay from './__fixtures__/preview-overlay-invoker-preservation.
 import catalog from './en.json';
 import { producerProjection } from './producer-projection';
 import {
-  actualRepairSource as source, nativeRepairPredecessor, restoreNativeSourceRepair,
+  actualRepairSource as source, nativeRepairPredecessor, restoreMobilePresentationSource, restoreNativeSourceRepair,
 } from './verified-native-source-repair-contract';
 import { restoreAppDesignSource } from './verified-widget-implementation-contract';
 
@@ -24,6 +24,8 @@ const preview = 'web/src/features/settings/components/WidgetDesignPackSettings.t
 const widgetPreview = 'web/src/features/settings/components/WidgetDesignPackPreview.tsx';
 const mapControls = 'web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx';
 const dialogFocus = 'web/src/hooks/useDialogFocus.ts';
+const touchTokens = 'web/src/lib/tokens.ts';
+const touchBrush = 'web/src/features/battery/pages/BatteryDegradationPage.tsx';
 const tree = (file: string, text: string) =>
   ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 function nodes(text: string): ts.Node[] {
@@ -45,8 +47,9 @@ const calls = (file: string, text: string) => producerProjection(file, text).cal
 
 describe('exact e1fb native source repair successor (not native certification)', () => {
   it.each(repair.sources)('pins actual source and restores the complete predecessor: $file', patch => {
-    const current = source(patch.file);
-    const previous = restoreNativeSourceRepair(patch.file, current);
+    const actual = source(patch.file);
+    const current = restoreMobilePresentationSource(patch.file, actual);
+    const previous = restoreNativeSourceRepair(patch.file, actual);
     expect(hash(current)).toBe(patch.after);
     expect(hash(previous)).toBe(patch.before);
     expect(nativeRepairPredecessor(patch.file)).toBe(previous);
@@ -54,7 +57,7 @@ describe('exact e1fb native source repair successor (not native certification)',
       expect(producerProjection(patch.file, current)).toEqual(producerProjection(patch.file, previous));
     }
     // Historical approvals are not an alternate accepted shipping endpoint.
-    for (const changed of [previous, current + '\n', current.slice(1)]) {
+    for (const changed of [previous, actual + '\n', actual.slice(1)]) {
       expect(() => restoreNativeSourceRepair(patch.file, changed)).toThrow();
     }
     for (const hunk of patch.hunks) {
@@ -62,7 +65,7 @@ describe('exact e1fb native source repair successor (not native certification)',
       const changed = current.slice(0, hunk.start) + hunk.old + current.slice(hunk.start + hunk.new.length);
       expect(() => restoreNativeSourceRepair(patch.file, changed)).toThrow();
     }
-    expect(source(patch.file)).toBe(current);
+    expect(source(patch.file)).toBe(actual);
   });
 
   it('links emitted predecessors to independently compiled receipts, never fabricating an index map', () => {
@@ -116,12 +119,48 @@ describe('exact e1fb native source repair successor (not native certification)',
     expect(hash(nativeRepairPredecessor(barrel))).toBe(repair.sources.find(patch => patch.file === barrel)!.before);
   });
 
+  it('accepts only the exact touch-token successor of the pinned dependency', () => {
+    const current = source(touchTokens);
+    const previous = current
+      .replace('export const touchTargetPixels = 44\n\n', '')
+      .replace('    touchSize: touchTargetPixels,\n', '');
+    expect(hash(previous)).toBe(repair.dependencies.find(entry => entry.file === touchTokens)!.sha256);
+    for (const stale of [
+      previous,
+      current.replace('export const touchTargetPixels = 44\n\n', ''),
+      current.replace('    touchSize: touchTargetPixels,\n', ''),
+      current.replace('touchTargetPixels = 44', 'touchTargetPixels = 43'),
+    ]) {
+      expect(() => restoreNativeSourceRepair(barrel, source(barrel), file =>
+        file === touchTokens ? stale : source(file))).toThrow('exact touch target successor');
+    }
+    expect(nativeRepairPredecessor(barrel)).toBeTruthy();
+  });
+
+  it('inverts only the exact accessible touch-brush successor before historical checks', () => {
+    const current = source(touchBrush);
+    const previous = nativeRepairPredecessor(touchBrush);
+    expect(hash(previous)).toBe(appDesign.sources.find(entry => entry.file === touchBrush)!.after);
+    for (const stale of [
+      previous,
+      current.replace("import { useMediaQuery } from '@/hooks/useMediaQuery';\n", ''),
+      current.replace("  const touchBrush = useMediaQuery('(max-width: 767px), (pointer: coarse)');\n", ''),
+      current.replace('travellerWidth: chartTokens.brush.touchSize', 'travellerWidth: 8'),
+    ]) {
+      expect(() => restoreNativeSourceRepair(touchBrush, stale)).toThrow('exact touch brush successor');
+    }
+  });
+
   it.each(repair.sources)('rejects every actual producer key/default/arity/options mutation: $file', patch => {
     const current = source(patch.file);
+    const predecessor = restoreMobilePresentationSource(patch.file, current);
+    const predecessorProducers = nodes(predecessor).filter(ts.isCallExpression).filter(node =>
+      ts.isIdentifier(node.expression) && node.expression.text === 't'
+      || ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't');
+    expect(predecessorProducers).toHaveLength(patch.currentCallCount);
     const producers = nodes(current).filter(ts.isCallExpression).filter(node =>
       ts.isIdentifier(node.expression) && node.expression.text === 't'
       || ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't');
-    expect(producers).toHaveLength(patch.currentCallCount);
     for (const call of producers) {
       const operands = call.arguments.map(argument => argument.getText());
       const edits = [

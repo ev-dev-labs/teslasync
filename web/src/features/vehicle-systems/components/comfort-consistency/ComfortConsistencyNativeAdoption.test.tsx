@@ -111,18 +111,18 @@ const identityRules = new Map(PACK_IDS.map(pack => {
   return [pack, rules] as const;
 }));
 
-const matchedNodes = new WeakMap<Element, Map<Rule, Set<Element>>>();
+const matchedNodes = new WeakMap<Element, Map<string, Set<Element>>>();
 function matchingRules(host: Element, rules: readonly Rule[], node: Element, contract: string, owner?: string) {
-  const matches = matchedNodes.get(host) ?? new Map<Rule, Set<Element>>();
+  const matches = matchedNodes.get(host) ?? new Map<string, Set<Element>>();
   matchedNodes.set(host, matches);
-  return rules.filter(rule => rule.selector.includes(contract)
-    && (!owner || rule.selector.includes(`[data-app-design-owner~="${owner}"]`))
+  return rules.filter(rule => rule.selectors.some(selector => selector.includes(contract)
+    && (!owner || selector.includes(`[data-app-design-owner~="${owner}"]`))
     && (() => {
-      if (!matches.has(rule)) {
-        matches.set(rule, new Set(rule.selectors.flatMap(selector => [...host.querySelectorAll(selector)])));
+      if (!matches.has(selector)) {
+        matches.set(selector, new Set(host.querySelectorAll(selector)));
       }
-      return matches.get(rule)!.has(node);
-    })());
+      return matches.get(selector)!.has(node);
+    })()));
 }
 
 function tile(section: HTMLElement, label: string) {
@@ -146,12 +146,24 @@ describe('vehicle-systems-01 native adoption', () => {
         const value = reading?.querySelector('[data-app-part="metric-value"]');
         expect(label).not.toBeNull();
         expect(value).not.toBeNull();
-        expect(matchingRules(host, dataRules, item, '[data-app-metric="tile"]', owner).length).toBeGreaterThan(0);
+        const tileRules = matchingRules(host, dataRules, item, '[data-app-metric="tile"]', owner);
+        const embedded = item.closest('[data-surface-variant="embedded"]');
+        if (embedded) {
+          for (const rule of tileRules) {
+            rule.walkDecls(declaration => {
+              expect(declaration.prop, item.outerHTML).not.toMatch(
+                /^(background(?:-.+)?|border(?:-.+)?|padding(?:-.+)?|display|align-items|gap|grid-template-columns|font-size|text-align)$/,
+              );
+            });
+          }
+        } else {
+          expect(tileRules.length, item.outerHTML).toBeGreaterThan(0);
+        }
         expect(matchingRules(host, dataRules, reading!, '[data-app-part~="metric-reading"]').length).toBeGreaterThan(0);
         expect(matchingRules(host, dataRules, label!, '[data-app-part~="metric-label"]').length).toBeGreaterThan(0);
         expect(matchingRules(host, dataRules, value!, '[data-app-part~="metric-value"]').length).toBeGreaterThan(0);
-        if (!item.closest('[data-surface-variant="embedded"]')) {
-          expect(matchingRules(host, identityRules.get(pack)!, value!, '[data-app-part~="metric-value"]', `pack-${pack}`).length).toBeGreaterThan(0);
+        if (!embedded) {
+          expect(matchingRules(host, identityRules.get(pack)!, value!, '[data-app-part~="metric-value"]', `pack-${pack}`).length, value!.outerHTML).toBeGreaterThan(0);
         }
         const context = item.querySelector(':scope > [data-app-part="metric-context"]');
         if (context) {
@@ -159,7 +171,7 @@ describe('vehicle-systems-01 native adoption', () => {
         }
       }
       for (const bank of host.querySelectorAll('[data-app-part~="metric-grid"]')) {
-        expect(matchingRules(host, dataRules, bank, '[data-app-part~="metric-grid"]', owner).length).toBeGreaterThan(0);
+        expect(matchingRules(host, dataRules, bank, '[data-app-part~="metric-grid"]', owner).length, bank.outerHTML).toBeGreaterThan(0);
       }
       const records = [...host.querySelectorAll('[data-app-card-kind="record"]')];
       expect(records).toHaveLength(comfort.windowDirectory.displayed + hvac.runDirectory.displayed + 12);
@@ -216,13 +228,16 @@ describe('vehicle-systems-01 native adoption', () => {
       const unselected = tile(screen.getByTestId('unselected'), 'HVAC-active');
       expect(outer.getAttribute('data-app-design-owner')).toContain('data-instrument');
       expect(nested.getAttribute('data-app-design-owner')).toContain('data-cards');
-      expect(matchingRules(container, dataRules, outer, '[data-app-metric="tile"]', 'data-instrument').length).toBeGreaterThan(0);
-      expect(matchingRules(container, dataRules, nested, '[data-app-metric="tile"]', 'data-cards').length).toBeGreaterThan(0);
-      expect(matchingRules(container, dataRules, nested, '[data-app-metric="tile"]', 'data-instrument')).toHaveLength(0);
+      const outerRecord = outer.closest('[data-app-card-kind="record"]')!;
+      const nestedRecord = nested.closest('[data-app-card-kind="record"]')!;
+      expect(matchingRules(container, dataRules, outerRecord, '[data-app-card-kind="record"]', 'data-instrument').length).toBeGreaterThan(0);
+      expect(matchingRules(container, dataRules, nestedRecord, '[data-app-card-kind="record"]', 'data-cards').length).toBeGreaterThan(0);
+      expect(matchingRules(container, dataRules, nestedRecord, '[data-app-card-kind="record"]', 'data-instrument')).toHaveLength(0);
       for (const node of [neutral, unselected]) {
         expect(node).not.toHaveAttribute('data-app-design-owner');
         expect(matchingRules(container, dataRules, node, '[data-app-metric="tile"]')).toHaveLength(0);
         expect(matchingRules(container, surfaceRules, node, '[data-app-part~="card"]')).toHaveLength(0);
+        expect(matchingRules(container, dataRules, node.closest('[data-app-card-kind="record"]')!, '[data-app-card-kind="record"]')).toHaveLength(0);
       }
     } finally { release(); }
   });

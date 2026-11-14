@@ -295,6 +295,34 @@ describe('Tooltip — multiline', () => {
     }
   });
 
+  it('reclamps an unopened tooltip when its trigger is focused', () => {
+    let left = 100;
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      () => new DOMRect(left, 40, 36, 36),
+    );
+    const { unmount } = render(
+      <div data-testid="toolbar">
+        <Tooltip content="Review details"><button>Info</button></Tooltip>
+      </div>,
+    );
+    try {
+      const tip = screen.getByRole('tooltip');
+      const trigger = screen.getByRole('button', { name: 'Info' });
+      expect(tip.style.left).toBe('-32px');
+      left = 340;
+      fireEvent.focus(trigger);
+      expect(tip.style.left).toBe('-62px');
+      expect(trigger).toHaveAccessibleDescription('Review details');
+    } finally {
+      unmount();
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+    }
+  });
+
   it('positions an unopened tooltip on mount and updates its bounds after resizing', () => {
     const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(320);
     const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);

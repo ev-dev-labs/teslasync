@@ -71,7 +71,8 @@ function css(file: string): Rule[] {
 const identities = new Map(PACK_IDS.map(pack => [pack, css(join('packs', APP_DESIGN_PACK_FILES[pack]))]));
 function expectIdentity(node: Element, pack: typeof PACK_IDS[number], part: string) {
   expect(identities.get(pack)!.some(rule => rule.selectors.some(selector =>
-    selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector)))).toBe(true);
+    selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector))),
+  `${pack} ${part}: ${node.outerHTML.slice(0, 500)}`).toBe(true);
 }
 function expectFeedback(node: Element, pack: typeof PACK_IDS[number], kind: string) {
   expect(matchesAppDesignCss(node, `[data-app-feedback-kind="${kind}"]`).some(match =>
@@ -183,6 +184,53 @@ describe('notifications-late-01 real source-to-consumer adoption (source-only)',
       expect(state.subscribe).not.toHaveBeenCalled();
       expect(state.webhook).not.toHaveBeenCalled();
       expect(JSON.stringify({ logs: state.logs, devices: state.devices, channel })).toBe(snapshot);
+    } finally { view.release(); view.unmount(); }
+  });
+
+  it.each(['v5', 'v6', 'analog', 'observatory', 'kinetic', 'memphis'] as const)(
+    '%s keeps provider and definition treatments out of protected and semantic surfaces', pack => {
+      const view = mount(<><ChannelProvidersPanel channels={[channel]} /><ChannelCard channel={channel} onEdit={vi.fn()} /></>, pack);
+      try {
+        const card = view.host.querySelector('li[data-app-part~="card"]')!;
+        const panel = view.host.querySelector('[data-app-part~="panel"][data-app-list="definitions"]')!;
+        for (const [node, fragment] of [[card, 'li[data-app-part~="card"]'], [panel, '[data-app-list="definitions"]']] as const) {
+          const selectors = identities.get(pack)!.flatMap(rule => rule.selectors)
+            .filter(selector => selector.includes(fragment));
+          const isThemed = () => selectors.some(selector => node.matches(selector));
+          expect(isThemed(), fragment).toBe(true);
+          for (const [attribute, value] of [
+            ['data-app-tone', 'warning'], ['data-app-design-preserve', ''], ['data-widget-pack', ''],
+            ['data-vehicle-twin', ''], ['data-surface-variant', 'embedded'],
+            ['data-app-card-kind', 'conversation'], ['data-app-list', 'conversation'], ['data-mobile-table', ''],
+          ]) {
+            for (const target of [node, node.parentElement!]) {
+              const previous = target.getAttribute(attribute);
+              target.setAttribute(attribute, value);
+              expect(isThemed(), `${fragment}: ${attribute}`).toBe(false);
+              if (previous === null) target.removeAttribute(attribute);
+              else target.setAttribute(attribute, previous);
+            }
+          }
+        }
+      } finally { view.release(); view.unmount(); }
+    },
+  );
+
+  it.each(['analog', 'atlas'] as const)('%s keeps ghost-link treatments outside protected boundaries', pack => {
+    const view = mount(<NotificationRow log={state.logs[0]} rule={rule} selected onSelectionChange={vi.fn()} onActivate={vi.fn()} />, pack);
+    try {
+      const link = screen.getByRole('link', { name: 'View context' });
+      const selectors = identities.get(pack)!.flatMap(rule => rule.selectors)
+        .filter(selector => selector.includes('[data-app-part~="button"][data-app-variant="ghost"]'));
+      const isThemed = () => selectors.some(selector => link.matches(selector));
+      expect(isThemed()).toBe(true);
+      for (const attribute of ['data-app-design-preserve', 'data-widget-pack', 'data-vehicle-twin']) {
+        for (const target of [link, link.parentElement!]) {
+          target.setAttribute(attribute, '');
+          expect(isThemed(), attribute).toBe(false);
+          target.removeAttribute(attribute);
+        }
+      }
     } finally { view.release(); view.unmount(); }
   });
 

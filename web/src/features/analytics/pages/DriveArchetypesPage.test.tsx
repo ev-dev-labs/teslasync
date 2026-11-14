@@ -437,6 +437,9 @@ describe('DriveArchetypesPage', () => {
     expect(within(featureTable).getAllByRole('rowheader')).toHaveLength(4);
     expect(within(featureTable).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
       .toBe(true);
+    expect(featureTable).toHaveAttribute('data-mobile-stack-table');
+    expect(within(featureTable).getAllByRole('cell').map((cell) => cell.getAttribute('data-mobile-label')))
+      .toEqual(Array.from({ length: 4 }, () => ['Minimum', 'Median', 'Maximum']).flat());
 
     const candidateTable = within(screen.getByTestId('drive-archetypes-candidates'))
       .getByRole('table');
@@ -451,6 +454,10 @@ describe('DriveArchetypesPage', () => {
         'Decision',
       ]);
     expect(within(candidateTable).getAllByRole('rowheader').length).toBeGreaterThan(0);
+    expect(candidateTable).toHaveAttribute('data-mobile-stack-table');
+    const firstCandidate = within(candidateTable).getAllByRole('row')[1];
+    expect(within(firstCandidate).getAllByRole('cell').map((cell) => cell.getAttribute('data-mobile-label')))
+      .toEqual(['Silhouette', 'Restart agreement', 'Inertia', 'Realized clusters', 'Smallest / largest', 'Decision']);
     expectEverySection();
   });
 

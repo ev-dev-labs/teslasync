@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BatteryCharging, ChevronRight } from 'lucide-react'
 
-import { BUTTON_BASE, DataTable, type Column } from '@/components/ui'
+import { BUTTON_BASE, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui'
 import { LayoutCard } from '@/components/layout'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -32,62 +32,79 @@ export function chargeDurationMinutes(session: ChargingSession): number {
   return ms / 60_000
 }
 
-function useChargeColumns(): Column<ChargingSession>[] {
+function useChargeColumns(): {
+  columns: Column<ChargingSession>[]
+  mobilePresentation: MobileDataTablePresentation<ChargingSession>
+} {
   const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
 
-  return useMemo<Column<ChargingSession>[]>(
-    () => [
-      {
-        key: 'date',
-        header: t('common.date', 'Date'),
-        // The list endpoint sends `started_at`; `start_ts` is the dashboard /
-        // live-detail alias. Coalesce so the date never collapses to "—".
-        render: (s) => formatDateTime(s.started_at ?? s.start_ts),
-      },
-      {
-        key: 'energy',
-        align: 'right',
-        header: t('common.energy', 'Energy'),
-        render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
-        sortable: true,
-      },
-      {
-        key: 'duration',
-        align: 'right',
-        header: t('common.duration', 'Duration'),
-        render: (s) => durationStr(chargeDurationMinutes(s)),
-      },
-      {
-        key: 'cost',
-        align: 'right',
-        header: t('common.cost', 'Cost'),
-        // `cost_decimal` is the SI-canonical column; `cost` is the legacy alias.
-        render: (s) => {
+  return useMemo(
+    () => {
+      const display: Record<string, (session: ChargingSession) => string> = {
+        date: (s) => formatDateTime(s.started_at ?? s.start_ts),
+        energy: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
+        duration: (s) => durationStr(chargeDurationMinutes(s)),
+        cost: (s) => {
           const cost = s.cost ?? s.cost_decimal
           return cost != null ? formatCurrency(cost) : '—'
         },
-      },
-      {
-        key: 'battery',
-        align: 'right',
-        header: t('common.battery', 'Battery'),
-        render: (s) => {
+        battery: (s) => {
           if (s.start_soc_pct == null) return '—'
           return s.end_soc_pct != null
             ? `${s.start_soc_pct}% → ${s.end_soc_pct}%`
             : `${s.start_soc_pct}%`
         },
-      },
-    ],
+      }
+      const columns: Column<ChargingSession>[] = [
+        {
+          key: 'date',
+          header: t('common.date', 'Date'),
+          // The list endpoint sends `started_at`; `start_ts` is the dashboard /
+          // live-detail alias. Coalesce so the date never collapses to "—".
+          render: display.date,
+        },
+        {
+          key: 'energy',
+          align: 'right',
+          header: t('common.energy', 'Energy'),
+          render: display.energy,
+          sortable: true,
+        },
+        {
+          key: 'duration',
+          align: 'right',
+          header: t('common.duration', 'Duration'),
+          render: display.duration,
+        },
+        {
+          key: 'cost',
+          align: 'right',
+          header: t('common.cost', 'Cost'),
+          // `cost_decimal` is the SI-canonical column; `cost` is the legacy alias.
+          render: display.cost,
+        },
+        {
+          key: 'battery',
+          align: 'right',
+          header: t('common.battery', 'Battery'),
+          render: display.battery,
+        },
+      ]
+      const mobilePresentation: MobileDataTablePresentation<ChargingSession> = {
+        roles: { date: 'title', energy: 'primary', duration: 'meta', cost: 'meta', battery: 'meta' },
+        displayValue: (session, key) => display[key]?.(session),
+      }
+      return { columns, mobilePresentation }
+    },
     [t, formatCurrency, fmtNumber, displayPrecision, displayLocale],
   )
 }
 
 export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
   const { t } = useTranslation()
-  const chargeColumns = useChargeColumns()
+  const { columns: chargeColumns, mobilePresentation } = useChargeColumns()
 
   return (
     <LayoutCard
@@ -108,6 +125,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
           cardLayout
           columns={chargeColumns}
           mobileColumns={['date', 'energy', 'battery']}
+          mobilePresentation={mobilePresentation}
           data={sessions}
           keyExtractor={(s) => s.id}
           compact

@@ -575,7 +575,7 @@ export default function App() {
           <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
         </main>
       } />}
-      <Route path="/" element={<><Suspense fallback={null}><AppDesignBridge /></Suspense><Layout /></>}>
+      <Route path="/" element={<Suspense fallback={<PageLoadSkeleton panels={1} />}><AppDesignBridge><Layout /></AppDesignBridge></Suspense>}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}

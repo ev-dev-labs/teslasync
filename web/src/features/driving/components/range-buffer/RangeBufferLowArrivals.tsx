@@ -8,6 +8,7 @@ import {
   PanelTitle,
   Text,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -136,6 +137,21 @@ export function RangeBufferLowArrivals({
       timeZone, displayPrecision, displayLocale,
     ],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<RangeBufferLowArrival>>(() => ({
+    roles: { date: 'title', destination: 'meta', arrival: 'primary' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'date': return formatDateTime(row.endTs, { locale, tz: timeZone });
+        case 'destination':
+          return row.destinationLabel ?? t('rangeBuffer.lowArrivals.unknownDestination', 'Unknown endpoint');
+        case 'distance': return formatDistance(row.distanceM);
+        case 'start': return rangeBufferPercent(row.startPct, locale);
+        case 'drop': return rangeBufferPercent(row.dropPct, locale);
+        case 'arrival': return rangeBufferPercent(row.arrivalPct, locale);
+        default: return undefined;
+      }
+    },
+  }), [formatDistance, locale, t, timeZone, displayPrecision, displayLocale]);
 
   return (
     <section data-testid="range-buffer-low-arrivals">
@@ -163,6 +179,7 @@ export function RangeBufferLowArrivals({
             data={result.lowArrivals}
             keyExtractor={(row) => row.driveId}
             mobileColumns={['date', 'destination', 'arrival']}
+            mobilePresentation={mobilePresentation}
             emptyMessage={t(
               'rangeBuffer.lowArrivals.empty',
               'No included arrivals are available.',

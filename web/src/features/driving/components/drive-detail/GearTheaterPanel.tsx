@@ -1,11 +1,13 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight } from 'lucide-react';
 
-import { Badge, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, Text, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useGearTheater } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import type { TheaterEvent } from '@/types/teslaPhysics';
 
 export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
   const { t } = useTranslation();
@@ -14,6 +16,20 @@ export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
   const state = useDataState(query, { provenance: 'historical' });
   const theater = state.data;
   const events = theater?.events ?? [];
+  const mobilePresentation = useMemo<MobileDataTablePresentation<TheaterEvent & { index: number }>>(() => ({
+    roles: { at: 'title', gear: 'primary', latch: 'meta', door: 'badge' },
+    displayValue: (event, key) => {
+      switch (key) {
+        case 'at': return formatDateTime(event.at);
+        case 'gear': return event.gear || '—';
+        case 'latch': return event.charge_port_latch ?? '—';
+        case 'door': return event.charge_port_door_open == null ? '—'
+          : event.charge_port_door_open ? t('driveDetail.theater.portOpen', 'Port open')
+            : t('driveDetail.theater.portClosed', 'Port closed');
+        default: return null;
+      }
+    },
+  }), [formatDateTime, t]);
 
   return (
     <GlassPanel className="space-y-3 p-4 sm:p-5" data-testid="gear-theater">
@@ -40,6 +56,7 @@ export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
               data={events.map((event, index) => ({ ...event, index }))}
               keyExtractor={(event) => `${event.at}-${event.index}`}
               enableValueFilters
+              mobilePresentation={mobilePresentation}
               columns={[
                 { key: 'at', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (event) => <time dateTime={event.at}>{formatDateTime(event.at)}</time>, visibleOnMobile: true },
                 { key: 'gear', header: t('driveDetail.report.gear', 'Gear'), filterValue: (event) => event.gear ?? null, render: (event) => event.gear ? <Badge variant="neutral" size="sm">{event.gear}</Badge> : '—', visibleOnMobile: true },

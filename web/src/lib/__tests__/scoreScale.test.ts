@@ -46,7 +46,7 @@ describe('scoreScale.numericToGrade', () => {
   it('returns colour and numeric weight together', () => {
     const a = numericToGrade(95);
     expect(a.label).toBe('A+');
-    expect(a.color).toMatch(/^#/);
+    expect(a.color).toBe('var(--semantic-success)');
     expect(a.numeric).toBe(4.5);
   });
 
@@ -58,13 +58,13 @@ describe('scoreScale.numericToGrade', () => {
 
 describe('scoreScale.gradeInfo', () => {
   it.each([
-    ['A+', '#10b981', 4.5],
-    ['A',  '#10b981', 4.0],
+    ['A+', 'var(--semantic-success)', 4.5],
+    ['A',  'var(--semantic-success)', 4.0],
     ['B',  'var(--semantic-info)', 3.0],
-    ['C',  '#f59e0b', 2.0],
-    ['D',  '#ef4444', 1.0],
-    ['F',  '#b91c1c', 0.5],
-    ['—',  '#6b7280', null],
+    ['C',  'var(--semantic-warning)', 2.0],
+    ['D',  'var(--semantic-danger)', 1.0],
+    ['F',  'var(--semantic-danger)', 0.5],
+    ['—',  'var(--text-muted)', null],
   ] as const)('returns palette for %s', (label, color, numeric) => {
     const info = gradeInfo(label);
     expect(info.color).toBe(color);

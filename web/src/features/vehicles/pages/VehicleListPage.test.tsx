@@ -1988,9 +1988,9 @@ describe('VehicleListPage — native app-design consumers (source-only)', () => 
         expect(matchesConsumer(summary, '[data-app-part~="button"]', 'touch-action')).toBe(true);
         expect(matchesConsumer(disclosure, '[data-app-part~="panel"]', 'border-width')).toBe(true);
         const shapeProperty = /^border-(?:radius|start-start-radius)$/;
-        expect(matchesConsumer(link, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} footer`).toBe(true);
-        expect(matchesConsumer(summary, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} summary`).toBe(true);
-        expect(matchesConsumer(disclosure, `[data-app-design-pack="${pack}"]`, /^border(?:-.+)?$/), `${pack} disclosure`).toBe(true);
+        expect.soft(matchesConsumer(link, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} footer`).toBe(true);
+        expect.soft(matchesConsumer(summary, `[data-app-design-pack="${pack}"]`, shapeProperty), `${pack} summary`).toBe(true);
+        expect.soft(matchesConsumer(disclosure, `[data-app-design-pack="${pack}"]`, /^border(?:-.+)?$/), `${pack} disclosure`).toBe(true);
         for (const chip of chips) {
           expect(matchesConsumer(chip, '[data-app-metric="inline"]', 'flex-wrap')).toBe(true);
           expect(matchesConsumer(chip, '[data-app-metric="inline"][data-app-metric-kind="vehicle-stat-chip"]', 'outline')).toBe(true);

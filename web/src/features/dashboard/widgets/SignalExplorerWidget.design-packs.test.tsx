@@ -93,7 +93,10 @@ function tree(pack: PackId = 'v1', cols = 2, config?: WidgetConfig, vehicleId = 
 }
 
 async function settled() {
-  await waitFor(() => expect(client.isFetching()).toBe(0), { timeout: 10_000 });
+  await waitFor(async () => {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(client.isFetching()).toBe(0);
+  }, { timeout: 10_000 });
 }
 
 async function presentation(container: HTMLElement, appearance: string) {

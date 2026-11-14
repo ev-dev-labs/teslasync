@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { DataTable, GlassPanel, Icon, PanelTitle, Text, type Column } from '@/components/ui';
+import { DataTable, GlassPanel, Icon, PanelTitle, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -83,6 +83,18 @@ export default function AuditLogPage() {
     ],
     [t],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<AuditLogEntry>>(() => ({
+    roles: { action: 'title', time: 'primary', resource: 'meta', details: 'meta' },
+    displayValue: (log, key) => {
+      switch (key) {
+        case 'time': return formatDateTime(log.createdAt);
+        case 'action': return log.action ?? '—';
+        case 'resource': return log.resource ?? '—';
+        case 'details': return log.details ?? '—';
+        default: return null;
+      }
+    },
+  }), []);
 
   return (
     <PageLayout
@@ -156,6 +168,7 @@ export default function AuditLogPage() {
                   tableId="audit-logs"
                   caption={t('audit.recentActivity', 'Recent activity')}
                   columns={columns}
+                  mobilePresentation={mobilePresentation}
                   mobileColumns={['time', 'action', 'resource', 'details']}
                   data={filtered}
                   keyExtractor={(log) => String(log.id)}

@@ -36,6 +36,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { type ComponentProps } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -340,6 +341,28 @@ describe('TripDrivesTable — render states', () => {
 
 // ── Null-safety & accessibility ─────────────────────────────────────────────
 describe('TripDrivesTable — null-safety & a11y', () => {
+  it('keeps route, measurements, sorting and details available in the phone grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = renderTable();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      const keys = () => Array.from(grid.querySelectorAll('[data-row-key]'), (row) => row.getAttribute('data-row-key'));
+      expect(keys()).toEqual(['1', '2', '3']);
+      expect(grid.querySelector('[data-row-key="1"]')).toHaveTextContent('Alpha → Beta');
+      expect(grid.querySelector('[data-row-key="3"]')).toHaveTextContent('Delta ↻ round trip');
+      fireEvent.click(within(grid).getByRole('button', { name: 'Distance' }));
+      expect(keys()).toEqual(['3', '1', '2']);
+      fireEvent.click(within(grid).getByRole('button', { name: 'Distance' }));
+      expect(keys()).toEqual(['2', '1', '3']);
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      const detail = screen.getByRole('dialog');
+      for (const label of ['Route', 'Started', 'Distance', 'Energy', 'Duration']) {
+        expect(within(detail).getByText(label, { exact: true })).toBeInTheDocument();
+      }
+      expect(within(detail).getByText('energy:20000')).toBeInTheDocument();
+    } finally { bounds.mockRestore(); }
+  });
+
   it('exposes exactly the sortable columns as keyboard-operable buttons', () => {
     renderTable();
     for (const header of ['Started', 'Distance', 'Energy', 'Duration']) {

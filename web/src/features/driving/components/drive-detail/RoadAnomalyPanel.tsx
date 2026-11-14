@@ -6,11 +6,12 @@ import { useDriveRoadAnomalies } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { Button, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Button, DataTable, GlassPanel, PanelTitle, Text, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { MapContainer, MapTileLayer, MapInvalidator, MarkerCluster } from '@/components/maps';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { gaugeTone } from '@/lib/tokens';
+import type { RoadAnomalyCandidate } from '@/types/roadAnomalies';
 
 interface RoadAnomalyPanelProps {
   driveId: string;
@@ -42,6 +43,18 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
   );
   const selectedCandidate = candidates.find((candidate, index) =>
     `${candidate.ts}-${index}` === selectedCandidateId);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<RoadAnomalyCandidate & { index: number }>>(() => ({
+    roles: { time: 'title', speed: 'primary', location: 'meta' },
+    displayValue: (candidate, key) => {
+      switch (key) {
+        case 'time': return formatDateTime(candidate.ts);
+        case 'speed': return formatSpeed(candidate.speed_mps);
+        case 'location': return `${fmtScientificNumber(candidate.latitude, 5)}, ${fmtScientificNumber(candidate.longitude, 5)}`;
+        default: return null;
+      }
+    },
+    onOpenRow: (candidate) => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`),
+  }), [fmtScientificNumber, formatDateTime, formatSpeed]);
 
   return (
     <GlassPanel className="min-w-0 overflow-hidden p-4 sm:p-6 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11 max-md:[&_a]:min-h-11 max-md:[&_a]:min-w-11 max-md:[&_input]:min-h-11 max-md:[&_select]:min-h-11">
@@ -144,6 +157,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                 tableId="drive-detail:road-candidates" name="drive-road-candidates"
                 data={candidates.map((candidate, index) => ({ ...candidate, index }))}
                 keyExtractor={(candidate) => `${candidate.ts}-${candidate.index}`}
+                mobilePresentation={mobilePresentation}
                 columns={[
                   { key: 'time', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (candidate) => <Button variant="ghost" size="sm" onClick={() => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`)}><time dateTime={candidate.ts}>{formatDateTime(candidate.ts)}</time></Button>, visibleOnMobile: true },
                   { key: 'speed', header: t('driveDetail.road.speed', 'Recorded speed'), render: (candidate) => formatSpeed(candidate.speed_mps), visibleOnMobile: true },

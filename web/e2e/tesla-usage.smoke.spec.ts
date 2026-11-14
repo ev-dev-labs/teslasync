@@ -117,13 +117,19 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await expect(trend.locator('.recharts-bar-rectangle').first()).toBeVisible()
       const distribution = page.locator('figure').filter({ hasText: 'Selected-range cost distribution' })
       await expect(distribution.locator('.recharts-pie-sector').first()).toBeVisible()
-      await distribution.screenshot({ path: testInfo.outputPath(`tesla-distribution-${theme}-${width}.png`) })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await distribution.screenshot({ path: testInfo.outputPath(`tesla-distribution-${theme}-${width}.png`) })
+      }
       await page.getByRole('heading', { name: 'Tesla API usage' }).evaluate(element => element.scrollIntoView({ behavior: 'instant' }))
-      await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-top.png`) })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-top.png`) })
+      }
       // Exercise the real chart tooltip, not a mocked component.
       await trend.locator('.recharts-bar-rectangle').first().hover()
       await expect(page.locator('.recharts-tooltip-wrapper').last()).toBeVisible()
-      await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-populated.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-populated.png`), fullPage: true })
+      }
       await expect(page.locator('main').getByRole('button', { name: 'Date range', exact: true })).toHaveCount(0)
       await expect(page.getByRole('button', { name: /^Analysis window:/ })).toHaveCount(1)
       await page.getByRole('button', { name: /^Analysis window:/ }).click()
@@ -138,29 +144,39 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
         const bounds = await applyButton.boundingBox()
         return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY
       }).toBeLessThan(width === 390 ? 844 - 80 : 900 - 8)
-      await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-picker.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-picker.png`), fullPage: true })
+      }
       await view.getByRole('button', { name: '1 year', exact: true }).click()
       await view.getByRole('button', { name: 'Close view settings' }).click()
       await expect.poll(() => longRange).toBe(true)
       await expect(trend).toHaveAttribute('data-chart-state', 'ready')
       await expectBriefDetails(page, page.getByRole('region', { name: 'Selected range estimate', exact: true }), ['3 observed buckets'])
-      await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-year-${theme}-${width}.png`) })
-      await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-year.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-year-${theme}-${width}.png`) })
+        await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-year.png`), fullPage: true })
+      }
       await page.getByRole('combobox', { name: 'Group by' }).selectOption('week')
       await expect.poll(() => selectedBucket).toBe('week')
       await expect(trend).toHaveAttribute('data-chart-state', 'ready')
-      await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-week-${theme}-${width}.png`) })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-week-${theme}-${width}.png`) })
+      }
       empty = true
       await page.getByRole('button', { name: /^Analysis window:/ }).click()
       await view.getByRole('button', { name: '90 days', exact: true }).click()
       await view.getByRole('button', { name: 'Close view settings' }).click()
       await expect(page.locator('figure').filter({ hasText: 'Selected-range cost distribution' })).toHaveAttribute('data-chart-state', 'empty')
       await expect(trend).toHaveAttribute('data-chart-state', 'empty')
-      await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-empty.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-empty.png`), fullPage: true })
+      }
       await page.goto('/system-status')
       await expect(page.getByRole('region', { name: 'Current component status' })).toBeVisible()
       await expect(page.locator('#tesla-api')).toHaveCount(0)
-      await page.screenshot({ path: testInfo.outputPath(`tesla-status-${theme}-${width}.png`) })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`tesla-status-${theme}-${width}.png`) })
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
       // Stop the old app's fleet polling before removing its API interceptors.
       // Otherwise the next iteration's viewport/theme changes release live

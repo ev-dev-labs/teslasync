@@ -578,7 +578,7 @@ describe('application shell composition CSS contracts (not mounted browser geome
         switch (mode) {
           case 'cards':
             expect(get('transcript')).toMatchObject({ 'max-inline-size': '56rem', gap: 'var(--density-gap)' })
-            expect(get('bubble')).toMatchObject({ 'background-color': 'var(--surface-2)', 'padding-inline': 'var(--density-pad-x)' })
+            expect(get('bubble')).toMatchObject({ 'background-color': 'var(--app-conversation-surface, var(--surface-2))', 'padding-inline': 'var(--density-pad-x)' })
             break
           case 'editorial':
             expect(get('transcript')).toMatchObject({ 'max-inline-size': '72ch', gap: 'calc(var(--density-gap) * 1.5)' })
@@ -620,7 +620,7 @@ describe('application shell composition CSS contracts (not mounted browser geome
 
         for (const [name, value] of Object.entries(profile('cards'))) fixtures[4].host.setAttribute(name, value)
         await vi.waitFor(() => expect(fixtures[4].get('bubble').getAttribute('data-app-design-owner')).toContain('content-cards'))
-        expect(declarations(fixtures[4].get('bubble'))).toMatchObject({ border: '1px solid var(--border-default)', 'background-color': 'var(--surface-2)' })
+        expect(declarations(fixtures[4].get('bubble'))).toMatchObject({ border: '1px solid var(--border-default)', 'background-color': 'var(--app-conversation-surface, var(--surface-2))' })
         expect(declarations(fixtures[4].get('actions'))).not.toHaveProperty('opacity')
 
         fixtures[1].host.removeAttribute('data-app-header')

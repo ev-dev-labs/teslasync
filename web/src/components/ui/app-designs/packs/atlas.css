@@ -1,266 +1,355 @@
-/* Field-notebook hierarchy around authentic cartography, never tile filters. */
+/* Field-notebook frames and measured hierarchy around authentic cartography. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-dialog-kind="onboarding"] > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    box-shadow: inset 0 -1px var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-dialog-kind="onboarding"] > [data-app-part~="dialog-body"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] li[data-app-part~="card"][data-surface-variant="standalone"][class~="border-[var(--border-default)]"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="badge"]:not(:where([data-app-metric="score"], [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--radius-sm);
+    border-inline-start-width: 2px;
+    overflow-wrap: anywhere;
+  }
+}
 @media screen and (forced-colors: none) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 80% 0, color-mix(in srgb, var(--theme-accent) 4.5%, transparent), transparent 60%);
+    background-color: var(--app-surface-canvas);
+    background-image: linear-gradient(180deg, var(--app-surface-panel), var(--app-surface-canvas) 12rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"]:where([data-app-design-owner~="pack-atlas"]) {
-    --app-rule-style: solid; --app-nav-radius: var(--radius-sm);
-    --app-shadow: var(--elevation-1); --panel-radius: var(--radius-lg);
-    --panel-shadow: var(--elevation-1); --panel-shadow-hover: var(--elevation-1);
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg);
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-elevated);
+    --app-card-radius: var(--radius-md);
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-bold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: var(--radius-sm);
+    --app-control-surface: var(--control-bg);
+    --app-content-density: 1;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-md);
+    --app-rule-style: solid;
+    --app-nav-radius: var(--radius-sm);
+    --app-shadow: var(--elevation-1);
+    --panel-radius: var(--radius-md);
+    --panel-shadow: var(--elevation-1);
+    --panel-shadow-hover: var(--elevation-1);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); border-inline-end: 1px solid var(--border-strong);
+    background-color: var(--app-surface-panel);
+    border-inline-end: 1px solid var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2); border-block-end: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-atlas"]) {
-    padding-block: var(--density-pad-y); border-block-end: 1px solid var(--border-default);
-    row-gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start: 3px solid transparent; border-radius: var(--radius-sm);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start-color: var(--theme-accent);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
-    font-weight: var(--font-weight-semibold);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-atlas"]) {
-    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
-    gap: calc(var(--density-gap) * 2); padding: var(--density-pad-x);
-    border-block-start: 3px solid var(--border-strong); border-block-end: 1px solid var(--border-strong);
-    background-color: var(--surface-1);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-atlas"]) {
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-atlas"]) {
-    display: flex; flex-wrap: wrap; align-items: center; gap: var(--density-gap); padding-inline-start: var(--density-pad-x); margin-inline-start: auto;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-atlas"]) {
-    row-gap: calc(var(--density-gap) * 2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="section"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start: 1px solid var(--border-strong);
-    padding-inline-start: var(--density-pad-x); padding-block: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid var(--border-default); border-block-start: 2px solid var(--border-strong);
-    background-color: var(--surface-1);
-    box-shadow: var(--elevation-1);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 4.5%, var(--surface-1)), var(--surface-1) 5.5rem);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-atlas"]) {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-    gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-atlas"]) {
-    display: flex; flex-direction: column; align-items: flex-start; gap: var(--density-gap);
-    border: 1px solid var(--border-default); border-inline-start: 3px solid var(--border-strong);
-    padding: var(--density-pad-y) var(--density-pad-x);
-    background-color: var(--surface-2); border-radius: var(--radius-sm); box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric-label"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-atlas"]) {
-    text-wrap: pretty; max-inline-size: 32ch;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric-value"]:where(:not([data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-atlas"]) {
-    font-variant-numeric: tabular-nums; padding-block-end: calc(var(--density-gap) / 2);
+    background-color: var(--app-surface-panel);
     border-block-end: 1px solid var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field"]:where(:not([data-app-field-kind="choice"])):where([data-app-design-owner~="pack-atlas"]) {
-    padding-block: var(--density-pad-y); row-gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] .sidenav-panel:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--nav-context-bg);
+    border-inline: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field-label"]:where(:not([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-atlas"]) {
-    padding-inline-start: calc(var(--density-gap) / 2); border-inline-start: 2px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] .sidenav-panel [data-app-nav-slot="heading"]:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-surface-raised);
+    border-block-end: 1px solid var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [role="switch"], [role="slider"], [role="checkbox"], [role="radio"], [role="separator"], [data-app-control-kind]):where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-    background-color: var(--surface-1); box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where(.sidenav-rail-item, .sidenav-panel [data-app-part~="nav-item"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-nav-radius);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-radius: var(--radius-sm);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-atlas"]) { box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end: 2px solid var(--border-strong); gap: var(--density-gap);
-    padding-block: calc(var(--density-gap) / 2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid transparent; border-start-start-radius: var(--radius-sm);
-    border-start-end-radius: var(--radius-sm);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-color: var(--border-strong); border-block-end: 2px solid var(--theme-accent);
-    background-color: var(--surface-2);
-    font-weight: var(--font-weight-semibold);
-    box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block: 1px solid var(--border-strong); background-color: var(--surface-2);
-    padding: var(--density-pad-y) var(--density-pad-x); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-collapse: separate; border-spacing: 0; border-block: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2); border-block-end: 2px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end: 1px solid var(--border-default);
-    padding: var(--density-pad-y) var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-row"][aria-selected="true"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2); outline: 1px solid var(--border-strong); outline-offset: -1px;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-start: 1px solid var(--border-strong); padding-block: var(--density-pad-y); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-    border-block-start: 3px solid var(--border-strong); border-radius: var(--radius-lg);
-    box-shadow: var(--elevation-3);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end: 1px solid var(--border-strong); background-color: var(--surface-2);
-    padding-block: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-atlas"]) {
-    padding-block: var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-start: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid var(--border-strong); border-block-start-width: 2px;
-    border-radius: var(--radius-sm); box-shadow: var(--elevation-2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-atlas"]) {
-    border-radius: var(--radius-sm); border-inline-start: 3px solid transparent;
-    border-block-end: 1px solid var(--border-default);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):is([aria-selected="true"], [aria-checked="true"]):where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start-color: var(--theme-accent);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):focus-visible:where([data-app-design-owner~="pack-atlas"]) {
-    outline: 2px solid var(--focus-ring); outline-offset: -2px;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid var(--border-default); border-block-start: 2px solid var(--border-strong);
-    border-radius: var(--radius-sm); background-color: var(--surface-1); box-shadow: none;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end: 1px solid var(--border-default); padding-block-end: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); box-shadow: inset 0 -1px var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart"] .recharts-cartesian-grid line:where([data-app-design-owner~="pack-atlas"]) {
-    stroke: var(--border-default); stroke-dasharray: 3 6;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart"] .recharts-cartesian-axis-tick-value:where([data-app-design-owner~="pack-atlas"]) {
-    fill: var(--text-secondary);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2); padding: var(--density-pad-y);
-    border-block-start: 1px solid var(--border-default); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map"]:where([data-app-design-owner~="pack-atlas"]) {
-    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm); box-shadow: var(--elevation-1); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-atlas"]) {
-    outline: 2px solid var(--surface-1); outline-offset: 1px;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-1); border: 1px solid var(--border-strong);
-    border-inline-start-width: 2px; padding: var(--density-pad-y); gap: var(--density-gap);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)) > :where(li, [role="listitem"]):where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end: 1px solid var(--border-strong); padding-block: var(--density-pad-y);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
-    row-gap: calc(var(--density-gap) * 2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="status"], [data-app-part~="badge"]):where([data-app-design-owner~="pack-atlas"]) {
-    border-radius: var(--radius-xs); border-inline-start-width: 2px; border-style: solid;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-radius: var(--radius-sm); border-inline-start-width: 2px; padding: var(--density-pad-y) var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-atlas"]) {
-    text-align: start; align-items: flex-start; padding: var(--density-pad-x);
-    border-block: 1px dashed var(--border-strong); border-inline-start: 3px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="error"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start: 3px solid var(--semantic-danger); padding-inline-start: var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-inline-start: 1px solid var(--border-strong); padding-inline-start: var(--density-pad-x);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background-color: var(--skeleton-bg);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="error"] [data-app-part~="button"]:where([data-app-design-owner~="pack-atlas"]) { text-underline-offset: .25em;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"], [data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="map-marker"]):focus-visible:where([data-app-design-owner~="pack-atlas"]) {
-    outline: 2px solid var(--focus-ring); outline-offset: 2px;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-color: var(--semantic-danger); border-inline-start-width: 3px;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :is([data-app-part~="field-control"], [data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-atlas"]) {
-    border-style: dotted; box-shadow: none;
-    background-color: var(--surface-2); color: var(--text-secondary);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-atlas"]) {
-    border-style: solid; cursor: progress;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):active:where([data-app-design-owner~="pack-atlas"]) {
-    border-block-end-width: 2px; background-color: var(--control-bg-hover);
-  }
-}
-@media screen and (forced-colors: none) and (hover: hover) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):not([aria-disabled="true"]):hover:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--control-bg-hover);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--control-bg-hover); border-color: var(--control-border-hover);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"]):hover:where([data-app-design-owner~="pack-atlas"]) {
-    border-color: var(--control-border-hover);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-row"]:hover:where([data-app-design-owner~="pack-atlas"]) {
-    background-color: var(--surface-2);
-  }
-}
-@media screen and (forced-colors: none) and (max-width: 767px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-atlas"]) {
-    inline-size: 100%;
-    padding-inline-start: 0;
-    border-inline-start-width: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where(.sidenav-rail-item, .sidenav-panel [data-app-part~="nav-item"]):where([aria-current="page"], [aria-current="true"]):where([data-app-design-owner~="pack-atlas"]) {
+    box-shadow: inset 0 -2px var(--theme-primary), inset 0 0 0 1px var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-atlas"]) {
-    padding-block: var(--density-pad-y);
+    padding: var(--density-pad-y) var(--density-pad-x);
     gap: var(--density-gap);
+    border-block-start: 3px double var(--border-strong);
+    border-block-end: 1px solid var(--border-default);
+    background-color: var(--app-surface-panel);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"])):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-atlas"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.125rem), 1fr));
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not([data-app-tone], [data-app-part~="feedback"], [data-app-part~="conversation"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-block-start: 2px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"][data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg, var(--surface-1)));
+    box-shadow: inset 0 0 0 1px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric-grid"]:where(:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    display: grid;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-metric="stat-card"]:not([data-surface-variant="embedded"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-inline-start: 3px solid var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-form-heading]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-end-color: var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :is(input, select, textarea)[data-app-part~="field-control"]:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [data-app-control-kind], [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border);
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :is(a, summary)[data-app-part~="button"][data-app-variant="ghost"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-end-color: var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="tab"][aria-selected="true"]:where([data-app-design-owner~="pack-atlas"]) {
+    box-shadow: inset 0 -2px var(--theme-primary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-color: var(--app-grid-rule);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-grid-header);
+    border-block-end: 1px solid var(--app-grid-rule);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border);
+    border-radius: var(--app-card-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-end-color: var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--radius-sm);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-chart-variant="panel"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-start: 2px solid var(--border-strong);
+    border-radius: var(--app-card-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart"][data-chart-family="state-timeline"][data-chart-variant="panel"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    box-shadow: inset 0 0 0 var(--app-border-width, 1px) var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-chart-variant="panel"] > [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-end-color: var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-chart-viewport]:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-chart-surface);
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-chart-metadata]:where([data-app-design-owner~="pack-atlas"]) {
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-chart-metadata] > span + span:where([data-app-design-owner~="pack-atlas"]) {
+    border-inline-start: 1px solid var(--border-default);
+    padding-inline-start: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="chart-tooltip"]:where([data-app-design-owner~="pack-atlas"]) {
+    color: var(--text-primary);
+    background-color: var(--app-surface-overlay);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map"]:where([data-app-design-owner~="pack-atlas"]) {
+    outline: 3px double var(--border-strong);
+    outline-offset: -3px;
+    border-radius: var(--app-card-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border);
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="map-legend"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border);
+    border-inline-start-width: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-list="ranked"] > [data-app-part~="list-row"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-feedback-kind="empty"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-inline-start: 2px solid var(--border-strong);
+    padding-inline-start: calc(var(--density-pad-x) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-surface-raised);
+    border-color: var(--border-strong);
+    border-radius: var(--app-conversation-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="assistant"] > [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--app-conversation-surface);
+    border-color: var(--border-default);
+    border-inline-start-width: 2px;
+    border-radius: var(--app-conversation-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="user"] > [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-atlas"]) {
+    background-color: var(--theme-accent-soft);
+    border-color: var(--theme-accent);
+    border-radius: var(--app-conversation-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-inline-start-color: var(--border-strong);
+    background-color: var(--app-surface-canvas);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="helix-composer"] textarea[data-app-part~="field-control"]:where([data-app-design-owner~="pack-atlas"]) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :where([data-app-part~="button"]:not(.sidenav-phone-tab), [data-app-part~="tab"], [data-app-part~="field-control"]):focus-visible:where([data-app-design-owner~="pack-atlas"]) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="field-control"][aria-invalid="true"]:where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--semantic-danger);
   }
 }
 
+/* Preserve the widget's state rail instead of drawing a second canvas rail. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-grid-columns][data-widget-pack="atlas"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-inline-start: 0;
+  }
 
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-action-zone="context"] > div:where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-action-zone="context"] button[aria-haspopup="menu"]:where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-action-zone="context"] button[aria-haspopup="menu"] > span.truncate:where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: 0;
+    max-inline-size: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: start;
+    text-overflow: clip;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-action-zone="context"] button[aria-haspopup="menu"] > span:first-child.text-xs:where([data-app-design-owner~="pack-atlas"]) {
+    flex-shrink: 0;
+    max-inline-size: 35%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
+
+@media screen and (min-width: 1280px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column .sidenav-panel:where([data-app-design-owner~="pack-atlas"]) {
+    max-block-size: min(22rem, 42vh);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-short-label:where([data-app-design-owner~="pack-atlas"]) {
+    max-inline-size: 100%;
+    overflow: visible;
+    font-size: calc(0.875rem * var(--font-scale, 1));
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] .sidenav-panel .sidenav-page-row > a:where([data-app-design-owner~="pack-atlas"]) {
+    font-size: calc(0.875rem * var(--font-scale, 1));
+  }
+}
+
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-atlas"]) {
+    padding-inline: calc(var(--density-pad-x) / 2);
+    padding-block: calc(var(--density-pad-y) / 2);
+    gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-header"] > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-atlas"]) {
+    gap: calc(var(--density-gap) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-atlas"]) {
+    row-gap: calc(var(--density-gap) / 3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-action-zone="context"] button[aria-haspopup="menu"]:where([data-app-design-owner~="pack-atlas"]) {
+    gap: calc(var(--density-gap) / 2);
+    padding-inline: calc(var(--density-pad-x) / 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-atlas"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] :where([class~="text-[13px]"], [data-app-metric="stat-card"] .text-sm[class~="text-[var(--text-muted)]"], a[href]):not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
+    [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-atlas"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] a[href].inline-flex:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-widget-pack="atlas"] button:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-atlas"]) {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+}
+
+@media screen and (forced-colors: none) and (hover: hover) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"]:is([data-app-variant="secondary"], [data-app-variant="outline"]):not(:disabled, [aria-disabled="true"]):hover:where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border-hover);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] :is(input, select, textarea)[data-app-part~="field-control"]:not(:disabled, [aria-disabled="true"], [aria-invalid="true"], [data-role="helix-composer"] *):hover:where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--control-border-hover);
+  }
+}
+
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="panel"][data-app-feedback-kind="notice"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="skeleton"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm));
+  }
+}
+
+/* Native surfaces retain semantic colors while consuming this pack. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] form[data-app-part~="card"][data-app-card-kind="record"][data-surface-variant="standalone"][class~="bg-[var(--surface-1)]"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="border-[var(--border-subtle)]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="metric"][data-app-metric="tile"][data-surface-variant="standalone"][class~="border-white/[0.06]"][class~="bg-white/[0.02]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-color: var(--border-subtle);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-metric="tile"]:not([data-surface-variant="embedded"]) [data-app-part~="metric-value"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="button"][data-app-variant="primary"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-atlas"]) {
+    border-radius: var(--app-control-radius, var(--radius-md));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] [data-app-part~="loading"]:not([data-app-feedback-kind="inline-spinner"]):not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *)):where([data-app-design-owner~="pack-atlas"]) {
+    gap: var(--density-gap);
+  }
+}

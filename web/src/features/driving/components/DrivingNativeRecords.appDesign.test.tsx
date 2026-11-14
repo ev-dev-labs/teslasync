@@ -233,7 +233,7 @@ describe('driving-02 native adoption (source-only)', () => {
       for (const card of cards) {
         expect(card).toHaveAttribute('data-surface-variant', 'standalone');
         expect(consumes(card, baseRules, '[data-app-part~="card"]', 'border-radius')).toBe(true);
-        expect(consumes(card, packRules.get(pack)!, '[data-app-part~="card"]', pack === 'editorial' ? 'border-block' : 'border')).toBe(true);
+        expect(consumes(card, packRules.get(pack)!, '[data-app-part~="card"]', pack === 'editorial' ? 'border-block' : 'border'), card.outerHTML).toBe(true);
       }
       const origins = screen.getByTestId('destination-leading-directory').querySelectorAll('article');
       for (const origin of origins) {

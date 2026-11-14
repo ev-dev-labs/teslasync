@@ -11,6 +11,7 @@ const groups: ReadonlyArray<{ key: string; title: string; slugs: readonly Physic
 
 export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: PhysicsSlug; t: Translate }) {
   const navigate = useNavigate();
+  const activeFeature = features.find((feature) => feature.slug === activeSlug);
   return <GlassPanel className="space-y-4 p-4 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <PanelTitle>{t('teslaOnly.workbench.navigation', 'Tesla physics investigations')}</PanelTitle>
@@ -30,6 +31,11 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
             label: `${t(`teslaOnly.workbench.${group.key}`, group.title)} · ${t(`teslaOnly.feature.${item.slug}.title`, item.title)}`,
           }))),
         ]} />
+      {activeFeature && (
+        <Text as="p" variant="bodySm" data-active-physics-title className="mt-2 break-words">
+          {t(`teslaOnly.feature.${activeFeature.slug}.title`, activeFeature.title)}
+        </Text>
+      )}
     </div>
     <div data-app-part="navigation" className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
       {groups.map((group) => <div key={group.key} className="space-y-2">
@@ -50,10 +56,10 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
       </div>)}
     </div>
     <div className="flex flex-wrap gap-4 border-t border-[var(--glass-border)] pt-3">
-      <Link to="/tesla-physics/ledger" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+      <Link to="/tesla-physics/ledger" data-app-action-link className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
         {t('teslaOnly.feature.ledger.title', 'Physics ledger')} →
       </Link>
-      <Link to="/science" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+      <Link to="/science" data-app-action-link className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
         {t('teslaOnly.scienceLab', 'Science lab')} →
       </Link>
     </div>

@@ -78,9 +78,9 @@ export async function expectIntegratedGridFooter(table: Locator): Promise<void> 
   await expect(frame).toHaveCount(1);
   await expect(footer).toBeVisible();
   const geometry = await frame.evaluate((node) => {
-    const viewport = node.querySelector('[data-grid-viewport]');
+    const viewport = node.querySelector('[data-grid-viewport], [data-mobile-table]');
     const footerNode = node.querySelector('[data-grid-footer]');
-    if (!viewport || !footerNode) throw new Error('Grid frame must contain a viewport and footer');
+    if (!viewport || !footerNode) throw new Error('Grid frame must contain a data surface and footer');
     const bounds = node.getBoundingClientRect();
     const view = viewport.getBoundingClientRect();
     const foot = footerNode.getBoundingClientRect();

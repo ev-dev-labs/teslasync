@@ -19,6 +19,7 @@ import type { StatMetric } from '@/components/data-display/stat-reference/types'
 import { DataSourceNotice, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { FadeIn } from '@/components/motion';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 
@@ -68,6 +69,7 @@ export default function DigitalTwinPage() {
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
   const { asOf } = useAsOfDate();
+  const touchFriendlyTwin = useMediaQuery('(max-width: 767px), (pointer: coarse)');
   const historical = asOf !== null;
   usePageTitle(t('digitalTwin.title', 'Digital twin'));
 
@@ -400,6 +402,7 @@ export default function DigitalTwinPage() {
                     {...twinState}
                     size="lg"
                     interactive
+                    touchFriendly={touchFriendlyTwin}
                     driveIn
                     vehicleId={vehicle?.id}
                     exteriorColor={vehicle?.exterior_color}

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Accordion, GlassPanel, IconBox, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import { ThemePicker } from '@/components/ui/theme'
+import { useTheme } from '@/components/ui/ThemeProvider'
 import { PrefetchLink } from '@/components/layout'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -12,6 +13,7 @@ import {
 import { cn } from '@/lib/cn'
 import { Palette, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Tv } from 'lucide-react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import { resolveChartPalette } from '@/hooks/useChartPalette'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
 import WidgetDesignPackSettings from './WidgetDesignPackSettings'
@@ -23,6 +25,7 @@ type ChartPaletteId = 'cb_safe' | 'neon'
 export function AppearanceSettings() {
   const { t } = useTranslation('settings')
   const toast = useToast()
+  const { theme, mode } = useTheme()
 
   // Density picker. Reads/writes the same `ui_density` server-side setting
   // that `useDensitySync` applies to `body[data-density]`. We use the
@@ -124,7 +127,7 @@ export function AppearanceSettings() {
         <ThemePicker showMode showCustom />
       </GlassPanel>
 
-      <WidgetDesignPackSettings />
+      <WidgetDesignPackSettings chartColor={resolveChartPalette(chartPalette, { theme, mode })[0] ?? 'var(--theme-primary)'} />
 
       <GlassPanel className="p-6 space-y-6">
         {/* Density (information density) */}

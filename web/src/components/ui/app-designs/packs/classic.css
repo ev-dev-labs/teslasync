@@ -1,8 +1,43 @@
 /* Classic: a quiet frame, balanced reading groups and explicit action rails. */
+@media screen {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+    --app-brief-column-min-width: 9rem;
+    --app-input-action-clearance: 0.75rem;
+    --app-vehicle-icon-space: 2rem;
+    --app-header-title-min-width: 12rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-brief-value-size);
+  }
+}
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-elevated, var(--surface-3));
+    --app-card-radius: var(--radius-lg);
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: var(--tracking);
+    --app-control-radius: var(--radius-sm);
+    --app-control-surface: var(--control-bg, var(--surface-2));
+    --app-content-density: 1;
+    --app-interaction-duration: var(--motion-duration-fast);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-strong);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-subtle);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-md);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-classic"]) {
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--theme-accent) 4%, transparent), transparent 62%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-classic"]) {
     border-inline-end: 1px solid var(--border-default);
@@ -12,6 +47,23 @@
     background-color: var(--surface-1);
     border-block-end: 1px solid var(--border-default);
     column-gap: calc(var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href],
+    [data-battery-habit-stat] > .text-theme-accent
+  ):where([data-app-design-owner~="pack-classic"]) {
+    color: var(--text-primary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href]
+  ):where([data-app-design-owner~="pack-classic"]) {
+    text-decoration: underline;
+    text-decoration-color: var(--theme-primary);
+    text-underline-offset: 0.2em;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-classic"]) {
     gap: var(--density-gap);
@@ -24,8 +76,12 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-classic"]) {
     box-shadow: inset 0 -2px var(--theme-accent);
     background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    background-color: color-mix(in srgb, var(--theme-accent) 7%, var(--surface-1));
     font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] .sidenav-short-label:where([data-app-design-owner~="pack-classic"]) {
+    font-size: calc(0.75rem * var(--font-scale, 1));
+    line-height: 1.3;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-classic"]) {
     align-items: flex-start;
@@ -35,13 +91,14 @@
     flex-wrap: wrap;
     justify-content: space-between;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-classic"]) {
-  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
     align-items: center;
     gap: var(--density-gap);
     padding-inline-start: var(--density-pad-x);
     margin-inline-start: auto;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-route-focus-target]:where([data-app-design-owner~="pack-classic"]) {
+    font-weight: var(--font-weight-bold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="page-content"], [data-app-part~="section"]):where([data-app-design-owner~="pack-classic"]) {
     row-gap: calc(var(--density-gap) * 2);
@@ -51,10 +108,23 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-classic"]) {
     border: 1px solid var(--panel-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--elevation-1);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"],
+    [data-operational-brief-surface="standalone"]
+  ):where([data-app-design-owner~="pack-classic"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-bank]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    border-block: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list] [data-app-part~="metric-label"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: max(calc(0.875rem * var(--font-scale, 1)), var(--app-body-size, 0.875rem));
+    line-height: 1.4;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
     gap: var(--density-gap);
@@ -117,6 +187,7 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-classic"]) {
     border: 1px solid var(--border-strong);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-classic"]) {
@@ -134,6 +205,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-classic"]) {
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-classic"]) {
@@ -149,7 +221,7 @@
     border-block-end: 1px solid var(--border-subtle);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-classic"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-chart-surface, var(--surface-1));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-classic"]) {
     gap: calc(var(--density-gap) / 2) var(--density-gap);
@@ -161,6 +233,9 @@
     background-color: var(--surface-elevated);
     box-shadow: var(--elevation-2);
     font-variant-numeric: tabular-nums;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] .recharts-rectangle.recharts-tooltip-cursor:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    fill: var(--surface-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="map"]:where([data-app-design-owner~="pack-classic"]) {
     border-radius: var(--radius-lg);
@@ -213,21 +288,538 @@
     border-radius: var(--radius-sm);
     background-color: var(--skeleton-bg);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-classic"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-block-start: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="conversation-message"][data-role="user"] [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-classic"]) {
+    background-color: var(--app-conversation-surface, var(--surface-2));
+    background-color: color-mix(in srgb, var(--theme-primary) 8%, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="helix-side-panel"]:where([data-app-design-owner~="pack-classic"]) {
+    border-inline-start: 1px solid var(--border-default);
+  }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (min-width: 1280px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"]:first-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: auto;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"] > ul[data-app-part~="list"]:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] main:has([data-testid="help-baseline-links"]) section:has(> [data-app-part~="panel"] + [data-app-part~="panel"] > ul[data-app-part~="list"]) > [data-app-part~="panel"] > ul[data-app-part~="list"] > li + li:where([data-app-design-owner~="pack-classic"]) {
+    margin-block-start: 0;
+  }
+}
+@media screen and (max-width: 1023px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(max(var(--app-brief-column-min-width), var(--app-brief-content-min-width, 0px)) * max(1, var(--font-scale, 1))))), 1fr));
+    gap: 0 var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list][data-columns="1"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"][data-operational-metric-bank]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: contents;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list] > [data-app-part~="feedback"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+  }
+}
+@media screen and (min-width: 640px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-heatmap-axis-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-axis-hour]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-heatmap-axis-size);
+    line-height: var(--app-body-leading, 1.4);
+    white-space: nowrap;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-axis-hour]:nth-child(2n + 3):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    visibility: hidden;
+  }
+}
+@media screen and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-heatmap-touch-size: 2.75rem;
+    --app-touch-size: var(--app-heatmap-touch-size);
+    --app-body-size: var(--app-heatmap-axis-size);
+    --app-body-leading: 1.4;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-template-columns: repeat(6, minmax(var(--app-heatmap-touch-size), 1fr));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid] :is([data-heatmap-axis-spacer], [data-heatmap-axis-hour]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-day-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+    padding-block-start: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-slot]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    height: var(--app-heatmap-touch-size);
+    min-width: var(--app-heatmap-touch-size);
+    min-height: var(--app-heatmap-touch-size);
+    transform: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-hour-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: inline;
+    font-size: var(--app-heatmap-axis-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-viewport]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    contain: layout;
+    container: classic-heatmap / inline-size;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-tooltip] :is([data-chart-tooltip-label], [data-chart-tooltip-copy]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-heatmap-axis-size);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  @container classic-heatmap (min-width: 24rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(8, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+  @container classic-heatmap (min-width: 36rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(12, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+  @container classic-heatmap (min-width: 72rem) {
+    :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+      grid-template-columns: repeat(24, minmax(var(--app-heatmap-touch-size), 1fr));
+    }
+  }
+}
+@media screen and (min-width: 768px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-touch-size: 2.75rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(button[data-app-part~="button"], [data-app-part~="tab"], [data-app-part~="nav-item"], a[href]:not(.sr-only), input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), select, textarea):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button:nth-of-type(2)):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) * 2 + var(--density-gap) * 2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+}
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"]:where([data-app-design-owner~="pack-classic"]) {
+    --app-brief-heading-basis: 12rem;
+    --app-body-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    --app-body-leading: 1.4;
+    --app-brief-copy-size: var(--app-body-size);
+    --app-touch-size: 2.75rem;
+    --app-header-action-gap: 0px;
+    --app-heatmap-day-width: max(2.5rem, calc(2.5rem * var(--font-scale, 1)));
+    --app-heatmap-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-safe: env(safe-area-inset-bottom, 0px);
+    --app-phone-tab-icon-size: 1.375rem;
+    --app-phone-tab-gap: calc(var(--density-gap) / 4);
+    --app-phone-tab-padding: 0.25rem;
+    --app-phone-tab-line-height: calc(var(--app-body-size) * 1.25);
+  }
+  :root[data-app-design-pack="classic"]:not([data-tab-bar="off"]):where([data-app-design-owner~="pack-classic"]) {
+    --shell-tab-bar-height: calc(var(--app-phone-tab-icon-size) + var(--app-phone-tab-gap) + var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="mobile-workspace-controls"] > [data-active-range]:where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 0;
+    max-inline-size: none;
+    block-size: auto;
+    padding-block: calc(var(--density-pad-y) / 2);
+    padding-inline: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="mobile-workspace-controls"] [data-active-range] > span:where([data-app-design-owner~="pack-classic"]) {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-typography-role="body"], [data-typography-role="bodySm"], [class~="text-[var(--text-primary)]"], [class~="text-[var(--text-secondary)]"], [class~="text-[var(--text-muted)]"]).text-sm:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *, [data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"])):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="field-label"], input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="color"])[data-app-part~="field-control"], select[data-app-part~="field-control"], textarea[data-app-part~="field-control"], button[data-app-part~="button"]:not([data-app-icon-only="true"])):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-app-metric="headline"] [data-app-part~="metric-reading"] > [data-app-part~="metric-unit"],
+    [data-app-metric="inline"][data-app-part~="badge"]
+  ):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-widget-pack="classic"] .widget-detail-list .text-xs:not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
+    [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-classic"]) {
+    gap: 0;
+    padding-block-start: 0;
+    padding-block-end: var(--app-phone-tab-safe);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 max-content;
+    min-inline-size: var(--app-touch-size);
+    block-size: auto;
+    gap: var(--app-phone-tab-gap);
+    padding-block: var(--app-phone-tab-padding);
+    padding-inline: 0;
+    line-height: var(--app-phone-tab-line-height);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-classic"])::before {
+    top: auto;
+    bottom: 2px;
+    height: 2px;
+    border-radius: var(--radius-pill);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-tab-label:where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    font-size: var(--app-body-size);
+    line-height: var(--app-phone-tab-line-height);
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] :where([data-history-primary] > :first-child, [data-app-part~="history-route"], [data-app-metric-grid="inline"] [data-app-metric="inline"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] :where([data-app-part~="history-route"], [data-app-part~="history-route"] > span):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] [data-history-action-rail="true"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: var(--density-pad-x);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="list-row"] [data-history-action-rail="true"] [data-history-primary]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--density-gap));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-grid]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-axis]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+    margin-inline-start: calc(var(--app-heatmap-day-width) + var(--app-heatmap-gap));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-day]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: var(--app-heatmap-day-width) repeat(12, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-cost-heatmap-day-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    grid-row: span 2;
+    inline-size: auto;
+    margin-inline: 0;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
-    inline-size: 100%;
+    inline-size: auto;
+    max-inline-size: 100%;
     padding-inline-start: 0;
-    border-inline-start-width: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="compact-breadcrumbs"] > div:where([data-app-design-owner~="pack-classic"]) {
+    margin-block-end: var(--density-gap);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"] :is([data-action-zone="commands"], [data-action-zone="commands"] > [data-action-group]):where([data-app-design-owner~="pack-classic"]) {
+    gap: var(--app-header-action-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-classic"]) {
     padding-block: var(--density-pad-y);
-    gap: var(--density-gap);
+    gap: var(--density-gap) calc(var(--density-gap) / 3);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-classic"]) {
+    gap: calc(var(--density-gap) / 3);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"].flex-row:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    column-gap: calc(var(--density-gap) / 4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-header"].flex-row > [data-app-part~="page-title"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    flex: 1 1 min(100%, calc(var(--app-header-title-min-width) * max(1, var(--font-scale, 1))));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-classic"]) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="tabs"] > [data-app-part~="tab"]:where([data-app-design-owner~="pack-classic"]) {
+    block-size: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-brief-heading]:where([data-app-design-owner~="pack-classic"]) {
+    flex-basis: var(--app-brief-heading-basis);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-title"], [data-app-part~="feedback-message"]):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-brief-copy-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="support-bundle-panel"] > div:first-child > div:nth-child(2):where([data-app-design-owner~="pack-classic"]) {
+    flex-shrink: 1;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-code-kind="support-bundle"]:where([data-app-design-owner~="pack-classic"]) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(
+    [data-battery-habit-label],
+    [data-testid="dashboard-preset-open-dashboard"],
+    [data-testid="help-glossary"] a[href],
+    [data-tour="vehicles-card"] a[data-app-variant="ghost"],
+    [data-operational-metric-list] [data-app-part~="metric-label"],
+    [data-app-part~="dialog"] [data-app-part~="table-cell"] > :is(dt, dd),
+    [data-app-part~="dialog"] [data-app-part~="table-cell"] > dd :is(span, a, strong, code)
+  ):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-testid="dashboard-preset-open-dashboard"], [data-testid="help-glossary"] a[href]):where([data-app-design-owner~="pack-classic"]) {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="masked-value"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-testid="masked-value"] > button:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    --mgr-title-size: var(--app-body-size);
+    --mgr-primary-size: var(--app-body-size);
+    --mgr-meta-label-size: var(--app-body-size);
+    --mgr-meta-value-size: var(--app-body-size);
+    --mgr-group-header-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] :where(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value, .mgr-group-header):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] .mgr-card:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    max-height: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-mobile-table] :where(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    line-height: var(--app-body-leading);
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where([data-app-part~="feedback-message"], [data-testid="widget-body"] + div) a[href]:where([data-app-design-owner~="pack-classic"]) {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="chart-tooltip"] :where([data-chart-tooltip-label], [data-chart-tooltip-name], [data-chart-tooltip-value], [data-chart-tooltip-value] *, [data-chart-tooltip-copy]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-hour-label]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-block-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) + var(--app-input-action-clearance));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] input[data-app-part~="field-control"]:has(+ div > button:nth-of-type(2)):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-end: calc(var(--app-touch-size) * 2 + var(--app-input-action-clearance));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="vehicle-picker-control"] input[data-app-part~="field-control"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline-start: var(--app-vehicle-icon-space);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] label[data-app-field-kind="choice"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    min-inline-size: var(--app-touch-size);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] button[data-app-part~="status"][data-app-icon-only="true"]:is([class~="!h-5"], [class~="!h-7"]):not(:disabled, [class~="!w-2.5"]):not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="widget-shell-header"] button[data-app-part~="status"][data-app-icon-only="true"]:not(:disabled):where([data-app-design-owner~="pack-classic"]) {
+    width: var(--app-touch-size) !important;
+    height: var(--app-touch-size) !important;
+    min-width: var(--app-touch-size) !important;
+    min-height: var(--app-touch-size) !important;
+  }
 }
 
+@media screen and (max-width: 400px) {
+  :root[data-app-design-pack="classic"]:not([data-tab-bar="off"]):where([data-app-design-owner~="pack-classic"]) {
+    --shell-tab-bar-height: calc(max(var(--app-touch-size), var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: span 2;
+    flex-direction: row;
+    padding-inline: var(--app-phone-tab-padding);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:nth-child(n + 4):where([data-app-design-owner~="pack-classic"]) {
+    grid-column: span 3;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .nav-phone-icon:where([data-app-design-owner~="pack-classic"]) {
+    flex: none;
+    width: calc(var(--app-phone-tab-icon-size) * 0.82);
+    height: calc(var(--app-phone-tab-icon-size) * 0.82);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"] .nav-phone-icon svg:where([data-app-design-owner~="pack-classic"]) {
+    width: 100%;
+    height: 100%;
+  }
+}
 
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-classic"]) {
+    border-inline-start-width: 0;
+  }
+}
+
+@media screen and (max-width: 639px), screen and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-heatmap-label-day]:where([data-app-design-owner~="pack-classic"]) {
+    --heatmap-label-day: attr(data-heatmap-label-day);
+    --heatmap-label-hour: attr(data-heatmap-label-hour);
+    --heatmap-label-sessions: attr(data-heatmap-label-sessions);
+    --heatmap-label-energy: attr(data-heatmap-label-energy);
+    --heatmap-label-status: attr(data-heatmap-label-status);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table):where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+    inline-size: 100%;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption:where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+    inline-size: 100%;
+    text-align: start;
+    overflow-wrap: break-word;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead:where([data-app-design-owner~="pack-classic"]) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody:where([data-app-design-owner~="pack-classic"]) {
+    display: block;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr:where([data-app-design-owner~="pack-classic"]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--density-gap);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-block-end: 1px solid var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody :is(th, td):where([data-app-design-owner~="pack-classic"]) {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :first-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+    font-weight: var(--font-weight-semibold);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :last-child:where([data-app-design-owner~="pack-classic"]) {
+    grid-column: 1 / -1;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] :is([data-mobile-stack-table] tbody td[data-mobile-label], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table tbody td):where([data-app-design-owner~="pack-classic"])::before {
+    content: attr(data-mobile-label);
+    content: attr(data-mobile-label) / "";
+    color: var(--text-secondary);
+    font-size: var(--app-body-size);
+    font-weight: var(--font-weight-medium);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(1):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-day);
+    content: var(--heatmap-label-day) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(2):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-hour);
+    content: var(--heatmap-label-hour) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(3):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-sessions);
+    content: var(--heatmap-label-sessions) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(4):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-energy);
+    content: var(--heatmap-label-energy) / "";
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(5):where([data-app-design-owner~="pack-classic"])::before {
+    content: var(--heatmap-label-status);
+    content: var(--heatmap-label-status) / "";
+  }
+}
+
+@media screen and (forced-colors: active) and (max-width: 767px), screen and (forced-colors: active) and (min-width: 768px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] [data-app-part~="table"]:where([data-app-design-owner~="pack-classic"]) {
+    table-layout: fixed;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] :where(caption, th, td):where([data-app-design-owner~="pack-classic"]) {
+    padding-inline: calc(var(--density-gap) / 4);
+    overflow-wrap: anywhere;
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+}
+
+@media screen and (forced-colors: active) and (max-width: 639px), screen and (forced-colors: active) and (min-width: 640px) and (any-pointer: coarse) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] [data-table-variant="embedded"] > div:where([data-app-design-owner~="pack-classic"]) {
+    max-block-size: calc(var(--app-touch-size) * 9);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

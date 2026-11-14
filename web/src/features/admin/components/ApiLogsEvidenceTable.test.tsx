@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { APICallLog } from '@/api/types';
 import { ApiLogsEvidenceTable, type ApiLogsServerFilters } from './ApiLogsEvidenceTable';
@@ -74,6 +74,40 @@ beforeEach(() => {
 });
 
 describe('ApiLogsEvidenceTable server column filters', () => {
+  it('keeps server filters and expandable diagnostics available in the phone presentation', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      renderTable(emptyFilters, [{ ...log, status_code: 429, rate_limited: true }]);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = screen.getByRole('group', { name: 'API call log' });
+      expect(mobile).toHaveTextContent('/vehicles');
+      expect(mobile).toHaveTextContent('429 · Rate limited');
+      expect(mobile).toHaveTextContent('tesla-api');
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Method filter' }));
+      const filter = screen.getByRole('dialog', { name: 'Method filter' });
+      fireEvent.change(within(filter).getByLabelText('Method'), { target: { value: 'POST' } });
+      expect(onFilterChange).toHaveBeenCalledWith('method', 'POST');
+      fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Expand row' }));
+      expect(mobile).toHaveTextContent('App key: tablet (#42)');
+      expect(mobile).toHaveTextContent('Duration: 12ms');
+      expect(mobile.querySelector('pre code')?.textContent).toContain('"App-Key-ID": "42"');
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Collapse row' }));
+      expect(within(mobile).queryByText('Request URL')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s paints the actual opened record surface while preserving evidence order', pack => {
     const raw = 'z first\n  a second\n0 is a measured duration';
     const view = renderTable(emptyFilters, [{ ...log, duration_ms: 0, response_body: raw }], pack);

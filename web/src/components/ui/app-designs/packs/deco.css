@@ -1,344 +1,463 @@
-/* Architectural mastheads, paired rules and axial instruments without ornament over data. */
+/* Deco Grand: a symmetrical architectural frame, paired rules and measured type. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-dialog-kind="onboarding"] > :is([data-app-part~="dialog-header"], [data-app-part~="dialog-footer"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-deco"]) {
+    box-shadow: inset 0 -2px var(--app-grid-rule, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-dialog-kind="onboarding"] > [data-app-part~="dialog-body"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-deco"]) {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"]:where([data-app-design-owner~="pack-deco"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--panel-bg, var(--surface-1));
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-elevated, var(--surface-3));
+    --app-card-radius: 1.125rem 1.125rem 0.25rem 0.25rem;
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-bold);
+    --app-display-tracking: calc(var(--tracking, 0em) + 0.035em);
+    --app-control-radius: 0.625rem;
+    --app-control-surface: var(--surface-2);
+    --app-content-density: 1.08;
+    --app-interaction-duration: var(--motion-duration-normal);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-md);
+    --app-nav-radius: 0.625rem;
+    --app-brief-column-min-width: 10rem;
+    --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
+  }
+
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-deco"]) {
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--theme-accent) 4.5%, var(--surface-2)), transparent 60%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="shell-sidebar"], .sidenav-rail, .sidenav-panel):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-color: var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--border-strong);
-    background: var(--surface-1);
+    border-block-end: 3px double var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-deco"]) {
-    gap: var(--density-gap);
-    padding-block: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-strong);
-    align-items: stretch;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 3px double var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where(.sidenav-short-label, [data-app-nav-slot="heading"]):where([data-app-design-owner~="pack-deco"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: calc(var(--tracking, 0em) + 0.02em);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem 0 0;
-    border-inline: 1px solid var(--border-default);
-    border-block-end: 3px solid transparent;
+    border: 1px solid transparent;
+    border-radius: var(--app-nav-radius, var(--radius-md)) var(--app-nav-radius, var(--radius-md)) 0.125rem 0.125rem;
     white-space: normal;
     overflow-wrap: anywhere;
     text-align: center;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-selected="true"], [data-active="true"]):where([data-app-design-owner~="pack-deco"]) {
-    border-block-end-color: var(--theme-accent);
-    border-inline-color: var(--border-strong);
-    background: var(--surface-2);
-    text-underline-offset: .3em;
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"], [aria-selected="true"], [data-active="true"]):where([data-app-design-owner~="pack-deco"]) {
+    border-color: var(--border-strong);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    color: var(--text-primary);
+    box-shadow: inset 0 -2px 0 var(--theme-primary);
     font-weight: var(--font-weight-semibold);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-deco"]) {
-    display: flex;
-    padding-block: calc(var(--density-pad-x) * 1.5);
-    border-block: 1px solid var(--border-strong);
-    text-align: start;
-    background: var(--surface-1);
-    flex-wrap: wrap;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
     align-items: center;
+    gap: var(--density-gap);
+    padding: calc(var(--density-pad-y) * 1.25) var(--density-pad-x);
+    border-inline: 1px solid var(--border-strong);
+    border-block: 3px double var(--border-strong);
+    border-block-color: color-mix(in srgb, var(--theme-primary) 38%, var(--border-strong));
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    background-color: var(--app-surface-panel, var(--surface-1));
+    box-shadow: inset 0 0 0 3px var(--app-surface-panel, var(--surface-1)), inset 0 0 0 4px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+    text-align: center;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"]) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    inline-size: 100%;
     min-inline-size: 0;
+    max-inline-size: 100%;
+    text-align: center;
     overflow-wrap: anywhere;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"])::before,
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"])::after {
+    content: "";
+    flex: 1 1 2rem;
+    min-inline-size: 1rem;
+    max-inline-size: 4rem;
+    block-size: 0.25rem;
+    border-block: 1px solid var(--border-strong);
+    border-block-color: color-mix(in srgb, var(--theme-primary) 38%, var(--border-strong));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"] > .self-stretch[aria-hidden="true"]:where([data-app-design-owner~="pack-deco"]) {
+    display: none;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-route-focus-target]:where([data-app-design-owner~="pack-deco"]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    font-size: calc(clamp(1.625rem, 2.4vw, 2.375rem) * var(--font-scale, 1));
+    font-weight: var(--app-display-weight, var(--font-weight-bold));
+    letter-spacing: var(--app-display-tracking, var(--tracking));
+    text-wrap: balance;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-deco"]) {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
+    justify-self: center;
     align-items: center;
     gap: var(--density-gap);
     min-inline-size: 0;
     max-inline-size: 100%;
-    margin-inline-start: auto;
+    margin-inline-start: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-deco"]) {
     row-gap: calc(var(--density-gap) * 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="section"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-start: 1px solid var(--border-strong);
-    padding-block-start: var(--density-pad-x);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-content"] > [data-app-part~="section"]:not([data-operational-brief]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-part~="conversation-workspace"], [data-app-part~="conversation-workspace"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start: 3px double var(--border-default);
+    padding-block-start: var(--density-pad-y);
     min-inline-size: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="panel"], [data-app-part~="card"]):not([data-surface-variant="embedded"]):not(:where([data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
-    border-start-start-radius: 1.25rem;
-    border-end-end-radius: 1.25rem;
-    border-start-end-radius: .125rem;
-    border-end-start-radius: .125rem;
-    background: var(--panel-bg);
-    box-shadow: var(--elevation-1);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 4.5%, var(--surface-1)), var(--surface-1) 5.5rem);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-heading-level="section"], [data-heading-level="panel"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    font-family: var(--app-display-font, var(--font-sans));
+    letter-spacing: calc(var(--tracking, 0em) + 0.015em);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:not([data-app-tone]):not(:where([data-app-tone] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start-width: 3px;
+    border-block-start-style: double;
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-surface-variant="standalone"][class~="bg-[var(--panel-bg)]"], [data-operational-brief-surface="standalone"][class~="bg-[var(--surface-1)]"]):not(:where([data-app-tone], [data-app-tone] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-surface-variant="standalone"] > [data-card-header]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 3px double var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-stat-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-part~="conversation-workspace"] *)):where([data-app-design-owner~="pack-deco"]) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-block: var(--density-pad-y);
-    border-block: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-deco"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(10.25rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
+    align-items: stretch;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric"]:where(:not([data-app-metric]), [data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"]):not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    gap: calc(var(--density-gap) * 0.75);
     min-inline-size: 0;
-    padding: var(--density-pad-x);
-    border-inline: 1px solid var(--border-strong);
-    border-radius: 0;
-    background: var(--surface-1);
-    box-shadow: none;
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-default);
+    border-block-start: 3px double var(--border-strong);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
     text-align: start;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--border-strong);
-    padding-block-end: .5em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-metric="stat-card"] [data-app-part~="metric-heading"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    padding-block-end: calc(var(--density-pad-y) * 0.5);
+    border-block-end: 3px double var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-operational-metric]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    padding-block-start: calc(var(--density-pad-y) * 0.5);
+    border-block-start: 3px double var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-operational-brief-compact="true"] [data-operational-value]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    font-size: var(--app-brief-value-size, 1.25rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: calc(var(--tracking, 0em) + 0.015em);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-deco"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric-grid="inline"] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     font-variant-numeric: tabular-nums lining-nums;
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="field"]:not([data-app-field-kind="choice"]):where([data-app-design-owner~="pack-deco"]) {
-    border-block-start: 1px solid var(--border-default);
-    padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="field"]:not([data-app-field-kind="choice"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-part~="conversation-composer"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-deco"]) {
+    gap: calc(var(--density-gap) * 0.5);
+    align-content: start;
     min-inline-size: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *)):where([data-app-design-owner~="pack-deco"]) {
-    display: inline-block;
-    margin-block-end: .5em;
-    padding-inline-start: .5em;
-    border-inline-start: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="field-label"]:not(:where([data-app-field-kind="choice"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: calc(var(--tracking, 0em) + 0.015em);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [role="switch"], [data-app-control-kind="composite"]), [data-app-field-surface]):where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where(:is(input, select, textarea)[data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [data-app-control-kind="composite"]), [data-app-field-surface]:not([data-app-control-kind="dropzone"])):not(:where([data-app-field-kind="choice"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-part~="conversation-composer"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-deco"]) {
     border-block-end-width: 2px;
-    border-radius: .5rem .5rem 0 0;
-    background: var(--control-bg);
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem .125rem .125rem;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-part~="conversation-composer"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"]:where(:not([data-app-variant="ghost"])):where([data-app-design-owner~="pack-deco"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"]:where([data-app-variant="secondary"], [data-app-variant="outline"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-part~="conversation-composer"] *, [data-role="helix-composer"] *)):where([data-app-design-owner~="pack-deco"]) {
     border-block-end-width: 2px;
-    border-block-end-style: solid;
-    box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-choice-surface="radio"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem 0 0;
-    border-block-end-width: 2px;
-    border-block-end-style: solid;
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-choice-surface="radio"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-choice-indicator], [data-app-switch-track]):where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .125rem;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-choice-indicator="checkbox"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: 0.125rem;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block: 1px solid var(--border-strong);
-    padding-block: .375em;
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tabs"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 3px double var(--border-strong);
+    gap: calc(var(--density-gap) * 0.5);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem 0 0;
-    border-inline: 1px solid var(--border-default);
-    border-block-end: 3px solid transparent;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tab"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-current="page"]):where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--theme-accent);
-    background: var(--surface-2);
-    text-underline-offset: .3em;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tab"]:is([aria-selected="true"], [aria-current="page"], [aria-pressed="true"], [aria-checked="true"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    color: var(--text-primary);
     font-weight: var(--font-weight-semibold);
-    box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
+    box-shadow: inset 0 -2px 0 var(--theme-primary);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-toolbar"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--density-gap);
-    border-block: 1px solid var(--border-strong);
-    padding-block: var(--density-pad-y);
-    background: var(--surface-1);
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-toolbar"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    box-shadow: inset 0 -1px 0 var(--border-strong), inset 0 -3px 0 var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    border-collapse: separate;
-    border-spacing: 0;
-    border-inline: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-head"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    background: var(--surface-2);
-    border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-head"]:not(:where([data-app-table-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
+    box-shadow: inset 0 -1px 0 var(--border-strong), inset 0 -3px 0 var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    padding-block: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-default);
-    border-inline-end: 1px solid var(--border-subtle);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-cell"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end-color: var(--app-grid-rule, var(--border-default));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="pagination"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    border-block-start: 1px solid var(--border-strong);
-    padding-block: var(--density-pad-y);
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="pagination"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    box-shadow: inset 0 1px 0 var(--border-strong), inset 0 3px 0 var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="table-row"][aria-selected="true"] > [data-app-part~="table-cell"]:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-    box-shadow: inset 0 -3px var(--theme-accent);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog"]:where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
-    border-radius: 1.25rem 1.25rem .25rem .25rem;
-    background: var(--surface-1);
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start: 3px double var(--border-strong);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--border-strong);
-    align-items: flex-start;
-    background: var(--surface-2);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]) > [data-app-part~="dialog-header"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 3px double var(--border-default);
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-deco"]) {
-    min-inline-size: 0;
-    overscroll-behavior: contain;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]) > [data-app-part~="dialog-footer"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start: 3px double var(--border-default);
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-start: 1px solid var(--border-strong);
-    background: var(--surface-2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="popover"], [data-app-part~="tooltip"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
-    border-radius: .75rem .75rem .125rem .125rem;
-    background: var(--surface-1);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="popover"], [data-app-part~="chart-tooltip"], [data-app-part~="map-popup"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
-    color: var(--text-primary);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
-    border-radius: 1.25rem 1.25rem .125rem .125rem;
-    background: var(--panel-bg);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="tooltip"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm));
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] figure[data-app-part~="chart"][data-chart-variant="panel"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start-width: 3px;
+    border-block-start-style: double;
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart"][data-chart-family="state-timeline"][data-chart-variant="panel"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-card-radius, var(--radius-lg));
+    box-shadow: inset 0 1px 0 var(--border-default), inset 0 3px 0 var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] figure[data-chart-variant="panel"] [data-app-part~="chart-header"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 3px double var(--border-default);
+    padding-block-end: var(--density-pad-y);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart-plot"][data-chart-viewport]:not(:where(svg, svg *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-chart-surface, var(--surface-1));
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-default));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-chart-variant="embedded"] [data-app-part~="chart-plot"][data-chart-viewport]:not(:where(svg, svg *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    background-color: transparent;
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="popover"] :where([role="option"], [role^="menuitem"]):where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .5rem .5rem 0 0;
-    border-block-end: 1px solid var(--border-default);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--border-strong);
-    padding-block-end: var(--density-pad-y);
-    gap: var(--density-gap);
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-deco"]) {
-    min-inline-size: 0;
-    background: var(--surface-1);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-deco"]) {
-    display: flex;
-    flex-wrap: wrap;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="chart-legend"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     justify-content: center;
-    gap: var(--density-gap);
-    border-block-start: 1px solid var(--border-strong);
-    padding-block: var(--density-pad-y);
+    border-block-start: 3px double var(--border-default);
+    padding-block-start: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="map"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .25rem;
-    box-shadow: inset 0 0 0 3px var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="map"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm));
+    box-shadow: inset 0 0 0 1px var(--border-strong);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):where([data-app-design-owner~="pack-deco"]) {
-    border: 1px solid var(--border-strong);
-    border-radius: .75rem .75rem .125rem .125rem;
-    background: var(--surface-1);
-    box-shadow: var(--elevation-1);
-    gap: var(--density-gap);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):not([data-app-tone], [data-map-state="unavailable"]):not(:where([data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm));
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
+    box-shadow: var(--elevation-2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="map-marker"]:where([data-app-design-owner~="pack-deco"]) {
-    outline: 1px solid var(--surface-1);
-    outline-offset: 2px;
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="list"]:not(:where([data-app-list="legend"], [data-app-list="conversation"], [data-app-list="steps"], [data-app-list="steps"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block: 3px double var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="list"]:not(:where([data-app-list="legend"], [data-app-list="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-list="steps"], [data-app-list="steps"] *)):where([data-app-design-owner~="pack-deco"]) {
-    row-gap: 0;
-    border-block: 1px solid var(--border-strong);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="list-row"]:not(:where([data-app-list="legend"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-app-list="steps"] *)):where([data-app-design-owner~="pack-deco"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="list-row"]:not(:where([data-app-list="legend"] *, [data-app-list="steps"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     border-block-end: 1px solid var(--border-default);
-    padding-block: var(--density-pad-y);
-    min-inline-size: 0;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="timeline-content"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="timeline-content"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="steps"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 1px solid var(--border-default);
     padding-block-end: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="status"], [data-app-part~="badge"]):not([data-app-metric="score"]):where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .5rem .5rem 0 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="status"], [data-app-part~="badge"]):not([data-app-metric="score"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem .125rem .125rem;
-    border-inline-start-width: 2px;
-    border-inline-start-style: solid;
-    box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="feedback"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block: 2px double var(--border-strong);
-    padding-block: calc(var(--density-pad-y) * 2);
-    background: var(--surface-1);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="error"]:where([data-app-design-owner~="pack-deco"]) {
-    border-inline-start-color: var(--semantic-danger);
-    border-block-end: 1px solid var(--semantic-danger-border);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="feedback-actions"]:where([data-app-design-owner~="pack-deco"]) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--density-gap);
-    padding-block-start: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="feedback-actions"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     border-block-start: 1px solid var(--border-default);
+    padding-block-start: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="loading"]:where([data-app-design-owner~="pack-deco"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="loading"]:not([data-app-feedback-kind="inline-spinner"], [data-app-metric]):not(:where(svg, svg *, [data-app-metric-grid="native-gauge"] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="skeleton"]:where([data-app-design-owner~="pack-deco"]) {
-    border-radius: .75rem .75rem 0 0;
-    background-color: var(--surface-2);
-    border-block-end: 1px solid var(--border-default);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="skeleton"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-control-radius, var(--radius-sm)) var(--app-control-radius, var(--radius-sm)) 0.125rem 0.125rem;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"]):focus-visible:where([data-app-design-owner~="pack-deco"]) {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="conversation-workspace"], [data-role="helix-side-panel"]):where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-canvas, var(--bg-app));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="field-control"]:not([type="checkbox"], [type="radio"], [role="switch"])[aria-invalid="true"]:where([data-app-design-owner~="pack-deco"]) {
-    border-block-end: 1px solid var(--semantic-danger);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-role="helix-side-panel"] > :first-child:where([data-app-design-owner~="pack-deco"]) {
+    border-block-end: 3px double var(--border-default);
+    background-color: var(--app-surface-panel, var(--surface-1));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="tab"]):is(:disabled, [aria-disabled="true"]):where([data-app-design-owner~="pack-deco"]) {
-    border-block-end-style: dashed;
-    box-shadow: none;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="conversation-composer"], [data-role="helix-composer"]):where([data-app-design-owner~="pack-deco"]) {
+    border-block-start-width: 3px;
+    border-block-start-style: double;
+    background-color: var(--app-conversation-surface, var(--surface-2));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"][aria-busy="true"]:where([data-app-design-owner~="pack-deco"]) {
-    border-inline: 1px solid currentColor;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-role="helix-composer"]:where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="button"], [data-app-part~="field-control"], [data-app-part~="nav-item"], [data-app-part~="tab"]):focus-visible:where([data-app-design-owner~="pack-deco"]) {
+    outline: var(--focus-ring-width, 2px) solid var(--focus-ring, var(--theme-primary));
+    outline-offset: var(--focus-ring-offset, 2px);
   }
   @media (hover: hover) {
-    :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)), [data-app-part~="tab"], [data-app-part~="table-row"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-current="page"], [data-active="true"], [data-selected="true"]):hover:not(:where([data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
-      background-color: var(--surface-2);
-      background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
-      font-weight: var(--font-weight-semibold);
-      box-shadow: var(--elevation-1), inset 0 -2px 0 var(--theme-accent);
-    }
-    :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="button"]:not(:disabled, [aria-disabled="true"], [data-app-variant="primary"], [data-app-variant="danger"]):hover:where([data-app-design-owner~="pack-deco"]) {
-      text-underline-offset: .3em;
+    :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] :where([data-app-part~="nav-item"]:not(.sidenav-phone-tab), [data-app-part~="tab"]):not(:disabled, [aria-disabled="true"], [aria-selected="true"], [aria-current], [aria-pressed="true"], [aria-checked="true"], [data-active="true"]):hover:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+      background-color: var(--control-bg-hover, var(--surface-3));
+      box-shadow: inset 0 -2px 0 var(--border-strong);
     }
   }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-deco"]) {
-    inline-size: 100%;
-    padding-inline-start: 0;
-    border-inline-start-width: 0;
+
+@media screen and (min-width: 1024px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="metric-grid"][data-operational-metric-bank]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(19rem * max(1, var(--font-scale, 1)))), 1fr));
+    gap: 0 var(--density-gap);
+  }
+}
+
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"]:where([data-app-design-owner~="pack-deco"]) {
+    --app-brief-value-size: max(1rem, calc(1.25rem * var(--font-scale, 1)));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-deco"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"]) {
+    gap: 0.5rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"])::before,
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-deco"])::after {
+    flex-basis: 0.5rem;
+    min-inline-size: 0.5rem;
+    max-inline-size: 1.5rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-route-focus-target]:where([data-app-design-owner~="pack-deco"]) {
+    font-size: calc(clamp(1.375rem, 6vw, 1.625rem) * var(--font-scale, 1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-deco"]) {
+    inline-size: 100%;
+    justify-content: center;
+    padding-inline-start: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="page-actions"] > :where([data-action-zone="context"], [data-action-zone="commands"]):where([data-app-design-owner~="pack-deco"]) {
+    justify-content: center;
+    margin-inline: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-operational-metric-list] [data-operational-metric]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: calc(var(--density-gap) * 0.25);
+    padding-inline: calc(var(--density-pad-x) * 0.5);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-operational-metric] > :where([data-app-part~="metric-label"], [data-app-part~="metric-value"]):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-deco"]) {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: start;
+    text-align: start;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-widget-pack] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"], [data-testid="widget-body"] + div a[href]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-deco"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-deco"]) {
+    font-size: var(--app-body-size, 1rem);
+  }
+}
+
+@media screen and (forced-colors: none) and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="shell"][data-presentation-mode="standard"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-start-color: var(--border-strong);
+    box-shadow: inset 0 2px 0 var(--surface-1), inset 0 3px 0 var(--border-default), var(--elevation-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-nav-radius, var(--radius-md)) var(--app-nav-radius, var(--radius-md)) 0.125rem 0.125rem;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-role="bottom-tab-bar"] .sidenav-phone-tab.is-selected:where([data-app-design-owner~="pack-deco"]) {
+    background-color: var(--app-surface-raised, var(--surface-2));
+    color: var(--text-primary);
+    box-shadow: inset 0 -2px 0 var(--theme-primary);
+  }
+}
+
+@media screen and (forced-colors: none) and (prefers-reduced-motion: reduce) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"]:where([data-app-design-owner~="pack-deco"]) {
+    --app-interaction-duration: 0ms;
+  }
 }
 
 
+
+
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="panel"][data-app-feedback-kind="notice"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+}
+
+/* Native surfaces retain semantic colors while consuming this pack. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="border-[var(--border-subtle)]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-deco"]) {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+}

@@ -69,7 +69,7 @@ for (const theme of ['light', 'dark'] as const) {
 }
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
+  for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]) {
     test(`drive evidence aligns and filters at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(60_000);
       await page.setViewportSize({ width, height: 900 });
@@ -80,6 +80,16 @@ for (const theme of ['light', 'dark'] as const) {
 
       const region = page.getByRole('region', { name: 'Drive list' });
       const brief = page.getByTestId('drives-operational-brief');
+      if (width < 640) {
+        const title = brief.getByRole('heading', { name: 'Activity, efficiency, and exceptions in context' });
+        await expect(title).toBeVisible();
+        const geometry = await title.evaluate(node => ({
+          width: node.clientWidth, contentWidth: node.scrollWidth,
+          height: node.clientHeight, contentHeight: node.scrollHeight,
+        }));
+        expect(geometry.contentWidth, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width + 1);
+        expect(geometry.contentHeight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.height + 1);
+      }
       const metrics = brief.getByRole('listitem');
       await expect(metrics).toHaveCount(6);
       if (width >= 1920) {

@@ -1111,7 +1111,7 @@ describe('WarrantyCommandPage — native readout and claim ownership', () => {
               selector.includes('[data-app-part~="card"]') && selector.includes(`[data-app-design-owner~="pack-${pack}"]`)));
           }
         });
-        expect(surfaceRules.some(selector => form.matches(selector))).toBe(true);
+        expect.soft(surfaceRules.some(selector => form.matches(selector)), pack).toBe(true);
         expectDataMode(form, mode, '[data-app-card-kind="record"]');
         expectDataMode(body, mode, '[data-app-part~="record-body"]');
         for (const rule of matchingRules(body, '[data-app-part~="record-body"]')) {

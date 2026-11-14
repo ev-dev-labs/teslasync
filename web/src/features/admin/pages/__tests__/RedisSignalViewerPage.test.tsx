@@ -9,7 +9,7 @@
  * the top-of-page numbers don't lie about a 0 count.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -261,6 +261,58 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
         heightSpy.mockRestore();
         widthSpy.mockRestore();
       }
+  });
+
+  it('keeps location signals masked in mobile rows and revealable in details', async () => {
+    const observers: Array<{ callback: ResizeObserverCallback; target: Element }> = [];
+    class NarrowObserver {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) { observers.push({ callback: this.callback, target }); }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', NarrowObserver);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
+    mockedGetSignals.mockResolvedValue({
+      vehicle_id: 1,
+      signal_count: 2,
+      signals: {
+        Latitude: { value: 37.421999, type: 'number', source: 'redis' },
+        BatteryLevel: { value: 72, type: 'number', source: 'redis' },
+      },
+    });
+    const page = renderPage();
+    try {
+      fireEvent.change(screen.getByLabelText('Select vehicle'), { target: { value: '1' } });
+      await waitFor(() => expect(observers.some(({ target }) => target.hasAttribute('data-app-table-frame'))).toBe(true));
+      act(() => {
+        for (const observer of observers.filter(({ target }) => target.hasAttribute('data-app-table-frame'))) {
+          observer.callback([{
+            target: observer.target, contentRect: { width: 360, height: 500 },
+          } as ResizeObserverEntry], {} as ResizeObserver);
+        }
+      });
+
+      const table = await screen.findByRole('group', { name: 'admin:redis-signals' });
+      const location = within(table).getByRole('button', { name: 'Latitude' });
+      expect(location).toHaveTextContent('••.•••');
+      expect(page.container).not.toHaveTextContent('37.421999');
+      fireEvent.click(location);
+
+      const dialog = screen.getByRole('dialog', { name: 'admin:redis-signals' });
+      const masked = within(dialog).getByTestId('masked-value');
+      expect(masked).not.toHaveTextContent('37.421999');
+      fireEvent.click(within(masked).getByRole('button', { name: 'Reveal value' }));
+      expect(masked).toHaveTextContent('37.421999');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/audit/reveal'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    } finally {
+      page.unmount();
+      fetchSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 });
 

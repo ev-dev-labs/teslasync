@@ -6,6 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 import postcss, { type Rule } from 'postcss';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MetricBar } from '../data-display/MetricBar';
+import { UsageCard } from '../data-display/UsageCard';
+import { Card } from '../ui/Card';
 import {
   APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes,
 } from '../ui/app-designs/designs';
@@ -68,6 +70,51 @@ beforeEach(() => {
 });
 
 describe('real data-mode consumers without native CSS scope', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)(
+    '%s preserves semantic and embedded metric surfaces while styling ordinary tiles', pack => {
+      const { container } = render(
+        <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+          <UsageCard bands={[
+            { label: 'Normal usage', value: '1' },
+            { label: 'Warning usage', value: '2', intent: 'warn' },
+            { label: 'Danger usage', value: '3', intent: 'danger' },
+          ]} />
+          <Card variant="embedded" data-app-part="metric" data-app-metric="card">
+            <div data-app-part="metric" data-app-metric="tile">
+              <span data-app-part="metric-value">Embedded reading</span>
+            </div>
+          </Card>
+        </div>,
+      );
+      const host = container.firstElementChild!;
+      const release = observeAppDesignScopes(host);
+      try {
+        const normal = screen.getByText('Normal usage').closest('[data-app-metric="tile"]')!;
+        expect(matchingRules(normal).some(rule => 'background' in declarations(rule))).toBe(true);
+
+        const warning = screen.getByText('Warning usage').closest('[data-app-metric="tile"]')!;
+        const danger = screen.getByText('Danger usage').closest('[data-app-metric="tile"]')!;
+        const embedded = screen.getByText('Embedded reading').closest('[data-surface-variant="embedded"]')!;
+        expect(warning).toHaveClass('bg-[var(--semantic-warning-bg)]', 'border-[var(--semantic-warning-border)]');
+        expect(danger).toHaveClass('bg-[var(--semantic-danger-bg)]', 'border-[var(--semantic-danger-border)]');
+        expect(embedded).toHaveClass('bg-transparent', 'border-0');
+        for (const root of [warning, danger, embedded]) {
+          for (const element of [root, ...root.querySelectorAll('[data-app-part]')]) {
+            for (const rule of matchingRules(element).filter(rule => rule.selector.includes('[data-app-data='))) {
+              const style = declarations(rule);
+              for (const property of [
+                'background', 'border', 'padding', 'display', 'align-items', 'gap',
+                'grid-template-columns', 'font-size', 'text-align',
+              ]) expect(style).not.toHaveProperty(property);
+            }
+          }
+        }
+      } finally {
+        release();
+      }
+    },
+  );
+
   it.each(PACK_IDS)('%s keeps unknown fill absence and observed-zero geometry in native tracks', async pack => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     const tree = (

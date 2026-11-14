@@ -233,7 +233,7 @@ describe('owned system native design consumers (source-only)', () => {
       expect(complete.getAttribute('data-app-design-owner')).toContain('pack-blueprint');
       expect(complete.getAttribute('data-app-design-owner')).not.toContain('pack-v1');
       expect(incomplete).not.toHaveAttribute('data-app-design-owner');
-      expect(consumers('packs\\v1.css', incomplete, '[data-app-part~="badge"]')).toHaveLength(0);
+      expect(consumers(`packs\\${APP_DESIGN_PACK_FILES.v1}`, incomplete, '[data-app-part~="badge"]')).toHaveLength(0);
     } finally {
       release();
       view.unmount();

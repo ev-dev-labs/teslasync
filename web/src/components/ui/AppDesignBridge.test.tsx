@@ -99,7 +99,7 @@ describe('nearest design boundary isolation', () => {
         inheritedRules.push(inherited.toString());
       });
     }
-    installStyles(inheritedRules.join('\n'));
+    installStyles(`:root { --panel-radius: var(--radius-lg); }\n${inheritedRules.join('\n')}`);
     selection.appWide = true;
     selection.packId = 'ambient';
     const view = render(<>
@@ -109,7 +109,7 @@ describe('nearest design boundary isolation', () => {
     const boundary = view.getByTestId('quiet-variables');
     const snapshot = () => {
       const style = getComputedStyle(boundary);
-      return ['--app-border-width', '--app-nav-radius', '--app-shadow', '--panel-radius',
+      return ['--app-border-width', '--app-nav-radius', '--app-shadow', '--app-card-radius', '--panel-radius',
         '--panel-shadow', '--panel-shadow-hover', '--app-feedback-signal']
         .map(property => [property, style.getPropertyValue(property)]);
     };
@@ -122,7 +122,8 @@ describe('nearest design boundary isolation', () => {
       <AppDesignBridge />
       <section data-testid="quiet-variables" data-app-design-preview {...getAppDesignAttributes('quiet')} />
     </>);
-    expect(getComputedStyle(document.documentElement).getPropertyValue('--panel-radius')).toBe('0px');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--panel-radius')).toBe('var(--radius-lg)');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--app-card-radius')).toBe('0px');
     expect(getComputedStyle(document.documentElement).getPropertyValue('--app-border-width')).toBe('2px');
     expect(snapshot()).toEqual(first);
   });
@@ -177,6 +178,45 @@ describe('nearest design boundary isolation', () => {
     await waitFor(() => expect(panel).not.toHaveAttribute('data-app-design-owner'));
     panel.remove();
     await waitFor(() => expect(panel).not.toHaveAttribute('data-app-design-owner'));
+  });
+
+  it('keeps protected widget trees isolated when boundaries change or content moves', async () => {
+    selection.packId = 'classic';
+    selection.appWide = true;
+    const view = render(<>
+      <AppDesignBridge />
+      <div data-testid="outer">
+        <div data-testid="protected" data-app-design-preserve="">
+          <div data-testid="protected-child" data-app-part="section" />
+          <section data-app-design-preview {...getAppDesignAttributes('quiet')}>
+            <div data-testid="nested-preview" data-app-part="badge" />
+          </section>
+        </div>
+      </div>
+    </>);
+    const outer = view.getByTestId('outer');
+    const boundary = view.getByTestId('protected');
+    const child = view.getByTestId('protected-child');
+    const nested = view.getByTestId('nested-preview');
+    expect(outer).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic'));
+    expect(boundary).not.toHaveAttribute('data-app-design-owner');
+    expect(child).not.toHaveAttribute('data-app-design-owner');
+    expect(nested).not.toHaveAttribute('data-app-design-owner');
+
+    boundary.removeAttribute('data-app-design-preserve');
+    await waitFor(() => expect(child).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic')));
+    await waitFor(() => expect(nested).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-quiet')));
+    boundary.setAttribute('data-app-design-preserve', '');
+    await waitFor(() => expect(child).not.toHaveAttribute('data-app-design-owner'));
+    await waitFor(() => expect(nested).not.toHaveAttribute('data-app-design-owner'));
+
+    const inserted = document.createElement('span');
+    boundary.append(inserted);
+    await waitFor(() => expect(inserted).not.toHaveAttribute('data-app-design-owner'));
+    outer.append(inserted);
+    await waitFor(() => expect(inserted).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-classic')));
+    boundary.append(inserted);
+    await waitFor(() => expect(inserted).not.toHaveAttribute('data-app-design-owner'));
   });
 
   it('shares lifecycle with independently mounted previews and removes all private markers on last release', () => {

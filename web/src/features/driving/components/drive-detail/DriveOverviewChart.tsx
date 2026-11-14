@@ -198,10 +198,10 @@ function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
       label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}
       caption={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}
     >
-      <Table variant="embedded" aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
+      <Table data-mobile-stack-table variant="embedded" aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
         <thead data-app-part="table-head"><tr data-app-part="table-row"><th data-app-part="table-cell" scope="col">{t('driveDetail.report.signal', 'Signal')}</th><th data-app-part="table-cell" scope="col">{meanLabel}</th><th data-app-part="table-cell" scope="col">{maxLabel}</th><th data-app-part="table-cell" scope="col">{minLabel}</th></tr></thead>
         <tbody>{items.map((item) => (
-          <tr data-app-part="table-row" key={item.label}><th data-app-part="table-cell" scope="row">{item.label}</th><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.mean}</td><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.max}</td><td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{item.min}</td></tr>
+          <tr data-app-part="table-row" key={item.label}><th data-app-part="table-cell" scope="row">{item.label}</th><td data-app-part="table-cell" data-mobile-label={meanLabel} className="whitespace-nowrap tabular-nums">{item.mean}</td><td data-app-part="table-cell" data-mobile-label={maxLabel} className="whitespace-nowrap tabular-nums">{item.max}</td><td data-app-part="table-cell" data-mobile-label={minLabel} className="whitespace-nowrap tabular-nums">{item.min}</td></tr>
         ))}</tbody>
       </Table>
     </ChartSummary>

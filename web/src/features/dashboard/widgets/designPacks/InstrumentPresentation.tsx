@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { usePackModule, usePackPresentation } from './PackBoundary';
 import { PACK_APPEARANCES } from './types';
+import { loadInstrument } from './packModules';
 import type { InstrumentPresentationProps } from './families/Instrument.types';
-
-const loadInstrument = () => import('./families/InstrumentLayout');
 
 interface InstrumentProps extends Omit<InstrumentPresentationProps, 'appearance'> {
   children: ReactNode;

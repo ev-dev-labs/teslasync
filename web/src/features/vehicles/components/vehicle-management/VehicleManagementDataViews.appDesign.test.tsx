@@ -71,7 +71,7 @@ describe('typed vehicle-management source surfaces', () => {
         const selected: string[] = []
         identity.walkRules(rule => selected.push(...rule.selectors.filter(selector =>
           selector.includes('[data-app-part~="card"]') && card.matches(selector))))
-        expect(selected.length).toBeGreaterThan(0)
+        expect(selected.length, card.outerHTML).toBeGreaterThan(0)
       }
       expect(screen.getByText('Unknown active of 2 options returned')).toBeInTheDocument()
       expect(screen.getByText('Status unknown')).toBeInTheDocument()

@@ -816,11 +816,29 @@ export interface ApiRequestRecord {
   origin: string;
   path: string;
   resourceType: string;
-  disposition: 'pending' | 'fulfilled' | 'continued' | 'aborted';
+  disposition: 'pending' | 'fulfilled' | 'continued' | 'aborted' | 'cancelled';
+  failure?: string;
 }
 
 const ALLOWED_BEACON_PATHS = ['/api/v1/web-vitals', '/api/v1/web-errors'] as const;
+const CANCELLABLE_READ_PATHS: readonly string[] = [
+  '/api/v1/system/auth-mode',
+  '/api/v1/vehicles',
+  '/api/v1/onboarding/status',
+  '/api/v1/system/version',
+  '/api/v1/settings',
+  '/api/v1/system/audit',
+];
 const MAX_BEACON_BYTES = 64 * 1024;
+const UNLOAD_REQUESTS_KEY = '__TESLASYNC_E2E_UNLOAD_REQUESTS__';
+const UNLOAD_BEACONS_KEY = '__TESLASYNC_E2E_UNLOAD_BEACONS__';
+const mockPageStates = new WeakMap<Page, {
+  controller: MockApiController;
+  requestOwners: WeakMap<PlaywrightRequest, MockApiController>;
+  requestIndex: WeakMap<PlaywrightRequest, ApiRequestRecord>;
+  clientCancellations: Set<string>;
+  failedCancellations: Map<string, ApiRequestRecord>;
+}>();
 
 function requestRecord(
   controller: MockApiController,
@@ -953,6 +971,7 @@ async function fulfill(
       path === '/vehicles' ||
       path === '/auth/status' ||
       path === '/auth/session' ||
+      path === '/settings/widget-design-pack' ||
       path.startsWith('/system/auth-mode');
     if (request.method() === 'POST' && (path === '/web-vitals' || path === '/web-errors')) {
       const contentType = request.headers()['content-type'] ?? '';
@@ -1055,6 +1074,18 @@ export async function fulfillApiMock(
   }
 }
 
+export async function installForwardAuthDesignFixture(
+  page: Page,
+  controller: MockApiController,
+  subject: string,
+): Promise<void> {
+  const scope = createHash('sha256').update(`forward_auth:${subject}`).digest('hex');
+  await page.route(url => url.pathname === '/api/v1/settings/widget-design-pack' && !url.search, route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return fulfillApiMock(route, controller, { json: { pack_id: 'classic', scope, app_wide: false } });
+  });
+}
+
 export async function installApiMocks(
   page: Page,
   scenario: DataScenario = 'populated',
@@ -1078,11 +1109,90 @@ export async function installApiMocks(
     navPins: [],
     nextNavPinId: 1,
   };
-  page.on('request', (request) => {
-    requestRecord(controller, request);
-  });
-  await page.route('**/api/**', (route) =>
-    fulfill(route, scenario, controller, theme, density, sseServer.origin, accentTheme));
+  let state = mockPageStates.get(page);
+  if (state) {
+    state.controller = controller;
+  } else {
+    state = {
+      controller, requestOwners: new WeakMap(), requestIndex: new WeakMap(),
+      clientCancellations: new Set(), failedCancellations: new Map(),
+    };
+    mockPageStates.set(page, state);
+    const pageState = state;
+    await page.exposeBinding('__teslasyncE2EReadCancelled', (_source, id: string) => {
+      pageState.clientCancellations.add(id);
+      const record = pageState.failedCancellations.get(id);
+      if (record?.disposition === 'pending') record.disposition = 'cancelled';
+    });
+    await page.addInitScript((allowedPaths: readonly string[]) => {
+      const originalFetch = window.fetch;
+      let sequence = 0;
+      window.fetch = function (input, init) {
+        const request = input instanceof Request ? input : undefined;
+        let url: URL;
+        try {
+          url = new URL(request?.url ?? input.toString(), window.location.href);
+        } catch {
+          return originalFetch.call(window, input, init);
+        }
+        const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
+        const signal = init?.signal === undefined ? request?.signal : init.signal;
+        if (!signal || method !== 'GET' || url.origin !== window.location.origin
+          || !allowedPaths.includes(url.pathname) || url.search || url.hash) {
+          return originalFetch.call(window, input, init);
+        }
+        const id = `${Date.now()}-${Math.random()}-${sequence++}`;
+        const headers = new Headers(init?.headers ?? request?.headers);
+        headers.set('x-teslasync-e2e-request-id', id);
+        let pending = true;
+        const report = () => {
+          if (!pending) return;
+          const notify = (window as Window & {
+            __teslasyncE2EReadCancelled?: (requestId: string) => Promise<void>;
+          }).__teslasyncE2EReadCancelled;
+          if (notify) void notify(id).catch(() => undefined);
+        };
+        signal.addEventListener('abort', report, { once: true });
+        const result = originalFetch.call(window, input, { ...init, headers });
+        const finish = () => {
+          pending = false;
+          signal.removeEventListener('abort', report);
+        };
+        void result.then(finish, finish);
+        if (signal.aborted) report();
+        return result;
+      };
+    }, CANCELLABLE_READ_PATHS);
+    page.on('request', request => {
+      const record = requestRecord(pageState.controller, request);
+      if (record) {
+        pageState.requestOwners.set(request, pageState.controller);
+        pageState.requestIndex.set(request, record);
+      }
+    });
+    page.on('requestfailed', request => {
+      const record = pageState.requestIndex.get(request);
+      if (record) record.failure = request.failure()?.errorText ?? 'unknown';
+      const url = new URL(request.url());
+      const id = request.headers()['x-teslasync-e2e-request-id'];
+      // Both the client abort signal and the matching network failure are required.
+      if (record?.disposition === 'pending'
+        && id
+        && request.failure()?.errorText === 'net::ERR_ABORTED'
+        && request.method() === 'GET'
+        && request.resourceType() === 'fetch'
+        && url.origin === new URL(page.url()).origin
+        && CANCELLABLE_READ_PATHS.includes(url.pathname)
+        && !url.search && !url.hash) {
+        pageState.failedCancellations.set(id, record);
+        if (pageState.clientCancellations.has(id)) record.disposition = 'cancelled';
+      }
+    });
+  }
+  const pageState = state;
+  await page.route('**/api/**', route =>
+    fulfill(route, scenario, pageState.requestOwners.get(route.request()) ?? controller,
+      theme, density, sseServer.origin, accentTheme));
   return controller;
 }
 
@@ -1098,6 +1208,7 @@ export async function waitForHarnessReady(
     }), {
       message: 'mock API requests did not settle',
       timeout: 10_000,
+      intervals: [100],
     }).toEqual({ pending: 0, quiet: true });
   }
   await page.evaluate(async () => {
@@ -1140,12 +1251,24 @@ export async function waitForNoVisibleActivity(page: Page): Promise<void> {
     return [...activity].filter((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
-      return style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && rect.width > 0
-        && rect.height > 0
-        && rect.bottom > 0
-        && rect.top < innerHeight;
+      if (style.display === 'none' || style.visibility !== 'visible' || rect.width <= 0 || rect.height <= 0) return false;
+      let left = Math.max(0, rect.left);
+      let right = Math.min(innerWidth, rect.right);
+      let top = Math.max(0, rect.top);
+      let bottom = Math.min(innerHeight, rect.bottom);
+      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const ancestorStyle = getComputedStyle(ancestor);
+        const ancestorRect = ancestor.getBoundingClientRect();
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(ancestorStyle.overflowX)) {
+          left = Math.max(left, ancestorRect.left + ancestor.clientLeft);
+          right = Math.min(right, ancestorRect.left + ancestor.clientLeft + ancestor.clientWidth);
+        }
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(ancestorStyle.overflowY)) {
+          top = Math.max(top, ancestorRect.top + ancestor.clientTop);
+          bottom = Math.min(bottom, ancestorRect.top + ancestor.clientTop + ancestor.clientHeight);
+        }
+      }
+      return right > left && bottom > top;
     }).map((element) => ({
       tag: element.tagName.toLowerCase(),
       testId: element.dataset.testid ?? '',
@@ -1216,12 +1339,170 @@ export async function assertMockApiComplete(
       path: request.path,
       resourceType: request.resourceType,
       disposition: request.disposition,
+      failure: request.failure,
     }));
   await expect.poll(incompleteRequests, {
     message: 'API requests escaped or were blocked by Playwright routing',
     timeout: 5_000,
   }).toEqual([]);
   await cleanupServiceWorkers(page);
+}
+
+export async function prepareMockApiNavigation(page: Page): Promise<void> {
+  if (!mockPageStates.has(page) || !/^https?:/.test(page.url())) return;
+  await page.evaluate(({ storageKey, beaconKey, maxBytes }) => {
+    const records: Array<{
+      origin: string;
+      path: string;
+      hasSearch: boolean;
+      hasHash: boolean;
+      method: string;
+      contentType: string;
+      body: string | null;
+      size: number;
+    }> = [];
+    localStorage.setItem(storageKey, '[]');
+    const lateBeacons: CapturedBeacon[] = [];
+    localStorage.setItem(beaconKey, '[]');
+    const seededBeacons = (window as Window & { __TESLASYNC_E2E_BEACONS__?: CapturedBeacon[] })
+      .__TESLASYNC_E2E_BEACONS__;
+    const originalBeacon = Array.isArray(seededBeacons) ? navigator.sendBeacon.bind(navigator) : null;
+    Object.defineProperty(navigator, 'sendBeacon', {
+      configurable: true,
+      value: (rawUrl: string | URL, data?: BodyInit | null): boolean => {
+        const previousCount = seededBeacons?.length ?? 0;
+        const accepted = originalBeacon?.(rawUrl, data) ?? false;
+        const recorded = seededBeacons?.slice(previousCount) ?? [];
+        if (recorded.length === 0) {
+          let url: URL | null = null;
+          try {
+            url = new URL(String(rawUrl), location.href);
+          } catch {
+            // An invalid destination is recorded as an unreviewed beacon.
+          }
+          recorded.push({
+            method: 'POST',
+            sameOrigin: url?.origin === location.origin,
+            path: url?.pathname ?? '[invalid-url]',
+            hasSearch: Boolean(url?.search),
+            hasHash: Boolean(url?.hash),
+            size: 0,
+            contentType: '',
+            body: null,
+            accepted: false,
+            violations: ['missing-beacon-fixture'],
+          });
+        }
+        lateBeacons.push(...recorded);
+        localStorage.setItem(beaconKey, JSON.stringify(lateBeacons));
+        return accepted;
+      },
+    });
+    const originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+      const request = input instanceof Request ? input : undefined;
+      if (!(init?.keepalive ?? request?.keepalive ?? false)) {
+        return originalFetch.call(window, input, init);
+      }
+      let url: URL | null = null;
+      try {
+        url = new URL(request?.url ?? input.toString(), location.href);
+      } catch {
+        // An invalid destination is recorded as an unreviewed request.
+      }
+      const body = typeof init?.body === 'string' ? init.body : null;
+      const size = body == null ? 0 : new TextEncoder().encode(body).byteLength;
+      const headers = new Headers(init?.headers ?? request?.headers);
+      records.push({
+        origin: url?.origin ?? '',
+        path: url?.pathname ?? '[invalid-url]',
+        hasSearch: Boolean(url?.search),
+        hasHash: Boolean(url?.hash),
+        method: (init?.method ?? request?.method ?? 'GET').toUpperCase(),
+        contentType: headers.get('content-type') ?? '',
+        body: size <= maxBytes ? body : null,
+        size,
+      });
+      localStorage.setItem(storageKey, JSON.stringify(records));
+      return Promise.resolve(new Response(null, { status: 200 }));
+    };
+  }, { storageKey: UNLOAD_REQUESTS_KEY, beaconKey: UNLOAD_BEACONS_KEY, maxBytes: MAX_BEACON_BYTES });
+}
+
+export async function assertMockApiAfterNavigation(page: Page, origin: string): Promise<void> {
+  const controller = mockPageStates.get(page)?.controller;
+  if (!controller) return;
+  const storage = await page.context().storageState();
+  const originStorage = storage.origins.find(entry => entry.origin === origin)?.localStorage;
+  const rawRecords = originStorage?.find(entry => entry.name === UNLOAD_REQUESTS_KEY)?.value;
+  const records = rawRecords == null ? [] : JSON.parse(rawRecords) as Array<{
+    origin: string;
+    path: string;
+    hasSearch: boolean;
+    hasHash: boolean;
+    method: string;
+    contentType: string;
+    body: string | null;
+    size: number;
+  }>;
+  for (const record of records) {
+    const path = record.path.replace(/^\/api\/v1/, '');
+    const reviewed = record.origin === origin && record.method === 'POST'
+      && ALLOWED_BEACON_PATHS.some(allowed => allowed === record.path)
+      && !record.hasSearch && !record.hasHash;
+    if (!reviewed) {
+      controller.unmatched.add(`${record.method} ${record.origin === origin ? record.path : '[off-origin]'}`);
+      continue;
+    }
+    const violations = validateRumBody(path, record.contentType, record.body);
+    if (record.size > MAX_BEACON_BYTES && !violations.includes('payload-too-large')) {
+      violations.push('payload-too-large');
+    }
+    controller.seen.add(`${record.method} ${path}`);
+    controller.requests.push({
+      method: record.method,
+      origin: record.origin,
+      path: record.path,
+      resourceType: 'fetch',
+      disposition: 'fulfilled',
+    });
+    if (violations.length > 0) {
+      controller.invalidRum.push({ path, size: record.size, contentType: record.contentType, violations });
+    }
+  }
+  const navigatedAt = Date.now();
+  await expect.poll(() => ({
+    pending: controller.pending,
+    quiet: Date.now() - Math.max(navigatedAt, controller.lastActivityAt) >= 150,
+    incomplete: controller.requests
+      .filter(request => request.disposition === 'pending' || request.disposition === 'aborted')
+      .map(request => ({
+        method: request.method,
+        origin: request.origin === origin ? 'same-origin' : 'off-origin',
+        path: request.path,
+        resourceType: request.resourceType,
+        disposition: request.disposition,
+        failure: request.failure,
+      })),
+  }), {
+    message: 'late navigation API activity escaped or did not settle',
+    timeout: 5_000,
+  }).toEqual({ pending: 0, quiet: true, incomplete: [] });
+  expect([...controller.unmatched], 'unmatched E2E API requests after navigation').toEqual([]);
+  expect(controller.invalidRum, 'invalid fetch/xhr RUM payloads after navigation').toEqual([]);
+  const rawBeacons = originStorage?.find(entry => entry.name === UNLOAD_BEACONS_KEY)?.value;
+  const beacons = rawBeacons == null ? [] : JSON.parse(rawBeacons) as CapturedBeacon[];
+  const beaconViolations = beacons.filter(beacon => !beacon.accepted).map(beacon => ({
+    method: beacon.method,
+    origin: beacon.sameOrigin ? 'same-origin' : 'off-origin',
+    path: beacon.path,
+    hasSearch: beacon.hasSearch,
+    hasHash: beacon.hasHash,
+    size: beacon.size,
+    contentType: beacon.contentType,
+    violations: beacon.violations,
+  }));
+  expect(beaconViolations, 'invalid or unreviewed navigator.sendBeacon requests after navigation').toEqual([]);
 }
 
 export async function readCapturedBeacons(page: Page): Promise<CapturedBeacon[]> {

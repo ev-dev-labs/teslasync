@@ -8,7 +8,7 @@ interface NotificationSoundChannelRowProps {
   label: string;
   /** Per-category on/off state. */
   enabled: boolean;
-  /** Master gate — when off the row dims but stays interactive. */
+  /** Master gate — when off the row is outlined but stays interactive. */
   master: boolean;
   onToggle: (checked: boolean) => void;
   onTest: () => void;
@@ -34,7 +34,7 @@ export function NotificationSoundChannelRow({
       data-surface-variant="standalone"
       className={cn(
         'flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors',
-        !master && 'opacity-60',
+        !master && 'border-dashed',
       )}
     >
       <Toggle label={label} checked={enabled} onChange={onToggle} size="sm" />

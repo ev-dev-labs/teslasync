@@ -26,9 +26,8 @@ interface HeatmapGridProps {
 /**
  * The hero visualization for Charging Patterns: a 7×24 weekday/hour density
  * grid with shared hover/activation detail and a color-scale legend. One roving
- * tab stop exposes cell buttons without adding 168 sequential stops. The grid keeps a
- * sensible min-width and scrolls inside its own container on narrow screens so
- * the page itself never scrolls horizontally.
+ * tab stop exposes cell buttons without adding 168 sequential stops. On phones
+ * each weekday wraps into six-hour rows so every slot remains touchable.
  */
 export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, dayLabels = DAYS }: HeatmapGridProps) {
   const { t } = useTranslation();
@@ -59,7 +58,7 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
 
   return (
     <div>
-      <div className="overflow-x-auto">
+      <div className="min-w-0">
         <div
           data-app-part="chart-plot"
           {...(framed ? {} : {
@@ -67,12 +66,12 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
             'aria-label': t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day'),
           })}
           data-heatmap-grid
-          className="grid min-w-[640px] grid-cols-[56px_repeat(24,minmax(0,1fr))] gap-[2px]"
+          className="grid grid-cols-6 gap-0.5 sm:grid-cols-[56px_repeat(24,minmax(0,1fr))]"
         >
           {/* Hour header row */}
-          <div aria-hidden="true" />
+          <div aria-hidden="true" data-heatmap-axis-spacer className="hidden sm:block" />
           {HOURS.map((h) => (
-            <Caption key={h} className="text-center">
+            <Caption key={h} data-heatmap-axis-hour={h} className="hidden text-center sm:block">
               {h}
             </Caption>
           ))}
@@ -80,7 +79,7 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
           {/* One row per weekday */}
           {dayLabels.map((dayLabel, day) => (
             <Fragment key={dayLabel}>
-              <div className="flex items-center">
+              <div data-heatmap-day-label className="col-span-6 flex items-center pt-2 sm:col-span-1 sm:pt-0">
                 <Text variant="bodySm">{dayLabel}</Text>
               </div>
               {HOURS.map((hour) => {
@@ -105,7 +104,7 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
                     aria-haspopup="dialog"
                     aria-expanded={isHovered && detailOpen}
                     aria-describedby={isHovered && detailOpen ? detailId : undefined}
-                    className={`relative h-7 min-w-0 rounded-sm border border-[var(--border-subtle)] p-0 transition-transform motion-reduce:transition-none ${isHovered ? 'z-10 scale-125' : ''}`}
+                    className={`relative h-11 min-w-0 rounded-sm border border-[var(--border-subtle)] p-0 text-base transition-transform motion-reduce:transition-none sm:h-7 ${isHovered ? 'z-10 scale-125' : ''}`}
                     style={{ backgroundColor: heatmapColor(level), color: heatmapTextColor(level) }}
                     onFocus={() => setActiveSlot(slot)}
                     onMouseEnter={event => openDetail(event.currentTarget, day, hour)}
@@ -137,7 +136,9 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
                       target?.focus();
                       if (detailOpen && target) openDetail(target, Math.floor(next / 24), next % 24, hovered?.pinned);
                     }}
-                  />
+                  >
+                    <span aria-hidden="true" data-heatmap-hour-label className="sm:hidden">{hour}</span>
+                  </Button>
                 );
               })}
             </Fragment>
@@ -156,6 +157,7 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
           <div
             id={detailId}
             data-app-part="chart-tooltip"
+            data-heatmap-tooltip
             className="max-w-64 rounded-md px-2 py-1"
             onMouseLeave={event => {
               if (!hovered.pinned && !event.currentTarget.contains(document.activeElement)
@@ -179,13 +181,13 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
                 onClick={closeDetail}
               />
             </div>
-            <Text variant="caption" as="div" data-chart-readout>
+            <Text variant="caption" as="div" data-chart-readout data-chart-tooltip-copy>
               {selectedCell.count} {sessionsWord} · {hasEnergy
                 ? formatEnergy(energy)
                 : t('charging.heatmap.noMeasurements', 'No recorded measurements in the returned sessions')}
             </Text>
             {partial && (
-              <Text variant="caption" as="div">
+              <Text variant="caption" as="div" data-chart-tooltip-copy>
                 {t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')}
               </Text>
             )}

@@ -102,7 +102,7 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
       <Card layout padding="none" className="h-full p-4 sm:p-5" data-testid="drive-energy-evidence">
         <CardHeader title={t('driveDetail.report.energyEvidence', 'Energy and range evidence')} />
         <CardContent>
-        <Table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
+        <Table data-mobile-stack-table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
           <thead data-app-part="table-head"><tr data-app-part="table-row">
             <th data-app-part="table-cell" scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
             <th data-app-part="table-cell" scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
@@ -111,8 +111,8 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
           <tbody>{rows.map((row) => (
             <tr data-app-part="table-row" key={row.id}>
               <th data-app-part="table-cell" scope="row">{row.label}</th>
-              <td data-app-part="table-cell" className="whitespace-nowrap tabular-nums">{row.value}</td>
-              <td data-app-part="table-cell" className="min-w-48 text-[var(--text-muted)]">{row.source}</td>
+              <td data-app-part="table-cell" data-mobile-label={t('driveDetail.whyEnded.signal.cols.value', 'Value')} className="whitespace-nowrap tabular-nums">{row.value}</td>
+              <td data-app-part="table-cell" data-mobile-label={t('driveDetail.report.source', 'Source and method')} className="min-w-48 text-[var(--text-muted)]">{row.source}</td>
             </tr>
           ))}</tbody>
         </Table>

@@ -57,6 +57,11 @@ export function ArchetypeCandidateModels({
     'archetypes.candidates.agreement',
     'Restart agreement',
   );
+  const modelName = t('archetypes.candidates.model', 'Candidate');
+  const inertiaName = t('archetypes.candidates.inertia', 'Inertia');
+  const realizedName = t('archetypes.candidates.realized', 'Realized clusters');
+  const clusterRangeName = t('archetypes.candidates.clusterRange', 'Smallest / largest');
+  const decisionName = t('archetypes.candidates.decision', 'Decision');
 
   return (
     <section data-testid="drive-archetypes-candidates">
@@ -82,14 +87,14 @@ export function ArchetypeCandidateModels({
         chartKey="drive-archetype-candidates"
         data={rows}
         dataColumns={[
-          { key: 'model', label: t('archetypes.candidates.model', 'Candidate') },
-          { key: 'realized', label: t('archetypes.candidates.realized', 'Realized clusters') },
+          { key: 'model', label: modelName },
+          { key: 'realized', label: realizedName },
           { key: 'silhouette', label: silhouetteName, format: (value) => fmtScientificNumber(value, 3) },
-          { key: 'inertia', label: t('archetypes.candidates.inertia', 'Inertia'), format: (value) => fmtNumber(value) },
+          { key: 'inertia', label: inertiaName, format: (value) => fmtNumber(value) },
           { key: 'agreement', label: agreementName, format: (value) => fmtScientificNumber(value, 3) },
           { key: 'smallest', label: t('archetypes.candidates.smallest', 'Smallest cluster') },
           { key: 'largest', label: t('archetypes.candidates.largest', 'Largest cluster') },
-          { key: 'selected', label: t('archetypes.candidates.decision', 'Decision') },
+          { key: 'selected', label: decisionName },
         ]}
       >
         {({ hiddenSeries }) => (
@@ -124,17 +129,17 @@ export function ArchetypeCandidateModels({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <Table className="min-w-[760px]" aria-label={t('archetypes.candidates.title', 'Candidate-k model selection')}>
+          <Table className="min-w-[760px]" data-mobile-stack-table aria-label={t('archetypes.candidates.title', 'Candidate-k model selection')}>
 
             <thead data-app-part="table-head"><tr data-app-part="table-row">
               {[
-                t('archetypes.candidates.model', 'Candidate'),
+                modelName,
                 silhouetteName,
                 agreementName,
-                t('archetypes.candidates.inertia', 'Inertia'),
-                t('archetypes.candidates.realized', 'Realized clusters'),
-                t('archetypes.candidates.clusterRange', 'Smallest / largest'),
-                t('archetypes.candidates.decision', 'Decision'),
+                inertiaName,
+                realizedName,
+                clusterRangeName,
+                decisionName,
               ].map((label, index) => (
                 <th data-app-part="table-cell" key={label} scope="col" className={index > 0 && index < 6 ? 'text-right' : undefined}>
                   <MetricLabel>{label}</MetricLabel>
@@ -150,12 +155,12 @@ export function ArchetypeCandidateModels({
                 )}
               >
                 <th data-app-part="table-cell" scope="row"><Text variant="bodySm">{row.model}</Text></th>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
-                <td data-app-part="table-cell">
+                <td data-app-part="table-cell" data-mobile-label={silhouetteName} className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={agreementName} className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={inertiaName} className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={realizedName} className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={clusterRangeName} className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={decisionName}>
                 <Badge variant={row.selected === t('archetypes.common.selected', 'Selected') ? 'success' : 'neutral'}>
                   {row.selected}
                 </Badge>

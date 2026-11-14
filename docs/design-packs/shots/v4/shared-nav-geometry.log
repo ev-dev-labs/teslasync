@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "top": 747,
+    "bottom": 844,
+    "height": 97
+  },
+  "tabs": [
+    {
+      "label": "Home",
+      "top": 748,
+      "bottom": 792,
+      "height": 44,
+      "minHeight": "44px"
+    },
+    {
+      "label": "Vehicles",
+      "top": 748,
+      "bottom": 792,
+      "height": 44,
+      "minHeight": "44px"
+    },
+    {
+      "label": "Driving",
+      "top": 748,
+      "bottom": 792,
+      "height": 44,
+      "minHeight": "44px"
+    },
+    {
+      "label": "Charging",
+      "top": 802,
+      "bottom": 846,
+      "height": 44,
+      "minHeight": "44px"
+    },
+    {
+      "label": "More",
+      "top": 802,
+      "bottom": 846,
+      "height": 44,
+      "minHeight": "44px"
+    }
+  ],
+  "rowOverlap": -10,
+  "lastTabBeyondViewport": 2
+}
+FAIL shared bottom navigation rows overlap and/or extend below viewport

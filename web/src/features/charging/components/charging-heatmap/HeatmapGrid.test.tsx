@@ -102,9 +102,9 @@ describe('HeatmapGrid — structure & accessibility', () => {
     }
 
     // The hour-of-day header row spans 0..23.
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('23')).toBeInTheDocument();
+    expect(screen.getAllByText('0')).toHaveLength(8);
+    expect(screen.getAllByText('12')).toHaveLength(8);
+    expect(screen.getAllByText('23')).toHaveLength(8);
   });
 
   it('renders exactly 7×24 = 168 title-bearing cells with SI-agnostic tooltips', () => {

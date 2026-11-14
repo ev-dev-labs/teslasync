@@ -97,6 +97,10 @@ vi.mock('@/hooks/useWidgetDesignPack', () => ({
     packId: 'classic', isReady: false, isSaving: false, error: null, setPackId: vi.fn(),
   }),
 }))
+vi.mock('@/components/ui/ThemeProvider', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/ui/ThemeProvider')>(),
+  useTheme: () => ({ theme: {}, mode: { colorScheme: 'dark' } }),
+}))
 
 vi.mock('@/lib/tourRegistry', async () => {
   const actual = await vi.importActual<typeof import('@/lib/tourRegistry')>(

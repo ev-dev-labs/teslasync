@@ -7,7 +7,7 @@ import {
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
-import { Badge, Button, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
+import { Badge, Button, Caption, Text, HelperText, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { AlertBanner, Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -274,12 +274,17 @@ export default function TemperatureImpactPage() {
     [t, formatDate, formatTemperature, formatDistance, toDispEff, effLabel, fmtNumber],
   );
 
-  const scatterColumns: ChartDataColumn[] = [
+  const scatterColumns = useMemo<ChartDataColumn[]>(() => [
     { key: 'drive_date', label: t('tempImpact.driveDate', 'Date'), format: (value) => typeof value === 'string' && value ? formatDate(value) : '—' },
     { key: 'outside_temp', label: t('tempImpact.temperature', 'Temperature'), format: (value) => isMeasurement(value) ? formatTemperature(value) : '—' },
     { key: 'efficiency_wh_km', label: t('tempImpact.efficiency', 'Efficiency'), format: (value) => isMeasurement(value) ? `${fmtNumber(toDispEff(value))} ${effLabel}` : '—' },
     { key: 'distance_km', label: t('tempImpact.distance', 'Distance'), format: (value) => isMeasurement(value) ? formatDistance(value * 1000) : '—' },
-  ];
+  ], [t, formatDate, formatTemperature, fmtNumber, toDispEff, effLabel, formatDistance]);
+  const mobileDrives = useMemo<MobileDataTablePresentation<DriveRow>>(() => ({
+    roles: { drive_date: 'title', efficiency_wh_km: 'primary', outside_temp: 'meta', distance_km: 'meta' },
+    displayValue: (row, key) =>
+      scatterColumns.find(column => column.key === key)?.format?.(row[key as keyof DriveRow]) ?? null,
+  }), [scatterColumns]);
   const bucketColumns: ChartDataColumn[] = [
     { key: 'label', label: t('tempImpact.temperature', 'Temperature') },
     { key: 'avg', label: t('tempImpact.avgEff', 'Avg efficiency'), format: (value) => isMeasurement(value) ? `${fmtNumber(value)} ${effLabel}` : '—' },
@@ -689,6 +694,7 @@ export default function TemperatureImpactPage() {
               <DataTable
                 tableId="maps:temperature-impact-drives"
                 columns={driveColumns}
+                mobilePresentation={mobileDrives}
                 mobileColumns={['drive_date', 'outside_temp', 'efficiency_wh_km', 'distance_km']}
                 data={driveRows}
                 keyExtractor={(row) => row.id}

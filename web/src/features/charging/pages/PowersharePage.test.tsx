@@ -40,7 +40,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -683,6 +683,35 @@ describe('PowersharePage', () => {
       expect(within(table).getByText(label)).toBeInTheDocument();
     }
     expect(within(table).getAllByText('—')).toHaveLength(10);
+  });
+
+  it('keeps every snapshot value and its recorded timestamp available on phones', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      renderPage();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const snapshot = within(screen.getByRole('region', { name: 'Signal Snapshot' }));
+      const mobile = snapshot.getByRole('group', { name: 'charging:powershare-signals' });
+      for (const label of ['Status', 'Type', 'Output Power', 'Hours Remaining', 'Stop Reason']) {
+        expect(within(mobile).getByText(label)).toBeInTheDocument();
+      }
+      expect(mobile).toHaveTextContent('3.25 kW');
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('Updated');
+      expect(dialog).toHaveTextContent('Enabled');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('does not classify initially unresolved snapshots as authoritative empty', () => {

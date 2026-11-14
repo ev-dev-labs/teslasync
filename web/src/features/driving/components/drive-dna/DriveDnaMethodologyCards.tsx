@@ -9,7 +9,7 @@ export function DriveDnaMethodologyCards() {
   const { t } = useTranslation();
   return (
     <div className="mt-5 grid gap-3 md:grid-cols-2">
-      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
+      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
           <Fingerprint className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.scopeTitle', 'Selection & telemetry scope')}
@@ -43,7 +43,7 @@ export function DriveDnaMethodologyCards() {
         </ul>
       </div>
 
-      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
+      <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.interpretationTitle', 'Interpretation guardrails')}

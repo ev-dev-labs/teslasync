@@ -1,42 +1,79 @@
-/* Iconic: bold masthead, generous instrument bays and a grounded action dock. */
+/* Iconic Showroom: quiet canvas, framed exhibits and inset reading shelves. */
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is(section[data-app-part~="panel"][data-surface-variant="standalone"][class~="border-[var(--border-subtle)]"], div[data-app-part~="card"][data-surface-variant="standalone"][class~="bg-[var(--surface-2)]"]:has(> [data-app-part~="list-heading"] + ul[data-app-list="ranked"])):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-form-section][data-surface-variant="standalone"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"]:where([data-app-design-owner~="pack-v5"]) {
+    --app-surface-canvas: var(--bg-app);
+    --app-surface-panel: var(--surface-1);
+    --app-surface-raised: var(--surface-2);
+    --app-surface-overlay: var(--surface-3, var(--surface-elevated));
+    --app-card-radius: var(--radius-xl);
+    --app-card-shadow: var(--elevation-1);
+    --app-display-font: var(--font-sans);
+    --app-display-weight: var(--font-weight-semibold);
+    --app-display-tracking: calc(var(--tracking, 0em) - 0.0125em);
+    --app-control-radius: var(--radius-lg);
+    --app-control-surface: var(--surface-2);
+    --app-content-density: 1.12;
+    --app-interaction-duration: var(--motion-duration-normal);
+    --app-interaction-easing: var(--motion-easing-standard);
+    --app-chart-surface: var(--surface-1);
+    --app-chart-ink: var(--text-secondary);
+    --app-chart-grid: var(--border-default);
+    --app-grid-header: var(--surface-2);
+    --app-grid-rule: var(--border-default);
+    --app-conversation-surface: var(--surface-2);
+    --app-conversation-radius: var(--radius-xl);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-v5"]) {
-    background-image: linear-gradient(180deg, var(--surface-1), transparent 14rem);
-    background-image: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--theme-accent) 6.5%, transparent), transparent 68%);
+    background-color: var(--app-surface-canvas, var(--bg-app));
+    background-image: none;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-v5"]) {
-    background-color: var(--surface-1);
-    border-inline-end: 2px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-inline-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="workspace-header"]:where([data-app-design-owner~="pack-v5"]) {
-    background-color: var(--surface-1);
-    border-block-end: 3px solid var(--border-strong);
+    background-color: var(--app-surface-panel, var(--surface-1));
+    border-block-end: 1px solid var(--border-default);
     gap: calc(var(--density-gap) * 1.5);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="navigation"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="navigation"]:not([data-role="bottom-tab-bar"]):where([data-app-design-owner~="pack-v5"]) {
     gap: var(--density-gap);
     padding-block: var(--density-pad-y);
-    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-lg);
     column-gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab))[aria-current="page"]:where([data-app-design-owner~="pack-v5"]) {
-    box-shadow: inset 0 -3px var(--theme-accent);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="nav-item"]:where(:not(.sidenav-phone-tab)):is([aria-current="page"], [aria-current="true"]):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 -2px var(--theme-accent);
     font-weight: var(--font-weight-semibold);
-    background-color: var(--surface-2);
-    background-color: color-mix(in srgb, var(--theme-accent) 11%, var(--surface-1));
+    color: var(--text-primary);
+    background-color: var(--app-surface-raised, var(--surface-2));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-header"]:where([data-app-design-owner~="pack-v5"]) {
     align-items: flex-end;
-    gap: calc(var(--density-gap) * 2);
-    padding-block: calc(var(--density-pad-y) * 2);
-    border-block-end: 3px solid var(--border-strong);
+    gap: var(--density-gap) calc(var(--density-gap) * 2);
+    padding-block: var(--density-pad-y) calc(var(--density-pad-y) * 1.5);
+    border-block-end: 1px solid var(--border-default);
     flex-wrap: wrap;
     justify-content: space-between;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v5"]) {
+    align-items: center;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-route-focus-target]:where([data-app-design-owner~="pack-v5"]) {
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--app-display-tracking, var(--tracking));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v5"]) {
     gap: var(--density-gap);
@@ -45,47 +82,72 @@
     margin-inline-start: auto;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-content"]:where([data-app-design-owner~="pack-v5"]) {
-    row-gap: calc(var(--density-gap) * 2);
-  }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="section"]:where([data-app-design-owner~="pack-v5"]) {
     row-gap: calc(var(--density-gap) * 1.5);
-    padding-block-start: calc(var(--density-pad-y) * 1.5);
-    border-block-start: 2px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="grid"], [data-app-part~="stack"]):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="section"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    row-gap: calc(var(--density-gap) * 1.5);
+    padding-block-start: calc(var(--density-pad-y) * 0.5);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="grid"], [data-app-part~="stack"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     gap: calc(var(--density-gap) * 1.5);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"]:where([data-app-design-owner~="pack-v5"]) {
-    border: 1px solid var(--border-default);
-    border-block-start-width: 2px;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--elevation-0);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"][class~="rounded-panel"]:where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is(details[data-app-part~="panel"], div[data-app-part~="panel"], section[data-app-part~="panel"], a[data-app-part~="card"][data-app-part~="button"][data-app-variant="outline"])[data-surface-variant="standalone"]:is([class~="bg-[var(--surface-1)]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="record"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] li[data-app-part~="card"][data-surface-variant="standalone"]:is([class~="bg-white/[0.02]"], [class~="bg-[var(--surface-2)]"]):not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-list="definitions"][data-surface-variant="standalone"]:not(:where([data-tone], [data-tone] *, [data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-surface-variant="embedded"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-mobile-table], [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: inset 0 0 0 var(--app-border-width) var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"][class~="shadow-panel"]:not(:hover):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"], [data-chart-variant="panel"])[class~="bg-[var(--panel-bg)]"]:not(:hover):where([data-app-design-owner~="pack-v5"]) {
+    background-color: var(--app-surface-panel, var(--panel-bg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-surface-variant="standalone"], [data-chart-variant="panel"]) > [data-card-header]:where([data-app-design-owner~="pack-v5"]) {
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-stat-bank], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
     gap: calc(var(--density-gap) * 1.5);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v5"]) {
-    row-gap: var(--density-gap);
-    padding-block: var(--density-pad-y);
-    border-block-end: 2px solid var(--border-strong);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    row-gap: calc(var(--density-gap) * 0.75);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-operational-metric-bank] [data-app-metric="brief"]:not(:where([data-widget-pack], [data-widget-pack] *, [data-app-tone])):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-default);
+    border-block-start-color: var(--border-strong);
+    border-block-start-width: 1px;
+    border-radius: var(--radius-lg);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-label"]:not(:where([data-app-metric="inline"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-part~="badge"], [data-app-part~="badge"] *, [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     font-weight: var(--font-weight-medium);
     color: var(--text-secondary);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-value"]:not(:where([data-app-metric="inline"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-part~="badge"], [data-app-part~="badge"] *, [data-app-metric-grid="native-gauge"] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     font-variant-numeric: tabular-nums;
     font-weight: var(--font-weight-bold);
     overflow-wrap: anywhere;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="field"]:where([data-app-design-owner~="pack-v5"]) {
-    gap: var(--density-gap);
+    gap: calc(var(--density-gap) * 0.75);
     align-content: start;
-    padding-block-end: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="field-label"]:where([data-app-design-owner~="pack-v5"]) {
     font-weight: var(--font-weight-semibold);
@@ -95,63 +157,60 @@
     border-radius: var(--radius-lg);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="tabs"]:where([data-app-design-owner~="pack-v5"]) {
-    gap: var(--density-gap);
+    gap: calc(var(--density-gap) / 2);
     padding-block: calc(var(--density-gap) / 2);
-    border-block-end: 2px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="tab"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-lg);
     padding-inline: var(--density-pad-x);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-toolbar"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-toolbar"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     gap: var(--density-gap);
     padding: var(--density-pad-y) var(--density-pad-x);
-    background-color: var(--surface-2);
-    border-block-end: 2px solid var(--border-strong);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-block-end: 1px solid var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table"]:where([data-app-design-owner~="pack-v5"]) {
-    border-collapse: separate;
-    border-spacing: 0;
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     font-variant-numeric: tabular-nums;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-head"]:where([data-app-design-owner~="pack-v5"]) {
-    background-color: var(--surface-2);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-head"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    background-color: var(--app-grid-header, var(--surface-2));
     font-weight: var(--font-weight-semibold);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-row"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-row"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     vertical-align: middle;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-cell"]:where([data-app-design-owner~="pack-v5"]) {
-    border-block-end: 1px solid var(--border-default);
-    padding-block: var(--density-pad-y);
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="table-cell"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-block-end-color: var(--app-grid-rule, var(--border-default));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="pagination"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="pagination"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
-    border-block-start: 2px solid var(--border-default);
+    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog"]:not([data-app-dialog-kind="lightbox"]):where([data-app-design-owner~="pack-v5"]) {
     border: 1px solid var(--border-strong);
-    border-block-start-width: 2px;
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-3);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog-header"]:where([data-app-design-owner~="pack-v5"]) {
     gap: var(--density-gap);
     padding-block: calc(var(--density-pad-y) * 1.5);
-    border-block-end: 2px solid var(--border-default);
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog-body"]:where([data-app-design-owner~="pack-v5"]) {
     scroll-padding-block: calc(var(--density-pad-y) * 2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog-footer"]:where([data-app-design-owner~="pack-v5"]) {
-    background-color: var(--surface-2);
+    background-color: var(--app-surface-raised, var(--surface-2));
     gap: var(--density-gap);
-    border-block-start: 2px solid var(--border-default);
+    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="popover"]:where([data-app-design-owner~="pack-v5"]) {
     border: 1px solid var(--border-strong);
-    border-block-start-width: 2px;
     border-radius: var(--radius-lg);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="tooltip"]:where([data-app-design-owner~="pack-v5"]) {
@@ -161,15 +220,16 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="chart"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-xl);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-chart-variant="panel"]) > [data-app-part~="chart-header"]:where([data-app-design-owner~="pack-v5"]) {
     align-items: center;
     gap: var(--density-gap);
-    padding-block-end: calc(var(--density-pad-y) * 1.5);
-    border-block-end: 2px solid var(--border-default);
+    padding-block-end: var(--density-pad-y);
+    border-block-end: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="chart-plot"]:where([data-app-design-owner~="pack-v5"]) {
-    background-color: var(--surface-1);
+    background-color: var(--app-chart-surface, var(--surface-1));
     border-radius: var(--radius-lg);
+    box-shadow: inset 0 0 0 1px var(--app-chart-grid, var(--border-default));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-v5"]) {
     gap: var(--density-gap) calc(var(--density-gap) * 1.5);
@@ -180,14 +240,14 @@
     border: 1px solid var(--border-strong);
     border-block-start-width: 2px;
     border-radius: var(--radius-lg);
-    background-color: var(--surface-elevated);
+    background-color: var(--app-surface-overlay, var(--surface-elevated));
     box-shadow: var(--elevation-2);
     font-variant-numeric: tabular-nums;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="map"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-xl);
-    outline: 2px solid var(--border-strong);
-    outline-offset: -2px;
+    outline: 1px solid var(--border-strong);
+    outline-offset: -1px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="map-toolbar"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-lg);
@@ -211,10 +271,10 @@
     border-radius: var(--radius-lg);
     background-color: var(--surface-1);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *)):where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="list"]:not(:where([data-app-list="steps"], [data-app-list="steps"] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="suggestions"], [data-app-list="sources"], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v5"]) {
     row-gap: calc(var(--density-gap) * 1.5);
     padding-block: var(--density-pad-y);
-    border-block-start: 2px solid var(--border-default);
+    border-block-start: 1px solid var(--border-default);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="timeline"]:where([data-app-design-owner~="pack-v5"]) {
     padding-block: var(--density-pad-y);
@@ -224,14 +284,14 @@
     border-radius: var(--radius-lg);
     gap: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="feedback"]:where([data-app-design-owner~="pack-v5"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="feedback"]:not(:where([data-app-list="conversation"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-lg);
     border-inline-start-width: 2px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="empty"]:where([data-app-design-owner~="pack-v5"]) {
     padding-block: calc(var(--density-pad-y) * 3);
     row-gap: calc(var(--density-gap) * 1.5);
-    border-block: 2px solid var(--border-subtle);
+    border-block: 1px solid var(--border-subtle);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="error"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--radius-lg);
@@ -246,10 +306,52 @@
     border-radius: var(--radius-lg);
     background-color: var(--skeleton-bg);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-vehicle-hero-pack="v5"] > :nth-child(2):where([data-app-design-owner~="pack-v5"]) {
+    padding: calc(var(--density-pad-y) * 0.5);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: inset 0 0 0 3px var(--app-surface-panel, var(--surface-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-vehicle-hero-pack="v5"] > :nth-child(3):where([data-app-design-owner~="pack-v5"]) {
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border-inline-start: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-chart-caption]:where([data-app-design-owner~="pack-v5"]) {
+    margin-block-start: var(--density-gap);
+    padding: calc(var(--density-pad-y) * 0.75) var(--density-pad-x);
+    border-inline-start: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--app-surface-raised, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-role="assistant"] > [data-app-part~="conversation-bubble"]:where([data-app-design-owner~="pack-v5"]) {
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-conversation-radius, var(--radius-xl));
+    background-color: var(--app-conversation-surface, var(--surface-2));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="conversation-composer"]:where([data-app-design-owner~="pack-v5"]) {
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-conversation-radius, var(--radius-xl));
+    background-color: var(--app-surface-raised, var(--surface-2));
+    box-shadow: var(--elevation-1);
+  }
 }
-@media screen and (forced-colors: none) and (max-width: 767px) {
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-v5"]) {
+    font-size: var(--app-body-size, 1rem);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-widget-pack] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"], a.text-xs):where([data-app-design-owner~="pack-v5"]) {
+    font-size: var(--app-body-size, 1rem);
+    line-height: var(--app-body-leading, 1.4);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-widget-pack] a.text-xs:where([data-app-design-owner~="pack-v5"]) {
+    min-block-size: var(--app-touch-size, 2.75rem);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-v5"]) {
-    inline-size: 100%;
+    inline-size: auto;
+    max-inline-size: 100%;
     padding-inline-start: 0;
     border-inline-start-width: 0;
   }
@@ -257,11 +359,67 @@
     padding-block: var(--density-pad-y);
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"])):where([data-app-design-owner~="pack-v5"]) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.25rem), 1fr));
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"]):not(:where([data-app-metric-grid="native-gauge"], [data-stat-bank], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"], [data-app-list="conversation"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(10.25rem * max(1, var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
   }
 }
 
+/* Gallery keylines sit inside existing boxes and do not allocate layout space. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="page-header"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 -3px var(--app-surface-canvas, var(--bg-app)), inset 0 -4px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-route-focus-target]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    letter-spacing: calc(var(--tracking, 0em) + 0.02em);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-table-frame][data-surface-variant="standalone"]:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-strong);
+    box-shadow: inset 0 0 0 1px var(--border-strong), inset 0 0 0 4px var(--surface-1), inset 0 0 0 5px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-widget-id] > .dashboard-widget-panel, [data-operational-brief-surface="standalone"]):not(:hover):not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 0 0 1px var(--border-strong), inset 0 0 0 4px var(--surface-1), inset 0 0 0 5px var(--border-default), var(--app-card-shadow, var(--elevation-1));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-role="widget-shell-header"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    background-image: linear-gradient(90deg, var(--border-strong) 18%, var(--border-default) 18%);
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% 2px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-vehicle-hero-pack="v5"] > :nth-child(2):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 0 0 3px var(--app-surface-panel, var(--surface-1)), inset 0 0 0 4px var(--border-strong), inset 0 0 0 7px var(--app-surface-raised, var(--surface-2)), inset 0 0 0 8px var(--border-default);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-chart-caption], [data-vehicle-hero-pack="v5"] > :nth-child(3)):not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-v5"]) {
+    box-shadow: inset 0 1px var(--border-default), inset 0 -1px var(--border-default);
+  }
+}
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"][class~="bg-[var(--surface-2)]"]:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border: 1px solid var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
+}
 
 
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="panel"][data-app-feedback-kind="notice"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-md));
+  }
+}
+
+/* Native surfaces retain semantic colors while consuming this pack. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="card"][data-surface-variant="standalone"][class~="border"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :is([data-app-part~="panel"][data-app-panel-kind="code"], [data-app-part~="panel"][data-app-card-kind="record"]):not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-control-radius, var(--radius-md));
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="metric"][data-app-metric="tile"][data-surface-variant="standalone"][class~="border-white/[0.06]"][class~="bg-white/[0.02]"]:not(:where([data-app-tone], [data-app-tone] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-subtle);
+    background-color: var(--app-surface-raised, var(--surface-2));
+    border-radius: var(--app-card-radius, var(--radius-lg));
+  }
+}

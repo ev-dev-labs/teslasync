@@ -38,9 +38,9 @@ describe('ScoreBadge', () => {
     expect(screen.getByTestId('sb')).toHaveTextContent('—');
   });
 
-  it('applies the matching grade colour via inline style', () => {
+  it('uses the theme-aware grade colour', () => {
     render(<ScoreBadge grade="A" testId="sb" />);
-    expect(screen.getByTestId('sb')).toHaveStyle({ color: '#10b981' });
+    expect(screen.getByTestId('sb')).toHaveStyle({ color: 'var(--semantic-success)' });
   });
 
   it.each([

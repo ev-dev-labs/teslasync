@@ -16,9 +16,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import ClimateAirflow from './vehicle-instruments/ClimateAirflow';
 import { useObservationCurrent } from './vehicle-instruments/useObservationCurrent';
 import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { loadClimatePresentation } from './designPacks/packModules';
 import { PACK_APPEARANCES } from './designPacks/types';
-
-const loadClimatePresentation = () => import('./designPacks/families/ClimateStatusLayout');
 
 export default function ClimateStatusWidget({ vehicleId, size }: WidgetProps) {
   const packId = usePackPresentation();

@@ -103,7 +103,7 @@ describe('ProviderStatusPanel presentation', () => {
     });
   });
 
-  it('uses neutral theme roles for icon and rows and shared Typography for readable metadata', () => {
+  it('uses neutral theme roles and distinguishes metadata from limitation prose', () => {
     const { container } = render(
       <ProviderStatusPanel providers={[providers[1]]} loading={false} />,
     );
@@ -119,7 +119,7 @@ describe('ProviderStatusPanel presentation', () => {
     );
     expect(screen.getByText('1 findings')).toHaveClass(...typography.role.caption.split(' '));
     expect(screen.getByText(providers[1].limitations[0])).toHaveClass(
-      ...typography.role.caption.split(' '),
+      ...typography.role.bodySm.split(' '),
     );
     expect(screen.getByText('degraded')).toHaveClass('text-[var(--semantic-warning)]');
   });

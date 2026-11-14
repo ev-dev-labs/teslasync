@@ -24,7 +24,7 @@ import { useDataState } from '@/hooks/useDataState';
 
 import {formatTime, zonedDateParts} from '@/lib/dateFormat'
 import {formatWeekdayName} from '@/lib/dateConvert';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, typography } from '@/lib/tokens';
 
 import {
   HeatmapGrid,
@@ -242,7 +242,15 @@ export default function ChargingHeatmapPage() {
 
       {/* ── Hero: weekly heatmap + insights side panel ── */}
       <FadeIn delay={0.1}>
-        <section aria-labelledby="charging-heatmap-when" className="space-y-4">
+        <section
+          aria-labelledby="charging-heatmap-when"
+          className="space-y-4"
+          data-heatmap-label-day={slotColumns[0].label}
+          data-heatmap-label-hour={slotColumns[1].label}
+          data-heatmap-label-sessions={slotColumns[2].label}
+          data-heatmap-label-energy={slotColumns[3].label}
+          data-heatmap-label-status={slotColumns[4].label}
+        >
           <SectionTitle id="charging-heatmap-when">
             {t('charging.heatmap.whenSection', 'When You Charge')}
           </SectionTitle>
@@ -278,6 +286,7 @@ export default function ChargingHeatmapPage() {
                     fluid={false}
                     height={300}
                     mobileHeight={300}
+                    viewportClassName="h-auto min-h-0 max-h-none sm:min-h-0 [contain:layout] sm:[contain:layout_size]"
                   >
                     <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} dayLabels={dayLabels} framed />
                   </EmbeddedChart>
@@ -297,6 +306,7 @@ export default function ChargingHeatmapPage() {
                     >
                       <Table
                         variant="embedded"
+                        data-mobile-stack-table
                         tabIndex={0}
                         aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
                         className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
@@ -310,10 +320,10 @@ export default function ChargingHeatmapPage() {
                           {slotData.map((slot) => (
                             <tr data-app-part="table-row" key={`${slot.dayIndex}-${slot.hourIndex}`}>
                               <th data-app-part="table-cell" scope="row">{slot.day} {slot.hour}</th>
-                              <td data-app-part="table-cell">{slot.hour}</td>
-                              <td data-app-part="table-cell">{fmtInt(slot.count)}</td>
-                              <td data-app-part="table-cell">{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
-                              <td data-app-part="table-cell"><Text variant="bodySm">{slot.energyStatus}</Text></td>
+                              <td data-app-part="table-cell" data-mobile-label={slotColumns[1].label}>{slot.hour}</td>
+                              <td data-app-part="table-cell" data-mobile-label={slotColumns[2].label}>{fmtInt(slot.count)}</td>
+                              <td data-app-part="table-cell" data-mobile-label={slotColumns[3].label}>{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
+                              <td data-app-part="table-cell" data-mobile-label={slotColumns[4].label}><Text variant="bodySm">{slot.energyStatus}</Text></td>
                             </tr>
                           ))}
                         </tbody>
@@ -343,7 +353,7 @@ export default function ChargingHeatmapPage() {
                 <div className="space-y-4">
                   <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
                     <Caption>{t('charging.heatmap.favorite', 'Favorite Charging Time')}</Caption>
-                    <Text as="p" size="sm" weight="semibold" color="primary" className="mt-1">
+                    <Text as="p" variant="body" className={`mt-1 ${typography.weight.semibold}`}>
                       {model.maxCount > 0
                         ? t('charging.heatmap.favoriteValue', '{{day}} at {{hour}}', {
                             day: fullDayLabels[model.favDay],

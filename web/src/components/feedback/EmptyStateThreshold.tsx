@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Info } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Text } from '@/components/ui';
 
 export interface EmptyStateThresholdProps {
   /** How many items the user currently has. */
@@ -91,13 +92,13 @@ export function EmptyStateThreshold({
             />
           </div>
           {description && (
-            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+            <Text as="p" variant="bodySm" className="mt-0.5">
               {description}
-            </p>
+            </Text>
           )}
-          <p className="mt-2 text-xs text-[var(--text-muted)] leading-relaxed">
+          <Text as="p" variant="bodySm" className="mt-2 text-[var(--text-muted)] leading-relaxed">
             {message ?? defaultMessage}
-          </p>
+          </Text>
           {action && <div className="mt-3">{action}</div>}
         </div>
       </div>

@@ -51,6 +51,8 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
       - run: npm ci --legacy-peer-deps
+      - name: Install Chromium for browser contracts
+        run: npx playwright install --with-deps chromium
       # ── Route-template freshness chain ────────────────────────────────────
       # App.tsx -> routeRegistry.ts -> internal/api/webvitals (generated Go).
       # routeRegistry.ts is the source of truth for privacy-safe route

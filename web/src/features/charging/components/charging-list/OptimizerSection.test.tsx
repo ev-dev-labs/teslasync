@@ -247,7 +247,7 @@ describe('OptimizerSection — battery-friendly score', () => {
   it('paints the gauge green + "battery-friendly" caption for a high score', () => {
     const { container } = renderSection({ battery_health_score: 82 });
 
-    expect(screen.getByText('Your habits are battery-friendly')).toBeInTheDocument();
+    expect(screen.getByText('Your habits are battery-friendly')).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
     expect(gaugeStroke(container)).toBe('var(--semantic-success)');
     expect(screen.getByText('82')).toBeInTheDocument(); // gauge value
   });
