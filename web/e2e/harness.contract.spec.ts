@@ -102,7 +102,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       :root { --font-scale: .85; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
       * { box-sizing: border-box; }
       body { margin: 0; }
-      .text-sm, .mgr-title, .mgr-meta-value { font-size: 12px; }
+      .text-sm, .text-xs, .mgr-title, .mgr-meta-value { font-size: 12px; }
       #interactive-badge { display: inline-flex; }
       .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; font-size: 11px; }
       [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
@@ -113,6 +113,11 @@ test('shared pack phone rules retain readable controls, grid text and protected 
     <button id="action" data-app-part="button" data-app-design-owner="pack-v1">Apply</button>
     <span id="interactive-badge" role="button" data-app-part="badge" data-app-design-owner="pack-v1">Step</span>
     <p id="metric-context" class="text-sm" data-app-part="metric-context" data-app-design-owner="pack-v1">Forecast context</p>
+    <section>
+      <div id="brief-intro" class="text-xs" data-app-design-owner="pack-v1">An explanation before the summary.</div>
+      <section data-operational-brief><span id="brief-metadata" class="text-xs" data-app-design-owner="pack-v1">Snapshot</span></section>
+      <span id="brief-provenance" class="text-xs" data-app-design-owner="pack-v1">An explanation of the source and its limitations.</span>
+    </section>
     <div data-mobile-table data-app-design-owner="pack-v1">
       <div class="mgr-card" data-app-design-owner="pack-v1">
         <span class="mgr-title" data-app-design-owner="pack-v1">Session</span>
@@ -120,6 +125,10 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       </div>
     </div>
     <div data-app-design-preserve><p id="protected" class="text-sm" data-app-design-owner="pack-v1">Protected widget</p></div>
+    <div data-app-design-preserve>
+      <section data-operational-brief></section>
+      <span id="protected-provenance" class="text-xs" data-app-design-owner="pack-v1">Protected widget details</span>
+    </div>
     <nav data-role="bottom-tab-bar" data-app-design-owner="pack-v1">
       ${['Home', 'Drives', 'Charge', 'Alerts', 'More'].map(label => `
         <button class="sidenav-phone-tab" data-app-part="button nav-item" data-app-design-owner="pack-v1">
@@ -148,6 +157,8 @@ test('shared pack phone rules retain readable controls, grid text and protected 
           return {
             prose: font('#prose'), field: font('#field'), action: font('#action'),
             context: font('#metric-context'),
+            briefIntro: font('#brief-intro'), briefProvenance: font('#brief-provenance'),
+            briefMetadata: font('#brief-metadata'), protectedProvenance: font('#protected-provenance'),
             grid: font('.mgr-meta-value'), protected: font('#protected'),
             navButton: font('.sidenav-phone-tab'),
             inputHeight: bounds('#field').height, buttonHeight: bounds('#action').height,
@@ -161,6 +172,10 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.field, context).toBeGreaterThanOrEqual(16);
         expect(sizes.action, context).toBeGreaterThanOrEqual(16);
         expect(sizes.context, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.briefIntro, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.briefProvenance, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.briefMetadata, context).toBe(12);
+        expect(sizes.protectedProvenance, context).toBe(12);
         expect(sizes.grid, context).toBeGreaterThanOrEqual(16);
         expect(sizes.navButton, context).toBeGreaterThanOrEqual(16);
         expect(sizes.protected, context).toBe(12);
@@ -170,6 +185,67 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.badgeHeight, context).toBeGreaterThanOrEqual(44);
         expect(sizes.reserved, context).toBeGreaterThanOrEqual(sizes.navHeight);
         expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
+      }
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('#brief-intro')).toHaveCSS('font-size', '12px');
+  await expect(page.locator('#brief-provenance')).toHaveCSS('font-size', '12px');
+});
+
+test('phone explanations use the body floor in every pack without altering protected copy', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      :root { --font-scale: 1; --density-gap: 12px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      .text-xs { font-size: 12px; }
+      .text-sm { font-size: 14px; }
+    </style>
+    <section>
+      <div id="intro" class="text-xs" data-app-design-owner>Source details before the summary.</div>
+      <section data-operational-brief><span id="metadata" class="text-xs" data-app-design-owner>Snapshot</span></section>
+      <span id="provenance" class="text-xs" data-app-design-owner>Source limitations after the summary.</span>
+      <p id="panel-copy" class="text-sm" data-app-design-owner>A detailed explanation inside a panel.</p>
+    </section>
+    <div data-app-design-preserve>
+      <section data-operational-brief></section>
+      <span id="protected-copy" class="text-xs" data-app-design-owner>Protected widget details.</span>
+    </div>
+  `);
+  const styles = resolve('src', 'components', 'ui', 'app-designs');
+  const sheets = await Promise.all([
+    readFile(resolve(styles, 'base.css'), 'utf8'),
+    ...Object.values(APP_DESIGN_PACK_FILES).map(file => readFile(resolve(styles, 'packs', file), 'utf8')),
+    readFile(resolve(styles, 'mobile.css'), 'utf8'),
+  ]);
+  await page.addStyleTag({ content: sheets.join('\n') });
+  for (const forcedColors of ['none', 'active'] as const) {
+    await page.emulateMedia({ forcedColors });
+    for (const pack of PACK_IDS) {
+      const owner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+      await page.locator('html').evaluate((root, { attributes, owner }) => {
+        for (const [name, value] of Object.entries(attributes)) root.setAttribute(name, value);
+        root.setAttribute('data-app-design-owner', owner);
+        for (const element of document.querySelectorAll('[data-app-design-owner]')) element.setAttribute('data-app-design-owner', owner);
+      }, { attributes: getAppDesignAttributes(pack), owner });
+      for (const width of [360, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const scale of [0.85, 1.35]) {
+          await page.locator('html').evaluate((root, value) => root.style.setProperty('--font-scale', String(value)), scale);
+          const sizes = await page.evaluate(() => {
+            const font = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
+            return { intro: font('#intro'), provenance: font('#provenance'), panelCopy: font('#panel-copy'), metadata: font('#metadata'),
+              protectedCopy: font('#protected-copy'), scrollWidth: document.documentElement.scrollWidth };
+          });
+          const context = `${pack}, ${forcedColors}, ${width}px, scale ${scale}`;
+          expect(sizes.intro, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.provenance, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.panelCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.metadata, context).toBe(12);
+          expect(sizes.protectedCopy, context).toBe(12);
+          expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
+        }
       }
     }
   }
@@ -1199,6 +1275,11 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     <span id="small-role-class" class="text-sm text-[var(--text-secondary)]" style="font-size:15px">Small body role class</span>
     <p id="caption" data-typography-role="caption" style="font-size:12px">Short metadata</p>
     <p id="feedback" data-app-part="feedback-title" style="font-size:14px">Feedback title</p>
+    <section>
+      <div id="brief-intro" class="text-xs" style="font-size:12px">Summary explanation</div>
+      <section data-operational-brief></section>
+      <span id="brief-provenance" class="text-xs" style="font-size:12px">Source explanation</span>
+    </section>
     <div data-app-part="list-row">
       <div data-app-part="history-route" id="route" style="font-size:12px">Route</div>
       <div data-history-primary><span id="primary" style="font-size:14px">Time</span></div>
@@ -1221,6 +1302,8 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     expect.objectContaining({ id: 'small-role', size: 15 }),
     expect.objectContaining({ id: 'small-role-class', size: 15 }),
     expect.objectContaining({ id: 'feedback', size: 14 }),
+    expect.objectContaining({ id: 'brief-intro', size: 12 }),
+    expect.objectContaining({ id: 'brief-provenance', size: 12 }),
     expect.objectContaining({ id: 'route', size: 12 }),
     expect.objectContaining({ id: 'primary', size: 14 }),
     expect.objectContaining({ id: 'metrics', size: 12 }),

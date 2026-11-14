@@ -8,7 +8,7 @@ import { producerProjection, projectionDigest } from './producer-projection';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
-const mobileFingerprint = '28903ce76a31046446bd12efde618f216eba7bc06a6630739ba1a3649555b2bb';
+const mobileFingerprint = '0a6be40e3fe5be9f758af5a8572a5ef2aee56e7905051ca418669b11662fd7c9';
 const mobileTranslationAdditions: Record<string, string[]> = {
   'web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx': [
     "t('coverage.dualWrite.yes', 'signal_log')",

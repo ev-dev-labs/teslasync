@@ -152,12 +152,12 @@ export default function FleetTelemetryCoveragePage({
             data-testid="coverage-destinations-panel"
           >
           <LayoutCard title={t('coverage.destinations.title', 'Destination breakdown')}>
-            <Caption className="mb-3 block">
+            <Text as="p" variant="bodySm" className="mb-3">
               {t(
                 'coverage.destinations.help',
                 'Counts how many routed fields land in each storage destination. Fields routed with also_signal_log:true are counted under both their primary destination and signal_log, matching the runtime fan-out — totals may exceed the unique routed-fields count.',
               )}
-            </Caption>
+            </Text>
             {error ? <QueryError error={error} onRetry={() => void refetch()} /> : firstLoad ? (
               <ChartSkeleton />
             ) : (
@@ -229,12 +229,12 @@ export default function FleetTelemetryCoveragePage({
 
           <div className="min-w-0" data-testid="coverage-legend-panel">
           <LayoutCard title={t('coverage.legend.title', 'Reading this page')}>
-            <Caption className="mb-3 block">
+            <Text as="p" variant="bodySm" className="mb-3">
               {t(
                 'coverage.legend.intro',
                 'Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean "not applicable" for that field — they are expected, not missing data.',
               )}
-            </Caption>
+            </Text>
             <ul data-app-part="list" className="space-y-3">
               <li data-testid="coverage-legend-column">
                 <Text as="span" size="sm" weight="semibold" color="primary">
@@ -291,12 +291,12 @@ export default function FleetTelemetryCoveragePage({
                 <PanelTitle className="mb-1">
                   {t('coverage.orphans.title', 'Orphan fields detected')}
                 </PanelTitle>
-                <Caption>
+                <Text as="p" variant="bodySm">
                   {t(
                     'coverage.orphans.help',
                     'These routing.yaml entries reference Field names not present in protomodel.SignalsByName and not a strict prefix-extension of a compound parent. This is a deployment drift between the vendored Tesla proto and routing.yaml — investigate before relying on the affected destinations.',
                   )}
-                </Caption>
+                </Text>
               </div>
             </div>
             <ul data-app-part="list" className="flex flex-wrap gap-2">

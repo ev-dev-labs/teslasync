@@ -482,6 +482,99 @@ overflowing heatmap, small interactive targets, one contrast failure, one
 small body-text finding and a live-signals fixture that did not settle.
 These are not full-pack passes.
 
+After repairing the non-protected findings, a screenshot-free check of those
+11 Classic routes at 360px and 430px against the current isolated build
+reported:
+
+```text
+22 passed (2.9m)
+MOBILE_CHECK_EXIT=0
+```
+
+The automated contrast audit found no violated rules in those checks, but
+two chart-label nodes on notification health still require manual contrast
+review. This is not a pass for other routes, other packs or the protected
+Digital Twin. The shared native treatments now exclude semantic-tone surfaces
+and descendants; the native-consumer and preservation suites reported
+148 and 327 passing tests respectively.
+
+The same 11 routes were recaptured at 360 and 430px:
+
+```text
+22 passed (1.8m)
+```
+
+Those are initial-viewport images, not full-page visual approval. Inspection
+found explanatory copy rendered as 12px captions around operational briefs
+on feature flags, telemetry coverage, developer tools and the state debugger.
+The phone stylesheet now treats those immediate brief siblings as body prose
+using `--app-body-size`, while preserving compact metadata inside the brief,
+desktop typography and protected widgets. The text diagnostic also checks
+those siblings; real-route checks and replacement images are separate gates.
+The first development-server recheck reported `6 passed, 2 failed`: the
+360px feature-flags and coverage cases each recorded a pending auth-mode
+request in the strict fixture audit. A serial retry failed both for the same
+reason; neither failure is treated as a visual pass. A third, screenshot-free
+check against the updated production build passed both routes with zero
+violated or incomplete Axe contrast nodes:
+
+```text
+2 passed (21.1s)
+```
+
+The development-server request-accounting discrepancy remains unexplained.
+The four changed routes were recaptured against the production build at
+360px and 430px:
+
+```text
+8 passed (2.4m)
+```
+
+All eight initial views were inspected. The coverage page rendered its long
+destination explanation as a small caption, visible at 430px; that was a
+separate body-text defect, not covered by the brief-sibling rule. Its
+destination, legend and orphan-warning explanations now use body paragraphs
+instead of caption roles; the existing phone body token governs their size.
+The existing source-preservation receipt records these exact reversible
+presentation changes and continues to check the original translation calls,
+bindings and control flow.
+After the receipt was updated, the related preservation suites reported:
+
+```text
+Test Files  4 passed (4)
+     Tests  2104 passed (2104)
+```
+
+The page's regression suite and a screenshot-free 430px route check reported:
+
+```text
+Test Files  1 passed (1)
+     Tests  19 passed (19)
+1 passed (30.6s)
+```
+
+The route check found no violated or incomplete Axe contrast nodes. It does
+not verify the orphan-warning state visually. The corrected page was then
+recaptured against the updated production build at 360px and 430px:
+
+```text
+2 passed (14.9s)
+```
+
+Both initial views in `shots/final-coverage-body/classic` were inspected. The
+destination explanation is now body-sized where visible at 430px; the
+orphan-warning state and below-fold appearance were not visually reviewed.
+The two-row phone navigation takes substantial vertical space, some headings
+and actions wrap, and a temperature-impact value wraps. Chart text at 11px is
+also a legibility concern.
+
+For the two incomplete Classic notification-health chart labels at 430px, a
+screenshot-free DOM inspection found opaque `rgb(132, 144, 162)` text over
+`rgb(17, 21, 28)` with no overlapping filled SVG shapes. Their calculated
+contrast is 5.66:1 in that observed state. This resolves only that measured
+foreground/background pair, not other chart labels or the remaining Axe
+incomplete findings.
+
 Kinetic had assigned a length to the unitless `--app-content-density`
 multiplier, invalidating shared spacing calculations. Its multiplier is now
 unitless while its existing local gaps still use the density-gap length.
@@ -500,6 +593,66 @@ recorded 250 successful `/api/v1/settings` reads in about 10 seconds, with
 repeated query-observer subscriptions. Do not mask the churn or change API
 behavior as part of this visual-only work. Skip this route temporarily and
 revisit it at the final gate; it has no passing screenshot evidence.
+
+A screenshot-free development diagnostic traced the churn to the existing
+inline Recharts tooltip renderer in `PeriodDeltaChart.tsx`: repeated
+`ChartTooltipBase` mounts subscribe to settings again. In 12 seconds the
+instrumented page recorded 117 settings requests and 340 tooltip-content
+mounts. Both the chart and tooltip sources match `feature/app-design-themes`;
+changing this pre-existing request behavior is outside the visual-only scope.
+The diagnostic itself is not a route or screenshot pass.
+
+### Current-source validation
+
+The mobile prose change passed its two browser contracts, including 360/390/
+430px, reduced and enlarged font settings, forced colors, desktop and the
+protected-subtree boundary:
+
+```text
+2 passed (4.9s)
+```
+
+An additional synthetic browser contract loaded the 27 pack sheets at 360px
+and 430px, with reduced/enlarged font settings and normal/forced colors,
+and checked brief-sibling and in-panel explanations plus protected/metadata
+exclusions. Together with the shared phone and diagnostic contracts:
+
+```text
+3 passed (24.7s)
+```
+
+`npx tsc --noEmit`, the browser-harness TypeScript check and targeted ESLint
+exited 0 with no output. The complete hook verifier reported:
+
+```text
+  Found 571 unique URL patterns
+  Found 888 route patterns
+  ✅ ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES
+HOOK_AUDIT_EXIT=0
+```
+
+The coverage page retained 399 lines and four panel tags against the source
+branch. The scoped shared-design violations audit reported:
+
+```text
+✅ ALL CHECKS PASSED — 0 total violations
+VIOLATIONS_AUDIT_EXIT=0
+```
+
+An isolated build with the exact updated mobile stylesheet and coverage page
+reported:
+
+```text
+[pwa-precache] OK — route chunks remain on-demand
+[pwa-contract] OK — source + build contracts satisfied
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+BUILD_EXIT=0
+```
+
+Full lint on the preceding snapshot reported `LINT_EXIT=0`; targeted lint
+also passed for the later coverage and preservation edits. A prior-snapshot
+full test run and a separate current-source full test run are in progress;
+the focused contracts and updated build cover the phone and coverage changes.
 
 ## Protected surfaces
 

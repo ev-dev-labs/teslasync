@@ -806,3 +806,34 @@ checkout of the committed shared foundation and ran `npm run build` in its
 ```
 
 The build does not resolve the failed phone capture or establish contrast.
+
+### Later final-matrix repairs
+
+The feature-flags, live-signals, telemetry-coverage, departure-forecast,
+developer-tools, notification audit, browser and health, state-debugger,
+temperature-impact and Tesla charging sessions routes passed screenshot-free
+360/430px diagnostics (`22 passed (2.9m)`). Their recaptures also passed
+(`22 passed (1.8m)`) and were inspected side by side under
+`shots/final-repaired/classic`. These are initial-viewport dark-mode images;
+they do not establish below-fold appearance or complete route coverage.
+
+Inspection identified small explanatory captions on four routes. A subsequent
+phone-only token rule promotes those brief-adjacent explanations to body size;
+the earlier images predate that change. The four pages were recaptured at
+360/430px and all eight cases passed (`8 passed (2.4m)`); the images under
+`shots/final-prose-repaired/classic` were inspected. On telemetry coverage,
+the separate destination explanation was visibly too small at 430px. It,
+the legend introduction and orphan warning now use body paragraphs; updated
+360/430px recaptures passed (`2 passed (14.9s)`) and were inspected under
+`shots/final-coverage-body/classic`. The destination explanation is now
+body-sized where visible. The orphan-warning state and below-fold appearance
+were not visually reviewed.
+Other remaining defects include the
+space taken by two-row bottom navigation, wrapped headings/actions and a
+wrapped temperature-impact value. The notification-health chart has 11px
+labels that remain a legibility concern.
+
+For two Axe-incomplete labels on notification health at 430px, the observed
+opaque foreground/background colors calculate to 5.66:1 without overlapping
+filled SVG shapes. This is evidence for those nodes in that state only; it is
+not a blanket contrast or accessibility pass.

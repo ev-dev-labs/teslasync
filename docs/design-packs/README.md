@@ -37,7 +37,9 @@ Pack sheets can supply four elevation roles:
 `--app-surface-overlay`. Text, borders, accent, semantic states, and series
 colors come from the existing theme and chart palette.
 On phones, chart fallback tables use the shared stacked-table presentation
-with their original captions, headings, and localized cell labels.
+with their original captions, headings, and localized cell labels. Explanatory
+copy immediately before or after an operational brief uses `--app-body-size`;
+compact metadata inside the brief keeps its existing typography.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,

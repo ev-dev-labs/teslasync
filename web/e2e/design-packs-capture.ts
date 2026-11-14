@@ -288,6 +288,8 @@ export async function findSmallBodyText(page: Page) {
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"], '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"] [data-app-metric="inline"], '
     + '[data-operational-metric-list] [data-app-part~="metric-label"], '
+    + '[data-operational-brief] + :is(span, p, div).text-xs, '
+    + ':is(span, p, div).text-xs:has(+ [data-operational-brief]), '
     + '[data-mobile-table] :is(.mgr-title, .mgr-primary, .mgr-meta-label, .mgr-meta-value), '
     + '[data-app-part~="dialog"] [data-app-part~="table-cell"] > :is(dt, dd), '
     + '[data-app-part~="dialog"] [data-app-part~="table-cell"] > dd :is(span, strong, code), '

@@ -41,6 +41,12 @@
     line-height: var(--app-body-leading);
   }
 
+  :where([data-operational-brief] + :is(span, p, div).text-xs, :is(span, p, div).text-xs:has(+ [data-operational-brief])):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
   [data-app-part~="badge"][role="button"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     min-inline-size: var(--app-touch-size);
     min-block-size: var(--app-touch-size);

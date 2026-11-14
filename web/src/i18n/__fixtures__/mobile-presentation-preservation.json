@@ -85,6 +85,67 @@
     ]
   },
   {
+    "file": "web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx",
+    "before": "db19cd5f1aa644533bc6b2c422effda40fb29f318a81092ffa87e3ac8e4bca45",
+    "after": "109a77628a9213028dd4daf3ba7faf9360dcfb6615303e48d6e841e64fdc3bf3",
+    "hunks": [
+      {
+        "start": 154,
+        "old": [
+          "            <Caption className=\"mb-3 block\">"
+        ],
+        "new": [
+          "            <Text as=\"p\" variant=\"bodySm\" className=\"mb-3\">"
+        ]
+      },
+      {
+        "start": 159,
+        "old": [
+          "            </Caption>"
+        ],
+        "new": [
+          "            </Text>"
+        ]
+      },
+      {
+        "start": 231,
+        "old": [
+          "            <Caption className=\"mb-3 block\">"
+        ],
+        "new": [
+          "            <Text as=\"p\" variant=\"bodySm\" className=\"mb-3\">"
+        ]
+      },
+      {
+        "start": 236,
+        "old": [
+          "            </Caption>"
+        ],
+        "new": [
+          "            </Text>"
+        ]
+      },
+      {
+        "start": 293,
+        "old": [
+          "                <Caption>"
+        ],
+        "new": [
+          "                <Text as=\"p\" variant=\"bodySm\">"
+        ]
+      },
+      {
+        "start": 298,
+        "old": [
+          "                </Caption>"
+        ],
+        "new": [
+          "                </Text>"
+        ]
+      }
+    ]
+  },
+  {
     "file": "web/src/features/notifications/pages/AuditLogPage.tsx",
     "before": "6fd0ab7154bbaa0cfad0bf1b3ef05b066e96dae681463bc91af4ee1ad65f63f7",
     "after": "1873b94bc851028a7734e11c64c0468c71c9f1355fecc67341ee86091ca8030d",

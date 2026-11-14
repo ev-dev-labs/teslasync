@@ -128,6 +128,20 @@ beforeEach(() => {
 })
 
 describe('FleetTelemetryCoveragePage', () => {
+  it('presents destination, legend and warning explanations as readable body copy', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse({ orphan_fields: ['UnknownField'] }))
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    for (const explanation of [
+      /Counts how many routed fields land/,
+      /Each row is one Tesla telemetry field declared/,
+      /These routing\.yaml entries reference Field names/,
+    ]) {
+      expect(screen.getByText(explanation).tagName).toBe('P')
+    }
+  })
+
   it('describes absent columns without inferring signal_log and preserves unit_history routing', async () => {
     mockedRequest.mockResolvedValueOnce(makeResponse({
       categories: [{
