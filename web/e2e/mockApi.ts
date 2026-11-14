@@ -1200,6 +1200,7 @@ export async function installApiMocks(
 export async function waitForHarnessReady(
   page: Page,
   controller: MockApiController | null,
+  options: { domStabilityTimeoutMs?: number } = {},
 ): Promise<void> {
   await expect(page.locator('main')).toBeVisible();
   if (controller) {
@@ -1235,7 +1236,7 @@ export async function waitForHarnessReady(
     return sample;
   });
   try {
-    // Keep the five 150ms samples inside the browser, even with tracing enabled.
+    // Keep the five 150ms samples inside the browser so tracing does not consume the DOM budget.
     const settled = await page.waitForFunction(sample => {
       const main = document.querySelector('main');
       if (main !== sample.main) {
@@ -1252,7 +1253,7 @@ export async function waitForHarnessReady(
       sample.stableSamples = signature === sample.previous ? sample.stableSamples + 1 : 0;
       sample.previous = signature;
       return sample.stableSamples >= 5 ? sample.stableSamples : false;
-    }, state, { polling: 150, timeout: 20_000 });
+    }, state, { polling: 150, timeout: options.domStabilityTimeoutMs ?? 8_000 });
     try {
       expect(await settled.jsonValue(), 'application DOM settles after mocked requests complete')
         .toBeGreaterThanOrEqual(5);

@@ -434,7 +434,8 @@ test('charging detail follows the focused cell while respecting viewport edges',
   await installSpecializedReviewSources(page, mocks, 'dark');
   await routeBuiltApplication(page, new URL(origin).origin, ['/charging-heatmap'], process.env.DESIGN_PACK_DIST_DIR);
   await page.goto(chargingReviewPath);
-  await waitForHarnessReady(page, mocks);
+  // The populated heatmap's chart and accessible table settle slowly in WebKit.
+  await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs: 20_000 });
   const grid = page.locator('[data-heatmap-grid]');
   const recorded = grid.getByRole('button', { name: /— 2 sessions$/ });
   await page.mouse.move(1, 1);
@@ -1154,7 +1155,8 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         energySources.setActive(path === energyReviewPath);
         const routeSignatures = new Map<string, PackId[]>();
         await page.goto(path);
-        await waitForHarnessReady(page, mocks);
+        await waitForHarnessReady(page, mocks, path === chargingReviewPath
+          ? { domStabilityTimeoutMs: 20_000 } : undefined);
         for (const packId of packIds) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);

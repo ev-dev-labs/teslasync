@@ -935,5 +935,187 @@
         ]
       }
     ]
+  },
+  {
+    "file": "web/src/features/system/pages/CommandHistoryPage.tsx",
+    "before": "9796301e71252aa4675a361ae3c559b58609c674b76a6064504634dd12c7688a",
+    "after": "6395a8c56af6173a14250e482cbbe8d183ba844d19fe3a1a6f8e2e7f204ffc98",
+    "hunks": [
+      {
+        "start": 15,
+        "old": [
+          "import { useDeferredValue, useMemo } from 'react';"
+        ],
+        "new": [
+          "import { useDeferredValue, useLayoutEffect, useMemo, useState } from 'react';"
+        ]
+      },
+      {
+        "start": 29,
+        "old": [
+          "  ResponsiveContainer, ChartTooltip, axisTickSm, EmbeddedChart,"
+        ],
+        "new": [
+          "  ResponsiveContainer, ChartTooltip, axisTickSm, EmbeddedChart, measureAxisLabelWidth,"
+        ]
+      },
+      {
+        "start": 34,
+        "old": [],
+        "new": [
+          "import { useMediaQuery } from '@/hooks/useMediaQuery';"
+        ]
+      },
+      {
+        "start": 41,
+        "old": [
+          "import { formatDateTime, formatRelative, formatDayKey } from '@/lib/dateFormat';"
+        ],
+        "new": [
+          "import { formatDateTime, formatRelative, formatDayKey, getFormatter } from '@/lib/dateFormat';"
+        ]
+      },
+      {
+        "start": 45,
+        "old": [],
+        "new": [
+          "import { getChartFontFamily, getChartFontScale } from '@/lib/chartTypography';"
+        ]
+      },
+      {
+        "start": 110,
+        "old": [],
+        "new": [
+          "",
+          "function usePhoneChartTypography() {",
+          "  const [typography, setTypography] = useState({ owned: false, size: 16, family: '', revision: 0 });",
+          "  useLayoutEffect(() => {",
+          "    const root = document.documentElement;",
+          "    let active = true;",
+          "    const update = (fontLoaded = false) => {",
+          "      const rootSize = parseFloat(getComputedStyle(root).fontSize) || 16;",
+          "      const next = {",
+          "        owned: root.hasAttribute('data-app-design-pack') && root.hasAttribute('data-app-design-owner'),",
+          "        size: rootSize * Math.max(1, getChartFontScale()),",
+          "        family: getChartFontFamily(),",
+          "      };",
+          "      setTypography(previous => !fontLoaded && previous.owned === next.owned && previous.size === next.size && previous.family === next.family",
+          "        ? previous : { ...next, revision: previous.revision + (fontLoaded ? 1 : 0) });",
+          "    };",
+          "    const observer = new MutationObserver(() => update());",
+          "    observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-app-design-pack', 'data-app-design-owner'] });",
+          "    const onFontsLoaded = () => update(true);",
+          "    document.fonts?.addEventListener('loadingdone', onFontsLoaded);",
+          "    void document.fonts?.ready.then(() => { if (active) onFontsLoaded(); });",
+          "    update();",
+          "    return () => {",
+          "      active = false;",
+          "      observer.disconnect();",
+          "      document.fonts?.removeEventListener('loadingdone', onFontsLoaded);",
+          "    };",
+          "  }, []);",
+          "  return typography;",
+          "}"
+        ]
+      },
+      {
+        "start": 228,
+        "old": [],
+        "new": [
+          "  const phone = useMediaQuery('(max-width: 767px)');",
+          "  const chartTypography = usePhoneChartTypography();"
+        ]
+      },
+      {
+        "start": 365,
+        "old": [],
+        "new": [
+          "",
+          "  const phoneAxes = useMemo(() => {",
+          "    if (!phone || !chartTypography.owned || dailyActivity.length === 0) return null;",
+          "    const yearFormatter = getFormatter({ timeZone: 'UTC', year: 'numeric' }, locale);",
+          "    const labels = new Map(dailyActivity.map(({ day, label }) => [",
+          "      label, {",
+          "        date: formatDayKey(day, { locale, style: 'short' }),",
+          "        year: yearFormatter.format(new Date(`${day}T12:00:00Z`)),",
+          "      },",
+          "    ]));",
+          "    const multiYear = new Set([...labels.values()].map(({ year }) => year)).size > 1;",
+          "    const canvas = document.createElement('canvas');",
+          "    const context = canvas.getContext('2d');",
+          "    if (context) context.font = `${chartTypography.size}px ${chartTypography.family}`;",
+          "    const measure = (label: string) => context?.measureText(label).width ?? label.length * chartTypography.size;",
+          "    const maxCount = dailyActivity.reduce((max, row) => Math.max(max, row.success + row.failed), 0);",
+          "    const countDigits = String(maxCount).length + 1;",
+          "    const countLabels = Array.from({ length: 10 }, (_, digit) => String(digit).repeat(countDigits));",
+          "    const countWidth = measureAxisLabelWidth(countLabels, measure);",
+          "    const dateWidth = measureAxisLabelWidth([...labels.values()].flatMap(({ date, year }) => [date, year]), measure, 0, 0);",
+          "    return {",
+          "      labels,",
+          "      multiYear,",
+          "      countWidth,",
+          "      datePadding: Math.ceil(dateWidth / 2 + chartTypography.size / 8),",
+          "      fontSize: chartTypography.size,",
+          "      fontFamily: chartTypography.family,",
+          "    };",
+          "  }, [phone, chartTypography, dailyActivity, locale]);"
+        ]
+      },
+      {
+        "start": 575,
+        "old": [],
+        "new": [
+          "              size={phoneAxes ? (phoneAxes.multiYear ? 'detail' : 'standard') : 'compact'}",
+          "              className={phoneAxes ? '[&_.recharts-cartesian-axis-tick-value]:!text-[length:var(--app-body-size)]' : undefined}"
+        ]
+      },
+      {
+        "start": 593,
+        "old": [
+          "                  <BarChart data={dailyActivity}>"
+        ],
+        "new": [
+          "                  <BarChart data={dailyActivity}",
+          "                    margin={phoneAxes ? { top: Math.ceil(phoneAxes.fontSize * 0.75), right: Math.ceil(phoneAxes.fontSize / 4), bottom: 0, left: 0 } : undefined}>"
+        ]
+      },
+      {
+        "start": 596,
+        "old": [
+          "                    <XAxis dataKey=\"label\" tick={axisTickSm} />",
+          "                    <YAxis tick={axisTickSm} allowDecimals={false} />"
+        ],
+        "new": [
+          "                    <XAxis key={phoneAxes ? `phone-x-${phoneAxes.fontSize}-${phoneAxes.fontFamily}` : 'desktop-x'}",
+          "                      dataKey=\"label\"",
+          "                      tick={phoneAxes?.multiYear ? ({ x, y, payload }: {",
+          "                        x: number; y: number; payload: { value: string };",
+          "                      }) => {",
+          "                        const label = phoneAxes.labels.get(String(payload.value))",
+          "                          ?? { date: String(payload.value), year: '' };",
+          "                        return (",
+          "                          <text x={x} y={y} textAnchor=\"middle\" fill={axisTickSm.fill}",
+          "                            fontSize={phoneAxes.fontSize} fontFamily={phoneAxes.fontFamily}",
+          "                            className=\"recharts-text recharts-cartesian-axis-tick-value\"",
+          "                            aria-label={String(payload.value)}>",
+          "                            <tspan x={x} dy=\"0.71em\">{label.date}</tspan>",
+          "                            <tspan x={x} dy=\"1.2em\">{label.year}</tspan>",
+          "                          </text>",
+          "                        );",
+          "                      } : phoneAxes ? { ...axisTickSm, fontSize: phoneAxes.fontSize, fontFamily: phoneAxes.fontFamily } : axisTickSm}",
+          "                      {...(phoneAxes ? {",
+          "                        tickFormatter: (label: string) => phoneAxes.labels.get(String(label))?.date ?? String(label),",
+          "                        height: Math.ceil(phoneAxes.fontSize * (phoneAxes.multiYear ? 3.6 : 2.3)),",
+          "                        tickMargin: Math.ceil(phoneAxes.fontSize / 2),",
+          "                        padding: { left: phoneAxes.datePadding, right: phoneAxes.datePadding },",
+          "                        interval: 'preserveStartEnd' as const,",
+          "                      } : {})} />",
+          "                    <YAxis key={phoneAxes ? `phone-y-${phoneAxes.fontSize}-${phoneAxes.fontFamily}` : 'desktop-y'}",
+          "                      tick={phoneAxes ? { ...axisTickSm, fontSize: phoneAxes.fontSize, fontFamily: phoneAxes.fontFamily } : axisTickSm}",
+          "                      {...(phoneAxes ? { width: phoneAxes.countWidth, minTickGap: Math.ceil(phoneAxes.fontSize / 2) } : {})}",
+          "                      allowDecimals={false} />"
+        ]
+      }
+    ]
   }
 ]

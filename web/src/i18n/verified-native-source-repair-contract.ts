@@ -8,7 +8,7 @@ import { producerProjection, projectionDigest } from './producer-projection';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
-const mobileFingerprint = '83543e52518859d67e10b0e351986676ee4b5c8395ec70b0b751859c965cd084';
+const mobileFingerprint = 'f6b6444637a5d5b59290701ba9a0bf93295dee7d26f80037d69c53d38d23d948';
 const touchTokenFile = 'web/src/lib/tokens.ts';
 const touchTargetSuccessor = '95f986e34f191508c59e89e79afd47fe090972bd8f3bcb36c3979e3f8e0935cb';
 const touchTokenAdditions = [
