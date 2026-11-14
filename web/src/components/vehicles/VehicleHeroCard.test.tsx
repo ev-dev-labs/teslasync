@@ -207,6 +207,37 @@ describe('VehicleHeroCard redesigned contract', () => {
     }
   });
 
+  it('keeps Telemetry Studio phone readings legible without styling preserved content', () => {
+    const { container } = renderCard();
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v1'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const rules: postcss.Rule[] = [];
+      postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'studio.css'), 'utf8'))
+        .walkRules(rule => {
+          if (rule.parent?.type === 'atrule' && rule.parent.name === 'media'
+            && rule.parent.params.includes('max-width: 767px')
+            && rule.nodes.some(node => node.type === 'decl'
+              && node.prop === 'font-size' && node.value === 'var(--app-body-size)')) rules.push(rule);
+        });
+      const unit = screen.getByRole('group', { name: 'Range' }).querySelector('[data-app-part~="metric-unit"]')!;
+      const badges = [...container.querySelectorAll('[data-app-metric="inline"][data-app-part~="badge"]')];
+      expect(badges).toHaveLength(3);
+      for (const target of [unit, ...badges]) {
+        expect(rules.some(rule => target.matches(rule.selector))).toBe(true);
+        const owner = target.getAttribute('data-app-design-owner')!;
+        target.setAttribute('data-app-design-owner', 'pack-classic');
+        expect(rules.some(rule => target.matches(rule.selector))).toBe(false);
+        target.setAttribute('data-app-design-owner', owner);
+      }
+      container.setAttribute('data-app-design-preserve', '');
+      for (const target of [unit, ...badges]) {
+        expect(rules.some(rule => target.matches(rule.selector))).toBe(false);
+      }
+    } finally { release(); }
+  });
+
   it('renders an explicit unavailable state and retains identity/actions', () => {
     renderCard({ vehicleState: null });
     expect(screen.getByRole('status')).toHaveTextContent('Live telemetry unavailable');

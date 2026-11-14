@@ -125,3 +125,18 @@ stylesheets. It exited 0:
 ```
 
 The build does not resolve the failed captures or incomplete contrast checks.
+
+## Later screenshot-free phone follow-up
+
+A 360/430px sweep against the immutable `d97ada73ed2b` application snapshot
+reported `500 passed, 8 failed`. Both widths failed Dashboard and Security
+Access on protected Digital Twin controls; Help overflowed and Quick Stats
+contained 14px readings. The sweep excluded Period Compare and the six
+standalone routes, and did not establish contrast or visual quality.
+
+Studio-owned Quick Stats units and inline readings now use the phone body-size
+token without applying it to protected content. Screenshot-free checks of
+Quick Stats passed at 360/390/430px in dark and light modes (`6 passed`) and
+at font scales 0.85 and 1.35 at 360/430px in both modes (`8 passed`). The
+protected Twin failures remain unresolved; the pack is still
+**passed-with-notes**, not a full mobile or visual pass.

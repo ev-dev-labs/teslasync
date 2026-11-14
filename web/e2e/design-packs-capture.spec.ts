@@ -378,7 +378,68 @@ for (const route of routes) {
       await waitForHarnessReady(page, mocks);
     }
 
-    if (route.path === '/help' && width < 768 && packId === 'classic') {
+    if (route.path === '/help' && width < 768) {
+      const panel = page.getByTestId('support-bundle-panel');
+      const panelBounds = await panel.boundingBox();
+      expect(panelBounds).not.toBeNull();
+      const actions: { x: number; y: number; width: number; height: number }[] = [];
+      for (const name of ['Copy bundle', 'Download', 'Report a problem']) {
+        const action = panel.getByRole('button', { name, exact: true });
+        await expect(action).toBeVisible();
+        const bounds = await action.boundingBox();
+        expect(bounds).not.toBeNull();
+        actions.push(bounds!);
+        expect(bounds!.x, `${name} remains inside its panel`).toBeGreaterThanOrEqual(panelBounds!.x - 1);
+        expect(bounds!.x + bounds!.width, `${name} remains inside its panel`)
+          .toBeLessThanOrEqual(panelBounds!.x + panelBounds!.width + 1);
+      }
+      for (const [index, first] of actions.entries()) {
+        for (const second of actions.slice(index + 1)) {
+          const overlapX = Math.min(first.x + first.width, second.x + second.width) - Math.max(first.x, second.x);
+          const overlapY = Math.min(first.y + first.height, second.y + second.height) - Math.max(first.y, second.y);
+          expect(overlapX <= 1 || overlapY <= 1, 'support actions do not overlap').toBe(true);
+        }
+      }
+      const links = await page.locator('[data-testid="help-glossary"] a, [data-testid="dashboard-preset-open-dashboard"]')
+        .evaluateAll(elements => elements.map(element => {
+          const box = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            width: box.width, height: box.height,
+            minWidth: parseFloat(style.minWidth), fontSize: parseFloat(style.fontSize),
+          };
+        }));
+      expect(links.length).toBeGreaterThan(1);
+      for (const link of links) {
+        expect(link.width, 'help link width').toBeGreaterThanOrEqual(44);
+        expect(link.height, 'help link height').toBeGreaterThanOrEqual(44);
+        expect(link.minWidth, 'help link minimum width').toBeGreaterThanOrEqual(44);
+        expect(link.fontSize, 'help link text size').toBeGreaterThanOrEqual(16);
+      }
+      const linkProbe = await page.getByTestId('dashboard-preset-open-dashboard').evaluate(link => {
+        const probe = link.cloneNode(false) as HTMLAnchorElement;
+        const parent = link.parentElement;
+        if (!parent) throw new Error('Dashboard preset link has no parent');
+        parent.append(probe);
+        try {
+          probe.textContent = 'x';
+          const short = probe.getBoundingClientRect();
+          probe.textContent = 'LongUnbrokenDashboardActionLabel'.repeat(4);
+          const long = probe.getBoundingClientRect();
+          const panelBox = parent.getBoundingClientRect();
+          return {
+            shortWidth: short.width, shortHeight: short.height,
+            overflow: probe.scrollWidth - probe.clientWidth,
+            right: long.right, panelRight: panelBox.right,
+          };
+        } finally {
+          probe.remove();
+        }
+      });
+      expect(linkProbe.shortWidth, 'short help link width').toBeGreaterThanOrEqual(44);
+      expect(linkProbe.shortHeight, 'short help link height').toBeGreaterThanOrEqual(44);
+      expect(linkProbe.overflow, 'long help link text overflow').toBeLessThanOrEqual(1);
+      expect(linkProbe.right, 'long help link remains inside its panel').toBeLessThanOrEqual(linkProbe.panelRight + 1);
       const code = page.getByTestId('support-bundle-json');
       const disclosure = code.locator('..').locator('summary');
       await disclosure.click();

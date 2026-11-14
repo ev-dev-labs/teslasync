@@ -49,7 +49,7 @@ export function HelpGlossaryPanel() {
               {term.learnMoreTo && (
                 <Link
                   to={term.learnMoreTo}
-                  className="inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
+                  className="inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline max-md:min-h-[var(--app-touch-size,2.75rem)] max-md:min-w-[var(--app-touch-size,2.75rem)] max-md:max-w-full max-md:items-center max-md:text-[length:var(--app-body-size,1rem)]"
                 >
                   {t('glossary.seeInContext', 'See it in context')}
                 </Link>

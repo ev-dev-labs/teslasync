@@ -1854,8 +1854,10 @@ completed fixes and local preview are handled.
 
 The completed remote 1440px light WebKit job also reported an 18px change in
 the Quiet overview's metric-grid row after owner restoration. The scoped
-intrinsic-row change has a passing synthetic boundary contract but has not yet
-been verified in the full desktop isolation phase.
+intrinsic-row change has a passing synthetic boundary contract. A separate
+screenshot-free WebKit check of the actual metric grid at a 768px allocation
+now passes for both outer packs; the full desktop isolation phase still fails
+on chart geometry and inherited legend colors.
 
 A screenshot-free Classic dark-mode sweep of the eligible capture registry
 at 360px and 430px, using synthetic data, reported:
@@ -1921,3 +1923,87 @@ custom phone case. WebKit light still changed restored phone timeline geometry
 and desktop chart geometry/inherited legend colors. No screenshot was taken;
 the exact comparison remains enabled. This failed revisit is deferred again
 while the separate phone sweep and CI continue.
+
+The narrower real-page desktop metric-grid check used the newly built Docker
+assets and retained exact owner and geometry comparisons:
+
+```text
+  1 passed (1.3m)
+BROWSER_PROBE_API_ESCAPE=0
+CROSS_BROWSER_EXIT=0
+QUIET_DESKTOP_GRID_EXIT=0
+PREVIEW_DESKTOP_TYPE_LINT_EXIT=0
+```
+
+The same desktop check against older `7402197cfc2f` assets failed while
+clicking the second outer pack's preview button, before reaching its grid
+assertion. It is not evidence that the metric-row regression was reproduced
+on those older assets:
+
+```text
+  1 failed
+BROWSER_PROBE_API_ESCAPE=0
+QUIET_DESKTOP_BASELINE_EXIT=1
+```
+
+The immutable `d97ada73ed2b` Telemetry Studio phone sweep completed without
+screenshots:
+
+```text
+  8 failed
+  500 passed (57.1m)
+V1_PHONE_CHECK_EXIT=1
+```
+
+At each of 360px and 430px, Dashboard and Security Access failed on preserved
+Digital Twin controls; Help overflowed and Quick Stats had undersized readings.
+Period Compare and six standalone routes remained excluded. This is not a
+contrast or visual pass, and the protected widgets were neither changed nor
+exempted.
+
+The Studio stylesheet now applies the existing phone body-size token to owned
+headline units and inline readings outside preserved content. Real Quick Stats
+checks passed at 360/390/430px in both themes (`6 passed`) and at font scales
+0.85 and 1.35 at 360/430px in both themes (`8 passed`). The focused native
+composition checks reported:
+
+```text
+Test Files  2 passed (2)
+     Tests  13 passed | 161 skipped (174)
+STUDIO_NATIVE_PRESERVATION_EXIT=0
+```
+
+The Help overflow also reproduced in Horizon Loft: the support action group
+was prevented from shrinking. The Help page now lets that group wrap and
+uses the phone text and touch tokens for its glossary and dashboard links,
+without changing their destinations or actions. A short-link minimum and
+the exact support JSON are checked alongside the panel bounds. The source
+preservation receipts record only these presentation changes.
+
+The expanded Help check passed at 360px and 430px in Horizon, including
+non-overlapping actions and short/long link geometry. The screenshot-free
+all-pack Help and Quick Stats check is still running. No visual or contrast
+pass is implied by these checks.
+
+```text
+2 passed (42.5s)
+HELP_ACTION_GEOMETRY_EXIT=0
+HELP_GEOMETRY_E2E_TYPE_LINT_EXIT=0
+TSC_NO_EMIT_EXIT=0
+HELP_TOKEN_FULL_LINT_EXIT=0
+Test Files  6 passed (6)
+     Tests  1009 passed | 7330 skipped (8339)
+HELP_CANONICAL_RECEIPTS_EXIT=0
+HELP_TOKEN_BUILD_EXIT=0
+```
+
+The isolated WebKit light-phone retry did not complete its comparison: the
+second preview-button click timed out after starting the click action. The
+exact restoration assertion remains unchanged and unresolved; no screenshot
+was taken and the mock API reported no escaped requests.
+
+```text
+1 failed
+BROWSER_PROBE_API_ESCAPE=0
+WEBKIT_LIGHT_OWNER_EXIT=1
+```

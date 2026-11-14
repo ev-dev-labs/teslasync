@@ -120,7 +120,7 @@ export function DashboardPresetPanel() {
 
       <Link
         to="/"
-        className="mt-3 inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
+        className="mt-3 inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline max-md:min-h-[var(--app-touch-size,2.75rem)] max-md:min-w-[var(--app-touch-size,2.75rem)] max-md:max-w-full max-md:items-center max-md:text-[length:var(--app-body-size,1rem)]"
         data-testid="dashboard-preset-open-dashboard"
       >
         {pending !== null
