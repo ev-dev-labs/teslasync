@@ -128,3 +128,27 @@ The orchestrator then ran `npm run build` in the isolated verification
 worktree with the final Blueprint stylesheet: **exit 0**. Its SHA-256 matched
 the working stylesheet. This does not resolve the capture or accessibility
 limitations above.
+
+The later screenshot-free Quick Stats check found that, at 430px, the
+two-column metric bank nested two-column ledger rows and left only 67.5px
+for each label. “Charging” and “efficiency” split within words in both
+themes. Blueprint's minimum brief-column token now leaves room for the
+ledger's label/value pairs. The new browser regression failed against the
+prior build and passed against the new build:
+
+```text
+2 passed (15.3s)
+BLUEPRINT_REGRESSION_FINAL_EXIT=0
+4 passed (28.5s)
+BLUEPRINT_CAPTURE_CHECK_EXIT=0
+Test Files  5 passed (5)
+     Tests  244 passed (244)
+BLUEPRINT_BRIEF_PACK_TEST_EXIT=0
+BLUEPRINT_REGRESSION_TYPE_LINT_EXIT=0
+BLUEPRINT_PHONE_BUILD_EXIT=0
+```
+
+The browser check covers 360/390/430px, font scales 0.85/1/1.35, light and
+dark themes, normal and forced colors, and the original 1440px bank layout.
+It checks metric-word wrapping, text size and document overflow, not full-page
+contrast or visual acceptance. No historical screenshots were replaced.

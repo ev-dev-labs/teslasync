@@ -238,6 +238,45 @@ describe('VehicleHeroCard redesigned contract', () => {
     } finally { release(); }
   });
 
+  it('uses the shared phone reading size in every pack without affecting protected content', () => {
+    const { container } = renderCard();
+    container.setAttribute('data-app-design-preview', '');
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'mobile.css'), 'utf8'))
+      .walkRules(rule => {
+        if (rule.parent?.type === 'atrule' && rule.parent.name === 'media'
+          && rule.parent.params.includes('max-width: 767px')
+          && rule.nodes.some(node => node.type === 'decl'
+            && node.prop === 'font-size' && node.value === 'var(--app-body-size)')) rules.push(rule);
+      });
+    const unit = screen.getByRole('group', { name: 'Range' }).querySelector('[data-app-part~="metric-unit"]')!;
+    const badges = [...container.querySelectorAll('[data-app-metric="inline"][data-app-part~="badge"]')];
+    expect(badges).toHaveLength(3);
+    const targets = [unit, ...badges];
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<Parameters<typeof getAppDesignAttributes>[0]>) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        for (const target of targets) {
+          expect(rules.some(rule => target.matches(rule.selector)), pack).toBe(true);
+          const owner = target.getAttribute('data-app-design-owner')!;
+          target.removeAttribute('data-app-design-owner');
+          expect(rules.some(rule => target.matches(rule.selector)), pack).toBe(false);
+          target.setAttribute('data-app-design-owner', owner);
+        }
+        for (const [attribute, value] of [
+          ['data-app-design-preserve', ''], ['data-widget-pack', pack], ['data-vehicle-twin', ''],
+          ['data-app-metric-grid', 'native-gauge'], ['data-app-card-kind', 'conversation'],
+          ['data-app-list', 'conversation'],
+        ]) {
+          container.setAttribute(attribute, value);
+          for (const target of targets) expect(rules.some(rule => target.matches(rule.selector)), pack).toBe(false);
+          container.removeAttribute(attribute);
+        }
+      } finally { release(); }
+    }
+  });
+
   it('renders an explicit unavailable state and retains identity/actions', () => {
     renderCard({ vehicleState: null });
     expect(screen.getByRole('status')).toHaveTextContent('Live telemetry unavailable');

@@ -1981,9 +1981,12 @@ the exact support JSON are checked alongside the panel bounds. The source
 preservation receipts record only these presentation changes.
 
 The expanded Help check passed at 360px and 430px in Horizon, including
-non-overlapping actions and short/long link geometry. The screenshot-free
-all-pack Help and Quick Stats check is still running. No visual or contrast
-pass is implied by these checks.
+non-overlapping actions and short/long link geometry. An all-pack,
+screenshot-free baseline was interrupted after 12 packs when the same
+Quick Stats text defect appeared in ten of them. All 24 completed Help
+checks passed; the 20 Quick Stats checks for those ten packs failed.
+Classic and Studio passed both routes. No visual or contrast pass is
+implied by these checks.
 
 ```text
 2 passed (42.5s)
@@ -1995,6 +1998,68 @@ Test Files  6 passed (6)
      Tests  1009 passed | 7330 skipped (8339)
 HELP_CANONICAL_RECEIPTS_EXIT=0
 HELP_TOKEN_BUILD_EXIT=0
+```
+
+The Help guideline script reported zero violations in each of its six
+categories and `TypeScript passes` (`HELP_AUDIT_EXIT=0`). Against the
+preceding commit, the three Help components retained their respective
+409/63/215 line counts and 3/3/3 `GlassPanel`/`ChartContainer` matches.
+The complete extracted hook verification reported
+`ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES` (`HOOK_AUDIT_EXIT=0`).
+
+The shared phone layer now applies the body-size token to owned headline
+units and inline metric badges, outside protected widgets and conversations.
+This avoids duplicating the same correction across packs. The screenshot-free
+all-pack Quick Stats check used an immutable build at 360px and 430px in both
+themes. Summing its per-pack results gives 106 passed and two failures:
+Blueprint split the words
+"Charging" and "efficiency" at 430px in both themes. The shared reading-size
+defect did not recur in those cases. Blueprint's ledger spacing has since been
+corrected; a focused browser regression and all four original Blueprint
+capture checks now pass against the corrected build. The 26 other packs'
+104 passing checks used the preceding build, which differs by the Blueprint
+stylesheet change.
+
+Selected output:
+
+```text
+node scripts\capture-design-packs.mjs --pack all --pages quick-stats --viewports phone-360,phone-430,phone-360-light,phone-430-light --base-url http://127.0.0.1:54872 --workers 2
+Capturing design pack blueprint
+  2 failed
+  2 passed (29.6s)
+Capturing design pack memphis
+  4 passed (34.4s)
+SHARED_PHONE_METRIC_ALL_PACK_EXIT=1
+Test Files  3 passed (3)
+     Tests  188 passed (188)
+SHARED_PHONE_METRIC_TEST_EXIT=0
+Test Files  3 passed (3)
+     Tests  78 passed (78)
+SHARED_PHONE_BRIDGE_TABLE_TEST_EXIT=0
+SHARED_PHONE_METRIC_TYPE_LINT_EXIT=0
+SHARED_PHONE_METRIC_BUILD_EXIT=0
+SHARED_PHONE_METRIC_FULL_LINT_EXIT=0
+```
+
+The scoped engineering audit reported no violations in the shared CSS or
+vehicle-card regression test.
+
+The Blueprint regression failed against the earlier build at 430px, then
+passed against the corrected build in both themes at 360/390/430px, font
+scales 0.85/1/1.35 and normal/forced colors. It also checks the existing
+1440px metric-bank layout. The capture checks also passed at 360/430px in
+both themes. No screenshots were taken.
+
+```text
+2 passed (15.3s)
+BLUEPRINT_REGRESSION_FINAL_EXIT=0
+4 passed (28.5s)
+BLUEPRINT_CAPTURE_CHECK_EXIT=0
+Test Files  5 passed (5)
+     Tests  244 passed (244)
+BLUEPRINT_BRIEF_PACK_TEST_EXIT=0
+BLUEPRINT_REGRESSION_TYPE_LINT_EXIT=0
+BLUEPRINT_PHONE_BUILD_EXIT=0
 ```
 
 The isolated WebKit light-phone retry did not complete its comparison: the

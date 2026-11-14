@@ -41,6 +41,13 @@
     line-height: var(--app-body-leading);
   }
 
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(
+    [data-app-metric="headline"] [data-app-part~="metric-reading"] > [data-app-part~="metric-unit"],
+    [data-app-metric="inline"][data-app-part~="badge"]
+  ):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-widget-pack], [data-widget-pack] *, [data-vehicle-twin], [data-vehicle-twin] *, [data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+  }
+
   :where([data-operational-brief] + :is(span, p, div).text-xs, :is(span, p, div).text-xs:has(+ [data-operational-brief])):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);

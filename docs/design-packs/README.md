@@ -40,7 +40,10 @@ On phones, chart fallback tables use the shared stacked-table presentation
 with their original captions, headings, and localized cell labels. Explanatory
 copy immediately before or after an operational brief uses `--app-body-size`;
 chart subtitles use the same body-size token, while compact metadata inside
-the brief keeps its existing typography. Opted-in evidence tables use the
+the brief keeps its existing typography. Owned headline units and inline
+metric badges also use that token outside protected widgets and conversations.
+Blueprint reserves enough brief-column width for its ledger label/value pairs
+to remain readable on phones. Opted-in evidence tables use the
 shared mobile grid and retain their original columns in Quick View.
 Interactive chart legends use `--app-chart-hidden-legend-opacity` to keep
 hidden-series labels readable while retaining their strike-through and pressed

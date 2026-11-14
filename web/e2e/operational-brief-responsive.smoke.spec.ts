@@ -1,0 +1,53 @@
+import { expect } from '@playwright/test';
+import { routeBuiltApplication, test } from './app-design-test';
+import { findSplitOperationalMetricWords } from './design-packs-capture';
+import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
+import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { createReviewPreference, installPackReview } from './widget-design-packs.mock';
+
+test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic Quick Stats fixtures');
+test.afterAll(async () => { await closeMockApiFixtures(); });
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`Blueprint Quick Stats keeps metric words readable on phones in ${theme}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const baseURL = testInfo.project.use.baseURL;
+    if (typeof baseURL !== 'string') throw new Error('A local test origin is required');
+    const origin = new URL(baseURL).origin;
+    const saved = createReviewPreference();
+    saved.pack_id = 'blueprint';
+    saved.app_wide = true;
+    await page.setViewportSize({ width: 430, height: 932 });
+    const mocks = await installPackReview(page, theme, 390, false, [], true, saved, origin, { font_scale: 1 });
+    await routeBuiltApplication(page, origin, ['/quick-stats'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/quick-stats', { waitUntil: 'domcontentloaded' });
+    await waitForHarnessReady(page, mocks);
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'blueprint');
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-owner', /^pack-blueprint(?:\s|$)/);
+    const labels = page.locator('[data-operational-metric-list] [data-app-part~="metric-label"]');
+    await expect(labels.filter({ hasText: /^Charging sessions$/ })).toBeVisible();
+    await expect(labels.filter({ hasText: /^Avg efficiency$/ })).toBeVisible();
+
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 932 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.locator('html').evaluate((element, value) =>
+            element.style.setProperty('--font-scale', String(value)), scale);
+          const context = `${theme}, ${forcedColors}, ${width}px, scale ${scale}`;
+          expect(await findSplitOperationalMetricWords(page), context).toEqual([]);
+          const sizes = await labels.evaluateAll(elements =>
+            elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+          expect(Math.min(...sizes), context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          await expectNoHorizontalOverflow(page);
+        }
+      }
+    }
+    await page.emulateMedia({ forcedColors: 'none' });
+    await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '1'));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(page.locator('[data-operational-metric-bank]').first()).toHaveCSS('display', 'flex');
+    await assertMockApiComplete(page, mocks);
+  });
+}

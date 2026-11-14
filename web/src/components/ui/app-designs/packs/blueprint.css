@@ -22,7 +22,7 @@
 }
 @media screen {
   :is(:root, [data-app-design-preview])[data-app-design-pack="blueprint"]:where([data-app-design-owner~="pack-blueprint"]) {
-    --app-brief-column-min-width: 10.5rem;
+    --app-brief-column-min-width: 18rem;
   }
 }
 

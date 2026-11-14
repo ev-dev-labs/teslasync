@@ -86,6 +86,11 @@ The frozen shared workbench layout places headerless section content in its
 second grid column; a shared correction is requested below rather than
 modifying that foundation. No third screenshot round was taken.
 
+A later shared correction restricts the two-column workbench layout to
+sections with a visible header. Synthetic browser checks covered headed,
+headerless and hidden-header sections; the actual energy page has not been
+recaptured or visually re-reviewed.
+
 ## Verification
 
 - Before the final CSS adjustment, the violations audit reported `0 total
