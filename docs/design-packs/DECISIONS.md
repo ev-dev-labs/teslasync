@@ -1409,3 +1409,25 @@ E2E_TSC_EXIT=0
 SW_TSC_EXIT=0
 LINT_EXIT=0
 ```
+
+## Command History phone axes: unresolved
+
+The Classic Command History chart still renders 11px axis labels on phones.
+A screenshot-free browser regression with populated synthetic data was
+configured for 360/390/430px, dark/light modes and font scales 0.85/1/1.35;
+it failed at 360px before reaching the wider widths. Simply enlarging the
+labels clipped ticks; additional measured widths and ownership-aware
+remeasurement still left the first date label overlapping the zero tick at
+360px and scale 1.35 in both modes. Increasing the X-axis tick margin did
+not resolve that overlap. The final attempted check reported:
+
+```text
+2 failed
+dark 360px scale 1.35: overlapping ticks
+light 360px scale 1.35: overlapping ticks
+AXIS_AFTER_EXIT=1
+```
+
+The tentative changes and failing test were removed rather than shipped.
+Axis legibility remains skipped after these attempts; the existing chart is
+unchanged and this does not establish phone compliance.
