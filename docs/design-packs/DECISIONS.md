@@ -929,6 +929,36 @@ TSC_EXIT=0
 LINT_EXIT=0
 ```
 
+On `0966cdb7b28f`, CI's frontend shard 8 found that the new readability
+rule did not satisfy `charts.css`'s existing forced-color and selector
+boundary:
+
+```text
+Test Files  1 failed | 367 passed (368)
+Tests       2 failed | 13942 passed (13944)
+```
+
+The readability invariant now lives in the descriptor-neutral screen
+layer alongside the other cross-mode accessibility rules. The chart
+presentation sheet retains its original forced-color and profile boundaries;
+the existing assertions were not relaxed. Focused tests reported:
+
+```text
+Test Files  3 passed (3)
+Tests       49 passed (49)
+CHART_BOUNDARY_TEST_EXIT=0
+Test Files  3 passed (3)
+Tests       68 passed (68)
+BASE_STYLE_CONTRACT_EXIT=0
+3 passed (20.8s)
+LEGEND_BOUNDARY_BROWSER_EXIT=0
+```
+
+At the final-gate revisit, a screenshot-free Classic 360px check of
+`/period-compare` again failed because the mocked requests did not become
+quiet (`PERIOD_REVISIT_EXIT=1`). The pre-existing request churn remains
+outside the visual-only scope, and the route remains skipped.
+
 The refreshed Docker preview was built from production source
 `67c12d5f88dc` and preflighted on a separate loopback port before replacing
 the task-owned preview. The previous container was retained for rollback.

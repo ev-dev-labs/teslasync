@@ -2,15 +2,9 @@
  * Chart composition belongs to the existing shared owners, not another frame.
  * The five modes are refined by the 27 identity sheets. Only presentation
  * roles are styled here: never series paint, paths, domains or SVG transforms.
- * Framing leaves native print/high-contrast alternatives and the unselected
- * application unchanged; owned interactive legends stay readable in both modes.
+ * Keeping this screen-only also leaves native print/high-contrast alternatives
+ * and the unselected application completely unchanged.
  */
-@media screen {
-  button[data-chart-legend-label][data-series-hidden="true"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
-    --app-chart-hidden-legend-opacity: 1;
-  }
-}
-
 @media screen and (forced-colors: none) {
   /* Final-target ownership keeps nested complete/incomplete previews isolated. */
   :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-design-owner]) {

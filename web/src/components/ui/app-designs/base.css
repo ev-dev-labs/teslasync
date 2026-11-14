@@ -102,6 +102,10 @@
     --app-phone-tab-line-height: calc(var(--app-body-size) * 1.25);
   }
 
+  [data-app-design-owner]:where(button[data-chart-legend-label][data-series-hidden="true"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *)) {
+    --app-chart-hidden-legend-opacity: 1;
+  }
+
   [data-app-design-owner]:where(
       [data-app-part~="shell-main"], [data-app-part~="workspace-header"],
       [data-app-part~="navigation"], [data-app-part~="page"],
