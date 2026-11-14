@@ -772,6 +772,51 @@ Both initial viewport images were inspected. The explanatory copy is below
 the initial viewport, and the two-row 360px navigation still takes substantial
 space; these checks do not establish coverage of all interaction states.
 
+A screenshot-free Classic diagnostic checked the 2FA, privacy, sessions,
+data-quality and feature-flags routes at both phone widths:
+
+```text
+10 passed (1.8m)
+```
+
+This run checked scoped touch targets, text size and overflow, but did not
+perform a contrast or visual review. A broader phone diagnostic excluded the
+known protected dashboard and `period-compare` and stopped at its three-failure
+limit:
+
+```text
+3 failed, 1 interrupted, 402 did not run, 90 passed (12.2m)
+```
+
+At 360px, Quick Stats had four 14px body readings; Range Buffer and Redis
+Signals had horizontally scrolling data grids. Classic now uses the phone
+body-size token for those readings. Range Buffer and Redis Signals use the
+shared mobile grid, with their original columns available in Quick View.
+Redis coordinate summaries stay masked until explicitly revealed.
+
+The three repaired routes passed screenshot-free checks at 360, 390 and
+430px in both color modes (`18 passed`). Focused mobile and privacy unit
+tests on the current source report `24 passed`. A later interactive browser
+run reported `10 passed, 2 failed`: one mock request remained pending and
+one page lost its execution context. Both failed cases passed individually
+on retry. After correlating client cancellation with the failed request, a
+screenshot-free run against the refreshed Docker image covered both routes at
+360, 390 and 430px in both modes:
+
+```text
+12 passed (4.0m)
+MOBILE_INTERACTION_FINAL_EXIT=0
+```
+
+These are interaction and geometry checks, not a visual or contrast pass.
+
+The historical preservation checks now verify the exact touch-token and
+accessible chart-brush successors before restoring their pinned predecessor
+bytes. Their targeted tests report `778 passed`. The independent native-card
+and dialog-consumer contracts report `59 passed`, and pack/native surface
+preservation reports `222 passed`. These checks do not replace the missing
+full unit suite or visual review.
+
 The capture runner can now select every canonical pack with `--pack all`
 and optionally set `--workers`; its focused safety tests report `5 passed`.
 Explicit `--exclude-pages` values are validated against the route registry
@@ -786,7 +831,11 @@ upstream system health endpoint reports the Tesla API component unhealthy; the
 preview does not change or repair the backend. A startup-readiness race
 triggered a rollback on the first replacement attempt; waiting for Docker
 health succeeded on the second. The latest image was independently
-preflighted and deployed with the previous preview retained for rollback.
+preflighted and deployed with the previous preview retained for rollback. Its
+production service worker was active and controlled a reload with zero page
+errors. Two additional screenshot-free Playwright checks against that image
+passed: dashboard layout labels across all 27 packs at 360, 390, and 430px,
+and the Energy chart's forced-colors mobile fallback at the same widths.
 
 Against the running image, the isolated gallery test checked all 27
 thumbnails at 360, 430 and 1440px, then selected and reloaded a mocked
@@ -798,15 +847,72 @@ copied from that image. Neither test started a server or took screenshots:
 1 passed (15.0s)
 ```
 
+The same screenshot-free gallery and delayed-preference startup checks on
+the refreshed `67c12d5f88dc` image reported:
+
+```text
+1 passed (14.8s)
+DOCKER_GALLERY_EXIT=0
+1 passed (9.3s)
+DOCKER_STARTUP_EXIT=0
+```
+
 The isolated snapshot's full Vitest run was stopped in error while it was
 still producing output. It did not finish and is not a full-suite result. A
-new full Vitest run is executing against the current source.
+new current-source run emitted at least 147 failure markers before being
+stopped for diagnosis and subsequent source fixes. It did not finish or
+produce a failure summary. A targeted follow-up for three nearby test files
+reported `725 passed`, so those files do not identify the failures.
 
 The current-source frontend checks completed with:
 
 ```text
 TSC_EXIT=0
 LINT_EXIT=0
+```
+
+The refreshed Docker preview was built from production source
+`67c12d5f88dc` and preflighted on a separate loopback port before replacing
+the task-owned preview. The previous container was retained for rollback.
+The image build, full lint before subsequent test-harness-only edits,
+candidate browser and proxy checks reported:
+
+```text
+DOCKER_BUILD_EXIT=0
+FULL_LINT_EXIT=0
+CANDIDATE_CONTAINER=running healthy
+INDEX_HTTP=200
+ASSET_HTTP=200
+BROWSER_HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0
+PORT_3121_HEALTH_HTTP=503 AUTH_HTTP=200
+PORT_8080_HEALTH_HTTP=503 AUTH_HTTP=200
+PREVIEW=running healthy
+WIDTH=360 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+WIDTH=430 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+WIDTH=1440 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+```
+
+The backend's existing health failure is not caused or repaired by this
+frontend preview. The candidate container was removed after the replacement
+became healthy; the preview remains available on `127.0.0.1:3120`. These
+width checks cover the live preview's initial route only.
+
+The browser fixture previously left a canceled startup auth-mode request
+pending when Playwright never invoked its route. Its accounting now requires
+both the matching client abort signal and a matching aborted network request;
+other pending or blocked requests still fail the strict completion guard. The
+focused contract verifies that unknown paths, extra query parameters,
+off-origin requests, other methods, and requests blocked before a client abort
+remain incomplete:
+
+```text
+1 passed (8.2s)
+4 passed (9.6s)
+6 passed (33.4s)
+HARNESS_CONTRACT_EXIT=0
+NETWORK_HARNESS_EXIT=0
+E2E_HARNESS_ESLINT_EXIT=0
+E2E_HARNESS_TYPECHECK_EXIT=0
 ```
 
 The API Logs engineering audit reported zero violations in each of its six

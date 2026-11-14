@@ -816,7 +816,7 @@ export interface ApiRequestRecord {
   origin: string;
   path: string;
   resourceType: string;
-  disposition: 'pending' | 'fulfilled' | 'continued' | 'aborted';
+  disposition: 'pending' | 'fulfilled' | 'continued' | 'aborted' | 'cancelled';
 }
 
 const ALLOWED_BEACON_PATHS = ['/api/v1/web-vitals', '/api/v1/web-errors'] as const;
@@ -1078,8 +1078,71 @@ export async function installApiMocks(
     navPins: [],
     nextNavPinId: 1,
   };
+  const clientCancellations = new Set<string>();
+  const failedCancellations = new Map<string, ApiRequestRecord>();
+  await page.exposeBinding('__teslasyncE2EAuthModeCancelled', (_source, id: string) => {
+    clientCancellations.add(id);
+    const record = failedCancellations.get(id);
+    if (record?.disposition === 'pending') record.disposition = 'cancelled';
+  });
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch;
+    let sequence = 0;
+    window.fetch = function (input, init) {
+      const request = input instanceof Request ? input : undefined;
+      let url: URL;
+      try {
+        url = new URL(request?.url ?? input.toString(), window.location.href);
+      } catch {
+        return originalFetch.call(window, input, init);
+      }
+      const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
+      const signal = init?.signal === undefined ? request?.signal : init.signal;
+      if (!signal || method !== 'GET' || url.origin !== window.location.origin
+        || url.pathname !== '/api/v1/system/auth-mode' || url.search || url.hash) {
+        return originalFetch.call(window, input, init);
+      }
+      const id = `${Date.now()}-${Math.random()}-${sequence++}`;
+      const headers = new Headers(init?.headers ?? request?.headers);
+      headers.set('x-teslasync-e2e-request-id', id);
+      let pending = true;
+      const report = () => {
+        if (!pending) return;
+        const notify = (window as Window & {
+          __teslasyncE2EAuthModeCancelled?: (requestId: string) => Promise<void>;
+        }).__teslasyncE2EAuthModeCancelled;
+        if (notify) void notify(id).catch(() => undefined);
+      };
+      signal.addEventListener('abort', report, { once: true });
+      const result = originalFetch.call(window, input, { ...init, headers });
+      const finish = () => {
+        pending = false;
+        signal.removeEventListener('abort', report);
+      };
+      void result.then(finish, finish);
+      if (signal.aborted) report();
+      return result;
+    };
+  });
   page.on('request', (request) => {
     requestRecord(controller, request);
+  });
+  page.on('requestfailed', request => {
+    const record = controller.requestIndex.get(request);
+    const url = new URL(request.url());
+    const id = request.headers()['x-teslasync-e2e-request-id'];
+    // Both the client abort signal and the matching network failure are required.
+    if (record?.disposition === 'pending'
+      && id
+      && request.failure()?.errorText === 'net::ERR_ABORTED'
+      && request.method() === 'GET'
+      && request.resourceType() === 'fetch'
+      && url.origin === new URL(page.url()).origin
+      && url.pathname === '/api/v1/system/auth-mode'
+      && !url.search && !url.hash) {
+      failedCancellations.set(id, record);
+      if (clientCancellations.has(id)) record.disposition = 'cancelled';
+    }
   });
   await page.route('**/api/**', (route) =>
     fulfill(route, scenario, controller, theme, density, sseServer.origin, accentTheme));

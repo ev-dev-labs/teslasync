@@ -8,7 +8,7 @@ import { APPLICATION_DESIGNS, APP_DESIGN_PACK_FILES, getAppDesignAttributes } fr
 import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
+import { assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, resolveApiFixture, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -69,6 +69,61 @@ test('harness does not accept continuously active mock requests', async ({ page 
     await expect(waitForHarnessReady(page, controller)).rejects.toThrow('mock API requests did not settle');
   } finally {
     clearInterval(recurring);
+  }
+});
+
+test('harness distinguishes a cancelled startup read from unreviewed API requests', async ({ page }) => {
+  await page.route('http://127.0.0.1:54321/', route =>
+    route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
+  const controller = await installApiMocks(page);
+  if (!controller) throw new Error('Mock API is required');
+  await page.route('**/api/**', async route => {
+    if (route.request().headers()['x-test-wait'] === '1') {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await route.fulfill({ json: { mode: 'open' } }).catch(() => undefined);
+    } else {
+      await route.abort('aborted');
+    }
+  });
+  try {
+    await page.goto('http://127.0.0.1:54321/');
+    await page.evaluate(async () => {
+      const cancelled = new AbortController();
+      const stillActive = new AbortController();
+      const cancelledAfterFailure = new AbortController();
+      const delayed = fetch('/api/v1/system/auth-mode', {
+        signal: cancelled.signal, headers: { 'x-test-wait': '1' },
+      }).catch(() => undefined);
+      const blocked = fetch('/api/v1/system/auth-mode', { signal: cancelledAfterFailure.signal })
+        .catch(() => undefined).then(() => cancelledAfterFailure.abort());
+      setTimeout(() => cancelled.abort(), 100);
+      await Promise.all([
+        delayed, blocked,
+        fetch('/api/v1/system/auth-mode').catch(() => undefined),
+        fetch('/api/v1/system/auth-mode', { signal: stillActive.signal }).catch(() => undefined),
+        fetch('/api/v1/system/auth-mode?unreviewed=1').catch(() => undefined),
+        fetch('/api/v1/system/auth-mode', { method: 'POST' }).catch(() => undefined),
+        fetch('/api/v1/unreviewed').catch(() => undefined),
+        fetch('http://127.0.0.1:54322/api/v1/system/auth-mode').catch(() => undefined),
+      ]);
+    });
+    await expect.poll(() => controller.requests.length).toBe(8);
+    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(1);
+    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(7);
+    expect(controller.requests.find(record => record.disposition === 'cancelled')).toMatchObject({
+      method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch',
+    });
+    expect(await page.evaluate(async () => {
+      try {
+        await fetch('http://[').catch(() => undefined);
+        return false;
+      } catch {
+        return true;
+      }
+    })).toBe(false);
+    await expect(assertMockApiComplete(page, controller)).rejects.toThrow('API requests escaped or were blocked by Playwright routing');
+  } finally {
+    await closeMockApiFixtures();
   }
 });
 
