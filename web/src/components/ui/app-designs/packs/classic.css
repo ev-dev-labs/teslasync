@@ -465,6 +465,15 @@
   ):not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     font-size: var(--app-body-size);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-widget-pack="classic"] .widget-detail-list .text-xs:not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
+    [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-classic"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-role="bottom-tab-bar"]:where([data-app-design-owner~="pack-classic"]) {
     gap: 0;
     padding-block-start: 0;

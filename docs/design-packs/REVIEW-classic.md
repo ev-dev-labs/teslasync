@@ -897,3 +897,12 @@ four updated images were inspected:
 ```text
 4 passed (1.8m)
 ```
+
+## Phone detail-text follow-up
+
+The Recent drives detail-list context measured 10.2px at font scale 0.85
+and 12px at scale 1. Classic now applies the phone body token to ordinary
+owned detail-list text, excluding protected and specialized surfaces. A
+mocked real-dashboard check covers both themes and 360/390/430px at three
+font scales; see `DECISIONS.md` for results. Other routes, protected twins
+and the existing visual limitations remain unverified.
