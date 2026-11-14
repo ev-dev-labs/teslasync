@@ -99,6 +99,14 @@
     border-end-start-radius: var(--radius-sm);
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v6"]) {
+    border-color: var(--border-default);
+    border-block-end-width: 2px;
+    border-start-start-radius: var(--radius-xl);
+    border-start-end-radius: var(--radius-sm);
+    border-end-end-radius: var(--radius-xl);
+    border-end-start-radius: var(--radius-sm);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-v6"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));

@@ -112,6 +112,11 @@
     border-radius: var(--app-card-radius, 0px);
     box-shadow: var(--app-card-shadow, var(--elevation-0));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="bauhaus"] [data-app-part~="card"][data-surface-variant="standalone"][data-app-metric="headline"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-bauhaus"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-card-radius, 0px);
+    box-shadow: var(--app-card-shadow, var(--elevation-0));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="bauhaus"] [data-card-header]:not(:where(
     [data-widget-pack], [data-widget-pack] *, [data-app-part~="conversation"] *, [data-surface-variant="embedded"] *,
     [data-operational-brief-surface="embedded"] *,

@@ -84,6 +84,11 @@
     background-color: var(--app-surface-panel, var(--surface-1));
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-observatory"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-md));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric-grid"]:not([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));

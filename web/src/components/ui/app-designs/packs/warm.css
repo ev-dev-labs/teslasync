@@ -116,6 +116,10 @@
     border-radius: var(--app-card-radius, 1.25rem) var(--app-card-radius, 1.25rem) max(var(--radius-lg, 0.625rem), 1rem) max(var(--radius-lg, 0.625rem), 1rem);
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-app-part~="card"][data-surface-variant="standalone"][data-app-metric="headline"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-warm"]) {
+    border-radius: var(--app-card-radius, var(--radius-xl));
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:is([class~="bg-[var(--panel-bg)]"], [data-operational-brief-surface="standalone"][class~="bg-[var(--surface-1)]"]):not(:where([data-app-tone], [data-app-tone] *, [data-app-metric], [data-app-metric] *, [data-app-part~="metric-grid"] *, [data-app-card-kind="conversation"], [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *, [data-surface-variant="embedded"] *, [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-warm"]) {
     background-color: var(--app-surface-panel, var(--panel-bg));
   }

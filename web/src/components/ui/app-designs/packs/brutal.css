@@ -96,6 +96,11 @@
     border-radius: 0;
     box-shadow: 0 4px 0 var(--text-primary);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="brutal"] [data-app-part~="card"][data-surface-variant="standalone"][data-app-metric="headline"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-surface-variant="embedded"] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-brutal"]) {
+    border: 2px solid var(--text-primary);
+    border-radius: 0;
+    box-shadow: 0 4px 0 var(--text-primary);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="brutal"] [data-app-part~="panel"][data-surface-variant="standalone"].dashboard-widget-panel:not(:where([data-app-tone], [data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-brutal"]) {
     box-shadow: 0 2px 0 var(--text-primary);
   }

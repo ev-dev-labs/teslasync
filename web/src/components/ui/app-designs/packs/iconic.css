@@ -84,6 +84,10 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"][class~="rounded-panel"]:where([data-app-design-owner~="pack-v5"]) {
     border-radius: var(--app-card-radius, var(--radius-xl));
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-v5"]) {
+    border-color: var(--border-default);
+    border-radius: var(--app-card-radius, var(--radius-xl));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] :where([data-app-part~="panel"], [data-app-part~="card"], [data-app-part~="metric"])[data-surface-variant="standalone"][class~="shadow-panel"]:not(:hover):where([data-app-design-owner~="pack-v5"]) {
     box-shadow: var(--app-card-shadow, var(--elevation-1));
   }

@@ -126,6 +126,14 @@
     background-color: var(--app-surface-panel, var(--panel-bg));
     box-shadow: 0 0.25rem 0 var(--border-default);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="memphis"] [data-app-part~="dialog"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"][class~="border-[var(--border-default)]"]:not(:where([data-tone], [data-app-tone], [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *, [data-mobile-table] *)):where([data-app-design-owner~="pack-memphis"]) {
+    border-color: var(--border-default);
+    border-start-start-radius: var(--radius-xl);
+    border-start-end-radius: var(--radius-sm);
+    border-end-end-radius: var(--radius-xl);
+    border-end-start-radius: var(--radius-sm);
+    box-shadow: var(--app-card-shadow, var(--elevation-1));
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="memphis"] :where([data-app-part~="panel"], [data-app-part~="card"])[data-surface-variant="standalone"]:is([class~="bg-[var(--panel-bg)]"], [data-operational-brief-surface="standalone"][class~="bg-[var(--surface-1)]"]):nth-child(even):not(:where(
     [data-app-metric], [data-app-tone], [data-tone], [data-app-part~="feedback"], [data-app-part~="chart"],
     [data-app-card-kind="conversation"], [data-app-card-kind="record"], [data-app-panel-kind="code"],
