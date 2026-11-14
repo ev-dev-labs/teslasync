@@ -994,6 +994,21 @@ LATE_MOBILE_RECHECK_EXIT=0
 That command used `DESIGN_PACK_CHECK_ONLY=1` and did not verify contrast or
 save or inspect screenshots.
 
+The remaining late Classic routes were checked without screenshots or
+contrast auditing:
+
+```text
+> node scripts\capture-design-packs.mjs --pack classic --pages share-card,signal-change-points,signal-correlation,signal-deadband,signal-diff,signal-entropy,vehicles,weekly-digest,what-if,vehicle-systems--software --viewports phone-360,phone-430 --base-url http://127.0.0.1:3120 --workers 2
+20 passed (1.9m)
+LATE_MOBILE_REMAINING_EXIT=0
+```
+
+In an isolated Command History experiment, the existing SVG axis labels
+measured 11px. Forcing 16px placed the top tick outside the SVG at each of
+360, 390 and 430px, even though adjacent tick labels did not overlap. The
+global override was not applied; a safe solution must account for chart
+geometry and remains skipped rather than treating small labels as resolved.
+
 At the final-gate revisit, a screenshot-free Classic 360px check of
 `/period-compare` again failed because the mocked requests did not become
 quiet (`PERIOD_REVISIT_EXIT=1`). The pre-existing request churn remains
