@@ -6,5 +6,5 @@
 - Mocked Recent drives context and Command History axes have targeted all-27-pack phone checks; other mobile coverage remains incomplete.
 - The eight Vitest shards and merged coverage passed in CI on `ced744f586c9`; later changes have focused local coverage.
 - Draft PR #259 targets `feature/app-design-themes`; its checks are the source for current CI status.
-- Targeted Firefox/WebKit regressions pass in an isolated Linux container; broader CI is pending.
-- The Docker preview is healthy at `localhost:3120`; the existing backend health still reports Tesla API degraded.
+- Focused Firefox/WebKit regressions, including Command History axes, pass in an isolated Linux container; broader CI is pending.
+- Docker preview `632cd7218af7` is healthy at `localhost:3120`; existing backend health still reports Tesla API degraded.

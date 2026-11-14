@@ -1592,6 +1592,12 @@ npx playwright test --config=playwright.v6-mobile.local.config.ts --project=loca
   8 passed (1.9m)
 EDGE_DETAIL_AXIS_EXIT=0
 
+npx playwright test widget-design-packs.app.spec.ts --project=app-design-firefox --project=app-design-webkit --grep="Command History" --workers=1 --reporter=line
+  16 passed (13.0m)
+BROWSER_PROBE_HTTP=200
+BROWSER_PROBE_API_ESCAPE=0
+FIREFOX_WEBKIT_DETAIL_AXIS_EXIT=0
+
 npx vitest run src\features\system\pages\CommandHistoryPage.test.tsx --reporter=dot --maxWorkers=1
   Tests 26 passed (26)
 POST_DETAIL_COMMAND_VITEST_EXIT=0
@@ -1618,6 +1624,43 @@ paths. The Vitest run emitted the existing JSDOM/Recharts zero-size warnings.
 The Edge axis cases cover recent and year-spanning dates, 360/390/430px,
 three scales and both themes in Classic, plus all 27 packs at 360/430px,
 scale 1.35 and both themes. They also check a German/Georgia preference and
-desktop/unowned preservation. The broader Firefox/WebKit run is pending.
+desktop/unowned preservation. The Firefox/WebKit cases ran against isolated
+production assets in a Linux container with no external network; the local
+asset server reported no unexpected API traffic.
 These focused checks do not establish full-page mobile, contrast, visual or
 cross-pack acceptance.
+
+The committed frontend image was built from `632cd7218af7` and tested before
+replacing the task-owned preview. The previous preview container is retained
+stopped for rollback. The candidate used port 3122 and the refreshed preview
+uses port 3120; neither browser run saved screenshots.
+
+```text
+docker build --build-arg VITE_GIT_SHA=632cd7218af7420127b550a177e545ab62b81cb0 --tag teslasync-web:design-packs-v2-632cd7218af7 --file <committed-context>\Dockerfile.web <committed-context>
+PREVIEW_DETAIL_BUILD_EXIT=0
+
+npx playwright test --config=playwright.v6-mobile.local.config.ts --project=local-v6 --grep="live application thumbnails|all pack dashboard layout names|Command History" --workers=1
+  10 passed (1.9m)
+CANDIDATE_BROWSER_EXIT=0
+
+npx playwright test --config=playwright.v6-mobile.local.config.ts --project=local-v6 --grep="applies the verified pack before the shell appears and persists on reload" --workers=1
+  1 passed (10.9s)
+CANDIDATE_STARTUP_EXIT=0
+
+npx playwright test --config=playwright.v6-mobile.local.config.ts --project=local-v6 --grep="live application thumbnails|Command History phone axes remain legible and contained in dark \(year-boundary, custom font and locale\)" --workers=1
+  2 passed (25.4s)
+REFRESHED_PREVIEW_BROWSER_EXIT=0
+
+PREVIEW_HEALTH=healthy
+PREVIEW_INDEX=200
+/assets/index-DSKDPHLK.js HTTP=200
+/healthz HTTP=200
+/api/v1/system/auth-mode HTTP=200
+/api/v1/system/version HTTP=200
+/api/v1/system/health HTTP=503
+BACKEND_SYSTEM_HEALTH_HTTP=503
+```
+
+The startup check used assets extracted from the candidate image; all browser
+checks used synthetic API fixtures. The system health 503 is also present on
+the existing backend and reports the Tesla API component degraded.
