@@ -93,3 +93,10 @@ Terminal's SHA-256 matched the working stylesheet. A combined native
 composition, ordered-step and DataTable selection reported 3 files passed,
 35 tests passed and 165 skipped. These checks do not resolve the visual or
 contrast findings above.
+
+## Phone metric follow-up
+
+Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
+The owned ordinary headline context and units now use the phone body token;
+protected and specialized surfaces remain excluded. See `DECISIONS.md` for
+the screenshot-free regression results and remaining limitations.

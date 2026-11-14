@@ -28,7 +28,9 @@ images were inspected; its phone cases failed, so it is not a passing capture.
    at 12px. Please review their shared/widget mobile typography with the
    16px body requirement, retaining real metric and link content. Relevant
    sources include `RecentDrivesWidget.tsx`, `shared/WidgetBigNumber.tsx`, and
-   `FleetPostureWidget.tsx`.
+   `FleetPostureWidget.tsx`. The ordinary headline context and unit now have
+   a pack-owned phone treatment and focused regression; the links still need
+   independent verification.
 3. **Bottom navigation diagnostic:** all five parent buttons were reported
    at 11px, while shared `mobile.css` sets the child `.sidenav-tab-label` to
    `--app-body-size` (at least 16px). Please reconcile the parent and rendered

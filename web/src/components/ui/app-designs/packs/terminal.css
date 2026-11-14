@@ -334,6 +334,18 @@
     border-color: var(--control-border-hover);
   }
 }
+@media screen and (max-width: 767px) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-widget-pack="terminal"] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
+    [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,
+    [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *
+  )):where([data-app-design-owner~="pack-terminal"]) {
+    font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
+    line-height: var(--app-body-leading, 1.4);
+  }
+}
+
 @media screen and (forced-colors: none) and (max-width: 767px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="page-actions"]:where([data-app-design-owner~="pack-terminal"]) {
     inline-size: 100%;
