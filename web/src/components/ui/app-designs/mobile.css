@@ -369,7 +369,7 @@
 @media screen and (max-width: 1023px) {
   [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(var(--app-brief-column-min-width, 9rem) * max(1, var(--font-scale, 1))))), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(max(var(--app-brief-column-min-width, 9rem), var(--app-brief-content-min-width, 0px)) * max(1, var(--font-scale, 1))))), 1fr));
     gap: 0 var(--density-gap);
   }
 

@@ -319,7 +319,7 @@
 @media screen and (max-width: 1023px) {
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(var(--app-brief-column-min-width) * max(1, var(--font-scale, 1))))), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(calc((100% - var(--density-gap)) / 2), calc(max(var(--app-brief-column-min-width), var(--app-brief-content-min-width, 0px)) * max(1, var(--font-scale, 1))))), 1fr));
     gap: 0 var(--density-gap);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-operational-metric-list][data-columns="1"]:not(:where([data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-classic"]) {

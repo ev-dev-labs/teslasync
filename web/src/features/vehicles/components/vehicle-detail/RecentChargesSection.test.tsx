@@ -31,9 +31,10 @@
  *     plain navigation link, so a bare render() is the full surface.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within, cleanup } from '@testing-library/react'
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ChargingSession } from '@/api/types'
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils'
 
 // jsdom lacks matchMedia; some shared chrome reads it at render. Install a
 // benign stub before anything evaluates.
@@ -202,6 +203,28 @@ describe('RecentChargesSection — chrome + a11y', () => {
 })
 
 describe('RecentChargesSection — populated table', () => {
+  it('keeps all formatted session fields available in the phone grid and quick view', () => {
+    const bounds = forceMobileDataTables()
+    try {
+      renderSection([makeSession()])
+      expect(screen.queryByRole('table')).not.toBeInTheDocument()
+      const grid = screen.getByRole('group', { name: 'vehicles:detail-recent-charges' })
+      for (const value of ['42.00 kWh', '1h 30m', '$7.50', '20% → 80%']) {
+        expect(within(grid).getByText(value)).toBeInTheDocument()
+      }
+      fireEvent.click(within(grid).getByRole('button', { name: 'Quick view' }))
+      const detail = screen.getByRole('dialog')
+      for (const label of ['Date', 'Energy', 'Duration', 'Cost', 'Battery']) {
+        expect(within(detail).getByText(label)).toBeInTheDocument()
+      }
+      for (const value of ['42.00 kWh', '1h 30m', '$7.50', '20% → 80%']) {
+        expect(within(detail).getByText(value)).toBeInTheDocument()
+      }
+    } finally {
+      bounds.mockRestore()
+    }
+  })
+
   it('renders the five column headers through i18n keys with English fallbacks', () => {
     renderSection([makeSession()])
     expect(screen.getByRole('table')).toBeInTheDocument()

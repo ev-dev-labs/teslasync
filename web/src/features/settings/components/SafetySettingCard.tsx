@@ -95,6 +95,7 @@ export function SafetySettingCard({
         href={docsHref}
         target="_blank"
         rel="noreferrer"
+        data-app-action-link=""
         aria-label={docsAriaLabel}
         className={cn(
           'inline-flex items-center gap-1 self-start rounded hover:underline',

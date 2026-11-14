@@ -89,10 +89,10 @@ export function TripShareRow({
               data-app-metric="inline"
               data-app-metric-kind="trip-distance"
               as="span"
-              size="sm"
+              size="base"
               weight="medium"
               color="primary"
-              className="inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1 md:text-sm"
             >
               <MapPin className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />
               <span data-app-part="metric-reading metric-value">{formatDistance(trip.total_distance_m)}</span>
@@ -102,9 +102,9 @@ export function TripShareRow({
               data-app-metric="inline"
               data-app-metric-kind="trip-energy"
               as="span"
-              size="sm"
+              size="base"
               weight="medium"
-              className="inline-flex items-center gap-1 text-amber-300"
+              className="inline-flex items-center gap-1 text-amber-300 md:text-sm"
             >
               <Zap className="h-3.5 w-3.5" aria-hidden="true" />
               <span data-app-part="metric-reading metric-value">{formatEnergy(trip.total_energy_wh)}</span>
