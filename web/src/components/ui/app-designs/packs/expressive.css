@@ -349,6 +349,7 @@
     border-inline-start-width: 0;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="page-header"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *):where([data-app-design-owner~="pack-v6"]) {
+    --app-header-title-min-width: 16rem;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -358,6 +359,9 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="page-header"] > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v6"]) {
     flex: 1 1 12rem;
     padding-block: 0;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-app-part~="page-header"]:not(:where([data-presentation-mode="report"], [data-presentation-mode="kiosk"]) *) > [data-app-part~="page-title"]:where([data-app-design-owner~="pack-v6"]) {
+    flex: 1 1 min(100%, calc(var(--app-header-title-min-width) * max(1, var(--font-scale, 1))));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-action-zone="context"] :has(> [aria-haspopup="menu"] > span.truncate):where([data-app-design-owner~="pack-v6"]),
   :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-action-zone="context"] [aria-haspopup="menu"]:has(> span.truncate):where([data-app-design-owner~="pack-v6"]) {

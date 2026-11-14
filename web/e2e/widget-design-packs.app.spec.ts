@@ -85,6 +85,80 @@ for (const mode of ['dark', 'light'] as const) {
   });
 }
 
+for (const mode of ['dark', 'light'] as const) {
+  test(`Expressive Form phone headings have room for short titles in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'v6';
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin);
+    await installSpecializedReviewSources(page, mocks, mode);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/drives'], process.env.DESIGN_PACK_DIST_DIR);
+    try {
+      await page.goto('/drives');
+      await waitForHarnessReady(page, mocks);
+      await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'v6');
+      const heading = page.getByRole('heading', { name: 'Drive history', exact: true });
+      const help = page.getByRole('button', { name: 'More info: Drive history', exact: true });
+      await expect(heading).toBeVisible();
+      for (const forcedColors of ['none', 'active'] as const) {
+        await page.emulateMedia({ forcedColors });
+        for (const width of [360, 390, 430, 768, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          for (const scale of [0.85, 1, 1.35]) {
+            await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+            const geometry = await heading.evaluate(element => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              const lines = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length;
+              const title = element.closest('[data-app-part~="page-title"]')?.getBoundingClientRect();
+              const header = element.closest('[data-app-part~="page-header"]')?.getBoundingClientRect();
+              const actions = element.closest('[data-app-part~="page-header"]')
+                ?.querySelector('[data-app-part~="page-actions"]')?.getBoundingClientRect();
+              if (!title || !header || !actions) throw new Error('Page heading geometry is missing');
+              return {
+                lines,
+                titleWithinHeader: title.left >= header.left - 1 && title.right <= header.right + 1,
+                actionsWithinHeader: actions.left >= header.left - 1 && actions.right <= header.right + 1,
+                overlapping: title.left < actions.right - 1 && title.right > actions.left + 1
+                  && title.top < actions.bottom - 1 && title.bottom > actions.top + 1,
+                overflow: element.scrollWidth - element.clientWidth,
+              };
+            });
+            const label = `${mode} ${forcedColors} ${width}px scale ${scale}`;
+            if (scale === 1) expect(geometry.lines, `${label} title lines`).toBe(1);
+            expect(geometry.titleWithinHeader, `${label} title containment`).toBe(true);
+            expect(geometry.actionsWithinHeader, `${label} action containment`).toBe(true);
+            expect(geometry.overlapping, `${label} overlapping actions`).toBe(false);
+            expect(geometry.overflow, `${label} title overflow`).toBeLessThanOrEqual(1);
+            if (width < 768) {
+              const helpSize = await help.boundingBox();
+              expect(helpSize && Math.min(helpSize.width, helpSize.height), `${label} help target`).toBeGreaterThanOrEqual(44);
+            }
+            expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${label} page overflow`).toBeLessThanOrEqual(1);
+          }
+        }
+      }
+      await page.emulateMedia({ forcedColors: 'none' });
+      await page.setViewportSize({ width: 390, height: 900 });
+      const container = page.locator('[data-app-part~="page"]').first();
+      const header = page.locator('[data-app-part~="page-header"]').first();
+      for (const presentation of ['report', 'kiosk']) {
+        await container.evaluate((element, value) => element.setAttribute('data-presentation-mode', value), presentation);
+        const titleMinimum = await header.evaluate(element =>
+          getComputedStyle(element).getPropertyValue('--app-header-title-min-width').trim());
+        expect(titleMinimum, `${mode} ${presentation} title token`).toBe('12rem');
+      }
+      await container.evaluate(element => element.removeAttribute('data-presentation-mode'));
+      await assertMockApiComplete(page, mocks);
+    } finally {
+      await closeMockApiFixtures();
+    }
+  });
+}
+
 test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const origin = testInfo.project.use.baseURL;

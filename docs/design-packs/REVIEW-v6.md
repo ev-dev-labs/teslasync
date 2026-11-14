@@ -216,3 +216,44 @@ with the repaired v5, v6 and Atlas stylesheets: **exit 0**. All three SHA-256
 hashes matched the working files. The combined native-composition, ordered-step
 and DataTable contracts reported **3 files passed, 200 tests passed**. This
 does not establish the post-capture appearance or contrast.
+
+## Phone heading follow-up
+
+The saved 390px Drives image shows the short page title wrapping beside the
+action rail. A real-route, screenshot-free regression reproduced two title
+lines at 390px in both dark and light modes. The pack's phone heading now
+reserves a larger, font-scale-aware title width, allowing the action rail to
+wrap instead of squeezing the title.
+
+The same browser check then passed at 360/390/430/768/1440px, scales
+0.85/1/1.35, both modes and normal/forced colors. It checked containment,
+overlap, page overflow and the phone help target; the short title was one
+line at the default scale. Report and kiosk title tokens stayed at their
+existing value. The separate dashboard layout-name check also passed across
+all 27 packs at the three phone widths:
+
+```text
+3 passed (1.0m)
+V6_HEADING_FINAL_EXIT=0
+```
+
+No new screenshots were taken. The saved images predate this change, so the
+updated layout and its extra action-row space have not been visually approved.
+
+```text
+Test Files  3 passed | 1 skipped (4)
+     Tests  9 passed | 204 skipped (213)
+V6_UNIT_FINAL_EXIT=0
+Test Files  2 passed (2)
+     Tests  43 passed (43)
+V6_OWNER_CONTRACT_EXIT=0
+FRONTEND_TSC_EXIT=0
+E2E_TSC_FINAL_EXIT=0
+E2E_ESLINT_FINAL_EXIT=0
+ISOLATED_BUILD_EXIT=0
+V6_AUDIT_EXIT=0
+```
+
+The isolated Vite build included all four normal postbuild checks. The pack's
+engineering audit reported zero in all six pattern categories and `TypeScript
+passes`; those pattern checks do not certify CSS contrast.
