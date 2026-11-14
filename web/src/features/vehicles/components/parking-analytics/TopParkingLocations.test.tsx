@@ -360,6 +360,43 @@ describe('OvernightParkingContext numeric fidelity', () => {
 });
 
 describe('TopParkingLocations value filters', () => {
+  it('retains the full location, censoring and dwell details in the phone presentation', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    const address = '123 Long Destination Avenue, Building Seven, Springfield, California 90210';
+    const value = summary();
+    value.locations = [{ location: address, stints: 2, totalMs: 7_200_000, share: 0.75 }];
+    value.stints = [{
+      sourceDriveId: 7, location: address, startMs: 0, endMs: 7_200_000,
+      durationMs: 7_200_000, ongoing: true, rightCensored: true,
+    }];
+    try {
+      render(<TopParkingLocations summary={value} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = document.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(mobile).toHaveTextContent(address);
+      expect(mobile).toHaveTextContent('Right-censored');
+      expect(mobile).toHaveTextContent('Observed minimum');
+      expect(mobile).toHaveTextContent('7200 s');
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Quick view' }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText(address)).not.toHaveClass('truncate');
+      expect(dialog).toHaveTextContent('Right-censored');
+      expect(dialog).toHaveTextContent('Observed minimum');
+      expect(dialog).toHaveTextContent('75.00%');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('filters all loaded location groups before client pagination', () => {
     render(<TopParkingLocations summary={summary()} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Stints filter' }));

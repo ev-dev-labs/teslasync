@@ -39,7 +39,9 @@ colors come from the existing theme and chart palette.
 On phones, chart fallback tables use the shared stacked-table presentation
 with their original captions, headings, and localized cell labels. Explanatory
 copy immediately before or after an operational brief uses `--app-body-size`;
-compact metadata inside the brief keeps its existing typography.
+chart subtitles use the same body-size token, while compact metadata inside
+the brief keeps its existing typography. Opted-in evidence tables use the
+shared mobile grid and retain their original columns in Quick View.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,
@@ -112,6 +114,13 @@ $env:DESIGN_PACK_CAPTURE_BASE_URL='http://127.0.0.1:5173'
 node scripts\capture-design-packs.mjs --pack classic --pages dashboard,drives,energy --viewports phone-390,desktop --base-url $env:DESIGN_PACK_CAPTURE_BASE_URL
 ```
 
+For the eligible final-matrix routes, `--pack all --pages all` traverses the
+canonical pack registry and the capture route list. `--workers 4` optionally
+limits parallel Playwright workers; the default is one. Standalone routes
+listed in `DECISIONS.md` are not included in that route list. Use
+`--exclude-pages period-compare` only when intentionally recording that
+previously blocked route as an omission; exclusions do not count as passes.
+
 Images are written under `shots\<pack>\<viewport>\<page>.png`. A saved image
 does not imply that the associated diagnostics passed. Set the example origin
 to the actual already-running server; the runner does not start it. Set
@@ -120,7 +129,8 @@ when the default paths already contain review evidence. Optionally set
 `DESIGN_PACK_DIST_DIR` to a verified production build's absolute `dist` path
 to route its index and assets through the same local origin; fixture and
 diagnostic checks still run normally. Set `DESIGN_PACK_SKIP_EXISTING=1` to
-resume without replacing existing viewport images. Skipped images are not
-passing results; retain and inspect their original diagnostics separately.
+resume without replacing existing viewport images; diagnostics still run
+against the current build. A preserved image may depict an older build even
+when the current diagnostics pass, so it remains separate visual evidence.
 Use `DESIGN_PACK_CHECK_ONLY=1` to rerun diagnostics without taking, deleting,
 or replacing screenshots.

@@ -7,6 +7,8 @@
 
 export type NeonColor = 'cyan' | 'green' | 'red' | 'purple' | 'amber' | 'blue' | 'neutral'
 
+export const touchTargetPixels = 44
+
 // Historical variant names remain compatible; presentation uses semantic roles.
 export const neonColorMap: Record<NeonColor, {
   text: string
@@ -413,6 +415,7 @@ export const chartTokens = {
     fill: 'color-mix(in srgb, var(--text-secondary) 6%, transparent)',
     travellerWidth: 8,
     height: 28,
+    touchSize: touchTargetPixels,
   },
   /**
    * Synced-cursor reference line — drawn by recharts when two charts share

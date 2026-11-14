@@ -103,8 +103,8 @@ export function DrivePhysicsDebriefPanel({
         ))}
       </ol>
       <Text as="p" variant="caption">
-        <a href="#power-trace" className="underline underline-offset-4">{t('driveDetail.powerProfile', 'Power profile')}</a>
-        {' · '}<a href="#fsd-evidence" className="underline underline-offset-4">{t('driveDetail.fsd.title', 'Supervised driving')}</a>
+        <a href="#power-trace" data-app-action-link className="underline underline-offset-4">{t('driveDetail.powerProfile', 'Power profile')}</a>
+        {' · '}<a href="#fsd-evidence" data-app-action-link className="underline underline-offset-4">{t('driveDetail.fsd.title', 'Supervised driving')}</a>
       </Text>
     </GlassPanel>
   );

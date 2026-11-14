@@ -1102,7 +1102,7 @@ describe('SmartChargePage — plan history', () => {
     expect(table().getAllByText('$0.00')).toHaveLength(2);
   });
 
-  it('keeps every history field reachable on phones through the existing scrollable table', () => {
+  it('keeps every history field in the desktop table', () => {
     mockPlans.mockReturnValue(makeQuery({ data: [makePlan()] }));
     renderPage();
     const tableElement = screen.getByRole('table', { name: 'charging:smart-charge-history' });
@@ -1118,6 +1118,37 @@ describe('SmartChargePage — plan history', () => {
     expect(table.getByText('completed')).toHaveClass(...BADGE_VARIANTS.success.split(' '));
     expect(tableElement.closest('.overflow-auto')).toHaveClass('max-w-full', 'overscroll-x-contain');
     expect(tableElement).toHaveAttribute('tabindex', '0');
+  });
+
+  it('keeps every history field and value available in the phone grid', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      mockPlans.mockReturnValue(makeQuery({ data: [makePlan()] }));
+      renderPage();
+      act(() => observers.filter(({ element }) => element.matches('[data-app-table-frame]'))
+        .forEach(({ element, callback }) => callback(
+          [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry], {} as ResizeObserver,
+        )));
+      const mobile = screen.getByRole('group', { name: 'charging:smart-charge-history' });
+      expect(mobile).toHaveTextContent('PG&E EV2-A');
+      expect(mobile).toHaveTextContent('02:00 — 05:00');
+      expect(mobile).toHaveTextContent('$3.25');
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Quick view' }));
+      const detail = screen.getByRole('dialog');
+      for (const label of ['Date', 'Window', 'Plan', 'Cost', 'Saved', 'Status']) {
+        expect(within(detail).getByText(label, { exact: true })).toBeInTheDocument();
+      }
+      expect(detail).toHaveTextContent('$5.25');
+      expect(detail).toHaveTextContent('completed');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('retains history rows and shows an honest warning after a failed background refresh', () => {

@@ -9,6 +9,7 @@ import {
   HelpTooltip,
   Text,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
@@ -49,10 +50,10 @@ export function TopParkingLocations({
         filterValueLabel: (_value, row) => row.location ?? t('parking.unknown', 'Unknown location'),
         visibleOnMobile: true,
         render: (row) => (
-          <span className="flex items-center gap-2">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
             <Text
               variant="bodySm"
-              className="block max-w-64 truncate"
+              className="block min-w-0 break-words md:max-w-64 md:truncate"
               title={row.location ?? undefined}
             >
               {row.location ?? t('parking.unknown', 'Unknown location')}
@@ -110,6 +111,24 @@ export function TopParkingLocations({
     ],
     [formatDuration, censoredLocations, t, fmtInt, fmtNumber],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<LocationDwell>>(() => ({
+    roles: { location: 'title', totalMs: 'primary', stints: 'meta', share: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'location': return [
+          row.location ?? t('parking.unknown', 'Unknown location'),
+          censoredLocations.has(row.location) ? t('comfortConsistency.directory.censored', 'Right-censored') : null,
+        ].filter(Boolean).join(' · ');
+        case 'totalMs': return [
+          formatDuration(row.totalMs / 1_000),
+          censoredLocations.has(row.location) ? t('batteryPassport.distribution.minimum', 'Observed minimum') : null,
+        ].filter(Boolean).join(' · ');
+        case 'stints': return fmtInt(row.stints);
+        case 'share': return `${fmtNumber(row.share * 100)}%`;
+        default: return null;
+      }
+    },
+  }), [censoredLocations, fmtInt, fmtNumber, formatDuration, t]);
 
   return (
     <section
@@ -183,6 +202,7 @@ export function TopParkingLocations({
                 'No destination-linked parking stints are available in this window.',
               )}
               mobileColumns={['location', 'totalMs']}
+              mobilePresentation={mobilePresentation}
               pagination
             />
           )}

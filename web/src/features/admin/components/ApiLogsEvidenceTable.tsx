@@ -2,12 +2,14 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Badge, Button, CodeBlock, CopyButton, DataTable, GlassPanel, Input, Label, Select, Text, Caption,
-  type Column, type SelectOption, type PaginationProps,
+  type Column, type SelectOption, type PaginationProps, type MobileDataTablePresentation,
 } from '@/components/ui';
 import { DateTime, FormattedNumber } from '@/components/data-display';
 import type { APICallLog } from '@/api/types';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { formatDateTime } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { TableControls } from '@/components/forms';
@@ -332,6 +334,25 @@ export function ApiLogsEvidenceTable({
     ];
   }, [t, serviceConfig, installationFor, filters, onFilterChange, methodOptions, statusOptions, serviceOptions, fmtInt, displayPrecision, displayLocale]);
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<APICallLog>>(() => ({
+    roles: { endpoint: 'title', status: 'primary', method: 'badge', time: 'meta', service: 'meta', duration: 'meta' },
+    displayValue: (log, key) => {
+      switch (key) {
+        case 'endpoint': return log.endpoint ?? '—';
+        case 'method': return log.http_method;
+        case 'status': return [
+          log.status_code ?? t('apiLogs.na', 'N/A'),
+          log.rate_limited ? t('apiLogs.rateLimited', 'Rate limited') : null,
+        ].filter(value => value != null).join(' · ');
+        case 'time': return formatDateTime(log.ts, { tz: 'UTC', locale: displayLocale });
+        case 'service': return serviceConfig(log.service).label;
+        case 'duration': return log.duration_ms == null || !Number.isFinite(log.duration_ms)
+          ? '—' : fmtNumber(log.duration_ms, displayPrecision, displayLocale);
+        default: return null;
+      }
+    },
+  }), [t, serviceConfig, displayPrecision, displayLocale]);
+
   return (
     <DataTable
       tableId="admin:api-logs"
@@ -343,6 +364,7 @@ export function ApiLogsEvidenceTable({
       rowLabel={(log) => `${log.http_method} ${log.endpoint ?? '—'}`}
       density="compact"
       mobileColumns={['method', 'endpoint', 'status', 'service', 'client', 'key']}
+      mobilePresentation={mobilePresentation}
       resizable
       columnReorder
       columnVisibility

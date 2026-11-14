@@ -88,5 +88,6 @@ describe('PhysicsInvestigationNav native link controls', () => {
     render(<MemoryRouter initialEntries={['/tesla-physics']}><Navigation /></MemoryRouter>);
     fireEvent.change(screen.getByRole('combobox', { name: 'Choose investigation' }), { target: { value: 'unknown' } });
     expect(screen.getByRole('link', { name: 'Unknown OS' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByText('Unknown OS', { selector: 'p' })).toBeVisible();
   });
 });

@@ -668,7 +668,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                 {title}
               </Heading>
               {headerDescription ?? (subtitle && (
-                <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
+                <Text as="p" variant="caption" data-chart-subtitle className="mt-1 leading-relaxed">{subtitle}</Text>
               ))}
               {metadataContent}
             </div>

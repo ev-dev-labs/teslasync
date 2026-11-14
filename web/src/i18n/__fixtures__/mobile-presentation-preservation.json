@@ -43,6 +43,83 @@
     ]
   },
   {
+    "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
+    "before": "265927b9ade0595d7f86f319c855f19d46f2a556ac7b6ce03a0e80816c89238c",
+    "after": "62ff2ebc2a228833fd9d95329f71951d88cb2953f09a525d61c5a2210373f920",
+    "hunks": [
+      {
+        "start": 116,
+        "old": [],
+        "new": [
+          "              data-app-action-link"
+        ]
+      },
+      {
+        "start": 125,
+        "old": [],
+        "new": [
+          "                data-app-action-link"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/ApiLogsEvidenceTable.tsx",
+    "before": "d8503689b0202a21037a7c0dbaab14883140ec5628970027d3f1e55e4fc7dc9e",
+    "after": "3afc1e4a533af7af2c4ea71efb22e9538edf950186098b6b049dd989126e4cb8",
+    "hunks": [
+      {
+        "start": 4,
+        "old": [
+          "  type Column, type SelectOption, type PaginationProps,"
+        ],
+        "new": [
+          "  type Column, type SelectOption, type PaginationProps, type MobileDataTablePresentation,"
+        ]
+      },
+      {
+        "start": 10,
+        "old": [],
+        "new": [
+          "import { formatDateTime } from '@/lib/dateFormat';",
+          "import { fmtNumber } from '@/lib/numberFormat';"
+        ]
+      },
+      {
+        "start": 336,
+        "old": [],
+        "new": [
+          "  const mobilePresentation = useMemo<MobileDataTablePresentation<APICallLog>>(() => ({",
+          "    roles: { endpoint: 'title', status: 'primary', method: 'badge', time: 'meta', service: 'meta', duration: 'meta' },",
+          "    displayValue: (log, key) => {",
+          "      switch (key) {",
+          "        case 'endpoint': return log.endpoint ?? '—';",
+          "        case 'method': return log.http_method;",
+          "        case 'status': return [",
+          "          log.status_code ?? t('apiLogs.na', 'N/A'),",
+          "          log.rate_limited ? t('apiLogs.rateLimited', 'Rate limited') : null,",
+          "        ].filter(value => value != null).join(' · ');",
+          "        case 'time': return formatDateTime(log.ts, { tz: 'UTC', locale: displayLocale });",
+          "        case 'service': return serviceConfig(log.service).label;",
+          "        case 'duration': return log.duration_ms == null || !Number.isFinite(log.duration_ms)",
+          "          ? '—' : fmtNumber(log.duration_ms, displayPrecision, displayLocale);",
+          "        default: return null;",
+          "      }",
+          "    },",
+          "  }), [t, serviceConfig, displayPrecision, displayLocale]);",
+          ""
+        ]
+      },
+      {
+        "start": 366,
+        "old": [],
+        "new": [
+          "      mobilePresentation={mobilePresentation}"
+        ]
+      }
+    ]
+  },
+  {
     "file": "web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
     "before": "6b45963b06e163faf7d4c26f4c9f5b9b33817d874504899c564701e8ab1b3d60",
     "after": "c7ecc6a66b6cba652679550f0b18bf4af7969bd2621c37b2305fdba2d0a1ac09",
@@ -629,8 +706,17 @@
   {
     "file": "web/src/components/charts/ChartContainer.tsx",
     "before": "beaef9bec78ad0320c60da69b137f2c4a48aacb14c800e22bcadbe571a7f09d9",
-    "after": "b027825fd9102979415727d25fbbb48fc0933e18c843eebd21d6c303a7e7191d",
+    "after": "d3428bbd036f4e504f15b6a33ed07198118b28f16934bf5a00b27d085c700e00",
     "hunks": [
+      {
+        "start": 670,
+        "old": [
+          "                <Text as=\"p\" variant=\"caption\" className=\"mt-1 leading-relaxed\">{subtitle}</Text>"
+        ],
+        "new": [
+          "                <Text as=\"p\" variant=\"caption\" data-chart-subtitle className=\"mt-1 leading-relaxed\">{subtitle}</Text>"
+        ]
+      },
       {
         "start": 963,
         "old": [],

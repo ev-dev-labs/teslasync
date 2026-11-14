@@ -15,7 +15,7 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 
-import { GlassPanel, Badge, DataTable, Text, Caption, MetricValue, Icon, type Column, IconButton } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, Text, Caption, MetricValue, Icon, type Column, type MobileDataTablePresentation, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { VisuallyHidden } from '@/components/a11y';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
@@ -373,6 +373,10 @@ export default function NavigationRoutePage() {
     [t, fmtScientificNumber],
   );
 
+  const waypointTypeLabel = useCallback((type: Waypoint['type']) => (
+    t(`nav.wp.kind.${type}`, type === 'supercharger' ? 'Supercharger' : type === 'destination' ? 'Destination' : 'Waypoint')
+  ), [t]);
+
   /* ---- waypoint columns ---- */
   const waypointColumns: Column<Waypoint>[] = useMemo(
     () => [
@@ -408,7 +412,7 @@ export default function NavigationRoutePage() {
             }
             size="sm"
           >
-            {t(`nav.wp.kind.${row.type}`, row.type === 'supercharger' ? 'Supercharger' : row.type === 'destination' ? 'Destination' : 'Waypoint')}
+            {waypointTypeLabel(row.type)}
           </Badge>
         ),
       },
@@ -426,8 +430,20 @@ export default function NavigationRoutePage() {
         ),
       },
     ],
-    [t, distanceUnit, fmtNumber],
+    [t, distanceUnit, fmtNumber, waypointTypeLabel],
   );
+  const waypointMobilePresentation = useMemo<MobileDataTablePresentation<Waypoint>>(() => ({
+    roles: { name: 'title', type: 'badge', distance: 'primary' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'name': return row.name;
+        case 'type': return waypointTypeLabel(row.type);
+        case 'distance': return row.distance == null
+          ? '—' : `${fmtNumber(convertDistanceFromSI(row.distance, distanceUnit))} ${distanceUnit}`;
+        default: return null;
+      }
+    },
+  }), [distanceUnit, fmtNumber, waypointTypeLabel]);
 
   /* ---- sort state ---- */
   const [sortKey, setSortKey] = useState('time');
@@ -901,6 +917,7 @@ export default function NavigationRoutePage() {
                       enableValueFilters
                       columns={waypointColumns}
                       mobileColumns={['name', 'type', 'distance']}
+                      mobilePresentation={waypointMobilePresentation}
                       data={waypoints}
                       keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
                       compact

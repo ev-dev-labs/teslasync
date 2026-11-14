@@ -10,7 +10,7 @@ import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types.ts
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const usage = 'Usage: node scripts/capture-design-packs.mjs --pack <id|all> '
   + '--pages <dashboard,drives,energy|all> --viewports <phone-390,desktop> '
-  + '--base-url <running local server URL> [--workers <count>]';
+  + '--base-url <running local server URL> [--exclude-pages <ids>] [--workers <count>]';
 
 export function capturePackIds(selection) {
   if (selection === 'all') return [...PACK_IDS];
@@ -25,6 +25,7 @@ async function main() {
       pages: { type: 'string' },
       viewports: { type: 'string' },
       'base-url': { type: 'string' },
+      'exclude-pages': { type: 'string' },
       workers: { type: 'string' },
       help: { type: 'boolean' },
     },
@@ -78,6 +79,7 @@ async function main() {
           ...process.env,
           DESIGN_PACK: packId,
           DESIGN_PACK_PAGES: pages === 'all' ? '' : pages,
+          DESIGN_PACK_EXCLUDE_PAGES: values['exclude-pages'] ?? process.env.DESIGN_PACK_EXCLUDE_PAGES ?? '',
           DESIGN_PACK_CAPTURE_BASE_URL: server.origin,
           DESIGN_PACK_CAPTURE_OUTPUT_DIR: outputDir,
           DESIGN_PACK_CAPTURE_STATES: '0',

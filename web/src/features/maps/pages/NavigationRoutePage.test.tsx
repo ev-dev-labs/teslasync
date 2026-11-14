@@ -1178,6 +1178,16 @@ describe('NavigationRoutePage — heading cardinal (edge hardening)', () => {
   });
 
   describe('NavigationRoutePage — modernization preservation', () => {
+    it('provides complete localized waypoint values to the mobile grid', () => {
+      h.historyMode = 'pending';
+      renderPage();
+      const waypoints = screen.getByTestId('maps:navigation-waypoints');
+      expect(JSON.parse(waypoints.getAttribute('data-mobile-fields')!)).toEqual(['name', 'type', 'distance']);
+      expect(JSON.parse(waypoints.getAttribute('data-mobile-values')!)).toEqual([
+        { name: 'Downtown Office', type: 'Destination', distance: '5.00 km' },
+      ]);
+    });
+
     it('keeps time, coordinates and work available through the existing mobile table contract', async () => {
       renderPage();
       const history = await screen.findByTestId('maps:navigation-location-history');

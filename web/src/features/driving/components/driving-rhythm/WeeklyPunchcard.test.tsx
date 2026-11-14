@@ -89,7 +89,7 @@ describe('WeeklyPunchcard', () => {
       const summary = populatedSummary();
       render(<MemoryRouter><WeeklyPunchcard summary={summary} state={ready} /></MemoryRouter>);
       const region = screen.getByRole('region', {
-        name: 'Weekly drive-start counts; scroll to see all hours',
+        name: 'Drive starts by local weekday and hour; strongest slot Mon 05:00',
       });
       expect(region).toHaveAttribute('tabindex', '0');
       expect(region).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
@@ -109,6 +109,7 @@ describe('WeeklyPunchcard', () => {
         cells.forEach((cell, hour) => {
           const count = summary.matrix[order[index]!]![hour]!;
           expect(cell.textContent).toBe(String(count));
+          expect(cell).toHaveAttribute('data-punchcard-hour', String(hour).padStart(2, '0'));
           expect(cell).toHaveAccessibleName(`${days[index]} ${String(hour).padStart(2, '0')}:00 · ${count} drives`);
           expect(cell).not.toHaveAttribute('title');
           expect(cell).toBeVisible();

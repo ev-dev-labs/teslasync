@@ -67,17 +67,27 @@ export function captureRoutes(): CaptureRoute[] {
   return result;
 }
 
-export function selectCaptureRoutes(selection: string | undefined): CaptureRoute[] {
+export function selectCaptureRoutes(selection: string | undefined, exclusions?: string): CaptureRoute[] {
   const routes = captureRoutes();
-  if (!selection?.trim()) return routes;
-  const requested = new Set(selection.split(',').map(value => value.trim()).filter(Boolean));
-  const selected = routes.filter(route => requested.has(route.file) || requested.has(route.template));
+  const requested = new Set(selection?.split(',').map(value => value.trim()).filter(Boolean) ?? []);
+  const excluded = new Set(exclusions?.split(',').map(value => value.trim()).filter(Boolean) ?? []);
+  if (selection?.trim() && !requested.size) throw new Error('No design pack capture pages selected');
+  const selected = requested.size
+    ? routes.filter(route => requested.has(route.file) || requested.has(route.template))
+    : routes;
   for (const value of requested) {
     if (!selected.some(route => route.file === value || route.template === value)) {
       throw new Error(`Unknown design pack capture page: ${value}`);
     }
   }
-  return selected;
+  for (const value of excluded) {
+    if (!routes.some(route => route.file === value || route.template === value)) {
+      throw new Error(`Unknown excluded design pack capture page: ${value}`);
+    }
+  }
+  const result = selected.filter(route => !excluded.has(route.file) && !excluded.has(route.template));
+  if (!result.length) throw new Error('No design pack capture pages selected');
+  return result;
 }
 
 export async function findHorizontalScrollRegions(page: Page) {
@@ -106,6 +116,8 @@ export async function findHorizontalScrollRegions(page: Page) {
       className: element.getAttribute('class'),
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
+      table: element.querySelector('table')?.getAttribute('aria-label') ?? null,
+      section: element.closest('section')?.getAttribute('aria-label') ?? null,
     })));
 }
 
@@ -283,7 +295,7 @@ export async function findSmallBodyText(page: Page) {
     'p:not([data-typography-role]):not(.text-xs):not([data-app-part~="metric-label"]):not([data-app-part~="metric-context"]), '
     + '[data-typography-role="body"], [data-typography-role="bodySm"], '
     + '.text-sm[class~="text-[var(--text-primary)]"], .text-sm[class~="text-[var(--text-secondary)]"], .text-sm[class~="text-[var(--text-muted)]"], '
-    + '[data-app-part~="feedback-title"], [data-app-part~="feedback-message"], '
+    + '[data-app-part~="feedback-title"], [data-app-part~="feedback-message"], [data-chart-subtitle], '
     + '[data-app-part~="history-route"], [data-app-part~="list-row"] [data-history-primary] > :first-child, '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"], '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"] [data-app-metric="inline"], '

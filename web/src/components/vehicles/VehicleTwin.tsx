@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { motion as motionTokens } from '@/lib/tokens';
+import { motion as motionTokens, touchTargetPixels } from '@/lib/tokens';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Typography';
@@ -102,6 +102,8 @@ const WHEEL_CY = 221;
 export interface VehicleTwinProps extends VehicleTwinState {
   size?: VehicleTwinSize;
   interactive?: boolean;
+  /** Expand the page's SVG inspection targets without changing widget geometry. */
+  touchFriendly?: boolean;
   /** Cosmetic, bounded entrance only; never supplies measured vehicle state. */
   driveIn?: boolean;
   /** Disable continuous state cues without changing the accessible measured state. */
@@ -188,12 +190,63 @@ function buildTwinIds(uid: string): TwinIds {
 interface TwinContextValue {
   ids: TwinIds;
   paint: PaintPalette;
+  touchLayout?: TwinTouchLayout;
   /** Paint-derived accent colors used by `BodyShell` etc. */
   bodyAccent: {
     stroke: string;
     highlight: string;
     chrome: string;
     shadow: string;
+  };
+}
+
+type TwinTouchTarget = 'frunk' | 'trunk' | 'frontWindow' | 'rearWindow'
+  | 'frontDoor' | 'rearDoor' | 'chargePort' | 'sentry' | 'lock';
+type TwinTouchBox = { x: number; y: number; width: number; height: number };
+type TwinTouchLayout = {
+  targets: Record<TwinTouchTarget, TwinTouchBox>;
+  minY: number;
+  maxY: number;
+};
+
+function buildTwinTouchLayout(width: number): TwinTouchLayout | undefined {
+  // SVG coordinates scale with the scene; allocate disjoint CSS-sized targets
+  // that still contain the original inspection landmarks.
+  const scale = width / VIEWBOX_WIDTH;
+  const size = (touchTargetPixels + 0.5) / scale;
+  const clearance = 0.5 / scale;
+  const left = Math.max(256 + 0.5 * size, 320 - 0.5 * size, 372 - 1.5 * size) + clearance;
+  const right = Math.min(247 + 1.5 * size, 320 + 0.5 * size, 364 - 0.5 * size) - clearance;
+  if (left > right) return undefined;
+  const center = Math.max(left, Math.min(320, right));
+  const rearEnd = center + 1.5 * size;
+  const tail = Math.max(rearEnd, 532 - size + clearance);
+  if (tail > Math.min(506 - clearance, VIEWBOX_WIDTH - size)) return undefined;
+  const box = (x: number, y: number): TwinTouchBox => ({ x, y, width: size, height: size });
+  const frontX = center - 1.5 * size;
+  if (frontX - 44 < size) return undefined;
+  const middleX = center - 0.5 * size;
+  const rearX = center + 0.5 * size;
+  const frontSplit = (117 + 194) / 2;
+  const rearSplit = (113 + 191) / 2;
+  const securitySplit = (91 + 114) / 2;
+  const tailSplit = (117 + 136) / 2;
+  const targets: TwinTouchLayout['targets'] = {
+    frunk: { x: 44, y: 164 - size / 2, width: frontX - 44, height: size },
+    frontWindow: box(frontX, frontSplit - size),
+    frontDoor: box(frontX, frontSplit),
+    sentry: box(middleX, securitySplit - size),
+    lock: box(middleX, securitySplit),
+    rearWindow: box(rearX, rearSplit - size),
+    rearDoor: box(rearX, rearSplit),
+    trunk: box(tail, tailSplit - size),
+    chargePort: box(tail, tailSplit),
+  };
+  const boxes = Object.values(targets);
+  return {
+    targets,
+    minY: Math.min(VIEWBOX_MIN_Y, ...boxes.map(({ y }) => y)),
+    maxY: Math.max(VIEWBOX_MIN_Y + VIEWBOX_HEIGHT, ...boxes.map(({ y, height }) => y + height)),
   };
 }
 
@@ -283,6 +336,7 @@ function stateLabel(value: boolean | null, trueText: string, falseText: string, 
 
 function InteractiveHotspot({
   enabled,
+  target,
   x,
   y,
   width,
@@ -291,6 +345,7 @@ function InteractiveHotspot({
   side = 'top',
 }: {
   enabled?: boolean;
+  target: TwinTouchTarget;
   x: number;
   y: number;
   width: number;
@@ -298,13 +353,19 @@ function InteractiveHotspot({
   label: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
 }) {
+  const { touchLayout } = useTwinCtx();
   if (!enabled) return null;
 
+  const bounds = touchLayout?.targets[target];
+  const trigger = (
+    <Tooltip content={label} side={side} portal={bounds ? true : undefined}>
+      <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
+    </Tooltip>
+  );
   return (
-    <foreignObject x={x} y={y} width={width} height={height}>
-      <Tooltip content={label} side={side}>
-        <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
-      </Tooltip>
+    <foreignObject x={bounds?.x ?? x} y={bounds?.y ?? y} width={bounds?.width ?? width} height={bounds?.height ?? height}
+      data-twin-touch-target={bounds ? target : undefined}>
+      {bounds ? <div className="h-full w-full [&>span]:h-full [&>span]:w-full">{trigger}</div> : trigger}
     </foreignObject>
   );
 }
@@ -568,6 +629,7 @@ function BodyShell({
 
       <InteractiveHotspot
         enabled={interactive}
+        target="frunk"
         x={44}
         y={140}
         width={150}
@@ -577,6 +639,7 @@ function BodyShell({
       />
       <InteractiveHotspot
         enabled={interactive}
+        target="trunk"
         x={462}
         y={94}
         width={88}
@@ -794,6 +857,7 @@ function SideWindows({
       )}
       <InteractiveHotspot
         enabled={interactive}
+        target="frontWindow"
         x={198}
         y={92}
         width={98}
@@ -802,6 +866,7 @@ function SideWindows({
       />
       <InteractiveHotspot
         enabled={interactive}
+        target="rearWindow"
         x={316}
         y={90}
         width={96}
@@ -883,6 +948,7 @@ function DoorOverlay({
       )}
       <InteractiveHotspot
         enabled={interactive}
+        target={isFront ? 'frontDoor' : 'rearDoor'}
         x={hotspot.x}
         y={hotspot.y}
         width={hotspot.width}
@@ -1094,6 +1160,7 @@ function ChargePortIndicator({
       )}
       <InteractiveHotspot
         enabled={interactive}
+        target="chargePort"
         x={cx - 14}
         y={cy - 14}
         width={28}
@@ -1115,11 +1182,34 @@ function SecurityOverlay({
   interactive?: boolean;
 }) {
   const { t } = useTranslation();
+  const { touchLayout } = useTwinCtx();
   const iconSize = 18;
   const cx = 320;
   const cy = 114;
   const sentryY = cy - 23;
   const sentryIcon = <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />;
+  const touchIcon = (target: 'sentry' | 'lock', label: string, icon: ReactNode, originalY: number) => {
+    const bounds = touchLayout?.targets[target];
+    if (!interactive || !bounds) return null;
+    return (
+      <div className="h-full w-full [&>span]:h-full [&>span]:w-full">
+        <Tooltip content={label} side="top" portal>
+          <Button type="button" variant="ghost" aria-label={label}
+            className="relative block h-full w-full rounded-none p-0 hover:bg-transparent">
+            <span className="absolute flex items-center justify-center rounded-full bg-[var(--bg-app)]"
+              style={{ left: cx - iconSize / 2 - bounds.x, top: originalY - iconSize / 2 - bounds.y, width: iconSize, height: iconSize }}>
+              {icon}
+            </span>
+          </Button>
+        </Tooltip>
+      </div>
+    );
+  };
+  const sentryBounds = interactive ? touchLayout?.targets.sentry : undefined;
+  const lockBounds = interactive ? touchLayout?.targets.lock : undefined;
+  const lockIcon = locked
+    ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
+    : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />;
 
   return (
     <g>
@@ -1128,34 +1218,32 @@ function SecurityOverlay({
           stroke={C.sentryGlow} strokeWidth={1.2} opacity={0.65} />
       )}
       {sentryMode && (
-        <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
-          <Tooltip content={t('guard.sentryActive')} side="top">
+        <foreignObject x={sentryBounds?.x ?? cx - iconSize / 2} y={sentryBounds?.y ?? sentryY - iconSize / 2}
+          width={sentryBounds?.width ?? iconSize} height={sentryBounds?.height ?? iconSize}
+          data-twin-touch-target={sentryBounds ? 'sentry' : undefined}>
+          {sentryBounds ? touchIcon('sentry', t('guard.sentryActive'), sentryIcon, sentryY) : <Tooltip content={t('guard.sentryActive')} side="top">
             {interactive ? (
               <Button type="button" variant="ghost" aria-label={t('guard.sentryActive')}
                 className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">{sentryIcon}</Button>
             ) : (
               <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">{sentryIcon}</span>
             )}
-          </Tooltip>
+          </Tooltip>}
         </foreignObject>
       )}
       {locked !== null && (
-        <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
-          {interactive ? (
+        <foreignObject x={lockBounds?.x ?? cx - iconSize / 2} y={lockBounds?.y ?? cy - iconSize / 2}
+          width={lockBounds?.width ?? iconSize} height={lockBounds?.height ?? iconSize}
+          data-twin-touch-target={lockBounds ? 'lock' : undefined}>
+          {lockBounds ? touchIcon('lock', t(locked ? 'common.locked' : 'common.unlocked'), lockIcon, cy) : interactive ? (
             <Tooltip content={t(locked ? 'common.locked' : 'common.unlocked')} side="top">
               <Button type="button" variant="ghost" aria-label={t(locked ? 'common.locked' : 'common.unlocked')} className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">
-                {locked
-                  ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
-                  : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
-                }
+                {lockIcon}
               </Button>
             </Tooltip>
           ) : (
             <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
-              {locked
-                ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
-                : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
-              }
+              {lockIcon}
             </span>
           )}
         </foreignObject>
@@ -1375,6 +1463,7 @@ export function VehicleTwin({
   vehicleColor,
   size = 'md',
   interactive = false,
+  touchFriendly = false,
   driveIn = false,
   animateActivity = true,
   wheelMotionClassName,
@@ -1418,7 +1507,13 @@ export function VehicleTwin({
   const containerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const width = Math.min(SIZE_MAP[size], measuredWidth ?? SIZE_MAP[size]);
-  const height = Math.round(width * ASPECT_RATIO);
+  const touchLayout = useMemo(
+    () => interactive && touchFriendly ? buildTwinTouchLayout(width) : undefined,
+    [interactive, touchFriendly, width],
+  );
+  const viewboxMinY = touchLayout?.minY ?? VIEWBOX_MIN_Y;
+  const viewboxHeight = (touchLayout?.maxY ?? VIEWBOX_MIN_Y + VIEWBOX_HEIGHT) - viewboxMinY;
+  const height = Math.round(width * (touchLayout ? viewboxHeight / VIEWBOX_WIDTH : ASPECT_RATIO));
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -1455,7 +1550,7 @@ export function VehicleTwin({
   const imgScale = unitsPerImgPx * u;
   const imgWidth = COMPOSITOR_METRICS.imgWidth * imgScale;
   const imgLeft = (43 - COMPOSITOR_METRICS.carLeft * unitsPerImgPx) * u;
-  const imgTop = ((263 - VIEWBOX_MIN_Y) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u;
+  const imgTop = ((263 - viewboxMinY) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u;
   const imgStyle = {
     position: 'absolute' as const,
     width: imgWidth,
@@ -1477,6 +1572,7 @@ export function VehicleTwin({
     () => ({
       ids,
       paint,
+      touchLayout,
       bodyAccent: {
         stroke: paint.bodyStroke,
         highlight: paint.bodyHighlight,
@@ -1484,7 +1580,7 @@ export function VehicleTwin({
         shadow: paint.bodyShadow,
       },
     }),
-    [ids, paint],
+    [ids, paint, touchLayout],
   );
 
   return (
@@ -1538,7 +1634,7 @@ export function VehicleTwin({
           </>
         )}
         <svg
-          viewBox={`0 ${VIEWBOX_MIN_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+          viewBox={`0 ${viewboxMinY} ${VIEWBOX_WIDTH} ${viewboxHeight}`}
           width={width}
           height={height}
           xmlns="http://www.w3.org/2000/svg"

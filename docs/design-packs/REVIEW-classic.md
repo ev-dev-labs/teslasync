@@ -837,3 +837,63 @@ For two Axe-incomplete labels on notification health at 430px, the observed
 opaque foreground/background colors calculate to 5.66:1 without overlapping
 filled SVG shapes. This is evidence for those nodes in that state only; it is
 not a blanket contrast or accessibility pass.
+
+### Later mobile evidence
+
+The populated archetype evidence and candidate tables, 168-cell weekly
+punchcard, API logs, parking, Powershare, drive-detail tables and navigation,
+and physics actions received mobile presentation fixes. Nine affected routes
+were recaptured at 360px and 430px against the pre-subtitle production build:
+
+```text
+18 passed
+```
+
+Those viewport images do not establish contrast or a complete visual review.
+The drive navigation wraps without horizontal scrolling but consumes
+substantial vertical space. A parking screenshot exposed an undersized chart
+subtitle; a shared body-token treatment and focused synthetic checks now
+cover it. The Driving Rhythm description was also too small, and the native
+Physics chooser clipped a long current investigation name. Those now use a
+body role and an additional wrapping translated title, respectively. The
+images above predate these refinements; see the later recaptures below.
+
+The nine routes were recaptured and inspected at 360px and 430px against the
+updated production snapshot:
+
+```text
+18 passed (6.4m)
+```
+
+The parking subtitle and Driving Rhythm copy are now body-sized, and Physics
+shows the selected investigation below the native chooser. The images are
+initial dark-mode views, not complete contrast or interaction coverage. At
+360px the two-row navigation still occupies substantial space. The API logs
+scope explanation was visibly small; it and two other explanatory texts now
+use body roles. The previous Docker build failed the new 16px regression
+check at 12px. The updated Docker build passed at both phone widths:
+
+```text
+Contrast: 0 violated rules, 0 nodes require manual review
+Contrast: 0 violated rules, 0 nodes require manual review
+2 passed (36.7s)
+```
+
+Both initial viewport images were inspected; the explanatory copy is below
+the initial view, and other interaction states remain unverified.
+
+An empty-notice spacing fix on Energy Orchestrator passed and was inspected
+at 360px, 430px, 768px and 1440px:
+
+```text
+4 passed (2.4m)
+```
+
+The desktop image also exposed a split "Present" switch label. A wrapping
+layout fix and a rendered-line regression check were added; the old snapshot
+failed that check with two lines. The corrected Docker build passed and the
+four updated images were inspected:
+
+```text
+4 passed (1.8m)
+```

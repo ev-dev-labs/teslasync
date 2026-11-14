@@ -114,6 +114,7 @@ export function SupervisedDrivingPanel({
           <div className="flex flex-col items-end gap-1">
             <Link
               to="/fsd"
+              data-app-action-link
               className={evidenceLinkClass}
             >
               {t('driveDetail.fsd.openInsights', 'Open FSD insights')}
@@ -122,6 +123,7 @@ export function SupervisedDrivingPanel({
             {insight?.firmware_version ? (
               <Link
                 to="/fsd#fsd-firmware-spotlight"
+                data-app-action-link
                 className={evidenceLinkClass}
               >
                 {t('driveDetail.fsd.afterFirmware', 'After firmware {{version}}', {

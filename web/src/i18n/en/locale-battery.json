@@ -4254,6 +4254,11 @@
       "title": "Helix natural-language filter"
     }
   },
+  "signalQuery": {
+    "preset": {
+      "aria": "{{label}} time range"
+    }
+  },
   "softwareUpdates": {
     "aiNarration": {
       "badge": "Helix",

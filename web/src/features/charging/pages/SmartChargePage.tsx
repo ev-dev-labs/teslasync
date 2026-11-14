@@ -20,6 +20,7 @@ import {
   ErrorText,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { UnitInput, FormSection } from '@/components/forms';
 import { type StatMetric } from '@/components/data-display';
@@ -401,6 +402,26 @@ export default function SmartChargePage() {
     },
     [t, formatDate, formatTime, formatCurrency],
   );
+  const historyMobilePresentation = useMemo<MobileDataTablePresentation<ChargePlan>>(() => ({
+    roles: {
+      rate_plan: 'title', status: 'badge', estimated_cost: 'primary',
+      created_at: 'meta', window: 'meta', savings: 'meta',
+    },
+    displayValue: (plan, key) => {
+      switch (key) {
+        case 'created_at': return formatDate(plan.created_at);
+        case 'window': return `${formatTime(plan.scheduled_start)} — ${formatTime(plan.scheduled_end)}`;
+        case 'rate_plan': return plan.rate_plan ?? '—';
+        case 'status': return plan.status;
+        case 'estimated_cost':
+        case 'savings': {
+          const value = knownNumber(plan[key]);
+          return value == null ? '—' : formatCurrency(value);
+        }
+        default: return null;
+      }
+    },
+  }), [formatDate, formatTime, formatCurrency]);
 
   return (
     <PageLayout
@@ -690,6 +711,7 @@ export default function SmartChargePage() {
                 enableValueFilters
                 tableId="charging:smart-charge-history"
                 columns={historyColumns}
+                mobilePresentation={historyMobilePresentation}
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={onSort}

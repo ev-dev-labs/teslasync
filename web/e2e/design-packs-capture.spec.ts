@@ -7,7 +7,7 @@ import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { routeBuiltApplication, test } from './app-design-test';
 import { BODY_ROLE_SELECTOR, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
-import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, mockDrive, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { cardLayoutContractPaths, resolveCardLayoutContractSource } from './cardLayoutContractSources';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview } from './widget-design-packs.mock';
@@ -24,7 +24,7 @@ if (!PACK_IDS.some(id => id === requestedPack)) {
   throw new Error(`Unknown design pack: ${requestedPack}`);
 }
 const packId = requestedPack as PackId;
-const routes = selectCaptureRoutes(process.env.DESIGN_PACK_PAGES);
+const routes = selectCaptureRoutes(process.env.DESIGN_PACK_PAGES, process.env.DESIGN_PACK_EXCLUDE_PAGES);
 const requestedScale = process.env.DESIGN_PACK_FONT_SCALE;
 const fontScale = requestedScale === undefined ? 1 : Number(requestedScale);
 if (!Number.isFinite(fontScale) || fontScale < 0.85 || fontScale > 1.35) {
@@ -86,10 +86,10 @@ for (const route of routes) {
     const tablePath = resolve(directory, `${route.file}--table.png`);
     const supportPath = resolve(directory, `${route.file}--support.png`);
     const alreadyCaptured = await skipExistingCapture(viewportPath, !checkOnly && process.env.DESIGN_PACK_SKIP_EXISTING === '1');
-    test.skip(alreadyCaptured, 'Existing viewport evidence is preserved');
+    const captureImages = !checkOnly && !alreadyCaptured;
     let tableImage: Buffer | undefined;
     let supportImage: Buffer | undefined;
-    if (!checkOnly) {
+    if (captureImages) {
       await mkdir(directory, { recursive: true });
       await clearCaptureImages(viewportPath, fullPath, tablePath, captureStates, [supportPath]);
     }
@@ -144,9 +144,41 @@ for (const route of routes) {
         return fulfillApiFixture(request, mocks, { json: sessions });
       });
     }
+    if (route.path === '/digital-twin' && width < 768) {
+      await page.route(url => url.pathname === '/api/v1/security/latest', request => {
+        if (request.request().method() !== 'GET') return request.fallback();
+        return fulfillApiFixture(request, mocks, {
+          json: { vehicle_id: 7, ts: new Date().toISOString(), locked: true, sentry_mode: true },
+        });
+      });
+    }
     if (['/drives', '/drives/412', '/drives/412/replay', '/battery-cells',
       '/charging-heatmap', '/signal-mutual-information', '/live', '/chatbot', '/statistics'].includes(route.path)) {
       await installSpecializedReviewSources(page, mocks, mode);
+    }
+    if (route.path === '/drive-archetypes') {
+      const drives = Array.from({ length: 20 }, (_, index) => {
+        const group = index % 2;
+        const sample = Math.floor(index / 2);
+        const km = group ? 100 + sample * 2 : 10 + sample * 0.4;
+        const speedKph = group ? 90 + sample % 4 : 30 + sample % 3;
+        const start = new Date(Date.UTC(2026, 2, sample + 1, group ? 14 : 8, 5)).toISOString();
+        return {
+          ...mockDrive,
+          id: index + 1,
+          start_ts: start,
+          end_ts: null,
+          duration_s: Math.round(km / speedKph * 3600),
+          distance_m: km * 1000,
+          energy_used_wh: (group ? 150 : 180) * km + sample * km,
+          avg_speed_mps: speedKph / 3.6,
+          outside_temp_avg_c: (group ? 20 : 10) + sample * 0.2,
+        };
+      });
+      await page.route(url => url.pathname === '/api/v1/drives', request => {
+        if (request.request().method() !== 'GET') return request.fallback();
+        return fulfillApiFixture(request, mocks, { json: drives });
+      });
     }
     let path = route.path;
     if (path === '/charging-heatmap') path = chargingReviewPath;
@@ -178,8 +210,80 @@ for (const route of routes) {
     const activeScale = await page.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--font-scale')));
     expect(activeScale).toBeCloseTo(fontScale, 2);
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
+    if (route.path === '/energy-orchestrator') {
+      const leadingSpace = await page.locator('[data-layout-reference]').evaluate(layout => {
+        const content = Array.from(layout.children).find(child =>
+          !child.hasAttribute('data-home-energy-source') || child.childElementCount > 0);
+        if (!content) throw new Error('Home energy content is missing');
+        const layoutStyle = getComputedStyle(layout);
+        const contentStyle = getComputedStyle(content);
+        return content.getBoundingClientRect().top - layout.getBoundingClientRect().top
+          - parseFloat(layoutStyle.borderTopWidth) - parseFloat(layoutStyle.paddingTop)
+          - parseFloat(contentStyle.marginTop);
+      });
+      expect(leadingSpace, 'empty source notices must not create leading gaps').toBeLessThanOrEqual(1);
+      const batteryLabel = page.getByRole('switch', { name: 'Present' }).locator('..').locator('[data-app-part="field-label"]');
+      const labelLines = await batteryLabel.evaluate(element => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return range.getClientRects().length;
+      });
+      expect(labelLines, 'home battery switch label must not break across lines').toBe(1);
+    }
+    if (route.path === '/api-logs' && width < 768) {
+      for (const text of [
+        'API call totals and service counts use the View settings range.',
+        'Newest first. Filters query all matching requests;',
+        'Expand a request to inspect headers, bodies, and metadata.',
+      ]) {
+        const copy = page.getByText(text, { exact: false });
+        await expect(copy).toBeVisible();
+        const fontSize = await copy.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+        expect(fontSize, `API log guidance is too small: ${text}`).toBeGreaterThanOrEqual(16);
+      }
+    }
+    if (route.path === '/drive-archetypes' && width < 640) {
+      const table = page.locator('[data-testid="drive-archetypes-candidates"] [data-chart-viewport] table[data-mobile-stack-table]');
+      await expect(table).toBeVisible();
+      await expect(table.locator('tbody tr')).not.toHaveCount(0);
+      const geometry = await table.evaluate(element => {
+        const viewport = element.closest<HTMLElement>('[data-chart-viewport]')!;
+        return {
+          rowDisplay: getComputedStyle(element.querySelector('tbody tr')!).display,
+          tableBottom: element.getBoundingClientRect().bottom,
+          viewportBottom: viewport.getBoundingClientRect().bottom,
+        };
+      });
+      expect(geometry.rowDisplay).toBe('grid');
+      expect(geometry.tableBottom).toBeLessThanOrEqual(geometry.viewportBottom + 1);
+    }
+    if (route.path === '/driving-rhythm') {
+      const cells = page.locator('[data-weekly-punchcard] tbody td');
+      await expect(cells).toHaveCount(168);
+      const unexpanded = await cells.evaluateAll(elements => elements
+        .map(element => element.getAttribute('aria-label') ?? '')
+        .filter(label => /\{\{.*?\}\}/.test(label)));
+      expect(unexpanded, 'punchcard labels must interpolate their counts').toEqual([]);
+    }
+    const physicsTitle = route.path === '/tesla-physics/contradictions' ? 'Contradiction court'
+      : route.path === '/tesla-physics/car-kept-living' ? 'Car kept living' : null;
+    if (physicsTitle && width < 640) {
+      const activeTitle = page.locator('[data-active-physics-title]');
+      await expect(activeTitle).toBeVisible();
+      await expect(activeTitle).toHaveText(physicsTitle);
+      const geometry = await activeTitle.evaluate(element => ({
+        fontSize: parseFloat(getComputedStyle(element).fontSize),
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+      }));
+      expect(geometry.fontSize).toBeGreaterThanOrEqual(15.9);
+      expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+      expect(geometry.scrollHeight).toBeLessThanOrEqual(geometry.clientHeight + 1);
+    }
     await page.mouse.move(0, 0);
-    const viewportImage = viewportOnly && !checkOnly ? await page.screenshot({ animations: 'disabled' }) : undefined;
+    const viewportImage = viewportOnly && captureImages ? await page.screenshot({ animations: 'disabled' }) : undefined;
     if (viewportImage) await writeCaptureImages(viewportPath, fullPath, [viewportImage]);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
@@ -248,7 +352,7 @@ for (const route of routes) {
       expect(await code.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
       const json = await code.textContent();
       expect(() => JSON.parse(json ?? '')).not.toThrow();
-      if (captureStates) {
+      if (captureStates && captureImages) {
         await disclosure.scrollIntoViewIfNeeded();
         supportImage = await page.screenshot({ animations: 'disabled' });
       }
@@ -297,7 +401,7 @@ for (const route of routes) {
         expect(detailSizes.length).toBeGreaterThanOrEqual(7);
         for (const size of detailSizes) expect(size).toBeGreaterThanOrEqual(15.9);
       }
-      if (captureStates) tableImage = await page.screenshot({ animations: 'disabled' });
+      if (captureStates && captureImages) tableImage = await page.screenshot({ animations: 'disabled' });
       await details.getByRole('button', { name: 'Close', exact: true }).last().click();
       await page.locator('main').evaluate(element => { element.scrollTop = 0; });
     }
@@ -326,6 +430,108 @@ for (const route of routes) {
       console.log(`Header geometry: ${JSON.stringify(geometry)}`);
     }
 
+    if (width < 768 && route.path === '/digital-twin') {
+      const scene = page.locator('[data-vehicle-twin]').first();
+      await scene.scrollIntoViewIfNeeded();
+      const targets = scene.locator('[data-twin-touch-target]');
+      await expect(targets).toHaveCount(9);
+      const geometry = await targets.evaluateAll(elements => {
+        const points: Record<string, [number, number]> = {
+          frunk: [119, 164], trunk: [506, 117], frontWindow: [247, 117], rearWindow: [364, 113],
+          frontDoor: [256, 194], rearDoor: [372, 191], chargePort: [532, 136], sentry: [320, 91], lock: [320, 114],
+        };
+        return elements.map(element => {
+          const button = element.querySelector('button')!;
+          const rect = button.getBoundingClientRect();
+          const svg = element.closest('svg')!;
+          const point = new DOMPoint(...points[element.getAttribute('data-twin-touch-target')!])
+            .matrixTransform(svg.getScreenCTM()!);
+          const originalHit = document.elementFromPoint(point.x, point.y);
+          const centerHit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return {
+            name: element.getAttribute('data-twin-touch-target'),
+            x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+            originalHit: originalHit === button || button.contains(originalHit),
+            centerHit: centerHit === button || button.contains(centerHit),
+          };
+        });
+      });
+      for (const [index, target] of geometry.entries()) {
+        expect(target.width, `${target.name} width`).toBeGreaterThanOrEqual(43.9);
+        expect(target.height, `${target.name} height`).toBeGreaterThanOrEqual(43.9);
+        expect(target.originalHit, `${target.name} original landmark`).toBe(true);
+        expect(target.centerHit, `${target.name} target center`).toBe(true);
+        for (const other of geometry.slice(index + 1)) {
+          expect(target.x + target.width <= other.x + 0.1 || other.x + other.width <= target.x + 0.1
+            || target.y + target.height <= other.y + 0.1 || other.y + other.height <= target.y + 0.1,
+          `${target.name} overlaps ${other.name}`).toBe(true);
+        }
+      }
+      const lock = scene.locator('[data-twin-touch-target="lock"] button');
+      await lock.click();
+      const tooltipId = await lock.getAttribute('aria-describedby');
+      const tooltip = page.locator(`[id="${tooltipId}"]`);
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveText('Locked');
+      await lock.press('Escape');
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+    if (width < 768 && route.path === '/battery-degradation') {
+      const handles = page.locator('[data-chart-key="battery-degradation-trend"] .recharts-brush-traveller');
+      await expect(handles).toHaveCount(2);
+      for (const handle of await handles.all()) {
+        const bounds = await handle.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.width).toBeGreaterThanOrEqual(43.9);
+        expect(bounds!.height).toBeGreaterThanOrEqual(43.9);
+        await expect(handle).toHaveAccessibleName('Health trend & projection time range');
+      }
+      const first = handles.first();
+      const before = await first.getAttribute('aria-valuenow');
+      await first.focus();
+      await first.press('ArrowRight');
+      await expect(first).not.toHaveAttribute('aria-valuenow', before!);
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+    if (width < 768 && route.path === '/energy-orchestrator') {
+      const cells = page.locator('[data-tariff-heatmap-cells]').first();
+      const slots = cells.getByRole('button');
+      await expect(slots).toHaveCount(96);
+      const geometry = await slots.evaluateAll(elements => elements.map(element => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, y: box.y, width: box.width, height: box.height };
+      }));
+      expect(geometry.some(cell => cell.y > geometry[0].y)).toBe(true);
+      expect(await cells.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+      for (const cell of geometry) {
+        expect(cell.width).toBeGreaterThanOrEqual(43.9);
+        expect(cell.height).toBeGreaterThanOrEqual(43.9);
+      }
+      const chosen = slots.nth(20);
+      await chosen.scrollIntoViewIfNeeded();
+      await chosen.click();
+      const details = page.locator('[data-tariff-heatmap-detail]');
+      await expect(details).toHaveText((await chosen.getAttribute('aria-label'))!);
+      await expect(details).toBeInViewport();
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+    if (width < 768 && ['/admin/feedback', '/charging/schedule', '/navigation'].includes(route.path)) {
+      const name = route.path === '/admin/feedback' ? 'admin:feedback'
+        : route.path === '/charging/schedule' ? 'charging:smart-charge-history' : 'maps:navigation-waypoints';
+      const mobile = page.getByRole('group', { name });
+      await expect(mobile).toHaveAttribute('data-mobile-table');
+      await expect(mobile.getByRole('button', { name: 'Quick view' }).first()).toBeVisible();
+      if (route.path === '/navigation') {
+        await mobile.getByRole('button', { name: 'Quick view' }).first().click();
+        const details = page.getByRole('dialog');
+        for (const label of ['Name', 'Type', 'Distance']) {
+          await expect(details.getByText(label, { exact: true })).toBeVisible();
+        }
+        await expect(details.getByText('Catalogue library', { exact: true })).toBeVisible();
+        await expect(details.getByText('Destination', { exact: true })).toBeVisible();
+        await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+      }
+    }
     if (packId === 'classic' && width < 768 && route.path === '/drives') {
       const header = page.locator('[data-app-part~="page-header"]').first();
       const title = await header.locator('[data-app-part~="page-title"]').boundingBox();
@@ -408,11 +614,27 @@ for (const route of routes) {
     }
     if (packId === 'classic' && width < 768) {
       const bodySizes = await page.locator(BODY_ROLE_SELECTOR).evaluateAll(elements => elements
-        .filter(element => element.matches('[data-app-design-owner~="pack-classic"]')
-          && !element.closest('[data-widget-pack], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric-grid="native-gauge"]')
-          && !element.matches('[data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"]'))
-        .map(element => parseFloat(getComputedStyle(element).fontSize)));
-      for (const size of bodySizes) expect(size).toBeGreaterThanOrEqual(Math.max(16, 16 * fontScale) - 0.1);
+        .filter(element => {
+          const box = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return element.matches('[data-app-design-owner~="pack-classic"]')
+            && !element.closest('[aria-hidden="true"], [data-widget-pack], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric-grid="native-gauge"]')
+            && !element.matches('[data-app-part~="metric"], [data-app-part~="metric-label"], [data-app-part~="metric-value"]')
+            && style.display !== 'none' && style.visibility === 'visible'
+            && Number(style.opacity) > 0 && box.width > 1 && box.height > 1;
+        })
+        .map(element => ({
+          tag: element.tagName.toLowerCase(),
+          text: element.textContent?.trim().slice(0, 100),
+          type: element.getAttribute('type'),
+          placeholder: element.getAttribute('placeholder'),
+          className: element.getAttribute('class'),
+          role: element.getAttribute('data-typography-role'),
+          size: parseFloat(getComputedStyle(element).fontSize),
+        })));
+      for (const body of bodySizes) {
+        expect(body.size, JSON.stringify(body)).toBeGreaterThanOrEqual(Math.max(16, 16 * fontScale) - 0.1);
+      }
     }
     if (packId === 'classic' && width < 768 && route.path === '/action-center') {
       const brief = page.locator('[data-operational-brief]').first();
@@ -583,7 +805,7 @@ for (const route of routes) {
       if (width < 640) await assertMobileTable(table, 4, 168, '0:00');
       else await expect(table.getByRole('row')).toHaveCount(169);
       expect(await findHorizontalScrollRegions(page), 'open heatmap table has horizontal scrolling').toEqual([]);
-      if (captureStates) {
+      if (captureStates && captureImages) {
         await page.getByRole('region', { name: 'Charging Cost Heatmap — data table' }).last().scrollIntoViewIfNeeded();
         tableImage = await page.screenshot({ animations: 'disabled' });
       }
@@ -655,7 +877,7 @@ for (const route of routes) {
       const table = tableRegion.getByRole('table');
       await assertMobileTable(table, 5, 168, '12:00 AM');
       expect(await findHorizontalScrollRegions(page), 'open Charging Patterns table has horizontal scrolling').toEqual([]);
-      if (captureStates) {
+      if (captureStates && captureImages) {
         await tableRegion.scrollIntoViewIfNeeded();
         tableImage = await page.screenshot({ animations: 'disabled' });
       }
@@ -771,7 +993,7 @@ for (const route of routes) {
       const table = tableRegion.getByRole('table');
       await assertMobileTable(table, 5, 168, '12:00 AM');
       expect(await findHorizontalScrollRegions(page), 'touch heatmap has horizontal scrolling').toEqual([]);
-      if (captureStates) {
+      if (captureStates && captureImages) {
         await tableRegion.scrollIntoViewIfNeeded();
         tableImage = await page.screenshot({ animations: 'disabled' });
       }
@@ -814,7 +1036,7 @@ for (const route of routes) {
         });
         expect(caption.width).toBeGreaterThanOrEqual(200);
         expect(caption.height).toBeLessThanOrEqual(caption.fontSize * 5);
-        if (captureStates) {
+        if (captureStates && captureImages) {
           await fallback.scrollIntoViewIfNeeded();
           tableImage = await page.screenshot({ animations: 'disabled' });
           await page.locator('main').evaluate(element => { element.scrollTop = 0; });
@@ -823,7 +1045,7 @@ for (const route of routes) {
     }
 
     await page.mouse.move(0, 0);
-    const frames = checkOnly ? [] : [viewportImage ?? await page.screenshot({ animations: 'disabled' })];
+    const frames = captureImages ? [viewportImage ?? await page.screenshot({ animations: 'disabled' })] : [];
     const horizontalScrollRegions = width < 768 ? await findHorizontalScrollRegions(page) : [];
     const smallTouchTargets = touchAudit
       ? [...selectionTouchTargets, ...await findSmallTouchTargets(page)]
@@ -843,7 +1065,7 @@ for (const route of routes) {
       await waitForHarnessReady(page, mocks);
       const next = await main.evaluate(element => element.scrollTop);
       if (next <= position.top) throw new Error('Main content could not be scrolled for capture');
-      if (!viewportOnly && !checkOnly) frames.push(await page.screenshot({ animations: 'disabled' }));
+      if (!viewportOnly && captureImages) frames.push(await page.screenshot({ animations: 'disabled' }));
       if (width < 768) horizontalScrollRegions.push(...await findHorizontalScrollRegions(page));
       if (touchAudit) smallTouchTargets.push(...await findSmallTouchTargets(page));
       if (textAudit) smallBodyText.push(...await findSmallBodyText(page));
@@ -881,7 +1103,7 @@ for (const route of routes) {
     expect(uniqueScrollRegions, 'mobile content has horizontal scrolling regions').toEqual([]);
     expect(pageErrors, 'uncaught browser errors').toEqual([]);
     await assertMockApiComplete(page, mocks);
-    if (!checkOnly) {
+    if (captureImages) {
       await writeCaptureImages(viewportPath, fullPath, frames);
       if (tableImage) await writeFile(tablePath, tableImage);
       if (supportImage) await writeFile(supportPath, supportImage);

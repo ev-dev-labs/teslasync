@@ -96,7 +96,7 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
           ) : (
             <Text as="p" variant="caption">{physics.schedule.honesty}</Text>
           )}
-          <Link to="/physics-cockpit" className="text-sm text-[var(--text-secondary)] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
+          <Link to="/physics-cockpit" data-app-action-link className="text-sm text-[var(--text-secondary)] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
             {t('charging.physics.cockpit', 'Open Tesla physics cockpit')}
           </Link>
         </>

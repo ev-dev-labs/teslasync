@@ -26,6 +26,11 @@ test('design pack captures cover registered application routes with unique filen
   expect(routes.some(route => route.template === '/watch')).toBe(false);
   expect(selectCaptureRoutes('dashboard,/drives').map(route => route.file)).toEqual(['dashboard', 'drives']);
   expect(() => selectCaptureRoutes('not-a-page')).toThrow('Unknown design pack capture page');
+  expect(selectCaptureRoutes('dashboard,/drives', '/drives').map(route => route.file)).toEqual(['dashboard']);
+  expect(selectCaptureRoutes(undefined, 'period-compare')).toHaveLength(routes.length - 1);
+  expect(() => selectCaptureRoutes(undefined, 'not-a-page')).toThrow('Unknown excluded design pack capture page');
+  expect(() => selectCaptureRoutes('dashboard', 'dashboard')).toThrow('No design pack capture pages selected');
+  expect(() => selectCaptureRoutes(',')).toThrow('No design pack capture pages selected');
   expect(CAPTURE_VIEWPORTS.map(({ width, height }) => [width, height])).toEqual([
     [360, 800], [390, 844], [430, 932], [768, 1024], [1440, 900],
   ]);
@@ -103,16 +108,19 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       * { box-sizing: border-box; }
       body { margin: 0; }
       .text-sm, .text-xs, .mgr-title, .mgr-meta-value { font-size: 12px; }
+      .small-important { font-size: 12px !important; }
       #interactive-badge { display: inline-flex; }
       .sidenav-phone-tab { display: flex; flex-direction: column; align-items: center; border: 0; font-size: 11px; }
       [data-role="bottom-tab-bar"] { display: flex; align-items: stretch; }
     </style>
     <p id="prose" class="text-sm" data-app-design-owner="pack-v1">Readable body text</p>
+    <a id="action-link" href="#details" data-app-action-link data-app-design-owner="pack-v1">Details</a>
     <label data-app-part="field-label" data-app-design-owner="pack-v1" for="field">Search</label>
-    <input id="field" data-app-part="field-control" data-app-design-owner="pack-v1">
+    <input id="field" class="small-important" data-app-part="field-control" data-app-design-owner="pack-v1">
     <button id="action" data-app-part="button" data-app-design-owner="pack-v1">Apply</button>
     <span id="interactive-badge" role="button" data-app-part="badge" data-app-design-owner="pack-v1">Step</span>
     <p id="metric-context" class="text-sm" data-app-part="metric-context" data-app-design-owner="pack-v1">Forecast context</p>
+    <p id="chart-subtitle" class="text-xs" data-chart-subtitle data-app-design-owner="pack-v1">Chart source and limitations.</p>
     <section>
       <div id="brief-intro" class="text-xs" data-app-design-owner="pack-v1">An explanation before the summary.</div>
       <section data-operational-brief><span id="brief-metadata" class="text-xs" data-app-design-owner="pack-v1">Snapshot</span></section>
@@ -125,6 +133,8 @@ test('shared pack phone rules retain readable controls, grid text and protected 
       </div>
     </div>
     <div data-app-design-preserve><p id="protected" class="text-sm" data-app-design-owner="pack-v1">Protected widget</p></div>
+    <div data-app-design-preserve><p id="protected-subtitle" class="text-xs" data-chart-subtitle data-app-design-owner="pack-v1">Protected chart subtitle</p></div>
+    <div data-app-design-preserve><a id="protected-link" href="#details" data-app-action-link data-app-design-owner="pack-v1">Link</a></div>
     <div data-app-design-preserve>
       <section data-operational-brief></section>
       <span id="protected-provenance" class="text-xs" data-app-design-owner="pack-v1">Protected widget details</span>
@@ -157,12 +167,15 @@ test('shared pack phone rules retain readable controls, grid text and protected 
           return {
             prose: font('#prose'), field: font('#field'), action: font('#action'),
             context: font('#metric-context'),
+            chartSubtitle: font('#chart-subtitle'), protectedSubtitle: font('#protected-subtitle'),
             briefIntro: font('#brief-intro'), briefProvenance: font('#brief-provenance'),
             briefMetadata: font('#brief-metadata'), protectedProvenance: font('#protected-provenance'),
             grid: font('.mgr-meta-value'), protected: font('#protected'),
             navButton: font('.sidenav-phone-tab'),
             inputHeight: bounds('#field').height, buttonHeight: bounds('#action').height,
             badgeWidth: bounds('#interactive-badge').width, badgeHeight: bounds('#interactive-badge').height,
+            linkWidth: bounds('#action-link').width, linkHeight: bounds('#action-link').height,
+            protectedLinkHeight: bounds('#protected-link').height,
             navHeight: bounds('[data-role="bottom-tab-bar"]').height, reserved: bounds('#reserved').height,
             scrollWidth: document.documentElement.scrollWidth,
           };
@@ -172,6 +185,8 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.field, context).toBeGreaterThanOrEqual(16);
         expect(sizes.action, context).toBeGreaterThanOrEqual(16);
         expect(sizes.context, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.chartSubtitle, context).toBeGreaterThanOrEqual(16);
+        expect(sizes.protectedSubtitle, context).toBe(12);
         expect(sizes.briefIntro, context).toBeGreaterThanOrEqual(16);
         expect(sizes.briefProvenance, context).toBeGreaterThanOrEqual(16);
         expect(sizes.briefMetadata, context).toBe(12);
@@ -183,6 +198,9 @@ test('shared pack phone rules retain readable controls, grid text and protected 
         expect(sizes.buttonHeight, context).toBeGreaterThanOrEqual(44);
         expect(sizes.badgeWidth, context).toBeGreaterThanOrEqual(44);
         expect(sizes.badgeHeight, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.linkWidth, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.linkHeight, context).toBeGreaterThanOrEqual(44);
+        expect(sizes.protectedLinkHeight, context).toBeLessThan(44);
         expect(sizes.reserved, context).toBeGreaterThanOrEqual(sizes.navHeight);
         expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
       }
@@ -191,6 +209,7 @@ test('shared pack phone rules retain readable controls, grid text and protected 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('#brief-intro')).toHaveCSS('font-size', '12px');
   await expect(page.locator('#brief-provenance')).toHaveCSS('font-size', '12px');
+  await expect(page.locator('#chart-subtitle')).toHaveCSS('font-size', '12px');
 });
 
 test('phone explanations use the body floor in every pack without altering protected copy', async ({ page }) => {
@@ -207,6 +226,7 @@ test('phone explanations use the body floor in every pack without altering prote
       <section data-operational-brief><span id="metadata" class="text-xs" data-app-design-owner>Snapshot</span></section>
       <span id="provenance" class="text-xs" data-app-design-owner>Source limitations after the summary.</span>
       <p id="panel-copy" class="text-sm" data-app-design-owner>A detailed explanation inside a panel.</p>
+      <p id="chart-copy" class="text-xs" data-chart-subtitle data-app-design-owner>A chart's source and limitations.</p>
     </section>
     <div data-app-design-preserve>
       <section data-operational-brief></section>
@@ -235,13 +255,14 @@ test('phone explanations use the body floor in every pack without altering prote
           await page.locator('html').evaluate((root, value) => root.style.setProperty('--font-scale', String(value)), scale);
           const sizes = await page.evaluate(() => {
             const font = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
-            return { intro: font('#intro'), provenance: font('#provenance'), panelCopy: font('#panel-copy'), metadata: font('#metadata'),
+            return { intro: font('#intro'), provenance: font('#provenance'), panelCopy: font('#panel-copy'), chartCopy: font('#chart-copy'), metadata: font('#metadata'),
               protectedCopy: font('#protected-copy'), scrollWidth: document.documentElement.scrollWidth };
           });
           const context = `${pack}, ${forcedColors}, ${width}px, scale ${scale}`;
           expect(sizes.intro, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
           expect(sizes.provenance, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
           expect(sizes.panelCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.chartCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
           expect(sizes.metadata, context).toBe(12);
           expect(sizes.protectedCopy, context).toBe(12);
           expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
@@ -249,6 +270,101 @@ test('phone explanations use the body floor in every pack without altering prote
       }
     }
   }
+});
+
+test('phone report navigation and complete weekday-hour evidence fit every pack', async ({ page }) => {
+  const owner = 'data-app-design-owner';
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  await page.setContent(`
+    <style>
+      :root { --font-scale: 1; --density-gap: 12px; --density-pad-y: 12px; --density-pad-x: 16px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      .scroll { max-width: 100%; overflow-x: auto; }
+      .wide { min-width: 800px; }
+      table { width: 100%; table-layout: fixed; }
+      .stack { min-width: 620px; }
+      .stack td { min-width: 192px; white-space: nowrap; }
+      nav { display: flex; position: sticky; gap: 8px; overflow-x: auto; }
+      nav a { flex-shrink: 0; }
+      .nowrap { white-space: nowrap; }
+    </style>
+    <nav data-drive-report-nav ${owner}>
+      ${['Overview', 'Energy', 'Telemetry', 'Supervised', 'Physics', 'Diagnostics']
+        .map(label => `<a href="#${label}" data-app-action-link ${owner}>${label}</a>`).join('')}
+      <a href="#extended" class="nowrap" data-app-action-link ${owner}>UnbrokenTranslatedActionLabelDesignedToWrapOnNarrowPhones</a>
+    </nav>
+    <div class="scroll">
+      <div class="wide" data-weekly-punchcard-frame ${owner}>
+        <table data-weekly-punchcard ${owner}>
+          <caption ${owner}>Week</caption>
+          <thead ${owner}><tr><th>Day</th>${Array.from({ length: 24 }, (_, hour) => `<th>${hour}</th>`).join('')}</tr></thead>
+          <tbody ${owner}>${days.map(day => `<tr ${owner}>
+            <th ${owner}><span ${owner}>${day}</span></th>
+            ${Array.from({ length: 24 }, (_, hour) =>
+              `<td ${owner} data-punchcard-hour="${String(hour).padStart(2, '0')}" aria-label="${day} ${hour}:00"><span ${owner}>${hour}</span></td>`).join('')}
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="scroll"><table class="stack" data-mobile-stack-table ${owner}>
+      <thead ${owner}><tr><th>Metric</th><th>Value</th><th>Source</th></tr></thead>
+      <tbody ${owner}><tr ${owner}><th ${owner}>Energy</th><td ${owner} data-mobile-label="Value">12 kWh</td>
+        <td ${owner} data-mobile-label="Source">A long recorded source and method</td></tr></tbody>
+    </table></div>
+  `);
+  const styles = resolve('src', 'components', 'ui', 'app-designs');
+  const sheets = await Promise.all([
+    readFile(resolve(styles, 'base.css'), 'utf8'),
+    ...Object.values(APP_DESIGN_PACK_FILES).map(file => readFile(resolve(styles, 'packs', file), 'utf8')),
+    readFile(resolve(styles, 'mobile.css'), 'utf8'),
+  ]);
+  await page.addStyleTag({ content: sheets.join('\n') });
+  for (const pack of PACK_IDS) {
+    const designOwner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+    await page.locator('html').evaluate((root, { attributes, designOwner }) => {
+      for (const [name, value] of Object.entries(attributes)) root.setAttribute(name, value);
+      root.setAttribute('data-app-design-owner', designOwner);
+      for (const element of document.querySelectorAll('[data-app-design-owner]')) element.setAttribute('data-app-design-owner', designOwner);
+    }, { attributes: getAppDesignAttributes(pack), designOwner });
+    for (const width of [360, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      const measurements = await page.evaluate(() => {
+        const table = document.querySelector<HTMLElement>('[data-weekly-punchcard]')!;
+        const row = table.querySelector<HTMLElement>('tbody tr')!;
+        const cell = row.querySelector<HTMLElement>('td')!;
+        const nav = document.querySelector<HTMLElement>('nav')!;
+        return {
+          scrollWidth: document.documentElement.scrollWidth,
+          regions: [...document.querySelectorAll<HTMLElement>('.scroll')].map(region => region.scrollWidth - region.clientWidth),
+          rowDisplay: getComputedStyle(row).display,
+          hour: getComputedStyle(cell, '::before').content,
+          cellCount: table.querySelectorAll('tbody td').length,
+          cellSize: parseFloat(getComputedStyle(cell.querySelector('span')!).fontSize),
+          navPosition: getComputedStyle(nav).position,
+          linkSizes: [...nav.querySelectorAll('a')].map(link => {
+            const { width, height } = link.getBoundingClientRect();
+            return { width, height };
+          }),
+        };
+      });
+      const context = `${pack}, ${width}px`;
+      expect(measurements.scrollWidth, context).toBeLessThanOrEqual(width);
+      expect(measurements.regions, context).toEqual([0, 0]);
+      expect(measurements.rowDisplay, context).toBe('grid');
+      expect(measurements.hour, context).toBe('"00"');
+      expect(measurements.cellCount, context).toBe(168);
+      expect(measurements.cellSize, context).toBeGreaterThanOrEqual(16);
+      expect(measurements.navPosition, context).toBe('static');
+      for (const link of measurements.linkSizes) {
+        expect(link.width, context).toBeGreaterThanOrEqual(44);
+        expect(link.height, context).toBeGreaterThanOrEqual(44);
+      }
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('[data-weekly-punchcard] tbody tr').first()).toHaveCSS('display', 'table-row');
+  await expect(page.locator('nav')).toHaveCSS('position', 'sticky');
 });
 
 test('pack presentation roles reset at nested previews without changing protected surfaces', async ({ page }) => {
@@ -1273,6 +1389,7 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     <p id="small" style="font-size:14px">Small paragraph</p>
     <span id="small-role" data-typography-role="bodySm" style="font-size:15px">Small body role</span>
     <span id="small-role-class" class="text-sm text-[var(--text-secondary)]" style="font-size:15px">Small body role class</span>
+    <p id="chart-subtitle" data-chart-subtitle style="font-size:12px">Chart source and limitations</p>
     <p id="caption" data-typography-role="caption" style="font-size:12px">Short metadata</p>
     <p id="feedback" data-app-part="feedback-title" style="font-size:14px">Feedback title</p>
     <section>
@@ -1301,6 +1418,7 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     expect.objectContaining({ id: 'small', size: 14 }),
     expect.objectContaining({ id: 'small-role', size: 15 }),
     expect.objectContaining({ id: 'small-role-class', size: 15 }),
+    expect.objectContaining({ id: 'chart-subtitle', size: 12 }),
     expect.objectContaining({ id: 'feedback', size: 14 }),
     expect.objectContaining({ id: 'brief-intro', size: 12 }),
     expect.objectContaining({ id: 'brief-provenance', size: 12 }),

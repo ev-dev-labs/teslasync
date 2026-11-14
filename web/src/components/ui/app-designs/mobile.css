@@ -47,6 +47,12 @@
     overflow-wrap: anywhere;
   }
 
+  [data-chart-subtitle]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+    overflow-wrap: anywhere;
+  }
+
   [data-app-part~="badge"][role="button"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     min-inline-size: var(--app-touch-size);
     min-block-size: var(--app-touch-size);
@@ -54,6 +60,7 @@
 
   :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .sr-only), select, textarea)[data-app-part~="field-control"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     min-block-size: var(--app-touch-size);
+    font-size: var(--app-body-size) !important;
   }
 
   input[data-app-part~="field-control"]:has(+ div > button):not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
@@ -204,6 +211,76 @@
     max-inline-size: 100%;
   }
 
+  a[data-app-action-link]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--app-touch-size);
+    min-block-size: var(--app-touch-size);
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [data-drive-report-nav][data-app-design-owner] {
+    position: static;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  [data-weekly-punchcard-frame][data-app-design-owner] {
+    min-inline-size: 0;
+  }
+
+  [data-weekly-punchcard][data-app-design-owner],
+  [data-weekly-punchcard] :is(caption, tbody)[data-app-design-owner] {
+    display: block;
+    inline-size: 100%;
+  }
+
+  [data-weekly-punchcard] thead[data-app-design-owner] {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  [data-weekly-punchcard] tbody tr[data-app-design-owner] {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--app-heatmap-gap);
+    padding-block: var(--density-pad-y);
+  }
+
+  [data-weekly-punchcard] tbody th[data-app-design-owner] {
+    grid-column: 1 / -1;
+    inline-size: auto;
+  }
+
+  [data-weekly-punchcard] tbody td[data-app-design-owner] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-inline-size: 0;
+    padding: calc(var(--density-pad-y) / 2) 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-weekly-punchcard] tbody td[data-app-design-owner]::before {
+    content: attr(data-punchcard-hour);
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-weekly-punchcard] tbody :is(th, td) [data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
   [data-app-part~="timeline-row"] [data-app-part~="timeline-content"] > a[href][data-app-design-owner],
   .leaflet-control-attribution a[href][data-app-design-owner] {
     display: inline-flex;
@@ -312,6 +389,10 @@
 @media screen and (max-width: 400px) {
   :root[data-app-design-owner]:not([data-tab-bar="off"]) {
     --shell-tab-bar-height: calc(max(var(--app-touch-size), var(--app-phone-tab-line-height) * 2 + var(--app-phone-tab-padding) * 2) * 2 + 1px + var(--app-phone-tab-safe));
+  }
+
+  [data-operational-metric="guard-unacknowledged"][data-app-design-owner] {
+    grid-column: 1 / -1;
   }
 
   [data-role="bottom-tab-bar"][data-app-design-owner] {
@@ -426,6 +507,14 @@
   :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table)[data-app-design-owner] {
     display: block;
     inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  [data-chart-key="drive-archetype-candidates"] [data-chart-viewport][data-app-design-owner] {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    contain: layout;
   }
 
   :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption[data-app-design-owner] {
@@ -469,6 +558,7 @@
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
     text-align: start;
+    white-space: normal;
     overflow-wrap: anywhere;
   }
 

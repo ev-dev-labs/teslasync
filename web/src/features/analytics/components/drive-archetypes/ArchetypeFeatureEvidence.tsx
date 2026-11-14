@@ -28,6 +28,9 @@ export function ArchetypeFeatureEvidence({
 }: ArchetypeFeatureEvidenceProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const minimumLabel = t('archetypes.features.minimum', 'Minimum');
+  const medianLabel = t('archetypes.features.median', 'Median');
+  const maximumLabel = t('archetypes.features.maximum', 'Maximum');
   const ranges = summary.featureRanges;
   const rows = [
     {
@@ -72,13 +75,13 @@ export function ArchetypeFeatureEvidence({
           {t('archetypes.features.subtitle', 'Eligible-row minimum, median, and maximum values at the display boundary.')}
         </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="eligible">
-          <Table className="min-w-[620px]" aria-label={t('archetypes.features.title', 'Feature ranges and temperature-imputation evidence')}>
+          <Table className="min-w-[620px]" data-mobile-stack-table aria-label={t('archetypes.features.title', 'Feature ranges and temperature-imputation evidence')}>
 
             <thead data-app-part="table-head"><tr data-app-part="table-row">
               <th data-app-part="table-cell" scope="col"><MetricLabel>{t('archetypes.features.feature', 'Feature')}</MetricLabel></th>
-              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.minimum', 'Minimum')}</MetricLabel></th>
-              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.median', 'Median')}</MetricLabel></th>
-              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{t('archetypes.features.maximum', 'Maximum')}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{minimumLabel}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{medianLabel}</MetricLabel></th>
+              <th data-app-part="table-cell" scope="col" className="text-right"><MetricLabel>{maximumLabel}</MetricLabel></th>
             </tr></thead>
             <tbody>
             {rows.map((row) => (
@@ -86,9 +89,9 @@ export function ArchetypeFeatureEvidence({
                 key={row.label}
               >
                 <th data-app-part="table-cell" scope="row"><Text variant="label">{row.label}</Text></th>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.min)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.median)}</Text></td>
-                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">{row.format(row.range.max)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={minimumLabel} className="text-right"><Text variant="bodySm">{row.format(row.range.min)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={medianLabel} className="text-right"><Text variant="bodySm">{row.format(row.range.median)}</Text></td>
+                <td data-app-part="table-cell" data-mobile-label={maximumLabel} className="text-right"><Text variant="bodySm">{row.format(row.range.max)}</Text></td>
               </tr>
             ))}
             </tbody>

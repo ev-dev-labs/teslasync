@@ -112,7 +112,7 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
         <EmptyState message={t('physicsLedger.drive.empty', 'No drive interval in this window.')} />
       )}
       <Text as="p" size="sm" color="secondary">
-        <Link to="/tesla-physics/ledger" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+        <Link to="/tesla-physics/ledger" data-app-action-link className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
           {t('driveDetail.ledger.openFull', 'Open the full physics ledger')}
         </Link>
       </Text>

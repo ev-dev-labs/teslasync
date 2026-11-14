@@ -275,9 +275,9 @@ export default function ApiLogsPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <Caption className="block">
+        <Text as="p" variant="bodySm">
           {t('apiLogs.statsScope', 'API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.')}
-        </Caption>
+        </Text>
       </FadeIn>
 
       {/* Full-width evidence workspace; server predicates stay separate from column layout. */}
@@ -376,9 +376,9 @@ export default function ApiLogsPage() {
                       })
                     : totalIsKnown && total === 0 ? t('apiLogs.totalCount', '{{count}} total', { count: 0 }) : '—'}
                 </Caption>
-                <Caption className="mt-1 block">
+                <Text as="p" variant="bodySm" className="mt-1">
                   {t('apiLogs.loadedPageScope', 'Newest first. Filters query all matching requests; exports include only this loaded page.')}
-                </Caption>
+                </Text>
               </div>
             </div>
 
@@ -402,7 +402,7 @@ export default function ApiLogsPage() {
               statusOptions={statusOptions}
               serviceOptions={serviceOptions}
               toolbarHeading={
-                <Caption>{t('apiLogs.inspectHint', 'Expand a request to inspect headers, bodies, and metadata.')}</Caption>
+                <Text as="span" variant="bodySm">{t('apiLogs.inspectHint', 'Expand a request to inspect headers, bodies, and metadata.')}</Text>
               }
               controls={{
                 search: {

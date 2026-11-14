@@ -246,11 +246,12 @@ observed breakages before continuing the uncaptured cases. The matrix includes
 the previously unstable period-comparison route, but the six standalone routes
 remain outside the identity-safe capture registry.
 
-Resuming a matrix with `DESIGN_PACK_SKIP_EXISTING=1` skips each existing
-viewport image before any cleanup or capture. The harness contract and an
-actual skipped Classic dashboard invocation verified that existing evidence
-remains byte-for-byte unchanged. These skips do not convert the interrupted
-run's failures or unfinished captures into passes.
+Initially, `DESIGN_PACK_SKIP_EXISTING=1` skipped existing images and their
+diagnostics. The runner now preserves those images but still runs diagnostics
+against the current build. An expected failure against an older build and a
+pass against the repaired build both left the existing image hash unchanged.
+Passing diagnostics do not establish that a preserved image depicts the
+current build or retroactively pass an interrupted capture.
 
 `DESIGN_PACK_CHECK_ONLY=1` reruns the same geometry, touch, text, contrast,
 mock and browser-error checks without taking or changing screenshots. The
@@ -476,7 +477,8 @@ investigated. The previously documented period-comparison route remains
 temporarily excluded.
 
 The resumed Classic run stopped at its 12-failure threshold: 40 passed,
-42 existing images were skipped, three cases were interrupted and 919 did
+42 existing images and their diagnostics were skipped under the earlier
+resume behavior, three cases were interrupted and 919 did
 not run. The failures include several horizontally scrolling tables, an
 overflowing heatmap, small interactive targets, one contrast failure, one
 small body-text finding and a live-signals fixture that did not settle.
@@ -653,6 +655,163 @@ Full lint on the preceding snapshot reported `LINT_EXIT=0`; targeted lint
 also passed for the later coverage and preservation edits. A prior-snapshot
 full test run and a separate current-source full test run are in progress;
 the focused contracts and updated build cover the phone and coverage changes.
+
+### Mobile evidence follow-up
+
+The shared phone treatment now stacks the populated archetype evidence and
+candidate tables, preserves their localized column labels, and gives the
+candidate viewport enough height for the stacked rows. The weekly punchcard
+retains all 168 cells and localized accessible labels without a horizontal
+phone scroller. Drive-detail, parking, Powershare and API-log tables opt into
+the existing mobile presentation rather than changing their data or actions.
+Drive and physics action links use the shared touch-size treatment.
+
+A production build was made from an isolated snapshot after all 34 modified
+frontend files were copied and their hashes matched the working tree:
+
+```text
+[pwa-precache] OK — route chunks remain on-demand
+[pwa-contract] OK — source + build contracts satisfied
+[source-maps] OK — no publicly reachable source maps, serving path denies .map
+```
+
+With that build served through the existing local origin, screenshot-free
+checks of populated `/drive-archetypes` and `/drives/412` at 360px and 430px
+reported:
+
+```text
+4 passed (1.8m)
+```
+
+The earlier development-server retries intermittently left a mocked
+`/api/v1/system/auth-mode` request pending; the production checks passed
+without relaxing request accounting. These four checks do not establish
+contrast or other routes. A broader Classic 360px sweep is in progress.
+Nine changed routes were recaptured at 360px and 430px on that pre-subtitle
+build, with the mobile overflow, touch and text diagnostics enabled:
+
+```text
+18 passed
+```
+
+Inspection of the parking capture found another undersized chart subtitle.
+The shared chart now exposes a subtitle marker and the owner-scoped phone
+layer gives that copy the existing body-size token, excluding preserved
+widgets. The browser contracts check this treatment across all 27 pack sheets
+and its protected boundary:
+
+```text
+3 passed (18.8s)
+```
+
+The focused chart test reported:
+
+```text
+Test Files  1 passed (1)
+     Tests  1 passed | 30 skipped (31)
+```
+
+Those synthetic checks do not replace a production recapture. The updated
+build and full lint are in progress. A later source review retained the
+mobile grid's Quick View columns, stabilized its presentation props, and
+used the SI duration converter without changing the displayed minutes.
+The relevant component and preservation tests reported:
+
+```text
+Test Files  10 passed (10)
+     Tests  966 passed (966)
+```
+
+Inspection of the existing Driving Rhythm and Physics phone images exposed a
+small explanatory caption and a clipped selected investigation. The former
+now uses a body role; the latter also exposes its full translated title below
+the native chooser. Their focused component tests reported:
+
+```text
+Test Files  2 passed (2)
+     Tests  8 passed (8)
+```
+
+The added browser check requires that title to be visible, body-sized and
+unclipped. These changes still require production recaptures.
+
+The case-sensitive scan of the 18 changed production feature files reported:
+
+```text
+raw interactive HTML: 0
+static CSS-variable inline styles: 0
+direct chart/map or old API imports: 0
+double API prefix: 0
+camelCase vehicle query: 0
+```
+
+The audit extension also flagged six archetype and seven drive-detail
+`<Table>` uses as raw tables; the reported elements are the shared
+`@/components/ui` component, not lowercase `<table>` elements.
+
+The latest production-snapshot recaptures covered those nine routes at both
+phone widths (`18 passed`) and Energy Orchestrator at all four target widths
+(`4 passed`). Empty source notices no longer introduce 140px of blank space.
+The desktop capture revealed a split battery-switch label; its new browser
+assertion failed against the earlier snapshot as expected. The refreshed
+Docker build passed the four-width recapture (`4 passed`) and the corrected
+images were inspected.
+
+The API logs scope explanation measured 12px on the prior Docker build.
+Three explanatory texts now use the shared body role, while compact counts
+remain metadata. A new browser check failed on the old build as expected;
+the updated Docker build passed the 360px and 430px checks:
+
+```text
+Contrast: 0 violated rules, 0 nodes require manual review
+Contrast: 0 violated rules, 0 nodes require manual review
+2 passed (36.7s)
+```
+
+Both initial viewport images were inspected. The explanatory copy is below
+the initial viewport, and the two-row 360px navigation still takes substantial
+space; these checks do not establish coverage of all interaction states.
+
+The capture runner can now select every canonical pack with `--pack all`
+and optionally set `--workers`; its focused safety tests report `5 passed`.
+Explicit `--exclude-pages` values are validated against the route registry
+(`1 passed` selection contract); omitted routes are not counted as passes.
+The final matrix remains incomplete, and `period-compare` and the six
+standalone routes remain explicitly unverified.
+
+The task-owned Docker preview is isolated at `http://localhost:3120` and
+uses the existing backend. Its index, entry asset, API version route, browser
+render at phone and desktop widths, and container health passed. The existing
+upstream system health endpoint reports the Tesla API component unhealthy; the
+preview does not change or repair the backend. A startup-readiness race
+triggered a rollback on the first replacement attempt; waiting for Docker
+health succeeded on the second. The latest image was independently
+preflighted and deployed with the previous preview retained for rollback.
+
+Against the running image, the isolated gallery test checked all 27
+thumbnails at 360, 430 and 1440px, then selected and reloaded a mocked
+server preference. A separate delayed-preference startup test used assets
+copied from that image. Neither test started a server or took screenshots:
+
+```text
+1 passed (19.6s)
+1 passed (15.0s)
+```
+
+The isolated snapshot's full Vitest run was stopped in error while it was
+still producing output. It did not finish and is not a full-suite result. A
+new full Vitest run is executing against the current source.
+
+The current-source frontend checks completed with:
+
+```text
+TSC_EXIT=0
+LINT_EXIT=0
+```
+
+The API Logs engineering audit reported zero violations in each of its six
+categories and `TypeScript passes`. The page has 477 lines and five
+panel/chart references, unchanged from `feature/app-design-themes`.
 
 ## Protected surfaces
 
