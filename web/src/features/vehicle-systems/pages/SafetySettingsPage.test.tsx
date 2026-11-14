@@ -57,6 +57,7 @@ import type { SecurityEvent } from '@/api/types';
 import { formatDistance, type UnitPref } from '@/lib/unitConversion';
 import type { FormatOptions } from '@/hooks/useUnits';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { NavigationGuardProvider } from '@/components/feedback';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
@@ -623,6 +624,27 @@ describe('SafetySettingsPage', () => {
 
 
 describe('SafetySettingsPage preservation', () => {
+  it('keeps unknown and disabled safety states and every history field in the phone grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      safetyHistoryMock.mockReturnValue(makeQuery<SafetySnapshot[]>({ data: [
+        { ...HISTORY[0], automatic_emergency_braking_off: null, automatic_emergency_braking_state: 'Unavailable' },
+        { ...HISTORY[1], automatic_emergency_braking_off: true },
+      ] }));
+      const { container } = renderPage();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid.querySelector('[data-row-key="10"]')).toHaveTextContent('AEB: —');
+      expect(grid.querySelector('[data-row-key="11"]')).toHaveTextContent('AEB: Off');
+      expect(grid).toHaveTextContent('Time:');
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      const detail = screen.getByRole('dialog');
+      for (const name of ['Time', 'AEB', 'AEB operating state', 'BSC', 'BSCW', 'FCW', 'LDA', 'ELDA', 'CFD', 'SLW', 'PIN']) {
+        expect(within(detail).getByText(name, { exact: true })).toBeInTheDocument();
+      }
+      expect(within(detail).getByText('Unavailable')).toBeInTheDocument();
+    } finally { bounds.mockRestore(); }
+  });
+
   it('presents configuration coverage neutrally without changing the original threshold helpers', () => {
     renderPage();
     expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-color', 'var(--text-secondary)');

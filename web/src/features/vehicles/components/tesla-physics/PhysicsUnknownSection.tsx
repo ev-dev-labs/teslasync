@@ -52,9 +52,9 @@ export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPag
         </div>)}
       </div> : <Text as="p" variant="bodySm">{t('teslaOnly.unknownNoBudgets', 'No signal-specific budgets returned; individual signal coverage cannot be assessed.')}</Text>}
       <div className="flex flex-wrap gap-4">
-        <Link to="/tesla-physics/clocks" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectClocks', 'Check event and ingest intervals')} →</Link>
-        <Link to="/tesla-physics/nervous-system" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectNerves', 'Check silent and contradictory signals')} →</Link>
-        <Link to="/tesla-physics/car-kept-living" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectQueue', 'Check broker and replay context')} →</Link>
+        <Link to="/tesla-physics/clocks" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectClocks', 'Check event and ingest intervals')} →</Link>
+        <Link to="/tesla-physics/nervous-system" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectNerves', 'Check silent and contradictory signals')} →</Link>
+        <Link to="/tesla-physics/car-kept-living" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectQueue', 'Check broker and replay context')} →</Link>
       </div>
       <RawRows title={t('teslaOnly.budgetBreakdown', 'Per-signal coverage budget')} rows={sorted} tableId="physics:unknown" t={t}
         keyExtractor={(r) => r.kind} columns={[

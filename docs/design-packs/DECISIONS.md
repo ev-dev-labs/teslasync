@@ -1104,6 +1104,45 @@ safety, security and signal-history tables; undersized physics navigation
 links; a missing trip-detail fixture; and two navigation-context errors.
 These are not visual or contrast approvals.
 
+The safety and security history tables, trip-detail drives, and the physics
+attention and logbook tables now opt into the existing phone grid. Quick View
+retains the original column renderers, including timestamps and unit
+formatters. Logbook session links remain available on the phone and in the
+expanded evidence. The physics raw-evidence wrapper can explicitly preserve
+its desktop expansion when a mobile presentation is supplied; its existing
+default remains unchanged. The trip-detail fixture matches only its exact,
+query-free request.
+
+Screenshot-free Classic checks against isolated production assets reported:
+
+```text
+6 passed (58.3s)
+4 passed (51.1s)
+```
+
+The first run checked logbook, modes and trip detail at 360px and 430px; the
+second opened and expanded logbook and nervous-system evidence at both widths.
+These checks covered scrolling, touch targets, text size, browser errors and
+strict mock completion, not visual or contrast approval. The focused physics
+and raw-evidence tests reported `Test Files 2 passed (2)`, `Tests 98 passed
+(98)`. The combined safety, security, trip, physics and fixture run reported:
+
+```text
+Test Files  6 passed (6)
+     Tests  383 passed (383)
+```
+
+It emitted existing React `act(...)` and JSDOM `scrollTo` warnings. Frontend
+and E2E TypeScript checks exited 0; focused ESLint exited 0. The guideline
+audit reported no violations in the changed production files. The safety
+page changed from 925 to 944 counted lines and retained eight `LayoutCard`
+occurrences; it uses no direct `GlassPanel` or `ChartContainer` tags. No API
+hooks changed; the earlier hook verifier matched 571 extracted URL patterns.
+
+The separate security-access check still fails at both phone widths: seven
+existing shared Digital Twin hotspots measure approximately 11-14px. The
+history grid repair does not resolve or waive that protected-design conflict.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle

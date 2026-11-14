@@ -308,6 +308,19 @@ for (const route of routes) {
     if (viewportImage) await writeCaptureImages(viewportPath, fullPath, [viewportImage]);
     if (touchDevice) expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
 
+    if (width < 640 && ['/tesla-physics/logbook', '/tesla-physics/nervous-system'].includes(route.path)) {
+      const disclosure = page.getByRole('button', { name: /^Inspect raw evidence:/ });
+      await disclosure.click();
+      const raw = page.getByRole('region', { name: /^Inspect raw evidence:/ });
+      const grid = raw.locator('[data-mobile-table]');
+      await expect(grid).toBeVisible();
+      await expect(grid.locator('[data-row-key]')).not.toHaveCount(0);
+      await grid.getByRole('button', { name: 'Expand row' }).first().click();
+      await expect(grid.locator('dl[data-app-list="definitions"]').first()).toBeVisible();
+      expect(await findHorizontalScrollRegions(page), 'expanded physics evidence has horizontal scrolling').toEqual([]);
+      await page.locator('main').evaluate(element => { element.scrollTop = 0; });
+    }
+
     if (route.path === '/energy' && width < 768 && packId === 'classic') {
       const headerGeometry = await page.locator('[data-role="page-header"]').first().evaluate(header => {
         const title = header.querySelector<HTMLElement>('[data-app-part~="page-title"]')!;

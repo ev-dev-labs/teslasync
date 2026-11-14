@@ -11,18 +11,19 @@ export function Evidence({ title, honesty, children }: { title: string; honesty?
   </GlassPanel>;
 }
 
-export function RawRows<T>({ title, rows, columns, tableId, keyExtractor, mobileColumns, mobilePresentation, t, disclosureLabel, description }: {
+export function RawRows<T>({ title, rows, columns, tableId, keyExtractor, mobileColumns, mobilePresentation, expandable = !mobilePresentation, t, disclosureLabel, description }: {
   title: string; rows: T[]; columns: Column<T>[]; tableId: string;
   keyExtractor: (row: T) => string; mobileColumns?: string[]; t: Translate;
   disclosureLabel?: string; description?: string;
   mobilePresentation?: MobileDataTablePresentation<T>;
+  expandable?: boolean;
 }) {
   const { expandedKeys, setExpandedKeys } = useTableExpansion();
   return <Accordion headerClassName="min-h-11" title={disclosureLabel ?? t('teslaOnly.workbench.inspectRaw', 'Inspect raw evidence: {{title}} ({{count}} rows)', { title, count: rows.length })}>
     <Text as="p" variant="caption">{description ?? t('teslaOnly.workbench.rawCaution', 'Rows are the returned, bounded observations, not a complete lifetime stream. Open only when you need timestamps or individual readings.')}</Text>
     <DataTable tableId={tableId} columns={columns} mobileColumns={mobileColumns} mobilePresentation={mobilePresentation} data={rows}
       className="[&_button]:max-md:min-h-11 [&_button]:max-md:min-w-11"
-      expandable={!mobilePresentation} expandedKeys={expandedKeys} onExpandedChange={setExpandedKeys}
+      expandable={expandable} expandedKeys={expandedKeys} onExpandedChange={setExpandedKeys}
       renderExpanded={(row) => <dl data-app-part="list" data-app-list="definitions" className="min-w-0 space-y-3">
         {columns.map((column) => <div data-app-part="list-row" key={column.key} className="min-w-0 space-y-1 break-words">
           <Text data-app-part="metric-label" as="dt" variant="caption">{column.header}</Text>
