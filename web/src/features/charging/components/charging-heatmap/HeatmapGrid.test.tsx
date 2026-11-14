@@ -30,6 +30,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
+import { flushSync } from 'react-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import { HeatmapGrid as Grid } from './HeatmapGrid';
@@ -151,6 +152,28 @@ describe('HeatmapGrid — colour scale', () => {
 });
 
 describe('HeatmapGrid — hover detail popover', () => {
+  it('anchors detail to the next cell even when focus synchronously flushes rendering', () => {
+    const model = emptyModel();
+    model.grid[0][0] = { count: 1, totalEnergyWh: 1250 };
+    model.grid[0][1] = { count: 2, totalEnergyWh: 2500 };
+    const { container } = render(<HeatmapGrid model={model} formatEnergy={makeFormatEnergy()} />);
+    const slots = container.querySelectorAll<HTMLButtonElement>('button[data-heatmap-slot]');
+    vi.spyOn(slots[0], 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 300, 24, 28));
+    vi.spyOn(slots[1], 'getBoundingClientRect').mockReturnValue(new DOMRect(140, 300, 24, 28));
+    fireEvent.focus(slots[0]);
+    fireEvent.click(slots[0]);
+    const flushFocus = () => flushSync(() => {});
+    document.addEventListener('focusin', flushFocus);
+    try {
+      fireEvent.keyDown(slots[0], { key: 'ArrowRight' });
+      expect(slots[1]).toHaveFocus();
+      expect(screen.getByRole('dialog')).toHaveTextContent('2 sessions · 2.50 kWh');
+      expect(screen.getByRole('dialog')).toHaveStyle({ left: '152px' });
+    } finally {
+      document.removeEventListener('focusin', flushFocus);
+    }
+  });
+
   it('uses one roving keyboard stop and opens the same detail on activation, arrows and touch', () => {
     const model = emptyModel();
     model.grid[0][0] = { count: 1, totalEnergyWh: 1250 };

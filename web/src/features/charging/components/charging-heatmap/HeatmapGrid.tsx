@@ -133,8 +133,9 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, 
                       }
                       event.preventDefault();
                       const target = event.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`[data-heatmap-slot="${next}"]`);
-                      target?.focus();
+                      // Focus can synchronously remount the popover, so update its anchor first.
                       if (detailOpen && target) openDetail(target, Math.floor(next / 24), next % 24, hovered?.pinned);
+                      target?.focus();
                     }}
                   >
                     <span aria-hidden="true" data-heatmap-hour-label className="sm:hidden">{hour}</span>
