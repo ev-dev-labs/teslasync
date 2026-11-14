@@ -954,6 +954,33 @@ BASE_STYLE_CONTRACT_EXIT=0
 LEGEND_BOUNDARY_BROWSER_EXIT=0
 ```
 
+The merged coverage job on the same CI head reported the same two
+chart-boundary failures, not an additional failure:
+
+```text
+Test Files  1 failed | 2946 passed (2947)
+Tests       2 failed | 101795 passed | 4 skipped (101801)
+```
+
+After the repair, frontend TypeScript and full lint passed; the committed
+source also built as the Docker image `teslasync-web:design-packs-v2-7d6dca06e1ca`:
+
+```text
+TSC_AFTER_BOUNDARY_EXIT=0
+LINT_BOUNDARY_EXIT=0
+```
+
+The candidate image was checked on loopback before replacing the task-owned
+preview. The browser contracts for hidden legends, preview isolation and the
+mobile gallery reported `4 passed`. The startup persistence contract initially
+failed because it defaulted to an older local `e2e/.app-dist`; after pointing
+it at the candidate image's extracted assets, it reported `1 passed`.
+The refreshed `localhost:3120` container is healthy, and its index, built
+asset and auth proxy return 200. Actual-browser checks at 360, 430 and
+1440px reported zero page errors and document overflow on the initial route.
+The existing backend health endpoint still returns 503. These are smoke
+checks, not a full mobile or visual acceptance.
+
 At the final-gate revisit, a screenshot-free Classic 360px check of
 `/period-compare` again failed because the mocked requests did not become
 quiet (`PERIOD_REVISIT_EXIT=1`). The pre-existing request churn remains
