@@ -702,6 +702,73 @@ test('shared phone heatmap and opted-in table wrap without losing cells or label
   }
 });
 
+test('phone chart legends keep readable labels without changing protected widgets', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setContent(`
+    <style>
+      * { box-sizing: border-box; }
+      html { --font-scale: 1; --density-gap: 12px; --density-pad-y: 8px; --density-pad-x: 12px; }
+      body { margin: 0; }
+      ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); padding: 0; margin: 0; }
+      li { display: flex; min-width: 0; }
+      [data-chart-legend-label] { font-size: 12px; }
+    </style>
+    <figure data-owned data-app-part="chart">
+      <div data-owned data-app-part="chart-legend">
+        <ul data-owned>
+          <li data-owned><span data-owned data-chart-legend-label>Very long charging efficiency label</span></li>
+          <li data-owned><button data-owned data-app-part="button" data-chart-legend-label>Battery status</button></li>
+        </ul>
+      </div>
+    </figure>
+    <div data-app-design-preserve><span data-owned data-chart-legend-label>Protected widget</span></div>
+  `);
+  for (const sheet of ['base.css', 'charts.css', 'mobile.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', sheet), 'utf8') });
+  }
+  for (const pack of PACK_IDS) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8') });
+  }
+  for (const pack of PACK_IDS) {
+    const owner = [`pack-${pack}`, ...Object.entries(APPLICATION_DESIGNS[pack]).map(([slot, value]) => `${slot}-${value}`)].join(' ');
+    await page.locator('html').evaluate((element, values) => {
+      for (const [name, value] of Object.entries(values.attributes)) element.setAttribute(name, value);
+      element.setAttribute('data-app-design-owner', values.owner);
+      document.querySelectorAll('[data-owned]').forEach(node => node.setAttribute('data-app-design-owner', values.owner));
+    }, { attributes: getAppDesignAttributes(pack), owner });
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        const legend = page.locator('[data-app-part="chart-legend"]');
+        const geometry = await legend.evaluate(element => ({
+          overflow: element.scrollWidth - element.clientWidth,
+          labels: [...element.querySelectorAll<HTMLElement>('[data-chart-legend-label]')].map(label => ({
+            size: parseFloat(getComputedStyle(label).fontSize),
+            overflow: label.scrollWidth - label.clientWidth,
+          })),
+        }));
+        const context = `${pack} ${forcedColors} ${width}px`;
+        expect(geometry.overflow, context).toBeLessThanOrEqual(1);
+        for (const label of geometry.labels) {
+          expect(label.size, context).toBeGreaterThanOrEqual(16);
+          expect(label.overflow, context).toBeLessThanOrEqual(1);
+        }
+        await expect(page.locator('[data-app-design-preserve] [data-chart-legend-label]')).toHaveCSS('font-size', '12px');
+      }
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const [scale, minimum] of [[0.85, 16], [1.35, 21.5]]) {
+    await page.locator('html').evaluate((element, value) => element.style.setProperty('--font-scale', String(value)), scale);
+    const label = page.locator('[data-app-part="chart-legend"] [data-chart-legend-label]').first();
+    expect(await label.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(minimum);
+    expect(await label.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('[data-app-part="chart-legend"] [data-chart-legend-label]').first()).toHaveCSS('font-size', '12px');
+});
+
 test('chart fallback tables retain readable labeled cells without phone overflow', async ({ page }) => {
   test.setTimeout(120_000);
   const columns = ['Type', 'Sessions', 'Energy', 'Cost', 'Energy with recorded cost', 'Sessions with recorded cost'];
@@ -1689,6 +1756,7 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     <span id="small-role" data-typography-role="bodySm" style="font-size:15px">Small body role</span>
     <span id="small-role-class" class="text-sm text-[var(--text-secondary)]" style="font-size:15px">Small body role class</span>
     <p id="chart-subtitle" data-chart-subtitle style="font-size:12px">Chart source and limitations</p>
+    <span id="chart-legend" data-chart-legend-label style="font-size:12px">Battery level</span>
     <p id="caption" data-typography-role="caption" style="font-size:12px">Short metadata</p>
     <p id="feedback" data-app-part="feedback-title" style="font-size:14px">Feedback title</p>
     <section>
@@ -1718,6 +1786,7 @@ test('mobile text audit reports visible small prose without flagging hidden or o
     expect.objectContaining({ id: 'small-role', size: 15 }),
     expect.objectContaining({ id: 'small-role-class', size: 15 }),
     expect.objectContaining({ id: 'chart-subtitle', size: 12 }),
+    expect.objectContaining({ id: 'chart-legend', size: 12 }),
     expect.objectContaining({ id: 'feedback', size: 14 }),
     expect.objectContaining({ id: 'brief-intro', size: 12 }),
     expect.objectContaining({ id: 'brief-provenance', size: 12 }),
