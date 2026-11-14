@@ -1068,6 +1068,21 @@ ESLINT_EXIT=0
 The browser check covers semantic and embedded paint and padding in the four
 data modes at 360px and 1440px. A full-suite pass is still outstanding.
 
+Seven routes that failed an earlier Classic 360px sweep were checked again
+against the current development server without taking screenshots. The
+checks cover 360px and 430px, including touch targets, text size, overflow and
+mock API completion; they do not establish visual or contrast acceptance.
+
+```text
+  14 passed (2.4m)
+CURRENT_MOBILE_EXIT=0
+TSC_EXIT=0
+```
+
+The routes were Admin Feedback, Battery Degradation, Charging Detail,
+Charging Schedule, Energy Orchestrator, Guard Mode and Navigation. The
+separately protected Digital Twin failure remains unresolved.
+
 ## Protected surfaces
 
 Keep the Digital Twin and Digital Twin Mini layouts and existing Tesla vehicle
