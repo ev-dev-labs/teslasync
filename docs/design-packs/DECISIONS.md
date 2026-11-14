@@ -864,6 +864,64 @@ stopped for diagnosis and subsequent source fixes. It did not finish or
 produce a failure summary. A targeted follow-up for three nearby test files
 reported `725 passed`, so those files do not identify the failures.
 
+Another fail-fast Vitest run stopped after one notification consumer failure:
+
+```text
+Test Files  1 failed | 18 passed
+Tests       1 failed | 3844 passed
+```
+
+The focused notification file initially reported `7 failed | 48 passed`.
+Six packs lacked treatments for standalone provider cards and definition
+panels; Atlas and Analog also lacked the ghost context-link treatment. Their
+pack styles now use token-based treatments while excluding semantic,
+embedded, conversation, data-grid, and protected widget surfaces. The
+notification and native-surface preservation checks now report:
+
+```text
+Test Files  4 passed (4)
+Tests       253 passed (253)
+```
+
+After replacing the new fixed shadow widths with the existing border-width
+token, the notification and native-composition checks reported `172 passed`
+again. A screenshot-free Chromium computed-style check verified the six
+provider/definition treatments, protected semantic backgrounds, and the two
+ghost-link treatments. These are behavioral checks, not a visual review.
+The new selectors were then tightened to exclude protected and conversation
+markers on both the target and its ancestors. The focused boundary tests and
+the complete notification consumer file reported:
+
+```text
+Tests  8 passed | 55 skipped
+Tests  63 passed
+NOTIFICATION_LINT_EXIT=0
+TSC_FINAL_EXIT=0
+E2E_TSC_FINAL_EXIT=0
+```
+
+The full Vitest suite has not yet completed, and these checks do not establish
+visual acceptance or mobile coverage for the affected pages.
+
+An Analog notification-channels diagnostic with no screenshots checked 360px
+and 430px in both modes. Three cases passed; the 360px light case failed the
+strict mock guard with one pending `GET /api/v1/vehicles`. No overflow, touch
+target, or body-size failure was reported before that guard. The same guard
+failed on retry. The fixture now also correlates client cancellation and
+network abort for the exact same-origin vehicle-list GET; extra queries,
+other methods, off-origin calls and blocked requests still fail. The focused
+strictness contract and a second retry both passed:
+
+```text
+1 passed (8.4s)
+1 passed (15.0s)
+1 passed (8.2s)
+70 passed (1.6m)
+```
+
+Together with the three initial passes, the diagnostic covered both widths in
+both modes, but it did not inspect screenshots or check contrast.
+
 The current-source frontend checks completed with:
 
 ```text
@@ -897,13 +955,13 @@ frontend preview. The candidate container was removed after the replacement
 became healthy; the preview remains available on `127.0.0.1:3120`. These
 width checks cover the live preview's initial route only.
 
-The browser fixture previously left a canceled startup auth-mode request
-pending when Playwright never invoked its route. Its accounting now requires
-both the matching client abort signal and a matching aborted network request;
-other pending or blocked requests still fail the strict completion guard. The
-focused contract verifies that unknown paths, extra query parameters,
-off-origin requests, other methods, and requests blocked before a client abort
-remain incomplete:
+The browser fixture previously left canceled startup auth-mode and vehicle-list
+requests pending when Playwright never invoked their routes. Its accounting
+now requires both the matching client abort signal and a matching aborted
+network request; other pending or blocked requests still fail the strict
+completion guard. The focused contract verifies that unknown paths, extra
+query parameters, off-origin requests, other methods, and requests blocked
+before a client abort remain incomplete:
 
 ```text
 1 passed (8.2s)
@@ -918,6 +976,36 @@ E2E_HARNESS_TYPECHECK_EXIT=0
 The API Logs engineering audit reported zero violations in each of its six
 categories and `TypeScript passes`. The page has 477 lines and five
 panel/chart references, unchanged from `feature/app-design-themes`.
+
+The latest production-source snapshot, `ebf27e706445`, was built into the
+Docker preview and preflighted separately before replacing the task-owned
+container. The preceding preview remains stopped for rollback. The first
+browser launch could not find a bundled Chromium executable; retrying with the
+installed Edge browser passed without installing another browser:
+
+```text
+PREVIEW_BUILD_EXIT=0
+FINAL_LINT_EXIT=0
+CANDIDATE_HEALTH=healthy
+INDEX_HTTP=200
+ASSET_HTTP=200
+/api/v1/system/auth-mode CANDIDATE_HTTP=200 BACKEND_HTTP=200
+/api/v1/system/health CANDIDATE_HTTP=503 BACKEND_HTTP=503
+PREVIEW_HEALTH=healthy
+PREVIEW_INDEX_HTTP=200
+PREVIEW_ASSET_HTTP=200
+WIDTH=360 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+WIDTH=430 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+WIDTH=1440 HTTP=200 MAIN_VISIBLE=true PAGE_ERRORS=0 DOCUMENT_OVERFLOW=0px
+SERVICE_WORKER_CONTROLLED_RELOAD=true MAIN_VISIBLE=true PAGE_ERRORS=0
+2 passed (20.6s)
+PREVIEW_GALLERY_STARTUP_EXIT=0
+```
+
+The gallery and delayed-preference tests used the deployed image's copied
+assets and mocked preference API. They took no screenshots. The width checks
+cover only the initial live route, and the full Vitest run remains incomplete;
+neither result establishes full-app visual or mobile acceptance.
 
 ## Protected surfaces
 
