@@ -1431,3 +1431,71 @@ AXIS_AFTER_EXIT=1
 The tentative changes and failing test were removed rather than shipped.
 Axis legibility remains skipped after these attempts; the existing chart is
 unchanged and this does not establish phone compliance.
+
+## Dashboard phone context follow-up
+
+A screenshot-free mocked dashboard survey found ordinary Recent drives
+context below the requested floor in v4, v7, Editorial, Terminal, Bauhaus and
+Neo Brutal: 11.9px at scale 0.85 and 14px at scale 1. Atlas had the same
+defect, and Classic's different detail-list presentation measured 10.2px and
+12px. The affected pack styles now use the body-size token for those ordinary
+phone contexts; the seven headline packs also cover ordinary metric units.
+Protected twins, native gauges, specialized metrics, and report/kiosk
+presentations remain outside these treatments.
+
+The temporary Edge-only configuration used the existing Vite server and
+disabled screenshots, video and traces:
+
+```text
+npx playwright test --config playwright.v6-mobile.local.config.ts --project local-v6 --grep "dashboard metric context remains readable"
+  16 passed (3.0m)
+PHONE_METRIC_TEST_EXIT=0
+
+npx playwright test --config playwright.v6-mobile.local.config.ts --project local-v6 --grep "recent-drive context is readable across design packs"
+  2 passed (1.1m)
+ALL_PACK_CONTEXT_EXIT=0
+
+npx vitest run src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx --testNamePattern="phone metric typography" --reporter=dot --maxWorkers=1
+ Test Files  1 passed (1)
+      Tests  9 passed | 111 skipped (120)
+METRIC_BOUNDARIES_EXIT=0
+```
+
+The first check covers the eight headline packs including the earlier v6 fix,
+with both themes, normal/forced colors, 360/390/430px and scales 0.85/1/1.35;
+it checks context and Battery unit size, widget containment, context overlap,
+and document overflow. The second covers Recent drives context in all 27
+packs at those widths and scales in both themes, without forced colors.
+These checks do not establish visual acceptance, other-route behavior,
+localized text or the unresolved protected-twin requirements.
+
+## Browser teardown and cross-browser checks
+
+The application-design fixture keeps its mock SSE server alive until the
+page has unloaded. It also accounts for and validates keepalive requests
+created during actual navigation, rather than allowing them to reach the
+preview proxy after Playwright removes the page routes.
+Late `sendBeacon` calls are also retained for validation; if the seeded
+beacon fixture is absent, the request is blocked and fails the check. Before
+that change the new invalid-beacon regression unexpectedly resolved instead
+of rejecting.
+
+The charging heatmap detail is allowed to follow the selected cell while
+respecting the shared popover's viewport clamp. Nested-preview comparisons
+now move the pointer off interactive controls before comparing appearances.
+Two focused, screenshot-free checks passed against the isolated build:
+
+```text
+npx playwright test --config=playwright.v6-mobile.local.config.ts --grep "charging detail follows|nested preview comparison" --workers=1
+  2 passed (29.9s)
+FIREFOX_REGRESSION_EDGE_EXIT=0
+
+npx playwright test --config=playwright.contract.config.ts --grep "application design teardown" --workers=1
+  5 passed (10.0s)
+TEARDOWN_CONTRACT_EXIT=0
+```
+
+The local Firefox run could not start because its Playwright browser was
+missing. A retry of the browser download timed out on three CDN endpoints;
+the installation was stopped. Edge results do not establish a Firefox pass,
+so the Firefox CI job remains the cross-browser verification.
