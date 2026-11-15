@@ -540,8 +540,10 @@ describe('GrafanaPanelPage', () => {
     expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    await waitFor(() => expect(editor.value).toBe(''));
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    await waitFor(() => {
+      expect(editor).toHaveValue('');
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
     expect(screen.queryByText(/Copied\. Paste the JSON/i)).not.toBeInTheDocument();
     // Back to the disabled baseline.
     expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();

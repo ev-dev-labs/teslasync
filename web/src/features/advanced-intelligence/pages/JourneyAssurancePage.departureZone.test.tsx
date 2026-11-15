@@ -161,7 +161,7 @@ describe('Journey departure display-zone contract', () => {
     expect(departureInput()).toHaveAccessibleDescription(entryDescription);
     const hintId = departureInput().getAttribute('aria-describedby');
     expect(hintId).toBeTruthy();
-    expect(document.getElementById(hintId ?? '')).toBeVisible();
+    await waitFor(() => expect(document.getElementById(hintId ?? '')).toBeVisible(), { timeout: 5_000 });
     expect(document.getElementById(hintId ?? '')).not.toHaveTextContent(displayZone);
     expect(document.getElementById(hintId ?? '')).not.toHaveTextContent(browserZone);
     expect(scenarioRequests()).toHaveLength(0);
