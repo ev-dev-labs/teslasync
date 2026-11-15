@@ -17,6 +17,42 @@ remaining matrix was started after Classic with four workers, using assets
 copied from Docker image `teslasync-web:design-packs-v2-445e5bb317b1`.
 It is not a completed or passing matrix.
 
+### Current CI follow-up
+
+On pushed head `876619a52e`, frontend shards 1 and 3 passed after the catalog
+repair. Shard 7 failed one Grafana editor test that checked persisted
+storage immediately after the editor changed, although persistence runs in
+a React effect. The test now waits for both the empty editor and the removed
+draft without changing application behavior. The full Grafana page and
+manual-editor tests reported `25 passed`; the formerly failing case passed
+three additional runs. Shard 8 separately failed a Journey departure hint
+visibility assertion; its enclosing entry animation starts at zero opacity.
+The test now waits for the real hint to become visible and still checks its
+accessible description and exact zone exclusions. Local verification reported:
+
+```text
+ Test Files  2 passed (2)
+      Tests  25 passed (25)
+GRAFANA_TEST_EXIT=0
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+JOURNEY_ZONE_TEST_EXIT=0
+
+GRAFANA_CLEAR_REPEAT_EXIT=0
+JOURNEY_HINT_REPEAT_EXIT=0
+FRONTEND_TEST_LINT_EXIT=0
+FRONTEND_TYPESCRIPT_EXIT=0
+```
+
+Each repeat ran three times; the Journey suite emitted a Node
+`MaxListenersExceededWarning`.
+
+The security and Lighthouse workflows completed successfully at that head;
+the security workflow warned that GitHub could not retrieve the full
+300-file PR diff. The CI aggregate and frontend coverage merge failed because
+the frontend shards failed, so the PR is not green.
+
 ## Catalog preservation and preview refresh
 
 PR head `445e5bb317` failed frontend test shards 1, 3 and 7 because the two
