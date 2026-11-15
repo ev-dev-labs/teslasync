@@ -1,5 +1,20 @@
 # Design Pack Decisions
 
+### Horizon final-matrix evidence
+
+The Horizon run against the pinned `445e5bb317b1` assets reported
+`1012 passed, 4 failed (58.6m)`. Both phone Dashboard failures are the
+preserved widget findings. The 430px Digital Twin page landmark failure was
+fixed and passed the screenshot-free 360/430px retry below. The tablet
+Dashboard timed out; its screenshot-free retry reported `2 passed (4.1m)`.
+The original failures remain part of the matrix evidence.
+
+The run produced 254 phone-360, 254 phone-430, 253 tablet and 254 desktop
+PNGs. All 1,015 passed signature, chunk-CRC and viewport-dimension checks;
+the tablet Dashboard image is missing. These images predate the later
+notification-axis and Digital Twin page fixes and do not establish visual
+acceptance. The matrix continues with the next pack.
+
 ### Horizon Digital Twin page targets
 
 Horizon overrides the ordinary square-corner utility on the transparent

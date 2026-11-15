@@ -79,6 +79,14 @@ are not contrast passes.
 
 ## Additional verification
 
+- The later final matrix reported `1012 passed, 4 failed (58.6m)` against
+  pinned older assets: both phone Dashboards failed the protected-widget
+  checks, the 430px Digital Twin page had a landmark failure, and the tablet
+  Dashboard timed out. Separate screenshot-free retries passed the fixed
+  Digital Twin page at 360/430px and the tablet Dashboard. The 1,015 saved
+  matrix PNGs passed integrity and dimension checks; the tablet Dashboard
+  image is missing. They predate the page fix and do not constitute a visual
+  pass.
 - A later screenshot-free `/digital-twin` page check at 360 and 430px
   reported `2 passed` after keeping its transparent touch targets square
   against Horizon's radius treatment. The original widget designs were not
