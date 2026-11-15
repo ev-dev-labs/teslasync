@@ -2101,3 +2101,24 @@ the charging-detail focus anchor, and saved-appearance startup and reload. CI
 run `43653409615` passed on `8e784a91a5`. The frontend-quality watcher exited
 because GitHub's API rate limit was exhausted; that does not establish a
 workflow failure or success. Its final result remains unverified.
+
+The quota reset allowed the existing frontend-quality run to be inspected.
+All 32 Windows visual shards passed, but application-design and responsive
+shards were still running. A new push would cancel that run, so retain it
+until its result is known before synchronizing the pending local commits.
+
+The Classic dark-mode contrast spot check was repeated without screenshots
+using the committed Docker assets at 360px and 430px:
+
+```text
+npx playwright test --config=e2e\design-packs-capture.config.ts --grep="capture " --project=phone-360 --project=phone-430 --workers=1
+  8 passed (2.2m)
+CONTEXT_EXIT=0
+```
+
+The four axe results needing manual review were two repetitions each of a
+charging result count and a decorative Quick Stats arrow. At both widths the
+count used `rgb(170, 180, 195)` on `rgb(17, 21, 28)` (8.73:1); the arrow
+used `rgb(244, 247, 251)` on that surface (17.03:1). These are computed-style
+samples, not a full contrast or visual review. The all-pack four-page
+contrast check remains in progress.
