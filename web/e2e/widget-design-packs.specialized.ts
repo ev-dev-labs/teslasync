@@ -159,8 +159,15 @@ async function inspectReviewDetails(page: Page, packId: PackId, testInfo: TestIn
 }
 
 export async function sampleHeatmapPaint(plot: Locator) {
-  const samples = await plot.evaluate(async element => {
+  const geometry = await plot.evaluate(async element => {
     await document.fonts.ready;
+    if (!(element instanceof SVGSVGElement) || !element.hasAttribute('viewBox')) {
+      throw new Error('Heatmap paint verification requires an SVG viewBox');
+    }
+    const aspect = element.getAttribute('preserveAspectRatio')?.trim() ?? 'xMidYMid meet';
+    if (aspect !== 'xMidYMid' && aspect !== 'xMidYMid meet') {
+      throw new Error(`Unsupported heatmap aspect ratio: ${aspect}`);
+    }
     // A pack switch can resize the grid after its owner attribute changes.
     await new Promise<void>((resolve, reject) => {
       let previous = '';
@@ -185,18 +192,22 @@ export async function sampleHeatmapPaint(plot: Locator) {
       requestAnimationFrame(check);
     });
     const nodes = element.querySelectorAll('rect');
-    const bounds = element.getBoundingClientRect();
-    return [36, 37, 38, 39].map(index => {
-      const box = nodes[index].getBoundingClientRect();
-      return {
-        fill: getComputedStyle(nodes[index]).fill,
-        x: (box.left + box.width / 2 - bounds.left) / bounds.width,
-        y: (box.top + box.height / 2 - bounds.top) / bounds.height,
-      };
-    });
+    const { x, y, width, height } = element.viewBox.baseVal;
+    if (width <= 0 || height <= 0) throw new Error('Heatmap viewBox has no area');
+    return {
+      viewBox: { x, y, width, height },
+      samples: [36, 37, 38, 39].map(index => {
+        const box = nodes[index].getBBox();
+        return {
+          fill: getComputedStyle(nodes[index]).fill,
+          x: box.x + box.width / 2,
+          y: box.y + box.height / 2,
+        };
+      }),
+    };
   });
   const pixels = await plot.screenshot({ animations: 'disabled' });
-  const paint = await plot.evaluate(async (_element, { imageData, samples }) => {
+  const paint = await plot.evaluate(async (_element, { imageData, geometry }) => {
     const image = new Image();
     image.src = `data:image/png;base64,${imageData}`;
     await image.decode();
@@ -206,13 +217,19 @@ export async function sampleHeatmapPaint(plot: Locator) {
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Heatmap paint verification requires a 2D context');
     context.drawImage(image, 0, 0);
+    // Screenshot animation handling can resize the SVG after DOM measurement.
+    // Map its viewBox to the captured image, including xMidYMid letterboxing.
+    const { viewBox, samples } = geometry;
+    const scale = Math.min(canvas.width / viewBox.width, canvas.height / viewBox.height);
+    const left = (canvas.width - viewBox.width * scale) / 2;
+    const top = (canvas.height - viewBox.height * scale) / 2;
     return samples.map(sample => {
-      const x = Math.floor(sample.x * canvas.width);
-      const y = Math.floor(sample.y * canvas.height);
+      const x = Math.floor(left + (sample.x - viewBox.x) * scale);
+      const y = Math.floor(top + (sample.y - viewBox.y) * scale);
       return { fill: sample.fill, sample: { x, y, width: canvas.width, height: canvas.height },
         rgba: [...context.getImageData(x, y, 1, 1).data] };
     });
-  }, { imageData: pixels.toString('base64'), samples });
+  }, { imageData: pixels.toString('base64'), geometry });
   return { pixels, paint };
 }
 

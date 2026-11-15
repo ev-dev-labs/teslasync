@@ -95,12 +95,12 @@ export const baseConfig: PlaywrightTestConfig = {
     },
     {
       name: 'firefox-smoke',
-      testMatch: /cross-browser\.smoke\.spec\.ts/,
+      testMatch: [/cross-browser\.smoke\.spec\.ts/, /heatmap-paint\.smoke\.spec\.ts/],
       use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' },
     },
     {
       name: 'webkit-smoke',
-      testMatch: /cross-browser\.smoke\.spec\.ts/,
+      testMatch: [/cross-browser\.smoke\.spec\.ts/, /heatmap-paint\.smoke\.spec\.ts/],
       use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' },
     },
     {

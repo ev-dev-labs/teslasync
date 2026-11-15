@@ -1,5 +1,34 @@
 # Design pack decisions
 
+## Desktop WebKit heatmap evidence
+
+The `2b2aef0093` WebKit 1440px light and custom jobs failed both the
+dashboard heatmap-paint check and mixed-pack isolation. The existing custom
+failure image shows a correctly ordered heatmap, but its recorded sample
+coordinates came from a different SVG geometry than the captured image.
+Mapping the SVG viewBox into that image gives the maximum, middle, zero and
+missing samples as `[156,106,222]`, `[93,69,135]`, `[31,33,48]` and
+`[23,28,37]` respectively. This confirms a measurement mismatch for that
+image; the light failure and other packs still need the exact CI rerun.
+
+The paint sampler now maps cell centers through the captured image's
+`xMidYMid meet` viewBox, retaining the actual-pixel ordering assertions.
+A synthetic regression simulating a capture-time resize failed in Chromium,
+Firefox and WebKit before the change and passed afterwards. The synthetic
+tests create no stored PNG files:
+
+```text
+Before: 3 failed
+After: 12 passed (47.1s)
+SCREENSHOT_COUNT=0
+E2E_TYPESCRIPT_EXIT=0
+FOCUSED_ESLINT_EXIT=0
+```
+
+The exact dark 390px isolation phase also passed on retry:
+`1 passed (3.9m)`, `BROWSER_PROBE_API_ESCAPE=0`, `SCREENSHOT_COUNT=0`.
+Desktop isolation and the next CI run are not yet verified.
+
 ## WebKit preview restoration follow-up
 
 The failing CI isolation checks compared the preview before inherited styles
@@ -28,9 +57,9 @@ FOCUSED_ESLINT_EXIT=0
 Scoped app-design audit: 0 violations; TypeScript passes
 ```
 
-The dark exact phase, other viewport/theme combinations, and the next CI run
-remain unverified. Sensitive-mode isolation runs suppress their explicit
-preview screenshots; normal CI evidence capture is unchanged.
+At that point the dark exact phase, other viewport/theme combinations, and
+the next CI run were unverified. Sensitive-mode isolation runs suppress their
+explicit preview screenshots; normal CI evidence capture is unchanged.
 
 ## Full Vitest snapshot
 
