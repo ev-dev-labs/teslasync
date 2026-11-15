@@ -159,11 +159,34 @@ async function inspectReviewDetails(page: Page, packId: PackId, testInfo: TestIn
 }
 
 export async function sampleHeatmapPaint(plot: Locator) {
-  const pixels = await plot.screenshot({ animations: 'disabled' });
-  const paint = await plot.evaluate(async (element, imageData) => {
+  const samples = await plot.evaluate(async element => {
+    await document.fonts.ready;
+    // A pack switch can resize the grid after its owner attribute changes.
+    await new Promise<void>((resolve, reject) => {
+      let previous = '';
+      let stableSince = 0;
+      const deadline = performance.now() + 8_000;
+      const check = (now: number) => {
+        const nodes = element.querySelectorAll('rect');
+        const boxes = [element, ...[36, 37, 38, 39].map(index => nodes[index])]
+          .map(node => {
+            const box = node.getBoundingClientRect();
+            return [box.x, box.y, box.width, box.height].map(value => Math.round(value * 10) / 10);
+          });
+        const current = JSON.stringify(boxes);
+        if (current !== previous) {
+          previous = current;
+          stableSince = now;
+        }
+        if (now - stableSince >= 250) resolve();
+        else if (now >= deadline) reject(new Error('Heatmap geometry did not settle before paint sampling'));
+        else requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    });
     const nodes = element.querySelectorAll('rect');
     const bounds = element.getBoundingClientRect();
-    const samples = [36, 37, 38, 39].map(index => {
+    return [36, 37, 38, 39].map(index => {
       const box = nodes[index].getBoundingClientRect();
       return {
         fill: getComputedStyle(nodes[index]).fill,
@@ -171,6 +194,9 @@ export async function sampleHeatmapPaint(plot: Locator) {
         y: (box.top + box.height / 2 - bounds.top) / bounds.height,
       };
     });
+  });
+  const pixels = await plot.screenshot({ animations: 'disabled' });
+  const paint = await plot.evaluate(async (_element, { imageData, samples }) => {
     const image = new Image();
     image.src = `data:image/png;base64,${imageData}`;
     await image.decode();
@@ -186,7 +212,7 @@ export async function sampleHeatmapPaint(plot: Locator) {
       return { fill: sample.fill, sample: { x, y, width: canvas.width, height: canvas.height },
         rgba: [...context.getImageData(x, y, 1, 1).data] };
     });
-  }, pixels.toString('base64'));
+  }, { imageData: pixels.toString('base64'), samples });
   return { pixels, paint };
 }
 
