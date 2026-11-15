@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
-import { routeBuiltApplication, test } from './app-design-test';
+import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
@@ -1200,9 +1200,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         expect.soft(routeSignatures.size, `EXACTLY 27 real ${path} layouts at ${width}px/${theme}`).toBe(27);
       }
       if (phase.kind === 'route' && phase.path !== '/settings') {
-        energySources.setActive(false);
-        await page.goto('/settings');
-        await waitForHarnessReady(page, mocks);
+        await energySources.leaveToSettings();
       }
       picker = await appearance(page, width);
       // Widget-only mode lets every dialog prove local scoping independently of
@@ -1428,13 +1426,13 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         });
       }
       if (phase.kind === 'route') {
-        await testInfo.attach('real-page-compositions.json', {
-          body: JSON.stringify({ scope, route: phase.path, observations: routeEvidence }, null, 2), contentType: 'application/json',
+        await attachJsonEvidence(testInfo, 'real-page-compositions.json', {
+          scope, route: phase.path, observations: routeEvidence,
         });
       }
       if (phase.kind === 'responsive') {
-        await testInfo.attach('preview-compositions.json', {
-          body: JSON.stringify({ scope, observations: geometryEvidence }, null, 2), contentType: 'application/json',
+        await attachJsonEvidence(testInfo, 'preview-compositions.json', {
+          scope, observations: geometryEvidence,
         });
         await testInfo.attach('preview-identity-collisions.json', {
           body: JSON.stringify(Object.fromEntries([...signatures].map(([value, clusters]) => [
@@ -1494,8 +1492,8 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await expectProfile(page, outerPack);
           expect(await preservedPreferences(page)).toEqual(outerBefore);
         }
-        await testInfo.attach('mixed-pack-isolation.json', {
-          body: JSON.stringify({ scope, innerPack: 'quiet', allocations, isolated, incomplete, outer }, null, 2), contentType: 'application/json',
+        await attachJsonEvidence(testInfo, 'mixed-pack-isolation.json', {
+          scope, innerPack: 'quiet', allocations, isolated, incomplete, outer,
         });
         expect(isolated.memphis, 'Quiet inline and real open portals are independent of outer application pack')
           .toEqual(isolated.blueprint);
@@ -1523,27 +1521,23 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         && !['/api/v1/settings/widget-design-pack', '/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path))).toEqual([]);
       expect(failures).toEqual([]);
       await assertMockApiComplete(page, mocks);
-      await testInfo.attach('main-phase-invariants.json', {
-        body: JSON.stringify({
-          scope, publicRoutes: { before: neutralBefore, after: neutralAfter },
-          appearance: { before: preferences, after }, dataSaver: beforePreview.storage['teslasync:low-bandwidth:v1'],
-          persistedProfileAfterReload: { ...saved },
-          forbiddenWrites: mocks.requests.filter(request => !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
-            && !['/api/v1/settings/widget-design-pack', '/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path)),
-          pageErrors: failures,
-        }, null, 2), contentType: 'application/json',
+      await attachJsonEvidence(testInfo, 'main-phase-invariants.json', {
+        scope, publicRoutes: { before: neutralBefore, after: neutralAfter },
+        appearance: { before: preferences, after }, dataSaver: beforePreview.storage['teslasync:low-bandwidth:v1'],
+        persistedProfileAfterReload: { ...saved },
+        forbiddenWrites: mocks.requests.filter(request => !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
+          && !['/api/v1/settings/widget-design-pack', '/api/v1/web-vitals', '/api/v1/web-errors'].includes(request.path)),
+        pageErrors: failures,
       });
-      await testInfo.attach('acceptance-family-observations.json', {
-        body: JSON.stringify({
-          claim: 'Only this registered phase was observed. Mocked UI measurements are not certification; final assertions and visual review remain authoritative.',
-          scope, requiredPhases: mainPhases(width),
-          join: {
-            profile: ['project', 'profile', 'theme', 'profileWidth'],
-            observation: ['allocatedWidth', 'pack', 'family', 'phase', 'route', 'state', 'outerPack'],
-            rule: 'Join successful phase artifacts by profile, retaining every observation facet. Require every registered phase, all 27 packs in every real-route/core/allocated-width phase, and all 12 families for each pack across the union. Isolation covers its explicit inner/outer packs only. Phases are separate tests, not one completed 324-cell case.',
-          },
-          families: acceptanceFamilies, observedMeasurements: familyEvidence.length, observations: familyEvidence,
-        }, null, 2), contentType: 'application/json',
+      await attachJsonEvidence(testInfo, 'acceptance-family-observations.json', {
+        claim: 'Only this registered phase was observed. Mocked UI measurements are not certification; final assertions and visual review remain authoritative.',
+        scope, requiredPhases: mainPhases(width),
+        join: {
+          profile: ['project', 'profile', 'theme', 'profileWidth'],
+          observation: ['allocatedWidth', 'pack', 'family', 'phase', 'route', 'state', 'outerPack'],
+          rule: 'Join successful phase artifacts by profile, retaining every observation facet. Require every registered phase, all 27 packs in every real-route/core/allocated-width phase, and all 12 families for each pack across the union. Isolation covers its explicit inner/outer packs only. Phases are separate tests, not one completed 324-cell case.',
+        },
+        families: acceptanceFamilies, observedMeasurements: familyEvidence.length, observations: familyEvidence,
       });
     });
   }

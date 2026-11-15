@@ -9,6 +9,33 @@ import { energyReviewPath, installEnergyReviewSources } from './widget-design-pa
 // cases, without another project/workflow or reloading on ordinary pack changes.
 test.setTimeout(1_800_000);
 test.afterAll(async () => { await closeMockApiFixtures(); });
+
+test('keeps live energy reads mocked while navigating away', async ({ page }, testInfo) => {
+  const saved = createReviewPreference();
+  saved.app_wide = true;
+  const mocks = await installPackReview(page, 'dark', 390, false, [], false, saved,
+    testInfo.project.use.baseURL);
+  const sources = await installEnergyReviewSources(page, mocks);
+  sources.setActive(true);
+  await page.goto(energyReviewPath);
+  await waitForHarnessReady(page, mocks);
+
+  const navigate = page.goto.bind(page);
+  let finalPollStatus = 0;
+  page.goto = async (url, options) => {
+    finalPollStatus = await page.evaluate(async () =>
+      (await fetch('/api/v1/vehicles/7/energy/flow')).status);
+    return navigate(url, options);
+  };
+  try {
+    await sources.leaveToSettings();
+  } finally {
+    page.goto = navigate;
+  }
+  expect(finalPollStatus).toBe(200);
+  await assertMockApiComplete(page, mocks);
+});
+
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [1440, 390]) {
     test(`Energy flow real source states at ${width}px in ${theme}`, async ({ page }, testInfo) => {

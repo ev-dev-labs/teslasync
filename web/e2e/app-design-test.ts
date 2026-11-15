@@ -1,6 +1,13 @@
-import { test as base, type Page } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
+import { test as base, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
 import { assertMockApiAfterNavigation, prepareMockApiNavigation } from './mockApi';
+
+export async function attachJsonEvidence(testInfo: TestInfo, name: string, value: unknown) {
+  const path = testInfo.outputPath(name);
+  await writeFile(path, JSON.stringify(value, null, 2));
+  testInfo.attachments.push({ name, path, contentType: 'application/json' });
+}
 
 export async function routeBuiltApplication(page: Page, origin: string, paths: string[], dist?: string) {
   if (!dist) return;
