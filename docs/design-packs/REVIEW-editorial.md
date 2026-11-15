@@ -111,3 +111,25 @@ Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
 The owned ordinary headline context and units now use the phone body token;
 protected and specialized surfaces remain excluded. See `DECISIONS.md` for
 the screenshot-free regression results and remaining limitations.
+
+## Phone operational labels follow-up
+
+The four-page, all-pack contrast spot checks found split words on Editorial's
+charging and settings pages at 430px in both themes. A focused check also
+found `Sessions/week` splitting at 360px with 1.35 text scaling. Editorial now
+uses a wider minimum for phone metric banks and stacks each operational
+label above its value instead of squeezing both into one row. The existing
+desktop layout and widget-owned content are outside the new phone rule.
+
+The production-build Edge regression checked both pages in dark and light at
+360/390/430px, text scales 0.85/1/1.35 and normal/forced colors. It checked
+word fragmentation, horizontal overflow and the enlarged charging label's
+position relative to its value. No new screenshots were taken.
+
+```text
+14 passed (1.4m)
+8 passed (4.3m) in Firefox and WebKit
+```
+
+That result includes ten Helix regressions; it is not a full Editorial page,
+contrast or visual pass. The previous captures predate this change.
