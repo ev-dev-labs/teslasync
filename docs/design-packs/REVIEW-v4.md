@@ -410,5 +410,8 @@ owned stat-card units as well as headline units. Screenshot-free dashboard
 checks passed in dark and light at 360, 390 and 430px, scales 0.85, 1 and
 1.35, and normal and forced colors (`2 passed`). The native-composition and
 Charge Status preservation selection reported `19 passed, 504 skipped`.
-The matrix images predate this correction; the preserved twin findings
-remain unresolved.
+The 360px and 430px dashboard images were recaptured against the newer
+build, inspected, and passed PNG integrity checks. Both capture cases still
+failed on protected twin targets and text; the `km` unit was no longer
+reported. These top-of-page images do not show the corrected card, and the
+remaining matrix images predate the correction.
