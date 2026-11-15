@@ -402,11 +402,13 @@ export async function isolationAppearance(host: Locator) {
  * the restored geometry is read after the browser has laid out the preview. */
 export async function assertOwnerGuardActivation(preview: Locator) {
   const activation = await preview.evaluate(async element => {
-    const nodes = [element, ...element.querySelectorAll('[data-app-part], .leaflet-pane, svg, svg path')];
+    const selector = '[data-app-part], .leaflet-pane, svg, svg path';
     const properties = ['display', 'grid-template-columns', 'flex-direction', 'padding', 'gap',
-      'font-size', 'font-weight', 'line-height', 'border-width', 'border-style',
+      'font-family', 'font-size', 'font-weight', 'line-height', 'color', 'border-width', 'border-style',
       'background-color', 'background-image', 'border-radius', 'box-shadow'];
-    const capture = () => nodes.filter(node => node.getClientRects().length > 0).map(node => {
+    await document.fonts.ready;
+    const capture = () => [element, ...element.querySelectorAll(selector)]
+      .filter(node => node.getClientRects().length > 0).map(node => {
       const css = getComputedStyle(node);
       const box = node.getBoundingClientRect();
       let width = box.width;
@@ -420,11 +422,59 @@ export async function assertOwnerGuardActivation(preview: Locator) {
           height = Math.abs(matrix.b * bounds.width) + Math.abs(matrix.d * bounds.height);
         }
       }
-      return { width, height,
+      return { tag: node.tagName, part: node.getAttribute('data-app-part'),
+        className: node.getAttribute('class'), width, height,
         styles: properties.map(property => css.getPropertyValue(property)) };
     });
+    const waitForStablePreview = () => new Promise<void>((resolve, reject) => {
+      const deadline = performance.now() + 15_000;
+      let previous = '';
+      let stableSamples = 0;
+      let mutated = false;
+      const observer = new MutationObserver(() => { mutated = true; });
+      observer.observe(element, { subtree: true, childList: true, attributes: true, characterData: true });
+      const sample = () => {
+        const nodes = [element, ...element.querySelectorAll('*')];
+        const ancestors = nodes.map(node => {
+          const box = node.getBoundingClientRect();
+          const css = getComputedStyle(node);
+          return [node.getClientRects().length, box.width, box.height,
+            ...properties.map(property => css.getPropertyValue(property))];
+        });
+        const signature = JSON.stringify([ancestors, capture()]);
+        stableSamples = !mutated && signature === previous ? stableSamples + 1 : 0;
+        previous = signature;
+        mutated = false;
+        if (stableSamples >= 5) {
+          observer.disconnect();
+          resolve();
+        } else if (performance.now() >= deadline) {
+          observer.disconnect();
+          reject(new Error('preview geometry or styles did not settle before owner activation'));
+        } else window.setTimeout(nextFrame, 150);
+      };
+      const nextFrame = () => requestAnimationFrame(() => requestAnimationFrame(sample));
+      nextFrame();
+    });
+    await waitForStablePreview();
     const owners = [element, ...element.querySelectorAll('[data-app-design-owner]')]
       .map(node => ({ node, owner: node.getAttribute('data-app-design-owner') }));
+    const snapshotStyle = (node: Element) => {
+      const css = getComputedStyle(node);
+      return {
+        tag: node.tagName,
+        part: node.getAttribute('data-app-part'),
+        className: node.getAttribute('class'),
+        fontSize: css.fontSize,
+        lineHeight: css.lineHeight,
+        color: css.color,
+        bodySize: css.getPropertyValue('--app-body-size'),
+        owner: node.getAttribute('data-app-design-owner'),
+      };
+    };
+    const originalStyles = [element, ...element.querySelectorAll('*')]
+      .map(node => ({ node, style: snapshotStyle(node) }));
+    const originalStyleByNode = new Map(originalStyles.map(({ node, style }) => [node, style]));
     const applied = capture();
     let unowned: ReturnType<typeof capture>;
     try {
@@ -435,17 +485,63 @@ export async function assertOwnerGuardActivation(preview: Locator) {
         if (owner !== null) node.setAttribute('data-app-design-owner', owner);
       }
     }
-    const ownersRestored = owners.every(({ node, owner }) => node.getAttribute('data-app-design-owner') === owner);
+    const changedOwners = (allowClearedRemounts: boolean) => owners.flatMap(({ node, owner }) => {
+      const actual = node.getAttribute('data-app-design-owner');
+      const restored = element.contains(node) && actual === owner;
+      const removed = allowClearedRemounts && !node.isConnected && actual === null;
+      return restored || removed ? [] : [{
+        tag: node.tagName,
+        part: node.getAttribute('data-app-part'),
+        className: node.getAttribute('class'),
+        expected: owner,
+        actual,
+        connected: node.isConnected,
+        inPreview: element.contains(node),
+      }];
+    });
+    const immediateChanges = changedOwners(false);
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await waitForStablePreview();
+    const delayedChanges = changedOwners(true);
+    const previewOwner = owners.find(({ node }) => node === element)?.owner ?? null;
+    const liveChanges = [element, ...element.querySelectorAll('*')].flatMap(node => {
+      const actual = node.getAttribute('data-app-design-owner');
+      return actual === previewOwner ? [] : [{
+        tag: node.tagName,
+        part: node.getAttribute('data-app-part'),
+        className: node.getAttribute('class'),
+        expected: previewOwner,
+        actual,
+        connected: node.isConnected,
+        inPreview: element.contains(node),
+      }];
+    });
+    const styleChanges = originalStyles.flatMap(({ node, style }) => {
+      if (!element.contains(node)) return [];
+      const after = snapshotStyle(node);
+      if (JSON.stringify(style) === JSON.stringify(after)) return [];
+      const ancestors = [];
+      for (let ancestor = node.parentElement; ancestor && ancestors.length < 4; ancestor = ancestor.parentElement) {
+        ancestors.push({ before: originalStyleByNode.get(ancestor), after: snapshotStyle(ancestor) });
+      }
+      return [{ before: style, after, ancestors }];
+    });
     return {
       applied, unowned, restored: capture(),
-      ownersRestored: ownersRestored && owners.every(({ node, owner }) => node.getAttribute('data-app-design-owner') === owner),
+      ownersRestored: immediateChanges.length === 0 && delayedChanges.length === 0 && liveChanges.length === 0,
+      ownerChanges: [...immediateChanges, ...delayedChanges, ...liveChanges].slice(0, 8),
+      styleChanges,
     };
   });
-  expect(activation.ownersRestored, 'activation probe restores every owner').toBe(true);
+  expect(activation.ownersRestored, `activation probe restores every owner: ${JSON.stringify(activation.ownerChanges)}`).toBe(true);
   expect(activation.applied, 'real final-target owner guards change computed preview composition/treatment')
     .not.toEqual(activation.unowned);
-  expect(activation.restored, 'activation probe restores the actual sandbox exactly').toEqual(activation.applied);
+  const changedNodes = activation.restored.flatMap((node, index) =>
+    JSON.stringify(node) === JSON.stringify(activation.applied[index])
+      ? []
+      : [{ index, before: activation.applied[index], after: node }]);
+  expect(activation.restored, `activation probe restores the actual sandbox exactly: ${JSON.stringify(changedNodes.slice(0, 8))}; inherited styles: ${JSON.stringify(activation.styleChanges.slice(0, 16))}`)
+    .toEqual(activation.applied);
 }
 
 export async function inspectPortaledIsolation(page: Page, preview: Locator) {

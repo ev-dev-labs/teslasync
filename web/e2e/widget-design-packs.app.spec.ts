@@ -497,6 +497,86 @@ test('nested preview comparison settles map control hover independently of the o
   await assertMockApiComplete(page, mocks);
 });
 
+for (const outer of ['memphis', 'blueprint'] as const) {
+  test(`Quiet overview metric grid restores at desktop preview width inside ${outer}`, async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+    });
+    const preference = createReviewPreference();
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, 'light', 1440, false, [], false, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/settings'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/settings');
+    await waitForHarnessReady(page, mocks);
+    const picker = await appearance(page, 1440);
+    await selectReviewPack(page, outer);
+    await expectProfile(page, outer);
+    await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
+    const preview = dialog.locator('[data-preview-synthetic="true"]');
+    await expect(preview).toBeVisible();
+    await preview.evaluate(element => { element.style.width = '768px'; });
+    await expect.poll(() => preview.evaluate(element => element.getBoundingClientRect().width)).toBe(768);
+    await assertOwnerGuardActivation(preview.locator('[data-preview-section="overview"] > [data-app-part~="metric-grid"]'));
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+for (const { theme, width, allocation } of [
+  { theme: 'dark', width: 390, allocation: 320 },
+  { theme: 'light', width: 390, allocation: 320 },
+  { theme: 'custom', width: 390, allocation: 320 },
+  { theme: 'light', width: 1440, allocation: 768 },
+] as const) {
+  test(`incomplete nested preview remains neutral and restores its owner in ${theme} at ${width}px`, async ({ page }, testInfo) => {
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const mode = theme === 'custom' ? 'dark' : theme;
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: mode });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+    });
+    const preference = createReviewPreference();
+    preference.app_wide = true;
+    const mocks = await installPackReview(page, mode, width, false, [], false, preference, origin,
+      theme === 'custom' ? customReviewSettings : {});
+    await routeBuiltApplication(page, new URL(origin).origin, ['/settings'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/settings');
+    await waitForHarnessReady(page, mocks);
+    const picker = await appearance(page, width);
+    const incomplete: Awaited<ReturnType<typeof inspectIncompletePreview>>[] = [];
+    for (const outer of ['memphis', 'blueprint'] as const) {
+      await selectReviewPack(page, outer);
+      await expectProfile(page, outer);
+      await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
+      const preview = dialog.locator('[data-preview-synthetic="true"]');
+      await expect(preview).toBeVisible();
+      await preview.evaluate((element, allocatedWidth) => { element.style.width = `${allocatedWidth}px`; }, allocation);
+      await expect.poll(() => preview.evaluate(element => element.getBoundingClientRect().width)).toBe(allocation);
+      await expect(preview.locator('.leaflet-container')).toHaveCount(1);
+      incomplete.push(await inspectIncompletePreview(page, preview));
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+    }
+    const changedStyles = incomplete[0].inline.styles.flatMap((style, index) =>
+      JSON.stringify(style) === JSON.stringify(incomplete[1].inline.styles[index])
+        ? []
+        : [{ index, before: style, after: incomplete[1].inline.styles[index] }]);
+    expect(incomplete[0], `neutral preview style differences: ${JSON.stringify(changedStyles.slice(0, 8))}`)
+      .toEqual(incomplete[1]);
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
 test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const origin = testInfo.project.use.baseURL;
@@ -871,21 +951,27 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
   await preview.evaluate(element => element.removeAttribute('data-app-data'));
   await expect(preview).not.toHaveAttribute('data-app-design-owner');
   await expect(preview.locator('[data-app-design-owner]')).toHaveCount(0);
-  await expect.poll(() => preview.locator('[data-app-part~="feedback-copy"]').evaluateAll(nodes =>
-    nodes.length > 0 && nodes.every(node => {
-      const parent = node.parentElement;
-      return parent !== null && getComputedStyle(node).color === getComputedStyle(parent).color;
-    })),
-  { message: 'neutral feedback wrappers settle inherited text color after owner removal' }).toBe(true);
   await settlePointer(preview);
+  await expect.poll(() => preview.locator('[data-app-feedback-kind="error"] [data-app-part~="feedback-layout"]')
+    .evaluateAll(layouts => layouts.length > 0 && layouts.every(layout => {
+      const wrappers = [...layout.querySelectorAll(
+        '[data-app-part~="feedback-content"], [data-app-part~="feedback-copy"], [data-app-part~="feedback-actions"]',
+      )];
+      return wrappers.length >= 3 && wrappers.every(node =>
+        node.parentElement !== null && getComputedStyle(node.parentElement).color === getComputedStyle(node).color);
+    })),
+  { message: 'neutral error wrappers settle inherited text color after owner removal' }).toBe(true);
   const inline = await isolationAppearance(preview);
   const portals: Record<string, unknown> = {};
   for (const [trigger, name] of [
     ['Preview help', 'Preview help'], ['Inspect sample journey', 'Synthetic journey details'],
     ['Source quality filter', 'Source quality filter'],
   ]) {
-    await preview.getByRole('button', { name: trigger, exact: true }).click();
+    const opener = preview.getByRole('button', { name: trigger, exact: true });
+    if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'false');
+    await opener.click();
     const portal = page.getByRole('dialog', { name, exact: true });
+    if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'true');
     await expect(portal).toBeVisible();
     expect(await portal.evaluate((element, attributes) => {
       const boundary = element.closest('[data-app-design-preview]');
@@ -901,8 +987,39 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
     else if (trigger === 'Source quality filter') await portal.getByRole('button', { name: 'Done', exact: true }).click();
     else await page.keyboard.press('Escape');
     await expect(portal).toBeHidden();
+    if (trigger === 'Inspect sample journey') {
+      await expect(preview.getByRole('button', { name: trigger, exact: true })).toBeFocused();
+    }
   }
   await preview.evaluate((element, value) => element.setAttribute('data-app-data', value), getAppDesignAttributes('quiet')['data-app-data']);
+  await expect(preview).toHaveAttribute('data-app-design-owner', /(?:^|\s)pack-quiet(?:\s|$)/);
+  await expect.poll(() => preview.locator('.leaflet-container').evaluate(element => {
+    const owner = element.getAttribute('data-app-design-owner');
+    const leading = getComputedStyle(element).lineHeight;
+    const panes = [...element.querySelectorAll('.leaflet-pane')];
+    return owner !== null && panes.length > 0 && panes.every(pane =>
+      pane.getAttribute('data-app-design-owner') === owner && getComputedStyle(pane).lineHeight === leading);
+  }), { message: 'restored map panes inherit the active font leading' }).toBe(true);
+  const legends = preview.locator('[data-app-part~="chart-legend"] .recharts-default-legend');
+  await expect.poll(() => legends.evaluateAll(nodes => nodes.length > 0 && nodes.every(node =>
+    [node, ...node.children, ...node.querySelectorAll('svg, path')].every(child => child.parentElement !== null
+      && child.parentElement.hasAttribute('data-app-design-owner')
+      && child.hasAttribute('data-app-design-owner')
+      && getComputedStyle(child).color === getComputedStyle(child.parentElement).color))),
+  { message: 'restored chart legends inherit their active owner color', timeout: 15_000 }).toBe(true);
+  const iconPaths = preview.locator('svg.lucide > path');
+  await expect.poll(() => iconPaths.evaluateAll(nodes => nodes.length > 0 && nodes.every(node =>
+    node.parentElement !== null && getComputedStyle(node).fontSize === getComputedStyle(node.parentElement).fontSize)),
+  { message: 'restored icon paths inherit the active font size', timeout: 15_000 }).toBe(true);
+  if (await page.evaluate(() => matchMedia('(max-width: 767px)').matches)) {
+    await expect.poll(() => preview.locator('[data-app-part~="page-header"] .text-sm')
+      .evaluateAll(nodes => nodes.length > 0 && nodes.every(node => {
+        const style = getComputedStyle(node);
+        const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const scale = Number(style.getPropertyValue('--font-scale')) || 1;
+        return parseFloat(style.fontSize) >= Math.max(rootSize, rootSize * scale) - 0.1;
+      })), { message: 'restored preview body text reaches the phone size floor' }).toBe(true);
+  }
   await assertOwnerGuardActivation(preview);
   return { inline, portals };
 }
@@ -1081,6 +1198,11 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
   for (const { width, phase } of [1440, 390].flatMap(width => mainPhases(width).map(phase => ({ width, phase })))) {
     test(`Application design languages at ${width}px in ${theme} — phase ${phase.label}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 1000 });
+      if (process.env.E2E_REVIEW_ONLINE === '1') {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+        });
+      }
       const workspaceHeader = page.getByRole('banner', {
         name: width < 1280 ? 'Site header' : 'Workspace command bar', exact: true,
       });
@@ -1486,7 +1608,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           observe('quiet', 'dialogs-popovers', portaled, 'mixed-pack-owned-portals', outerPack, isolationWidth);
           observe('quiet', 'dialogs-popovers', incomplete[outerPack], 'mixed-pack-incomplete-neutral', outerPack, isolationWidth);
           observe(outerPack, 'shell-navigation', outer[outerPack], 'outer-profile-retained');
-          await dialog.screenshot({ path: testInfo.outputPath(`quiet-inside-${outerPack}.png`), animations: 'disabled' });
+          if (process.env.E2E_SENSITIVE !== '1') {
+            await dialog.screenshot({ path: testInfo.outputPath(`quiet-inside-${outerPack}.png`), animations: 'disabled' });
+          }
           await page.keyboard.press('Escape');
           await expect(dialog).toBeHidden();
           await expectProfile(page, outerPack);

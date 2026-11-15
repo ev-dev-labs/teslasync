@@ -15,7 +15,7 @@ import {
   QUALITY_ROUTES,
 } from './routeRegistry';
 import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
-import { unexpectedNeutralScopes } from './widget-design-packs.acceptance';
+import { assertOwnerGuardActivation, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 
 appDesignTest.describe('application design teardown', () => {
   appDesignTest.describe.configure({ mode: 'serial' });
@@ -274,6 +274,162 @@ test('harness rejects continuously changing DOM content', async ({ page }) => {
     await expect(waitForHarnessReady(page, null)).rejects.toThrow('Timeout');
   } finally {
     await page.evaluate(() => window.clearInterval((window as Window & { __DOM_CHANGE_TIMER__?: number }).__DOM_CHANGE_TIMER__));
+  }
+});
+
+const ownerActivationFixture = `
+  <style>[data-app-design-owner] [data-app-part="card"] { padding: 8px; }</style>
+  <main><div id="preview" data-app-design-owner="pack-test">
+    <div id="intermediate" data-app-design-owner="pack-test">
+      <div id="card" data-app-part="card" data-app-design-owner="pack-test">Preview</div>
+    </div>
+  </div></main>
+`;
+
+test('owner activation waits for preview geometry to settle', async ({ page }) => {
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    const state = window as Window & { __PREVIEW_CHANGES__?: number };
+    state.__PREVIEW_CHANGES__ = 0;
+    const timer = setInterval(() => {
+      const count = (state.__PREVIEW_CHANGES__ ?? 0) + 1;
+      state.__PREVIEW_CHANGES__ = count;
+      document.querySelector<HTMLElement>('#card')!.style.height = count % 2 ? '80px' : '120px';
+      if (count === 6) clearInterval(timer);
+    }, 100);
+  });
+  await assertOwnerGuardActivation(page.locator('#preview'));
+  expect(await page.evaluate(() => (window as Window & { __PREVIEW_CHANGES__?: number }).__PREVIEW_CHANGES__)).toBe(6);
+});
+
+test('owner activation waits for preview styles to settle without geometry changes', async ({ page }) => {
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__ =
+      document.querySelector<HTMLElement>('#card')!.animate(
+        [{ backgroundColor: 'rgb(0, 0, 0)' }, { backgroundColor: 'rgb(255, 255, 255)' }],
+        { duration: 1200, fill: 'forwards' },
+      );
+  });
+  await assertOwnerGuardActivation(page.locator('#preview'));
+  expect(await page.evaluate(() =>
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__?.playState)).toBe('finished');
+});
+
+test('owner activation waits for preview text colors to settle', async ({ page }) => {
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__ =
+      document.querySelector<HTMLElement>('#card')!.animate(
+        [{ color: 'rgb(0, 0, 0)' }, { color: 'rgb(255, 255, 255)' }],
+        { duration: 1200, fill: 'forwards' },
+      );
+  });
+  await assertOwnerGuardActivation(page.locator('#preview'));
+  expect(await page.evaluate(() =>
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__?.playState)).toBe('finished');
+});
+
+test('owner activation waits for intermediate preview surfaces to settle', async ({ page }) => {
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__ =
+      document.querySelector<HTMLElement>('#intermediate')!.animate(
+        [{ backgroundColor: 'rgb(0, 0, 0)' }, { backgroundColor: 'rgb(255, 255, 255)' }],
+        { duration: 1200, fill: 'forwards' },
+      );
+  });
+  await assertOwnerGuardActivation(page.locator('#preview'));
+  expect(await page.evaluate(() =>
+    (window as Window & { __PREVIEW_ANIMATION__?: Animation }).__PREVIEW_ANIMATION__?.playState)).toBe('finished');
+});
+
+test('owner activation rejects changes after restoration', async ({ page }) => {
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    const preview = document.querySelector('#preview')!;
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      document.querySelector<HTMLElement>('#card')!.style.padding = '24px';
+    });
+    observer.observe(preview, { attributes: true, attributeFilter: ['data-app-design-owner'] });
+  });
+  await expect(assertOwnerGuardActivation(page.locator('#preview')))
+    .rejects.toThrow('activation probe restores the actual sandbox exactly');
+});
+
+for (const variant of ['equivalent', 'unowned', 'changed-geometry'] as const) {
+  test(`owner activation checks ${variant} remount`, async ({ page }) => {
+    await page.setContent(ownerActivationFixture);
+    await page.evaluate(remount => {
+      const preview = document.querySelector('#preview')!;
+      const observer = new MutationObserver(() => {
+        observer.disconnect();
+        const card = document.querySelector('#card')!;
+        const replacement = card.cloneNode(true) as HTMLElement;
+        if (remount === 'unowned') replacement.removeAttribute('data-app-design-owner');
+        if (remount === 'changed-geometry') replacement.style.height = '123px';
+        card.replaceWith(replacement);
+        card.removeAttribute('data-app-design-owner');
+      });
+      observer.observe(preview, { attributes: true, attributeFilter: ['data-app-design-owner'] });
+    }, variant);
+    if (variant === 'equivalent') await assertOwnerGuardActivation(page.locator('#preview'));
+    else await expect(assertOwnerGuardActivation(page.locator('#preview')))
+      .rejects.toThrow(variant === 'unowned' ? 'activation probe restores every owner'
+        : 'activation probe restores the actual sandbox exactly');
+  });
+}
+
+test('owner activation rejects a continuously changing preview', async ({ page }) => {
+  test.setTimeout(25_000);
+  await page.setContent(ownerActivationFixture);
+  await page.evaluate(() => {
+    let expanded = false;
+    setInterval(() => {
+      expanded = !expanded;
+      document.querySelector<HTMLElement>('#card')!.style.height = expanded ? '80px' : '120px';
+    }, 75);
+  });
+  await expect(assertOwnerGuardActivation(page.locator('#preview')))
+    .rejects.toThrow('preview geometry or styles did not settle before owner activation');
+});
+
+test('Quiet preview sizes metric rows without changing protected or other grids', async ({ page }) => {
+  await page.setContent(`
+    <style>
+      .bank { display: grid; width: 200px; grid-auto-rows: 40px; }
+      .bank > :first-child { height: 20px; }
+      .bank > :last-child { height: 60px; }
+    </style>
+    <div data-app-design-preview data-app-design-pack="quiet">
+      <section data-preview-section="overview">
+        <div id="sample" class="bank" data-app-part="metric-grid" data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        <div id="preserved" class="bank" data-app-part="metric-grid" data-app-design-preserve data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        <div id="twin" class="bank" data-app-part="metric-grid" data-vehicle-twin data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        <div id="widget" class="bank" data-app-part="metric-grid" data-widget-pack="quiet" data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        <div id="native" class="bank" data-app-part="metric-grid" data-app-metric-grid="inline" data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        <div id="operational" class="bank" data-app-part="metric-grid" data-operational-metric-bank data-app-design-owner="pack-quiet"><div></div><div></div></div>
+      </section>
+      <div data-app-design-preserve>
+        <section data-preview-section="overview">
+          <div id="preserved-child" class="bank" data-app-part="metric-grid" data-app-design-owner="pack-quiet"><div></div><div></div></div>
+        </section>
+      </div>
+      <div id="outside" class="bank" data-app-part="metric-grid" data-app-design-owner="pack-quiet"><div></div><div></div></div>
+      <div data-app-design-preview data-app-design-pack="classic">
+        <section data-preview-section="overview">
+          <div id="foreign" class="bank" data-app-part="metric-grid" data-app-design-owner="pack-classic"><div></div><div></div></div>
+        </section>
+      </div>
+    </div>
+  `);
+  await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', 'quiet.css'), 'utf8') });
+  const rows = (selector: string) => page.locator(selector).evaluate(element =>
+    getComputedStyle(element).gridTemplateRows);
+  expect(await rows('#sample')).toBe('20px 60px');
+  for (const id of ['preserved', 'twin', 'widget', 'native', 'operational', 'preserved-child', 'outside', 'foreign']) {
+    expect(await rows(`#${id}`), id).toBe('40px 40px');
   }
 });
 

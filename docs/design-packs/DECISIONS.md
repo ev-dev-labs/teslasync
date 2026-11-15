@@ -1,5 +1,37 @@
 # Design pack decisions
 
+## WebKit preview restoration follow-up
+
+The failing CI isolation checks compared the preview before inherited styles
+had consistently settled. The browser contract now waits for the restored
+map-pane leading, chart-legend colors and icon font sizes, then retains the
+exact owner and composition comparisons. Neutral error wrappers are checked
+before comparing previews under different outer packs. These checks do not
+establish why WebKit sometimes reports stale inherited values.
+
+The focused dark and custom 390px checks passed in an isolated WebKit
+container. The exact custom CI isolation phase also passed, but the exact dark
+phase timed out clicking the Quiet preview before reaching the comparison.
+Host CPU utilization was 100% during that attempt; its effect on the timeout
+is unproven. An earlier exact-phase run could not change scope because
+network-isolated WebKit reports `navigator.onLine=false`. The explicitly
+opt-in `E2E_REVIEW_ONLINE=1` setting supplies an online state only to the
+synthetic review; offline product behavior is unchanged.
+
+```text
+Focused WebKit dark/custom at 390px: 2 passed (3.9m)
+Exact WebKit 390px mixed-pack isolation, dark/custom: 1 failed, 1 passed (5.1m)
+BROWSER_PROBE_API_ESCAPE=0
+SCREENSHOT_COUNT=0
+E2E_TSC_EXIT=0
+FOCUSED_ESLINT_EXIT=0
+Scoped app-design audit: 0 violations; TypeScript passes
+```
+
+The dark exact phase, other viewport/theme combinations, and the next CI run
+remain unverified. Sensitive-mode isolation runs suppress their explicit
+preview screenshots; normal CI evidence capture is unchanged.
+
 ## Full Vitest snapshot
 
 The immutable frontend snapshot at `243a4c319943` completed:
