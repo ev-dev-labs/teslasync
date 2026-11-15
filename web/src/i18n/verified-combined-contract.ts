@@ -77,6 +77,8 @@ const dashboardPolishAdditions = [
   ['widget.fleetStatsBar.distanceViewRange', 'Distance (view range)'],
   ['widget.fleetStatsBar.energyViewRange', 'Energy (view range)'],
   ['widget.recentDrivesSummary', '{{count}} recent drives \u00b7 {{total}}'],
+  ['dashboardWidgets.driving.speedHeatmap.sampleLegend', 'Outline = sampled period'],
+  ['dashboardWidgets.driving.speedHeatmap.colorStrengthLegend', 'Stronger color = higher speed'],
   ['dbHealth.estimatedRows', 'Estimated rows'],
   ['dbHealth.estimatedTotalRows', 'Estimated total rows'],
   ['dbHealth.rowEstimatesNote', 'Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.'],

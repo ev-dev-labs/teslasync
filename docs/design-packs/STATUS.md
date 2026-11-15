@@ -5,6 +5,6 @@
 - Phase 1 remains incomplete: token coverage, protected dashboard twin hotspots and standalone routes remain unresolved.
 - Dark and light Drives/Energy/Vehicles sweeps passed 162/162 scoped checks each; the light contrast scan had 64 incomplete nodes, 12 later resolved in Terminal. Cyber grid contrast and preview isolation have focused cross-browser checks; full-page accessibility remains unverified.
 - Full Vitest on snapshot `243a4c3199` passed 2,947 files and 101,822 tests; later CSS and browser-test changes require separate validation.
-- Draft PR #259 targets `feature/app-design-themes`; five WebKit design jobs and three dependent browser aggregate checks failed on head `2b2aef0093`.
+- Draft PR #259 targets `feature/app-design-themes`; head `445e5bb317` failed three frontend shards on catalog preservation. The exact-copy projection repair passed 12 local suites; its next CI run is pending.
 - Local WebKit 390px custom/dark isolation passed; a focused desktop custom probe passed, but the prior 0.5px desktop difference and the next CI run remain unresolved.
-- Docker preview `87afae094c6e` is healthy at `localhost:3120` but predates the heatmap fix; the existing backend health endpoint still returns 503.
+- Docker preview `445e5bb317b1` is healthy at `localhost:3120` and includes the heatmap fix; the existing backend health endpoint still returns 503.

@@ -1,5 +1,46 @@
 # Design pack decisions
 
+## Catalog preservation and preview refresh
+
+PR head `445e5bb317` failed frontend test shards 1, 3 and 7 because the two
+new speed-heatmap legend keys were not projected out before historical catalog
+fingerprints were checked. The projection now verifies their exact values
+before removing them; the predecessor counts and digests are unchanged.
+The regression checks the actual widget calls, generated catalog, retained
+historical legends, and rejection of altered or missing new copy.
+
+```text
+Test Files  12 passed (12)
+     Tests  7766 passed (7766)
+CATALOG_PRESERVATION_EXIT=0
+CATALOG_FINAL_TSC_ESLINT_EXIT=0
+I18N_AUDIT_EXIT=0
+```
+
+The committed `445e5bb317b1` application was built into the local Docker
+preview. The candidate's first browser run passed two checks but failed the
+startup check because that test had loaded an older `e2e/.app-dist`. The
+startup check passed when rerun with assets extracted from the candidate
+image; the deployed image then passed all three browser checks using those
+same assets. No screenshots were taken. The previous preview remains stopped
+as `teslasync-design-packs-rollback-87afae094c6e-445e`.
+
+```text
+PREVIEW_IMAGE_BUILD_EXIT=0
+CANDIDATE_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200
+CANDIDATE_STARTUP_EXIT=0
+PREVIEW_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200
+3 passed (3.5m)
+LIVE_PREVIEW_BROWSER_EXIT=0
+LIVE_PREVIEW_REAL_BROWSER_EXIT=0
+PREVIEW_HEALTH_HTTP=503 BACKEND_HEALTH_HTTP=503
+```
+
+The live browser check covered the initial route at 360, 430 and 1440px with
+no page errors or horizontal overflow; it is not an all-page acceptance
+check. The existing backend health failure is unchanged. The catalog fix
+touches tests only, so the preview contains the current application source.
+
 ## Sampled speed-heatmap periods
 
 The captured light and custom heatmaps distinguished zero-speed samples from

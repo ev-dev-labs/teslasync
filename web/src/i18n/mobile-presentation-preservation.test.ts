@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import changes from './__fixtures__/mobile-presentation-preservation.json';
 import catalog from './en.json';
+import dashboardCatalog from './en/locale-dashboard.json';
 import shell from './en/shell.json';
 import { producerProjection } from './producer-projection';
 import { catalogBeforeDashboardPolish, designProfileCopy } from './verified-combined-contract';
@@ -47,5 +48,32 @@ describe('mobile presentation source preservation', () => {
       changed.common[key] += '!';
       expect(() => catalogBeforeDashboardPolish(changed)).toThrow();
     }
+  });
+
+  it('preserves the historical speed-heatmap legends while verifying their replacements', () => {
+    const heatmap = catalog.dashboardWidgets.driving.speedHeatmap;
+    const generated = dashboardCatalog.dashboardWidgets.driving.speedHeatmap;
+    const previous = catalogBeforeDashboardPolish(catalog).dashboardWidgets.driving.speedHeatmap;
+    const source = readFileSync(resolve(process.cwd(), 'src', 'features', 'dashboard', 'widgets', 'SpeedHeatmapWidget.tsx'), 'utf8');
+    const calls = producerProjection('SpeedHeatmapWidget.tsx', source).calls.map(call => call.call);
+    for (const [key, expected] of [
+      ['sampleLegend', 'Outline = sampled period'],
+      ['colorStrengthLegend', 'Stronger color = higher speed'],
+    ] as const) {
+      expect(heatmap[key]).toBe(expected);
+      expect(generated[key]).toBe(expected);
+      expect(calls).toContain(`t('dashboardWidgets.driving.speedHeatmap.${key}', '${expected}')`);
+      expect(previous[key]).toBeUndefined();
+      const changed = structuredClone(catalog);
+      changed.dashboardWidgets.driving.speedHeatmap[key] += '!';
+      expect(() => catalogBeforeDashboardPolish(changed)).toThrow();
+      const missing = structuredClone(catalog);
+      delete (missing.dashboardWidgets.driving.speedHeatmap as Partial<typeof heatmap>)[key];
+      expect(() => catalogBeforeDashboardPolish(missing)).toThrow();
+    }
+    expect(heatmap.noSampleLegend).toBe('Dim = no sample');
+    expect(heatmap.higherSpeedLegend).toBe('Brighter = higher speed');
+    expect(generated.noSampleLegend).toBe(heatmap.noSampleLegend);
+    expect(generated.higherSpeedLegend).toBe(heatmap.higherSpeedLegend);
   });
 });
