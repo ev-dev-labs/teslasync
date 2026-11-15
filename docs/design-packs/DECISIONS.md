@@ -2345,7 +2345,27 @@ BROWSER_PROBE_API_ESCAPE=0
 CROSS_BROWSER_SMOKE_EXIT=1
 ```
 
+A subsequent instrumented WebKit-only run passed three repetitions. Each
+recorded pointer-down, pointer-up and click on Streets, without escaped API
+requests. It did not reproduce the earlier failure; the temporary
+instrumentation was removed and the intermittent interaction remains
+unresolved. An instrumented Firefox-only run also passed three repetitions
+with matching synthetic preference writes and reads; it did not reproduce the
+stale selection, so that intermittent failure remains unresolved as well.
+
+```text
+3 passed (3.5m)
+BROWSER_PROBE_API_ESCAPE=0
+WEBKIT_MAP_TRACE_EXIT=0
+3 passed (4.0m)
+BROWSER_PROBE_API_ESCAPE=0
+FIREFOX_PREFERENCE_TRACE_EXIT=0
+```
+
 The strict two-outer-pack WebKit light-phone owner check subsequently passed
 twice with the pending diagnostic instrumentation. An earlier repetition
 failed exact inherited-style restoration, so those two passes are not proof
-that the intermittent defect is resolved. No screenshots were taken.
+that the intermittent defect is resolved. The pending owner-settling,
+restoration and protected-grid contracts passed in Edge (`10 passed`), and
+the diagnostic files passed focused ESLint and E2E TypeScript. No screenshots
+were taken.
