@@ -1,6 +1,82 @@
 # Design Pack Decisions
 
+### Expressive Form final-matrix evidence
+
+The pinned matrix reported `1014 passed, 2 failed (49.5m)`. Both phone
+dashboards reported protected twin targets and text as well as a 12px Charge
+Status distance unit. All 1,016 PNGs passed signature, chunk-CRC and viewport
+dimension checks. A focused regression reproduced the unit at 10.2px at
+360px and scale 0.85; the v6 phone selector now covers owned stat-card units
+and context without changing protected or specialized surfaces.
+
+```text
+PHONE_DISTANCE_FINAL_EXIT=0  # 4 passed across v4/v6, dark/light, phone widths, scales and forced colors
+V6_PRESERVATION_EXIT=0       # 121 passed
+FRONTEND_TSC_EXIT=0
+E2E_TSC_EXIT=0
+TOUCHED_ESLINT_EXIT=0
+```
+
+The two fixed dashboard pages were recaptured against current Vite source.
+Both cases still failed on protected twin targets and text; the small unit
+was no longer reported. Their PNG integrity and dimensions were verified,
+but the initial viewport does not include that card. The matrix and
+recaptures therefore represent mixed builds, not full acceptance.
+
+### Iconic Showroom final-matrix evidence
+
+The pinned matrix reported `1013 passed, 3 failed (49.1m)`: the two
+protected dashboard widget cases and the 430px Digital Twin page landmark.
+All 1,016 PNGs passed signature, chunk-CRC and dimension checks. The page-only
+square-corner repair was subsequently checked without screenshots at 360 and
+430px in dark and light themes: `4 passed (4.2m)`. The older matrix images
+and the unresolved protected widget findings are not full acceptance.
+The repaired 430px page alone was recaptured against the newer build:
+`1 passed (2.3m)`, with PNG integrity and dimensions verified. The resulting
+evidence is mixed-build.
+
+### Executive Concierge charge unit
+
+The pinned matrix reported a 12px `km` unit on both phone dashboards. A
+screenshot-free diagnostic identified the unprotected Charge Status stat
+card. The v4 phone selector now gives owned stat-card units the same
+body-size token as headline units, without changing protected surfaces.
+
+```text
+CONCIERGE_DISTANCE_EXIT=1  # 360px pack-review-charge-status distance unit: 12px
+CONCIERGE_DISTANCE_MATRIX_EXIT=0  # 2 passed (2.2m)
+CONCIERGE_PRESERVATION_EXIT=0  # 3 files, 19 passed, 504 skipped
+```
+
+The browser retry covered dark/light, 360/390/430px, scales 0.85/1/1.35
+and normal/forced colors, including unit containment and document overflow.
+The two phone dashboards were recaptured against the newer build. Both
+cases still failed on protected twin targets and text, but no longer
+reported the `km` unit. Their PNGs passed integrity and dimension checks;
+the initial viewport does not include the corrected card. The protected
+twin findings remain open.
+
 ### Latest Docker preview
+
+The committed frontend at `f9c93755bfa2` was built into the immutable image
+`teslasync-web:design-packs-v2-f9c93755bfa2`. A separate loopback candidate
+passed its Docker health check, index, static-asset and authentication-proxy
+checks, then replaced the task-owned preview at `localhost:3120`. The
+previous container remains stopped for rollback.
+
+```text
+PREVIEW_BUILD_SHA=f9c93755bfa2 PREVIEW_BUILD_EXIT=0
+PREVIEW_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200
+PREVIEW_BROWSER width=360  http=200 main=visible overflow=0 pageErrors=0
+PREVIEW_BROWSER width=430  http=200 main=visible overflow=0 pageErrors=0
+PREVIEW_BROWSER width=1440 http=200 main=visible overflow=0 pageErrors=0
+SYSTEM_HEALTH_PROXY_HTTP=503 BACKEND_HTTP=503
+```
+
+These are initial-route smoke checks, not all-page acceptance. The later
+Expressive Form charge-unit fix was not in this image and needs a new build.
+
+### Previous Docker preview
 
 The committed frontend at `98debceb5a8b` was built into the immutable image
 `teslasync-web:design-packs-v2-98debceb5a8b`. A separate candidate passed its
@@ -94,13 +170,21 @@ dashboard and mini widgets continue to use their original geometry.
 
 The fatigue and burn-rate charts now measure phone-axis labels using the
 owned body-size token. Desktop and unowned charts retain their existing
-layout. Long rule labels are abbreviated only on the axis; the complete
-values remain in the chart data and tooltip.
+layout. Long rule labels can be abbreviated on the chart; the data table
+retains the complete rule names.
 
 - A later isolated Firefox run found the fatigue score's `100.00` tick
-  clipped at 360px in dark and light mode. This remains open until the
-  cross-browser fix is verified. A separate custom-font run timed out while
-  switching from Cyberdeck to Blueprint; its cause is not yet established.
+  clipped at 360px. Phone chart margins now reserve measured space for
+  localized endpoint ticks. Isolated retries passed in Chromium dark/light
+  and custom German typography (`3 passed`), Firefox dark (`1 passed`) and
+  WebKit custom German typography (`1 passed`); the WebKit check reported
+  `BROWSER_PROBE_API_ESCAPE=0` and `SCREENSHOT_COUNT=0`. These checks also
+  retain the desktop and unowned chart assertions.
+- The current notification component and raw-bridge Vitest selection
+  reported `4 files, 159 tests passed`, with existing Recharts zero-size
+  warnings.
+- The notification feature guideline audit reported `0 violations` in all
+  six categories and `TypeScript passes`; the scan included 131 TSX files.
 - Edge geometry checks at 360, 390 and 430px, three font scales, dark,
   light and custom typography, and four packs: `3 passed (1.5m)`.
 - `npx tsc --noEmit`: exit 0; `npx tsc --noEmit -p e2e\tsconfig.json`:
@@ -130,7 +214,7 @@ charts keep their existing presentation.
   the shared `Table` imported from `@/components/ui` as raw HTML.
 - An earlier browser run failed strict mock accounting for aborted requests;
   the clean retry above passed without relaxing those assertions.
-  Cross-browser verification remains outstanding.
+  The current measured-margin cross-browser retries are listed above.
 
 ### Classic matrix and capture continuation
 
