@@ -11,11 +11,13 @@ V3_PHONE_CHECK_EXIT=0
 ```
 
 All 12 scans reported zero Axe contrast violations. Both 360px Drives scans
-also reported one incomplete node: the sticky `4 results` summary partially
-overlaps another element in the scanned state. A separate screenshot-free
-context check scrolled that label into view; its foreground/background pairs
-were 8.73:1 in dark and 7.31:1 in light. Those measurements do not resolve
-the originally overlapping state or constitute a visual pass.
+also reported one incomplete node: Axe could not determine the background of
+the sticky `4 results` summary because of a partial overlap. A screenshot-free
+context check in that same scrolled state found an opaque ancestor, no
+intervening background image, filter or opacity, and the label was the top
+hit at nine sampled points. Its computed foreground/background pairs were
+8.73:1 in dark and 7.31:1 in light. This resolves only the sampled state, not
+other scroll positions or visual acceptance.
 
 The local build used for the Pixel and Precision phone checks has the same
 12 CSS asset names and SHA-256 hashes as Docker preview `fdcd380f40`; its

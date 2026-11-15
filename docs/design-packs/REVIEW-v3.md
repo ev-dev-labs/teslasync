@@ -95,8 +95,8 @@ in each mode: the sticky `4 results` summary partially overlapped another
 element. The 430px scans and both Energy and Vehicles widths had no incomplete
 nodes.
 
-After scrolling the summary into view in a separate context run, its measured
-foreground/background contrast was 8.73:1 in dark and 7.31:1 in light. This
-does not establish the contrast or visibility of the original overlapping
-state. The checks saved no images and did not cover the protected twins or
-the rest of the application.
+In a separate screenshot-free context run at the same scrolled position,
+the label was the top hit at nine sampled points above an opaque ancestor.
+Its computed foreground/background contrast was 8.73:1 in dark and 7.31:1
+in light. Other scroll positions and the visual appearance remain unreviewed;
+the checks did not cover the protected twins or the rest of the application.

@@ -1268,6 +1268,33 @@ for (const route of routes) {
           console.log(`  Manual contrast review: ${node.target.join(' > ')} — ${node.failureSummary ?? 'unknown'}`);
           if (process.env.DESIGN_PACK_CONTRAST_CONTEXT === '1') {
             const target = page.locator(node.target.join(' ')).first();
+            const initial = await target.evaluate(element => {
+              const rect = element.getBoundingClientRect();
+              const points = [0.1, 0.5, 0.9].flatMap(x => [0.1, 0.5, 0.9].map(y => {
+                const hit = document.elementFromPoint(rect.x + rect.width * x, rect.y + rect.height * y);
+                return {
+                  x, y, tag: hit?.tagName ?? null,
+                  className: hit?.getAttribute('class') ?? null,
+                  containsText: !!hit && (hit === element || element.contains(hit)),
+                };
+              }));
+              const chain: Array<Record<string, string>> = [];
+              for (let ancestor: Element | null = element; ancestor && chain.length < 12; ancestor = ancestor.parentElement) {
+                const style = getComputedStyle(ancestor);
+                chain.push({
+                  tag: ancestor.tagName.toLowerCase(), color: style.color,
+                  background: style.backgroundColor, image: style.backgroundImage,
+                  opacity: style.opacity, filter: style.filter, backdrop: style.backdropFilter,
+                });
+              }
+              return {
+                rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                viewport: { width: innerWidth, height: innerHeight },
+                scrollTop: document.getElementById('main-content')?.scrollTop ?? null,
+                points, chain,
+              };
+            }).catch(error => ({ error: String(error) }));
+            console.log(`  Contrast initial geometry: ${JSON.stringify(initial)}`);
             await target.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
             const context = await target.evaluate(element => {
               const rect = element.getBoundingClientRect();
