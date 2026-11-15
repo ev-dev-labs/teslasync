@@ -1,5 +1,22 @@
 # Design pack decisions
 
+## Committed charger preview
+
+The local preview was rebuilt from commit `0fae1a58ab97`. Its candidate was
+checked on an unused loopback port before replacing the task-owned 3120
+container; the preceding container remains stopped for rollback.
+
+```text
+PREVIEW_BUILD_EXIT=0
+CANDIDATE_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_HTTP=200
+PREVIEW_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_HTTP=200
+360px, 430px, 1440px: HTTP 200, main visible, 0 page errors, 0 document overflow
+SYSTEM_HEALTH_HTTP=503
+```
+
+The browser checks used the live initial route and took no screenshots.
+The existing backend health endpoint still reports the Tesla API unhealthy.
+
 ## Charger details on phones
 
 The scoped phone-text scan missed the charger breakdown's session count and
@@ -82,8 +99,8 @@ The runner enabled its scoped visible-touch-target and body-text checks, with
 establish visual acceptance, every interaction state, other routes, light
 mode or other font scales. The check-only capture safety changes were made
 while the sweep was running, so this is not a single immutable harness
-revision. The tested local build's CSS matches the Docker preview; its index
-and JavaScript assets differ.
+revision. Its CSS matched the then-current Docker preview before the charger
+follow-up; its index and JavaScript assets differed.
 
 ## Screenshot-free preservation and WebKit follow-up
 
