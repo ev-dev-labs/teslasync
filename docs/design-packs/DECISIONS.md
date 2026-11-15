@@ -2265,3 +2265,51 @@ DEPLOYED_IMAGE=teslasync-web:design-packs-v2-19c0889436 HEALTH=healthy RESTART=u
 DEPLOYED_BROWSER={"status":200,"rootChildren":4,"cssSheets":2,"overflow":false,"pageErrors":0}
 SYSTEM_HEALTH_HTTP=503
 ```
+
+### CI balancing, interaction fixes and preview refresh
+
+The 32 required Chromium quality jobs now divide ordinary cases into 24
+shards and design-pack cases into eight. Exact discovery for the CI project
+set confirmed that this partition neither drops nor duplicates a case:
+
+```text
+FULL=2867 DESIGN=197 ORDINARY=2670 UNIQUE=2867 DISJOINT=True EXACT_MULTISET=True
+CI_DISCOVERY_EQUIVALENCE_EXIT=0
+```
+
+The Horizon freshness panel wraps long ranked labels, and Helix history
+preserves primary-mouse selection when WebKit scrolls a focused button.
+Targeted unit, lint, type, build and cross-browser checks passed before the
+push; these do not establish full-page mobile acceptance. The previous full
+Vitest run was not an immutable source snapshot and did not pass:
+
+```text
+Test Files  2 failed | 2945 passed (2947)
+     Tests  4 failed | 101812 passed | 4 skipped (101820)
+```
+
+A fresh full Vitest run is running from an isolated checkout of `3b65d101b4`;
+its result is not yet known. Draft PR #259 now points to that commit, and its
+new workflows are running. The strict WebKit owner-restoration assertion is
+still under investigation: a single-preview diagnostic passed twice, but
+that does not establish isolation across both outer packs.
+
+The Docker image built from `3b65d101b4` replaced the task-owned preview after
+a separate healthy candidate passed its index, asset, auth-proxy and phone
+browser checks. The previous preview remains stopped for rollback. The six
+focused Helix and Horizon browser regressions passed against the deployed
+image without screenshots; the pre-existing backend health endpoint still
+returns 503.
+
+```text
+DOCKER_BUILD_EXIT=0
+CANDIDATE_HEALTH=healthy
+CANDIDATE_BROWSER={"status":200,"rootChildren":4,"cssSheets":6,"horizontalOverflow":false,"pageErrors":0}
+DEPLOYED_IMAGE=teslasync-web:design-packs-v2-3b65d101b4c7 HEALTH=healthy RESTART=unless-stopped
+INDEX_HTTP=200
+AUTH_PROXY_HTTP=200
+DEPLOYED_BROWSER={"status":200,"rootChildren":4,"cssSheets":4,"horizontalOverflow":false,"pageErrors":0}
+6 passed (43.2s)
+DEPLOYED_BROWSER_REGRESSION_EXIT=0
+SYSTEM_HEALTH_HTTP=503
+```
