@@ -10,10 +10,18 @@ import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types.ts
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const usage = 'Usage: node scripts/capture-design-packs.mjs --pack <id|all> '
   + '--pages <dashboard,drives,energy|all> --viewports <phone-390,desktop> '
-  + '--base-url <running local server URL> [--exclude-pages <ids>] [--workers <count>]';
+  + '--base-url <running local server URL> [--exclude-pages <ids>] [--workers <count>] '
+  + '[--resume-after <pack-id>]';
 
-export function capturePackIds(selection) {
-  if (selection === 'all') return [...PACK_IDS];
+export function capturePackIds(selection, resumeAfter) {
+  if (selection === 'all') {
+    if (resumeAfter === undefined) return [...PACK_IDS];
+    const index = PACK_IDS.indexOf(resumeAfter);
+    if (index < 0) throw new Error(`Unknown resume pack: ${resumeAfter}`);
+    if (index === PACK_IDS.length - 1) throw new Error('No packs remain after the selected pack');
+    return PACK_IDS.slice(index + 1);
+  }
+  if (resumeAfter !== undefined) throw new Error('--resume-after requires --pack all');
   if (!PACK_IDS.includes(selection)) throw new Error(`Unknown design pack: ${selection}`);
   return [selection];
 }
@@ -27,6 +35,7 @@ async function main() {
       'base-url': { type: 'string' },
       'exclude-pages': { type: 'string' },
       workers: { type: 'string' },
+      'resume-after': { type: 'string' },
       help: { type: 'boolean' },
     },
   });
@@ -38,7 +47,7 @@ async function main() {
   const baseURL = values['base-url'] ?? process.env.DESIGN_PACK_CAPTURE_BASE_URL;
   if (!pack || !pages || !viewports || !baseURL) throw new Error(usage);
   if (!/^[a-z0-9-]+$/.test(pack)) throw new Error('Invalid pack ID');
-  const packs = capturePackIds(pack);
+  const packs = capturePackIds(pack, values['resume-after']);
   const workers = Number(values.workers ?? '1');
   if (!Number.isInteger(workers) || workers < 1 || workers > 32) {
     throw new Error('Workers must be an integer between 1 and 32');

@@ -19,6 +19,14 @@ test('all-pack capture uses the canonical registry and preserves individual IDs'
   assert.throws(() => capturePackIds('missing-pack'), /Unknown design pack/);
 });
 
+test('resuming an all-pack capture starts after the named pack', () => {
+  assert.deepEqual(capturePackIds('all', 'classic'), PACK_IDS.slice(1));
+  assert.deepEqual(capturePackIds('all', PACK_IDS[PACK_IDS.length - 2]), PACK_IDS.slice(-1));
+  assert.throws(() => capturePackIds('all', 'missing-pack'), /Unknown resume pack/);
+  assert.throws(() => capturePackIds('all', PACK_IDS[PACK_IDS.length - 1]), /No packs remain/);
+  assert.throws(() => capturePackIds('v1', 'classic'), /requires --pack all/);
+});
+
 test('capture runner requires a pack, page list, viewport list and server', () => {
   const result = run('--pack', 'classic');
   assert.equal(result.status, 1);

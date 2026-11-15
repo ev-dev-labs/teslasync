@@ -137,6 +137,8 @@ limits parallel Playwright workers; the default is one. Standalone routes
 listed in `DECISIONS.md` are not included in that route list. Use
 `--exclude-pages period-compare` only when intentionally recording that
 previously blocked route as an omission; exclusions do not count as passes.
+After a completed pack, `--resume-after <pack-id>` with `--pack all` continues
+in registry order without revisiting earlier packs.
 
 Images are written under `shots\<pack>\<viewport>\<page>.png`. A saved image
 does not imply that the associated diagnostics passed. Set the example origin
