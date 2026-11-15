@@ -1,5 +1,30 @@
 # Design Pack Decisions
 
+### Precision Ledger destination metrics
+
+The pinned matrix exposed a split word in the 360px destination brief. An
+initial wider label column still split words at the largest text scale, so
+Precision Ledger now stacks labels above their right-aligned values on phones
+while retaining the ruled ledger and the desktop side-by-side layout.
+Protected widget compositions are unchanged.
+
+- Chromium dark/light destination checks across 360, 390 and 430px, three
+  font scales, forced colors and desktop: `2 passed`.
+- The screenshot-free matrix route check reported `4 passed (9.9m)` at 360
+  and 430px in both themes.
+- The pack-preservation suite reported `1 file, 120 tests passed`.
+  The original matrix images predate this change; fixed-route captures and
+  cross-browser verification remain outstanding.
+- The scoped Precision Ledger stylesheet audit reported `No violations found`.
+- Full frontend lint and its registered audits completed successfully:
+
+  ```text
+  [audit-registry] 42 audit script(s) on disk, 42 active (2 thresholded), 3 manual report(s), 1 archived
+  [audit-registry] OK — every audit is registered, executable, thresholded and wired
+  [release-identity] OK — release threads VITE_APP_VERSION + VITE_GIT_SHA + VITE_RELEASE_BUILD into the single build-scan/export step; compose uses its own opt-in variables and unversioned builds stay unparseable and harmless
+  PHONE_FIXES_FULL_LINT_EXIT=0
+  ```
+
 ### Horizon final-matrix evidence
 
 The Horizon run against the pinned `445e5bb317b1` assets reported

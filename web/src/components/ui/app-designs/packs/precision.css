@@ -370,6 +370,19 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid="inline"], [data-app-metric-grid="native-gauge"], [data-operational-metric-bank], [data-widget-pack], [data-widget-pack] *)):where([data-app-design-owner~="pack-v3"]) {
     grid-template-columns: minmax(0, 1fr);
   }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-operational-metric-list] [data-app-metric="brief"]:not(:where(
+    [data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *,
+    [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *
+  )):where([data-app-design-owner~="pack-v3"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-operational-metric-list] [data-app-metric="brief"]:not(:where(
+    [data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *,
+    [data-widget-pack], [data-widget-pack] *, [data-app-design-preserve], [data-app-design-preserve] *
+  )) > [data-app-part~="metric-value"]:where([data-app-design-owner~="pack-v3"]) {
+    grid-column: 1;
+    grid-row: 2;
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] [data-role="bottom-tab-bar"] .sidenav-phone-tab:where([data-app-design-owner~="pack-v3"]) {
     font-size: var(--app-body-size, 1rem);
   }

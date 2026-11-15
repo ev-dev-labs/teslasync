@@ -100,3 +100,15 @@ the label was the top hit at nine sampled points above an opaque ancestor.
 Its computed foreground/background contrast was 8.73:1 in dark and 7.31:1
 in light. Other scroll positions and the visual appearance remain unreviewed;
 the checks did not cover the protected twins or the rest of the application.
+
+## Destination brief follow-up — 2026-11-14
+
+The final matrix's pinned assets split a destination metric label at 360px.
+On phones, Precision Ledger now stacks each label above its right-aligned
+value, preserving the ledger rules; desktop remains side-by-side. Dark and
+light browser checks passed across 360, 390 and 430px, three text scales and
+forced colors, and the 120-test pack-preservation suite passed. These checks
+do not establish full-page visual or cross-browser acceptance. The original
+matrix images predate the change and require a fixed-route capture. The
+screenshot-free matrix route check reported `4 passed (9.9m)` at 360 and
+430px in both themes.
