@@ -2072,3 +2072,32 @@ was taken and the mock API reported no escaped requests.
 BROWSER_PROBE_API_ESCAPE=0
 WEBKIT_LIGHT_OWNER_EXIT=1
 ```
+
+### Committed-source Docker refresh
+
+The current frontend image was built from commit `bd586368207c`, preflighted
+on loopback port 3122, and then installed as the task-owned preview on port
+3120. The preceding preview remains stopped for rollback. Browser checks used
+the image's extracted assets and synthetic data; they took no screenshots.
+The existing backend health endpoint still returns 503.
+
+```text
+PREVIEW_IMAGE_BUILD_EXIT=0
+CANDIDATE_ID=3f54e863cd3e83c147663ae5eacdb4409f5b5029936b91498754207bd90182c2 HEALTH=healthy
+INDEX_HTTP=200 ASSET_HTTP=200 API_VERSION_HTTP=200
+BACKEND_HEALTH_HTTP=503
+  5 passed (43.5s)
+CANDIDATE_BROWSER_EXIT=0
+PREVIEW_HEALTH=healthy
+INDEX_HTTP=200 ASSET_HTTP=200 API_VERSION_HTTP=200
+BACKEND_HEALTH_HTTP=503
+  5 passed (42.8s)
+LIVE_PREVIEW_BROWSER_EXIT=0
+BLUEPRINT_PHONE_FULL_LINT_EXIT=0
+```
+
+The browser selector covered both Blueprint phone themes, thumbnail isolation,
+the charging-detail focus anchor, and saved-appearance startup and reload. CI
+run `43653409615` passed on `8e784a91a5`. The frontend-quality watcher exited
+because GitHub's API rate limit was exhausted; that does not establish a
+workflow failure or success. Its final result remains unverified.
