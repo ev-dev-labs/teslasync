@@ -296,6 +296,7 @@ export async function findSmallBodyText(page: Page) {
     + '[data-typography-role="body"], [data-typography-role="bodySm"], '
     + '.text-sm[class~="text-[var(--text-primary)]"], .text-sm[class~="text-[var(--text-secondary)]"], .text-sm[class~="text-[var(--text-muted)]"], '
     + '[data-app-part~="feedback-title"], [data-app-part~="feedback-message"], [data-chart-subtitle], [data-chart-legend-label], '
+    + '[data-battery-panel="energy-charger-breakdown"] [data-chart-viewport] .text-xs, '
     + '[data-app-part~="history-route"], [data-app-part~="list-row"] [data-history-primary] > :first-child, '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"], '
     + '[data-app-part~="list-row"] [data-app-metric-grid="inline"] [data-app-metric="inline"], '

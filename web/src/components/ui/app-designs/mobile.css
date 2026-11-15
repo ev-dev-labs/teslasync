@@ -66,6 +66,16 @@
     overflow-wrap: anywhere;
   }
 
+  [data-battery-panel="energy-charger-breakdown"] [data-chart-viewport] .text-xs:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    font-size: var(--app-body-size);
+    line-height: var(--app-body-leading);
+  }
+
+  [data-battery-panel="energy-charger-breakdown"] [data-chart-viewport] .justify-between:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+    flex-wrap: wrap;
+    column-gap: var(--density-gap);
+  }
+
   [data-app-part~="badge"][role="button"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     min-inline-size: var(--app-touch-size);
     min-block-size: var(--app-touch-size);

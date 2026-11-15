@@ -100,3 +100,13 @@ Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
 The owned ordinary headline context and units now use the phone body token;
 protected and specialized surfaces remain excluded. See `DECISIONS.md` for
 the screenshot-free regression results and remaining limitations.
+
+## Charger breakdown follow-up
+
+Phone session counts and rates now use the shared body-size token. Terminal's
+chart edges use inset rules instead of a background gradient, without changing
+the plot's box geometry. Screenshot-free Edge checks passed with three charger
+categories at 360px and 430px in both modes and scales 1 and 1.35; the chart
+had no automated contrast violations or incomplete contrast nodes in those
+cases. This does not resolve the other review findings or constitute a visual
+pass.

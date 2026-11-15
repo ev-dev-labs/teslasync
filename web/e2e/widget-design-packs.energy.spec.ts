@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
-import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
-import { attachJsonEvidence } from './app-design-test';
-import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
+import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import type { ChargingSession } from '../src/api/types';
+import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
+import { attachJsonEvidence, routeBuiltApplication } from './app-design-test';
+import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
+import { findSmallBodyText } from './design-packs-capture';
+import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { inspectEnergyReview } from './widget-design-packs.energy';
 import { energyReviewPath, installEnergyReviewSources } from './widget-design-packs.energy.mock';
@@ -10,6 +16,127 @@ import { energyReviewPath, installEnergyReviewSources } from './widget-design-pa
 // cases, without another project/workflow or reloading on ordinary pack changes.
 test.setTimeout(1_800_000);
 test.afterAll(async () => { await closeMockApiFixtures(); });
+
+test('phone charger details stay legible on a contrast-checkable Terminal chart', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setContent(`
+    <style>
+      :root { --font-scale: 0.85; --density-gap: 8px; --surface-1: #fafbfc;
+        --text-muted: #57667c; --border-default: #a0a9b5; --border-strong: #69798a; }
+      .text-xs { font-size: 12px; color: var(--text-muted); }
+      .justify-between { display: flex; justify-content: space-between; }
+      [data-chart-viewport] { width: 300px; }
+    </style>
+    <section data-battery-panel="energy-charger-breakdown">
+      <div id="plot" data-chart-viewport="bounded" data-app-design-owner="pack-terminal">
+        <div class="justify-between" data-app-design-owner="pack-terminal">
+          <span class="text-xs" data-app-design-owner="pack-terminal">1 session</span>
+          <span class="text-xs" data-app-design-owner="pack-terminal"><span>$0.16</span>/kWh</span>
+        </div>
+        <span id="preserved" data-app-design-preserve>
+          <span class="text-xs" data-app-design-owner="pack-terminal">Preserved</span>
+        </span>
+        <span id="unowned" class="text-xs">Unowned</span>
+      </div>
+    </section>
+  `);
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('data-app-design-pack', 'terminal');
+    element.setAttribute('data-app-design-owner', 'pack-terminal');
+  });
+  for (const file of ['packs/terminal.css', 'mobile.css']) {
+    await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', file), 'utf8') });
+  }
+  const metadata = page.locator('#plot .justify-between .text-xs');
+  await expect(metadata).toHaveCount(2);
+  expect(await metadata.evaluateAll(nodes => nodes.map(node => parseFloat(getComputedStyle(node).fontSize)))).toEqual([16, 16]);
+  expect(await page.locator('#plot .justify-between').evaluate(node => getComputedStyle(node).flexWrap)).toBe('wrap');
+  expect(await page.locator('#preserved .text-xs').evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(12);
+  expect(await page.locator('#unowned').evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(12);
+  const undersized = (await findSmallBodyText(page)).map(item => item.text);
+  expect(undersized).toEqual(expect.arrayContaining(['Preserved', 'Unowned']));
+  expect(undersized).not.toContain('1 session');
+  const audit = await new AxeBuilder({ page }).include('#plot').withRules(['color-contrast']).analyze();
+  expect(audit.violations).toEqual([]);
+  expect(audit.incomplete).toEqual([]);
+
+  await page.locator('html').evaluate(element => element.style.setProperty('--font-scale', '1.35'));
+  expect(await metadata.first().evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeCloseTo(21.6, 1);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect(await metadata.first().evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(12);
+});
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const width of [360, 430]) {
+    for (const fontScale of [1, 1.35]) {
+      test(`Energy charger details fit ${width}px in ${theme} at ${fontScale} scale`, async ({ page }, testInfo) => {
+        test.setTimeout(180_000);
+        const baseURL = testInfo.project.use.baseURL;
+        if (typeof baseURL !== 'string') throw new Error('Review origin is required');
+        await page.setViewportSize({ width, height: 900 });
+        await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+        const saved = createReviewPreference();
+        saved.pack_id = 'terminal';
+        saved.app_wide = true;
+        const mocks = await installPackReview(page, theme, 390, false, [], true, saved, baseURL,
+          { font_scale: fontScale });
+        const [session] = catalogueOperationalSources(new Date().toISOString())['/charging'] as ChargingSession[];
+        const sessions = [session, { ...session, id: 702, charger_type: 'Tesla' },
+          { ...session, id: 703, charger_type: 'CCS' }];
+        await page.route(url => url.pathname === '/api/v1/charging', request => {
+          if (request.request().method() !== 'GET') return request.fallback();
+          return fulfillApiFixture(request, mocks, { json: sessions });
+        });
+        await routeBuiltApplication(page, new URL(baseURL).origin, ['/energy'], process.env.DESIGN_PACK_DIST_DIR);
+        await page.goto('/energy');
+        await waitForHarnessReady(page, mocks);
+        const panel = page.locator('[data-battery-panel="energy-charger-breakdown"]');
+        const plot = panel.locator('[data-chart-viewport]');
+        const packs = fontScale === 1.35 ? PACK_IDS : ['terminal'] as const;
+        let selected: PackId = 'terminal';
+        for (const packId of packs) {
+          await test.step(`${packId} charger metadata`, async () => {
+            if (packId !== selected) {
+              await selectReviewPack(page, packId);
+              selected = packId;
+            }
+            await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', packId, { timeout: 20_000 });
+            await expect(plot).toBeVisible();
+            const metadata = plot.locator('.text-xs');
+            await expect(metadata).toHaveCount(6);
+            const measurements = await metadata.evaluateAll(nodes => nodes.map(node => {
+              const bounds = node.getBoundingClientRect();
+              const viewport = node.closest('[data-chart-viewport]')!.getBoundingClientRect();
+              return {
+                text: node.textContent?.trim(),
+                fontSize: parseFloat(getComputedStyle(node).fontSize),
+                left: bounds.left - viewport.left,
+                right: viewport.right - bounds.right,
+                top: bounds.top - viewport.top,
+                bottom: viewport.bottom - bounds.bottom,
+              };
+            }));
+            for (const item of measurements) {
+              expect(item.text).toBeTruthy();
+              expect(item.fontSize).toBeGreaterThanOrEqual(Math.max(16, 16 * fontScale) - 0.1);
+              expect(Math.min(item.left, item.right, item.top, item.bottom)).toBeGreaterThanOrEqual(-1);
+            }
+            const overflow = await page.evaluate(() =>
+              document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            expect(overflow).toBeLessThanOrEqual(1);
+            if (packId === 'terminal') {
+              const audit = await new AxeBuilder({ page }).include('[data-battery-panel="energy-charger-breakdown"]')
+                .withRules(['color-contrast']).analyze();
+              expect(audit.violations).toEqual([]);
+              expect(audit.incomplete).toEqual([]);
+            }
+          });
+        }
+        await assertMockApiComplete(page, mocks);
+      });
+    }
+  }
+}
 
 test('keeps live energy reads mocked while navigating away', async ({ page }, testInfo) => {
   const saved = createReviewPreference();

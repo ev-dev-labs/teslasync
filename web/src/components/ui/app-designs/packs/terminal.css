@@ -215,10 +215,10 @@
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-chart-viewport="bounded"]:where([data-app-design-owner~="pack-terminal"]) {
     background-color: var(--app-chart-surface, var(--surface-1));
-    background-image: repeating-linear-gradient(to bottom, var(--border-strong) 0 2px, transparent 2px 6px), repeating-linear-gradient(to bottom, var(--border-strong) 0 2px, transparent 2px 6px);
-    background-position: left top, right top;
-    background-size: 1px 100%;
-    background-repeat: no-repeat;
+    background-image: none;
+    box-shadow: inset 0 0 0 var(--app-border-width, 1px) var(--app-chart-grid, var(--border-subtle)),
+      inset var(--app-border-width, 1px) 0 var(--border-strong),
+      inset calc(0px - var(--app-border-width, 1px)) 0 var(--border-strong);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] [data-app-part~="chart-legend"]:where([data-app-design-owner~="pack-terminal"]) {
     box-shadow: inset 0 1px 0 var(--border-default);

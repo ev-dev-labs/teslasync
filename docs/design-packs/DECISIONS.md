@@ -1,5 +1,66 @@
 # Design pack decisions
 
+## Charger details on phones
+
+The scoped phone-text scan missed the charger breakdown's session count and
+cost rate, which rendered at 12px. Owned charger metadata now uses the shared
+phone body-size token and its rows can wrap. Terminal's chart keeps inset edge
+rules without a background image, so its charger text can be contrast-tested
+without changing chart dimensions. The mobile typography rule excludes
+explicitly protected content.
+
+Screenshot-free Edge checks of three charger categories passed in all 27
+packs at 360px and 430px, in light and dark modes, at font scale 1.35:
+all six metadata values per page met the size floor and stayed within the
+chart, and the document had no horizontal overflow. Terminal also passed the
+same checks at scale 1; its chart's automated color-contrast audit had no
+violations or incomplete nodes at either scale, width or mode. A synthetic
+contract verified the 0.85 scale floor, protected content and desktop sizing.
+This covers the charger panel, not every text element or route.
+The phone-text scanner now includes these charger captions, with a regression
+for undersized protected and unowned samples.
+
+```text
+charger contract and phone checks: 9 passed (2.0m), including all 27 packs
+in four scale-1.35 scenarios
+Terminal Digital Twin preservation at 360/430px: 2 passed (46.3s)
+Terminal energy check-only capture at 360/430px, scale 1.35: 2 passed (57.8s)
+  0 contrast violations; one short-content node per viewport requires review
+EnergyPage, DataTable and AppDesignBridge: 3 files, 62 tests passed
+npm run lint: FULL_LINT_EXIT=0 (before final focused scanner changes)
+npx tsc --noEmit: exit 0
+npx tsc -p e2e\tsconfig.json --noEmit: exit 0
+npm run typecheck:sw: exit 0
+isolated vite build and four postbuild checks: exit 0
+```
+
+The light-mode sweep below used earlier built CSS. No screenshot was taken
+for these checks.
+
+## All-pack light phone sweep
+
+The earlier build completed the three-route check in light mode:
+
+```powershell
+Set-Location web
+$env:DESIGN_PACK_CHECK_ONLY='1'
+$env:DESIGN_PACK_BROWSER_CHANNEL='msedge'
+$env:DESIGN_PACK_FONT_SCALE='1'
+$env:DESIGN_PACK_CHECK_CONTRAST='1'
+$env:DESIGN_PACK_DIST_DIR='D:\repos\teslasync\web\dist'
+node scripts\capture-design-packs.mjs --pack all --pages vehicles,drives,energy --viewports phone-360-light,phone-430-light --base-url http://127.0.0.1:54872 --workers 1
+27 packs: 6 passed each
+162 contrast checks: 0 violated rules, 64 incomplete nodes
+ALL_PACKS_LIGHT_PHONE_EXIT=0
+```
+
+The 64 incomplete results are not contrast passes: Cyber had 43, Terminal
+12, Ambient and Atlas three each, Swiss two, and Precision Ledger one.
+The subsequent Terminal charger-panel checks above resolved the twelve
+reported Terminal nodes in the tested scenarios; the other 52 results still
+need review. The scoped phone-text scan missed the charger captions described
+above, so neither sweep establishes full-page text-size compliance.
+
 ## Three-route phone sweep across all packs
 
 A screenshot-free sweep of Drives, Energy and Vehicles at 360px and 430px
@@ -71,8 +132,13 @@ solely to host load.
 The pending acceptance helper now yields browser frames between stability
 samples, and the nested-dialog check waits for focus to return before the
 next interaction. Exact owner, geometry and style comparisons remain in
-place. The synthetic owner and Quiet-grid contracts passed, but the changed
-real-app checks still need a cross-browser rerun after the current sweep:
+place. The synthetic owner and Quiet-grid contracts passed. A post-sweep
+Firefox/WebKit real-app repeat reported `4 passed, 2 failed (9.7m)`: Firefox
+custom-phone could not find the preview after its click, and WebKit desktop
+again differed in chart geometry and inherited legend color after restoration.
+The restored legend color matched its parent's computed color, while the
+pre-probe child color differed from that same parent. The cause is unproven;
+the assertions remain enabled and no API requests escaped the fixture.
 
 ```text
 npx playwright test --config=playwright.contract.config.ts --grep 'owner activation|Quiet preview sizes' --workers=1
