@@ -2244,3 +2244,24 @@ FINAL_TSC_EXIT=0
 VEHICLE_TWIN_AUDIT_EXIT=0
 SECURITY_PANEL_AUDIT_EXIT=0
 ```
+
+### Docker preview refresh
+
+The image built from committed `19c0889436` now serves the task-owned preview
+at `http://localhost:3120`. A separate candidate was checked before replacement;
+the previous container remains stopped as a rollback. A phone-sized Edge probe
+rendered the app without horizontal overflow or page errors. The pre-existing
+backend system-health endpoint still returns 503; no screenshots were taken.
+
+```text
+PREVIEW_BUILD_EXIT=0
+state=running health=healthy
+INDEX_HTTP=200 INDEX_BYTES=10575
+ASSET_HTTP=200 PATH=/assets/index-DG9FMpM6.js BYTES=1047814
+ASSET_HTTP=200 PATH=/assets/vendor-react-DhiZVHQA.js BYTES=366611
+ASSET_HTTP=200 PATH=/assets/index-Ca4-G2L9.css BYTES=222205
+AUTH_PROXY_HTTP=200
+DEPLOYED_IMAGE=teslasync-web:design-packs-v2-19c0889436 HEALTH=healthy RESTART=unless-stopped
+DEPLOYED_BROWSER={"status":200,"rootChildren":4,"cssSheets":2,"overflow":false,"pageErrors":0}
+SYSTEM_HEALTH_HTTP=503
+```

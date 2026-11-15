@@ -7,4 +7,4 @@
 - The eight Vitest shards and merged coverage passed in CI on `ced744f586c9`; later changes have focused local coverage.
 - Draft PR #259 targets `feature/app-design-themes`; CI on `8e784a91a5` has WebKit isolation failures and frontend quality is still running.
 - Receipt, readiness, Quiet preview and heatmap fixes have focused coverage; WebKit SVG restoration and desktop isolation remain unresolved.
-- Docker preview `35aa7ff61dc9` is healthy at `localhost:3120`; existing backend health still reports Tesla API degraded.
+- Docker preview `19c0889436` is healthy at `localhost:3120`; existing backend health still reports Tesla API degraded.
