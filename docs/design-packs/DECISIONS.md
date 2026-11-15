@@ -2712,3 +2712,24 @@ dark reported a changed neutral-preview text color and an activation
 restoration failure on retry. The other browser jobs were still running when
 checked. Local screenshot-free diagnostics are investigating the failures;
 neither an application defect nor a test-timing cause has been established.
+
+A screenshot-free WebKit diagnostic against the rebuilt frontend failed three
+focused incomplete-preview cases. Light 390px showed inherited SVG font and
+legend color differences after owner restoration; custom 390px timed out
+performing the filter click; light 1440px timed out waiting for the journey
+button to stabilize. The captured CI dark mismatch was specifically the
+`feedback-copy` wrapper's inherited color. These findings are not yet a
+verified fix:
+
+```text
+3 failed
+BROWSER_PROBE_API_ESCAPE=0
+```
+
+The Cyber regression explicitly disables screenshots, traces and video and
+passed against the same committed build in isolated Chromium:
+
+```text
+5 passed (1.3m)
+BROWSER_PROBE_API_ESCAPE=0
+```
