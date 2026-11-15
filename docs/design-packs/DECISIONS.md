@@ -2313,3 +2313,39 @@ DEPLOYED_BROWSER={"status":200,"rootChildren":4,"cssSheets":4,"horizontalOverflo
 DEPLOYED_BROWSER_REGRESSION_EXIT=0
 SYSTEM_HEALTH_HTTP=503
 ```
+
+### Preservation and browser teardown follow-up
+
+The Helix pointer-focus repair now has an exact, reversible source receipt.
+Eight preservation suites, including mutation checks for its three hunks,
+passed without changing the existing producer or translation projections:
+
+```text
+Test Files  8 passed (8)
+     Tests  8524 passed (8524)
+HELIX_PRESERVATION_EXIT=0
+```
+
+The immutable full Vitest run on `3b65d101b4` was stopped because it did not
+contain that required receipt. A new run is using committed snapshot
+`243a4c3199`; its result is not yet known. Draft PR #259 points to that
+commit, with workflows running.
+
+The cross-browser smoke now uses the guarded page fixture, which navigates
+away while mock routes are still installed. The actual-navigation teardown
+contracts passed (`5 passed`). Six screenshot-free Firefox and WebKit live-map
+repetitions recorded no escaped API requests but did not all pass: one Firefox
+pack selection remained on the previous pack, and one WebKit Streets control
+did not activate. Both are under investigation.
+
+```text
+2 failed
+4 passed (7.6m)
+BROWSER_PROBE_API_ESCAPE=0
+CROSS_BROWSER_SMOKE_EXIT=1
+```
+
+The strict two-outer-pack WebKit light-phone owner check subsequently passed
+twice with the pending diagnostic instrumentation. An earlier repetition
+failed exact inherited-style restoration, so those two passes are not proof
+that the intermittent defect is resolved. No screenshots were taken.
