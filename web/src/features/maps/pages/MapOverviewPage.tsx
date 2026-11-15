@@ -383,25 +383,28 @@ export default function MapOverviewPage() {
             ) : hasValidLocation && latest ? (
               <>
                 <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
-                <MapContainer
-                  key={`position-map:${selectedId}`}
-                  center={[latest.latitude, latest.longitude]}
-                  zoom={15}
-                  scrollWheelZoom
-                  zoomAnimation={!reduce}
-                  fadeAnimation={!reduce}
-                  markerZoomAnimation={!reduce}
-                  className="h-full w-full"
-                >
-                  <MapTileLayer style={mapStyle} />
-                  <MapInvalidator />
-                  <Marker position={[latest.latitude, latest.longitude]} icon={vehicleIcon()}>
-                    <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
-                  </Marker>
-                  {trailPositions.length > 1 && (
-                    <Polyline positions={trailPositions} color="var(--semantic-info)" weight={3} opacity={0.7} />
-                  )}
-                </MapContainer>
+                {/* A definite containing height keeps Leaflet visible when the grid row is sized by min-height. */}
+                <div className="absolute inset-0">
+                  <MapContainer
+                    key={`position-map:${selectedId}`}
+                    center={[latest.latitude, latest.longitude]}
+                    zoom={15}
+                    scrollWheelZoom
+                    zoomAnimation={!reduce}
+                    fadeAnimation={!reduce}
+                    markerZoomAnimation={!reduce}
+                    className="h-full w-full"
+                  >
+                    <MapTileLayer style={mapStyle} />
+                    <MapInvalidator />
+                    <Marker position={[latest.latitude, latest.longitude]} icon={vehicleIcon()}>
+                      <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
+                    </Marker>
+                    {trailPositions.length > 1 && (
+                      <Polyline positions={trailPositions} color="var(--semantic-info)" weight={3} opacity={0.7} />
+                    )}
+                  </MapContainer>
+                </div>
               </>
             ) : (
               <div className="flex h-full items-center justify-center">
