@@ -75,6 +75,19 @@ Drives node and two desktop Dashboard nodes because of overlap/pseudo-element
 background uncertainty. Desktop Drives/Energy failed before contrast analysis.
 No manual contrast pass is claimed.
 
+## Final matrix evidence
+
+The pinned final matrix reported `1013 passed, 3 failed (49.1m)`. Both
+phone Dashboard cases failed the preserved Digital Twin widget checks;
+the 430px Digital Twin page also missed its original charge-port landmark.
+The shared page-only square-corner repair was made after these captures,
+but has not yet been rechecked specifically for v5.
+
+The matrix saved 254 PNGs per viewport. All 1,016 passed signature,
+chunk-CRC and exact-dimension checks. The 360px Digital Twin page, tablet
+Notification Health and desktop Dashboard images were inspected; these
+older captures do not establish visual or contrast acceptance.
+
 ## Other verification and limits
 
 - `npx tsc --noEmit`: exit 0, no output, before the final CSS-only refinements.
