@@ -5,6 +5,6 @@
 - Phase 1 remains incomplete: token coverage, protected twin hotspots and standalone routes remain unresolved.
 - Mocked Recent drives, Command History axes and Helix content have targeted all-27-pack phone checks; other mobile coverage remains incomplete.
 - The eight Vitest shards and merged coverage passed in CI on `ced744f586c9`; later changes have focused local coverage.
-- Draft PR #259 targets `feature/app-design-themes`; CI passed on `8e784a91a5`. Frontend quality is still running; all 32 Windows visual shards have passed.
+- Draft PR #259 targets `feature/app-design-themes`; CI passed on `8e784a91a5`. Frontend quality is still running; local lint and API-hook verification exited 0.
 - Receipt, readiness, Quiet preview and heatmap fixes have focused coverage; WebKit SVG restoration and desktop isolation remain unresolved.
-- Docker preview `bd586368207c` is healthy at `localhost:3120`; existing backend health still reports Tesla API degraded.
+- Docker preview `35aa7ff61dc9` is healthy at `localhost:3120`; existing backend health still reports Tesla API degraded.

@@ -2172,3 +2172,52 @@ The scoped audit reported no violations in the modified CSS, renderer or
 browser tests. It reported one `raw-html-table` finding in `MarkdownTable.tsx`:
 the matched `<Table>` is the shared component imported from `@/components/ui`,
 not a raw HTML table. No screenshots were taken for these follow-ups.
+
+### Preview refresh and verification
+
+The image built from committed `35aa7ff61dc9` replaced the task-owned Docker
+preview at `http://localhost:3120` after a separate candidate was checked.
+The previous container remains stopped as a rollback. Both candidate and
+replacement returned HTTP 200 for the index, bundled script, auth mode and
+version; the existing backend health endpoint returned 503 through both the
+old and candidate previews. No screenshots were taken.
+
+```text
+PREVIEW_IMAGE_BUILD_EXIT=0
+CANDIDATE_HEALTH=healthy
+candidate browser regression: 10 passed (1.3m)
+PREVIEW_HEALTH=healthy
+replacement browser regression: 5 passed (41.8s)
+FRONTEND_FULL_LINT_EXIT=0
+API_HOOK_AUDIT_EXIT=0
+```
+
+The hook verifier extracted 571 URL patterns and matched them against 888
+registered route patterns; it reported no double prefix or camelCase query
+parameters. The full local Vitest run was stopped before completion to apply a
+subsequent fix; it is not a passing full-suite result.
+
+The previously failing Editorial charging and settings cases were rechecked
+without screenshots against the image's extracted assets at 360px and 430px
+in both themes:
+
+```text
+8 passed (1.6m)
+EDITORIAL_CONTRAST_RECHECK_EXIT=0
+```
+
+All eight axe reports had zero violated rules; the four charging reports each
+had one overlapping result-count node requiring manual contrast review.
+Across the earlier 176 incomplete nodes per theme, 54 are the same decorative
+`aria-hidden` arrow accompanying the visible Details link. The remaining 122
+include 60 gradient-background, 58 overlap and four short-content findings;
+they have not been individually resolved or certified.
+
+The isolated WebKit light-phone owner check passed once, then two repetitions
+failed: one on exact restoration and one on a preview click timeout. In the
+restoration failure, sampled nodes retained identical owner attributes, matched
+the same CSS selectors and exposed the same body-size token, yet their
+computed font sizes changed from 14px or 12px to 16px after owner removal and
+restoration. This narrows the symptom but does not establish its cause. The
+exact assertion remains enabled; no API requests escaped and no screenshots
+were taken.
