@@ -290,7 +290,7 @@ function TwinTouchTarget({
     >
       <Tooltip content={label} side={side} portal>
         <Button type="button" variant="ghost" aria-label={label}
-          className="relative block h-full w-full rounded-none p-0 hover:bg-transparent">
+          className="relative block h-full w-full !rounded-none p-0 hover:bg-transparent">
           {children}
         </Button>
       </Tooltip>

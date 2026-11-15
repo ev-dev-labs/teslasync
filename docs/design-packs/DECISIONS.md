@@ -1,5 +1,18 @@
 # Design Pack Decisions
 
+### Horizon Digital Twin page targets
+
+Horizon overrides the ordinary square-corner utility on the transparent
+touch controls in `/digital-twin`, clipping a charge-port landmark. The
+page-only touch target now explicitly keeps square corners. The protected
+dashboard and mini widgets continue to use their original geometry.
+
+- Screenshot-free Horizon route checks at 360 and 430px: `2 passed (5.7m)`.
+- Digital Twin and pack-preservation Vitest: `3 files, 462 tests passed`,
+  with existing motion warnings; focused ESLint exited 0.
+- The scoped VehicleTwin audit reported `0 violations` in all six checks and
+  `TypeScript passes`. The protected dashboard phone failures remain open.
+
 ### Notification health phone axes
 
 The fatigue and burn-rate charts now measure phone-axis labels using the

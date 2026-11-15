@@ -79,6 +79,10 @@ are not contrast passes.
 
 ## Additional verification
 
+- A later screenshot-free `/digital-twin` page check at 360 and 430px
+  reported `2 passed` after keeping its transparent touch targets square
+  against Horizon's radius treatment. The original widget designs were not
+  changed; the protected dashboard phone-target findings remain unresolved.
 - A screenshot-free synthetic Edge probe after the follow-up reported a
   1440px header with `392px 288px 392px` tracks, zero search-center offset
   and all four modeled controls on one row. It does not replace a production

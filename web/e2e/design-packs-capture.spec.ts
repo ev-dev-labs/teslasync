@@ -544,19 +544,24 @@ for (const route of routes) {
             .matrixTransform(svg.getScreenCTM()!);
           const originalHit = document.elementFromPoint(point.x, point.y);
           const centerHit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          const hitTarget = (hit: Element | null) =>
+            hit?.closest('[data-twin-touch-target]')?.getAttribute('data-twin-touch-target')
+            ?? hit?.tagName ?? 'none';
           return {
             name: element.getAttribute('data-twin-touch-target'),
             x: rect.x, y: rect.y, width: rect.width, height: rect.height,
             originalHit: originalHit === button || button.contains(originalHit),
             centerHit: centerHit === button || button.contains(centerHit),
+            landmark: { x: point.x, y: point.y, hit: hitTarget(originalHit) },
+            centerTarget: hitTarget(centerHit),
           };
         });
       });
       for (const [index, target] of geometry.entries()) {
         expect(target.width, `${target.name} width`).toBeGreaterThanOrEqual(43.9);
         expect(target.height, `${target.name} height`).toBeGreaterThanOrEqual(43.9);
-        expect(target.originalHit, `${target.name} original landmark`).toBe(true);
-        expect(target.centerHit, `${target.name} target center`).toBe(true);
+        expect(target.originalHit, `${target.name} original landmark ${JSON.stringify(target.landmark)}, target ${JSON.stringify(target)}`).toBe(true);
+        expect(target.centerHit, `${target.name} target center hit ${target.centerTarget}`).toBe(true);
         for (const other of geometry.slice(index + 1)) {
           expect(target.x + target.width <= other.x + 0.1 || other.x + other.width <= target.x + 0.1
             || target.y + target.height <= other.y + 0.1 || other.y + other.height <= target.y + 0.1,
