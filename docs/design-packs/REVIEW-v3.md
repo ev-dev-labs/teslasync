@@ -85,3 +85,18 @@ AUDIT_LEDGER_HEADER_EXIT=0
 ```
 
 The separate `audit_code` check on the final stylesheet returned `No violations found`. These checks do not resolve the earlier capture or accessibility findings and are not a visual pass.
+
+## 360/430px phone diagnostics — 2026-11-14
+
+Screenshot-free checks of Drives, Energy and Vehicles in light and dark modes
+reported `12 passed (3.5m)` and `V3_PHONE_CHECK_EXIT=0`. All scans had zero
+Axe contrast violations, but the 360px Drives scan had one incomplete result
+in each mode: the sticky `4 results` summary partially overlapped another
+element. The 430px scans and both Energy and Vehicles widths had no incomplete
+nodes.
+
+After scrolling the summary into view in a separate context run, its measured
+foreground/background contrast was 8.73:1 in dark and 7.31:1 in light. This
+does not establish the contrast or visibility of the original overlapping
+state. The checks saved no images and did not cover the protected twins or
+the rest of the application.

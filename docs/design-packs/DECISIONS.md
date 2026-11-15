@@ -1,5 +1,27 @@
 # Design pack decisions
 
+## Precision Ledger phone follow-up
+
+A screenshot-free `v3` check covered Drives, Energy and Vehicles at 360px and
+430px in light and dark modes:
+
+```text
+12 passed (3.5m)
+V3_PHONE_CHECK_EXIT=0
+```
+
+All 12 scans reported zero Axe contrast violations. Both 360px Drives scans
+also reported one incomplete node: the sticky `4 results` summary partially
+overlaps another element in the scanned state. A separate screenshot-free
+context check scrolled that label into view; its foreground/background pairs
+were 8.73:1 in dark and 7.31:1 in light. Those measurements do not resolve
+the originally overlapping state or constitute a visual pass.
+
+The local build used for the Pixel and Precision phone checks has the same
+12 CSS asset names and SHA-256 hashes as Docker preview `fdcd380f40`; its
+index and JavaScript assets differ. Neither check covers the protected twin,
+other pages, or the complete final matrix.
+
 ## Pixel phone follow-up
 
 A screenshot-free Pixel Cockpit (`v7`) check covered Drives, Energy, and
