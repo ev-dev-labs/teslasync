@@ -1,5 +1,57 @@
 # Design pack decisions
 
+## Sampled speed-heatmap periods
+
+The captured light and custom heatmaps distinguished zero-speed samples from
+missing periods by only 1.067:1 and 1.073:1 respectively. Sampled SVG cells now
+have a token-colored, non-scaling outline; missing cells do not. The legend
+identifies that outline and describes stronger color rather than claiming that
+higher speeds are always brighter. The reviewed Classic light detail is
+`shots/classic/review/light-speed-heatmap.png`. This is a focused crop, not a
+replacement for the unfinished page matrix.
+
+```text
+Heatmap and i18n preservation contracts: 4 files, 869 tests passed
+Split-catalog and i18n loading contracts: 4 files, 167 tests passed
+Edge: 4 pack/theme heatmaps at 360, 390, 430 and 1440px plus cancellation contract: 5 passed (1.8m)
+Scoped SpeedHeatmapWidget guideline audit: 0 violations
+Widget nonblank lines: 348 before, 351 after; chart/panel references: 3 before, 3 after
+Final-source TypeScript, changed-file ESLint, i18n lint, service-worker typecheck,
+isolated production build and four postbuild checks: HEATMAP_V2_BUILD_CHECKS_EXIT=0
+npm run lint before the final test-wait and catalog-key correction: FULL_LINT_EXIT=0
+Earlier changed-file ESLint and E2E TypeScript: FINAL_CHANGED_TYPES_AND_LINT_EXIT=0
+useDriving hook verification: 28 paths matched, DRIVING_HOOK_VERIFY_EXIT=0
+```
+
+The phone dashboard intentionally shows the existing compact peak reading
+instead of the full heatmap. The focused browser test checks that behavior and
+containment without changing it. The fixture accepts `GET /pinned?type=vehicle`
+as cancelled only when its matching client abort and network failure are both
+observed; other queries and methods remain failures.
+
+The first Firefox/WebKit heatmap run had seven passes and one failure. WebKit
+Classic light timed out waiting for the application DOM to settle, before
+reaching the heatmap assertions. A two-repeat WebKit follow-up passed once and
+failed once after resize while the widget measured two pixels wide outside the
+viewport. The focused test now waits for the same containment assertion to
+pass after responsive reflow and allows 20 seconds for DOM settling; it does
+not waive containment. Those runs reported no API escape and saved no
+screenshots. The earlier attempts do not establish the cause of the delay.
+
+The original higher-speed legend is retained in the historical English
+catalog; the revised copy uses a new key. Replacing the historical value
+failed its preservation contract before that correction.
+
+The exact desktop WebKit comparison previously differed by 0.5px in a table
+row. A focused custom/1440 probe including real portal interactions passed
+under Memphis and Blueprint (`1 passed (8.0m)`, `BROWSER_PROBE_API_ESCAPE=0`,
+`SCREENSHOT_COUNT=0`). All sampled descendant table styles and geometry agreed
+in that run. A separate collapsed-table probe did not reproduce a size change
+from fractional vertical position. Neither result establishes the cause of the
+earlier difference; the exact comparison remains in place and the next CI run
+is required. Three engine aggregate checks failed because their shared design
+matrix included the five WebKit failures, not because their smoke shards failed.
+
 ## Desktop WebKit heatmap evidence
 
 The `2b2aef0093` WebKit 1440px light and custom jobs failed both the

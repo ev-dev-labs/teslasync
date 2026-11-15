@@ -8,7 +8,7 @@ import { assertContained, assertNavigationTextContained, assertOwnerGuardActivat
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
-import { inspectSpecializedRoute, specializedReviewRoutes } from './widget-design-packs.specialized';
+import { assertHeatmapSampleOutlines, inspectSpecializedRoute, specializedReviewRoutes } from './widget-design-packs.specialized';
 import { installSpecializedReviewSources } from './widget-design-packs.specialized.mock';
 import { chargingReviewPath, specializedDrives } from './widget-design-packs.specialized.fixtures';
 import { inspectEnergyReview } from './widget-design-packs.energy';
@@ -30,6 +30,48 @@ const acceptanceFamilies = [
   'metrics-timelines', 'charts-gauges', 'maps-geofences', 'feedback-all-states',
   'responsive-accessibility', 'real-page-adoption', 'distinct-rendered-identity',
 ] as const;
+
+for (const [pack, theme] of [
+  ['classic', 'light'], ['v7', 'light'], ['cyber', 'dark'], ['blueprint', 'custom'],
+] as const) {
+  test(`speed heatmap outlines sampled periods in ${pack} ${theme}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const mode = theme === 'custom' ? 'dark' : theme;
+    const preference = createReviewPreference();
+    preference.pack_id = pack;
+    preference.app_wide = true;
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: mode });
+    const mocks = await installPackReview(page, mode, 1440, false,
+      [['speed-heatmap', 'Speed heatmap']], false, preference, origin,
+      theme === 'custom' ? customReviewSettings : {});
+    await installSpecializedReviewSources(page, mocks, mode);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.goto('/');
+    await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs: 20_000 });
+    const heatmap = page.locator('[data-widget-id="pack-review-speed-heatmap"]');
+    const plot = heatmap.locator('svg[data-chart-family="speed-heatmap"]:visible');
+    for (const width of [360, 390, 430]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(plot).toHaveCount(0);
+      await expect(heatmap).toContainText(/44\.74|72\.00/);
+      await expect(async () => {
+        await assertContained(heatmap, `${pack} ${theme} speed heatmap at ${width}px`);
+      }).toPass({ timeout: 20_000, intervals: [100, 250, 500] });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(plot).toHaveCount(1);
+    await expect(plot.locator('rect')).toHaveCount(168);
+    await expect(heatmap.getByText('Outline = sampled period', { exact: true })).toBeVisible();
+    await assertHeatmapSampleOutlines(plot);
+    await expect(async () => {
+      await assertContained(heatmap, `${pack} ${theme} speed heatmap at 1440px`);
+    }).toPass({ timeout: 20_000, intervals: [100, 250, 500] });
+    await assertMockApiComplete(page, mocks);
+  });
+}
 
 for (const mode of ['dark', 'light'] as const) {
   test(`hidden chart legends stay readable and reversible in ${mode}`, async ({ page }, testInfo) => {
@@ -534,6 +576,7 @@ for (const { theme, width, allocation } of [
   { theme: 'light', width: 390, allocation: 320 },
   { theme: 'custom', width: 390, allocation: 320 },
   { theme: 'light', width: 1440, allocation: 768 },
+  { theme: 'custom', width: 1440, allocation: 768 },
 ] as const) {
   test(`incomplete nested preview remains neutral and restores its owner in ${theme} at ${width}px`, async ({ page }, testInfo) => {
     const origin = testInfo.project.use.baseURL;

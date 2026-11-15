@@ -10,7 +10,7 @@ import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
 import { test as appDesignTest } from './app-design-test';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, prepareMockApiNavigation, resolveApiFixture, seedBrowserState, waitForHarnessReady, waitForNoVisibleActivity, type MockApiController } from './mockApi';
+import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, prepareMockApiNavigation, resolveApiFixture, seedBrowserState, waitForHarnessReady, waitForNoVisibleActivity, type ApiRequestRecord, type MockApiController } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -438,6 +438,14 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
     route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
   const controller = await installApiMocks(page);
   if (!controller) throw new Error('Mock API is required');
+  const pinnedRequests = new Map<string, ApiRequestRecord>();
+  page.on('request', request => {
+    const url = new URL(request.url());
+    const record = controller.requestIndex.get(request);
+    if (url.pathname === '/api/v1/pinned' && record) {
+      pinnedRequests.set(`${request.method()} ${url.search}`, record);
+    }
+  });
   await page.route('**/api/**', async route => {
     if (route.request().headers()['x-test-wait'] === '1'
       || new URL(route.request().url()).port === '54322') {
@@ -459,6 +467,7 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
       const additionalReads = [
         '/api/v1/onboarding/status', '/api/v1/system/version',
         '/api/v1/settings', '/api/v1/system/audit', '/api/v1/pinned?type=navigation',
+        '/api/v1/pinned?type=vehicle',
       ].map(path => ({ path, controller: new AbortController() }));
       const delayed = fetch('/api/v1/system/auth-mode', {
         signal: cancelled.signal, headers: { 'x-test-wait': '1' },
@@ -486,15 +495,26 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
         fetch('/api/v1/pinned?type=automation', unreviewed).catch(() => undefined),
         fetch('/api/v1/pinned?type=navigation&unreviewed=1', unreviewed).catch(() => undefined),
         fetch('/api/v1/pinned?type=navigation', { ...unreviewed, method: 'POST' }).catch(() => undefined),
+        fetch('/api/v1/pinned?type=vehicle&unreviewed=1', unreviewed).catch(() => undefined),
+        fetch('/api/v1/pinned?type=vehicle', { ...unreviewed, method: 'POST' }).catch(() => undefined),
         fetch('/api/v1/unreviewed', unreviewed).catch(() => undefined),
         fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }).catch(() => undefined),
         ...additionalReads.map(({ path, controller }) =>
           fetch(path, { signal: controller.signal, headers: { 'x-test-wait': '1' } }).catch(() => undefined)),
       ]);
     });
-    await expect.poll(() => controller.requests.length).toBe(20);
-    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(7);
-    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(13);
+    await expect.poll(() => controller.requests.length).toBe(23);
+    await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(8);
+    expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(15);
+    expect(Object.fromEntries([...pinnedRequests].map(([key, record]) => [key, record.disposition]))).toEqual({
+      'GET ?type=navigation': 'cancelled',
+      'GET ?type=vehicle': 'cancelled',
+      'GET ?type=automation': 'pending',
+      'GET ?type=navigation&unreviewed=1': 'pending',
+      'GET ?type=vehicle&unreviewed=1': 'pending',
+      'POST ?type=navigation': 'pending',
+      'POST ?type=vehicle': 'pending',
+    });
     expect(controller.requests.filter(record => record.disposition === 'cancelled')).toEqual(expect.arrayContaining([
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/system/auth-mode', resourceType: 'fetch' }),
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/vehicles', resourceType: 'fetch' }),

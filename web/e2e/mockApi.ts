@@ -829,6 +829,7 @@ const CANCELLABLE_READ_TARGETS: readonly string[] = [
   '/api/v1/settings',
   '/api/v1/system/audit',
   '/api/v1/pinned?type=navigation',
+  '/api/v1/pinned?type=vehicle',
 ];
 const MAX_BEACON_BYTES = 64 * 1024;
 const UNLOAD_REQUESTS_KEY = '__TESLASYNC_E2E_UNLOAD_REQUESTS__';

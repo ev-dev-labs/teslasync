@@ -201,8 +201,8 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
         ]}
         caption={
           <div data-app-part="chart-legend" data-chart-scale className="flex flex-wrap justify-between gap-2">
-            <Caption>{t('dashboardWidgets.driving.speedHeatmap.noSampleLegend', 'Dim = no sample')}</Caption>
-            <Caption>{t('dashboardWidgets.driving.speedHeatmap.higherSpeedLegend', 'Brighter = higher speed')}</Caption>
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.sampleLegend', 'Outline = sampled period')}</Caption>
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.colorStrengthLegend', 'Stronger color = higher speed')}</Caption>
           </div>
         }
       >
@@ -354,6 +354,9 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale, 
             width={9}
             height={11}
             rx={pixel ? 0 : 1.5}
+            stroke={cell.count > 0 ? 'var(--text-primary)' : undefined}
+            strokeWidth={cell.count > 0 ? 'var(--app-border-width, 1px)' : undefined}
+            vectorEffect="non-scaling-stroke"
             fill={cell.count === 0 ? 'var(--surface-2)' : speedToColor(
               cell.avgSpeed || Number.EPSILON,
               maxSpeed || 1,

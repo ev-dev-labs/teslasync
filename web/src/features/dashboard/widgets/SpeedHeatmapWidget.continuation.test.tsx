@@ -42,7 +42,7 @@ describe('specialist speed heatmap canonical frame', () => {
       caption: expect.anything(),
     }));
     expect(hooks.chart.mock.calls[0][0].data).toHaveLength(168);
-    expect(screen.getByText('Dim = no sample').closest('[data-chart-scale]')).toBeInTheDocument();
+    expect(screen.getByText('Outline = sampled period').closest('[data-chart-scale]')).toBeInTheDocument();
     expect(container.querySelectorAll('svg[data-chart-family="speed-heatmap"] [data-chart-axis]')).toHaveLength(12);
   });
 

@@ -43013,7 +43013,9 @@
         "columns": "Columns",
         "timeOfDay": "Time of day",
         "noSampleLegend": "Dim = no sample",
+        "sampleLegend": "Outline = sampled period",
         "higherSpeedLegend": "Brighter = higher speed",
+        "colorStrengthLegend": "Stronger color = higher speed",
         "blankCells": "Blank cells represent periods without samples, not zero speed."
       },
       "signalExplorer": {

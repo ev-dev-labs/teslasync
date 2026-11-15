@@ -101,6 +101,10 @@ function expectOriginalGrid(pixel = false, wide = true, unit: SpeedUnitPref = 'k
   expect(cells[6 * 24 + 23].textContent).toContain(`${displaySpeed(15, unit)} ${unit} (1 drive)`);
   expect(cells[24 + 6].textContent).toContain('No data');
   expect(cells[24 + 6]).toHaveAttribute('fill', 'var(--surface-2)');
+  expect(cells[24 + 6]).not.toHaveAttribute('stroke');
+  expect(cells[8]).toHaveAttribute('stroke', 'var(--text-primary)');
+  expect(cells[9]).toHaveAttribute('stroke', 'var(--text-primary)');
+  expect(cells[9]).toHaveAttribute('vector-effect', 'non-scaling-stroke');
   expect(cells[9].getAttribute('fill')).not.toBe('var(--surface-2)');
   expect(cells[8]).toHaveAttribute('rx', pixel ? '0' : '1.5');
   expect(cells[8]).toHaveAttribute('fill', `color-mix(in srgb, ${pixel ? 'var(--text-primary)' : 'var(--theme-accent)'} 100%, var(--surface-2))`);
@@ -143,8 +147,8 @@ describe.each(packs)('Speed heatmap %s / %s', (packId, packAppearance) => {
     expect(screen.getByText('Days')).toBeInTheDocument();
     expect(screen.getByText('Columns')).toBeInTheDocument();
     expect(screen.getByText('Time of day')).toBeInTheDocument();
-    expect(screen.getByText('Dim = no sample')).toBeInTheDocument();
-    expect(screen.getByText('Brighter = higher speed')).toBeInTheDocument();
+    expect(screen.getByText('Outline = sampled period')).toBeInTheDocument();
+    expect(screen.getByText('Stronger color = higher speed')).toBeInTheDocument();
     expect(screen.getByText(blankCells)).toBeInTheDocument();
     expect(view.container.querySelector('[data-widget-appearance] svg.lucide')?.getAttribute('class')).toMatch(/grid/i);
     expectOriginalGrid(packId === 'v7');

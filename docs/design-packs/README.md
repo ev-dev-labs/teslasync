@@ -53,6 +53,8 @@ columns in Quick View.
 Interactive chart legends use `--app-chart-hidden-legend-opacity` to keep
 hidden-series labels readable while retaining their strike-through and pressed
 state. Protected widgets and unowned charts retain their existing dimming.
+The speed heatmap outlines sampled cells with `--text-primary` and
+`--app-border-width`, keeping measured zero distinct from a missing period.
 The Command History chart measures phone-axis labels using the shared body
 font size; its tooltip and data table retain the complete localized dates.
 

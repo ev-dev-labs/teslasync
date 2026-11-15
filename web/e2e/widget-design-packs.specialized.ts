@@ -233,6 +233,49 @@ export async function sampleHeatmapPaint(plot: Locator) {
   return { pixels, paint };
 }
 
+export async function assertHeatmapSampleOutlines(plot: Locator) {
+  const cells = await plot.evaluate(element => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Heatmap outline verification requires a 2D context');
+    const rgba = (color: string) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    };
+    const rectangles = element.querySelectorAll('rect');
+    return [36, 37, 38, 39].map(index => {
+      const style = getComputedStyle(rectangles[index]);
+      return {
+        stroke: style.stroke,
+        width: parseFloat(style.strokeWidth),
+        vectorEffect: style.vectorEffect,
+        fill: rgba(style.fill),
+        strokeColor: style.stroke === 'none' ? null : rgba(style.stroke),
+      };
+    });
+  });
+  const luminance = (color: number[]) => color.slice(0, 3).map(value => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  const background = cells[3].fill;
+  expect(background[3], 'missing sample has an opaque surface').toBe(255);
+  expect(cells[3].stroke, 'missing samples do not receive an outline').toBe('none');
+  for (const cell of cells.slice(0, 3)) {
+    expect(cell.strokeColor, 'every sampled period has an outline').not.toBeNull();
+    expect(cell.strokeColor![3], 'sample outline is opaque').toBe(255);
+    expect(cell.width, 'sample outline remains visible at any plot scale').toBeGreaterThanOrEqual(1);
+    expect(cell.vectorEffect).toBe('non-scaling-stroke');
+    const a = luminance(cell.strokeColor!);
+    const b = luminance(background);
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+      'sample outline contrasts with missing periods').toBeGreaterThanOrEqual(3);
+  }
+  return cells;
+}
+
 /** Actual data-backed feature renderers and local open controls. Metadata is
  * checked separately; distinctness evidence contains only measured geometry. */
 export async function inspectSpecializedRoute(
@@ -264,6 +307,8 @@ export async function inspectSpecializedRoute(
       expect(distances[0], 'maximum speed has stronger paint than the middle sample').toBeGreaterThan(distances[1]);
       expect(distances[1], 'middle speed has stronger paint than measured zero').toBeGreaterThan(distances[2]);
       expect(distances[2], 'measured zero stays visually distinct from no sample').toBeGreaterThan(0);
+      evidence.speedOutlines = await assertHeatmapSampleOutlines(plot);
+      await expect(heatmap.getByText('Outline = sampled period', { exact: true })).toBeVisible();
       evidence.speedPaint = paint.map(({ fill, rgba }) => ({ fill, rgba }));
       await expect(plot).toContainText(sampleSpeed);
       await expect(plot.locator('title')).toHaveCount(168);
