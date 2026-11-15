@@ -339,6 +339,12 @@
     overflow-wrap: anywhere;
   }
 
+  [data-app-part~="conversation-answer"] pre:not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *))[data-app-design-owner] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: var(--app-body-size);
+  }
+
   [data-cost-heatmap-grid]:not(:where([data-widget-pack], [data-widget-pack] *))[data-app-design-owner] {
     min-inline-size: 0;
   }
@@ -517,7 +523,7 @@
     --heatmap-label-status: attr(data-heatmap-label-status);
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table)[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table)[data-app-design-owner] {
     display: block;
     inline-size: 100%;
     min-inline-size: 0;
@@ -530,7 +536,7 @@
     contain: layout;
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) caption[data-app-design-owner] {
     display: block;
     inline-size: 100%;
     text-align: start;
@@ -538,7 +544,7 @@
     font-size: var(--app-body-size);
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) thead[data-app-design-owner] {
     position: absolute;
     inline-size: 1px;
     block-size: 1px;
@@ -550,11 +556,11 @@
     border: 0;
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody[data-app-design-owner] {
     display: block;
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr[data-app-design-owner] {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--density-gap);
@@ -562,7 +568,7 @@
     border-block-end: 1px solid var(--border-default);
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody :is(th, td)[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody :is(th, td)[data-app-design-owner] {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
@@ -575,16 +581,22 @@
     overflow-wrap: anywhere;
   }
 
-  :is([data-mobile-stack-table], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :is(:first-child, :last-child)[data-app-design-owner] {
+  :is([data-mobile-stack-table], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)), [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table) tbody tr > :is(:first-child, :last-child)[data-app-design-owner] {
     grid-column: 1 / -1;
   }
 
-  :is([data-mobile-stack-table] tbody td[data-mobile-label], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table tbody td)[data-app-design-owner]::before {
+  :is([data-mobile-stack-table] tbody td[data-mobile-label], [data-conversation-table]:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *)) tbody td[data-mobile-label], [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] table tbody td)[data-app-design-owner]::before {
     content: attr(data-mobile-label);
     content: attr(data-mobile-label) / "";
     color: var(--text-secondary);
     font-size: var(--app-body-size);
     font-weight: var(--font-weight-medium);
+  }
+
+  @media screen and (max-width: 639px) {
+    [data-app-part~="conversation-answer"] [data-conversation-table][data-app-design-owner] tbody tr:not(:where([data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *))[data-app-design-owner] {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   [data-chart-key="charging-weekly-heatmap"] [data-chart-alternative] tbody td:nth-child(1)[data-app-design-owner]::before {

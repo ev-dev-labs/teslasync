@@ -154,6 +154,20 @@ describe('MarkdownRenderer', () => {
     expect(screen.getByRole('cell', { name: '300' })).toBeInTheDocument();
   });
 
+  it('associates formatted table headers with cells for the stacked phone layout', async () => {
+    await renderMarkdown(
+      '| **Metric name** | `Energy use` |\n| --- | --- |\n| Range | 300 |\n| Charge | 80 |\n\n'
+      + '| Other | State |\n| --- | --- |\n| Battery | Ready |',
+    );
+
+    const [first, second] = screen.getAllByRole('table');
+    expect(first).toHaveAttribute('data-conversation-table');
+    expect(within(first).getByRole('cell', { name: 'Range' })).toHaveAttribute('data-mobile-label', 'Metric name');
+    expect(within(first).getByRole('cell', { name: '300' })).toHaveAttribute('data-mobile-label', 'Energy use');
+    expect(within(first).getByRole('cell', { name: 'Charge' })).toHaveAttribute('data-mobile-label', 'Metric name');
+    expect(within(second).getByRole('cell', { name: 'Ready' })).toHaveAttribute('data-mobile-label', 'State');
+  });
+
   // ── security: raw HTML must not execute ──────────────────────────────────
   it('escapes raw HTML in the source instead of mounting live DOM (no rehype-raw)', async () => {
     const { container } = await renderMarkdown(
