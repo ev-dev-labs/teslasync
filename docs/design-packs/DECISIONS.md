@@ -1,5 +1,61 @@
 # Design pack decisions
 
+## Full Vitest snapshot
+
+The immutable frontend snapshot at `243a4c319943` completed:
+
+```text
+Test Files  2947 passed (2947)
+     Tests  101822 passed | 4 skipped (101826)
+FULL_VITEST_EXIT=0
+```
+
+Later commits changed several pack stylesheets and browser-test files, so
+this is not a full-suite result for the latest source. On PR head
+`2b2aef0093`, all eight frontend test shards, merged frontend coverage,
+frontend lint and frontend build report success; other browser jobs are
+still running and later local changes have not been pushed.
+
+## Cyber grid intersection contrast
+
+The original Cyber canvas painted two translucent grid layers over each other.
+For the light Vehicles breadcrumb, a conservative calculation at their
+intersection gives 4.284:1 against the actual canvas and muted-text colors;
+whether a glyph covered an intersection in the earlier scan was not
+established. The canvas now uses one conic-gradient layer for the same
+96px grid, with pack-owned size and line-width tokens, so the two traces no
+longer compound. The orchestrator added the required resets for those inherited
+tokens at preview boundaries; neutral and other-pack previews must not inherit
+Cyber grid geometry. The corresponding calculated worst case is 4.886:1.
+This does not resolve the earlier incomplete Axe nodes or certify every
+background and text combination.
+
+```text
+Edge: preview-token isolation and Cyber Vehicles at 360/430px, light/dark: 5 passed (22.0s)
+Firefox/WebKit: the same checks: 10 passed (2.6m)
+BROWSER_PROBE_API_ESCAPE=0
+Old built CSS: focused light 360px regression failed, 2 layers instead of 1
+Current CSS: focused light 360px probe passed, calculated ratio 4.885835
+Light 360px Axe: Energy 0 violations/7 incomplete; Vehicles 0/16 incomplete
+Cyber preservation: 3 files, 9 tests passed, 192 skipped
+npx tsc --noEmit: exit 0
+npx tsc -p e2e\tsconfig.json --noEmit: exit 0
+npm run typecheck:sw: exit 0
+focused ESLint and three scoped guideline audits: exit 0
+isolated current-source Vite build and four postbuild checks: exit 0
+npm run lint: exit 0 before the final test-fixture import and timeout changes
+final focused ESLint and E2E TypeScript: exit 0
+```
+
+Firefox and WebKit were unavailable in the Windows cache; after two launch
+attempts failed before running a test, the repeat above used the existing
+network-isolated Linux browser image and an isolated production build. An
+initial final-source repeat reported ten passing tests but an escaped
+`/api/v1/export/jobs` request during teardown, so it was not accepted. The
+test now uses the guarded page fixture; the subsequent repeat above had no API
+escape. No screenshots were taken, and broader contrast and visual review
+remain open.
+
 ## Committed charger preview
 
 The local preview was rebuilt from commit `0fae1a58ab97`. Its candidate was

@@ -66,6 +66,7 @@ export const baseConfig: PlaywrightTestConfig = {
       testMatch: [
         /\.smoke\.spec\.ts/,
         /widget-design-packs\.app\.spec\.ts$/,
+        /widget-design-packs\.cyber\.spec\.ts$/,
         /widget-design-packs\.energy\.spec\.ts$/,
         /widget-design-packs\.native\.spec\.ts$/,
         /operationalbrief-contracts[\\/][^\\/]+\.supported\.spec\.ts$/,

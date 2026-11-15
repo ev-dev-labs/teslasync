@@ -58,6 +58,8 @@
     --app-chart-grid: initial;
     --app-grid-header: initial;
     --app-grid-rule: initial;
+    --app-cyber-canvas-grid-size: initial;
+    --app-cyber-canvas-grid-line: initial;
     --app-conversation-surface: initial;
     --app-conversation-radius: initial;
   }

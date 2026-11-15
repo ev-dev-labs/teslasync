@@ -66,6 +66,8 @@ See each pack sheet for its actual assignments; the role names do not imply
 that every component is already tokenized or that chart series differ by pack.
 Any new inherited `--app-*` property must also be reset at the preview
 boundary in `base.css`.
+Cyber's `--app-cyber-canvas-grid-size` and `--app-cyber-canvas-grid-line`
+define its circuit grid; neutral and other-pack previews reset both.
 
 The composition columns below are the navigation/header/content roles from
 `APPLICATION_DESIGNS`; the corresponding stylesheet contains the remaining pack

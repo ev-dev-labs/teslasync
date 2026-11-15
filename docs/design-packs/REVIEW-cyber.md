@@ -1,5 +1,16 @@
 # Cyberdeck review
 
+## Grid contrast follow-up
+
+The canvas grid now paints intersecting traces in one token-based layer
+instead of compounding two translucent layers. Screenshot-free Edge, Firefox
+and WebKit checks passed on Vehicles at 360px and 430px in both themes; the
+light breadcrumb's calculated worst-case grid contrast improved from 4.284:1
+to 4.886:1. Preview-boundary checks confirm the Cyber grid tokens do not
+leak into neutral or other-pack previews. The test also checks the existing
+grid size and document overflow. This is not a visual review or a resolution
+of the earlier incomplete contrast nodes.
+
 ## Scope and first capture
 
 Implemented the existing `cyber` application pack using theme-derived

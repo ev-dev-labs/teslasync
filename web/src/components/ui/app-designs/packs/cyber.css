@@ -37,13 +37,17 @@
     --app-grid-rule: var(--border-strong);
     --app-conversation-surface: var(--surface-2);
     --app-conversation-radius: var(--radius-xs);
+    --app-cyber-canvas-grid-size: 6rem;
+    --app-cyber-canvas-grid-line: 1px;
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="cyber"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-cyber"]) {
     background-color: var(--app-surface-canvas, var(--bg-app));
-    background-image:
-      linear-gradient(90deg, transparent calc(100% - 1px), var(--border-subtle) 0),
-      linear-gradient(180deg, transparent calc(100% - 1px), var(--border-subtle) 0);
-    background-size: 6rem 6rem;
+    /* A single paint layer keeps intersecting traces from compounding. */
+    background-image: conic-gradient(
+      at calc(100% - var(--app-cyber-canvas-grid-line)) calc(100% - var(--app-cyber-canvas-grid-line)),
+      var(--border-subtle) 0deg 270deg, transparent 270deg 360deg
+    );
+    background-size: var(--app-cyber-canvas-grid-size) var(--app-cyber-canvas-grid-size);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="cyber"] [data-app-part~="shell-sidebar"]:where([data-app-design-owner~="pack-cyber"]) {
     border-inline-end: 1px solid var(--border-strong);
