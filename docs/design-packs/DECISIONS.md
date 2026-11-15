@@ -59,6 +59,34 @@ that run, but the cause is not established. Neither run took screenshots;
 the restoration assertion has not been weakened. Defer this issue while
 other checks continue, then revisit it after the active sweeps finish.
 
+The subsequent two-repeat real-app WebKit run reported `4 passed, 2 failed
+(10.2m)`. Both failures were at 1440px: one source-quality-filter click timed
+out, and one exact-restoration comparison found changed chart geometry and
+legend inheritance after owner restoration. A separate motion diagnostic
+failed earlier while waiting for the synthetic outer pack selection to apply,
+so it captured no click-motion samples. No screenshots were taken. The cause
+is still unproven; do not treat these failures as a pass or attribute them
+solely to host load.
+
+The pending acceptance helper now yields browser frames between stability
+samples, and the nested-dialog check waits for focus to return before the
+next interaction. Exact owner, geometry and style comparisons remain in
+place. The synthetic owner and Quiet-grid contracts passed, but the changed
+real-app checks still need a cross-browser rerun after the current sweep:
+
+```text
+npx playwright test --config=playwright.contract.config.ts --grep 'owner activation|Quiet preview sizes' --workers=1
+10 passed (44.1s)
+OWNER_CONTRACT_EXIT=0
+
+npx tsc --noEmit
+exit 0
+npx tsc -p e2e\tsconfig.json --noEmit
+E2E_TYPESCRIPT_EXIT=0
+npx eslint e2e\harness.contract.spec.ts e2e\widget-design-packs.acceptance.ts e2e\widget-design-packs.app.spec.ts --max-warnings 0
+FOCUSED_ESLINT_EXIT=0
+```
+
 ## Precision Ledger phone follow-up
 
 A screenshot-free `v3` check covered Drives, Energy and Vehicles at 360px and
