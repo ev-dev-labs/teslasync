@@ -62,9 +62,11 @@ The original failures remain part of the matrix evidence.
 
 The run produced 254 phone-360, 254 phone-430, 253 tablet and 254 desktop
 PNGs. All 1,015 passed signature, chunk-CRC and viewport-dimension checks;
-the tablet Dashboard image is missing. These images predate the later
-notification-axis and Digital Twin page fixes and do not establish visual
-acceptance. The matrix continues with the next pack.
+the original tablet Dashboard image was missing. A later capture against
+`98debceb5a8b` recovered that image and replaced only the repaired Digital
+Twin page images at 360 and 430px. All three new PNGs passed integrity and
+dimension checks. The other images predate later fixes; this mixed-build
+evidence does not establish visual acceptance. The matrix continues.
 
 ### Horizon Digital Twin page targets
 

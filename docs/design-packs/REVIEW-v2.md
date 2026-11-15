@@ -84,9 +84,9 @@ are not contrast passes.
   checks, the 430px Digital Twin page had a landmark failure, and the tablet
   Dashboard timed out. Separate screenshot-free retries passed the fixed
   Digital Twin page at 360/430px and the tablet Dashboard. The 1,015 saved
-  matrix PNGs passed integrity and dimension checks; the tablet Dashboard
-  image is missing. They predate the page fix and do not constitute a visual
-  pass.
+  matrix PNGs passed integrity and dimension checks; the original tablet
+  Dashboard image was missing. They predate the page fix and do not
+  constitute a visual pass.
 - A later screenshot-free `/digital-twin` page check at 360 and 430px
   reported `2 passed` after keeping its transparent touch targets square
   against Horizon's radius treatment. The original widget designs were not
@@ -110,10 +110,17 @@ are not contrast passes.
 - `npx vitest run src\components\ui\app-designs\packs\PackNativeStepsPreservation.test.tsx -t "'v2' native steps identity preservation"`:
   `Test Files 1 passed (1)`, `Tests 2 passed | 52 skipped (54)`.
 
-The captures cover dark mode at scale 1 only. Real light/forced-color routes,
-larger text, 360/430px routes, open menus and Helix states remain unverified.
-No build was run. Page line/section comparisons and hook verification were not
-applicable to this stylesheet-only implementation.
+The missing tablet Dashboard and the repaired 360/430px Digital Twin page
+were later captured against image `98debceb5a8b`; the three cases passed,
+their PNG signatures, CRCs and dimensions checked out, and the images were
+inspected. The 360px viewport does not include the lower car graphic. The
+remaining matrix images are from older assets, and the protected phone
+widget findings and incomplete contrast reviews remain open.
+
+The captures cover dark mode at scale 1 only. Other real light/forced-color
+routes, larger text, 360/430px routes, open menus and Helix states remain
+unverified. No build was run for the original stylesheet-only implementation.
+Page line/section comparisons and hook verification were not applicable to it.
 
 ## Contact-sheet refinement — no new visual review
 
