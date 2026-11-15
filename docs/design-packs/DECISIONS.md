@@ -1,5 +1,31 @@
 # Design Pack Decisions
 
+### Notification health phone axes
+
+The fatigue and burn-rate charts now measure phone-axis labels using the
+owned body-size token. Desktop and unowned charts retain their existing
+layout. Long rule labels are abbreviated only on the axis; the complete
+values remain in the chart data and tooltip.
+
+- Edge geometry checks at 360, 390 and 430px, three font scales, dark,
+  light and custom typography, and four packs: `3 passed (1.5m)`.
+- `npx tsc --noEmit`: exit 0; `npx tsc --noEmit -p e2e\tsconfig.json`:
+  exit 0 before the later capture-diagnostic edit.
+- The notification hook verification found 36 URL patterns and reported
+  `ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES`.
+- `npm run lint`: exit 0; targeted notification and Command History Vitest:
+  `4 files, 129 tests passed`, with Recharts zero-size warnings.
+- The Windows Firefox browser was absent and its installation timed out.
+  Cross-browser verification will use the existing isolated browser image.
+
+### Notification latency chart phone-axis blocker
+
+The latency histogram still uses the existing 10–11px axis styling. Three
+responsive attempts exposed too few horizontal labels or an overlap between
+the first range label and the zero tick at 360px. Those histogram changes
+were not shipped; revisit the measured layout after the remaining capture
+and CI work. This is an unresolved mobile-readability defect.
+
 ### Classic matrix and capture continuation
 
 The resumed Classic matrix completed with `1014 passed` and `2 failed

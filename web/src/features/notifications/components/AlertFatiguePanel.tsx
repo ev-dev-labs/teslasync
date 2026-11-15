@@ -21,6 +21,7 @@ import { isFiniteNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { analyzeAlertFatigue, type FatigueVerdict } from '../lib/alertFatigue';
+import { useNotificationPhoneChartAxes } from '../lib/useNotificationPhoneChartAxes';
 
 const VERDICT_BADGE: Record<FatigueVerdict, 'success' | 'warning' | 'danger' | 'neutral'> = {
   healthy: 'success',
@@ -46,6 +47,7 @@ export function AlertFatiguePanel() {
   const percentLabel = (value: unknown) => isFiniteNumber(value) && Number.isFinite(value * 100)
     ? `${fmtNumber(value * 100)}%` : '—';
   const detailTitleId = useId();
+  const phoneAxes = useNotificationPhoneChartAxes();
 
   const logsQuery = useNotificationAnalysisLogs();
   const source = useDataState(logsQuery, { provenance: 'historical' });
@@ -90,6 +92,10 @@ export function AlertFatiguePanel() {
       count,
     }));
   }, [summary.groups, formatTime]);
+  const ruleAxis = phoneAxes?.categoryAxis(chartData.map(({ rule }) => rule));
+  const hourCountWidth = phoneAxes?.numericWidth(
+    hourData.reduce((max, { count }) => Math.max(max, count), 0), countLabel,
+  );
 
   const sourceDescriptor = { id: 'alert-fatigue', label: t('alertFatigue.title', 'Alert fatigue'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
@@ -213,6 +219,7 @@ export function AlertFatiguePanel() {
         ) : (
           <ChartContainer
             title={t('alertFatigue.chart', 'Noise score by rule')}
+            className={phoneAxes?.className}
             subtitle={t(
               'alertFatigue.chartHint',
               'Anything past the line is firing more than it is earning',
@@ -240,15 +247,19 @@ export function AlertFatiguePanel() {
               <BarChart
                 data={chartData}
                 layout="vertical"
-                margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+                margin={phoneAxes?.margin ?? { top: 8, right: 16, bottom: 8, left: 8 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis type="number" tickFormatter={numberLabel} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]} />
+                <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} type="number" tickFormatter={numberLabel}
+                  tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]}
+                  {...(phoneAxes ? { height: phoneAxes.xHeight, minTickGap: phoneAxes.minTickGap, tickMargin: phoneAxes.tickMargin } : {})} />
                 <YAxis
+                  key={phoneAxes ? `y-${phoneAxes.key}` : 'desktop-y'}
                   type="category"
                   dataKey="rule"
-                  width={110}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  width={ruleAxis?.width ?? 110}
+                  tickFormatter={ruleAxis?.format}
+                  tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}
                 />
                 <Tooltip content={<ChartTooltip valueFormatter={numberLabel} />} />
                 <ReferenceLine x={70} stroke={chartTokens.series[5]} strokeDasharray="4 4" />
@@ -288,6 +299,7 @@ export function AlertFatiguePanel() {
         ) : (
         <ChartContainer
           title={t('alertFatigue.hours', 'When notifications arrive')}
+          className={phoneAxes?.className}
           subtitle={t(
             'alertFatigue.hoursHint',
             'Firings by hour of day across every rule — the small hours are what really cost goodwill',
@@ -308,10 +320,15 @@ export function AlertFatiguePanel() {
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={hourData}>
+            <BarChart data={hourData} margin={phoneAxes?.margin}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="hour" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <YAxis tickFormatter={countLabel} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+              <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} dataKey="hour"
+                tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}
+                {...(phoneAxes ? { height: phoneAxes.xHeight, minTickGap: phoneAxes.minTickGap, tickMargin: phoneAxes.tickMargin } : {})} />
+              <YAxis key={phoneAxes ? `y-${phoneAxes.key}` : 'desktop-y'} tickFormatter={countLabel}
+                tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 11 }}
+                {...(phoneAxes ? { width: hourCountWidth, minTickGap: phoneAxes.minTickGap } : {})}
+                allowDecimals={false} />
               <Tooltip content={<ChartTooltip valueFormatter={countLabel} />} />
               <Bar
                 dataKey="count"

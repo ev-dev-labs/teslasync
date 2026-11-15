@@ -57,6 +57,8 @@ The speed heatmap outlines sampled cells with `--text-primary` and
 `--app-border-width`, keeping measured zero distinct from a missing period.
 The Command History chart measures phone-axis labels using the shared body
 font size; its tooltip and data table retain the complete localized dates.
+The notification fatigue and burn-rate phone charts use the same body-size
+token and measure their labels; tooltips and data tables retain full values.
 
 `--app-display-font`, `--app-display-weight`, and `--app-display-tracking`
 compose the saved typography preferences. `--app-card-radius`,

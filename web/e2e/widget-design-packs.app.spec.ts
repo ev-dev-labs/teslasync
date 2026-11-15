@@ -13,6 +13,7 @@ import { installSpecializedReviewSources } from './widget-design-packs.specializ
 import { chargingReviewPath, specializedDrives } from './widget-design-packs.specialized.fixtures';
 import { inspectEnergyReview } from './widget-design-packs.energy';
 import { energyReviewPath, installEnergyReviewSources } from './widget-design-packs.energy.mock';
+import { analysisRows, deliveryRows, NOW as notificationNow } from './operationalbrief-contracts/notifications.fixtures';
 
 test.setTimeout(1_800_000);
 const packIds = Object.keys(packNames) as PackId[];
@@ -162,8 +163,8 @@ async function assertCommandAxisGeometry(chart: Locator, scale: number, label: s
       rect: node.getBoundingClientRect(),
     }));
     const issues: string[] = [];
-    if (labels.filter(node => node.axis === 'x').length < 2) issues.push('fewer than two date ticks');
-    if (labels.filter(node => node.axis === 'y').length < 2) issues.push(`fewer than two count ticks (${dimensions()}, svg=${bounds.width}x${bounds.height})`);
+    if (labels.filter(node => node.axis === 'x').length < 2) issues.push('fewer than two x-axis ticks');
+    if (labels.filter(node => node.axis === 'y').length < 2) issues.push(`fewer than two y-axis ticks (${dimensions()}, svg=${bounds.width}x${bounds.height})`);
     for (const [index, node] of labels.entries()) {
       if (node.size < Math.max(16, 16 * expectedScale) - 0.1) issues.push(`${node.axis}:${node.text} is ${node.size}px`);
       if (node.rect.left < bounds.left - 1 || node.rect.right > bounds.right + 1
@@ -173,7 +174,8 @@ async function assertCommandAxisGeometry(chart: Locator, scale: number, label: s
       for (const other of labels.slice(index + 1)) {
         if (node.rect.left < other.rect.right - 1 && node.rect.right > other.rect.left + 1
           && node.rect.top < other.rect.bottom - 1 && node.rect.bottom > other.rect.top + 1) {
-          issues.push(`${node.axis}:${node.text} overlaps ${other.axis}:${other.text}`);
+          const box = (rect: DOMRect) => [rect.left, rect.top, rect.right, rect.bottom].map(value => value.toFixed(1)).join(',');
+          issues.push(`${node.axis}:${node.text} [${box(node.rect)}] overlaps ${other.axis}:${other.text} [${box(other.rect)}]`);
         }
       }
     }
@@ -277,6 +279,88 @@ test('Command History keeps its original chart without an application-wide pack'
   await expect(tick).toContainText(String(new Date().getUTCFullYear()));
   expect(await tick.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
   await assertMockApiComplete(page, mocks);
+});
+
+test.describe('Notification fatigue and burn-rate phone chart axes', () => {
+  for (const [mode, customFont] of [['dark', false], ['light', false], ['dark', true]] as const) {
+    test(`stay legible and contained in ${mode}${customFont ? ' with a custom font and locale' : ''}`, async ({ page }, testInfo) => {
+      test.setTimeout(300_000);
+      const origin = testInfo.project.use.baseURL;
+      if (typeof origin !== 'string') throw new Error('A running application origin is required');
+      const preference = createReviewPreference();
+      preference.app_wide = true;
+      const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin,
+        customFont ? { ...customReviewSettings, locale: 'de-DE' } : {});
+      await page.clock.setFixedTime(new Date(notificationNow));
+      await page.route(url => url.pathname === '/api/v1/notifications/logs', route => {
+        const request = route.request();
+        const params = new URL(request.url()).searchParams;
+        if (request.method() !== 'GET' || params.get('archived') !== 'all'
+          || !['inbox', 'deliveries'].includes(params.get('view') ?? '')) return route.fallback();
+        return fulfillApiFixture(route, mocks, {
+          json: params.get('view') === 'deliveries' ? deliveryRows : analysisRows,
+        });
+      });
+      await routeBuiltApplication(page, new URL(origin).origin, ['/notifications/health'], process.env.DESIGN_PACK_DIST_DIR);
+      await page.setViewportSize({ width: 360, height: 900 });
+      await page.goto('/notifications/health');
+      await waitForHarnessReady(page, mocks);
+      const charts = [
+        page.locator('#fatigue [data-chart-viewport]').nth(0),
+        page.locator('#fatigue [data-chart-viewport]').nth(1),
+        page.locator('#burn-rate [data-chart-viewport]'),
+      ];
+      await page.setViewportSize({ width: 1440, height: 900 });
+      for (const chart of charts) {
+        await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
+          .evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+      }
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+          for (const [index, chart] of charts.entries()) {
+            await chart.scrollIntoViewIfNeeded();
+            await assertCommandAxisGeometry(chart, scale, `${mode} chart ${index + 1}, ${width}px, scale ${scale}`);
+          }
+        }
+      }
+      if (customFont) {
+        await expect.poll(() => charts[0]!.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
+          .evaluate(node => getComputedStyle(node).fontFamily)).toContain('Georgia');
+      }
+      for (const pack of ['v1', 'cyber', 'blueprint'] as const) {
+        await selectReviewPack(page, pack);
+        await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+        for (const width of [360, 430]) {
+          await page.setViewportSize({ width, height: 900 });
+          for (const [index, chart] of charts.entries()) {
+            await chart.scrollIntoViewIfNeeded();
+            await assertCommandAxisGeometry(chart, 1.35, `${pack} ${mode} chart ${index + 1}, ${width}px`);
+          }
+        }
+      }
+      await page.evaluate(async () => {
+        const saved = await fetch('/api/v1/settings/widget-design-pack', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pack_id: 'classic', app_wide: false }),
+        });
+        if (!saved.ok) throw new Error('Synthetic preference write failed');
+        const channel = new BroadcastChannel('teslasync');
+        channel.postMessage({
+          _from: 'design-review-harness', _ts: Date.now(),
+          msg: { type: 'queryInvalidate', keys: [['widget-design-preference']] },
+        });
+        channel.close();
+      });
+      await expect(page.locator('html')).not.toHaveAttribute('data-app-design-owner');
+      for (const chart of charts) {
+        await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
+          .evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+      }
+      await assertMockApiComplete(page, mocks);
+    });
+  }
 });
 
 for (const mode of ['dark', 'light'] as const) {
