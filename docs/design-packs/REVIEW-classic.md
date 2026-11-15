@@ -7,6 +7,17 @@ remaining routes and interaction states are unreviewed.
 The first two score tables record earlier captures; some screenshot paths
 have since been overwritten by recaptures and no longer reproduce those frames.
 
+## Final matrix continuation
+
+The resumed Classic matrix completed 1,016 cases at 360, 430, 768 and
+1440px: 1,014 passed and the dashboard failed at both phone widths because
+protected Digital Twin controls and text remain below the requested sizes.
+The 956 newly saved PNGs passed file-integrity and viewport-dimension checks.
+Earlier screenshots were preserved, so this is mixed-build evidence rather
+than a current-build visual pass. `/period-compare` and six standalone routes
+remain excluded. The diagnostics do not replace manual contrast and visual
+review.
+
 ## Speed heatmap contrast follow-up
 
 In the light-theme detail at `shots/classic/review/light-speed-heatmap.png`,

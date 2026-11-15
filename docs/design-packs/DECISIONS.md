@@ -1,4 +1,21 @@
-# Design pack decisions
+# Design Pack Decisions
+
+### Classic matrix and capture continuation
+
+The resumed Classic matrix completed with `1014 passed` and `2 failed
+(3.0h)`. Both failures are the protected dashboard Digital Twin on phone,
+whose existing controls and text do not meet the requested 44px and 16px
+minimums. No protected geometry was changed. The 956 newly saved Classic
+PNGs passed signature, chunk-CRC and viewport-dimension checks, but preserved
+older images make this mixed-build evidence, not visual acceptance.
+`/period-compare` and six standalone routes remain excluded.
+
+The capture runner can now resume `--pack all` after a named pack without
+restarting the shared server or overwriting existing screenshots. Its focused
+tests reported `6 passed` and its ESLint and syntax checks exited 0. The
+remaining matrix was started after Classic with four workers, using assets
+copied from Docker image `teslasync-web:design-packs-v2-445e5bb317b1`.
+It is not a completed or passing matrix.
 
 ## Catalog preservation and preview refresh
 
