@@ -98,7 +98,7 @@
     gap: var(--density-gap);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v7"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-tone], [data-surface-variant="embedded"], [data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v7"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v7"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="score"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-metric-grid="native-gauge"] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-v7"]) {
     row-gap: calc(var(--density-gap) / 2);
     padding-block: var(--density-pad-y);
     border-block-end: 1px solid var(--border-strong);

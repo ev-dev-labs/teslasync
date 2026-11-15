@@ -1200,6 +1200,7 @@ test('native outline cards retain their pack hover and pressed treatments', asyn
 });
 
 test('data modes preserve semantic and embedded metric paint and layout', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setContent(`
     <style>
       html {
@@ -1220,12 +1221,18 @@ test('data modes preserve semantic and embedded metric paint and layout', async 
     <div id="danger" class="tile danger" data-owned data-app-part="metric" data-app-metric="tile" data-app-tone="danger">Danger</div>
     <div id="embedded" class="tile embedded" data-owned data-app-part="metric" data-app-metric="card" data-surface-variant="embedded">
       <div id="nested" class="tile" data-owned data-app-part="metric" data-app-metric="tile">Embedded reading</div>
+      <div id="nested-card" class="tile" data-owned data-app-part="metric" data-app-metric="card">Embedded card</div>
+      <div id="nested-stat" class="tile" data-owned data-app-part="metric" data-app-metric="stat-card">Embedded stat</div>
+      <div id="nested-brief" class="tile" data-owned data-app-part="metric" data-app-metric="brief">Embedded brief</div>
     </div>
   `);
   await page.addStyleTag({ content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8') });
-  for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+  for (const pack of PACK_IDS) {
     const attributes = getAppDesignAttributes(pack);
     const owner = `pack-${pack} data-${APPLICATION_DESIGNS[pack].data}`;
+    const sheet = await page.addStyleTag({
+      content: await readFile(resolve('src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'),
+    });
     await page.locator('html').evaluate((element, values) => {
       for (const [name, value] of Object.entries(values.attributes)) element.setAttribute(name, value);
       element.setAttribute('data-app-design-owner', values.owner);
@@ -1243,21 +1250,43 @@ test('data modes preserve semantic and embedded metric paint and layout', async 
       }, palette);
       for (const width of [360, 1440]) {
         await page.setViewportSize({ width, height: 844 });
-        await expect(page.locator('#warning')).toHaveCSS('background-color', palette.warning);
-        await expect(page.locator('#warning')).toHaveCSS('border-top-color', palette.warningBorder);
-        await expect(page.locator('#danger')).toHaveCSS('background-color', palette.danger);
-        await expect(page.locator('#danger')).toHaveCSS('border-top-color', palette.dangerBorder);
-        await expect(page.locator('#embedded')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-        await expect(page.locator('#embedded')).toHaveCSS('border-top-width', '0px');
-        for (const id of ['warning', 'danger', 'embedded', 'nested']) {
-          await expect(page.locator(`#${id}`)).toHaveCSS('display', 'block');
+        const styles = await page.evaluate(() => Object.fromEntries(
+          ['normal', 'warning', 'danger', 'embedded', 'nested', 'nested-card', 'nested-stat', 'nested-brief'].map(id => {
+            const element = document.getElementById(id)!;
+            const computed = getComputedStyle(element);
+            return [id, {
+              background: computed.backgroundColor, border: computed.borderTopColor,
+              borderWidth: computed.borderTopWidth, display: computed.display,
+              paddingTop: computed.paddingTop, paddingRight: computed.paddingRight,
+              backgroundImage: computed.backgroundImage, shadow: computed.boxShadow,
+              position: computed.position, afterContent: getComputedStyle(element, '::after').content,
+            }];
+          }),
+        ));
+        const context = `${pack}, ${width}px, ${palette.warning}`;
+        expect.soft(styles.warning, `${context} warning`).toMatchObject({
+          background: palette.warning, border: palette.warningBorder, display: 'block',
+          paddingTop: '12px', paddingRight: '12px',
+        });
+        expect.soft(styles.danger, `${context} danger`).toMatchObject({
+          background: palette.danger, border: palette.dangerBorder, display: 'block',
+          paddingTop: '12px', paddingRight: '12px',
+        });
+        expect.soft(styles.embedded, `${context} embedded`).toMatchObject({
+          background: 'rgba(0, 0, 0, 0)', borderWidth: '0px', display: 'block',
+          paddingTop: '0px', paddingRight: '0px',
+        });
+        for (const id of ['nested', 'nested-card', 'nested-stat', 'nested-brief']) {
+          expect.soft(styles[id], `${context} ${id}`).toMatchObject({
+            background: 'rgb(24, 24, 24)', borderWidth: '1px', display: 'block',
+            paddingTop: '12px', paddingRight: '12px', backgroundImage: 'none', shadow: 'none',
+            position: 'static', afterContent: 'none',
+          });
         }
-        await expect(page.locator('#nested')).toHaveCSS('background-color', 'rgb(24, 24, 24)');
-        await expect(page.locator('#nested')).toHaveCSS('padding-top', '12px');
-        await expect(page.locator('#nested')).toHaveCSS('padding-right', '12px');
-        await expect(page.locator('#normal')).not.toHaveCSS('background-color', 'rgb(24, 24, 24)');
+        expect.soft(styles.normal.background, `${context} normal`).not.toBe('rgb(24, 24, 24)');
       }
     }
+    await sheet.evaluate(element => element.remove());
   }
 });
 

@@ -166,7 +166,7 @@
     gap: var(--density-gap);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="glass"] [data-app-metric="stat-card"]:not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-glass"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="glass"] [data-app-metric="stat-card"]:not([data-surface-variant="embedded"], [data-app-tone]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-glass"]) {
     padding: var(--density-pad-y) var(--density-pad-x);
     border-radius: var(--app-card-radius, var(--radius-xl));
     box-shadow: var(--app-card-shadow);

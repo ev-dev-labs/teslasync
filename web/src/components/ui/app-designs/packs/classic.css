@@ -130,15 +130,15 @@
     gap: var(--density-gap);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric"]:not(:where([data-app-metric="inline"], [data-app-metric="headline"], [data-app-metric="comparison"], [data-app-metric="ring"], [data-app-metric="bar"], [data-app-metric="composition"], [data-app-metric="segments"], [data-app-part~="badge"], [data-app-tone], [data-app-tone] *, [data-surface-variant="embedded"], [data-surface-variant="embedded"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
     row-gap: calc(var(--density-gap) / 2);
     padding-block: var(--density-pad-y);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-label"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-label"]:not(:where([data-app-tone] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
     color: var(--text-secondary);
     overflow-wrap: anywhere;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-value"]:not(:where([data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="classic"] [data-app-part~="metric-value"]:not(:where([data-app-tone] *, [data-surface-variant="embedded"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric="ring"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-classic"]) {
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }

@@ -133,7 +133,7 @@
     border-radius: 50%;
     box-shadow: inset 0 0 0 1px var(--border-strong), inset 0 0 0 4px var(--app-surface-raised, var(--surface-2)), inset 0 0 0 5px var(--border-default);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-metric="brief"]:not([data-app-tone], [data-surface-variant="embedded"]):not(:where([data-widget-pack] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-analog"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-metric="brief"]:not([data-app-tone], [data-surface-variant="embedded"]):not(:where([data-app-tone] *, [data-surface-variant="embedded"] *, [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-analog"]) {
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     box-shadow: inset 0 0 0 1px var(--border-subtle);
@@ -324,7 +324,7 @@
   :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-part~="metric-grid"]:not(:where([data-app-metric-grid], [data-operational-metric-bank], [data-stat-bank], [data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *)):where([data-app-design-owner~="pack-analog"]) {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(9.5rem * max(1, var(--font-scale, 1)))), 1fr));
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-metric="brief"]:not([data-app-tone], [data-surface-variant="embedded"]):not(:where([data-widget-pack] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-analog"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-metric="brief"]:not([data-app-tone], [data-surface-variant="embedded"]):not(:where([data-app-tone] *, [data-surface-variant="embedded"] *, [data-widget-pack] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-analog"]) {
     padding-inline: var(--density-pad-y);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] [data-app-metric="card"][data-role="metric-card"] > [data-app-part~="metric-frame"] [data-app-part~="metric-label"]:where([data-app-design-owner~="pack-analog"]),

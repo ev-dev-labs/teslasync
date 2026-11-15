@@ -2369,3 +2369,26 @@ that the intermittent defect is resolved. The pending owner-settling,
 restoration and protected-grid contracts passed in Edge (`10 passed`), and
 the diagnostic files passed focused ESLint and E2E TypeScript. No screenshots
 were taken.
+
+### Semantic and embedded metric surfaces
+
+A screenshot-free browser contract now checks the actual stylesheet for each
+of the 27 packs, two semantic palettes, and 360px and 1440px widths. It
+found that Classic changed warning and danger padding, and that Classic,
+Expressive, Pixel, Ambient, Analog, Observatory, Swiss, Glass and Cyberdeck
+could add metric treatments inside embedded surfaces. Their selectors now
+preserve the existing semantic and embedded ownership boundaries while
+ordinary metric treatments remain active.
+
+```text
+Browser contracts: 5 passed (33.8s)
+Real-component preservation: Test Files 4 passed; Tests 140 passed
+Pack composition and notification preservation: Test Files 4 passed; Tests 312 passed
+TypeScript: npx tsc --noEmit exited 0
+Frontend lint: npm run lint exited 0
+Production build: npm run build exited 0; PWA and source-map postchecks passed
+Pack directory guideline audit: Scanned 3 files: No violations found.
+```
+
+The browser fixture checks computed paint and geometry, not rendered-route
+visual approval or full contrast compliance. No screenshots were taken.

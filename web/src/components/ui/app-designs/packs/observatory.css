@@ -132,7 +132,7 @@
     gap: calc(var(--density-gap) * 1.25);
     align-items: stretch;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone], [data-metric-track], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone], [data-metric-track], [style*="background"]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     display: flex; flex-direction: column; align-items: stretch; gap: var(--density-gap);
     padding: var(--density-pad-y) var(--density-pad-x);
     border: 1px solid var(--border-default);
@@ -140,7 +140,7 @@
     background-color: var(--app-surface-raised, var(--surface-2));
     box-shadow: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:is([data-app-metric="card"], [data-app-metric="stat-card"]):not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"]:is([data-app-metric="card"], [data-app-metric="stat-card"]):not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     background-image:
       linear-gradient(var(--border-strong), var(--border-strong)),
       linear-gradient(var(--border-strong), var(--border-strong));
@@ -148,10 +148,10 @@
     background-position: right 0.25rem top 0.5rem, right 0.5rem top 0.25rem;
     background-repeat: no-repeat;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     position: relative;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"])::after {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"])::after {
     content: "";
     position: absolute;
     inset-block-start: 0.25rem;
@@ -163,15 +163,15 @@
       linear-gradient(var(--border-strong), var(--border-strong)) center / 1px 0.5rem no-repeat;
     pointer-events: none;
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="stat-card"]:not([data-app-tone]) [data-app-part~="metric-heading"]:not(:where([data-widget-pack] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="stat-card"]:not([data-app-tone]) [data-app-part~="metric-heading"]:not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack] *)):where([data-app-design-owner~="pack-observatory"]) {
     border-block-end: 1px solid var(--border-default);
     padding-block-end: calc(var(--density-gap) / 2);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-label"]:not(:where([data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-label"]:not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     font-weight: var(--font-weight-medium);
     letter-spacing: calc(var(--tracking, 0em) + 0.01em);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-value"]:not(:where([data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] :where([data-app-metric="card"], [data-app-metric="stat-card"], [data-app-metric="tile"], [data-app-metric="stat"], [data-app-metric="brief"]):not([data-surface-variant="embedded"], [data-app-tone]) [data-app-part~="metric-value"]:not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric="inline"] *, [data-app-metric="ring"] *, [data-app-metric="bar"] *, [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *, [data-app-metric="headline"] *, [data-app-metric="comparison"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     font-variant-numeric: tabular-nums lining-nums;
     letter-spacing: calc(var(--tracking, 0em) - 0.01em);
   }
@@ -423,7 +423,7 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, max(10.375rem, calc(10.375rem * var(--font-scale, 1)))), 1fr));
     gap: var(--density-gap);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"][data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="metric"][data-app-metric="brief"]:not([data-surface-variant="embedded"], [data-app-tone], [style*="background"]):not(:where([data-surface-variant="embedded"] *, [data-app-tone] *, [data-widget-pack], [data-widget-pack] *, [data-app-list="conversation"] *, [data-app-card-kind="conversation"] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-observatory"]) {
     padding-inline: calc(var(--density-pad-x) * 0.75);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-metric="card"] [data-app-part~="metric-label"] > span:not(:where([data-widget-pack] *, [data-app-card-kind="conversation"] *)):where([data-app-design-owner~="pack-observatory"]) {
