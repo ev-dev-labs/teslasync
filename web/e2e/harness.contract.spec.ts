@@ -2584,7 +2584,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     needs?: string | string[];
     if?: string;
     steps: WorkflowStep[];
-    strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{ suite: string; shard: string }> } };
+    strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{ name: string; suite: string; partition?: string; shard: string }> } };
   }> };
   const build = workflow.jobs['browser-build'];
   const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
@@ -2595,7 +2595,21 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   expect(comparison?.if).toBeUndefined();
   expect(visualSteps.some(step => step.run?.includes('e2e:update-visual'))).toBe(false);
   const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
-  for (const [suite, count] of [['quality', 32], ['a11y', 13], ['performance', 1]] as const) {
+  const qualityRows = chromiumRows.filter(row => row.suite === 'quality');
+  expect(qualityRows.map(row => row.name))
+    .toEqual(Array.from({ length: 32 }, (_, index) => `responsive-${index + 1}`));
+  for (const [partition, count] of [['ordinary', 24], ['design', 8]] as const) {
+    expect(qualityRows.filter(row => row.partition === partition).map(row => row.shard))
+      .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
+  }
+  const chromiumRun = workflow.jobs['chromium-tests'].steps.find(step => step.name === 'Run isolated Chromium suite');
+  const designFilter = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
+  expect(chromiumRun?.env?.QUALITY_PARTITION).toBe('${{ matrix.partition }}');
+  expect(chromiumRun?.run).toContain(`ordinary) set -- --grep-invert='${designFilter}' ;;`);
+  expect(chromiumRun?.run).toContain(`design) set -- --grep='${designFilter}' ;;`);
+  expect(chromiumRun?.run).toContain(`'') set -- ;;`);
+  expect(chromiumRun?.run).toContain('Unknown quality partition');
+  for (const [suite, count] of [['a11y', 13], ['performance', 1]] as const) {
     expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))
       .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
   }
@@ -2615,7 +2629,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist/', 'if-no-files-found': 'error' });
 
   for (const [id, command] of [
-    ['chromium-tests', "npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}"],
+    ['chromium-tests', "npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} \"$@\" ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}"],
     ['cross-browser-tests', 'npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3'],
     ['visual-tests', `npm run e2e:visual -- --shard=\${{ matrix.shard }}/${visualShards.length} --workers=2`],
   ]) {
@@ -2623,7 +2637,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     expect(job.needs).toBe('browser-build');
     expect(job.steps.find(step => step.uses?.startsWith('actions/download-artifact'))?.with)
       .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist' });
-    expect(job.steps.find(step => step.run === command)?.env)
+    expect(job.steps.find(step => step.run?.includes(command))?.env)
       .toMatchObject({ E2E_REUSE_BUILD: '1', E2E_MOCKS: '1' });
   }
 

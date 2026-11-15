@@ -61,8 +61,21 @@ test('independent validation and Docker builds start together; final gate checks
 
 test('browser shards reuse one build and retain isolated performance and Windows baselines', () => {
   const shards = browser.jobs['chromium-tests'].strategy.matrix.include;
-  assert.deepEqual(shards.filter(shard => shard.suite === 'quality').map(shard => shard.shard),
-    Array.from({ length: 32 }, (_, i) => `${i + 1}/32`));
+  const quality = shards.filter(shard => shard.suite === 'quality');
+  assert.deepEqual(quality.map(shard => shard.name),
+    Array.from({ length: 32 }, (_, i) => `responsive-${i + 1}`));
+  for (const [partition, count] of [['ordinary', 24], ['design', 8]]) {
+    assert.deepEqual(quality.filter(shard => shard.partition === partition).map(shard => shard.shard),
+      Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
+  }
+  const run = browser.jobs['chromium-tests'].steps.find(step => step.name === 'Run isolated Chromium suite');
+  const pattern = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
+  assert.equal(run.env.QUALITY_PARTITION, '${{ matrix.partition }}');
+  assert.ok(run.run.includes(`ordinary) set -- --grep-invert='${pattern}' ;;`));
+  assert.ok(run.run.includes(`design) set -- --grep='${pattern}' ;;`));
+  assert.ok(run.run.includes(`'') set -- ;;`));
+  assert.match(run.run, /Unknown quality partition/);
+  assert.match(run.run, /--shard=\$\{\{ matrix\.shard \}\} "\$@"/);
   for (const [suite, count] of [['a11y', 13], ['performance', 1]]) {
     assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard),
       Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));

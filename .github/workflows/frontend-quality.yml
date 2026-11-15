@@ -103,39 +103,40 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Keep every partition required; the aggregate checks the entire matrix.
-          - {name: responsive-1, suite: quality, shard: '1/32'}
-          - {name: responsive-2, suite: quality, shard: '2/32'}
-          - {name: responsive-3, suite: quality, shard: '3/32'}
-          - {name: responsive-4, suite: quality, shard: '4/32'}
-          - {name: responsive-5, suite: quality, shard: '5/32'}
-          - {name: responsive-6, suite: quality, shard: '6/32'}
-          - {name: responsive-7, suite: quality, shard: '7/32'}
-          - {name: responsive-8, suite: quality, shard: '8/32'}
-          - {name: responsive-9, suite: quality, shard: '9/32'}
-          - {name: responsive-10, suite: quality, shard: '10/32'}
-          - {name: responsive-11, suite: quality, shard: '11/32'}
-          - {name: responsive-12, suite: quality, shard: '12/32'}
-          - {name: responsive-13, suite: quality, shard: '13/32'}
-          - {name: responsive-14, suite: quality, shard: '14/32'}
-          - {name: responsive-15, suite: quality, shard: '15/32'}
-          - {name: responsive-16, suite: quality, shard: '16/32'}
-          - {name: responsive-17, suite: quality, shard: '17/32'}
-          - {name: responsive-18, suite: quality, shard: '18/32'}
-          - {name: responsive-19, suite: quality, shard: '19/32'}
-          - {name: responsive-20, suite: quality, shard: '20/32'}
-          - {name: responsive-21, suite: quality, shard: '21/32'}
-          - {name: responsive-22, suite: quality, shard: '22/32'}
-          - {name: responsive-23, suite: quality, shard: '23/32'}
-          - {name: responsive-24, suite: quality, shard: '24/32'}
-          - {name: responsive-25, suite: quality, shard: '25/32'}
-          - {name: responsive-26, suite: quality, shard: '26/32'}
-          - {name: responsive-27, suite: quality, shard: '27/32'}
-          - {name: responsive-28, suite: quality, shard: '28/32'}
-          - {name: responsive-29, suite: quality, shard: '29/32'}
-          - {name: responsive-30, suite: quality, shard: '30/32'}
-          - {name: responsive-31, suite: quality, shard: '31/32'}
-          - {name: responsive-32, suite: quality, shard: '32/32'}
+          # Complementary filters keep every quality test while spreading the
+          # long, 27-pack acceptance cases across eight required jobs.
+          - {name: responsive-1, suite: quality, partition: ordinary, shard: '1/24'}
+          - {name: responsive-2, suite: quality, partition: ordinary, shard: '2/24'}
+          - {name: responsive-3, suite: quality, partition: ordinary, shard: '3/24'}
+          - {name: responsive-4, suite: quality, partition: ordinary, shard: '4/24'}
+          - {name: responsive-5, suite: quality, partition: ordinary, shard: '5/24'}
+          - {name: responsive-6, suite: quality, partition: ordinary, shard: '6/24'}
+          - {name: responsive-7, suite: quality, partition: ordinary, shard: '7/24'}
+          - {name: responsive-8, suite: quality, partition: ordinary, shard: '8/24'}
+          - {name: responsive-9, suite: quality, partition: ordinary, shard: '9/24'}
+          - {name: responsive-10, suite: quality, partition: ordinary, shard: '10/24'}
+          - {name: responsive-11, suite: quality, partition: ordinary, shard: '11/24'}
+          - {name: responsive-12, suite: quality, partition: ordinary, shard: '12/24'}
+          - {name: responsive-13, suite: quality, partition: ordinary, shard: '13/24'}
+          - {name: responsive-14, suite: quality, partition: ordinary, shard: '14/24'}
+          - {name: responsive-15, suite: quality, partition: ordinary, shard: '15/24'}
+          - {name: responsive-16, suite: quality, partition: ordinary, shard: '16/24'}
+          - {name: responsive-17, suite: quality, partition: ordinary, shard: '17/24'}
+          - {name: responsive-18, suite: quality, partition: ordinary, shard: '18/24'}
+          - {name: responsive-19, suite: quality, partition: ordinary, shard: '19/24'}
+          - {name: responsive-20, suite: quality, partition: ordinary, shard: '20/24'}
+          - {name: responsive-21, suite: quality, partition: ordinary, shard: '21/24'}
+          - {name: responsive-22, suite: quality, partition: ordinary, shard: '22/24'}
+          - {name: responsive-23, suite: quality, partition: ordinary, shard: '23/24'}
+          - {name: responsive-24, suite: quality, partition: ordinary, shard: '24/24'}
+          - {name: responsive-25, suite: quality, partition: design, shard: '1/8'}
+          - {name: responsive-26, suite: quality, partition: design, shard: '2/8'}
+          - {name: responsive-27, suite: quality, partition: design, shard: '3/8'}
+          - {name: responsive-28, suite: quality, partition: design, shard: '4/8'}
+          - {name: responsive-29, suite: quality, partition: design, shard: '5/8'}
+          - {name: responsive-30, suite: quality, partition: design, shard: '6/8'}
+          - {name: responsive-31, suite: quality, partition: design, shard: '7/8'}
+          - {name: responsive-32, suite: quality, partition: design, shard: '8/8'}
           # Thirteen independent audits; don't create 51 empty runners.
           - {name: accessibility, suite: a11y, shard: '1/13'}
           - {name: accessibility-2, suite: a11y, shard: '2/13'}
@@ -169,7 +170,15 @@ jobs:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
           GUARD_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
-        run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
+          QUALITY_PARTITION: ${{ matrix.partition }}
+        run: |
+          case "$QUALITY_PARTITION" in
+            ordinary) set -- --grep-invert='widget-design-packs\.(app|energy|native)\.spec\.ts' ;;
+            design) set -- --grep='widget-design-packs\.(app|energy|native)\.spec\.ts' ;;
+            '') set -- ;;
+            *) echo "Unknown quality partition: $QUALITY_PARTITION" >&2; exit 1 ;;
+          esac
+          npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} "$@" ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
       - name: Record application design build receipt
         if: always() && matrix.suite == 'quality'
         run: |
