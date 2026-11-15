@@ -155,7 +155,19 @@ bar and two-row navigation occupy substantial height; the Drives and Energy
 metric cards each take a full-width row, pushing the history and chart below
 the first screen. The dashboard action row also leaves a conspicuous band of
 empty space. These observations do not cover the rest of each page, chart
-contrast, interaction states or the still-running matrix. The protected
-Digital Twin requirements remain unresolved. The matrix recorded the
+contrast or interaction states. The protected Digital Twin requirements
+remain unresolved. The matrix recorded the
 dashboard case as failed and the Drives and Energy cases as passed; images
 are saved before the later diagnostic assertions.
+
+## Completed final matrix
+
+The pinned `445e5bb317b1` build produced **1,014 passed, 2 failed** across
+254 routes at each of 360px, 430px, 768px and 1440px. Both failures were
+the phone dashboard's protected Digital Twin: its controls measured
+36×36px and 10×28px and three text elements measured 14px. The runner
+saved those images before reporting the failures.
+
+All 1,016 PNGs were decoded successfully at their expected viewport
+dimensions. `/period-compare` and six standalone routes remain excluded;
+the matrix did not establish contrast or visual quality on every page.

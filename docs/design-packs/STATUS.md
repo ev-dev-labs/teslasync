@@ -1,7 +1,7 @@
 # Design pack status
 
 - `design-packs-v2` is based on `feature/app-design-themes`; all 27 stylesheets changed, but their reviews retain unresolved defects.
-- The resumed Classic matrix passed 1,014/1,016 checks; two protected dashboard twin phone cases failed. Its preserved images span builds, and the remaining pack matrix is unfinished. Studio's earlier screenshot-free sweep passed 500/508 phone cases.
+- The Classic and Studio matrices each passed 1,014/1,016 checks; protected dashboard twin phone cases failed. Studio's 1,016 images decoded successfully; Classic images span builds, and the remaining matrix is unfinished.
 - Phase 1 remains incomplete: token coverage, protected dashboard twin hotspots and standalone routes remain unresolved.
 - Dark and light Drives/Energy/Vehicles sweeps passed 162/162 scoped checks each; the light contrast scan had 64 incomplete nodes, 12 later resolved in Terminal. Cyber grid contrast and preview isolation have focused cross-browser checks; full-page accessibility remains unverified.
 - Full Vitest on snapshot `243a4c3199` passed 2,947 files and 101,822 tests; later CSS and browser-test changes require separate validation.
