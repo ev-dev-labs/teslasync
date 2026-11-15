@@ -119,7 +119,7 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
                     key={row.name}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                   >
-                    <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex min-w-0 max-w-full items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
                       <Text data-app-part="metric-label" variant="code" className="min-w-0 break-words">
                         {row.name}
