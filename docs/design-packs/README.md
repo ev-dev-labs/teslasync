@@ -43,8 +43,13 @@ chart subtitles use the same body-size token, while compact metadata inside
 the brief keeps its existing typography. Owned headline units and inline
 metric badges also use that token outside protected widgets and conversations.
 Blueprint reserves enough brief-column width for its ledger label/value pairs
-to remain readable on phones. Opted-in evidence tables use the
-shared mobile grid and retain their original columns in Quick View.
+to remain readable on phones; Editorial stacks operational labels above their
+values. Helix wraps long code and presents Markdown tables using the shared
+phone grid, with labels derived from their column headings. Fine-pointer
+desktop and report/kiosk presentations retain their original layouts; the
+shared stacked-table treatment also applies to larger coarse-pointer screens.
+Opted-in evidence tables use the shared mobile grid and retain their original
+columns in Quick View.
 Interactive chart legends use `--app-chart-hidden-legend-opacity` to keep
 hidden-series labels readable while retaining their strike-through and pressed
 state. Protected widgets and unowned charts retain their existing dimming.

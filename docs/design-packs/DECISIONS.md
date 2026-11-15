@@ -2120,5 +2120,55 @@ The four axe results needing manual review were two repetitions each of a
 charging result count and a decorative Quick Stats arrow. At both widths the
 count used `rgb(170, 180, 195)` on `rgb(17, 21, 28)` (8.73:1); the arrow
 used `rgb(244, 247, 251)` on that surface (17.03:1). These are computed-style
-samples, not a full contrast or visual review. The all-pack four-page
-contrast check remains in progress.
+samples, not a full contrast or visual review. The completed all-pack
+four-page results are recorded below.
+
+### All-pack contrast spot checks and phone follow-up
+
+The screenshot-free checks completed against immutable `bd586368207c` assets:
+charging, drives, Quick Stats and settings at 360px and 430px in each of the
+27 packs. Dark and light each reported 214 passed and two failed: Editorial's
+430px charging and settings labels split words. In each theme axe reported
+zero violated rules across 216 reports; 176 nodes in 116 reports still need
+manual review. These results do not certify contrast or untested pages.
+
+```text
+dark:  214 passed, 2 failed; 216 reports, 0 violated rules, 176 incomplete nodes
+light: 214 passed, 2 failed; 216 reports, 0 violated rules, 176 incomplete nodes
+```
+
+Editorial's phone metric banks now stack labels and values when narrow. The
+final Edge regression passed on the revised production assets in both themes,
+including the previously failing 430px pages and a 360px, 1.35-scale label.
+Its `14 passed` includes ten Helix cases; it does not replace the full
+contrast or screenshot matrix.
+
+Helix's long code and wide Markdown tables also overflowed or squeezed on
+phones. The owner-scoped phone treatment wraps code and stacks table cells
+with their original column headings, without changing copied text or API
+data. Fine-pointer desktop, widget-only, report and kiosk treatments remain
+unchanged; larger coarse-pointer screens use the shared stacked-table rules.
+The all-pack browser check switches complete CSS profile attributes directly;
+it tests owner propagation and composition, not saved-selection persistence.
+
+```text
+Edge production-build regression:             14 passed (1.4m)
+Firefox/WebKit Helix regression:              20 passed (8.8m)
+Firefox/WebKit Editorial regression:           8 passed (4.3m)
+BROWSER_PROBE_API_ESCAPE=0
+MarkdownRenderer.test.tsx:                    10 passed
+Pack/steps/DataTable preservation:            15 passed | 194 skipped
+FRONTEND_TSC_EXIT=0
+SERVICE_WORKER_TYPECHECK_EXIT=0
+E2E_TSC_EXIT=0
+ISOLATED_VITE_BUILD_EXIT=0
+POSTBUILD_check-bundle-size.mjs_EXIT=0
+POSTBUILD_check-pwa-precache.mjs_EXIT=0
+POSTBUILD_check-pwa-contract.mjs_EXIT=0
+POSTBUILD_check-source-maps.mjs_EXIT=0
+```
+
+The scoped audit reported no violations in the modified CSS, renderer or
+browser tests. It reported one `raw-html-table` finding in `MarkdownTable.tsx`:
+the matched `<Table>` is the shared component imported from `@/components/ui`,
+not a raw HTML table. No screenshots were taken for these follow-ups.
