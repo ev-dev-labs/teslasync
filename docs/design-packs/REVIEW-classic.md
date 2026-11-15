@@ -7,6 +7,16 @@ remaining routes and interaction states are unreviewed.
 The first two score tables record earlier captures; some screenshot paths
 have since been overwritten by recaptures and no longer reproduce those frames.
 
+## Speed heatmap contrast follow-up
+
+In the light-theme detail at `shots/classic/review/light-speed-heatmap.png`,
+the measured-zero fill contrasted only 1.067:1 with an unsampled cell. Sampled
+periods now have a token-colored outline and a matching legend; missing
+periods remain unoutlined. A screenshot-free Edge check passed at 360, 390,
+430 and 1440px; the same Classic check passed twice in WebKit. Phones retain
+the existing compact peak reading instead of the full plot. The crop and
+focused checks are not a full-page acceptance.
+
 | Page and image | Hierarchy | Spacing | Typography | Color | Polish | Mobile | Distinctiveness |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Dashboard, `desktop/dashboard.png` | 5 | 4 | 6 | 7 | 5 | — | 4 |

@@ -13,13 +13,13 @@ replacement for the unfinished page matrix.
 ```text
 Heatmap and i18n preservation contracts: 4 files, 869 tests passed
 Split-catalog and i18n loading contracts: 4 files, 167 tests passed
-Edge: 4 pack/theme heatmaps at 360, 390, 430 and 1440px plus cancellation contract: 5 passed (1.8m)
+Edge: 4 pack/theme heatmaps at 360, 390, 430 and 1440px plus cancellation contract: 5 passed (2.9m)
+WebKit: Classic light and Blueprint custom heatmaps, repeated twice: 4 passed (7.9m)
 Scoped SpeedHeatmapWidget guideline audit: 0 violations
 Widget nonblank lines: 348 before, 351 after; chart/panel references: 3 before, 3 after
 Final-source TypeScript, changed-file ESLint, i18n lint, service-worker typecheck,
 isolated production build and four postbuild checks: HEATMAP_V2_BUILD_CHECKS_EXIT=0
-npm run lint before the final test-wait and catalog-key correction: FULL_LINT_EXIT=0
-Earlier changed-file ESLint and E2E TypeScript: FINAL_CHANGED_TYPES_AND_LINT_EXIT=0
+npm run lint after the final test-wait and catalog-key correction: HEATMAP_V2_FULL_LINT_EXIT=0
 useDriving hook verification: 28 paths matched, DRIVING_HOOK_VERIFY_EXIT=0
 ```
 
@@ -35,8 +35,10 @@ reaching the heatmap assertions. A two-repeat WebKit follow-up passed once and
 failed once after resize while the widget measured two pixels wide outside the
 viewport. The focused test now waits for the same containment assertion to
 pass after responsive reflow and allows 20 seconds for DOM settling; it does
-not waive containment. Those runs reported no API escape and saved no
-screenshots. The earlier attempts do not establish the cause of the delay.
+not waive containment. The subsequent two-repeat check passed for both
+Classic light and Blueprint custom, with `BROWSER_PROBE_API_ESCAPE=0` and
+`SCREENSHOT_COUNT=0`. The earlier attempts do not establish the cause of the
+delay, and these focused checks do not certify every pack or page.
 
 The original higher-speed legend is retained in the historical English
 catalog; the revised copy uses a new key. Replacing the historical value
