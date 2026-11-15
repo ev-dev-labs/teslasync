@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import {
   assertMockApiComplete,
   installApiMocks,
@@ -10,7 +10,7 @@ import {
   expectNoRuntimeFailures,
   monitorPage,
 } from './qualityAssertions';
-import { routeBuiltApplication } from './app-design-test';
+import { routeBuiltApplication, test } from './app-design-test';
 import { createReviewPreference, installPackReview, selectReviewPack } from './widget-design-packs.mock';
 import { installSpecializedReviewSources } from './widget-design-packs.specialized.mock';
 
