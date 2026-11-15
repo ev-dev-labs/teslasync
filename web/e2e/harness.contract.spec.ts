@@ -1286,7 +1286,7 @@ test('data modes preserve semantic and embedded metric paint and layout', async 
         expect.soft(styles.normal.background, `${context} normal`).not.toBe('rgb(24, 24, 24)');
       }
     }
-    await sheet.evaluate(element => element.remove());
+    await sheet.evaluate(element => { element.parentNode?.removeChild(element); });
   }
 });
 
