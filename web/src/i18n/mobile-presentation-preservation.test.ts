@@ -19,6 +19,20 @@ describe('mobile presentation source preservation', () => {
     expect(() => restoreMobilePresentationSource(change.file, source.slice(1))).toThrow();
   });
 
+  it('rejects partially reverted Helix pointer-focus repairs', () => {
+    const file = 'web/src/features/system/components/chatbot/SessionList.tsx';
+    const change = changes.find(entry => entry.file === file)!;
+    const source = readFileSync(resolve(process.cwd(), '..', file), 'utf8');
+    const previous = restoreMobilePresentationSource(file, source);
+    expect(producerProjection(file, source)).toEqual(producerProjection(file, previous));
+    for (const hunk of change.hunks) {
+      const lines = source.split('\n');
+      expect(lines.slice(hunk.start, hunk.start + hunk.new.length)).toEqual(hunk.new);
+      lines.splice(hunk.start, hunk.new.length, ...hunk.old);
+      expect(() => restoreMobilePresentationSource(file, lines.join('\n'))).toThrow();
+    }
+  });
+
   it('pins the appearance-loading copy in the actual catalog, shell and producer', () => {
     const file = 'web/src/components/ui/AppDesignBridge.tsx';
     const source = readFileSync(resolve(process.cwd(), '..', file), 'utf8');

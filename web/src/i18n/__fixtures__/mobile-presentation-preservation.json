@@ -1,5 +1,48 @@
 [
   {
+    "file": "web/src/features/system/components/chatbot/SessionList.tsx",
+    "before": "c352113ba45d5536f164f8259ed443e703d1300aa41e9163bd62e0960abf28d8",
+    "after": "031fbb122501fe0522e15f5b26945527074c16861e42bc4281fdd46a911762bd",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { useState, useRef, useEffect, useId, type KeyboardEvent } from 'react';"
+        ],
+        "new": [
+          "import { useState, useRef, useEffect, useId, type KeyboardEvent, type PointerEvent } from 'react';"
+        ]
+      },
+      {
+        "start": 99,
+        "old": [],
+        "new": [
+          "  const handleSessionPointerDown = (event: PointerEvent<HTMLDivElement>) => {",
+          "    if (event.pointerType !== 'mouse' || event.button !== 0 || !(event.target instanceof Element)) return;",
+          "    const button = event.target.closest('button');",
+          "    const main = event.currentTarget.closest('main');",
+          "    const scrollTop = main?.scrollTop ?? 0;",
+          "    if (!button || !main || !scrollTop) return;",
+          "    button.focus({ preventScroll: true });",
+          "    if (main.scrollTop !== scrollTop) {",
+          "      // WebKit can ignore preventScroll and move the pressed button before pointerup.",
+          "      event.preventDefault();",
+          "      main.scrollTop = scrollTop;",
+          "    }",
+          "  };",
+          ""
+        ]
+      },
+      {
+        "start": 178,
+        "old": [],
+        "new": [
+          "                  onPointerDown={handleSessionPointerDown}"
+        ]
+      }
+    ]
+  },
+  {
     "file": "web/src/features/system/components/help-index/DashboardPresetPanel.tsx",
     "before": "36c4f980b3e7299b0118c1914767b095378cea49621b3324256a8867a6f79093",
     "after": "6d744628bae43976f5b0143f9ac0e5ef396deea0c7ec09a6206c8421f29df35a",
