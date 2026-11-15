@@ -454,13 +454,15 @@ for (const mode of ['dark', 'light'] as const) {
 }
 
 const phoneMetricPacks = ['v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus', 'brutal'] as const;
-for (const mode of ['dark', 'light'] as const) {
-  test(`Executive Concierge dashboard distance units remain readable outside preserved widgets in ${mode}`, async ({ page }, testInfo) => {
+for (const [pack, mode] of (['v4', 'v6'] as const).flatMap(
+  pack => (['dark', 'light'] as const).map(mode => [pack, mode] as const),
+)) {
+  test(`${packNames[pack]} dashboard distance units remain readable outside preserved widgets in ${mode}`, async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const origin = testInfo.project.use.baseURL;
     if (typeof origin !== 'string') throw new Error('A running application origin is required');
     const preference = createReviewPreference();
-    preference.pack_id = 'v4';
+    preference.pack_id = pack;
     preference.app_wide = true;
     const widgets = [
       ['onboarding-checklist', 'Onboarding'], ['vehicle-hero', 'Vehicle card'],

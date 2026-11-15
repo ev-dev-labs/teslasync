@@ -387,8 +387,9 @@
     font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
     line-height: var(--app-body-leading, 1.4);
   }
-  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-widget-pack] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
-    [data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *,
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] [data-widget-pack] :is([data-app-metric="headline"], [data-app-metric="stat-card"]) :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+    [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
+    [data-app-metric-grid="native-gauge"] *,
     [data-app-metric="bar"] *, [data-app-metric="ring"] *, [data-app-metric="composition"] *,
     [data-app-metric="score"] *, [data-app-metric="segments"] *,
     [data-presentation-mode="report"] *, [data-presentation-mode="kiosk"] *

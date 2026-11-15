@@ -289,3 +289,28 @@ V6_METRIC_AUDIT_EXIT=0
 
 No new screenshots were taken. The saved dashboard images predate this
 change; protected Digital Twin text and controls remain unresolved.
+
+## Final matrix and charge-unit follow-up
+
+The pinned final matrix reported **1,014 passed, 2 failed**. Both failures
+were phone dashboards: protected Digital Twin controls and text, plus a 12px
+Charge Status distance unit. All 1,016 matrix PNGs passed signature, CRC and
+viewport-dimension checks. The dashboard, Drives and Energy samples were
+inspected; these samples do not establish full-page visual or contrast
+acceptance.
+
+A real-dashboard regression reproduced the Charge Status unit at 10.2px at
+360px and font scale 0.85. Expressive Form now applies its phone body token
+to owned stat-card units and context while excluding preserved twins, native
+gauges, specialized metrics, and report and kiosk presentations. The browser
+regression passed for Expressive Form and Executive Concierge in dark and
+light modes at 360/390/430px, scales 0.85/1/1.35, and normal/forced colors:
+**4 passed**. The native-composition suite passed **121 tests**, including
+the new stat-card ownership and preservation boundary.
+
+Only the two fixed dashboard pages were recaptured against the current Vite
+source. Both cases still failed on protected Digital Twin controls and text,
+but no longer reported the small distance unit. Both PNGs passed integrity
+and dimension checks. Their initial viewports do not show the corrected card;
+the screenshots are mixed-build evidence and the protected failures remain
+open.
