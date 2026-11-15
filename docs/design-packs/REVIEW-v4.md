@@ -403,3 +403,12 @@ images; all 1,016 passed PNG signature, chunk-CRC and configured dimension
 checks. The phone dashboard and destination, desktop dashboard and tablet
 inbox images were inspected. These are initial-viewport captures of the
 pinned assets, not evidence of full-page visual or contrast acceptance.
+
+The `km` unit was traced to an ordinary Charge Status stat card, not a
+protected twin. The v4 phone treatment now applies the body-size token to
+owned stat-card units as well as headline units. Screenshot-free dashboard
+checks passed in dark and light at 360, 390 and 430px, scales 0.85, 1 and
+1.35, and normal and forced colors (`2 passed`). The native-composition and
+Charge Status preservation selection reported `19 passed, 504 skipped`.
+The matrix images predate this correction; the preserved twin findings
+remain unresolved.

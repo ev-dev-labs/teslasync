@@ -449,6 +449,62 @@ for (const mode of ['dark', 'light'] as const) {
 }
 
 const phoneMetricPacks = ['v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus', 'brutal'] as const;
+for (const mode of ['dark', 'light'] as const) {
+  test(`Executive Concierge dashboard distance units remain readable outside preserved widgets in ${mode}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const origin = testInfo.project.use.baseURL;
+    if (typeof origin !== 'string') throw new Error('A running application origin is required');
+    const preference = createReviewPreference();
+    preference.pack_id = 'v4';
+    preference.app_wide = true;
+    const widgets = [
+      ['onboarding-checklist', 'Onboarding'], ['vehicle-hero', 'Vehicle card'],
+      ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini'],
+      ['battery-gauge', 'Battery'], ['climate-status', 'Climate'],
+      ['recent-drives', 'Recent drives'], ['charge-status', 'Charge status'],
+      ['security-status', 'Security'], ['quick-nav', 'Quick navigation'], ['fleet-posture', 'Fleet posture'],
+    ] as const;
+    const mocks = await installPackReview(page, mode, 390, false, widgets, true, preference, origin);
+    await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto('/');
+    await waitForHarnessReady(page, mocks);
+    const units = page.locator('[data-app-part~="metric-unit"]').filter({ hasText: /^km$/ });
+    await expect(units.first()).toBeVisible();
+    for (const forcedColors of ['none', 'active'] as const) {
+      await page.emulateMedia({ forcedColors });
+      for (const width of [360, 390, 430]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const scale of [0.85, 1, 1.35]) {
+          await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+          const readings = await units.evaluateAll(elements => elements.map(element => {
+            const box = element.getBoundingClientRect();
+            const metric = element.closest('[data-app-metric]')?.getBoundingClientRect();
+            const row = element.parentElement;
+            return {
+              size: parseFloat(getComputedStyle(element).fontSize),
+              widget: element.closest('[data-widget-id]')?.getAttribute('data-widget-id'),
+              preserved: !!element.closest('[data-app-design-preserve], [data-vehicle-twin]'),
+              contained: !!metric && box.left >= metric.left - 1 && box.right <= metric.right + 1,
+              overflow: row ? row.scrollWidth - row.clientWidth : Infinity,
+            };
+          }));
+          const owned = readings.filter(item => !item.preserved);
+          expect(owned.some(item => item.widget === 'pack-review-charge-status')).toBe(true);
+          for (const reading of owned) {
+            const label = `${mode} ${forcedColors} ${width}px scale ${scale} ${reading.widget}`;
+            expect(reading.size, `${label} distance unit`).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.02);
+            expect(reading.contained, `${label} unit containment`).toBe(true);
+            expect(reading.overflow, `${label} reading overflow`).toBeLessThanOrEqual(1);
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
 for (const [pack, mode] of phoneMetricPacks.flatMap(
   pack => (['dark', 'light'] as const).map(mode => [pack, mode] as const),
 )) {
