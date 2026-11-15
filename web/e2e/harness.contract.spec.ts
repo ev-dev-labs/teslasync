@@ -2572,6 +2572,7 @@ test('authenticated smoke records only sanitized aggregate status', () => {
 
 test('CI shares one hermetic build and gives each browser shard one managed preview', () => {
   interface WorkflowStep {
+    name?: string;
     run?: string;
     if?: string;
     uses?: string;
