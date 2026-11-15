@@ -98,6 +98,10 @@ export function NotificationLatencyPanel() {
     [summary.histogram, t, fmtNumber],
   );
   const latencyAxis = phoneAxes?.categoryAxis(histogramData.map(({ range }) => range));
+  const histogramMargin = phoneAxes ? {
+    ...phoneAxes.margin,
+    right: Math.max(phoneAxes.margin.right, Math.ceil(phoneAxes.numericWidth(summary.count, fmtInt) / 2)),
+  } : undefined;
   const sourceDescriptor = { id: 'notification-latency', label: t('notificationLatency.title', 'Notification latency'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
   const isBlocked = !source.hasData && source.isRefreshBlocked;
@@ -212,7 +216,7 @@ export function NotificationLatencyPanel() {
           >
             {/* Single histogram count series; percentile summaries are KPIs rather than toggleable series. */}
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={histogramData} layout={phoneAxes ? 'vertical' : 'horizontal'} margin={phoneAxes?.margin}>
+              <BarChart data={histogramData} layout={phoneAxes ? 'vertical' : 'horizontal'} margin={histogramMargin}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 {phoneAxes && latencyAxis ? (
                   <>

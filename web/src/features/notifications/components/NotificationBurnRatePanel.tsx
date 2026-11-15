@@ -62,6 +62,7 @@ export function NotificationBurnRatePanel() {
   const countWidth = phoneAxes?.numericWidth(timelineData.reduce(
     (max, row) => Math.max(max, row.sent + row.failed + row.deferred), 0,
   ));
+  const timelineMargin = phoneAxes?.marginFor(timelineData.map(({ time }) => time));
   const sourceDescriptor = { id: 'notification-burn-rate', label: t('notificationBurnRate.title', 'Notification burn rate'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
   const isBlocked = !source.hasData && source.isRefreshBlocked;
@@ -194,7 +195,7 @@ export function NotificationBurnRatePanel() {
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={timelineData} margin={phoneAxes?.margin}>
+                <BarChart data={timelineData} margin={timelineMargin}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} dataKey="time"
                     tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}

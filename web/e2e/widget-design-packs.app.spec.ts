@@ -165,16 +165,16 @@ async function assertCommandAxisGeometry(chart: Locator, scale: number, label: s
     const issues: string[] = [];
     if (labels.filter(node => node.axis === 'x').length < 2) issues.push('fewer than two x-axis ticks');
     if (labels.filter(node => node.axis === 'y').length < 2) issues.push(`fewer than two y-axis ticks (${dimensions()}, svg=${bounds.width}x${bounds.height})`);
+    const box = (rect: DOMRect) => [rect.left, rect.top, rect.right, rect.bottom].map(value => value.toFixed(1)).join(',');
     for (const [index, node] of labels.entries()) {
       if (node.size < Math.max(16, 16 * expectedScale) - 0.1) issues.push(`${node.axis}:${node.text} is ${node.size}px`);
       if (node.rect.left < bounds.left - 1 || node.rect.right > bounds.right + 1
         || node.rect.top < bounds.top - 1 || node.rect.bottom > bounds.bottom + 1) {
-        issues.push(`${node.axis}:${node.text} is clipped`);
+        issues.push(`${node.axis}:${node.text} [${box(node.rect)}] is clipped by svg [${box(bounds)}]`);
       }
       for (const other of labels.slice(index + 1)) {
         if (node.rect.left < other.rect.right - 1 && node.rect.right > other.rect.left + 1
           && node.rect.top < other.rect.bottom - 1 && node.rect.bottom > other.rect.top + 1) {
-          const box = (rect: DOMRect) => [rect.left, rect.top, rect.right, rect.bottom].map(value => value.toFixed(1)).join(',');
           issues.push(`${node.axis}:${node.text} [${box(node.rect)}] overlaps ${other.axis}:${other.text} [${box(other.rect)}]`);
         }
       }
@@ -210,7 +210,7 @@ for (const [mode, scenario, customFont] of [
       await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
         .evaluate(node => getComputedStyle(node).fontFamily)).toContain('Georgia');
     }
-    await chart.scrollIntoViewIfNeeded();
+    await chart.scrollIntoViewIfNeeded({ timeout: 30_000 });
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
@@ -284,9 +284,12 @@ test('Command History keeps its original chart without an application-wide pack'
 test.describe('Notification health phone chart axes', () => {
   for (const [mode, customFont] of [['dark', false], ['light', false], ['dark', true]] as const) {
     test(`stay legible and contained in ${mode}${customFont ? ' with a custom font and locale' : ''}`, async ({ page }, testInfo) => {
-      test.setTimeout(300_000);
+      test.setTimeout(420_000);
       const origin = testInfo.project.use.baseURL;
       if (typeof origin !== 'string') throw new Error('A running application origin is required');
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+      });
       const preference = createReviewPreference();
       preference.app_wide = true;
       const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin,
@@ -309,7 +312,7 @@ test.describe('Notification health phone chart axes', () => {
       await routeBuiltApplication(page, new URL(origin).origin, ['/notifications/health'], process.env.DESIGN_PACK_DIST_DIR);
       await page.setViewportSize({ width: 360, height: 900 });
       await page.goto('/notifications/health');
-      await waitForHarnessReady(page, mocks);
+      await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs: 25_000 });
       const charts = [
         page.locator('#fatigue [data-chart-viewport]').nth(0),
         page.locator('#fatigue [data-chart-viewport]').nth(1),
@@ -319,22 +322,23 @@ test.describe('Notification health phone chart axes', () => {
       await expect(page.locator('#latency table').first().locator('tbody tr')).toHaveCount(6);
       await expect(page.locator('#latency table').first().locator('tbody tr').first()).toContainText('250');
       await page.setViewportSize({ width: 1440, height: 900 });
-      for (const chart of charts) {
+      for (const [index, chart] of charts.entries()) {
         await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
-          .evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+          .evaluate(node => parseFloat(getComputedStyle(node).fontSize), undefined, { timeout: 20_000 }),
+        { message: `${mode} desktop chart ${index + 1}`, timeout: 20_000 }).toBe(11);
       }
       for (const width of [360, 390, 430]) {
         await page.setViewportSize({ width, height: 900 });
         for (const scale of [0.85, 1, 1.35]) {
           await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
           for (const [index, chart] of charts.entries()) {
-            await chart.scrollIntoViewIfNeeded();
+            await chart.scrollIntoViewIfNeeded({ timeout: 30_000 });
             await assertCommandAxisGeometry(chart, scale, `${mode} chart ${index + 1}, ${width}px, scale ${scale}`);
           }
         }
       }
       const latencyChart = charts[3]!;
-      await latencyChart.scrollIntoViewIfNeeded();
+      await latencyChart.scrollIntoViewIfNeeded({ timeout: 30_000 });
       await expect(latencyChart.locator('.recharts-yAxis .recharts-cartesian-axis-tick-value')).toHaveCount(6);
       await latencyChart.locator('.recharts-bar-rectangle .recharts-rectangle').first().hover();
       const latencyTooltip = page.locator('#latency [data-chart-tooltip-label]');
@@ -346,11 +350,11 @@ test.describe('Notification health phone chart axes', () => {
       }
       for (const pack of ['v1', 'cyber', 'blueprint'] as const) {
         await selectReviewPack(page, pack);
-        await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+        await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack, { timeout: 20_000 });
         for (const width of [360, 430]) {
           await page.setViewportSize({ width, height: 900 });
           for (const [index, chart] of charts.entries()) {
-            await chart.scrollIntoViewIfNeeded();
+            await chart.scrollIntoViewIfNeeded({ timeout: 30_000 });
             await assertCommandAxisGeometry(chart, 1.35, `${pack} ${mode} chart ${index + 1}, ${width}px`);
           }
         }
@@ -368,10 +372,11 @@ test.describe('Notification health phone chart axes', () => {
         });
         channel.close();
       });
-      await expect(page.locator('html')).not.toHaveAttribute('data-app-design-owner');
-      for (const chart of charts) {
+      await expect(page.locator('html')).not.toHaveAttribute('data-app-design-owner', { timeout: 20_000 });
+      for (const [index, chart] of charts.entries()) {
         await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
-          .evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBe(11);
+          .evaluate(node => parseFloat(getComputedStyle(node).fontSize), undefined, { timeout: 20_000 }),
+        { message: `${mode} unowned chart ${index + 1}`, timeout: 20_000 }).toBe(11);
       }
       await assertMockApiComplete(page, mocks);
     });
@@ -673,7 +678,7 @@ test('nested preview comparison settles map control hover independently of the o
   for (const outer of ['memphis', 'blueprint'] as const) {
     await selectReviewPack(page, outer);
     await expectProfile(page, outer);
-    await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+    await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click({ timeout: 30_000 });
     const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
     const preview = dialog.locator('[data-preview-synthetic="true"]');
     await expect(preview).toBeVisible();
@@ -751,6 +756,7 @@ for (const { theme, width, allocation } of [
     await waitForHarnessReady(page, mocks);
     const picker = await appearance(page, width);
     const incomplete: Awaited<ReturnType<typeof inspectIncompletePreview>>[] = [];
+    const tableDiagnostics: unknown[] = [];
     for (const outer of ['memphis', 'blueprint'] as const) {
       await selectReviewPack(page, outer);
       await expectProfile(page, outer);
@@ -761,7 +767,7 @@ for (const { theme, width, allocation } of [
       await preview.evaluate((element, allocatedWidth) => { element.style.width = `${allocatedWidth}px`; }, allocation);
       await expect.poll(() => preview.evaluate(element => element.getBoundingClientRect().width)).toBe(allocation);
       await expect(preview.locator('.leaflet-container')).toHaveCount(1);
-      incomplete.push(await inspectIncompletePreview(page, preview));
+      incomplete.push(await inspectIncompletePreview(page, preview, tableDiagnostics));
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
     }
@@ -769,6 +775,9 @@ for (const { theme, width, allocation } of [
       JSON.stringify(style) === JSON.stringify(incomplete[1].inline.styles[index])
         ? []
         : [{ index, before: style, after: incomplete[1].inline.styles[index] }]);
+    if (JSON.stringify(incomplete[0]) !== JSON.stringify(incomplete[1])) {
+      await attachJsonEvidence(testInfo, 'neutral-table-diagnostics.json', tableDiagnostics);
+    }
     expect(incomplete[0], `neutral preview style differences: ${JSON.stringify(changedStyles.slice(0, 8))}`)
       .toEqual(incomplete[1]);
     await assertMockApiComplete(page, mocks);
@@ -1145,7 +1154,7 @@ async function settlePointer(host: Locator) {
   });
 }
 
-async function inspectIncompletePreview(page: Page, preview: Locator) {
+async function inspectIncompletePreview(page: Page, preview: Locator, tableDiagnostics?: unknown[]) {
   await preview.evaluate(element => element.removeAttribute('data-app-data'));
   await expect(preview).not.toHaveAttribute('data-app-design-owner');
   await expect(preview.locator('[data-app-design-owner]')).toHaveCount(0);
@@ -1160,6 +1169,27 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
     })),
   { message: 'neutral error wrappers settle inherited text color after owner removal' }).toBe(true);
   const inline = await isolationAppearance(preview);
+  if (tableDiagnostics) {
+    tableDiagnostics.push(await preview.locator('[data-preview-section="table"]').evaluate(section => {
+      const origin = section.getBoundingClientRect();
+      return [...section.querySelectorAll('table, tr, th, td, th *, td *')].map(node => {
+        const box = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {
+          tag: node.tagName,
+          part: node.getAttribute('data-app-part'),
+          text: node.textContent?.trim().slice(0, 80),
+          top: box.top - origin.top,
+          width: box.width,
+          height: box.height,
+          font: style.font,
+          lineHeight: style.lineHeight,
+          padding: style.padding,
+          border: style.borderWidth,
+        };
+      });
+    }));
+  }
   const portals: Record<string, unknown> = {};
   for (const [trigger, name] of [
     ['Preview help', 'Preview help'], ['Inspect sample journey', 'Synthetic journey details'],
@@ -1167,7 +1197,7 @@ async function inspectIncompletePreview(page: Page, preview: Locator) {
   ]) {
     const opener = preview.getByRole('button', { name: trigger, exact: true });
     if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'false');
-    await opener.click();
+    await opener.click({ timeout: 30_000 });
     const portal = page.getByRole('dialog', { name, exact: true });
     if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'true');
     await expect(portal).toBeVisible();

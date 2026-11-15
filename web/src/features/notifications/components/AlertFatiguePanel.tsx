@@ -96,6 +96,8 @@ export function AlertFatiguePanel() {
   const hourCountWidth = phoneAxes?.numericWidth(
     hourData.reduce((max, { count }) => Math.max(max, count), 0), countLabel,
   );
+  const scoreMargin = phoneAxes?.marginFor([numberLabel(100)]);
+  const hourMargin = phoneAxes?.marginFor(hourData.map(({ hour }) => hour));
 
   const sourceDescriptor = { id: 'alert-fatigue', label: t('alertFatigue.title', 'Alert fatigue'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
@@ -247,7 +249,7 @@ export function AlertFatiguePanel() {
               <BarChart
                 data={chartData}
                 layout="vertical"
-                margin={phoneAxes?.margin ?? { top: 8, right: 16, bottom: 8, left: 8 }}
+                margin={scoreMargin ?? { top: 8, right: 16, bottom: 8, left: 8 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} type="number" tickFormatter={numberLabel}
@@ -320,7 +322,7 @@ export function AlertFatiguePanel() {
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={hourData} margin={phoneAxes?.margin}>
+            <BarChart data={hourData} margin={hourMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} dataKey="hour"
                 tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}

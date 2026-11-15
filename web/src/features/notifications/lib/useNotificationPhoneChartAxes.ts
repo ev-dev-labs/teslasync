@@ -59,11 +59,16 @@ export function useNotificationPhoneChartAxes() {
         },
       };
     };
+    const margin = { top: Math.ceil(size * 0.75), right: Math.ceil(size / 2), bottom: 0, left: 0 };
     return {
       key: `${size}-${family}-${revision}`,
       tick: { fill: 'var(--text-muted)', fontSize: size, fontFamily: family },
       className: '[&_.recharts-cartesian-axis-tick-value]:!text-[length:var(--app-body-size)]',
-      margin: { top: Math.ceil(size * 0.75), right: Math.ceil(size / 2), bottom: 0, left: 0 },
+      margin,
+      marginFor: (labels: readonly string[]) => ({
+        ...margin,
+        right: Math.max(margin.right, Math.ceil(measureAxisLabelWidth(labels, measure, 0, 0) / 2 + size / 4)),
+      }),
       xHeight: Math.ceil(size * 3),
       minTickGap: Math.ceil(size / 2),
       tickMargin: Math.ceil(size),
