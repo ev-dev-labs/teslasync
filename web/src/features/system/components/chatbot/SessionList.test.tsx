@@ -100,7 +100,10 @@ function makeSession(overrides: Partial<ChatSessionInfo> = {}): ChatSessionInfo 
   };
 }
 
-function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {}) {
+function renderList(
+  props: Partial<React.ComponentProps<typeof SessionList>> = {},
+  { inMain = false }: { inMain?: boolean } = {},
+) {
   const handlers = {
     onSelect: vi.fn(),
     onNewChat: vi.fn(),
@@ -109,7 +112,7 @@ function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {
   };
   const sessions = props.sessions ?? [makeSession()];
   const activeSessionId = props.activeSessionId ?? '';
-  const utils = render(
+  const list = (
     <SessionList
       sessions={sessions}
       activeSessionId={activeSessionId}
@@ -119,12 +122,67 @@ function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {
       onDelete={props.onDelete ?? handlers.onDelete}
       isLoading={props.isLoading}
       source={props.source}
-    />,
+    />
   );
+  const utils = render(inMain ? <main>{list}</main> : list);
   return { ...utils, ...handlers };
 }
 
 describe('SessionList', () => {
+  it('keeps a mouse selection in place if focus scrolls its workspace', () => {
+    const { onSelect } = renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    vi.spyOn(session, 'focus').mockImplementation(options => {
+      main.scrollTop = 0;
+      HTMLElement.prototype.focus.call(session, options);
+    });
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    Object.defineProperty(down, 'pointerType', { value: 'mouse' });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(true);
+    expect(session).toHaveFocus();
+    fireEvent.click(session);
+    expect(onSelect).toHaveBeenCalledWith('s1');
+  });
+
+  it('leaves normal mouse focus and clicks unchanged when no scroll jump occurs', () => {
+    const { onSelect } = renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    Object.defineProperty(down, 'pointerType', { value: 'mouse' });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(false);
+    expect(session).toHaveFocus();
+    fireEvent.click(session);
+    expect(onSelect).toHaveBeenCalledWith('s1');
+  });
+
+  it.each([
+    ['touch', 0],
+    ['mouse', 2],
+  ])('does not intercept %s pointer button %i', (pointerType, button) => {
+    renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    const focus = vi.spyOn(session, 'focus');
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button });
+    Object.defineProperty(down, 'pointerType', { value: pointerType });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+  });
+
   it('renders the New Chat control + Sessions header and fires onNewChat', () => {
     const { onNewChat } = renderList({ sessions: [] });
 

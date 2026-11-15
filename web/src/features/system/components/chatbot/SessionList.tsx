@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useId, type KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, useId, type KeyboardEvent, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, ConfirmDialog, GlassPanel, Icon, Input, Text } from '@/components/ui';
@@ -97,6 +97,20 @@ export function SessionList({
     }
   };
 
+  const handleSessionPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0 || !(event.target instanceof Element)) return;
+    const button = event.target.closest('button');
+    const main = event.currentTarget.closest('main');
+    const scrollTop = main?.scrollTop ?? 0;
+    if (!button || !main || !scrollTop) return;
+    button.focus({ preventScroll: true });
+    if (main.scrollTop !== scrollTop) {
+      // WebKit can ignore preventScroll and move the pressed button before pointerup.
+      event.preventDefault();
+      main.scrollTop = scrollTop;
+    }
+  };
+
   return (
     <>
       <GlassPanel
@@ -162,6 +176,7 @@ export function SessionList({
                 <div
                   key={session.id}
                   role="listitem"
+                  onPointerDown={handleSessionPointerDown}
                   data-app-part="list-row conversation-session"
                   data-app-session-state={isRenaming ? 'editing' : isActive ? 'active' : 'idle'}
                   className={cn(
