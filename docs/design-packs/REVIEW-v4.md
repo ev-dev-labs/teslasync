@@ -392,3 +392,14 @@ Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
 The owned ordinary headline context and units now use the phone body token;
 protected and specialized surfaces remain excluded. See `DECISIONS.md` for
 the screenshot-free regression results and remaining limitations.
+
+## Final matrix progress
+
+The pinned `445e5bb317b1` matrix reported `1014 passed, 2 failed (52.6m)`.
+Both failures were the phone dashboard: the preserved Digital Twin controls
+and text remain below the requested mobile minima, and the audit also found
+a 12px `km` unit whose source needs confirmation. Each viewport produced 254
+images; all 1,016 passed PNG signature, chunk-CRC and configured dimension
+checks. The phone dashboard and destination, desktop dashboard and tablet
+inbox images were inspected. These are initial-viewport captures of the
+pinned assets, not evidence of full-page visual or contrast acceptance.

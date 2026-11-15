@@ -1,7 +1,7 @@
 # Design pack status
 
 - `design-packs-v2` is based on `feature/app-design-themes`; all 27 stylesheets changed, but their reviews retain unresolved defects.
-- Classic and Studio each passed 1,014/1,016 matrix checks, Horizon 1,012/1,016 and Precision Ledger 1,013/1,016. Later focused fixes have passing retries; protected dashboard phone cases remain unresolved and the matrix is unfinished.
+- Classic, Studio and Executive Concierge each passed 1,014/1,016 matrix checks, Horizon 1,012/1,016 and Precision Ledger 1,013/1,016. Protected dashboard phone cases and a 12px Concierge unit remain unresolved; the matrix is unfinished.
 - Phase 1 remains incomplete: token coverage, protected dashboard twin hotspots and standalone routes remain unresolved.
 - Dark and light Drives/Energy/Vehicles sweeps passed 162/162 scoped checks each; the light contrast scan had 64 incomplete nodes, 12 later resolved in Terminal. Cyber grid contrast and preview isolation have focused cross-browser checks; full-page accessibility remains unverified.
 - Full Vitest on snapshot `243a4c3199` passed 2,947 files and 101,822 tests; the `98debceb5a8b` rerun was stopped after a Firefox axis defect was found.
