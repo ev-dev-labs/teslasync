@@ -740,7 +740,7 @@ async function auditPreview(page: Page, testInfo: TestInfo, file: string) {
     .include('[data-preview-synthetic="true"]')
     .options({ rules: { 'target-size': { enabled: true } } })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
-  await testInfo.attach(file, { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
+  await attachJsonEvidence(testInfo, file, results);
   expect(results.violations, 'the real preview has no waived WCAG 2.2 AA violations').toEqual([]);
 }
 
@@ -1155,8 +1155,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         energySources.setActive(path === energyReviewPath);
         const routeSignatures = new Map<string, PackId[]>();
         await page.goto(path);
-        await waitForHarnessReady(page, mocks, path === chargingReviewPath
-          ? { domStabilityTimeoutMs: 20_000 } : undefined);
+        const domStabilityTimeoutMs = path === chargingReviewPath ? 20_000
+          : path.startsWith('/drives/') ? 30_000 : undefined;
+        await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs });
         for (const packId of packIds) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);
@@ -1434,11 +1435,10 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         await attachJsonEvidence(testInfo, 'preview-compositions.json', {
           scope, observations: geometryEvidence,
         });
-        await testInfo.attach('preview-identity-collisions.json', {
-          body: JSON.stringify(Object.fromEntries([...signatures].map(([value, clusters]) => [
+        await attachJsonEvidence(testInfo, 'preview-identity-collisions.json',
+          Object.fromEntries([...signatures].map(([value, clusters]) => [
             value, [...clusters.values()].filter(group => group.length > 1),
-          ])), null, 2), contentType: 'application/json',
-        });
+          ])));
         for (const [allocatedWidth, distinct] of signatures) {
           expect.soft(distinct.size, `EXACTLY 27 rendered layout signatures at ${allocatedWidth}px/${theme}`).toBe(27);
         }

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
+import { attachJsonEvidence } from './app-design-test';
 import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { inspectEnergyReview } from './widget-design-packs.energy';
@@ -67,9 +68,7 @@ for (const theme of ['dark', 'light'] as const) {
           }
         });
       }
-      await testInfo.attach('energy-flow-source-state-geometry.json', {
-        body: JSON.stringify(evidence, null, 2), contentType: 'application/json',
-      });
+      await attachJsonEvidence(testInfo, 'energy-flow-source-state-geometry.json', evidence);
       // Require every authored real state, not just whichever entries happen
       // to survive. Signatures contain measured page + focused-surface geometry.
       const requiredStates = [
@@ -191,9 +190,7 @@ test('Energy mobile header tooltips stay contained across all designs', async ({
       }
       expect(Object.keys(evidence)).toHaveLength(27);
     } finally {
-      await testInfo.attach(`energy-mobile-header-${theme}.json`, {
-        body: JSON.stringify(evidence, null, 2), contentType: 'application/json',
-      });
+      await attachJsonEvidence(testInfo, `energy-mobile-header-${theme}.json`, evidence);
       await testInfo.attach(`energy-mobile-header-${theme}.png`, {
         body: await page.screenshot(), contentType: 'image/png',
       });
