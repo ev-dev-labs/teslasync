@@ -112,3 +112,13 @@ do not establish full-page visual or cross-browser acceptance. The original
 matrix images predate the change and require a fixed-route capture. The
 screenshot-free matrix route check reported `4 passed (9.9m)` at 360 and
 430px in both themes.
+
+## Final matrix progress
+
+The pinned `445e5bb317b1` matrix reported `1013 passed, 3 failed (52.5m)`.
+The failures were the preserved dashboard twin at both phone widths and the
+360px destination brief fixed above. Each of the four viewports produced 254
+images; all 1,016 passed PNG signature, chunk-CRC and configured dimension
+checks. The phone destination, desktop dashboard and tablet notification
+images were inspected. They predate the later fixes, cover initial viewports
+only, and do not establish full-page visual or contrast acceptance.

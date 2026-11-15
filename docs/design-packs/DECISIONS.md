@@ -51,6 +51,15 @@ Protected widget compositions are unchanged.
   PHONE_FIXES_FULL_LINT_EXIT=0
   ```
 
+The pinned final matrix subsequently finished Precision Ledger with
+`1013 passed, 3 failed (52.5m)`: the two preserved dashboard twin cases and
+the 360px destination brief fixed above. Each viewport produced 254 PNGs;
+all 1,016 passed signature, chunk-CRC and exact-dimension checks. The first
+integrity script incorrectly assumed 360px captures were at least 844px high;
+the corrected check used the configured 360x800 viewport. The inspected
+destination phone, dashboard desktop and notification tablet images are
+older than the fixes and are not visual or contrast acceptance.
+
 ### Horizon final-matrix evidence
 
 The Horizon run against the pinned `445e5bb317b1` assets reported
@@ -88,6 +97,10 @@ owned body-size token. Desktop and unowned charts retain their existing
 layout. Long rule labels are abbreviated only on the axis; the complete
 values remain in the chart data and tooltip.
 
+- A later isolated Firefox run found the fatigue score's `100.00` tick
+  clipped at 360px in dark and light mode. This remains open until the
+  cross-browser fix is verified. A separate custom-font run timed out while
+  switching from Cyberdeck to Blueprint; its cause is not yet established.
 - Edge geometry checks at 360, 390 and 430px, three font scales, dark,
   light and custom typography, and four packs: `3 passed (1.5m)`.
 - `npx tsc --noEmit`: exit 0; `npx tsc --noEmit -p e2e\tsconfig.json`:
@@ -173,6 +186,14 @@ OK — no direct date/time formatting outside the shared layer (3859 files scann
 [release-identity] OK — release threads VITE_APP_VERSION + VITE_GIT_SHA + VITE_RELEASE_BUILD into the single build-scan/export step; compose uses its own opt-in variables and unversioned builds stay unparseable and harmless
 FULL_LINT_EXIT=0
 ```
+
+The frontend quality run on that same head subsequently finished with a
+WebKit desktop isolation failure: the custom-font case failed all three
+attempts, while the light case passed on its second retry. The exact
+comparison reported a 0.5px table-row height difference and matching sampled
+styles; its cause remains under investigation. The replay reported
+`46 passed, 1 flaky, 1 failed` and `E2E preview proxy escape check: 0 errors`.
+The three engine aggregates failed because they include that design job.
 
 The security and Lighthouse workflows completed successfully at that head;
 the security workflow warned that GitHub could not retrieve the full
