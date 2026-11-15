@@ -2392,3 +2392,25 @@ Pack directory guideline audit: Scanned 3 files: No violations found.
 
 The browser fixture checks computed paint and geometry, not rendered-route
 visual approval or full contrast compliance. No screenshots were taken.
+
+The same all-pack contract passed in the isolated Firefox and WebKit engines:
+
+```text
+2 passed (1.4m)
+```
+
+The committed `fdcd380f40` production source was rebuilt into the task-owned
+Docker preview. Port 3121 was already allocated to an existing container, which
+was left untouched; the new candidate was preflighted on port 3130. The
+previous 3120 preview remains stopped for rollback.
+
+```text
+PREVIEW_BUILD_EXIT=0
+CANDIDATE_HEALTH=healthy INDEX_HTTP=200 AUTH_PROXY_HTTP=200
+DEPLOYED_IMAGE=teslasync-web:design-packs-v2-fdcd380f408e HEALTH=healthy RESTART=unless-stopped
+DEPLOYED_BROWSER: 360px, 430px, 1440px: HTTP 200, no initial horizontal overflow or page errors
+SYSTEM_HEALTH_HTTP=503
+```
+
+The browser check covers the initial live route only. The existing backend
+health failure and the broader visual and mobile acceptance gaps remain.
