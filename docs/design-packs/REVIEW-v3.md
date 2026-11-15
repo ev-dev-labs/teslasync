@@ -101,7 +101,7 @@ Its computed foreground/background contrast was 8.73:1 in dark and 7.31:1
 in light. Other scroll positions and the visual appearance remain unreviewed;
 the checks did not cover the protected twins or the rest of the application.
 
-## Destination brief follow-up — 2026-11-14
+## Destination brief follow-up — 2026-11-15
 
 The final matrix's pinned assets split a destination metric label at 360px.
 On phones, Precision Ledger now stacks each label above its right-aligned

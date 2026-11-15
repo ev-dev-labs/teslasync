@@ -1,5 +1,31 @@
 # Design Pack Decisions
 
+### Latest Docker preview
+
+The committed frontend at `98debceb5a8b` was built into the immutable image
+`teslasync-web:design-packs-v2-98debceb5a8b`. A separate candidate passed its
+Docker health check, index, static-asset and authentication-proxy HTTP checks.
+The live task-owned preview at `localhost:3120` was then replaced, retaining
+the previous container for rollback. Its frontend and proxy returned 200; the
+existing backend health endpoint still returned 503.
+
+```text
+PREVIEW_BUILD_SHA=98debceb5a8b PREVIEW_BUILD_EXIT=0
+PREVIEW_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200 BACKEND_HEALTH_HTTP=503
+PREVIEW_BROWSER width=360 main=visible horizontalOverflow=0
+PREVIEW_BROWSER width=430 main=visible horizontalOverflow=0
+PREVIEW_BROWSER width=1440 main=visible horizontalOverflow=0
+PREVIEW_BROWSER_PAGE_ERRORS=0
+PREVIEW_BROWSER_EXIT=0
+```
+
+The candidate's gallery check passed for all pack thumbnails. The first
+no-flash test used a different, stale default E2E build and failed to observe
+the preference request; rerunning against the extracted image assets reported
+`1 passed (26.7s)`. The unmocked candidate rendered visible main content at
+360, 430 and 1440px with zero page errors and document overflow. These checks
+do not establish full-app visual or accessibility acceptance.
+
 ### Precision Ledger destination metrics
 
 The pinned matrix exposed a split word in the 360px destination brief. An
@@ -9,7 +35,7 @@ while retaining the ruled ledger and the desktop side-by-side layout.
 Protected widget compositions are unchanged.
 
 - Chromium dark/light destination checks across 360, 390 and 430px, three
-  font scales, forced colors and desktop: `2 passed`.
+  font scales, forced colors and desktop: `2 passed (1.6m)`.
 - The screenshot-free matrix route check reported `4 passed (9.9m)` at 360
   and 430px in both themes.
 - The pack-preservation suite reported `1 file, 120 tests passed`.
@@ -84,6 +110,9 @@ charts keep their existing presentation.
   360 and 430px. The custom fixture includes 1,000 deliveries.
 - Targeted latency Vitest reported `2 files, 67 tests passed` with existing
   Recharts zero-size warnings; app and E2E TypeScript exited 0.
+- The project audit reported zero violations in all six categories and
+  `TypeScript passes`. The separate `audit_code` tool incorrectly identified
+  the shared `Table` imported from `@/components/ui` as raw HTML.
 - An earlier browser run failed strict mock accounting for aborted requests;
   the clean retry above passed without relaxing those assertions.
   Cross-browser verification remains outstanding.
