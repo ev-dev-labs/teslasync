@@ -1344,12 +1344,14 @@ if (routes.some(route => route.path === '/')) {
     );
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    const directory = resolve(process.cwd(), '..', 'docs', 'design-packs', 'shots', packId,
+    const directory = resolve(shotsRoot, packId,
       `${testInfo.project.name}${forcedColorsSuffix}${touchSuffix}${scaleSuffix}`);
     const paths = selection.flatMap(([id]) => ['widget-only', 'app-wide'].map(state =>
       resolve(directory, `dashboard--${id}--${state}.png`)));
-    await mkdir(directory, { recursive: true });
-    await Promise.all(paths.map(path => rm(path, { force: true })));
+    if (!checkOnly) {
+      await mkdir(directory, { recursive: true });
+      await Promise.all(paths.map(path => rm(path, { force: true })));
+    }
     const images: Buffer[] = [];
     const widgetWidths = new Map<string, number>();
     const measurements: Array<Array<{ label: string; x: number; y: number; width: number; height: number; radius: string }>> = [];
@@ -1377,7 +1379,7 @@ if (routes.some(route => route.path === '/')) {
         expect(new URL(photoSource!).hostname).toBe('static-assets.tesla.com');
         const naturalBounds = await widget.boundingBox();
         if (!naturalBounds) throw new Error(`${id}: widget has no bounds`);
-        images.push(await widget.screenshot({ animations: 'disabled' }));
+        if (!checkOnly) images.push(await widget.screenshot({ animations: 'disabled' }));
         const originalWidth = await widget.evaluate(element => ({
           value: (element as HTMLElement).style.getPropertyValue('width'),
           priority: (element as HTMLElement).style.getPropertyPriority('width'),
@@ -1434,13 +1436,15 @@ if (routes.some(route => route.path === '/')) {
     expect(errors).toEqual([]);
     expect(measurements[0].length).toBeGreaterThanOrEqual(12);
     expect(measurements[1]).toHaveLength(measurements[0].length);
-    for (let index = 0; index < selection.length; index += 1) {
-      await testInfo.attach(`${selection[index][0]}-widget-only.png`, {
-        body: images[index], contentType: 'image/png',
-      });
-      await testInfo.attach(`${selection[index][0]}-app-wide.png`, {
-        body: images[selection.length + index], contentType: 'image/png',
-      });
+    if (!checkOnly) {
+      for (let index = 0; index < selection.length; index += 1) {
+        await testInfo.attach(`${selection[index][0]}-widget-only.png`, {
+          body: images[index], contentType: 'image/png',
+        });
+        await testInfo.attach(`${selection[index][0]}-app-wide.png`, {
+          body: images[selection.length + index], contentType: 'image/png',
+        });
+      }
     }
     for (let index = 0; index < measurements[0].length; index += 1) {
       const before = measurements[0][index];
@@ -1452,9 +1456,11 @@ if (routes.some(route => route.path === '/')) {
       }
       expect(after.radius, `${before.label} corner treatment`).toBe(before.radius);
     }
-    for (let index = 0; index < selection.length; index += 1) {
-      await writeFile(paths[index * 2], images[index]);
-      await writeFile(paths[index * 2 + 1], images[selection.length + index]);
+    if (!checkOnly) {
+      for (let index = 0; index < selection.length; index += 1) {
+        await writeFile(paths[index * 2], images[index]);
+        await writeFile(paths[index * 2 + 1], images[selection.length + index]);
+      }
     }
   });
 }

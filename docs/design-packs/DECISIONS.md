@@ -1,5 +1,40 @@
 # Design pack decisions
 
+## Screenshot-free preservation and WebKit follow-up
+
+Check-only capture now disables Playwright failure screenshots and traces.
+The Digital Twin preservation check still compares geometry, but does not
+create, remove, attach or replace images in that mode. It also honors the
+configured shots root when image capture is enabled.
+
+```text
+npx playwright test --config=playwright.contract.config.ts --grep 'check-only capture disables screenshots and browser traces'
+1 passed (3.0s)
+
+npx playwright test --config=e2e\design-packs-capture.config.ts --project=phone-390 --grep 'preserve the two Digital Twin widgets'
+1 passed (43.7s)
+TWIN_SENTINELS_UNCHANGED=True
+
+node --test scripts\__tests__\capture-design-packs.test.mjs
+tests 5, pass 5, fail 0
+```
+
+The four sentinel files were isolated task-owned fixtures, not review images.
+The Twin run used `DESIGN_PACK_CHECK_ONLY=1`, the existing local server and
+an isolated shots root. The guideline audit reported no violations in the
+capture configuration, capture spec and harness contract.
+No application page or API hook changed in this follow-up.
+The preservation check does not resolve the protected twins' small phone
+controls or text.
+
+Repeated isolated WebKit preview attempts remain blocked. An earlier custom
+phone run had one exact owner-restoration geometry mismatch; a later
+two-repeat run timed out during clicks on the source-quality filter and
+the second outer pack's preview button. The host reported 100% CPU during
+that run, but the cause is not established. Neither run took screenshots;
+the restoration assertion has not been weakened. Defer this issue while
+other checks continue, then revisit it after the active sweeps finish.
+
 ## Precision Ledger phone follow-up
 
 A screenshot-free `v3` check covered Drives, Energy and Vehicles at 360px and

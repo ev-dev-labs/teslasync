@@ -30,8 +30,9 @@ export default defineConfig({
     serviceWorkers: 'block',
     hasTouch: process.env.DESIGN_PACK_TOUCH_DEVICE === '1',
     actionTimeout: 15_000,
-    screenshot: process.env.DESIGN_PACK_VIEWPORT_ONLY === '1' ? 'off' : 'only-on-failure',
-    trace: 'retain-on-failure',
+    screenshot: process.env.DESIGN_PACK_CHECK_ONLY === '1' || process.env.DESIGN_PACK_VIEWPORT_ONLY === '1'
+      ? 'off' : 'only-on-failure',
+    trace: process.env.DESIGN_PACK_CHECK_ONLY === '1' ? 'off' : 'retain-on-failure',
   },
   projects: CAPTURE_VIEWPORTS.flatMap(viewport =>
     (['dark', 'light'] as const).map(mode => ({

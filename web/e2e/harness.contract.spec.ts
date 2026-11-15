@@ -168,6 +168,22 @@ test('design pack captures cover registered application routes with unique filen
   ]);
 });
 
+test('check-only capture disables screenshots and browser traces', async () => {
+  const previous = process.env.DESIGN_PACK_CHECK_ONLY;
+  const output = process.env.DESIGN_PACK_CAPTURE_OUTPUT_DIR;
+  process.env.DESIGN_PACK_CHECK_ONLY = '1';
+  try {
+    const { default: config } = await import('./design-packs-capture.config');
+    expect(config.use?.screenshot).toBe('off');
+    expect(config.use?.trace).toBe('off');
+  } finally {
+    if (previous === undefined) delete process.env.DESIGN_PACK_CHECK_ONLY;
+    else process.env.DESIGN_PACK_CHECK_ONLY = previous;
+    if (output === undefined) delete process.env.DESIGN_PACK_CAPTURE_OUTPUT_DIR;
+    else process.env.DESIGN_PACK_CAPTURE_OUTPUT_DIR = output;
+  }
+});
+
 test('neutral-scope checks allow only settings thumbnails, not stale previews or portals', async ({ page }) => {
   await page.setContent(`
     <section aria-labelledby="settings-widget-design-packs">
