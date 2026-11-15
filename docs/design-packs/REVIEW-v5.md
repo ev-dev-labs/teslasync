@@ -80,13 +80,18 @@ No manual contrast pass is claimed.
 The pinned final matrix reported `1013 passed, 3 failed (49.1m)`. Both
 phone Dashboard cases failed the preserved Digital Twin widget checks;
 the 430px Digital Twin page also missed its original charge-port landmark.
-The shared page-only square-corner repair was made after these captures,
-but has not yet been rechecked specifically for v5.
+The shared page-only square-corner repair was made after these captures.
+A screenshot-free retry against the newer build passed at 360 and 430px in
+dark and light themes: `4 passed (4.2m)`. It checked the original landmarks,
+target dimensions, text size and horizontal overflow on the page.
 
 The matrix saved 254 PNGs per viewport. All 1,016 passed signature,
 chunk-CRC and exact-dimension checks. The 360px Digital Twin page, tablet
-Notification Health and desktop Dashboard images were inspected; these
-older captures do not establish visual or contrast acceptance.
+Notification Health and desktop Dashboard images were inspected. The
+repaired 430px Digital Twin page was then recaptured against the newer
+build: `1 passed (2.3m)`; its PNG passed integrity and dimension checks
+and was inspected. The mixed-build images do not establish full visual or
+contrast acceptance.
 
 ## Other verification and limits
 
