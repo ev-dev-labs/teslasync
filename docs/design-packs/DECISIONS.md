@@ -2678,3 +2678,37 @@ SYSTEM_HEALTH_HTTP=503
 
 The browser check covers the initial live route only. The existing backend
 health failure and the broader visual and mobile acceptance gaps remain.
+
+### Current Docker preview and WebKit CI
+
+The committed Cyber contrast and preview-boundary changes were built into
+`teslasync-web:design-packs-v2-87afae094c6e`. A candidate on the free
+loopback port 3133 passed its health, index, JavaScript asset, auth proxy and
+screenshot-free 360px browser checks before replacing the task-owned preview.
+The prior preview was retained as
+`teslasync-design-packs-rollback-0fae1a58ab97-20261115`. The new preview is
+available at `http://localhost:3120`:
+
+```text
+PREVIEW_BUILD_EXIT=0
+PREVIEW_HEALTH=healthy
+PREVIEW_INDEX=200
+PREVIEW_ASSET=200
+PREVIEW_AUTH=200
+PREVIEW_BROWSER_360=360/360 root=4
+PREVIEW_BROWSER_430=430/430 root=4
+PREVIEW_BROWSER_1440=1440/1440 root=4
+PREVIEW_BROWSER_STATUS=200
+BACKEND_HEALTH_HTTP=503
+```
+
+These are initial-route responsiveness checks, not all-page visual or mobile
+acceptance. The existing backend health failure is unchanged.
+
+On PR head `2b2aef0093`, the 390px WebKit custom and dark application-design
+jobs failed after 20 tests passed in each. Both failures involved mixed-pack
+isolation: custom reported changed line heights after owner activation, while
+dark reported a changed neutral-preview text color and an activation
+restoration failure on retry. The other browser jobs were still running when
+checked. Local screenshot-free diagnostics are investigating the failures;
+neither an application defect nor a test-timing cause has been established.
