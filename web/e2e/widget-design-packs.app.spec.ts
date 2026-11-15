@@ -281,7 +281,7 @@ test('Command History keeps its original chart without an application-wide pack'
   await assertMockApiComplete(page, mocks);
 });
 
-test.describe('Notification fatigue and burn-rate phone chart axes', () => {
+test.describe('Notification health phone chart axes', () => {
   for (const [mode, customFont] of [['dark', false], ['light', false], ['dark', true]] as const) {
     test(`stay legible and contained in ${mode}${customFont ? ' with a custom font and locale' : ''}`, async ({ page }, testInfo) => {
       test.setTimeout(300_000);
@@ -292,13 +292,18 @@ test.describe('Notification fatigue and burn-rate phone chart axes', () => {
       const mocks = await installPackReview(page, mode, 390, false, [], true, preference, origin,
         customFont ? { ...customReviewSettings, locale: 'de-DE' } : {});
       await page.clock.setFixedTime(new Date(notificationNow));
+      const deliveries = customFont
+        ? Array.from({ length: 1_000 }, (_, index) => ({ ...deliveryRows[0]!, id: 1_000 - index }))
+        : deliveryRows;
       await page.route(url => url.pathname === '/api/v1/notifications/logs', route => {
         const request = route.request();
         const params = new URL(request.url()).searchParams;
         if (request.method() !== 'GET' || params.get('archived') !== 'all'
           || !['inbox', 'deliveries'].includes(params.get('view') ?? '')) return route.fallback();
         return fulfillApiFixture(route, mocks, {
-          json: params.get('view') === 'deliveries' ? deliveryRows : analysisRows,
+          json: params.get('view') === 'deliveries'
+            ? params.has('before_id') ? [] : deliveries
+            : analysisRows,
         });
       });
       await routeBuiltApplication(page, new URL(origin).origin, ['/notifications/health'], process.env.DESIGN_PACK_DIST_DIR);
@@ -309,7 +314,10 @@ test.describe('Notification fatigue and burn-rate phone chart axes', () => {
         page.locator('#fatigue [data-chart-viewport]').nth(0),
         page.locator('#fatigue [data-chart-viewport]').nth(1),
         page.locator('#burn-rate [data-chart-viewport]'),
+        page.locator('#latency [data-chart-viewport]'),
       ];
+      await expect(page.locator('#latency table').first().locator('tbody tr')).toHaveCount(6);
+      await expect(page.locator('#latency table').first().locator('tbody tr').first()).toContainText('250');
       await page.setViewportSize({ width: 1440, height: 900 });
       for (const chart of charts) {
         await expect.poll(() => chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
@@ -325,6 +333,13 @@ test.describe('Notification fatigue and burn-rate phone chart axes', () => {
           }
         }
       }
+      const latencyChart = charts[3]!;
+      await latencyChart.scrollIntoViewIfNeeded();
+      await expect(latencyChart.locator('.recharts-yAxis .recharts-cartesian-axis-tick-value')).toHaveCount(6);
+      await latencyChart.locator('.recharts-bar-rectangle .recharts-rectangle').first().hover();
+      const latencyTooltip = page.locator('#latency [data-chart-tooltip-label]');
+      await expect(latencyTooltip).toBeVisible();
+      await expect(latencyTooltip).toContainText('250');
       if (customFont) {
         await expect.poll(() => charts[0]!.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value').first()
           .evaluate(node => getComputedStyle(node).fontFamily)).toContain('Georgia');

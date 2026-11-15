@@ -46,13 +46,22 @@ values remain in the chart data and tooltip.
 - The Windows Firefox browser was absent and its installation timed out.
   Cross-browser verification will use the existing isolated browser image.
 
-### Notification latency chart phone-axis blocker
+### Notification latency chart phone axes
 
-The latency histogram still uses the existing 10–11px axis styling. Three
-responsive attempts exposed too few horizontal labels or an overlap between
-the first range label and the zero tick at 360px. Those histogram changes
-were not shipped; revisit the measured layout after the remaining capture
-and CI work. This is an unresolved mobile-readability defect.
+The app-owned phone histogram now uses measured horizontal categories and a
+height derived from the body-size token. All six ranges remain visible; the
+tooltip and data table retain their complete values. Desktop and unowned
+charts keep their existing presentation.
+
+- Chromium geometry checks for all four notification health charts reported
+  `3 passed (3.6m)` across 360, 390 and 430px, three font scales, dark,
+  light and custom German typography; three additional packs were checked at
+  360 and 430px. The custom fixture includes 1,000 deliveries.
+- Targeted latency Vitest reported `2 files, 67 tests passed` with existing
+  Recharts zero-size warnings; app and E2E TypeScript exited 0.
+- An earlier browser run failed strict mock accounting for aborted requests;
+  the clean retry above passed without relaxing those assertions.
+  Cross-browser verification remains outstanding.
 
 ### Classic matrix and capture continuation
 
