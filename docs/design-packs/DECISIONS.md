@@ -1,5 +1,28 @@
 # Design pack decisions
 
+## Three-route phone sweep across all packs
+
+A screenshot-free sweep of Drives, Energy and Vehicles at 360px and 430px
+in dark mode completed for all 27 packs:
+
+```powershell
+Set-Location web
+$env:DESIGN_PACK_CHECK_ONLY='1'
+$env:DESIGN_PACK_BROWSER_CHANNEL='msedge'
+$env:DESIGN_PACK_FONT_SCALE='1'
+$env:DESIGN_PACK_DIST_DIR='D:\repos\teslasync\web\dist'
+node scripts\capture-design-packs.mjs --pack all --pages vehicles,drives,energy --viewports phone-360,phone-430 --base-url http://127.0.0.1:54872 --workers 2
+27 packs: 6 passed each
+ALL_PACKS_THREE_ROUTES_EXIT=0
+```
+
+The 162 checks used mock data and did not scan contrast, touch targets or
+text size. They do not establish visual acceptance, other routes, light mode
+or other font scales. The check-only capture safety changes were made while
+the sweep was running, so this is not a single immutable harness revision.
+The tested local build's CSS matches the Docker preview; its index and
+JavaScript assets differ.
+
 ## Screenshot-free preservation and WebKit follow-up
 
 Check-only capture now disables Playwright failure screenshots and traces.
