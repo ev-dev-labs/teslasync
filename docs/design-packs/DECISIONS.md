@@ -46,7 +46,14 @@ FRONTEND_TYPESCRIPT_EXIT=0
 ```
 
 Each repeat ran three times; the Journey suite emitted a Node
-`MaxListenersExceededWarning`.
+`MaxListenersExceededWarning`. A subsequent full frontend lint run completed:
+
+```text
+OK — no direct date/time formatting outside the shared layer (3859 files scanned)
+[audit-registry] OK — every audit is registered, executable, thresholded and wired
+[release-identity] OK — release threads VITE_APP_VERSION + VITE_GIT_SHA + VITE_RELEASE_BUILD into the single build-scan/export step; compose uses its own opt-in variables and unversioned builds stay unparseable and harmless
+FULL_LINT_EXIT=0
+```
 
 The security and Lighthouse workflows completed successfully at that head;
 the security workflow warned that GitHub could not retrieve the full

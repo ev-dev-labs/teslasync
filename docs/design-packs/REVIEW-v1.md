@@ -145,3 +145,17 @@ Quick Stats passed at 360/390/430px in dark and light modes (`6 passed`) and
 at font scales 0.85 and 1.35 at 360/430px in both modes (`8 passed`). The
 protected Twin failures remain unresolved; the pack is still
 **passed-with-notes**, not a full mobile or visual pass.
+
+## Final-matrix phone spot-check
+
+The `shots/v1/phone-360/{dashboard,drives,energy}.png` images from the pinned
+`445e5bb317b1` build were inspected during the continuing matrix. The
+dashboard layout name now wraps instead of truncating. The combined status
+bar and two-row navigation occupy substantial height; the Drives and Energy
+metric cards each take a full-width row, pushing the history and chart below
+the first screen. The dashboard action row also leaves a conspicuous band of
+empty space. These observations do not cover the rest of each page, chart
+contrast, interaction states or the still-running matrix. The protected
+Digital Twin requirements remain unresolved. The matrix recorded the
+dashboard case as failed and the Drives and Energy cases as passed; images
+are saved before the later diagnostic assertions.
