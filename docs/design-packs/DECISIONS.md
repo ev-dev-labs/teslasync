@@ -1,5 +1,19 @@
 # Design pack decisions
 
+## Pixel phone follow-up
+
+A screenshot-free Pixel Cockpit (`v7`) check covered Drives, Energy, and
+Vehicles at 360px and 430px in dark and light modes:
+
+```text
+Contrast: 0 violated rules, 0 nodes require manual review
+12 passed (3.2m)
+V7_PHONE_CHECK_EXIT=0
+```
+
+The contrast result was repeated for each of the 12 cases. It does not cover
+the protected dashboard, other routes, or visual acceptance.
+
 ## Parallel review capture
 
 The shared preview/dev server is owned by the orchestrator. The pack capture

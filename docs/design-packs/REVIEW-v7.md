@@ -51,9 +51,9 @@ recapture and does not prove the final visual result.
   refresh control, and 12–14px text in the protected Digital Twin/widget
   area. Shared owner action is requested in `requests/v7.md`; the protected
   subtree was not restyled.
-- No contrast result is available. Light mode, forced colors, full-app 360
-  and 430px, larger saved fonts, keyboard focus, and open Helix/interaction
-  states were not visually verified.
+- The original captures have no contrast result. Light mode, forced colors,
+  full-app 360 and 430px, larger saved fonts, keyboard focus, and open
+  Helix/interaction states were not visually verified.
 - After the structural fixes, `npx vitest run
   src\components\ui\app-designs\designs.test.ts
   src\components\ui\app-designs\packs\PackNativeCompositionPreservation.test.tsx
@@ -83,3 +83,8 @@ Recent drives context measured 11.9px at scale 0.85 and 14px at scale 1.
 The owned ordinary headline context and units now use the phone body token;
 protected and specialized surfaces remain excluded. See `DECISIONS.md` for
 the screenshot-free regression results and remaining limitations.
+
+A subsequent screenshot-free check of Drives, Energy, and Vehicles at 360px
+and 430px in dark and light modes reported `12 passed`. The enabled contrast
+scan reported zero violations and zero nodes requiring manual review in each
+case. This does not cover the protected dashboard or establish visual acceptance.
