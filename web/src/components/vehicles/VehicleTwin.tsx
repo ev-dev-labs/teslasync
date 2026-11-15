@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -191,6 +192,8 @@ interface TwinContextValue {
   ids: TwinIds;
   paint: PaintPalette;
   touchLayout?: TwinTouchLayout;
+  touchLayer: HTMLDivElement | null;
+  touchScale: number;
   /** Paint-derived accent colors used by `BodyShell` etc. */
   bodyAccent: {
     stroke: string;
@@ -258,6 +261,42 @@ function useTwinCtx(): TwinContextValue {
     throw new Error('VehicleTwin sub-components must be rendered inside <VehicleTwin>');
   }
   return ctx;
+}
+
+function TwinTouchTarget({
+  target,
+  label,
+  side = 'top',
+  children,
+}: {
+  target: TwinTouchTarget;
+  label: string;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  children?: ReactNode;
+}) {
+  const { touchLayer, touchLayout, touchScale } = useTwinCtx();
+  if (!touchLayer || !touchLayout) return null;
+  const bounds = touchLayout.targets[target];
+  return createPortal(
+    <div
+      data-twin-touch-target={target}
+      className="pointer-events-auto absolute [&>span]:h-full [&>span]:w-full"
+      style={{
+        left: bounds.x * touchScale,
+        top: (bounds.y - touchLayout.minY) * touchScale,
+        width: bounds.width * touchScale,
+        height: bounds.height * touchScale,
+      }}
+    >
+      <Tooltip content={label} side={side} portal>
+        <Button type="button" variant="ghost" aria-label={label}
+          className="relative block h-full w-full rounded-none p-0 hover:bg-transparent">
+          {children}
+        </Button>
+      </Tooltip>
+    </div>,
+    touchLayer,
+  );
 }
 
 /**
@@ -357,15 +396,12 @@ function InteractiveHotspot({
   if (!enabled) return null;
 
   const bounds = touchLayout?.targets[target];
-  const trigger = (
-    <Tooltip content={label} side={side} portal={bounds ? true : undefined}>
-      <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
-    </Tooltip>
-  );
+  if (bounds) return <TwinTouchTarget target={target} label={label} side={side} />;
   return (
-    <foreignObject x={bounds?.x ?? x} y={bounds?.y ?? y} width={bounds?.width ?? width} height={bounds?.height ?? height}
-      data-twin-touch-target={bounds ? target : undefined}>
-      {bounds ? <div className="h-full w-full [&>span]:h-full [&>span]:w-full">{trigger}</div> : trigger}
+    <foreignObject x={x} y={y} width={width} height={height}>
+      <Tooltip content={label} side={side}>
+        <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
+      </Tooltip>
     </foreignObject>
   );
 }
@@ -1182,7 +1218,7 @@ function SecurityOverlay({
   interactive?: boolean;
 }) {
   const { t } = useTranslation();
-  const { touchLayout } = useTwinCtx();
+  const { touchLayout, touchScale } = useTwinCtx();
   const iconSize = 18;
   const cx = 320;
   const cy = 114;
@@ -1192,17 +1228,19 @@ function SecurityOverlay({
     const bounds = touchLayout?.targets[target];
     if (!interactive || !bounds) return null;
     return (
-      <div className="h-full w-full [&>span]:h-full [&>span]:w-full">
-        <Tooltip content={label} side="top" portal>
-          <Button type="button" variant="ghost" aria-label={label}
-            className="relative block h-full w-full rounded-none p-0 hover:bg-transparent">
-            <span className="absolute flex items-center justify-center rounded-full bg-[var(--bg-app)]"
-              style={{ left: cx - iconSize / 2 - bounds.x, top: originalY - iconSize / 2 - bounds.y, width: iconSize, height: iconSize }}>
-              {icon}
-            </span>
-          </Button>
-        </Tooltip>
-      </div>
+      <TwinTouchTarget target={target} label={label}>
+        <span className="absolute flex items-center justify-center rounded-full bg-[var(--bg-app)]"
+          style={{
+            left: (cx - iconSize / 2 - bounds.x) * touchScale,
+            top: (originalY - iconSize / 2 - bounds.y) * touchScale,
+            width: iconSize,
+            height: iconSize,
+            transform: `scale(${touchScale})`,
+            transformOrigin: 'top left',
+          }}>
+          {icon}
+        </span>
+      </TwinTouchTarget>
     );
   };
   const sentryBounds = interactive ? touchLayout?.targets.sentry : undefined;
@@ -1217,25 +1255,22 @@ function SecurityOverlay({
         <ellipse cx={cx} cy={sentryY} rx={16} ry={7} fill="none" vectorEffect="non-scaling-stroke"
           stroke={C.sentryGlow} strokeWidth={1.2} opacity={0.65} />
       )}
-      {sentryMode && (
-        <foreignObject x={sentryBounds?.x ?? cx - iconSize / 2} y={sentryBounds?.y ?? sentryY - iconSize / 2}
-          width={sentryBounds?.width ?? iconSize} height={sentryBounds?.height ?? iconSize}
-          data-twin-touch-target={sentryBounds ? 'sentry' : undefined}>
-          {sentryBounds ? touchIcon('sentry', t('guard.sentryActive'), sentryIcon, sentryY) : <Tooltip content={t('guard.sentryActive')} side="top">
+      {sentryMode && (sentryBounds
+        ? touchIcon('sentry', t('guard.sentryActive'), sentryIcon, sentryY)
+        : <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
+          <Tooltip content={t('guard.sentryActive')} side="top">
             {interactive ? (
               <Button type="button" variant="ghost" aria-label={t('guard.sentryActive')}
                 className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">{sentryIcon}</Button>
             ) : (
               <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">{sentryIcon}</span>
             )}
-          </Tooltip>}
-        </foreignObject>
-      )}
-      {locked !== null && (
-        <foreignObject x={lockBounds?.x ?? cx - iconSize / 2} y={lockBounds?.y ?? cy - iconSize / 2}
-          width={lockBounds?.width ?? iconSize} height={lockBounds?.height ?? iconSize}
-          data-twin-touch-target={lockBounds ? 'lock' : undefined}>
-          {lockBounds ? touchIcon('lock', t(locked ? 'common.locked' : 'common.unlocked'), lockIcon, cy) : interactive ? (
+          </Tooltip>
+        </foreignObject>)}
+      {locked !== null && (lockBounds
+        ? touchIcon('lock', t(locked ? 'common.locked' : 'common.unlocked'), lockIcon, cy)
+        : <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
+          {interactive ? (
             <Tooltip content={t(locked ? 'common.locked' : 'common.unlocked')} side="top">
               <Button type="button" variant="ghost" aria-label={t(locked ? 'common.locked' : 'common.unlocked')} className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">
                 {lockIcon}
@@ -1246,8 +1281,7 @@ function SecurityOverlay({
               {lockIcon}
             </span>
           )}
-        </foreignObject>
-      )}
+        </foreignObject>)}
     </g>
   );
 }
@@ -1505,6 +1539,7 @@ export function VehicleTwin({
   const animateDriving = isDriving === true && !reduce && animateActivity;
   const animateEntry = driveIn && !reduce;
   const containerRef = useRef<HTMLDivElement>(null);
+  const [touchLayer, setTouchLayer] = useState<HTMLDivElement | null>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const width = Math.min(SIZE_MAP[size], measuredWidth ?? SIZE_MAP[size]);
   const touchLayout = useMemo(
@@ -1573,6 +1608,8 @@ export function VehicleTwin({
       ids,
       paint,
       touchLayout,
+      touchLayer,
+      touchScale: u,
       bodyAccent: {
         stroke: paint.bodyStroke,
         highlight: paint.bodyHighlight,
@@ -1580,7 +1617,7 @@ export function VehicleTwin({
         shadow: paint.bodyShadow,
       },
     }),
-    [ids, paint, touchLayout],
+    [ids, paint, touchLayout, touchLayer, u],
   );
 
   return (
@@ -1701,6 +1738,8 @@ export function VehicleTwin({
           )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
+        {/* Safari can hit the foreignObject wrapper rather than its button. */}
+        {touchLayout && <div ref={setTouchLayer} className="pointer-events-none absolute inset-0" />}
       </motion.div>
       <VisuallyHidden id={summaryId}>{summary}</VisuallyHidden>
       {interactive && (

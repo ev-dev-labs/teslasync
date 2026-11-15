@@ -188,14 +188,17 @@ describe('VehicleTwin source-derived inspection', () => {
       frunk: [119, 164], trunk: [506, 117], frontWindow: [247, 117], rearWindow: [364, 113],
       frontDoor: [256, 194], rearDoor: [372, 191], chargePort: [532, 136], sentry: [320, 91], lock: [320, 114],
     };
-    const targets = Array.from(scene.querySelectorAll<SVGForeignObjectElement>('[data-twin-touch-target]'));
+    const scale = width / 560;
+    const viewBox = scene.querySelector('svg.select-none')!.getAttribute('viewBox')!.split(' ').map(Number);
+    const minY = viewBox[1]!;
+    const targets = Array.from(scene.querySelectorAll<HTMLElement>('[data-twin-touch-target]'));
     expect(targets).toHaveLength(9);
     const boxes = targets.map(target => {
       const name = target.dataset.twinTouchTarget!;
-      const x = Number(target.getAttribute('x'));
-      const y = Number(target.getAttribute('y'));
-      const w = Number(target.getAttribute('width'));
-      const h = Number(target.getAttribute('height'));
+      const x = parseFloat(target.style.left) / scale;
+      const y = parseFloat(target.style.top) / scale + minY;
+      const w = parseFloat(target.style.width) / scale;
+      const h = parseFloat(target.style.height) / scale;
       const [originalX, originalY] = expected[name];
       expect(w * width / 560).toBeGreaterThanOrEqual(44);
       expect(h * width / 560).toBeGreaterThanOrEqual(44);
@@ -214,10 +217,10 @@ describe('VehicleTwin source-derived inspection', () => {
       }
     }
     const icon = scene.querySelector('[data-twin-touch-target="lock"] svg')!;
-    const bounds = scene.querySelector('[data-twin-touch-target="lock"]')!;
+    const bounds = scene.querySelector<HTMLElement>('[data-twin-touch-target="lock"]')!;
     const iconFrame = icon.parentElement as HTMLElement;
-    expect(Number(bounds.getAttribute('x')) + parseFloat(iconFrame.style.left)).toBeCloseTo(311);
-    expect(Number(bounds.getAttribute('y')) + parseFloat(iconFrame.style.top)).toBeCloseTo(105);
+    expect((parseFloat(bounds.style.left) + parseFloat(iconFrame.style.left)) / scale).toBeCloseTo(311);
+    expect((parseFloat(bounds.style.top) + parseFloat(iconFrame.style.top)) / scale + minY).toBeCloseTo(105);
   });
 
   it.each(['photo', 'svg'] as const)('keeps all null states unknown and image semantics in %s mode', async variant => {

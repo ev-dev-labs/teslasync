@@ -59,6 +59,7 @@ vi.mock('@/components/vehicles', () => ({
     vehicleId?: number | null
     size?: string
     interactive?: boolean
+    touchFriendly?: boolean
     isCharging?: boolean
     locked?: boolean | null
   }) => (
@@ -67,6 +68,7 @@ vi.mock('@/components/vehicles', () => ({
       data-vehicle-id={String(props.vehicleId)}
       data-size={props.size}
       data-interactive={String(props.interactive)}
+      data-touch-friendly={String(props.touchFriendly)}
       data-is-charging={String(props.isCharging)}
       data-locked={String(props.locked)}
     />
@@ -189,6 +191,22 @@ describe('DigitalTwinPanel', () => {
     expect(
       screen.queryByRole('status', { name: /loading/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it.each([true, false])('uses touch-friendly inspection when the phone or coarse-pointer query is %s', matches => {
+    const original = Object.getOwnPropertyDescriptor(window, 'matchMedia')
+    const media = { matches, addEventListener: vi.fn(), removeEventListener: vi.fn() }
+    const matchMedia = vi.fn(() => media)
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia })
+    try {
+      const { unmount } = renderPanel({ hasData: true })
+      expect(matchMedia).toHaveBeenCalledWith('(max-width: 767px), (pointer: coarse)')
+      expect(screen.getByTestId('vehicle-twin')).toHaveAttribute('data-touch-friendly', String(matches))
+      unmount()
+    } finally {
+      if (original) Object.defineProperty(window, 'matchMedia', original)
+      else Reflect.deleteProperty(window, 'matchMedia')
+    }
   })
 
   it('renders <QueryError> and forwards onRetry, firing it on click', () => {

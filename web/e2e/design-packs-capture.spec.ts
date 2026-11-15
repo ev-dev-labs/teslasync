@@ -538,7 +538,8 @@ for (const route of routes) {
         return elements.map(element => {
           const button = element.querySelector('button')!;
           const rect = button.getBoundingClientRect();
-          const svg = element.closest('svg')!;
+          const svg = element.closest('[data-vehicle-twin]')?.querySelector<SVGSVGElement>('svg.select-none');
+          if (!svg) throw new Error('Twin inspection scene has no SVG canvas');
           const point = new DOMPoint(...points[element.getAttribute('data-twin-touch-target')!])
             .matrixTransform(svg.getScreenCTM()!);
           const originalHit = document.elementFromPoint(point.x, point.y);

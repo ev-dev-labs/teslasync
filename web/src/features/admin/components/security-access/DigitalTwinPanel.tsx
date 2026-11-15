@@ -3,6 +3,8 @@ import { Car } from 'lucide-react';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { cn } from '@/lib/cn';
 import type { VehicleTwinState } from '@/lib/vehicleState';
 
 interface DigitalTwinPanelProps {
@@ -27,6 +29,7 @@ export function DigitalTwinPanel({
   className,
 }: DigitalTwinPanelProps) {
   const { t } = useTranslation();
+  const touchFriendlyTwin = useMediaQuery('(max-width: 767px), (pointer: coarse)');
 
   return (
     <GlassPanel className={className} padding="md">
@@ -45,8 +48,8 @@ export function DigitalTwinPanel({
           <Skeleton height={220} />
         </div>
       ) : hasData ? (
-        <div className="flex items-center justify-center py-2">
-          <VehicleTwin {...twinState} size="sm" interactive vehicleId={vehicleId} />
+        <div className={cn('flex items-center justify-center py-2', touchFriendlyTwin && 'flex-col gap-[var(--density-gap)]')}>
+          <VehicleTwin {...twinState} size="sm" interactive touchFriendly={touchFriendlyTwin} vehicleId={vehicleId} />
         </div>
       ) : (
         // no-action: latest state streams on a 5s poll — this gap is

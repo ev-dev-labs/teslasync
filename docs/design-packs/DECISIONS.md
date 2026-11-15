@@ -2221,3 +2221,26 @@ computed font sizes changed from 14px or 12px to 16px after owner removal and
 restoration. This narrows the symptom but does not establish its cause. The
 exact assertion remains enabled; no API requests escaped and no screenshots
 were taken.
+
+### Security Access phone twin follow-up
+
+The Security Access page opts into the existing expanded twin targets on phones
+and coarse pointers. Their interactive layer uses positioned HTML rather than
+SVG `foreignObject` buttons, which WebKit did not consistently hit on touch.
+The default dashboard twin and mini-widget designs remain unchanged.
+
+The focused unit run covered the shared twin, Security Access, and both
+protected widgets and their pack variants: `6` files, `542` tests passed. The
+phone regression checked all nine target labels, non-overlap, 44px minimum,
+landmark alignment, tooltips and horizontal overflow at 360, 390 and 430px.
+It passed in Edge (`2 passed`) and in Firefox, WebKit and iPhone-emulated
+WebKit (`6 passed`), including real taps in the touch project. The isolated
+Vite build and four postbuild checks exited 0. No screenshots were taken. These
+checks do not resolve the separate protected dashboard-widget target findings.
+
+```text
+FINAL_LINT_EXIT=0
+FINAL_TSC_EXIT=0
+VEHICLE_TWIN_AUDIT_EXIT=0
+SECURITY_PANEL_AUDIT_EXIT=0
+```
