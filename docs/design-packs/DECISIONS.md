@@ -16,12 +16,13 @@ node scripts\capture-design-packs.mjs --pack all --pages vehicles,drives,energy 
 ALL_PACKS_THREE_ROUTES_EXIT=0
 ```
 
-The 162 checks used mock data and did not scan contrast, touch targets or
-text size. They do not establish visual acceptance, other routes, light mode
-or other font scales. The check-only capture safety changes were made while
-the sweep was running, so this is not a single immutable harness revision.
-The tested local build's CSS matches the Docker preview; its index and
-JavaScript assets differ.
+The runner enabled its scoped visible-touch-target and body-text checks, with
+0.1px tolerance, but did not scan contrast. These mock-data checks do not
+establish visual acceptance, every interaction state, other routes, light
+mode or other font scales. The check-only capture safety changes were made
+while the sweep was running, so this is not a single immutable harness
+revision. The tested local build's CSS matches the Docker preview; its index
+and JavaScript assets differ.
 
 ## Screenshot-free preservation and WebKit follow-up
 
