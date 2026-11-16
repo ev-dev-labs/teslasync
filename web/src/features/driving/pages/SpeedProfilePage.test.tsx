@@ -36,7 +36,7 @@
  */
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
@@ -844,7 +844,7 @@ describe('SpeedProfilePage', () => {
     expect(captured.scatterData).toHaveLength(2);
     const format = captured['axis-speed'] as (value: number) => string;
     expect(format(12.5)).toContain('12,5');
-    setGlobalLocale('en-US');
+    act(() => { setGlobalLocale('en-US'); });
   });
 
   it.each([

@@ -53,7 +53,7 @@ vi.mock('@/components/layout', () => ({
     </div>,
 }));
 
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
   const passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const inert = () => null;
   return {
@@ -79,7 +79,8 @@ vi.mock('@/components/charts', () => {
       return null;
     },
     XAxis: inert, YAxis: inert, CartesianGrid: inert, Tooltip: inert, ChartTooltip: inert,
-    chartGrid: {}, axisTick: {}, AREA_DEFAULTS: {},
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
+    axisTick: {}, AREA_DEFAULTS: {},
     areaGradient: (id: string, color: string, opacity: number) => {
       captured.gradient = { id, color, opacity };
       return null;

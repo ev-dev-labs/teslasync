@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parse } from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { request } from '@/api/client';
@@ -124,6 +124,7 @@ function mount(width = 1024, route = '/tesla-charging-history?from=2024-01-01&to
 }
 
 afterEach(() => {
+  cleanup();
   for (const release of designScopeReleases.splice(0)) release();
   for (const name of Object.keys(getAppDesignAttributes('classic'))) document.documentElement.removeAttribute(name);
   clients.splice(0).forEach(client => client.clear());

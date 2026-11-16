@@ -36,7 +36,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import { render, screen, within, fireEvent, act } from '@testing-library/react';
+import { cleanup, render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -221,6 +221,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
 });

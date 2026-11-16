@@ -1,6 +1,6 @@
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
+import { act,
   fireEvent,
   render,
   screen,
@@ -194,7 +194,7 @@ it('offers keyboard-accessible transition interpretation help without duration e
   mockSleep.mockReturnValue(queryResult({ data: transitionOnlyData() }));
   renderPage();
   const help = screen.getByRole('button', { name: 'Methodology and interpretation limits' });
-  help.focus();
+  act(() => { help.focus(); });
   expect(help).toHaveFocus();
   expect(help).toHaveAccessibleDescription(english.sleep.methodology.transitionSemantics);
 });

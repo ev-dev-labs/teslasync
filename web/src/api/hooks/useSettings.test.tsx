@@ -967,8 +967,10 @@ describe('useUpdatePollingConfig', () => {
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
     const { result } = renderHook(() => useUpdatePollingConfig(), { wrapper: Wrapper });
 
-    const returned = await result.current.mutateAsync(pc);
-    expect(returned.telemetry_capture).toBe(false);
+    await act(async () => {
+      const returned = await result.current.mutateAsync(pc);
+      expect(returned.telemetry_capture).toBe(false);
+    });
 
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].method).toBe('PUT');

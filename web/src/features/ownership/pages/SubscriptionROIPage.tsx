@@ -11,7 +11,6 @@ import {
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
   ChartContainer,
   ChartTooltip,
@@ -606,7 +605,7 @@ export default function SubscriptionROIPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={roiChartData} margin={chartMargin}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis tick={axisTick} unit="%" />
                 <Tooltip content={<ChartTooltip valueFormatter={(value) => typeof value === 'number' ? formatSignedPct(value) : '—'} />} />

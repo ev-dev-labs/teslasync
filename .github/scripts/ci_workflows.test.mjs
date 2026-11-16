@@ -114,10 +114,10 @@ test('all application design profiles run in both engines without skipping repla
   assert.match(registration.run, /tests\.length.*=== 1440 \? 23 : 21/);
   assert.match(registration.run, /projectName === `app-design-\$\{process\.env\.APP_DESIGN_BROWSER\}`/);
   assert.match(registration.run, /test\.title\.startsWith\(process\.env\.APP_DESIGN_PROFILE_TITLE\)/);
-  assert.match(commands(job), /--grep="\$APP_DESIGN_PROFILE_TITLE" --workers=2/);
+  assert.match(commands(job), /--grep="\$APP_DESIGN_PROFILE_TITLE" --workers=4/);
   const replay = job.steps.find(step => step.name === 'Preserve engine replay contract');
   assert.equal(replay.if, "matrix.width == 1440 && matrix.theme == 'dark'");
-  assert.match(replay.run, /--grep-invert="Application design languages at" --workers=2/);
+  assert.match(replay.run, /--grep-invert="Application design languages at" --workers=4/);
   const phases = job.steps.find(step => step.name === 'Run every application design phase');
   assert.notEqual(phases.run.match(/--output=(\S+)/)?.[1], replay.run.match(/--output=(\S+)/)?.[1]);
   assert.notEqual(phases.env.PLAYWRIGHT_JSON_OUTPUT_NAME, replay.env.PLAYWRIGHT_JSON_OUTPUT_NAME);

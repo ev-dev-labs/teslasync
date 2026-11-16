@@ -6,7 +6,6 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -107,7 +106,7 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
     >
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis
             dataKey="distance"
             {...axisTick}

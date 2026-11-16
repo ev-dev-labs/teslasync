@@ -11,7 +11,6 @@ import {
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
   ChartContainer,
   ChartLegend,
@@ -579,7 +578,7 @@ export default function DriverAttributionPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={shareData} margin={chartMargin}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis tick={axisTick} domain={[0, 100]} />
                 <Tooltip content={<ChartTooltip valueFormatter={(value, _name, unit) =>

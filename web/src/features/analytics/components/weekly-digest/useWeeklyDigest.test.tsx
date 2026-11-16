@@ -32,7 +32,7 @@
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { cleanup, renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
@@ -75,7 +75,6 @@ function makeWrapper() {
 }
 
 /** Lets a disabled query settle so we can assert it never fired. */
-const tick = () => new Promise((r) => setTimeout(r, 10));
 
 /* ── Fixture builders ── */
 function makeVehicle(over: Partial<Vehicle> & Pick<Vehicle, 'id' | 'vin'>): Vehicle {
@@ -361,7 +360,7 @@ beforeEach(() => {
   mockedRequest.mockReset();
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 /* ── Vehicle selection ── */
 describe('vehicle selection', () => {
@@ -436,7 +435,7 @@ describe('request wiring', () => {
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(callsFor('/vehicles')).toBe(1));
-    await tick();
+    await waitFor(() => expect(result.current.drivesLoading).toBe(false));
 
     expect(result.current.vehicleOptions).toEqual([]);
     expect(result.current.selectedVehicleId).toBe('');
@@ -652,10 +651,11 @@ describe('week navigation', () => {
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.isCurrentWeek).toBe(true));
+    await waitFor(() => expect(result.current.selectedVehicleId).toBe('1'));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     const label = result.current.weekLabel;
 
     act(() => result.current.goToNextWeek());
-    await tick();
 
     expect(result.current.isCurrentWeek).toBe(true);
     expect(result.current.weekLabel).toBe(label); // unchanged — no forward step

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import LocationMapWidget from './LocationMapWidget';
@@ -106,6 +106,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   document.documentElement.classList.remove('light-mode');
 });
 

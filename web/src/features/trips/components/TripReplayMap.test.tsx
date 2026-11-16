@@ -34,7 +34,7 @@
  * map/page tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { DrivePosition } from '@/types/driving';
 
 /* Prop-capturing shared state for the mocked maps barrel. Hoisted so the
@@ -447,7 +447,7 @@ describe('TripReplayMap — viewport lifecycle', () => {
     expect(onSeekToIndex).not.toHaveBeenCalled();
   });
 
-  it('preserves the viewport during playback, layer changes, and unrelated rerenders', () => {
+  it('preserves the viewport during playback, layer changes, and unrelated rerenders', async () => {
     const onSeekToIndex = vi.fn();
     const { rerender } = renderMap({ onSeekToIndex });
 
@@ -460,7 +460,7 @@ describe('TripReplayMap — viewport lifecycle', () => {
         reduceMotion
       />,
     );
-    fireEvent.click(screen.getByTestId('layer-switch'));
+    await act(async () => { fireEvent.click(screen.getByTestId('layer-switch')); });
 
     expect(maps.map.fitBounds).toHaveBeenCalledTimes(1);
     expect(maps.map.setView).not.toHaveBeenCalled();

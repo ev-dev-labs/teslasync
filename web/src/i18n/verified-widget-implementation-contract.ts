@@ -521,7 +521,26 @@ export function restoreSharedAxisRoleSource(file: string, source: string): strin
   return source;
 }
 
+export function restoreSharedGridCompositionSource(file: string, source: string): string {
+  if (file !== 'web/src/features/sharing/pages/SharedDrivePage.tsx') return source;
+  expect(hash(source), file + ': exact shared grid composition successor')
+    .toBe('8452f385f96fdce644a95fed8cc10204e8725bd2bd71a5519bc98c67f843bb8a');
+  const shared = readFileSync(resolve(process.cwd(), 'src/components/charts/chartUtils.tsx'), 'utf8');
+  expect(hash(shared), file + ': actual shared grid element and unchanged paint')
+    .toBe('81838b20d8a725ec3c2895ebec127302bdadf493915826c4108487c3cb552ddf');
+  nativeRepairPredecessor('web/src/lib/tokens.ts');
+  const imports = '  AreaChart, Area, LineChart, Line, XAxis, YAxis,\n';
+  expect(source.split(imports), file + ': unique corrected import').toHaveLength(2);
+  expect(source.split('{chartGrid}'), file + ': both corrected chart children').toHaveLength(3);
+  const previous = source.replace(imports, imports.replace('YAxis,', 'YAxis, CartesianGrid,'))
+    .replaceAll('{chartGrid}', '<CartesianGrid {...chartGrid} />');
+  expect(hash(previous), file + ': complete unchanged historical source')
+    .toBe(appDesign.sources.find(entry => entry.file === file)?.after);
+  return previous;
+}
+
 export function restoreAppDesignSource(file: string, source: string): string {
+  source = restoreSharedGridCompositionSource(file, source);
   source = restoreSharedAxisRoleSource(file, source);
   source = restoreNativeSourceRepair(file, source);
   source = restorePreviewChartQuerySource(file, source);

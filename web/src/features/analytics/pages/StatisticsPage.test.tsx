@@ -38,7 +38,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -197,6 +197,11 @@ import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import StatisticsPage from './StatisticsPage';
+import { getBootstrapSettings } from '@/api/settingsBootstrap';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockMileage = vi.mocked(useMileageStats);
@@ -297,7 +302,7 @@ function installHappyPath() {
   mockFleet.mockReturnValue(qr({ data: makeFleet(2) }));
 }
 
-function renderPage(initialEntries: string[] = ['/statistics']) {
+async function renderPage(initialEntries: string[] = ['/statistics']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -313,6 +318,7 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
     </MemoryRouter>
   );
   const result = render(page());
+  await act(async () => { await getBootstrapSettings(); });
   return { ...result, client, rerenderPage: () => result.rerender(page()) };
 }
 
@@ -374,7 +380,7 @@ beforeEach(() => {
 describe('StatisticsPage', () => {
   it('places every card-grid item as one spanned cell so briefs never collapse to a single column', async () => {
     mockMileage.mockReturnValue(qr({ data: makeMileage(), error: new Error('mileage refresh failed') }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
     const grids = document.querySelectorAll('[data-card-grid] > *');
     expect(grids).toHaveLength(3);
@@ -398,13 +404,12 @@ describe('StatisticsPage', () => {
         { state: 'charging', total_seconds: 3_600, percentage: 12.5, transition_count: 3 },
       ],
     };
-    mockedRequest.mockImplementation((path: unknown) => {
+    const defaultRequest = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((path, options) => {
       if (typeof path === 'string' && path.startsWith('/vehicle-states/summary?vehicle_id=1')) return Promise.resolve(response);
-      if (typeof path === 'string' && path.startsWith('/analytics/period-stats')) return periodStatsHandler();
-      if (typeof path === 'string' && path.startsWith('/annotations')) return Promise.resolve([]);
-      return Promise.resolve({});
+      return defaultRequest(path, options);
     });
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     await waitFor(() => {
@@ -430,7 +435,7 @@ describe('StatisticsPage', () => {
     const data = { ...makeFleet(2), partial_result: partial };
     const retry = vi.fn();
     mockFleet.mockReturnValue(qr({ data, isSuccess: true, refetch: retry }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
 
     const assertRetained = () => {
@@ -471,7 +476,7 @@ describe('StatisticsPage', () => {
 
   it('retains a partial notice when the producer supplies no reason list', async () => {
     mockFleet.mockReturnValue(qr({ data: { ...makeFleet(2), partial_result: { is_partial: true, reasons: null } } }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
     expect(screen.getByTestId('statistics-fleet-partial')).toHaveTextContent('not treated as complete');
   });
@@ -479,7 +484,7 @@ describe('StatisticsPage', () => {
   it('shows active chart loading without claiming successful empty results', async () => {
     mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
     mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
     expect(document.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(2);
     expect(screen.getAllByRole('status', { name: 'Loading chart…' })).toHaveLength(2);
@@ -493,7 +498,7 @@ describe('StatisticsPage', () => {
   it('explains paused first chart loads without claiming empty history or a vehicle outage', async () => {
     mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
     mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
     expect(screen.getAllByText('Refresh paused')).toHaveLength(2);
     expect(screen.queryByTestId('statistics-state-loading')).not.toBeInTheDocument();
@@ -513,7 +518,7 @@ describe('StatisticsPage', () => {
     mockSource.mockReturnValue(qr({
       isLoading: true, isPending: true, fetchStatus: 'fetching', refetch: retry,
     }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
 
     const chart = (name: string) => {
@@ -561,7 +566,7 @@ describe('StatisticsPage', () => {
 
   it('distinguishes successful empty fleet results from measured zero comparison values', async () => {
     mockFleet.mockReturnValue(qr({ data: makeFleet(0), isSuccess: true }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
     expect(screen.getByText('Add more vehicles to compare')).toBeInTheDocument();
     expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
@@ -579,7 +584,7 @@ describe('StatisticsPage', () => {
   it('keeps all three sections and both charts visible during independent retained refresh failures', async () => {
     mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), error: new Error('state refresh failed') }));
     mockFleet.mockReturnValue(qr({ data: makeFleet(2), error: new Error('fleet refresh failed') }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     expect(screen.getByRole('region', { name: 'Totals and averages' })).toBeInTheDocument();
@@ -597,7 +602,7 @@ describe('StatisticsPage', () => {
     const retryFleet = vi.fn();
     mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), fetchStatus: 'paused', refetch: retryState }));
     mockFleet.mockReturnValue(qr({ data: makeFleet(2), refetch: retryFleet }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const warning = screen.getByTestId('stale-refresh-warning');
@@ -615,7 +620,7 @@ describe('StatisticsPage', () => {
       { state: 'driving', total_seconds: 0, transition_count: 1 },
       { state: 'charging', count: 1 },
     ] }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const table = screen.getByRole('table', { name: 'State distribution — data table' });
@@ -630,7 +635,7 @@ describe('StatisticsPage', () => {
       { state: 'driving', total_seconds: 0, percentage: 0, transition_count: 1 },
       { state: 'new_source_state', total_seconds: 1800, percentage: 100, transition_count: 1 },
     ] }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const table = screen.getByRole('table', { name: 'State distribution — data table' });
@@ -646,7 +651,7 @@ describe('StatisticsPage', () => {
       { state: 'toString', total_seconds: 1200, percentage: 20, transition_count: 1 },
       { state: '__proto__', total_seconds: 4200, percentage: 70, transition_count: 1 },
     ] }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const table = screen.getByRole('table', { name: 'State distribution — data table' });
@@ -665,7 +670,7 @@ describe('StatisticsPage', () => {
       { ...fleet.vehicle_comparison[0], distance: 0, energy: 0 },
       { ...fleet.vehicle_comparison[1], name: null, distance: null, energy: null },
     ] } }));
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
@@ -676,7 +681,7 @@ describe('StatisticsPage', () => {
   });
 
   it('forwards the period query abort signal and gives the page refresh a mobile-sized target', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByText('500 km');
 
     const call = mockedRequest.mock.calls.find(args => args[0] === '/analytics/period-stats?vehicle_id=1');
@@ -686,7 +691,7 @@ describe('StatisticsPage', () => {
   });
 
   it('reviews totals, kilometre cost denominators and mixed mileage windows without another request', async () => {
-    renderPage();
+    await renderPage();
     const totals = screen.getByTestId('statistics-totals-brief');
     await within(totals).findByText('500 km');
     expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
@@ -704,7 +709,7 @@ describe('StatisticsPage', () => {
   });
 
   it('renders the page shell (h1 + subtitle) and sets the document title', async () => {
-    renderPage();
+    await renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Statistics' }),
@@ -719,7 +724,7 @@ describe('StatisticsPage', () => {
   });
 
   it('renders every period-total and average card with km-converted values', async () => {
-    renderPage();
+    await renderPage();
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
     expect(within(totals).getByText('Total distance')).toBeInTheDocument();
@@ -739,7 +744,7 @@ describe('StatisticsPage', () => {
 
   it.each(['km', 'mi'] as const)('discloses the existing CO₂ estimate in the occurrence and details without recalculating mass in %s', async length => {
     unitState.length = length;
-    renderPage();
+    await renderPage();
 
     const totals = screen.getByTestId('statistics-totals-brief');
     await within(totals).findByText('50.00 kg');
@@ -769,7 +774,7 @@ describe('StatisticsPage', () => {
   it('shows loading skeletons while the period-stats query is pending', async () => {
     periodStatsHandler = () => new Promise(() => {}); // never resolves
 
-    renderPage();
+    await renderPage();
 
     expect(screen.getByTestId('statistics-totals-brief')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByTestId('statistics-averages-brief')).toHaveAttribute('aria-busy', 'true');
@@ -782,7 +787,7 @@ describe('StatisticsPage', () => {
     ['mi', '257.50 Wh/mi'],
   ] as const)('discloses the charging numerator and efficiency proxy without recomputing returned values in %s', async (length, efficiency) => {
     unitState.length = length;
-    renderPage();
+    await renderPage();
 
     const totals = screen.getByTestId('statistics-totals-brief');
     await within(totals).findByText('100.00 kWh');
@@ -811,7 +816,7 @@ describe('StatisticsPage', () => {
         total_distance: value, total_drives: value, energy_used: value,
         total_cost: value, co2_saved: value, avg_efficiency: value,
       }));
-      renderPage();
+      await renderPage();
       const totals = screen.getByTestId('statistics-totals-brief');
       await waitFor(() => expect(totals).not.toHaveAttribute('aria-busy'));
       expectHiddenFields(totals, 5, 5);
@@ -823,7 +828,7 @@ describe('StatisticsPage', () => {
     'requires a known positive integer drive count (%s) for average distance',
     async total_drives => {
       periodStatsHandler = () => Promise.resolve(makeStats({ total_drives }));
-      renderPage();
+      await renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await waitFor(() => expect(within(averages).getByText('$0.50')).toBeInTheDocument());
       expectHiddenFields(averages, 1, 3);
@@ -835,7 +840,7 @@ describe('StatisticsPage', () => {
       total_distance: 0, total_drives: 0, energy_used: 0,
       total_cost: 0, co2_saved: 0, avg_efficiency: 0,
     }));
-    renderPage();
+    await renderPage();
     const totals = screen.getByTestId('statistics-totals-brief');
     await waitFor(() => expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5));
     expect(within(totals).getByText('0 km')).toBeInTheDocument();
@@ -847,11 +852,11 @@ describe('StatisticsPage', () => {
 
   it('preserves zero average distance with positive count and zero cost/km with positive distance', async () => {
     periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0, total_drives: 2 }));
-    const { unmount } = renderPage();
+    const { unmount } = await renderPage();
     await screen.findByText('0.00 km');
     unmount();
     periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0.5, total_cost: 0 }));
-    renderPage();
+    await renderPage();
     await waitFor(() => expect(within(screen.getByTestId('statistics-averages-brief')).getByText('$0.00')).toBeInTheDocument());
   });
 
@@ -861,7 +866,7 @@ describe('StatisticsPage', () => {
       total_distance: 0.5, total_drives: 2, energy_used: -0.25,
       total_cost: -0.125, co2_saved: -0.5, avg_efficiency: -10.5,
     }));
-    renderPage();
+    await renderPage();
     const totals = screen.getByTestId('statistics-totals-brief');
     await within(totals).findByText('-0.25 kWh');
     expect(within(totals).getByText('-0.50 kg')).toBeInTheDocument();
@@ -875,7 +880,7 @@ describe('StatisticsPage', () => {
     'requires known distance (%s) for both distance and cost averages',
     async total_distance => {
       periodStatsHandler = () => Promise.resolve(makeStats({ total_distance }));
-      renderPage();
+      await renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await within(averages).findByText('160.00 Wh/km');
       expectHiddenFields(averages, 2, 3);
@@ -884,7 +889,7 @@ describe('StatisticsPage', () => {
 
   it('retains signed distance but requires positive distance for cost/km', async () => {
     periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: -0.5, total_drives: 2 }));
-    renderPage();
+    await renderPage();
     const averages = screen.getByTestId('statistics-averages-brief');
     await within(averages).findByText('-0.25 km');
     expectHiddenFields(averages, 1, 3);
@@ -894,7 +899,7 @@ describe('StatisticsPage', () => {
     'withholds cost/km when cost is not a known measurement (%s)',
     async total_cost => {
       periodStatsHandler = () => Promise.resolve(makeStats({ total_cost }));
-      renderPage();
+      await renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await within(averages).findByText('11.90 km');
       expectHiddenFields(averages, 1, 3);
@@ -904,7 +909,7 @@ describe('StatisticsPage', () => {
   it('surfaces a retry-able error when the period-stats request fails', async () => {
     periodStatsHandler = () => Promise.reject(new Error('period stats down'));
 
-    renderPage();
+    await renderPage();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
@@ -914,7 +919,7 @@ describe('StatisticsPage', () => {
   it('re-fetches the period stats when the error retry button is clicked', async () => {
     periodStatsHandler = () => Promise.reject(new Error('boom'));
 
-    renderPage();
+    await renderPage();
 
     await screen.findByRole('button', { name: 'Retry' });
     const before = periodStatsCallCount();
@@ -926,7 +931,7 @@ describe('StatisticsPage', () => {
   it('shows a guided empty state when period stats resolve empty', async () => {
     periodStatsHandler = () => Promise.resolve(null);
 
-    renderPage();
+    await renderPage();
 
     expect(await screen.findByText('No statistics yet')).toBeInTheDocument();
     expect(
@@ -938,7 +943,7 @@ describe('StatisticsPage', () => {
   });
 
   it('renders the battery-health gauge and its stat cards on the happy path', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('Health')).toBeInTheDocument();
@@ -957,7 +962,7 @@ describe('StatisticsPage', () => {
   ])('formats source calendar months (%s) with numeric formatting and plural selection', async (age, expected) => {
     const battery = Object.freeze(makeBattery({ battery_age_months: age }));
     mockBattery.mockReturnValue(qr({ data: battery }));
-    renderPage();
+    await renderPage();
     const brief = screen.getByTestId('statistics-battery-brief');
     expect(brief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
@@ -980,7 +985,7 @@ describe('StatisticsPage', () => {
     try {
       mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months: 1234.5 }) }));
       mockMileage.mockReturnValue(qr({ data: makeMileage({ first_drive_at: date, last_drive_at: date }) }));
-      renderPage();
+      await renderPage();
       expect(within(screen.getByTestId('statistics-battery-brief')).getByText(/1\s234,50 mois/)).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -991,7 +996,7 @@ describe('StatisticsPage', () => {
     'does not invent calendar-month age from missing or invalid age (%s)',
     async battery_age_months => {
       mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months }) }));
-      renderPage();
+      await renderPage();
       const brief = screen.getByTestId('statistics-battery-brief');
       expect(brief.querySelector('[data-operational-metric="statistics-battery-age"]')).not.toBeInTheDocument();
       expectHiddenFields(brief, 1, 4);
@@ -1006,7 +1011,7 @@ describe('StatisticsPage', () => {
     async current_soh => {
       const battery = Object.freeze(makeBattery({ current_soh }));
       mockBattery.mockReturnValue(qr({ data: battery }));
-      renderPage();
+      await renderPage();
       await screen.findByRole('region', { name: 'Statistics' });
       const health = screen.getByRole('group', { name: 'Health' });
       expect(within(health).getByText('—')).toBeInTheDocument();
@@ -1025,7 +1030,7 @@ describe('StatisticsPage', () => {
     { current_soh: 0, current_soh_available: false },
   ])('keeps unsupported health unknown without hiding other metrics: %j', async overrides => {
     mockBattery.mockReturnValue(qr({ data: makeBattery(overrides) }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(within(screen.getByRole('group', { name: 'Health' })).getByText('—')).toBeInTheDocument();
     expect(screen.queryByRole('meter', { name: 'Health' })).not.toBeInTheDocument();
@@ -1042,7 +1047,7 @@ describe('StatisticsPage', () => {
     mockBattery.mockReturnValue(qr({ data: makeBattery({
       current_soh: 0, degradation_rate_pct_per_year: 0, total_cycles: 0, battery_age_months: 0, ...evidence,
     }) }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('meter', { name: 'Health' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
@@ -1051,7 +1056,7 @@ describe('StatisticsPage', () => {
 
   it.each([92.34, -2.34, 102.34])('preserves fractional and signed health %s without rounding or clamping its reading', async current_soh => {
     mockBattery.mockReturnValue(qr({ data: makeBattery({ current_soh, degradation_rate_pct_per_year: -1.25, battery_age_months: 2.5 }) }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     const health = screen.getByRole(current_soh >= 0 && current_soh <= 100 ? 'meter' : 'group', { name: 'Health' });
     expect(within(health).getByText(current_soh.toFixed(2))).toBeInTheDocument();
@@ -1062,7 +1067,7 @@ describe('StatisticsPage', () => {
   it('retains unknown health and measured neighbors during failed battery refresh', async () => {
     const refetch = vi.fn();
     mockBattery.mockReturnValue(qr({ data: makeBattery({ current_soh: null }), error: new Error('refresh failed'), refetch }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(within(screen.getByRole('group', { name: 'Health' })).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
@@ -1075,21 +1080,21 @@ describe('StatisticsPage', () => {
 
   it('renders battery empty and error placeholders without blanking the panel', async () => {
     mockBattery.mockReturnValue(qr({ data: undefined }));
-    const { unmount } = renderPage();
+    const { unmount } = await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No battery health data available')).toBeInTheDocument();
     expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
     unmount();
 
     mockBattery.mockReturnValue(qr({ error: new Error('battery down') }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
   });
 
   it('renders the mileage summary cards on the happy path', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('Daily average')).toBeInTheDocument();
     expect(screen.getByText('Yearly projection')).toBeInTheDocument();
@@ -1101,7 +1106,7 @@ describe('StatisticsPage', () => {
     const retryBattery = vi.fn();
     mockBattery.mockReturnValue(qr({ data: makeBattery(), refetch: retryBattery }));
     mockMileage.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
     expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Loading statistics');
     expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
@@ -1136,7 +1141,7 @@ describe('StatisticsPage', () => {
     const retryMileage = vi.fn();
     mockMileage.mockReturnValue(qr({ data: makeMileage(), refetch: retryMileage }));
     mockBattery.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch: retryBattery }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
     const brief = () => screen.getByTestId('statistics-battery-brief');
     expectDetails(brief(), 'Refresh paused');
@@ -1168,7 +1173,7 @@ describe('StatisticsPage', () => {
     const retryFleet = vi.fn();
     mockFleet.mockReturnValue(qr({ data: makeFleet(2), refetch: retryFleet }));
     mockMileage.mockReturnValue(qr({ data: makeMileage(), isFetching: true, fetchStatus: 'fetching', refetch: retryMileage }));
-    const { rerenderPage } = renderPage();
+    const { rerenderPage } = await renderPage();
     await screen.findByText('500 km');
     expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Refreshing');
     expect(screen.getByText('8,000 km')).toBeInTheDocument();
@@ -1199,21 +1204,21 @@ describe('StatisticsPage', () => {
 
   it('renders mileage empty and error placeholders without blanking the panel', async () => {
     mockMileage.mockReturnValue(qr({ data: undefined }));
-    const { unmount } = renderPage();
+    const { unmount } = await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No mileage data available')).toBeInTheDocument();
     expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
     unmount();
 
     mockMileage.mockReturnValue(qr({ error: new Error('mileage down') }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
   });
 
   it('renders the state-distribution chart figure when data is present', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
@@ -1229,7 +1234,7 @@ describe('StatisticsPage', () => {
     mockStateSummary.mockReturnValue(
       qr({ data: [{ state: 'driving', total_seconds: 5400, percentage: 100, transition_count: 4 }] }),
     );
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     // The restored raw row renders without a minute-shape adapter.
@@ -1241,14 +1246,14 @@ describe('StatisticsPage', () => {
 
   it('shows the state-distribution empty state when there are no rows', async () => {
     mockStateSummary.mockReturnValue(qr({ data: [] }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('No state distribution data')).toBeInTheDocument();
   });
 
   it('renders the vehicle-comparison chart with 2+ vehicles', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
@@ -1259,13 +1264,13 @@ describe('StatisticsPage', () => {
 
   it('shows a single-vehicle empty state and a fleet error placeholder', async () => {
     mockFleet.mockReturnValue(qr({ data: makeFleet(1) }));
-    const { unmount } = renderPage();
+    const { unmount } = await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('Add more vehicles to compare')).toBeInTheDocument();
     unmount();
 
     mockFleet.mockReturnValue(qr({ error: new Error('fleet down') }));
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
@@ -1273,16 +1278,17 @@ describe('StatisticsPage', () => {
   it.each(['2025-03-15', '2025-03-16'])('passes calendar instants through the fleet request and key with exclusive end %s', async (endDate) => {
     const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
     mockFleet.mockImplementation(actual.useFleetAnalytics);
-    mockedRequest.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
-    ));
+    const defaultRequest = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((path, options) =>
+      path.startsWith('/analytics/fleet') ? Promise.resolve(makeFleet(2)) : defaultRequest(path, options),
+    );
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2025-03-01',
       endDate,
       // Bare renders resolve the display zone to UTC (global timezone mock).
       timezone: 'UTC',
     });
-    const { client } = renderPage([`/statistics?from=2025-03-01&to=${endDate}`]);
+    const { client } = await renderPage([`/statistics?from=2025-03-01&to=${endDate}`]);
     await screen.findByRole('region', { name: 'Statistics' });
 
     const params = new URLSearchParams({ start: startInstant, end: endInstantExclusive });
@@ -1303,16 +1309,17 @@ describe('StatisticsPage', () => {
       vehicle_id: 1, days: 15, start: '', end: '', total_seconds: 3_600,
       by_state: [{ state: 'driving', total_seconds: 3_600, percentage: 100, transition_count: 1 }],
     };
-    mockedRequest.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/vehicle-states/summary') ? response : makeStats(),
-    ));
+    const defaultRequest = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((path, options) =>
+      path.startsWith('/vehicle-states/summary') ? Promise.resolve(response) : defaultRequest(path, options),
+    );
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2025-03-01',
       endDate: '2025-03-15',
       // Bare renders resolve the display zone to UTC (global timezone mock).
       timezone: 'UTC',
     });
-    const { client } = renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
+    const { client } = await renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
     await screen.findByRole('region', { name: 'Statistics' });
 
     const params = new URLSearchParams({ vehicle_id: '1', start: startInstant, end: endInstantExclusive });
@@ -1326,14 +1333,15 @@ describe('StatisticsPage', () => {
   it('preserves precise rolling 24-hour bounds in the fleet request and key', async () => {
     const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
     mockFleet.mockImplementation(actual.useFleetAnalytics);
-    mockedRequest.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
-    ));
+    const defaultRequest = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((path, options) =>
+      path.startsWith('/analytics/fleet') ? Promise.resolve(makeFleet(2)) : defaultRequest(path, options),
+    );
     const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T17:45:46.022Z'));
     try {
       const start = '2026-10-13T17:45:46.022Z';
       const end = '2026-10-14T17:45:46.022Z';
-      const { client } = renderPage(['/statistics?time_scope=24h']);
+      const { client } = await renderPage(['/statistics?time_scope=24h']);
       const params = new URLSearchParams({ start, end });
       await waitFor(() => expect(issuedPaths()).toContain(`/analytics/fleet?${params}`));
       expect(mockFleet).toHaveBeenCalledWith({ start, end });
@@ -1346,7 +1354,7 @@ describe('StatisticsPage', () => {
   });
 
   it('requests period stats with a snake_case vehicle_id and no /api/v1 prefix', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     const paths = issuedPaths();
@@ -1356,7 +1364,7 @@ describe('StatisticsPage', () => {
   });
 
   it('re-fetches the stats when the toolbar refresh button is clicked', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     // Both the toolbar <button> and the FreshnessDot chip expose a "Refresh"
@@ -1377,18 +1385,18 @@ describe('StatisticsPage', () => {
       vehicles: [],
       setVehicleId: vi.fn(),
     });
-    const { unmount } = renderPage();
+    const { unmount } = await renderPage();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     unmount();
 
     installHappyPath();
-    renderPage();
+    await renderPage();
     expect(screen.queryByRole('combobox', { name: 'Select Vehicle' })).not.toBeInTheDocument();
     expect(mockSelectedVehicle).toHaveBeenCalled();
   });
 
   it('consumes the selected vehicle from the shared context without a local picker', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(mockSelectedVehicle).toHaveBeenCalled();
     expect(screen.queryByRole('combobox', { name: 'Select Vehicle' })).not.toBeInTheDocument();
@@ -1397,7 +1405,7 @@ describe('StatisticsPage', () => {
 
   it('converts distance and efficiency to imperial units when preferred', async () => {
     unitState.length = 'mi';
-    renderPage();
+    await renderPage();
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
     // 500 km → 310.69 mi → fmtInt → 311 mi
@@ -1409,7 +1417,7 @@ describe('StatisticsPage', () => {
   });
 
   it('is accessible: labelled metric regions, named chart figures, and named controls', async () => {
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByRole('region', { name: 'Statistics' })).toBeInTheDocument();

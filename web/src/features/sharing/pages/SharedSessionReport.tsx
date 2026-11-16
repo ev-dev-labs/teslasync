@@ -6,7 +6,7 @@ import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTick,
-  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
+  ComposedChart, Area, Line, XAxis, YAxis,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
@@ -118,7 +118,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
             >
               <ResponsiveContainer width="100%" height={220}>
                 <ComposedChart data={curveData}>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis
                     dataKey="minutes"
                     {...axisTick}

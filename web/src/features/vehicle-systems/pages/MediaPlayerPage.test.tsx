@@ -75,7 +75,7 @@ vi.mock('@/components/charts', async () => {
     ...chartTestDoubles,
     EmbeddedChart,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
-    chartGrid: {},
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
     axisTickSm: {},
     ChartTooltip: Null,
     ChartGradient: Null,

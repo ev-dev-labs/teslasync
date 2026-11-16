@@ -30,6 +30,49 @@ import type { Mock } from 'vitest'
 // `globalThis` in real use, or a throwaway fake target in unit tests.
 type GlobalLike = Record<string, unknown>
 
+/** Give real responsive charts an allocated box in jsdom, which has no layout engine. */
+export function measureChartContainers(width: number, height: number) {
+  const measure = Element.prototype.getBoundingClientRect
+  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return this.classList.contains('recharts-responsive-container')
+      ? new DOMRect(0, 0, width, height) : measure.call(this)
+  })
+}
+
+/** jsdom has no viewport scrolling engine; keep coordinates and scroll events observable. */
+export function patchWindowScroll(target: Window = window) {
+  const keys = ['scrollTo', 'scrollX', 'scrollY', 'pageXOffset', 'pageYOffset'] as const
+  const descriptors = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(target, key)]))
+  const root = target.document.documentElement
+  const originalPosition = { left: root.scrollLeft, top: root.scrollTop }
+  const scrollTo = (options?: ScrollToOptions | number, y?: number) => {
+    const left = typeof options === 'number' ? options : options?.left ?? target.scrollX
+    const top = typeof options === 'number' ? y ?? 0 : options?.top ?? target.scrollY
+    const xPosition = Number.isFinite(left) ? left : 0
+    const yPosition = Number.isFinite(top) ? top : 0
+    root.scrollLeft = xPosition
+    root.scrollTop = yPosition
+    for (const [key, value] of Object.entries({
+      scrollX: xPosition, pageXOffset: xPosition, scrollY: yPosition, pageYOffset: yPosition,
+    })) {
+      Object.defineProperty(target, key, { configurable: true, writable: true, value })
+    }
+    target.dispatchEvent(new Event('scroll'))
+  }
+  Object.defineProperty(target, 'scrollTo', { configurable: true, writable: true, value: scrollTo })
+  return {
+    restore() {
+      for (const key of keys) {
+        const descriptor = descriptors.get(key)
+        if (descriptor) Object.defineProperty(target, key, descriptor)
+        else Reflect.deleteProperty(target, key)
+      }
+      root.scrollLeft = originalPosition.left
+      root.scrollTop = originalPosition.top
+    },
+  }
+}
+
 /**
  * jsdom-safe `IntersectionObserver`. `observe()` reports the target as fully
  * intersecting immediately so `useInView`-gated content (FadeIn, lazy charts)

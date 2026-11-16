@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartContainer,
   ChartTooltip, chartGrid, axisTickSm,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -76,7 +76,7 @@ export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhC
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows}>
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis dataKey="date" {...axisTickSm} />
           <YAxis
             {...axisTickSm}

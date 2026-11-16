@@ -37,6 +37,7 @@ import {
   restoreSettingsPreviewInvokerSource,
   restorePreviewChartQuerySource,
   restoreSharedAxisRoleSource,
+  restoreSharedGridCompositionSource,
 } from './verified-widget-implementation-contract';
 
 describe('additive widget implementation preservation', () => {
@@ -80,6 +81,16 @@ describe('additive widget implementation preservation', () => {
   }
 
   describe('exact additive application-design preservation', () => {
+    it('rejects altered grid composition and stale source without replacing historical fingerprints', () => {
+      const file = 'web/src/features/sharing/pages/SharedDrivePage.tsx';
+      const current = source(file);
+      const previous = restoreSharedGridCompositionSource(file, current);
+      expect(hash(previous)).toBe(appDesign.sources.find(entry => entry.file === file)?.after);
+      for (const altered of [previous, current + '\n', current.replace('{chartGrid}', '{null}')]) {
+        expect(() => restoreSharedGridCompositionSource(file, altered)).toThrow();
+      }
+    });
+
     it.each(appDesign.sources)('preserves complete source and every original call in $file', patch => {
       const current = source(patch.file);
       const previous = restoreAppDesignSource(patch.file, current);
@@ -87,7 +98,7 @@ describe('additive widget implementation preservation', () => {
       expect(hash(restoreRuntimeV9Source(patch.file,
         restoreTableNoMatchSource(patch.file,
           restoreCommandDeckModalSource(patch.file, restoreTableEmptyViewportSource(patch.file,
-            restoreSharedAxisRoleSource(patch.file, designCurrent))))))).toBe(patch.after);
+            restoreSharedAxisRoleSource(patch.file, restoreSharedGridCompositionSource(patch.file, designCurrent)))))))).toBe(patch.after);
       expect(hash(previous)).toBe(patch.before);
       expect(previous).not.toBe(current);
       const moved = appDesign.relocations.filter(([owner]) => owner === patch.file)

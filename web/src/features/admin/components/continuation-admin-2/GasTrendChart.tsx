@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import type { GasPriceHistory } from '@/api/types';
@@ -36,7 +36,9 @@ export function GasTrendChart({ source }: { source: DataState<GasPriceHistory[]>
       ]}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          {units.map((_unit, index) => areaGradient(`gasPriceGrad-${index}`, palette[index + 3] ?? color))}
+          {units.map((unit, index) => (
+            <Fragment key={unit}>{areaGradient(`gasPriceGrad-${index}`, palette[index + 3] ?? color)}</Fragment>
+          ))}
           <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
           <XAxis dataKey="date" tick={axisTick} />
           <YAxis width={96} tick={axisTick} domain={['auto', 'auto']}

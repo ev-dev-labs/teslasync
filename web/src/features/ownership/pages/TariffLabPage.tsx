@@ -10,7 +10,6 @@ import {
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
   ChartContainer,
   ChartTooltip,
@@ -609,7 +608,7 @@ export default function TariffLabPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={chartMargin}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis
                   tick={axisTick}

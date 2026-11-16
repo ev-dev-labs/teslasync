@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { cleanup, act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -78,7 +78,8 @@ function signedResult(report: VaultReport): SignedVaultReport {
 }
 
 describe('WarrantyResaleVaultPage', () => {
-  afterEach(() => { onlineManager.setOnline(true); vi.restoreAllMocks(); });
+  afterEach(() => {
+    cleanup(); onlineManager.setOnline(true); vi.restoreAllMocks(); });
   beforeEach(() => {
     selectedVehicleId = 1;
     requestMock.mockReset();
@@ -87,9 +88,9 @@ describe('WarrantyResaleVaultPage', () => {
     __resetAuditTrailForTests();
   });
 
-  it('shows the no-vehicle-selected empty state when no vehicle is selected', () => {
+  it('shows the no-vehicle-selected empty state when no vehicle is selected', async () => {
     selectedVehicleId = null;
-    renderPage();
+    await act(async () => { renderPage(); });
     expect(screen.getByText(/no vehicle selected/i)).toBeInTheDocument();
   });
 
@@ -549,7 +550,7 @@ describe('WarrantyResaleVaultPage tab/panel identity', () => {
     renderPage();
     await screen.findByText(/evidence inventory/i);
     const tabs = screen.getAllByRole('tab');
-    tabs[0].focus();
+    act(() => { tabs[0].focus(); });
     const moves = [
       { from: 0, key: 'ArrowRight', to: 1 },
       { from: 1, key: 'End', to: 4 },
@@ -598,7 +599,9 @@ describe('WarrantyResaleVaultPage tab/panel identity', () => {
 
   it('isolates tab and panel IDs between simultaneous page instances and retains identity on rerender', async () => {
     const { container, rerender } = renderPage();
-    rerender(<><WarrantyResaleVaultPage /><WarrantyResaleVaultPage /></>);
+    await act(async () => {
+      rerender(<><WarrantyResaleVaultPage /><WarrantyResaleVaultPage /></>);
+    });
     const tablists = within(container).getAllByRole('tablist');
     const first = within(tablists[0]);
     const second = within(tablists[1]);

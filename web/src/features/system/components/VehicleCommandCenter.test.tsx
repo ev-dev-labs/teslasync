@@ -166,16 +166,17 @@ function renderCenter(vehicle: Vehicle = makeVehicle()) {
       mutations: { retry: false },
     },
   });
-  const rendered = render(
+  const tree = () => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/commands']}>
         <ToastProvider>
           <VehicleCommandCenter vehicle={vehicle} />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return { ...rendered, queryClient };
+  const rendered = render(tree());
+  return { ...rendered, queryClient, refreshMode: () => rendered.rerender(tree()) };
 }
 
 function searchFor(value: string) {
@@ -517,15 +518,17 @@ describe('VehicleCommandCenter — command execution', () => {
       expect(lastPostBody()).toEqual({ command: 'valet_off' });
     });
 
-    it('cancels PIN intent without sending and rechecks readiness before explicit OFF', () => {
-      renderCenter();
+    it('cancels PIN intent without sending and rechecks readiness before explicit OFF', async () => {
+      const { refreshMode } = renderCenter();
       searchFor('set_valet_mode');
       fireEvent.click(screen.getByRole('button', { name: 'ON' }));
       fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
       expect(postCalls()).toHaveLength(0);
       operationalModeState.canWrite = false;
+      refreshMode();
       searchFor('guest_mode_on');
-      fireEvent.click(screen.getByRole('button', { name: 'OFF' }));
+      expect(screen.getByRole('button', { name: 'OFF' })).toBeDisabled();
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'OFF' })); });
       expect(postCalls()).toHaveLength(0);
     });
 

@@ -9,7 +9,6 @@ import {
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   ChartContainer,
   ChartLegend,
   ChartTooltip,
@@ -651,7 +650,7 @@ export default function ModelTrustPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={calibrationData} margin={chartMargin}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis tick={axisTick} tickFormatter={(value: number) => fmtScientificNumber(value, 3)} unit={selectedCard?.si_unit} />
                 <Tooltip content={<ChartTooltip valueFormatter={(value) => typeof value === 'number' ? `${fmtScientificNumber(value, 3)} ${selectedCard?.si_unit ?? '—'}` : '—'} />} />

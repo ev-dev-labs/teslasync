@@ -67,7 +67,7 @@ vi.mock('@/components/charts', async () => {
   const Inert = () => null;
   return {
     ...chartTestDoubles,
-    chartGrid: {},
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
     axisTickSm: {},
     ChartTooltip: Inert,
     CartesianGrid: Inert,

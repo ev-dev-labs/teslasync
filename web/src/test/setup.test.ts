@@ -33,11 +33,54 @@ import {
   patchBroadcastChannel,
   patchServiceWorkerLifecycle,
   TestCleanupRegistry,
+  measureChartContainers,
+  patchWindowScroll,
 } from './setup'
 
 afterEach(() => {
   // Guard against a test that forgot to restore leaking the stub across files.
   Reflect.deleteProperty(window, 'matchMedia')
+})
+
+it('reallocates responsive chart fixtures without replacing ordinary element measurements', () => {
+  const ordinary = document.createElement('button')
+  const chart = document.createElement('div')
+  chart.className = 'recharts-responsive-container'
+  const nativeBounds = ordinary.getBoundingClientRect()
+  const measurement = measureChartContainers(800, 320)
+  try {
+    expect(chart.getBoundingClientRect()).toMatchObject({ width: 800, height: 320 })
+    measureChartContainers(480, 240)
+    expect(chart.getBoundingClientRect()).toMatchObject({ width: 480, height: 240 })
+    expect(ordinary.getBoundingClientRect()).toEqual(nativeBounds)
+  } finally {
+    measurement.mockRestore()
+  }
+  expect(chart.getBoundingClientRect()).toEqual(nativeBounds)
+})
+
+it('applies both viewport scroll signatures, publishes changes and restores prior coordinates', () => {
+  const original = Object.getOwnPropertyDescriptor(window, 'scrollTo')
+  const initial = { x: window.scrollX, y: window.scrollY }
+  const listener = vi.fn()
+  const patch = patchWindowScroll()
+  window.addEventListener('scroll', listener)
+  try {
+    window.scrollTo(12, 34)
+    window.scrollTo({ top: 56 })
+    expect(window.scrollX).toBe(12)
+    expect(window.pageXOffset).toBe(12)
+    expect(window.scrollY).toBe(56)
+    expect(window.pageYOffset).toBe(56)
+    expect(document.documentElement.scrollLeft).toBe(12)
+    expect(document.documentElement.scrollTop).toBe(56)
+    expect(listener).toHaveBeenCalledTimes(2)
+  } finally {
+    window.removeEventListener('scroll', listener)
+    patch.restore()
+  }
+  expect(Object.getOwnPropertyDescriptor(window, 'scrollTo')).toEqual(original)
+  expect({ x: window.scrollX, y: window.scrollY }).toEqual(initial)
 })
 
 describe('MockIntersectionObserver', () => {

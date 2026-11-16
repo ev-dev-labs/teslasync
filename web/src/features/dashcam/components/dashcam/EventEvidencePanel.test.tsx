@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, act, render, screen } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ describe('EventEvidencePanel generated basis localization', () => {
     const view = render(<I18nextProvider i18n={i18n}><EventEvidencePanel clip={current} /></I18nextProvider>);
     expect(screen.getByText(`event.json reason: "${reason}" — folder: SavedClips`)).toBeInTheDocument();
     expect(screen.getByText(/sampled-frame pixel-difference score: 0.500 across 5/)).toBeInTheDocument();
-    await i18n.changeLanguage('fr');
+    await act(async () => { await i18n.changeLanguage('fr'); });
     view.rerender(<I18nextProvider i18n={i18n}><EventEvidencePanel clip={current} /></I18nextProvider>);
     expect(screen.getByText(`raison event.json : "${reason}" — dossier : SavedClips`)).toBeInTheDocument();
     expect(screen.getByText('dossier : SentryClips (cause inconnue)')).toBeInTheDocument();

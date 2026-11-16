@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
@@ -77,7 +77,9 @@ function mount(initialOffset = 0) {
 
 async function exportAs(format: 'CSV' | 'JSON') {
   fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-  fireEvent.click(screen.getByRole('menuitem', { name: `Download as ${format}` }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('menuitem', { name: `Download as ${format}` }));
+  });
 }
 
 beforeEach(() => {
@@ -165,7 +167,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
 
   it('consumes raw evidence strings through the normal client and success envelope without exporting alias fields', async () => {
     const { request } = await vi.importActual<typeof import('@/api/client')>('@/api/client');
-    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(
       JSON.stringify({ data: { rows: [ROW], limit: 100 } }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     ));
@@ -302,7 +304,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
       if (path.startsWith('/admin/audit-log?')) throw new ApiError('Refresh unavailable', 500);
       return success(path, init);
     });
-    await client.invalidateQueries();
+    await act(async () => { await client.invalidateQueries(); });
     await waitFor(() => expect(client.getQueryCache().getAll().some(query => query.state.error)).toBe(true));
     expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('with all evidence preserved');
     await exportAs('JSON');

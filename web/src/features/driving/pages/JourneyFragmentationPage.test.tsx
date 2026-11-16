@@ -1,6 +1,6 @@
 import { assertOperationalMetricUnavailable, assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -488,8 +488,10 @@ describe('JourneyFragmentationPage', () => {
       expect(result).toEqual(snapshot);
       expect(result.timeZone).toBe('America/Los_Angeles');
     } finally {
-      setGlobalLocale(previousLocale);
-      setGlobalPrecision(previousPrecision);
+      act(() => {
+        setGlobalLocale(previousLocale);
+        setGlobalPrecision(previousPrecision);
+      });
     }
   });
 

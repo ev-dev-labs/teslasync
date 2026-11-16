@@ -29,7 +29,7 @@
  * settings request and i18n are mocked for deterministic presentation.
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { act, render, screen, within, waitFor } from '@testing-library/react';
 
 import type { RouteSummary } from '@/types/driving';
 import { RouteCard, type RouteCardProps } from './RouteCard';
@@ -40,6 +40,7 @@ import {
   expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile,
 } from '@/components/feedback/appDesignCss.test-utils';
 import { ROUTE_EFF_COLORS } from './constants';
+import { getBootstrapSettings } from '@/api/settingsBootstrap';
 
 const actualThemeProvider = await vi.importActual<
   typeof import('@/components/ui/ThemeProvider')
@@ -97,16 +98,15 @@ function makeRoute(over: Partial<RouteSummary> = {}): RouteSummary {
   };
 }
 
-function renderCard(over: Partial<RouteCardProps> = {}) {
+async function renderCard(over: Partial<RouteCardProps> = {}) {
   const props: RouteCardProps = {
     route: makeRoute(),
     unit: makeUnitDisplay('km'),
     ...over,
   };
-  return {
-    ...render(<ActualThemeProvider><RouteCard {...props} /></ActualThemeProvider>),
-    props,
-  };
+  const view = render(<ActualThemeProvider><RouteCard {...props} /></ActualThemeProvider>);
+  await act(async () => { await getBootstrapSettings(); });
+  return { ...view, props };
 }
 
 // jsdom rejects gradients containing light-dark(). Capture the actual React
@@ -114,7 +114,7 @@ function renderCard(over: Partial<RouteCardProps> = {}) {
 const assignedBackgrounds = new WeakMap<CSSStyleDeclaration, string>();
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({})));
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => Response.json({})));
   // jsdom places CSS property accessors on CSSStyleProperties, one level
   // above CSSStyleDeclaration; use the prototype of an actual element style.
   const stylePrototype: CSSStyleDeclaration = Object.getPrototypeOf(
@@ -152,8 +152,8 @@ function gradientBackground(container: HTMLElement): string {
 }
 
 describe('RouteCard — header (endpoints, caption, badge)', () => {
-  it('renders the start→end heading and the trips · avg-distance caption (km)', () => {
-    renderCard();
+  it('renders the start→end heading and the trips · avg-distance caption (km)', async () => {
+    await renderCard();
 
     const heading = screen.getByRole('heading', { level: 3 });
     expect(heading).toHaveTextContent('Home');
@@ -163,30 +163,30 @@ describe('RouteCard — header (endpoints, caption, badge)', () => {
     expect(screen.getByText('12 trips · 25.00 km avg')).toBeInTheDocument();
   });
 
-  it('shows the efficiency badge with the SI value + unit and the matching band tone', () => {
-    renderCard(); // avg 160 Wh/km → "info" band (140..180)
+  it('shows the efficiency badge with the SI value + unit and the matching band tone', async () => {
+    await renderCard(); // avg 160 Wh/km → "info" band (140..180)
 
     const badge = screen.getByText('160 Wh/km');
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain('bg-[var(--semantic-info-bg)]');
   });
 
-  it('maps the badge tone across the efficiency bands (success / danger)', () => {
-    const good = renderCard({ route: makeRoute({ avgEfficiency: 100, bestEfficiency: 80, worstEfficiency: 130 }) });
+  it('maps the badge tone across the efficiency bands (success / danger)', async () => {
+    const good = await renderCard({ route: makeRoute({ avgEfficiency: 100, bestEfficiency: 80, worstEfficiency: 130 }) });
     // 100 < 140 → success.
     expect(within(good.container).getByText('100 Wh/km').className).toContain('bg-[var(--semantic-success-bg)]');
     good.unmount();
 
-    const bad = renderCard({ route: makeRoute({ avgEfficiency: 300, bestEfficiency: 200, worstEfficiency: 400 }) });
+    const bad = await renderCard({ route: makeRoute({ avgEfficiency: 300, bestEfficiency: 200, worstEfficiency: 400 }) });
     // 300 >= 220 → danger.
     expect(within(bad.container).getByText('300 Wh/km').className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 });
 
 describe('RouteCard — best/avg/worst readout', () => {
-  it.each(['km', 'mi'] as const)('binds native definition readings and units in every design without changing negative/inverted %s operands or the gradient', distance => {
+  it.each(['km', 'mi'] as const)('binds native definition readings and units in every design without changing negative/inverted %s operands or the gradient', async distance => {
     const unit = makeUnitDisplay(distance);
-    const { container } = renderCard({ unit, route: makeRoute({ bestEfficiency: -30, avgEfficiency: 200, worstEfficiency: 100 }) });
+    const { container } = await renderCard({ unit, route: makeRoute({ bestEfficiency: -30, avgEfficiency: 200, worstEfficiency: 100 }) });
     const before = gradientBackground(container);
     const definitions = container.querySelector('[data-app-list="definitions"]')!;
     const values = [...definitions.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent);
@@ -208,8 +208,8 @@ describe('RouteCard — best/avg/worst readout', () => {
     }
   });
 
-  it('renders each labelled figure with its SI-per-km value and unit', () => {
-    renderCard();
+  it('renders each labelled figure with its SI-per-km value and unit', async () => {
+    await renderCard();
 
     expect(screen.getByText('Best')).toBeInTheDocument();
     expect(screen.getByText('Avg')).toBeInTheDocument();
@@ -224,8 +224,8 @@ describe('RouteCard — best/avg/worst readout', () => {
     expect(screen.getAllByText('Wh/km').length).toBeGreaterThanOrEqual(3);
   });
 
-  it('pairs each figure with a toned-down status colour (never hue-only)', () => {
-    renderCard();
+  it('pairs each figure with a toned-down status colour (never hue-only)', async () => {
+    await renderCard();
     // colour is always paired with the value text, per the neon-text guideline.
     expect(screen.getByText('120').closest('dd')?.className).toContain('text-emerald-300');
     expect(screen.getByText('200').closest('dd')?.className).toContain('text-rose-300');
@@ -233,8 +233,8 @@ describe('RouteCard — best/avg/worst readout', () => {
 });
 
 describe('RouteCard — unit conversion (miles branch)', () => {
-  it('converts distance + efficiency to miles at the display boundary', () => {
-    renderCard({ unit: makeUnitDisplay('mi') });
+  it('converts distance + efficiency to miles at the display boundary', async () => {
+    await renderCard({ unit: makeUnitDisplay('mi') });
 
     // 160 Wh/km × 1.609344 = 257.5 → "257 Wh/mi"; 25 km → 15.53 mi.
     expect(Math.round(160 * KM_PER_MILE)).toBe(257);
@@ -243,19 +243,19 @@ describe('RouteCard — unit conversion (miles branch)', () => {
     expect(screen.getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(3);
   });
 
-  it('derives the badge tone from the SI value, not the converted display value', () => {
+  it('derives the badge tone from the SI value, not the converted display value', async () => {
     // In mi the badge reads "257 Wh/mi" (257 >= 220 would be "danger" if the
     // band were computed from the display number) — but the tone must stay
     // "info" because the raw SI figure is 160 Wh/km.
-    renderCard({ unit: makeUnitDisplay('mi') });
+    await renderCard({ unit: makeUnitDisplay('mi') });
     expect(screen.getByText('257 Wh/mi').className).toContain('bg-[var(--semantic-info-bg)]');
     expect(screen.getByText('257 Wh/mi').className).not.toContain('bg-[var(--semantic-danger-bg)]');
   });
 });
 
 describe('RouteCard — gradient bar', () => {
-  it('binds only the original aria-hidden track and original fill to deliberate native consumers in all27', () => {
-    const { container } = renderCard();
+  it('binds only the original aria-hidden track and original fill to deliberate native consumers in all27', async () => {
+    const { container } = await renderCard();
     const fill = gradientBar(container);
     const track = fill.parentElement!;
     const before = gradientBackground(container);
@@ -299,8 +299,8 @@ describe('RouteCard — gradient bar', () => {
     { name: 'zero denominator', bestEfficiency: -10, avgEfficiency: 20, worstEfficiency: 0, bestStop: '0', avgStop: '100' },
     { name: 'all negative', bestEfficiency: -30, avgEfficiency: -20, worstEfficiency: -10, bestStop: '0', avgStop: '0' },
     { name: 'malformed source with existing safe converter', bestEfficiency: NaN, avgEfficiency: Infinity, worstEfficiency: -Infinity, bestStop: '0', avgStop: '0' },
-  ])('retains the exact full-width source gradient for $name', ({ bestEfficiency, avgEfficiency, worstEfficiency, bestStop, avgStop }) => {
-    const { container } = renderCard({ route: makeRoute({ bestEfficiency, avgEfficiency, worstEfficiency }) });
+  ])('retains the exact full-width source gradient for $name', async ({ bestEfficiency, avgEfficiency, worstEfficiency, bestStop, avgStop }) => {
+    const { container } = await renderCard({ route: makeRoute({ bestEfficiency, avgEfficiency, worstEfficiency }) });
     expect(gradientBackground(container)).toBe(
       `linear-gradient(to right, ${ROUTE_EFF_COLORS.best} 0%, ${ROUTE_EFF_COLORS.best} ${bestStop}%,` +
       ` ${ROUTE_EFF_COLORS.avg} ${bestStop}%, ${ROUTE_EFF_COLORS.avg} ${avgStop}%,` +
@@ -312,8 +312,8 @@ describe('RouteCard — gradient bar', () => {
     expect(container.textContent).not.toContain('%');
   });
 
-  it('does not repair a caller converter that intentionally propagates malformed operands', () => {
-    const { container } = renderCard({
+  it('does not repair a caller converter that intentionally propagates malformed operands', async () => {
+    const { container } = await renderCard({
       route: makeRoute({ bestEfficiency: NaN, avgEfficiency: Infinity, worstEfficiency: NaN }),
       unit: { ...makeUnitDisplay('km'), toEfficiency: value => value ?? 0 },
     });
@@ -326,8 +326,8 @@ describe('RouteCard — gradient bar', () => {
     expect(gradientBar(container).parentElement).not.toHaveAttribute('role');
   });
 
-  it.each(['default', 'widget-only', 'public', 'incomplete'] as const)('leaves the native range neutral in %s scope', scope => {
-    const { container } = renderCard();
+  it.each(['default', 'widget-only', 'public', 'incomplete'] as const)('leaves the native range neutral in %s scope', async scope => {
+    const { container } = await renderCard();
     if (scope === 'widget-only') container.setAttribute('data-widget-pack', 'v2');
     if (scope === 'public') container.setAttribute('data-public-report', '');
     if (scope === 'incomplete') {
@@ -345,7 +345,7 @@ describe('RouteCard — gradient bar', () => {
   });
 
   it('respects nearest complete ownership and makes an incomplete nested range neutral', async () => {
-    const { container } = renderCard();
+    const { container } = await renderCard();
     container.setAttribute('data-app-design-preview', '');
     setAppDesignTestProfile(container, 'classic');
     const island = container.firstElementChild!;
@@ -363,8 +363,8 @@ describe('RouteCard — gradient bar', () => {
     } finally { release(); }
   });
 
-  it('renders the three-stop gradient at the computed best/avg percentages', () => {
-    const { container } = renderCard(); // best 120, avg 160, worst 200 → 60% / 80%
+  it('renders the three-stop gradient at the computed best/avg percentages', async () => {
+    const { container } = await renderCard(); // best 120, avg 160, worst 200 → 60% / 80%
     const bg = gradientBackground(container);
 
     expect(bg).toContain('linear-gradient');
@@ -372,10 +372,10 @@ describe('RouteCard — gradient bar', () => {
     expect(bg).toContain('80%');
   });
 
-  it('clamps a net-regen (negative efficiency) route so no CSS stop is negative', () => {
+  it('clamps a net-regen (negative efficiency) route so no CSS stop is negative', async () => {
     // A downhill route can be net-regen: best efficiency dips below zero. The
     // raw stop would be -15% — the clamp pins it to 0%.
-    const { container } = renderCard({
+    const { container } = await renderCard({
       route: makeRoute({ bestEfficiency: -30, avgEfficiency: 160, worstEfficiency: 200 }),
     });
     const bg = gradientBackground(container);
@@ -386,15 +386,15 @@ describe('RouteCard — gradient bar', () => {
     expect(screen.getByText('-30')).toBeInTheDocument();
   });
 
-  it('marks the decorative bar aria-hidden (its data is in the labelled readout)', () => {
-    const { container } = renderCard();
+  it('marks the decorative bar aria-hidden (its data is in the labelled readout)', async () => {
+    const { container } = await renderCard();
     expect(gradientBar(container).parentElement).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
 describe('RouteCard — null safety + placeholders', () => {
-  it('degrades empty-string endpoints to an em-dash without a stray title', () => {
-    renderCard({ route: makeRoute({ startLocation: '', endLocation: '' }) });
+  it('degrades empty-string endpoints to an em-dash without a stray title', async () => {
+    await renderCard({ route: makeRoute({ startLocation: '', endLocation: '' }) });
 
     const heading = screen.getByRole('heading', { level: 3 });
     const dashes = within(heading).getAllByText('—');
@@ -403,17 +403,17 @@ describe('RouteCard — null safety + placeholders', () => {
     expect(dashes[0]).not.toHaveAttribute('title');
   });
 
-  it('exposes a hover title on truncatable endpoints when a location is present', () => {
+  it('exposes a hover title on truncatable endpoints when a location is present', async () => {
     const longName = 'A Very Long Route Origin Name That Truncates';
-    renderCard({ route: makeRoute({ startLocation: longName }) });
+    await renderCard({ route: makeRoute({ startLocation: longName }) });
 
     const origin = screen.getByTitle(longName);
     expect(origin).toHaveTextContent(longName);
     expect(origin.className).toContain('truncate');
   });
 
-  it('renders without NaN when every numeric field is null at runtime', () => {
-    const { container } = renderCard({
+  it('renders without NaN when every numeric field is null at runtime', async () => {
+    const { container } = await renderCard({
       route: {
         startLocation: 'A',
         endLocation: 'B',
@@ -434,8 +434,8 @@ describe('RouteCard — null safety + placeholders', () => {
 });
 
 describe('RouteCard — accessibility', () => {
-  it('marks the decorative pin + arrow glyphs aria-hidden', () => {
-    const { container } = renderCard();
+  it('marks the decorative pin + arrow glyphs aria-hidden', async () => {
+    const { container } = await renderCard();
     const hidden = container.querySelectorAll('svg[aria-hidden="true"]');
     // MapPin (endpoint icon) + ArrowRight (route separator).
     expect(hidden.length).toBeGreaterThanOrEqual(2);

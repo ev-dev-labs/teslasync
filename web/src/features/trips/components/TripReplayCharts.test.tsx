@@ -114,7 +114,7 @@ vi.mock('@/components/layout', async () => ({
   ChartCard: (await import('@/components/charts')).ChartContainer,
 }));
 
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
   const Inert = () => null;
   return {
     ChartTimeRangeProvider: ({
@@ -136,7 +136,7 @@ vi.mock('@/components/charts', () => {
     ),
     useSyncedCursor: () => state.syncProps,
     useSyncedReferenceLineX: () => state.syncedX,
-    chartGrid: {},
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
     axisTick: {},
     fmt: (v: number, d = 0) => Number(v).toFixed(d),
     CHART_COLORS: ['#00f0ff', '#ff00aa', '#00ffaa'],

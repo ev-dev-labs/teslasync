@@ -68,11 +68,11 @@ vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
 //    the series/axis bindings for direct assertion. ChartContainer mirrors the
 //    real loading → empty → children precedence and exposes the wired props
 //    (title, aria label, fallback `data`, columns, height, loading, empty). ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
   const Inert = () => null;
   return {
     AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
-    chartGrid: { stroke: 'rgba(255,255,255,0.06)' },
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
     axisTickSm: { fontSize: 11 },
     ChartTooltip: Inert,
     CartesianGrid: Inert,

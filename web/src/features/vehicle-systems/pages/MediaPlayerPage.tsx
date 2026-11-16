@@ -18,7 +18,7 @@ import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feed
 import { FadeIn } from '@/components/motion';
 import {
   LinearGauge, ChartTooltip, ChartGradient, chartGrid, axisTickSm, CHART_COLORS,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, EmbeddedChart,
 } from '@/components/charts';
 
@@ -565,7 +565,7 @@ export default function MediaPlayerPage() {
                       <defs>
                         <ChartGradient id="volGrad" color={CHART_COLORS[0]} />
                       </defs>
-                      <CartesianGrid {...chartGrid} />
+                      {chartGrid}
                       <XAxis dataKey="time" {...axisTickSm} />
                       <YAxis
                         {...axisTickSm}

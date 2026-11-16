@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -144,6 +144,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  cleanup();
   onlineManager.setOnline(true);
   delete document.documentElement.dataset.theme;
   setGlobalPrecision(originalFormatting.precision);
@@ -231,7 +232,7 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(mobile.querySelectorAll('[data-row-key]')).toHaveLength(2);
     const first = mobile.querySelector('[data-row-key="2"]');
     if (!(first instanceof HTMLElement)) throw new Error('Stable history row identity absent');
-    first.focus();
+    act(() => { first.focus(); });
     fireEvent.keyDown(first, { key: 'Enter' });
     const detail = await screen.findByRole('dialog', { name: 'History table' });
     for (const field of ['Time', 'Front left (bar)', 'Front right (bar)', 'Rear left (bar)', 'Rear right (bar)', 'Warnings']) {

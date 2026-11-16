@@ -10,6 +10,7 @@ import type { PackId } from './designPacks/types';
 import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import SignalExplorerWidget from './SignalExplorerWidget';
+import { measureChartContainers } from '@/test/setup';
 
 const { requestMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string) => Promise<unknown>>(),
@@ -117,6 +118,7 @@ function historyRequests(name: string) {
 
 describe('SignalExplorerWidget design packs', () => {
   beforeEach(() => {
+    measureChartContainers(800, 300);
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
     requestMock.mockReset();
     failures = new Set();

@@ -108,7 +108,7 @@ vi.mock('@/components/charts', async () => {
   return {
   ...chartTestDoubles,
   ChartTooltip: () => null,
-  chartGrid: {},
+  chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
   axisTickSm: {},
   AREA_DEFAULTS: {},
   areaGradient: () => null,

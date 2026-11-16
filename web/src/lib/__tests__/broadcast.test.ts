@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { __resetErrorReporterForTests, getRecentReportsForFeedback } from '../errorReporter'
 import {
   TAB_ID,
   __resetBroadcastForTests,
@@ -56,6 +57,7 @@ async function settle(): Promise<void> {
 
 describe('broadcast bus', () => {
   beforeEach(() => {
+    __resetErrorReporterForTests()
     __resetBroadcastForTests()
     window.localStorage.clear()
     restoreBroadcastChannel()
@@ -72,6 +74,31 @@ describe('broadcast bus', () => {
   })
 
   describe('BroadcastChannel transport', () => {
+    it('fans out through one transport listener and releases every independent subscription', async () => {
+      expect(typeof BroadcastChannel).toBe('function')
+      const listen = vi.spyOn(BroadcastChannel.prototype, 'addEventListener')
+      const duplicate = vi.fn()
+      const handlers = [duplicate, duplicate, ...Array.from({ length: 10 }, () => vi.fn())]
+      const off = handlers.map(handler => subscribe(handler))
+      const peer = new BroadcastChannel('teslasync')
+      try {
+        expect(listen.mock.calls.filter(([type]) => type === 'message')).toHaveLength(1)
+        const envelope = { _from: 'peer', _ts: 1, msg: { type: 'auth.logout' } }
+        peer.postMessage(envelope)
+        await waitFor(() => handlers.slice(2).every(handler => handler.mock.calls.length === 1))
+        expect(duplicate).toHaveBeenCalledTimes(2)
+        off.forEach(unsubscribe => unsubscribe())
+        peer.postMessage(envelope)
+        await settle()
+        expect(duplicate).toHaveBeenCalledTimes(2)
+        expect(handlers.slice(2).every(handler => handler.mock.calls.length === 1)).toBe(true)
+      } finally {
+        off.forEach(unsubscribe => unsubscribe())
+        peer.close()
+        listen.mockRestore()
+      }
+    })
+
     it('delivers to a peer channel listening on the same name', async () => {
       // Skip if jsdom doesn't ship BroadcastChannel.
       if (typeof BroadcastChannel === 'undefined') return
@@ -129,7 +156,8 @@ describe('broadcast bus', () => {
     it('a thrown handler does not break sibling handlers or the bus', async () => {
       if (typeof BroadcastChannel === 'undefined') return
 
-      const failing = vi.fn(() => { throw new Error('boom') })
+      const error = new Error('boom')
+      const failing = vi.fn(() => { throw error })
       const ok = vi.fn()
       const offA = subscribe(failing)
       const offB = subscribe(ok)
@@ -141,6 +169,9 @@ describe('broadcast bus', () => {
       offB()
       expect(failing).toHaveBeenCalled()
       expect(ok).toHaveBeenCalledTimes(1)
+      expect(getRecentReportsForFeedback()).toContainEqual(expect.objectContaining({
+        message: 'boom', source: 'window',
+      }))
     })
   })
 

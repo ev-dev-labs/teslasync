@@ -172,29 +172,31 @@ describe('useIsForwardAuth', () => {
 
   it('returns false in open mode', async () => {
     mockedRequest.mockResolvedValueOnce(openModePayload);
-    const { result } = renderHook(() => useIsForwardAuth(), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalled());
-    // After resolution the value remains false.
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(result.current).toBe(false);
+    const { result } = renderHook(() => ({
+      source: useAuthMode(), value: useIsForwardAuth(),
+    }), { wrapper });
+    await waitFor(() => expect(result.current.source.isSuccess).toBe(true));
+    expect(result.current.value).toBe(false);
   });
 });
 
 describe('useAuthSubject', () => {
   it('returns null in open mode', async () => {
     mockedRequest.mockResolvedValueOnce(openModePayload);
-    const { result } = renderHook(() => useAuthSubject(), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(result.current).toBeNull();
+    const { result } = renderHook(() => ({
+      source: useAuthMode(), value: useAuthSubject(),
+    }), { wrapper });
+    await waitFor(() => expect(result.current.source.isSuccess).toBe(true));
+    expect(result.current.value).toBeNull();
   });
 
   it('returns null in forward-auth mode when the proxy stripped the header', async () => {
     mockedRequest.mockResolvedValueOnce(forwardAuthMissingSubjectPayload);
-    const { result } = renderHook(() => useAuthSubject(), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(result.current).toBeNull();
+    const { result } = renderHook(() => ({
+      source: useAuthMode(), value: useAuthSubject(),
+    }), { wrapper });
+    await waitFor(() => expect(result.current.source.isSuccess).toBe(true));
+    expect(result.current.value).toBeNull();
   });
 
   it('returns the resolved subject string in forward-auth mode', async () => {

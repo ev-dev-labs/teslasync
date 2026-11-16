@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -71,6 +71,10 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import ChargingHeatmapPage from './ChargingHeatmapPage';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockRange = useRangeState as unknown as ReturnType<typeof vi.fn>;
@@ -232,7 +236,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       expect(cells.filter(cell => cell.tabIndex === 0)).toHaveLength(1);
 
       const measuredSlot = within(viewport).getByRole('button', { name: 'Mon 08:00 — 2 sessions' });
-      measuredSlot.focus();
+      act(() => { measuredSlot.focus(); });
       await user.keyboard('{Enter}');
       expect(screen.getByRole('dialog', { name: 'Mon 08:00' })).toHaveTextContent('2 sessions · 1.00 kWh');
       expect(screen.getByRole('dialog', { name: 'Mon 08:00' })).toHaveTextContent('recorded values only');
@@ -317,7 +321,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       renderPage();
 
       const disclosure = screen.getByRole('button', { name: /data table/ });
-      disclosure.focus();
+      act(() => { disclosure.focus(); });
       await user.keyboard('{Enter}');
       expect(disclosure).toHaveAttribute('aria-expanded', 'true');
       const region = screen.getByRole('region', { name: 'Charging sessions by weekday and hour of day' });

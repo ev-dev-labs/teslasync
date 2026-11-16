@@ -93,7 +93,7 @@ vi.mock('@/lib/dateFormat', async (importOriginal) => {
 // Shared chart primitives → prop-echoing stubs. ChartContainer renders its
 // children so the LineChart / Line / legend all mount; recharts re-exports
 // echo the derived data the component threads into them.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
   ChartContainer: ({
     title,
     subtitle,
@@ -174,7 +174,7 @@ vi.mock('@/components/charts', () => ({
   CartesianGrid: () => null,
   Tooltip: () => null,
   ChartTooltip: () => null,
-  chartGrid: {},
+  chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
   axisTickSm: {},
   AREA_DEFAULTS: {},
 }));

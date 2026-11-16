@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
@@ -47,7 +47,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
         ]} />
       </div>,
     Tooltip: ({ content }: { content: ReactNode }) => <>{content}</>,
-    areaGradient: () => null,
+    areaGradient: (id: string) => <span data-testid="gradient" data-gradient-id={id} />,
   };
 });
 
@@ -66,15 +66,20 @@ function renderChart(data: GasPriceHistory[], error?: Error) {
 }
 
 afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
   document.documentElement.style.removeProperty('--font-sans');
   document.documentElement.style.removeProperty('--font-scale');
 });
 
 describe('GasTrendChart', () => {
   it('uses the saved font and text scale for axes and legend while retaining compact chart geometry', () => {
+    const errors = vi.spyOn(console, 'error');
     document.documentElement.style.setProperty('--font-sans', 'Preference Sans');
     document.documentElement.style.setProperty('--font-scale', '1.35');
     renderChart(history);
+    expect(screen.getAllByTestId('gradient')).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
     const tick = { fontFamily: 'Preference Sans', fontSize: 16, fill: chartTokens.axisStroke };
     expect(JSON.parse(screen.getByTestId('x-axis').dataset.tick ?? '{}')).toEqual(tick);
     expect(JSON.parse(screen.getByTestId('tick').dataset.tick ?? '{}')).toEqual(tick);

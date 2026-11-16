@@ -11,7 +11,7 @@ import { Button, Caption, Input, PanelTitle, Select, Text } from '@/components/u
 import { SourceContent, type SourceState } from '@/components/layout';
 import { Timeline } from '@/components/data-display';
 import {
-  EmbeddedChart, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  EmbeddedChart, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
   ChartTooltip, CHART_COLORS, axisTick, chartGrid,
 } from '@/components/charts';
 import { useDataState } from '@/hooks/useDataState';
@@ -267,7 +267,7 @@ export default function SignalExplorerWidget({ vehicleId, size, config }: Widget
           ]}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={plot}>
-              <CartesianGrid {...chartGrid} />
+              {chartGrid}
               <XAxis type="number" scale="time" dataKey="instant" tick={axisTick}
                 domain={[Date.parse(range.startInstant), Date.parse(range.endInstantExclusive)]}
                 tickFormatter={value => formatTime(Number(value))} />

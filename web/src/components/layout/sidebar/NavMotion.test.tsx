@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
@@ -76,11 +76,11 @@ describe('selection-only nav icon motion', () => {
     expect(rail().getByRole('button', { name: 'Charging', exact: true })).toHaveAttribute('aria-current', 'true')
     expect(document.querySelector('.is-animating')).toBeNull()
   })
-  it.each(['Alerts', 'Display', 'Account'])('%s footer keeps its accessible control and has an animated variant', name => {
+  it.each(['Alerts', 'Display', 'Account'])('%s footer keeps its accessible control and has an animated variant', async name => {
     render(<Deck />)
     const item = name === 'Alerts' || name === 'Display' ? rail().getByRole('link', { name, exact: true }) : rail().getByText('', { selector: 'summary' })
     expect(item.querySelector('svg')).toHaveAttribute('data-nav-icon', name === 'Alerts' ? 'alerts' : name === 'Display' ? 'display' : 'avatar')
-    fireEvent.click(item)
+    await act(async () => { fireEvent.click(item) })
     expect(target(item)).toHaveClass('is-animating')
     endMotion(target(item))
     expect(target(item)).not.toHaveClass('is-animating')

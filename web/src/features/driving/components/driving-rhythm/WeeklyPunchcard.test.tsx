@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -93,7 +93,7 @@ describe('WeeklyPunchcard', () => {
       });
       expect(region).toHaveAttribute('tabindex', '0');
       expect(region).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
-      region.focus();
+      act(() => { region.focus(); });
       expect(region).toHaveFocus();
       const table = within(region).getByRole('table');
       expect(table.closest('[data-table-variant]')).toHaveAttribute('data-table-variant', 'embedded');
@@ -129,7 +129,7 @@ describe('WeeklyPunchcard', () => {
           'Drive starts by local weekday and hour; strongest slot Mon ٠٥:٠٠',
         );
       } finally {
-        setGlobalLocale(previousLocale);
+        act(() => { setGlobalLocale(previousLocale); });
       }
     });
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { reportFrontendError } from './errorReporter'
 
 /**
  * Cross-tab synchronization.
@@ -117,6 +118,36 @@ const CHANNEL_NAME = 'teslasync'
 export const TAB_ID: string = safeRandomUUID()
 
 let chan: BroadcastChannel | null = null
+const subscribers = new Set<{ handler: (msg: BroadcastMessage) => void }>()
+
+function deliver(data: Envelope | null): void {
+  if (!data || typeof data !== 'object' || data._from === TAB_ID) return
+  if (!data.msg || typeof data.msg !== 'object') return
+  for (const subscriber of [...subscribers]) {
+    if (!subscribers.has(subscriber)) continue
+    try {
+      subscriber.handler(data.msg)
+    } catch (error) {
+      reportFrontendError(error, 'window')
+    }
+  }
+}
+
+function receiveMessage(event: MessageEvent): void {
+  deliver(event.data)
+}
+
+function receiveStorage(event: StorageEvent): void {
+  if (!event.key?.startsWith(FALLBACK_KEY_PREFIX) || !event.newValue) return
+  let envelope: Envelope | null
+  try {
+    envelope = JSON.parse(event.newValue) as Envelope
+  } catch (error) {
+    if (error instanceof SyntaxError) return
+    throw error
+  }
+  deliver(envelope)
+}
 
 function hasBroadcastChannel(): boolean {
   return typeof BroadcastChannel !== 'undefined'
@@ -128,6 +159,7 @@ function getChannel(): BroadcastChannel | null {
   if (!chan) {
     try {
       chan = new BroadcastChannel(CHANNEL_NAME)
+      chan.addEventListener('message', receiveMessage)
     } catch {
       // Some embedded contexts disable BroadcastChannel even though the
       // constructor exists. Fall back to storage-event mode.
@@ -187,47 +219,15 @@ export function subscribe(handler: (msg: BroadcastMessage) => void): () => void 
   // via the storage fallback (e.g. private-mode peer + normal peer on the
   // same origin). De-duplication by `_ts + _from` would be overkill; in
   // practice a single tab uses one transport at a time.
-  const cleanups: Array<() => void> = []
-
-  const ch = getChannel()
-  if (ch) {
-    const fn = (e: MessageEvent) => {
-      const data = e.data as Envelope | null
-      if (!data || typeof data !== 'object') return
-      if (data._from === TAB_ID) return
-      if (!data.msg || typeof data.msg !== 'object') return
-      try {
-        handler(data.msg)
-      } catch {
-        // Subscriber threw — never let one consumer crash the bus.
-      }
-    }
-    ch.addEventListener('message', fn)
-    cleanups.push(() => ch.removeEventListener('message', fn))
+  if (subscribers.size === 0) {
+    window.addEventListener('storage', receiveStorage)
   }
-
-  const onStorage = (e: StorageEvent) => {
-    if (!e.key || !e.key.startsWith(FALLBACK_KEY_PREFIX)) return
-    if (!e.newValue) return
-    let env: Envelope | null = null
-    try {
-      env = JSON.parse(e.newValue) as Envelope
-    } catch {
-      return
-    }
-    if (!env || env._from === TAB_ID) return
-    if (!env.msg || typeof env.msg !== 'object') return
-    try {
-      handler(env.msg)
-    } catch {
-      /* swallow */
-    }
-  }
-  window.addEventListener('storage', onStorage)
-  cleanups.push(() => window.removeEventListener('storage', onStorage))
-
+  const subscriber = { handler }
+  subscribers.add(subscriber)
+  getChannel()
   return () => {
-    for (const c of cleanups) c()
+    subscribers.delete(subscriber)
+    if (subscribers.size === 0) window.removeEventListener('storage', receiveStorage)
   }
 }
 
@@ -249,6 +249,8 @@ export function useBroadcast(handler: (msg: BroadcastMessage) => void): void {
  * defined/undefined to exercise both transports.
  */
 export function __resetBroadcastForTests(): void {
+  subscribers.clear()
+  if (typeof window !== 'undefined') window.removeEventListener('storage', receiveStorage)
   if (chan) {
     try {
       chan.close()

@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { cleanup, act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
@@ -333,6 +333,7 @@ function renderPage(path = '/fleet-compare', client = new QueryClient({
 }
 
 afterEach(() => {
+  cleanup();
   onlineManager.setOnline(true)
 })
 
@@ -860,9 +861,9 @@ describe('FleetComparePage', () => {
     )
   })
 
-  it('renders the page-level loading shell while vehicles are still loading', () => {
+  it('renders the page-level loading shell while vehicles are still loading', async () => {
     install({ vehiclesPending: true })
-    renderPage()
+    await act(async () => { renderPage() })
 
     // Header and section shells survive loading without presenting selectors,
     // a fabricated comparison table, or the single-vehicle empty state.

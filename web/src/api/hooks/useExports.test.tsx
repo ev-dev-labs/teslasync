@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('@/api/client', async () => {
@@ -192,8 +192,10 @@ describe('useCreateScheduledExport', () => {
   it('POSTs the payload and surfaces the created row', async () => {
     mockedRequest.mockResolvedValueOnce(sampleSchedule);
     const { result } = renderHook(() => useCreateScheduledExport(), { wrapper });
-    const created = await result.current.mutateAsync(validInput);
-    expect(created.id).toBe(7);
+    await act(async () => {
+      const created = await result.current.mutateAsync(validInput);
+      expect(created.id).toBe(7);
+    });
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/scheduled-exports');
     expect(opts.method).toBe('POST');
@@ -207,7 +209,7 @@ describe('useCreateScheduledExport', () => {
     // ScheduledExportInput type does not declare it. Behavioural check:
     // pass a plain payload and confirm the serialised body has no
     // owner_subject key.
-    await result.current.mutateAsync(validInput);
+    await act(async () => { await result.current.mutateAsync(validInput); });
     const body = JSON.parse(
       (mockedRequest.mock.calls[0][1] as { body: string }).body,
     );
@@ -219,11 +221,13 @@ describe('useUpdateScheduledExport', () => {
   it('PUTs to /scheduled-exports/{id}', async () => {
     mockedRequest.mockResolvedValueOnce({ ...sampleSchedule, name: 'renamed' });
     const { result } = renderHook(() => useUpdateScheduledExport(), { wrapper });
-    const updated = await result.current.mutateAsync({
-      id: 7,
-      payload: { ...validInput, name: 'renamed' },
+    await act(async () => {
+      const updated = await result.current.mutateAsync({
+        id: 7,
+        payload: { ...validInput, name: 'renamed' },
+      });
+      expect(updated.name).toBe('renamed');
     });
-    expect(updated.name).toBe('renamed');
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/scheduled-exports/7');
     expect(opts.method).toBe('PUT');
@@ -234,7 +238,7 @@ describe('useDeleteScheduledExport', () => {
   it('DELETEs /scheduled-exports/{id}', async () => {
     mockedRequest.mockResolvedValueOnce(undefined);
     const { result } = renderHook(() => useDeleteScheduledExport(), { wrapper });
-    await result.current.mutateAsync(7);
+    await act(async () => { await result.current.mutateAsync(7); });
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/scheduled-exports/7');
     expect(opts.method).toBe('DELETE');
@@ -248,8 +252,10 @@ describe('useRunScheduledExportNow', () => {
       next_run_at: '2025-06-15T12:00:00Z',
     });
     const { result } = renderHook(() => useRunScheduledExportNow(), { wrapper });
-    const row = await result.current.mutateAsync(7);
-    expect(row.next_run_at).toBe('2025-06-15T12:00:00Z');
+    await act(async () => {
+      const row = await result.current.mutateAsync(7);
+      expect(row.next_run_at).toBe('2025-06-15T12:00:00Z');
+    });
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/scheduled-exports/7/run');
     expect(opts.method).toBe('POST');

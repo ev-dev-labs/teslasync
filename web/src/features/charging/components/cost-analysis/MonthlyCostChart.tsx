@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartContainer,
   ChartTooltip, chartGrid, axisTickSm,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer,
   renderAnnotationLines,
   AREA_DEFAULTS, areaGradient,
@@ -96,7 +96,7 @@ export function MonthlyCostChart({ data, vehicleId, isLoading, error, onRetry }:
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>
             {areaGradient('costGrad', palette[0])}
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis
               dataKey="month"
               {...axisTickSm}

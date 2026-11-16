@@ -359,8 +359,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  setGlobalPrecision(originalFormatterPreferences.precision);
-  setGlobalLocale(originalFormatterPreferences.locale);
+  act(() => {
+    setGlobalPrecision(originalFormatterPreferences.precision);
+    setGlobalLocale(originalFormatterPreferences.locale);
+  });
 });
 
 function expectEvidenceDetail(id: string, text: string, present = true) {

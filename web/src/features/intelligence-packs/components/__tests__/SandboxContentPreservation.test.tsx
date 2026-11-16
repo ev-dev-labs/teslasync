@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
@@ -13,6 +13,10 @@ import { createInMemoryPackRepository } from '../../lib/packRepository';
 import { installPack } from '../../lib/packActions';
 import { intelPackQueryKeys } from '../../hooks/queryKeys';
 import { renderWithProviders as renderPack } from './testUtils';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 function renderWithProviders(ui: ReactElement, options?: Parameters<typeof renderPack>[1]) {
   return renderPack(<MemoryRouter>{ui}</MemoryRouter>, options);
@@ -66,6 +70,7 @@ describe('Sandbox actual-component content preservation', () => {
     originalPreferences = getFormatterPreferences();
   });
   afterEach(() => {
+    cleanup();
     setGlobalPrecision(originalPreferences.precision);
     setGlobalLocale(originalPreferences.locale);
   });

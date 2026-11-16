@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SignalObservation } from '@/types/signals';
 import type { MqttStatusData, VehicleTelemetry } from '@/types/telemetry';
@@ -211,7 +211,7 @@ it('keeps the mounted pause controller, focused action and frozen rows while swi
   const view = render(tree('classic'));
   fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
   const resume = screen.getByRole('button', { name: 'Resume' });
-  resume.focus();
+  act(() => { resume.focus(); });
   mocks.observations.mockReturnValue(query([observation({ signal_name: 'latest' })]));
 
   for (const pack of PACK_IDS) {

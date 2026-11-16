@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -50,6 +50,7 @@ describe('RecentPagesSegment', () => {
   });
 
   afterEach(() => {
+    cleanup();
     __resetRecentPagesForTests();
   });
 
@@ -132,7 +133,7 @@ describe('RecentPagesSegment', () => {
     expect(screen.getByText('Weekend trip')).toBeInTheDocument();
   });
 
-  it('closes after navigation and restores trigger focus on Escape', () => {
+  it('closes after navigation and restores trigger focus on Escape', async () => {
     recordPageView({ path: '/drives/55', title: 'Drive 55', kind: 'drive' });
     renderSegment();
 
@@ -145,7 +146,9 @@ describe('RecentPagesSegment', () => {
     expect(trigger).toHaveFocus();
 
     fireEvent.click(trigger);
-    fireEvent.click(screen.getByTestId('status-bar-recent-row-/drives/55'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('status-bar-recent-row-/drives/55'));
+    });
     expect(screen.queryByRole('dialog', { name: 'Recently viewed' })).toBeNull();
   });
 

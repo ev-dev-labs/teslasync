@@ -7,7 +7,7 @@ import { ChartCard, LayoutCard, PageHeader } from '@/components/layout';
 import { DataSourceNotice, EmptyState, Skeleton } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTick,
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis,
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
@@ -385,7 +385,7 @@ export default function SharedDrivePage() {
             >
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={elevationData}>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
@@ -438,7 +438,7 @@ export default function SharedDrivePage() {
             >
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={speedData}>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis
                     dataKey="distance"
                     {...axisTick}

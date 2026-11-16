@@ -681,7 +681,7 @@ describe('ChatbotPage — history sidebar toggle + persistence', () => {
     installRequest({ sessions: [session('s1')] });
     renderPage();
     const trigger = screen.getByRole('button', { name: 'History' });
-    trigger.focus();
+    act(() => { trigger.focus(); });
     fireEvent.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'History' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');

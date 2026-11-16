@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
@@ -10,6 +10,7 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 }));
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   motion.reduce = false;
 });
@@ -20,7 +21,7 @@ describe('charging search pending feedback', () => {
     const onChange = vi.fn();
     const { rerender } = render(<ChargingSearchControl value="" onChange={onChange} pending={false} />);
     const input = screen.getByRole('combobox');
-    input.focus();
+    act(() => { input.focus(); });
     fireEvent.change(input, { target: { value: 'charger:home' } });
     rerender(<ChargingSearchControl value="" onChange={onChange} pending />);
     expect(screen.getByRole('combobox')).toBe(input);

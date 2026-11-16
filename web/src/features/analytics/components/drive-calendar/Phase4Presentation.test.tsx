@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { ChartCard } from '@/components/layout';
 import { Bar, ChartTooltip, ComposedChart, Line, YAxis } from '@/components/charts';
@@ -20,6 +20,10 @@ import { resolve } from 'node:path';
 import postcss, { type Rule } from 'postcss';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const ownershipRules: Rule[] = [];
 postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
@@ -52,6 +56,7 @@ function chartElement(node: ReactNode, type: unknown): Record<string, unknown> {
 
 const initialPreferences = getFormatterPreferences();
 afterEach(() => {
+  cleanup();
   setGlobalPrecision(initialPreferences.precision);
   setGlobalLocale(initialPreferences.locale);
   summaryTranslation.mockReset();
@@ -213,7 +218,7 @@ describe('canonical calendar frames preserve independent source bodies', () => {
     expect(screen.getByText('1 active days · 2 drives')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     const trigger = screen.getByRole('button', { name: 'View details' });
-    trigger.focus();
+    act(() => { trigger.focus(); });
     await user.keyboard('{Enter}');
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const table = screen.getByRole('table', { name: 'Driving activity' });

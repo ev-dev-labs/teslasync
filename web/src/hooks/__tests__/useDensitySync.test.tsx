@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { getCurrentDensity, useDensitySync } from '../useDensitySync'
+import { useSettings } from '@/api/hooks/useSettings'
 
 // Stub the API client so useSettings() resolves without network.
 let nextSettings: { ui_density?: string } = { ui_density: 'comfortable' }
@@ -50,10 +51,12 @@ describe('useDensitySync', () => {
   it('ignores unknown density values from the server', async () => {
     document.body.dataset.density = 'comfortable'
     nextSettings = { ui_density: 'enormous' }
-    renderHook(() => useDensitySync(), { wrapper: wrap() })
+    const { result } = renderHook(() => {
+      useDensitySync()
+      return useSettings()
+    }, { wrapper: wrap() })
 
-    // give the query a tick to resolve; value should remain 'comfortable'
-    await new Promise((r) => setTimeout(r, 30))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(document.body.dataset.density).toBe('comfortable')
     expect(localStorage.getItem('teslasync-density')).toBeNull()
   })

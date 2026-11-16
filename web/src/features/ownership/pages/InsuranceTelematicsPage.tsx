@@ -9,7 +9,6 @@ import {
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ChartContainer,
   ChartGradient,
   ChartTooltip,
@@ -850,7 +849,7 @@ export default function InsuranceTelematicsPage() {
                 <defs>
                   <ChartGradient id={gradientId} color={palette[0]} opacity={0.08} />
                 </defs>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="label" tick={axisTick} />
                 <YAxis tick={axisTick} domain={[0, 100]} />
                 <Tooltip content={<ChartTooltip />} />

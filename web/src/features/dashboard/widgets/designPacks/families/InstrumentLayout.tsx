@@ -66,7 +66,7 @@ export default function InstrumentLayout({
         appearance === 'pixel' && '[&>svg]:[shape-rendering:crispEdges]',
       )}>{icon}</span>}
       <div data-app-part={radial ? 'metric' : undefined} data-app-metric={radial ? 'ring' : undefined}
-        className={cn('relative min-w-0', radial && 'flex size-[max(8rem,calc(8rem*var(--font-scale,1)))] shrink-0 items-center justify-center p-4')}>
+        className={cn('relative min-w-0', radial && 'flex aspect-square w-[min(100%,max(8rem,calc(8rem*var(--font-scale,1))))] shrink-0 items-center justify-center p-4')}>
         {radial && <svg data-app-part="chart-gauge" data-chart-family="radial-gauge" data-chart-variant="embedded"
           data-chart-gauge-shape={appearance === 'analog' ? 'needle' : 'arc'}
           viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">

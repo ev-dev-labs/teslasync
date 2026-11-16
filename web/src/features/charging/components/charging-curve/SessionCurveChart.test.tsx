@@ -43,12 +43,13 @@ vi.mock('react-i18next', () => {
 //    the series/axis bindings for direct assertion. ChartContainer exposes the
 //    props the component wires (title, aria label, fallback `data`, columns,
 //    export filename) as testable DOM. CHART_COLORS[0] is the stroke colour. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartGrid } = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
   const Inert = () => null;
   return {
     CHART_COLORS: ['#00f0ff', '#ff00aa', '#00ffaa'],
     AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
-    chartGrid: { stroke: 'rgba(255,255,255,0.06)' },
+    chartGrid,
     axisTickSm: { fontSize: 11 },
     ChartTooltip: Inert,
     CartesianGrid: Inert,

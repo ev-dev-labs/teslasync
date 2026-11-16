@@ -20,13 +20,10 @@
  *   • a11y: the band is a labelled region with no exposed decorative glyphs.
  *
  * react-i18next is mocked to echo the English fallback so labels are
- * deterministic. framer-motion is mocked to a passthrough because the
- * `@/components/data-display` barrel this file pulls in ships motion-driven
- * components; the mock keeps module load hermetic even though the band renders
- * no motion itself.
+ * deterministic. Motion uses the same real provider as the shared test setup.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { deriveExportStats, type ExportStats } from './exportStats';
@@ -39,26 +36,6 @@ const settings = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ settings, settingsUnavailable: false }),
-}));
-
-vi.mock('framer-motion', () => ({
-  m: new Proxy(
-    {},
-    {
-      get: () => (props: Record<string, unknown>) => {
-        const Component = (props.as as string) ?? 'div';
-        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
-        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
-      },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useReducedMotion: () => true,
-  useInView: () => true,
-  useMotionValue: (v: unknown) => ({ get: () => v, set: vi.fn(), on: vi.fn() }),
-  useSpring: (v: unknown) => ({ get: () => v, set: vi.fn(), on: vi.fn() }),
-  useTransform: () => ({ get: () => 0, set: vi.fn(), on: vi.fn() }),
-  animate: vi.fn(() => ({ stop: vi.fn() })),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -108,6 +85,7 @@ beforeEach(() => {
   setGlobalLocale('en-US');
 });
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
@@ -279,7 +257,7 @@ describe('ExportKpiBand', () => {
   it('opens the real Review details drawer with complete captions and source limitations, then restores focus on Escape', async () => {
     renderBand();
     const trigger = screen.getByRole('button', { name: 'Review details' });
-    trigger.focus();
+    act(() => { trigger.focus(); });
     fireEvent.click(trigger);
     const drawer = await screen.findByRole('dialog', { name: 'Export summary details' });
     expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -123,6 +123,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
@@ -228,7 +229,7 @@ describe('Tesla physics nested summary adoption', () => {
       ]} />);
     await user.click(screen.getByRole('button', { name: /Inspect raw evidence/ }));
     const expand = screen.getByRole('button', { name: /Expand row/ });
-    expand.focus();
+    act(() => { expand.focus(); });
     await user.keyboard('{Enter}');
     expect(expand).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Additional field', { selector: 'dt' })).toBeInTheDocument();
@@ -256,7 +257,7 @@ describe('Tesla physics nested summary adoption', () => {
     resize(375);
     expect(document.querySelector('[data-mobile-table]')).not.toBeNull();
     const quickView = screen.getByRole('button', { name: 'Quick view' });
-    quickView.focus();
+    act(() => { quickView.focus(); });
     await user.keyboard('{Enter}');
     const dialog = screen.getByRole('dialog');
     for (const label of ['Event time', 'Ingest time', 'Stored ingest lag', 'Elapsed since prior event', 'Display time', 'Unknown flag']) {

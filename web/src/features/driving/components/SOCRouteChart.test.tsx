@@ -141,9 +141,9 @@ interface StubContainerProps {
   children?: ReactNode;
 }
 
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
   ChartTooltip: () => null,
-  chartGrid: {},
+  chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
   axisTick: {},
   AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (

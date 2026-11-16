@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import {
   ChartLegend, ChartTooltip, EmbeddedChart, chartGrid, axisTickSm, AREA_DEFAULTS,
-  ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ComposedChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, LineChart, Line, type ChartDataRow,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -104,7 +104,7 @@ export function CostForecastSection({
           {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
                 <Tooltip content={<ChartTooltip />} />
@@ -150,7 +150,7 @@ export function CostForecastSection({
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData}>
-              <CartesianGrid {...chartGrid} />
+              {chartGrid}
               <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
               <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
               <Tooltip content={<ChartTooltip />} />

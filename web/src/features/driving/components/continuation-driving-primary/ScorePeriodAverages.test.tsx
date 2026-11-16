@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, act, render, screen, within } from '@testing-library/react';
 import { fmtInt, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type { PeriodStats } from '../../pages/DriveScorePage';
 import { ScorePeriodAverages } from './ScorePeriodAverages';
@@ -80,7 +80,7 @@ describe('ScorePeriodAverages directional comparisons', () => {
     setGlobalLocale('de-DE');
     setGlobalPrecision(0);
     const { rerender } = render(<ScorePeriodAverages stats={period(1.5, 0)} />);
-    setGlobalPrecision(2);
+    act(() => { setGlobalPrecision(2); });
     rerender(<ScorePeriodAverages stats={period(1.5, 0)} />);
     expect(screen.getAllByText('Increased by 1,50')).toHaveLength(2);
     rerender(<ScorePeriodAverages stats={period(0.001, 0)} />);
