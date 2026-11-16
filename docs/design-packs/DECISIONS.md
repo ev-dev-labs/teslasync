@@ -1,5 +1,202 @@
 # Design Pack Decisions
 
+## 2026-11-16 scaled containment, grid composition and lifecycle repairs
+
+The three Firefox phone profiles failed Material at 320px, RTL, 200% text and
+compact density on every attempt. Expanded diagnostic geometry identified a
+256px radial box in only 178px of available content. The repair bounds its
+inline size by that allocation and retains its square aspect, original
+default size, SVG geometry and text scaling. Temporary diagnostic expansion
+was removed; no containment assertion changed. The exact existing three
+Firefox theme phases pass (3 passed, 14.8m); the additional desktop/light
+Ambient failure passes its existing 768px phase (1 passed, 12.0m). Both runners
+report zero proxy errors. The 103 existing instrument tests also pass.
+
+The unchanged real-map phone phase passes locally without a retry, following
+its successful CI retry. This is bounded evidence, not a claim that every
+latest-head workflow has passed.
+
+Seven active quality profiles exceeded 45 minutes. Run 43944846908 was
+cancelled and its failed/cancelled jobs rerun once as attempt 2. Completed
+logs show continued work, including a deterministic Ambient failure, rather
+than a deadlock. Firefox desktop/light's route group finished while the
+remaining allocated-width phases continued sequentially through minute 45.
+The next batch uses four workers for the same phase and replay commands.
+All 12 profiles, 23/21 registrations, replay cases, steps, artifacts,
+assertions and thresholds remain unchanged. The workflow contract pins the
+new execution capacity, not fewer tests or a larger acceptance tolerance.
+
+Attempt 2 also exposed the same containment defects in Chromium: responsive-30
+(job 133606146922, Ambient custom/1440 at 768px; 23 other cases passed) and
+responsive-31 (job 133606146828, Material custom/390 at 320px; 26 other cases
+passed). Their exact existing phases are being verified locally before push.
+These two-worker design partitions took 55.1 and 58.5 minutes respectively.
+`c572eedc0d` applies the same four-worker capacity only to the existing
+Chromium design partition. Ordinary, accessibility and isolated performance
+commands are unchanged. Six workflow contracts and actionlint pass.
+The production/lifecycle repair batch is committed as `5e23bbb1ca`.
+Subsequent responsive-28 repeated dark-phone Material and light-desktop
+Ambient, with 22 other cases passing. Firefox desktop dark/custom repeated
+Ambient, each with 22 other phases passing. No additional root cause was
+identified in those complete logs.
+
+All six existing Chromium containment variants now pass locally: custom
+desktop 768px (1 passed, 7.6m), all phone themes at 320px (3 passed, 7.3m),
+and light/dark desktop 768px (2 passed, 6.6m). Every runner reports zero
+proxy errors. These complement the earlier bounded Firefox checks; they
+are not a claim that the full new-head CI profiles have passed.
+
+The current Docker build passed, including TypeScript and postbuild gates:
+399.3 KB transitive startup against the unchanged 400 KB budget. Port 3120
+now serves `teslasync-web:design-packs-v2-5e23bbb1ca`, running/healthy.
+Index, auth-mode, liveness and readiness return 200; the actual entry
+`/assets/index-Dc4IlylP.js` contains `5e23bbb1ca`. Workflow/docs-only commits
+do not change that image's frontend source. The previous container is
+preserved for rollback. Shared backend status still reports `no_token`
+and a closed breaker; aggregate health remains 503 for that documented
+external prerequisite. No other user's service was changed.
+Temporary Vite PID 23604 was stopped after all consumers finished and
+direct port-50723 connections were verified unavailable.
+
+Awaiting the real shared settings-hydration promise inside `act` removes the
+unawaited ThemeProvider updates in Tariff and RouteCard tests. Each mocked
+request now gets its own consumable Response. Their 91 cases pass. Rendering
+Tariff's actual chart also exposed React elements incorrectly spread as grid
+props: 26 occurrences in 23 production callers now render the existing
+shared `chartGrid` element. Twelve affected mocks now retain its actual export
+instead of claiming it is a plain props object. The actual Tariff chart probe
+asserts shared grid props, and jsdom chart fixtures explicitly allocate real
+responsive-container boxes rather than suppressing zero-layout warnings.
+The 27-file affected batch passes 2,004 tests with CI coverage enabled.
+
+SharedDrive's immutable historical source digest is unchanged. An exact
+successor inverse verifies the complete new source, the real shared grid
+dependency, the import and both chart children before reconstructing that
+digest. It rejects stale, appended or altered source; no snapshot or baseline
+was refreshed merely to accept a diff.
+
+The shared cross-tab bus previously attached one native BroadcastChannel
+listener per consumer. It now has one transport listener and independent
+subscription records, including duplicate callbacks. Unsubscription and
+reset release subscribers; one failing callback is reported through the
+existing privacy-aware reporter without blocking its siblings. The existing
+bus/settings/query tests verify 12 subscriptions, delivery, cleanup and
+actual error-report retention: 41 passed. Listener limits and console output
+are not suppressed.
+
+The four-worker execution check is complete: the existing Firefox and WebKit
+1440px light/custom isolation/restoration cases pass together with four
+workers (4 passed, 1.8m), with zero proxy errors. No screenshot tolerance or
+historical baseline changed. Attempt 2 on the old pushed head reproduces
+only the already-repaired Material phone and Ambient desktop containment
+failures in its four completed failing profiles; their other phases pass.
+
+The completed-CI warning ledger was repaired at the actual test boundaries:
+native focus and beforeunload events, asynchronous mutations/navigation,
+settings hydration, formatter changes, timers and unmount-before-reset
+cleanup. The 44-file lifecycle batch passed 2,562 tests; the subsequent
+13-file transition batch passed 428. Remaining cases exposed a test that
+asserted zero command POSTs before the mutation executed. Its mutable
+operational-mode double also never notified the parent component. The test
+now rerenders that double, checks the real disabled OFF action and awaits
+the attempted interaction before retaining the original zero-POST assertion.
+Production command authorization was not weakened or changed.
+
+Real chart rendering requires a measured container in jsdom. Only the
+observed chart fixtures opt into measured boxes; ordinary elements retain
+their native measurements. A focused regression checks repeated allocation
+and restoration. The initial prototype spy recursed across repeated fixture
+setup; it was corrected before shipping. The final 22-file affected batch
+passes 1,393 tests. Invalid motion passthrough mocks were removed in favor of
+the existing real test motion provider. The viewport-scroll polyfill updates
+both coordinate aliases and the document, emits scroll events and restores
+the prior descriptors; it is not a no-op used to hide diagnostics.
+
+Positive chart geometry also exposed unkeyed gas-price gradients. Stable
+source-unit keys preserve the existing IDs, colors, series and geometry.
+The existing gas chart test now renders gradient probes and observes console
+errors without muting them. Statistics request overrides delegate unrelated
+URLs to their valid existing fixtures instead of returning metric objects
+for array endpoints. The final nine-file regression command covers gas
+charts/page, Statistics, parking charts, both shared setup contracts,
+ScrollRestoration, exports and Alert Studio:
+
+```text
+Test Files  9 passed (9)
+     Tests  305 passed (305)
+```
+
+The shared JSX resolver diagnostic was traced to AtlasPanel's comment-only
+fragment child. Moving the same non-destructive-action explanation into the
+conditional expression removes the unnecessary fragment, without changing
+rendered controls. Sidebar behavior remains covered by the passing existing
+NavMotion and SidenavRedesign cases.
+
+The guideline script scanned byte-identical copies of all 26 then-changed
+production files: zero violations in all six categories and TypeScript
+passed. The two later source files, AtlasPanel and GasTrendChart, also have
+zero audit findings. Changed pages retain their sections and at least 99%
+of their prior line counts; no production API hook changed. Added-line
+suppression scans against both main and feature/app-design-themes return
+zero prohibited matches. No new suite, matrix, screenshot or suppression
+was introduced.
+
+## 2026-11-16 current-image deployment and WebKit verification
+
+`cc80591ddb` contains the verified CI-contract, recovery-reporting and backup
+test-lifecycle batch below. Latest-head CI frontend lint, shard 2 and generated
+freshness now pass. Other required jobs remain under continuous monitoring.
+Refreshed main ancestry is `247 0`; the PR is mergeable, ready and unmerged.
+
+Built `teslasync-web:design-packs-v2-cc80591ddb`, preflighted its separate
+loopback candidate, then replaced only the task-owned 3120 preview. The
+previous container is retained as
+`teslasync-design-packs-v2-rollback-before-cc80591ddb`.
+The deployed container is running/healthy; index, entry asset, auth-mode,
+liveness and readiness return 200, and the actual entry contains `cc80591ddb`.
+The candidate was removed after successful replacement. Shared services and
+other preview ports were not changed.
+
+The aggregate backend health endpoint separately reports missing Tesla
+authorization. `/system/status` explicitly returns `no_token`, a closed breaker
+and disabled Fleet Telemetry, while database/Redis/MQTT are healthy. This is
+an external authorization prerequisite, documented with source evidence in
+FOLLOWUPS.md, not permission to mute health failures.
+
+The superseded f2 WebKit custom dashboard trace records an eight-second
+element-screenshot font wait. `sampleHeatmapPaint` already awaits
+`document.fonts.ready` before measuring; adding a redundant wait or disabling
+Playwright's font check would not establish a repair. The current required
+phase and exact mixed-pack comparison remain unchanged.
+
+A first local run against Nginx reached the isolation assertions but failed
+the console gate because the synthetic SSE fixture uses a separate loopback
+origin, correctly rejected by production's same-origin connection policy.
+That is not a geometry pass for the whole test. The next run uses the exact
+deployed public assets with CI's Vite preview transport; neither production
+CSP nor the test's console assertion is weakened.
+
+The corrected local run used the exact deployed `cc80591ddb` public assets,
+the pinned Playwright 1.63.0 Linux image and the existing two-worker command:
+
+```text
+node node_modules/@playwright/test/cli.js test widget-design-packs.app.spec.ts --grep="Application design languages at 1440px in custom.*phase (real-route /$|mixed-pack isolation$)" --project=app-design-webkit --workers=2 --reporter=line,json --output=/evidence
+Running 2 tests using 2 workers
+  2 passed (3.0m)
+Loopback preview errors: 0
+report: expected=2, skipped=0, unexpected=0, flaky=0
+```
+
+This runs the full existing 27-pack dashboard phase and the exact mixed-pack
+isolation/restoration comparison, not a replacement probe. Neither the old
+font timeout nor the half-pixel comparison failure reproduced. It establishes
+the current focused result, not a root cause for the historical discrepancy
+or acceptance of the still-running full CI cohort. No comparison, timeout,
+font behavior or screenshot baseline was changed. The temporary asset preview
+was stopped after the two consumers finished.
+
+## Completed CI-repair batch receipts
+
 The shard-2 log also exposes an unawaited success transition in
 `BackupActionsCard.test.tsx`: its pending-state case resolves the mutation and
 immediately ends. Resolve within `act` and await the enabled action again,
@@ -48,6 +245,19 @@ fallback shadows in `feedback.css:1270-1293`. Recoloring those definitions or
 vehicle artwork would violate preservation, rather than close a token gap.
 The actual duplicate chart/grid/heatmap consumers were repaired in
 `a1eaf45a9b` and `f2a7691240`, retaining their original rendered values.
+
+Reconciliation of the historical REVIEW reports:
+
+| Finding family | Current disposition |
+| --- | --- |
+| Protected Twin controls/text repeated across pack reports | Shared-owner repair `8d41a1b725`; original phone cases and the current all-pack review/native-progress checks supply newer evidence. |
+| Small navigation prose, context, units and clipped layout-menu content | Shared and narrowly owned repairs in `a1eaf45a9b`, `8edd91f937` and `f2a7691240`; the existing phone cases cover the repaired states rather than declaring the old failed screenshots passing. |
+| `/pinned` still pending, incomplete navigations and energy loading/recovery races | Navigation/fixture lifecycle repairs retain strict request-ledger and error assertions. Existing affected cases pass; current full CI remains a separate release gate. |
+| Patterned surfaces, chart labels and blurred-header contrast incompletes | All 1,593 nodes from the current bounded 27-pack review have measured evidence; actual below-AA paints were repaired. Previously recorded opaque Classic legend/header ratios remain bounded evidence for those states. |
+| Analog title/selector refinements and standalone DataTable frames | Their own later REVIEW sections already record the source repairs and focused regressions. Current all-pack review and source-preservation checks supersede the earlier failed rounds; no new gallery is implied. |
+| Half-pixel desktop nested-preview comparison | Still tracked separately in FIXLIST.md until the unchanged required comparison passes on the current source. |
+| Two-row navigation, card density, whitespace, generic treatment, readable wrapping and chart-axis size preferences | These are appearance recommendations, not demonstrated clipping, overlap or body-text failures. Do not redesign accepted packs or change canonical chart-axis sizes merely to erase an old review's preference. |
+| Missing screenshots, unreviewed hover/below-fold states and interrupted scratch tools | These describe evidence limits, not established product defects. Preserve the historical reports; do not invent passes, create another matrix or bulk-regenerate shots. |
 
 The final lazy-recovery build reports startup JS 399.4 KB. The 400 KB budget is
 unchanged. The regression checks the actual reported module failure and retains

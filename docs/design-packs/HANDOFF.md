@@ -4,9 +4,36 @@
 
 Work has resumed. This section supersedes the stopped-session record below.
 PR #259 still targets main, is ready/non-draft, mergeable and unmerged.
-Refreshed main integration is `245 0` before the next repair commit.
+Refreshed main integration is `249 0` at `c572eedc0d`.
 `FIXLIST.md` is the current issue tracker; the prior follow-up deferrals are
 not accepted as impossible.
+
+Repair commit `5e23bbb1ca` closes the deterministic Firefox Material
+320px and Ambient 768px scaled-gauge overflows. Exact existing browser phases
+pass: three phone themes (14.8m) and desktop/light (12.0m), zero proxy errors.
+Existing Firefox/WebKit desktop isolation/restoration cases also pass with
+four workers (4 cases, 1.8m). The existing CI commands now use that capacity;
+no profile, phase, replay, threshold or assertion was removed.
+
+The batch also repairs 26 invalid React-grid spreads in 23 consumers,
+BroadcastChannel listener fanout, observed test lifecycle boundaries, actual
+chart-fixture geometry, gas-gradient keys and the AtlasPanel JSX diagnostic.
+Historical source fingerprints and all screenshots remain unchanged in
+this batch. Bounded affected batches include 2,004 tests with coverage,
+1,393 chart/lifecycle/sidebar cases and a final nine-file 305-case pass.
+The full lint gate passes; the changed source audits and TypeScript pass.
+See DECISIONS.md for failed intermediate experiments and exact scope.
+
+Quality run 43944846908 attempt 2 on `cc80591ddb` reports the same
+Material/Ambient containment failures in all six Firefox profiles and
+Chromium responsive-28/30/31. All six existing Chromium containment
+variants now pass locally: phone themes 3 passed (7.3m), custom desktop
+1 passed (7.6m), and light/dark desktop 2 passed (6.6m), zero proxy errors.
+`c572eedc0d` also gives the existing Chromium design partition four workers;
+ordinary/performance commands are unchanged. The shipping batch still
+requires every workflow to pass on its new head; the task is not complete.
+Temporary previews on 50719 and 50723 are stopped. Vite PID 23604 was
+explicitly stopped and direct port-50723 connections verified unavailable.
 
 Pushed `f2a7691240` fixes five packs' phone stat-card units, real
 Blueprint/Observatory patterned-text contrast, the radial Verified-label
@@ -17,11 +44,12 @@ TypeScript, scoped lint/audits, affected unit tests and actual browser checks
 passed. See DECISIONS.md for raw counts and measured contrast evidence.
 Ten existing repaired dashboard images were replaced; no other shot changed.
 
-CI is still being monitored, not declared green. On `f2a7691240`, frontend lint
-has a stale one-worker assertion and shard 2 has a stale direct token-history
-inverse. Both are repaired locally without changing coverage or historical
-fingerprints. The pending batch also exposes quota-module failures through
-the existing reporter and completes an unawaited backup test transition.
+CI is still being monitored, not declared green. `cc80591ddb` repairs
+`f2a7691240`'s stale one-worker assertion and direct token-history inverse
+without changing coverage or historical fingerprints. Latest-head CI
+frontend lint, shard 2 and generated freshness pass. The same commit exposes
+quota-module failures through the existing reporter and completes an
+unawaited backup test transition.
 Seven affected files pass 831 tests with CI coverage options; full lint,
 TypeScript and the private-map strict bundle gate pass (399.4 KB startup).
 Quality run 43923744808 was
@@ -34,11 +62,20 @@ performed in this continuation.
 The existing saved-layout popup/native-progress case now passes all 27 packs.
 The reviewed contrast nodes and shared token gaps have measured evidence;
 the strict desktop restoration comparison still requires the latest CI result.
-Remaining work: push this verified batch, finish REVIEW reconciliation, exact
-desktop restoration gates, Docker 3120 refresh, template-preserving PR
-description and final all-green receipt. Diagnostic previews 50659 and 50660
-are stopped. Other users' services remain untouched. The built f2 Docker image
-has not replaced the older 3120 preview; rebuild for the next source commit.
+REVIEW finding families are reconciled in DECISIONS.md. The exact existing
+custom/1440 WebKit dashboard and mixed-pack phases pass against deployed
+`cc80591ddb` assets: 2 passed (3.0m), no retries/skips, zero proxy errors.
+No tolerance, font-wait behavior or baseline changed. Remaining work: obtain
+the full current CI result, publish the template-preserving PR description
+and obtain a final all-green receipt after documentation changes.
+Current CI runs: CI 43944846750, Frontend Quality Gates 43944846908.
+
+Docker 3120 now serves `teslasync-web:design-packs-v2-5e23bbb1ca`, verified
+running/healthy with the actual entry asset identity and HTTP 200 on index,
+auth-mode, liveness and readiness. Rollback container:
+`teslasync-design-packs-v2-rollback-before-5e23bbb1ca`. Other users' services
+remain untouched. The shared backend's missing live Tesla authorization is
+proved in FOLLOWUPS.md; it is not a frontend regression or a weakened check.
 
 ## Historical stopped-session record
 
