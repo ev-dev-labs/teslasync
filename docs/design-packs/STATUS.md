@@ -1,10 +1,10 @@
 # Design pack status
 
-- `design-packs-v2` is based on `feature/app-design-themes`; all 27 stylesheets changed, but their reviews retain unresolved defects.
-- Classic, Studio, Executive Concierge, Expressive Form and Pixel Cockpit each passed 1,014/1,016 matrix checks, Horizon 1,012/1,016, and Precision Ledger and Iconic Showroom 1,013/1,016 each. Concierge, Expressive and Pixel charge units have passing phone retries; protected dashboard cases remain unresolved and the matrix is unfinished.
-- Phase 1 remains incomplete: token coverage, protected dashboard twin hotspots and standalone routes remain unresolved.
-- Dark and light Drives/Energy/Vehicles sweeps passed 162/162 scoped checks each; the light contrast scan had 64 incomplete nodes, 12 later resolved in Terminal. Cyber grid contrast and preview isolation have focused cross-browser checks; full-page accessibility remains unverified.
-- Full Vitest on snapshot `243a4c3199` passed 2,947 files and 101,822 tests; the `98debceb5a8b` rerun was stopped after a Firefox axis defect was found.
-- Draft PR #259 targets `feature/app-design-themes`; head `23e0cf85c9` passed all eight frontend test shards but failed generated-artifact freshness on a Git output-buffer overflow. A local repair passed 11 focused tests; the isolated full gate and next CI run remain pending.
-- Local WebKit 390px custom/dark isolation passed; a focused desktop custom probe passed, but the prior 0.5px desktop difference and pending CI isolation jobs remain unresolved.
-- Docker preview `cead512118c7` is healthy at `localhost:3120`; the later Pixel phone fix is not in that image. The existing backend health endpoint still returns 503.
+- Design work is accepted and frozen; all 27 existing packs and IDs are preserved.
+- PR #259 now targets `main`; merging fetched main `b79759f9cc` reported already up to date, and the frontend build passed.
+- Twin phone controls and body text are repaired without changing vehicle scenes; existing dashboard checks passed Classic dark and Pixel light at 360/430px (4 cases).
+- Existing Firefox notification-axis tests passed dark, light and custom-font/locale cases (3 cases).
+- Generated-artifact freshness passed all checks and verified 282 registered paths byte-identical; TypeScript and full frontend lint passed.
+- CI rate-limit integration contracts are repaired without relaxing thresholds: 7 frontend files / 7,744 tests passed; the Guard package passed Linux race tests with 87.2% coverage.
+- The single local full frontend test run and rebuilt Docker candidate are in progress. Final PR workflow acceptance is pending.
+- Existing screenshots are preserved. Deferred matrix, contrast-incomplete, 0.5px desktop and token-coverage work is listed in FOLLOWUPS.md.

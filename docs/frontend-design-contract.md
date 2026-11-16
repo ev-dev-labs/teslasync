@@ -188,6 +188,12 @@ selectors must not alter their composition or chrome; inherited theme and
 widget-pack tokens continue to apply. Ownership must update when a protected
 subtree is inserted, reparented or toggled.
 
+The accepted-design finalization permits a widget-owned phone accessibility
+repair on the two protected Twin shells: 44px header controls, wrapping header
+actions and a 16px minimum for existing body text. Vehicle scene geometry,
+images, pack chrome and desktop presentation remain unchanged. This does not
+permit application-pack selectors to enter protected subtrees.
+
 **Shared pack presentation roles (in progress):** The existing theme, font,
 density, semantic and chart-palette preferences remain authoritative. Within
 the verified app-design boundary, pack sheets may refine the existing

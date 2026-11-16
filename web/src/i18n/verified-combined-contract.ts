@@ -121,6 +121,21 @@ const themePresetAdditions = {
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
   const beforeExternalAuth = catalogBeforeAppDesign(catalog)
+  expect(beforeExternalAuth.ratelimit, 'ratelimit').toEqual({
+    appTitle: 'TeslaSync request limit reached',
+    teslaTitle: 'Tesla request limit reached',
+    unknownTitle: 'Request limit reached',
+    actionsPaused: 'Retry the action yourself after the countdown; actions never replay automatically.',
+    readsPaused: 'Cached data stays visible. Retry affected reads after the countdown; actions never replay automatically.',
+    countdown: 'Try again in {{n}}s',
+    ready: 'The cooldown has ended.',
+    retryReads: 'Retry affected reads',
+  })
+  expect(beforeExternalAuth.upstream, 'upstream').toEqual({ title: 'Tesla upstream unavailable' })
+  Object.assign(beforeExternalAuth, {
+    ratelimit: { banner: 'Too many requests — pausing for {{n}}s', retry: 'Retry now' },
+    upstream: { banner: 'Tesla upstream unavailable — retry in {{n}}s' },
+  })
   const common = beforeExternalAuth.common as Record<string, unknown>
   for (const [key, expected] of designProfileCopy) {
     expect(common[key], 'common.' + key).toBe(expected)

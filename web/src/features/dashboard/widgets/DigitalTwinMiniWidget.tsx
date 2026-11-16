@@ -138,6 +138,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
+      className="widget-twin-accessibility"
       title={t('widget.digitalTwinMini', 'Digital twin')}
       icon={<Monitor className="h-3.5 w-3.5" />}
       dataState={dataState}

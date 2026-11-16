@@ -302,7 +302,7 @@ func TestGuardConfigMountedRouteContract(t *testing.T) {
 	for _, route := range []string{
 		`r.Get("/", guardHandler.Status)`,
 		`r.Get("/config", guardHandler.Config)`,
-		`r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)`,
+		`r.With(ratemw.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)`,
 		`r.Get("/events", guardHandler.Events)`,
 	} {
 		if !strings.Contains(block, route) {

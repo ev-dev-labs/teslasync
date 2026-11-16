@@ -3253,3 +3253,50 @@ The stack association was removed, #258 was left open against main, and
 #259 was retargeted to main. No branches were rewritten or force-pushed.
 Fetched origin/main was already an ancestor of design-packs-v2.
 
+The main merge reported `Already up to date.` at
+`b79759f9cc454857a6bb5807f6cbf9f96a350dbe`; `npm run build` exited 0.
+The requested protected-dashboard repair is interpreted as a narrow,
+widget-owned accessibility exception, not permission to redesign the Twins.
+Their phone header controls now have a 44px floor, header actions can wrap,
+and existing 14px body text has a 16px floor respecting larger saved scales.
+Vehicle scene markup, imagery, geometry and data behavior are unchanged.
+
+The existing screenshot-free dashboard checks passed at 360px and 430px
+(`2 passed`), Firefox notification-axis regressions passed dark, light and
+custom-font/locale cases (`3 passed`), and the generated freshness command
+passed all registered checks and its byte-identical non-mutation assertion.
+
+CI exposed three stale contracts from the already-committed rate-limit
+integration, not flaky failures: the historical catalog projection omitted
+six net new leaves, the auth-probe test omitted its cancellation signal and
+expected a write to trigger a read probe, and the Guard route source assertion
+still named the replaced middleware alias. The repair pins the exact new
+copy before reconstructing the unchanged historical catalog, asserts the
+probe signal and write's single transport call, and pins the same 5/minute
+rate limit and impersonation protection using the current middleware alias.
+No historical fingerprint, threshold, test or workflow step is removed.
+
+Verification receipts for these repairs:
+
+```text
+Dashboard existing capture checks (check-only; Classic dark 360/430):
+  2 passed (47.2s)
+Dashboard existing capture checks (check-only; Pixel light 360/430):
+  2 passed (1.8m)
+Firefox Notification health phone chart axes:
+  3 passed (7.2m)
+Affected frontend contracts with CI coverage options:
+  Test Files  7 passed (7)
+       Tests  7744 passed (7744)
+Linux go test -race -coverprofile=/tmp/guard-coverage.out -covermode=atomic ./internal/api/guard:
+  ok github.com/ev-dev-labs/teslasync/internal/api/guard 2.093s coverage: 87.2% of statements
+Twin file audit:
+  static-inline-vars=0 raw-controls=0 old-api-imports=0
+  direct-vendor-imports=0 camelcase-query=0 double-api-prefix=0
+```
+
+Windows ARM64 cannot run Go race instrumentation, so the exact package command
+was run in the Go 1.27.4 Linux container instead. Both Twin widget source files
+gained one className line; their sections, hooks and URLs are unchanged.
+No screenshots were created or replaced by these check-only runs.
+
