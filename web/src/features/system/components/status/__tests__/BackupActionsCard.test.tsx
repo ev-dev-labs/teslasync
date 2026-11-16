@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -56,7 +56,8 @@ describe('BackupActionsCard', () => {
     const btn = screen.getByRole('button', { name: /Run quick backup now/ })
     fireEvent.click(btn)
     await waitFor(() => expect(screen.getByRole('button', { name: /Starting/ })).toBeDisabled())
-    resolveFn({ id: 1, status: 'started' })
+    await act(async () => { resolveFn({ id: 1, status: 'started' }) })
+    await waitFor(() => expect(screen.getByRole('button', { name: /Run quick backup now/ })).toBeEnabled())
   })
 
   it('surfaces a friendly error when the mutation fails', async () => {

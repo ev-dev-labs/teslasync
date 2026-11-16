@@ -119,9 +119,11 @@ describe('exact e1fb native source repair successor (not native certification)',
     expect(hash(nativeRepairPredecessor(barrel))).toBe(repair.sources.find(patch => patch.file === barrel)!.before);
   });
 
-  it('accepts only the exact touch-token successor of the pinned dependency', () => {
+  it('accepts only the exact shared-cell and touch-token successors of the pinned dependency', () => {
     const current = source(touchTokens);
+    const heatmapAddition = "  heatmap: {\n    cell: 'rounded-[3px] border border-[var(--border-subtle)]',\n  },\n";
     const previous = current
+      .replace(heatmapAddition, '')
       .replace('export const touchTargetPixels = 44\n\n', '')
       .replace('    touchSize: touchTargetPixels,\n', '');
     expect(hash(previous)).toBe(repair.dependencies.find(entry => entry.file === touchTokens)!.sha256);
@@ -130,9 +132,11 @@ describe('exact e1fb native source repair successor (not native certification)',
       current.replace('export const touchTargetPixels = 44\n\n', ''),
       current.replace('    touchSize: touchTargetPixels,\n', ''),
       current.replace('touchTargetPixels = 44', 'touchTargetPixels = 43'),
+      current.replace(heatmapAddition, ''),
+      current.replace(heatmapAddition, heatmapAddition.replace('3px', '4px')),
     ]) {
       expect(() => restoreNativeSourceRepair(barrel, source(barrel), file =>
-        file === touchTokens ? stale : source(file))).toThrow('exact touch target successor');
+        file === touchTokens ? stale : source(file))).toThrow('exact shared heatmap cell successor');
     }
     expect(nativeRepairPredecessor(barrel)).toBeTruthy();
   });

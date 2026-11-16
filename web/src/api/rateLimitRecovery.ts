@@ -53,7 +53,10 @@ export function installRateLimitRecovery(client: QueryClient): () => void {
       const error = query.state.error
       if (!query.isActive() || !isRateLimitError(error) || !isSafeRead(error.requestMethod) || !currentContext(error)) return
       attempts.set(query, (attempts.get(query) ?? 0) + 1)
-      void query.fetch(undefined, { cancelRefetch: false }).catch(() => undefined)
+      void client.refetchQueries({
+        type: 'active',
+        predicate: candidate => candidate === query,
+      }, { cancelRefetch: false })
     }, Math.min(MAX_TIMER_MS, remaining))
   }
   const resume = () => {

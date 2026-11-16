@@ -1,5 +1,104 @@
 # Design Pack Decisions
 
+The shard-2 log also exposes an unawaited success transition in
+`BackupActionsCard.test.tsx`: its pending-state case resolves the mutation and
+immediately ends. Resolve within `act` and await the enabled action again,
+covering the actual completed transition without muting React diagnostics.
+
+Final batch verification:
+
+```text
+npm test -- <seven affected files> --coverage --coverage.reporter=json --reporter=default --maxWorkers=2
+ Test Files  7 passed (7)
+      Tests  831 passed (831)
+npm run lint: exit 0
+private-map Vite build + check-bundle-size.mjs --strict --dist <session output>: exit 0
+startup JS 399.4 KB; startup icons 271/430; startup feature modules 13
+```
+
+The strict budget command correctly rejected a first invocation against public
+output without source maps. Its successful replacement used private maps in
+session-only output, never served or copied into the Docker preview. All
+budgets remain unchanged. The diagnostic Vite preview on 50659 was stopped
+after its consumers completed.
+
+## 2026-11-16 bounded review and token reconciliation
+
+The current 27-pack Dashboard/Drives/Energy review supersedes the repeated old
+Twin, navigation-font, small-unit, pending `/pinned` fixture and contrast
+findings in the pack reviews, not their historical screenshots. Of 324 cases,
+314 initially passed and ten failed solely on the five packs' stat units;
+those failures were repaired and rechecked. The existing all-pack unit/context
+cases also cover 360/390/430px, all three saved scales and both themes.
+
+The layout selector's selected value is already exposed as its accessible
+description (`a3177bf897`), with regression assertions. Its stable action name
+does not hide the selected name from assistive technology. The dismissed setup
+widget retains Restart and removal guidance inside the user's saved grid;
+automatically changing that saved geometry is not a defect repair. Requests for
+a different pack identity, fewer navigation rows, denser cards or a different
+header composition are redesign suggestions, not permission to change the
+accepted appearance. Readable wrapping is not horizontal overflow.
+
+The shared-component literal inventory finds the three canonical chart-axis
+size definitions, ThemeProvider palette definitions, protected TeslaCarViz
+artwork and unowned semantic feedback fallback treatments. Pack feedback
+already consumes `--app-feedback-signal` from semantic tokens and removes the
+fallback shadows in `feedback.css:1270-1293`. Recoloring those definitions or
+vehicle artwork would violate preservation, rather than close a token gap.
+The actual duplicate chart/grid/heatmap consumers were repaired in
+`a1eaf45a9b` and `f2a7691240`, retaining their original rendered values.
+
+The final lazy-recovery build reports startup JS 399.4 KB. The 400 KB budget is
+unchanged. The regression checks the actual reported module failure and retains
+the failed query's error state; both recovery files now pass 17 tests.
+Four directly dependent source-contract files pass 810 tests, including the
+157-case CI reproduction with coverage enabled. Both changed API files pass
+all six guideline categories and `npx tsc --noEmit`. No URL, page, section or
+data contract changed in this follow-up.
+
+## 2026-11-16 dependency-contract and remaining Promise-catch reconciliation
+
+Shard 2 on `f2a7691240` reports one failure among 12,084 tests: the standalone
+native dependency-history test reconstructs the old tokens file without
+removing the newly extracted heatmap cell role. Its production-source proof
+already performs that exact inverse. Apply the same explicit subtraction in
+the independent test, retaining the original historical digest and adding
+missing/changed shared-cell mutations. No fixture, baseline or approved
+fingerprint changes.
+
+The suppression review removes two remaining branch-added silent Promise
+catches in quota recovery. A failed lazy chunk now goes through the existing
+privacy-aware frontend error reporter while the failed read remains observable
+in Query state. An eager implementation was rejected locally: its startup JS
+was 400.2 KB against the unchanged 400 KB budget. Recovery stays lazy and
+installs only after an active safe read is rate-limited. The exact active query is refetched
+through QueryClient, which owns and publishes its error state, rather than
+discarding the internal Query.fetch rejection. Bounds, deadlines, jitter,
+focus/connectivity gates and mutation exclusions remain unchanged.
+
+```text
+queryClient.test.ts + rateLimitRecovery.test.ts: 2 files, 16 tests passed
+npm run build: exit 0; startup-budget warning found and investigated, not waived
+ci_workflows.test.mjs: 6 tests passed
+actionlint .github/workflows/frontend-quality.yml: exit 0
+Native progress real routes at 390px in dark: 1 passed (5.2m)
+```
+
+The existing native case traverses all 27 packs, including the real saved-layout
+popup and its viewport containment assertion. This closes the Analog popup
+verification left open by the stopped session.
+
+## 2026-11-16 stale workflow contract after verified parallel execution
+
+The first `f2a7691240` failure is Frontend lint, job 133549747502. Its workflow
+contract still requires `--workers=1`, although the independently validated
+existing profile cases now use two workers. This is a stale execution-detail
+assertion, not a missing test or changed acceptance threshold. Update it to
+require exactly two workers and strengthen the complementary replay command
+to require the same count. Every profile, case-count check, result artifact,
+required aggregate and isolated performance check remains intact.
+
 ## 2026-11-16 painted contrast and completed phone-unit review
 
 The frozen, existing 27-pack Dashboard/Drives/Energy review finished with

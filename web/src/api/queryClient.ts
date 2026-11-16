@@ -33,6 +33,7 @@
 import { QueryCache, QueryClient, type QueryClientConfig } from '@tanstack/react-query'
 import { isSafeRead } from '@/lib/rateLimit'
 import { isApiError, isRateLimitError, isUpstreamUnavailableError } from '@/lib/resilience'
+import { reportFrontendError } from '@/lib/errorReporter'
 
 function retryRead(failureCount: number, error: unknown): boolean {
   if ((error as { name?: unknown } | null)?.name === 'AbortError' ||
@@ -96,10 +97,12 @@ export function createQueryClient(): QueryClient {
       onError: (error, query) => {
         if (recoveryStarted || !isRateLimitError(error) || !isSafeRead(error.requestMethod) || !query.isActive()) return
         recoveryStarted = true
-        // Recovery is a failure-only path, not part of the cold-start shell.
         void import('./rateLimitRecovery')
           .then(({ installRateLimitRecovery }) => installRateLimitRecovery(client))
-          .catch(() => { recoveryStarted = false })
+          .catch((failure: unknown) => {
+            recoveryStarted = false
+            reportFrontendError(failure, 'promise')
+          })
       },
     }),
   })

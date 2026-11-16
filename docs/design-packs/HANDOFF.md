@@ -8,7 +8,7 @@ Refreshed main integration is `245 0` before the next repair commit.
 `FIXLIST.md` is the current issue tracker; the prior follow-up deferrals are
 not accepted as impossible.
 
-The next repair batch fixes five packs' phone stat-card units, real
+Pushed `f2a7691240` fixes five packs' phone stat-card units, real
 Blueprint/Observatory patterned-text contrast, the radial Verified-label
 overlap, light chart ticks, the ElevationProfile grid and identical-value
 chart/heatmap token adoption. It preserves historical source receipts with
@@ -17,18 +17,28 @@ TypeScript, scoped lint/audits, affected unit tests and actual browser checks
 passed. See DECISIONS.md for raw counts and measured contrast evidence.
 Ten existing repaired dashboard images were replaced; no other shot changed.
 
-CI is still being monitored, not declared green. Quality run 43923744808 was
+CI is still being monitored, not declared green. On `f2a7691240`, frontend lint
+has a stale one-worker assertion and shard 2 has a stale direct token-history
+inverse. Both are repaired locally without changing coverage or historical
+fingerprints. The pending batch also exposes quota-module failures through
+the existing reporter and completes an unawaited backup test transition.
+Seven affected files pass 831 tests with CI coverage options; full lint,
+TypeScript and the private-map strict bundle gate pass (399.4 KB startup).
+Quality run 43923744808 was
 cancelled/rerun once after over-age checks; its log exposed serial execution,
 not a deadlock. The batch enables two workers without removing any cases.
 Four existing all-pack phone cases passed in pinned Linux Firefox/WebKit in
 parallel, with zero loopback proxy errors. No full local unit shard run was
 performed in this continuation.
 
-Remaining work: final REVIEW/suppression reconciliation, the existing
-saved-layout popup case, latest-head exact desktop restoration gates, Docker
-3120 refresh, template-preserving PR description and final all-green receipt.
-The mutable diagnostic preview is on 50659; the completed frozen 50660 review
-server has been stopped. Other users' services remain untouched.
+The existing saved-layout popup/native-progress case now passes all 27 packs.
+The reviewed contrast nodes and shared token gaps have measured evidence;
+the strict desktop restoration comparison still requires the latest CI result.
+Remaining work: push this verified batch, finish REVIEW reconciliation, exact
+desktop restoration gates, Docker 3120 refresh, template-preserving PR
+description and final all-green receipt. Diagnostic previews 50659 and 50660
+are stopped. Other users' services remain untouched. The built f2 Docker image
+has not replaced the older 3120 preview; rebuild for the next source commit.
 
 ## Historical stopped-session record
 

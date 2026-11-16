@@ -21,8 +21,10 @@
  * primitive the QueryObserver consults at every interval tick.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { focusManager, QueryObserver } from '@tanstack/react-query'
+import * as errorReporter from '@/lib/errorReporter'
+import { RateLimitError } from '@/lib/resilience'
 
 import { createQueryClient, DEFAULT_QUERY_CLIENT_CONFIG } from './queryClient'
 
@@ -47,6 +49,35 @@ describe('DEFAULT_QUERY_CLIENT_CONFIG', () => {
 })
 
 describe('createQueryClient', () => {
+  it('reports a recovery-module failure without losing the failed read state', async () => {
+    const failure = new Error('Recovery module unavailable')
+    vi.doMock('./rateLimitRecovery', () => { throw failure })
+    const report = vi.spyOn(errorReporter, 'reportFrontendError')
+    const qc = createQueryClient()
+    const limited = new RateLimitError('limited', 1, '/vehicles', {
+      requestMethod: 'GET',
+    })
+    const observer = new QueryObserver(qc, {
+      queryKey: ['recovery-module-failure'],
+      queryFn: async () => { throw limited },
+    })
+    const unsubscribe = observer.subscribe(() => undefined)
+    try {
+      // Vitest wraps rejected module factories without discarding their cause.
+      await vi.waitFor(() => expect(report).toHaveBeenCalledWith(
+        expect.objectContaining({ cause: failure }), 'promise',
+      ))
+      expect(observer.getCurrentResult().error).toBe(limited)
+      expect(observer.getCurrentResult().status).toBe('error')
+    } finally {
+      unsubscribe()
+      qc.clear()
+      report.mockRestore()
+      errorReporter.__resetErrorReporterForTests()
+      vi.doUnmock('./rateLimitRecovery')
+    }
+  })
+
   it('returns a QueryClient with refetchIntervalInBackground=false default', () => {
     const qc = createQueryClient()
     const opts = qc.getDefaultOptions()
