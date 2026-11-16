@@ -53,6 +53,7 @@ export type BroadcastMessage =
   | { type: 'typography.spec.changed' }
   // ── Auth ─────────────────────────────────────────────────────────────────
   | { type: 'auth.logout' }
+  | { type: 'rateLimit.cooldown'; bucket: string; expiresAt: number }
   // ── Notifications ────────────────────────────────────────────────────────
   | { type: 'notifications.read'; alertIds: number[] }
   | { type: 'notifications.cleared' }

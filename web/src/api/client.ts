@@ -1,5 +1,5 @@
 /** Resilient transport; browser authentication belongs to the external provider. */
-import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys, parseError, notifyAuthenticationRequired, TeslaAuthExpiredError } from '../lib/resilience'
+import { ApiError, getApiBase, isApiError, camelCaseKeys, apiResponseError, fetchWithRateLimit, deduplicateRead, notifyAuthenticationRequired, TeslaAuthExpiredError } from '../lib/resilience'
 import { authHeaders, isRemoteMode } from '../lib/serverConnection'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 import { assertNeverQueuedOffline } from './offlineCache'
@@ -105,7 +105,7 @@ async function directRequest<T>(
   assertDocumentActive()
   const { headers, body, ...rest } = options
   const credentials = demoCredentialsMode()
-  const res = await fetch(apiUrl(path), {
+  const res = await fetchWithRateLimit(apiUrl(path), path, {
     ...rest,
     body,
     headers: buildHeaders(headers, body != null),
@@ -115,8 +115,7 @@ async function directRequest<T>(
   })
 
   if (!res.ok && !acceptedStatuses.includes(res.status)) {
-    const { message, code } = await parseError(res)
-    throw new ApiError(message, res.status, code)
+    throw await apiResponseError(res, path, options.method)
   }
 
   if (responseType === 'json' && res.ok && (res.headers.get('content-type') ?? '').includes('text/html')) {
@@ -158,7 +157,7 @@ function isAbortError(err: unknown): boolean {
 export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const {
     responseType = 'json',
-    skipAuthRefresh = false,
+    skipAuthRefresh: _skipAuthRefresh = false,
     acceptedStatuses = [],
     requiresLiveMode = false,
     headers,
@@ -197,12 +196,21 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
   const requestHeaders = authHeaders(headers)
 
   try {
-    return await directRequest<T>(
+    const execute = () => directRequest<T>(
       normalisedPath,
       { ...fetchOptions, headers: requestHeaders },
       responseType,
       acceptedStatuses,
     )
+    // Signal-owning queries are already deduplicated by TanStack. Sharing a
+    // promise across independent caller signals would couple cancellation.
+    if (!fetchOptions.signal && (fetchOptions.method ?? 'GET').toUpperCase() === 'GET') {
+      return await deduplicateRead(
+        JSON.stringify([apiUrl(normalisedPath), responseType, acceptedStatuses, [...requestHeaders], fetchOptions.credentials]),
+        execute,
+      )
+    }
+    return await execute()
   } catch (err) {
     // Caller-initiated cancellation (route change / unmount via the
     // `signal` option) must short-circuit the entire pipeline: never open
@@ -218,28 +226,8 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       throw err
     }
 
-    // For text responses or callers that opted out of the resilient
-    // refresh loop, the directRequest result IS the final answer —
-    // re-throw rather than re-attempting through resilientFetch
-    // (which doesn't know about the text response type).
-    if (responseType === 'text' || skipAuthRefresh || needsConfirmation ||
-      !['GET', 'HEAD', 'OPTIONS'].includes((fetchOptions.method ?? 'GET').toUpperCase())) {
-      throw err
-    }
-
-    // Missing/unavailable features are final responses, not transport failures.
-    // Reissuing them serially adds a round trip before shell hooks can settle.
-    if (isApiError(err) && (err.status === 404 || err.status === 501)) {
-      throw err
-    }
-
-    // Fall through: rerun via resilientFetch so the original retry,
-    // circuit-breaker policies still apply for
-    // transient read failures.
-    return resilientFetch<T>(normalisedPath, {
-      ...fetchOptions,
-      headers: requestHeaders,
-      acceptedStatuses,
-    })
+    // QueryClient owns bounded read retries. A second transport attempt here
+    // compounded retries and bypassed the first request's cooldown.
+    throw err
   }
 }

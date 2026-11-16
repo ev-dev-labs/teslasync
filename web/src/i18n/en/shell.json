@@ -1573,8 +1573,14 @@
     }
   },
   "ratelimit": {
-    "banner": "Too many requests — pausing for {{n}}s",
-    "retry": "Retry now"
+    "actionsPaused": "Retry the action yourself after the countdown; actions never replay automatically.",
+    "appTitle": "TeslaSync request limit reached",
+    "countdown": "Try again in {{n}}s",
+    "readsPaused": "Cached data stays visible. Retry affected reads after the countdown; actions never replay automatically.",
+    "ready": "The cooldown has ended.",
+    "retryReads": "Retry affected reads",
+    "teslaTitle": "Tesla request limit reached",
+    "unknownTitle": "Request limit reached"
   },
   "recentPages": {
     "justNow": "Just now",
@@ -2231,7 +2237,7 @@
     }
   },
   "upstream": {
-    "banner": "Tesla upstream unavailable — retry in {{n}}s"
+    "title": "Tesla upstream unavailable"
   },
   "vehiclePicker": {
     "aria": "Select vehicle",

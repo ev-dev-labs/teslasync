@@ -25038,11 +25038,17 @@
     "statusUnavailable": "Tesla account status unavailable."
   },
   "ratelimit": {
-    "banner": "Too many requests — pausing for {{n}}s",
-    "retry": "Retry now"
+    "appTitle": "TeslaSync request limit reached",
+    "teslaTitle": "Tesla request limit reached",
+    "unknownTitle": "Request limit reached",
+    "actionsPaused": "Retry the action yourself after the countdown; actions never replay automatically.",
+    "readsPaused": "Cached data stays visible. Retry affected reads after the countdown; actions never replay automatically.",
+    "countdown": "Try again in {{n}}s",
+    "ready": "The cooldown has ended.",
+    "retryReads": "Retry affected reads"
   },
   "upstream": {
-    "banner": "Tesla upstream unavailable — retry in {{n}}s"
+    "title": "Tesla upstream unavailable"
   },
   "serviceMode": {
     "banner": {

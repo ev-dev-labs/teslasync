@@ -153,7 +153,9 @@ describe('resilientFetch wire error normalization', () => {
       message: 'upstream cooling down', upstream: 'fleet', retryAfterSec: 17,
     })
     expect(eventSpy.mock.calls.map(([event]) => [event.type, (event as CustomEvent).detail])).toEqual([
-      ['teslasync:upstream-down', { upstream: 'fleet', retryAfterSec: 17 }],
+      ['teslasync:upstream-down', expect.objectContaining({
+        upstream: 'fleet', retryAfterSec: 17, scope: '/vehicles/1', requestMethod: 'GET',
+      })],
     ])
   })
 
@@ -165,14 +167,16 @@ describe('resilientFetch wire error normalization', () => {
 
     await expect(resilientFetch('/admin/schema-drift', { retries: 2 })).rejects.toMatchObject({
       name: 'RateLimitError', status: 429, code: 'RATE_LIMITED', message: 'slow down',
-      scope: '/admin', retryAfterSec: 23,
+      scope: '/admin/schema-drift', retryAfterSec: 23,
     })
-    await expect(resilientFetch('/admin/another-source', { retries: 2 })).rejects.toMatchObject({
-      name: 'RateLimitError', status: 429, scope: '/admin',
+    await expect(resilientFetch('/admin/schema-drift', { retries: 2 })).rejects.toMatchObject({
+      name: 'RateLimitError', status: 429, scope: '/admin/schema-drift',
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(eventSpy.mock.calls.map(([event]) => [event.type, (event as CustomEvent).detail])).toEqual([
-      ['teslasync:rate-limited', { scope: '/admin', retryAfterSec: 23 }],
+      ['teslasync:rate-limited', expect.objectContaining({
+        scope: '/admin/schema-drift', retryAfterSec: 23, methods: 'GET', source: 'unknown',
+      })],
     ])
   })
 

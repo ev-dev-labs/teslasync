@@ -36,7 +36,7 @@ describe('DEFAULT_QUERY_CLIENT_CONFIG', () => {
   it('keeps queries cache-first while mutations fail immediately offline', () => {
     const queries = DEFAULT_QUERY_CLIENT_CONFIG.defaultOptions?.queries
     expect(queries?.staleTime).toBe(60_000)
-    expect(queries?.retry).toBe(1)
+    expect(queries?.retry).toBeTypeOf('function')
     expect(queries?.refetchOnWindowFocus).toBe(false)
     expect(queries?.networkMode).toBe('offlineFirst')
 

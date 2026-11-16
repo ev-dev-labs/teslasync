@@ -30,24 +30,31 @@
  * directly preceding non-blank line.
  */
 
-import { QueryClient, type QueryClientConfig } from '@tanstack/react-query'
+import { QueryCache, QueryClient, type QueryClientConfig } from '@tanstack/react-query'
+import { isSafeRead } from '@/lib/rateLimit'
+import { isApiError, isRateLimitError, isUpstreamUnavailableError } from '@/lib/resilience'
+
+function retryRead(failureCount: number, error: unknown): boolean {
+  if ((error as { name?: unknown } | null)?.name === 'AbortError' ||
+      isRateLimitError(error) || isUpstreamUnavailableError(error)) return false
+  if (isApiError(error) && error.status >= 400 && error.status < 500 && error.status !== 408) return false
+  return failureCount < 1
+}
 
 /**
  * Default configuration applied to every QueryClient created via
  * `createQueryClient`. Exported so the audit + tests can introspect it
  * without instantiating a client.
  *
- * Mirrors the previous inline `main.tsx` configuration verbatim except
- * for the new `refetchIntervalInBackground: false` line. Existing
- * networkMode / retry / staleTime semantics are preserved, so this
- * remains a strictly additive change for callers.
+ * The query layer owns transient-read retries; quota recovery is separately
+ * bounded and waits for the server deadline. Mutations never retry.
  */
 export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
   defaultOptions: {
     queries: {
       staleTime: 60_000,
-      retry: 1,
-      retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 30_000),
+      retry: retryRead,
+      retryDelay: (attempt) => Math.min(2000 * 2 ** attempt * (0.75 + Math.random() * 0.5), 30_000),
       refetchOnWindowFocus: false,
       // PWA: serve cached data when the device is offline instead of
       // throwing immediately. TanStack Query keeps the query in 'paused'
@@ -82,5 +89,19 @@ export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
  * contract — are caught by the queryClient test suite.
  */
 export function createQueryClient(): QueryClient {
-  return new QueryClient(DEFAULT_QUERY_CLIENT_CONFIG)
+  let recoveryStarted = false
+  const client: QueryClient = new QueryClient({
+    ...DEFAULT_QUERY_CLIENT_CONFIG,
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        if (recoveryStarted || !isRateLimitError(error) || !isSafeRead(error.requestMethod) || !query.isActive()) return
+        recoveryStarted = true
+        // Recovery is a failure-only path, not part of the cold-start shell.
+        void import('./rateLimitRecovery')
+          .then(({ installRateLimitRecovery }) => installRateLimitRecovery(client))
+          .catch(() => { recoveryStarted = false })
+      },
+    }),
+  })
+  return client
 }

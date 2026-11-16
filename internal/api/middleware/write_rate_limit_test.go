@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 )
@@ -39,6 +40,15 @@ func TestWriteRateLimiter(t *testing.T) {
 	if got := limited.Header().Get("Retry-After"); got != "60" {
 		t.Fatalf("Retry-After = %q, want 60", got)
 	}
+	if limited.Header().Get(httputil.RateLimitMethodsHeader) != "WRITE" ||
+		limited.Header().Get(httputil.RateLimitScopeHeader) != "/*" {
+		t.Fatalf("write cooldown must cover writes only: %v", limited.Header())
+	}
+	now = now.Add(59 * time.Second)
+	if got := request(http.MethodPost, "198.51.100.10:1236").Header().Get("Retry-After"); got != "1" {
+		t.Fatalf("near-reset Retry-After = %q, want 1", got)
+	}
+	now = now.Add(-59 * time.Second)
 	if got := request(http.MethodGet, "198.51.100.10:1237").Code; got != http.StatusNoContent {
 		t.Fatalf("GET status = %d, want %d", got, http.StatusNoContent)
 	}

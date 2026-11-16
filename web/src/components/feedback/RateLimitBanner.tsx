@@ -1,119 +1,51 @@
-import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Clock, X } from 'lucide-react'
 import { Button } from '../ui/Button'
-
-/**
- * Rate-limit / upstream-breaker UX banner.
- *
- * Listens for two document-level CustomEvents emitted by `resilientFetch`:
- *   • teslasync:rate-limited  — fired on a 429 response. The detail
- *     carries the path scope (e.g. "/vehicles") and the Retry-After
- *     window in seconds. The banner shows a countdown so the user
- *     understands why their data isn't refreshing right now.
- *   • teslasync:upstream-down — fired on a 503 with code
- *     UPSTREAM_BREAKER_OPEN. The detail carries the upstream name
- *     (e.g. "tesla") and the suggested backoff window. Same UI shape
- *     as the rate-limit case, with different copy.
- *
- * When the countdown reaches zero the "Retry now" button enables —
- * clicking it invalidates every TanStack Query so pages refetch from
- * scratch. The user can also dismiss the banner manually, which clears
- * the local visibility state but does NOT clear the in-process
- * short-circuit cache in `resilientFetch`. That cache expires on its
- * own when the Retry-After window elapses; until then, queued queries
- * are calmly fast-failed instead of hammering the upstream.
- *
- * Mounted inside Layout's content column, below the workspace header,
- * so a visible notice cannot consume the report's horizontal space.
- *
- * Out of scope:
- *   • Per-resource rate-limit policies (banner is global per scope).
- *   • Persisting the cooldown across page reload — fresh load
- *     optimistically retries; if upstream is still limited it
- *     immediately re-fires the banner.
- *   • Adaptive client-side throttling that pre-emptively slows down.
- */
-
-interface State {
-  kind: 'rate-limited' | 'upstream-down'
-  scope?: string
-  upstream?: string
-  expiresAt: number
-}
+import { Text } from '../ui/Typography'
+import { isSafeRead } from '@/lib/rateLimit'
+import { isRateLimitError, isUpstreamUnavailableError } from '@/lib/resilience'
+import { useRateLimitNotices } from './useRateLimitNotices'
 
 export function RateLimitBanner() {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [state, setState] = useState<State | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    const onLimited = (e: Event) => {
-      const ce = e as CustomEvent<{ scope: string; retryAfterSec: number }>
-      const detail = ce.detail
-      if (!detail || typeof detail.retryAfterSec !== 'number') return
-      setState({
-        kind: 'rate-limited',
-        scope: detail.scope,
-        expiresAt: Date.now() + Math.max(0, detail.retryAfterSec) * 1000,
-      })
-      setNow(Date.now())
-    }
-    const onUpstream = (e: Event) => {
-      const ce = e as CustomEvent<{ upstream: string; retryAfterSec: number }>
-      const detail = ce.detail
-      if (!detail || typeof detail.retryAfterSec !== 'number') return
-      setState({
-        kind: 'upstream-down',
-        upstream: detail.upstream,
-        expiresAt: Date.now() + Math.max(0, detail.retryAfterSec) * 1000,
-      })
-      setNow(Date.now())
-    }
-    document.addEventListener('teslasync:rate-limited', onLimited)
-    document.addEventListener('teslasync:upstream-down', onUpstream)
-    return () => {
-      document.removeEventListener('teslasync:rate-limited', onLimited)
-      document.removeEventListener('teslasync:upstream-down', onUpstream)
-    }
-  }, [])
-
-  // Tick once per second only while the banner is visible — no reason
-  // to re-render the rest of the app every second when no countdown
-  // is in flight.
-  useEffect(() => {
-    if (!state) return
-    tickRef.current = setInterval(() => setNow(Date.now()), 1000)
-    return () => {
-      if (tickRef.current) {
-        clearInterval(tickRef.current)
-        tickRef.current = null
-      }
-    }
-  }, [state])
+  const { current: state, remaining, dismiss } = useRateLimitNotices()
 
   if (!state) return null
 
-  const remaining = Math.max(0, Math.ceil((state.expiresAt - now) / 1000))
   const isRateLimit = state.kind === 'rate-limited'
+  const writeOnly = state.methods !== '*' && !isSafeRead(state.methods)
   const Icon = isRateLimit ? Clock : AlertCircle
+  const title = !isRateLimit ? t('upstream.title')
+    : state.source === 'teslasync' ? t('ratelimit.appTitle')
+    : state.source === 'tesla' ? t('ratelimit.teslaTitle')
+    : t('ratelimit.unknownTitle')
 
   const handleRetry = () => {
-    setState(null)
-    void qc.invalidateQueries()
-  }
-
-  const handleDismiss = () => {
-    setState(null)
+    if (remaining > 0 || writeOnly) return
+    let selected = 0
+    void qc.refetchQueries({
+      type: 'active',
+      predicate: (query) => {
+        const error = query.state.error
+        if (!isRateLimitError(error) && !isUpstreamUnavailableError(error)) return false
+        const affected = isRateLimit
+          ? isRateLimitError(error) && error.bucket === state.bucket
+          : isUpstreamUnavailableError(error) && error.scope === state.scope
+        if (!affected || !isSafeRead(error.requestMethod) || error.expiresAt > Date.now() || selected >= 64) return false
+        selected++
+        return true
+      },
+    }, { cancelRefetch: false })
+    dismiss()
   }
 
   return (
     <div
-      role="alert"
+      role="status"
       aria-live="polite"
+      aria-atomic="false"
       data-testid="rate-limit-banner"
       data-app-part="feedback"
       data-app-feedback-kind="notice"
@@ -125,31 +57,36 @@ export function RateLimitBanner() {
         <Icon className="h-4 w-4 text-amber-300" aria-hidden />
       </div>
       <div data-app-part="feedback-content" className="flex-1 min-w-0">
-        <p data-app-part="feedback-title" className="text-sm font-medium text-[var(--text-primary)]">
-          {isRateLimit
-            ? t('ratelimit.banner', 'Too many requests — pausing for {{n}}s', { n: remaining })
-            : t('upstream.banner', 'Tesla upstream unavailable — retry in {{n}}s', { n: remaining })}
-        </p>
+        <Text as="p" variant="subhead" data-app-part="feedback-title">{title}</Text>
+        <Text as="p" variant="bodySm">
+          {writeOnly
+            ? t('ratelimit.actionsPaused')
+            : t('ratelimit.readsPaused')}
+        </Text>
+        <Text variant="caption" aria-live="off">
+          {remaining > 0 ? t('ratelimit.countdown', { n: remaining })
+            : t('ratelimit.ready')}
+        </Text>
       </div>
       <div data-app-part="feedback-actions" className="flex shrink-0 items-center gap-2">
-        <Button
+        {!writeOnly && <Button
+          type="button"
           size="sm"
           variant="primary"
           onClick={handleRetry}
           disabled={remaining > 0}
-          aria-disabled={remaining > 0 || undefined}
           data-testid="rate-limit-banner-retry"
         >
-          {t('ratelimit.retry', 'Retry now')}
-        </Button>
+          {t('ratelimit.retryReads')}
+        </Button>}
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          onClick={handleDismiss}
-          aria-label={t('common.dismiss', 'Dismiss')}
+          onClick={dismiss}
+          aria-label={t('common.dismiss')}
           data-testid="rate-limit-banner-dismiss"
-          className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--text-primary)]"
+          className="p-1.5"
         >
           <X className="h-4 w-4" aria-hidden />
         </Button>

@@ -5,12 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // DefaultWriteLimit is the authenticated write-route backstop. Individual
@@ -30,6 +33,7 @@ type WriteRateLimiter struct {
 	maxKeys         int
 	lastTrim        time.Time
 	principalHeader string
+	bucketFor       func(string) string
 }
 
 type writeRateWindow struct {
@@ -67,19 +71,35 @@ func NewWriteRateLimiter(limit int, window time.Duration, principalHeader string
 		clients:         make(map[string]writeRateWindow),
 		maxKeys:         10_000,
 		principalHeader: strings.TrimSpace(principalHeader),
+		bucketFor:       httputil.NewRateLimitBucket(),
 	}
 }
 
 // Middleware applies the limiter only to unsafe HTTP methods.
 func (l *WriteRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !isUnsafeMethod(r.Method) || l.allow(l.keyForRequest(r)) {
+		if !isUnsafeMethod(r.Method) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
+		key := l.keyForRequest(r)
+		allowed, remaining, resetAt := l.allow(key)
+		httputil.RateLimitPolicy{
+			Bucket: l.bucketFor(key), Scope: "/*", Methods: "WRITE",
+			Source: "teslasync", Enforcement: "process",
+		}.SetHeaders(w.Header())
+		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(l.limit))
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetAt.Unix(), 10))
+		if allowed {
+			next.ServeHTTP(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Retry-After", strconv.Itoa(int(l.window.Seconds())))
+		w.Header().Set("Retry-After", strconv.Itoa(max(0, int(math.Ceil(resetAt.Sub(l.now()).Seconds())))))
+		w.Header().Set(httputil.RateLimitLimitedHeader, "true")
+		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusTooManyRequests)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "write request rate limit exceeded",
@@ -88,7 +108,7 @@ func (l *WriteRateLimiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (l *WriteRateLimiter) allow(key string) bool {
+func (l *WriteRateLimiter) allow(key string) (allowed bool, remaining int, resetAt time.Time) {
 	now := l.now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -108,18 +128,18 @@ func (l *WriteRateLimiter) allow(key string) bool {
 			l.evictOldest()
 		}
 		l.clients[key] = writeRateWindow{start: now, count: 1}
-		return true
+		return true, l.limit - 1, now.Add(l.window)
 	}
 	if now.Sub(state.start) >= l.window {
 		l.clients[key] = writeRateWindow{start: now, count: 1}
-		return true
+		return true, l.limit - 1, now.Add(l.window)
 	}
 	if state.count >= l.limit {
-		return false
+		return false, 0, state.start.Add(l.window)
 	}
 	state.count++
 	l.clients[key] = state
-	return true
+	return true, l.limit - state.count, state.start.Add(l.window)
 }
 
 func (l *WriteRateLimiter) evictOldest() {
