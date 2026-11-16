@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -96,6 +97,8 @@ afterEach(() => {
   document.documentElement.removeAttribute('data-mode');
   document.documentElement.classList.remove('light-mode');
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('SlowQueriesDetails full-detail mobile contract', () => {
   it.each(['light', 'dark'])('keeps every field and full fingerprint reachable by keyboard in %s mode', async mode => {

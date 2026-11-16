@@ -3,6 +3,7 @@
  * Real router, real shared trust/layout/stat/table/chart containers. Only data
  * hooks and entrance motion are replaced; no fixture presentation controller.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ComponentProps } from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
@@ -101,6 +102,8 @@ beforeEach(() => {
   setFlow(flow);
 });
 afterEach(() => { void cleanup(); void vi.unstubAllGlobals(); });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Energy flow modernization — real shared surfaces', () => {
   it('retains all cards, chart accessibility tables and exact hook operands', () => {

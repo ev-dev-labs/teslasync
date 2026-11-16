@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -99,6 +100,8 @@ beforeEach(() => {
   vi.mocked(useDailyMileage).mockReturnValue(query(days) as ReturnType<typeof useDailyMileage>);
   vi.mocked(useMonthlyMileage).mockReturnValue(query(months) as ReturnType<typeof useMonthlyMileage>);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('live mileage modernization preservation', () => {
   it('distinguishes initial pause from retained empty and zero responses using source trust', () => {

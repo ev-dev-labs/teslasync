@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -85,6 +86,8 @@ afterEach(() => {
   deferredSearch.held = null;
   act(() => { setLowBandwidthMode('auto'); });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('native feedback followup (source selectors, not browser geometry acceptance)', () => {
   it.each(PACK_IDS)('%s composes real steps without repainting or resizing state geometry', pack => {

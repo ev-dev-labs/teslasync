@@ -1,4 +1,5 @@
 /** Authored, NOTRUN: real page/cards/stats/source recovery; no browser acceptance claim. */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -72,6 +73,8 @@ afterEach(() => {
   setGlobalPrecision(preferences.precision);
   setGlobalLocale(preferences.locale);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('charger resilience canonical migration', () => {
   it('preserves all metrics, full names, original what-if fields, order and complete accessible/export rows', () => {

@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { PropsWithChildren } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -111,6 +112,8 @@ afterEach((): void => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('live Battery Care mounted preservation', () => {
   it('keeps eight real section shells and unchanged history operands', () => {

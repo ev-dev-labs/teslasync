@@ -9,6 +9,7 @@
  * wiring run against fully-controlled inputs, then assert the rendered output
  * of the (real) child components.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -168,6 +169,8 @@ beforeEach(() => {
   h.streamOpts = null;
   h.throughputArgs = null;
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('LiveSignalMonitorPage', () => {
   it('renders the KPI band, empty analytics panels and page title when connected with an empty buffer', () => {

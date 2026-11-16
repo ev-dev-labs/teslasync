@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -112,6 +113,8 @@ beforeEach(() => {
   setGlobalLocale('en-US');
 });
 afterEach(() => vi.clearAllMocks());
+
+setupMeasuredChartContainers(800, 320);
 
 describe('period comparison live modernization regressions', () => {
   it('preserves independent all-time A and rolling B URLs and AI operands', async () => {

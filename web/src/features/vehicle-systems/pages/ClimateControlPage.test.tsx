@@ -25,6 +25,7 @@
  * level produced `undefined` and crashed the card reading `.color`/`.label`.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss, { type Rule } from 'postcss';
@@ -376,6 +377,8 @@ beforeEach(() => {
   setGlobalPrecision(2);
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('vehicle systems redesign consumers — climate', () => {
   const designRules: Rule[] = [];
   for (const file of ['base.css', 'feedback.css']) {
@@ -652,9 +655,9 @@ describe('climate efficiency measurement evidence', () => {
     install({
       latest: climate(),
       history: [
-        climate({ isAcOn: false, fanSpeed: 0 }),
-        Object.assign(climate({ fanSpeed: null }), { isAcOn: 'true' }),
-        Object.assign(climate({ fanSpeed: NaN }), { isAcOn: 1 }),
+        climate({ id: 1, isAcOn: false, fanSpeed: 0 }),
+        Object.assign(climate({ id: 2, fanSpeed: null }), { isAcOn: 'true' }),
+        Object.assign(climate({ id: 3, fanSpeed: NaN }), { isAcOn: 1 }),
       ],
     });
     renderPage();
@@ -681,10 +684,10 @@ describe('climate efficiency measurement evidence', () => {
     install({
       latest: climate(),
       history: [
-        climate({ timestamp: '2025-06-15T00:00:00Z', isAcOn: true }),
-        climate({ timestamp: '2025-06-15T00:01:00Z', isAcOn: false }),
-        climate({ timestamp: '2025-06-15T12:00:00Z', isAcOn: true }),
-        climate({ timestamp: '2025-06-15T12:01:00Z', isAcOn: undefined }),
+        climate({ id: 1, timestamp: '2025-06-15T00:00:00Z', isAcOn: true }),
+        climate({ id: 2, timestamp: '2025-06-15T00:01:00Z', isAcOn: false }),
+        climate({ id: 3, timestamp: '2025-06-15T12:00:00Z', isAcOn: true }),
+        climate({ id: 4, timestamp: '2025-06-15T12:01:00Z', isAcOn: undefined }),
       ],
     });
     renderPage();

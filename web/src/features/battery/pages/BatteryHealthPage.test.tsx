@@ -22,6 +22,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * slice tests.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { COLOR } from '@/lib/colors';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -365,6 +366,8 @@ beforeEach(() => {
 });
 
 /* ── Pure helpers ─────────────────────────────────────────────────── */
+
+setupMeasuredChartContainers(800, 320);
 
 describe('BatteryHealthPage · pure helpers', () => {
   it('distinguishes absent health/capacity measurements from measured zero health', () => {

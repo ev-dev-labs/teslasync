@@ -11,7 +11,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { Text } from '@/components/ui';
-import { MockResizeObserver } from '@/test/setup';
+import { setupMeasuredChartContainers, MockResizeObserver } from '@/test/setup';
 import type { ChargingSession } from '@/types/charging';
 import PackCapacityPage from '../../pages/PackCapacityPage';
 
@@ -153,6 +153,8 @@ function phoneContainer(): void {
   }
   vi.stubGlobal('ResizeObserver', PhoneObserver);
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Pack Capacity source modernization (NOT RUN)', () => {
   it('opens the real source review drawer with posterior uncertainty and no fabricated model confidence', () => {

@@ -30,6 +30,7 @@
  * in react-query (annotation hooks) and react-router (<EmptyState>'s <Link>),
  * so the tree is wrapped in QueryClientProvider + MemoryRouter.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -221,6 +222,8 @@ function dataRowCells(label: string): string[] {
 beforeEach(() => {
   unitsMock.mockReturnValue(unitsResult(UNIT_PREFS_KM));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('YearMonthlyChart — populated (metric / km)', () => {
   it('renders the title, interpolated subtitle, and the accessible chart frame', () => {

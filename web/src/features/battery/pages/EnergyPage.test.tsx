@@ -34,6 +34,7 @@
  * 2dp.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -352,6 +353,8 @@ beforeEach(() => {
   setGlobalLocale('en-US')
   install()
 })
+
+setupMeasuredChartContainers(800, 320)
 
 describe('EnergyPage', () => {
   it('renders the full dashboard once stats + sessions load', async () => {

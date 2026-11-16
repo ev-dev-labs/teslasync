@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -134,6 +135,8 @@ beforeEach(() => {
   sources.workspace.mockReturnValue(workspace());
   sources.updates.mockReturnValue(query([]));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('diagnostic evidence source preservation', () => {
   it.each(['analysis', 'pack'] as const)('uses the real %s Brief and review drawer with retained source context and no invented confidence', (page) => {

@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
@@ -145,6 +146,8 @@ beforeEach(() => {
     query(name ? { data: SERIES } : undefined));
   mocks.correlate.mockReturnValue({ result: RESULT, reason: null });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('SignalCorrelationPage canonical summary and unchanged controls', () => {
   it('updates both independent histories for a custom non-UTC range without resetting selections', () => {

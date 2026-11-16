@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ComponentProps, ReactElement } from 'react';
 import { act, render as renderWithProviders, renderHook, screen, within, type RenderOptions } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -101,6 +102,8 @@ function summary(): UtilizationSummary {
     accounting: { ...empty.accounting, returnedRows: 3, eligibleRows: 2, invalidTimestampRows: 1, usableDurationRows: 2 },
   };
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Shared utilization tables', () => {
   it('refreshes both calendar labels when the effective saved locale changes', async () => {

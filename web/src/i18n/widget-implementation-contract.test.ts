@@ -38,6 +38,7 @@ import {
   restorePreviewChartQuerySource,
   restoreSharedAxisRoleSource,
   restoreSharedGridCompositionSource,
+  sharedGridCompositionSources,
 } from './verified-widget-implementation-contract';
 
 describe('additive widget implementation preservation', () => {
@@ -82,12 +83,14 @@ describe('additive widget implementation preservation', () => {
 
   describe('exact additive application-design preservation', () => {
     it('rejects altered grid composition and stale source without replacing historical fingerprints', () => {
-      const file = 'web/src/features/sharing/pages/SharedDrivePage.tsx';
-      const current = source(file);
-      const previous = restoreSharedGridCompositionSource(file, current);
-      expect(hash(previous)).toBe(appDesign.sources.find(entry => entry.file === file)?.after);
-      for (const altered of [previous, current + '\n', current.replace('{chartGrid}', '{null}')]) {
-        expect(() => restoreSharedGridCompositionSource(file, altered)).toThrow();
+      for (const [file, repair] of Object.entries(sharedGridCompositionSources)) {
+        const current = source(file);
+        const previous = restoreSharedGridCompositionSource(file, current);
+        expect(hash(previous)).toBe(repair.before);
+        expect(translationCalls(file, current).map(signature)).toEqual(translationCalls(file, previous).map(signature));
+        for (const altered of [previous, current + '\n', current.replace('{chartGrid}', '{null}')]) {
+          expect(() => restoreSharedGridCompositionSource(file, altered)).toThrow();
+        }
       }
     });
 

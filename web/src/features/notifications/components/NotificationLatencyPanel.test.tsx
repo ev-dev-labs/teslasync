@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -65,6 +66,8 @@ vi.mock('@/components/charts', async importOriginal => {
     ReferenceLine: () => null,
   };
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('NotificationLatencyPanel shared delivery table', () => {
   beforeEach(() => {

@@ -39,6 +39,7 @@
  * {{placeholder}} interpolation applied.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -279,6 +280,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PowersharePage', () => {
   it.each([

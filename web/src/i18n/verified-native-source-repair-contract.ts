@@ -150,6 +150,82 @@ export function restoreMobilePresentationSource(file: string, source: string): s
   return previous;
 }
 
+const keyIdentityRepairs: Record<string, {
+  before: string;
+  after: string;
+  hunks: readonly (readonly [string, string])[];
+  parameter?: readonly [string, string];
+}> = {
+  'web/src/features/advanced-intelligence/pages/ComponentSurvivalPage.tsx': {
+    before: 'deff0b009d17029953dcdc2494453cc19ee34776b3de0d7ea5641e69749b96ee',
+    after: '742594a3ef1af18fadf59d0ab26286027f3e73ba2c03ec9a08219c78071f3c51',
+    hunks: [
+      ['item.competing_risks.map((risk, riskIndex) => (', 'item.competing_risks.map((risk) => ('],
+      ['                        key={`${risk.risk}:${riskIndex}`}', '                        key={risk.risk}'],
+      ['<div key={`${risk.risk}:${riskIndex}`}', '<div key={risk.risk}'],
+    ],
+    parameter: ['parameters:risk, riskIndex', 'parameters:risk'],
+  },
+  'web/src/features/dashboard/widgets/MaintenanceTrackerWidget.tsx': {
+    before: '411f3a8cbb68bd5007cf4fb860f317e8f0c7298499493607d3c28e2c726a9d1f',
+    after: '179b64644b11bd23f983ad58885ba5f44eca282dd3268d3c5db1ddca7ee9941b',
+    hunks: [['<li key={`${rec.itemId}:${rec.date}:${index}`}', '<li key={rec.itemId || index}']],
+  },
+  'web/src/features/system/components/status/TeslaApiUsageCard.tsx': {
+    before: '3abc8237c4a02ae7dd467d10ccf2f7cb5720b1dc9a8e80ed360fe9b2167277ec',
+    after: 'b1e3d6cef39df182b33a368173e6c0eb875b3b6988ee54b44f8f834bc8bd6b33',
+    hunks: [
+      ['apiUsage.history.map((c, index) => ({', 'apiUsage.history.map(c => ({'],
+      ['key: `${c.start}:${index}`,', 'key: c.start,'],
+    ],
+    parameter: ['parameters:c, index', 'parameters:c'],
+  },
+};
+
+export function restoreKeyIdentitySource(file: string, source: string): string {
+  const patch = keyIdentityRepairs[file];
+  if (!patch) return source;
+  expect(hash(source), file + ': exact keyed-record successor').toBe(patch.after);
+  let previous = source;
+  for (const [current, original] of patch.hunks) {
+    expect(previous.split(current), file + ': unique key-only repair').toHaveLength(2);
+    previous = previous.replace(current, original);
+  }
+  expect(hash(previous), file + ': complete unchanged pre-key source').toBe(patch.before);
+  const projection = producerProjection(file, source);
+  if (patch.parameter) {
+    const [current, original] = patch.parameter;
+    for (const call of projection.calls) {
+      call.controls = call.controls.map(control => control === current ? original : control);
+    }
+  }
+  expect(projection, file + ': unchanged calls and controls apart from the key ordinal parameter')
+    .toEqual(producerProjection(file, previous));
+  return previous;
+}
+
+function restoreAtlasFilterFragmentSource(file: string, source: string): string {
+  if (file !== 'web/src/components/layout/sidebar/AtlasPanel.tsx') return source;
+  expect(hash(source), file + ': exact filter-fragment repair successor')
+    .toBe('a7662a6d0ec5229ff333e57fe66844b9b7b3e83bddbf4f966c0095b987d93fb6');
+  const comment = '/* not-destructive: clears transient section-filter text only; saved groups, pins and page data are unchanged */';
+  const replacements = [
+    ['suffix={query ?\n', 'suffix={query ? <>\n'],
+    [comment, `{${comment}}`],
+    ['      : undefined} /></div>}', '      </> : undefined} /></div>}'],
+  ];
+  let previous = source;
+  for (const [current, original] of replacements) {
+    expect(previous.split(current), file + ': unique fragment-only repair').toHaveLength(2);
+    previous = previous.replace(current, original);
+  }
+  expect(hash(previous), file + ': unchanged historical filter source')
+    .toBe('6a0f4dd720fbb6b527f7131b2c497c2fe904e28b098e9db645d0518c11af9a84');
+  expect(producerProjection(file, source), file + ': unchanged filter calls and controls')
+    .toEqual(producerProjection(file, previous));
+  return previous;
+}
+
 /**
  * One explicit successor of e1fb, not a new historical baseline. The caller
  * supplies ACTUAL bytes. Old endpoints, partial edits and stale approvals fail.
@@ -161,6 +237,8 @@ export function restoreNativeSourceRepair(
   readDependency: (file: string) => string = actualRepairSource,
 ): string {
   expect(hash(JSON.stringify(repair)), 'pinned exact native source repair').toBe(fingerprint);
+  source = restoreKeyIdentitySource(file, source);
+  source = restoreAtlasFilterFragmentSource(file, source);
   source = restoreMobilePresentationSource(file, source);
   source = restoreTouchBrushSource(file, source);
   const patch = repair.sources.find(entry => entry.file === file);

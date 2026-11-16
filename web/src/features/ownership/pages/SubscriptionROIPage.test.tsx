@@ -9,6 +9,7 @@
  * preferences without changing the UTC business-date wire contract.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -210,6 +211,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('SubscriptionROIPage — confirm-gated delete', () => {
   it.each(['desktop', 'mobile'])('activates nested quality definition consumers in the real %s verdict renderer for every design', (presentation) => {

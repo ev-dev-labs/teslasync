@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactElement, ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -58,6 +59,8 @@ function mount(ui: ReactElement) {
   );
 }
 
+setupMeasuredChartContainers(800, 320);
+
 describe('secondary detail charts using the actual shared chart-card chain', () => {
   it.each([
     { title: 'SOC % over time', element: <SocChart chartData={points} /> },
@@ -75,8 +78,8 @@ describe('secondary detail charts using the actual shared chart-card chain', () 
     expect(viewport).toHaveStyle('--chart-height-desktop: 220px');
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
     expect(screen.getByText(/PNG/)).toBeInTheDocument();
-    // jsdom draws no plot <svg>, so the menu correctly withholds SVG capture.
-    expect(screen.queryByText(/SVG/)).not.toBeInTheDocument();
+    expect(viewport?.querySelector('.recharts-surface')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Save as SVG' })).toBeEnabled();
   });
 
   it('keeps all supplied histogram buckets and the sample-share basis in the accessible alternative', () => {

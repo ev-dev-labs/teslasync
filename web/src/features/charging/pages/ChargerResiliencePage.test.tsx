@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -120,6 +121,8 @@ afterEach(() => {
   setGlobalPrecision(preferences.precision);
   setGlobalLocale(preferences.locale);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('charger resilience page-local modernization', () => {
   it('owns all simulation definitions and each real site record without changing source scores or grouping', () => {

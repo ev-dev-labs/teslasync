@@ -8,7 +8,7 @@ import previewOverlay from './__fixtures__/preview-overlay-invoker-preservation.
 import catalog from './en.json';
 import { producerProjection } from './producer-projection';
 import {
-  actualRepairSource as source, nativeRepairPredecessor, restoreMobilePresentationSource, restoreNativeSourceRepair,
+  actualRepairSource as source, nativeRepairPredecessor, restoreKeyIdentitySource, restoreMobilePresentationSource, restoreNativeSourceRepair,
 } from './verified-native-source-repair-contract';
 import { restoreAppDesignSource } from './verified-widget-implementation-contract';
 
@@ -46,6 +46,33 @@ const initializer = (text: string, name: string) => {
 const calls = (file: string, text: string) => producerProjection(file, text).calls.map(call => call.call);
 
 describe('exact e1fb native source repair successor (not native certification)', () => {
+  it.each([
+    ['web/src/features/advanced-intelligence/pages/ComponentSurvivalPage.tsx', 'deff0b009d17029953dcdc2494453cc19ee34776b3de0d7ea5641e69749b96ee'],
+    ['web/src/features/dashboard/widgets/MaintenanceTrackerWidget.tsx', '411f3a8cbb68bd5007cf4fb860f317e8f0c7298499493607d3c28e2c726a9d1f'],
+    ['web/src/features/system/components/status/TeslaApiUsageCard.tsx', '3abc8237c4a02ae7dd467d10ccf2f7cb5720b1dc9a8e80ed360fe9b2167277ec'],
+  ])('preserves complete source through the key-only repair: %s', (file, before) => {
+    const current = source(file);
+    const previous = restoreKeyIdentitySource(file, current);
+    expect(hash(previous)).toBe(before);
+    expect(() => restoreNativeSourceRepair(file, current)).not.toThrow();
+    for (const altered of [previous, current + '\n', current.replace(/\bkey(?==|:)/, 'invalidKey')]) {
+      expect(() => restoreKeyIdentitySource(file, altered)).toThrow();
+      expect(() => nativeRepairPredecessor(file, () => altered)).toThrow();
+    }
+  });
+
+  it('preserves Atlas filter source and dependency guards without accepting stale or altered bytes', () => {
+    const file = 'web/src/components/layout/sidebar/AtlasPanel.tsx';
+    const current = source(file);
+    const previous = restoreNativeSourceRepair(file, current);
+    expect(hash(previous)).toBe(appDesign.sources.find(entry => entry.file === file)?.after);
+    expect(nativeRepairPredecessor(file)).toBe(previous);
+    for (const altered of [previous, current + '\n', current.replace("setQuery('')", "setQuery('changed')")]) {
+      expect(() => restoreNativeSourceRepair(file, altered)).toThrow();
+      expect(() => nativeRepairPredecessor(file, () => altered)).toThrow();
+    }
+  });
+
   it.each(repair.sources)('pins actual source and restores the complete predecessor: $file', patch => {
     const actual = source(patch.file);
     const current = restoreMobilePresentationSource(patch.file, actual);

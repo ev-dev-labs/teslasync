@@ -150,7 +150,8 @@ beforeEach(async () => {
   __resetTitleStoreForTests()
 })
 
-afterEach(() => {
+afterEach(async () => {
+  await act(() => vi.dynamicImportSettled())
   cleanup()
 })
 

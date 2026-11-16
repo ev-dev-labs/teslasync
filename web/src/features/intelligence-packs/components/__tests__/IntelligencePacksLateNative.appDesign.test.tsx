@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -60,6 +61,8 @@ function statCard(container: HTMLElement) {
   if (!(card instanceof HTMLElement)) throw new Error('Missing actual stat widget');
   return card;
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('intelligence-pack native records and synthetic stat ownership', () => {
   it('activates the actual capability rows, export record and stat anatomy for every complete app profile', async () => {

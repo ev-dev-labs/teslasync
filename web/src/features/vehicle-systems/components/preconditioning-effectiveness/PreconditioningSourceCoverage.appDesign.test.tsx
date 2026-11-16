@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ReactNode } from 'react';
@@ -113,6 +114,8 @@ afterEach(() => {
   releases.splice(0).forEach(release => release());
   cleanup();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('preconditioning evidence surfaces, source-only consumer activation', () => {
   it.each(PACK_IDS)('%s binds actual records, threshold readings and neutral limitations without changing evidence', pack => {

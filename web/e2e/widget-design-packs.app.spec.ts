@@ -1522,10 +1522,10 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         const routeSignatures = new Map<string, PackId[]>();
         await prepareMockApiNavigation(page);
         await page.goto(path);
-        await assertMockApiAfterNavigation(page, navigationOrigin);
         const domStabilityTimeoutMs = path === chargingReviewPath ? 20_000
           : path.startsWith('/drives/') ? 30_000 : undefined;
         await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs });
+        await assertMockApiAfterNavigation(page, navigationOrigin);
         for (const packId of packIds) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);

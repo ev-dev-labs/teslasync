@@ -33,6 +33,7 @@
  *   - interaction: the "Refresh from Tesla" action + the EmptyState CTA both
  *     fire the refresh mutation; picking a range preset commits via setRange.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -250,6 +251,8 @@ beforeEach(() => {
   setLive({ data: makeLive() });
   setHistory({ data: HISTORY });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PowerFlowDashboardPage — loading', () => {
   it('keeps all four sections but withholds KPI values, the gauge and badges', () => {

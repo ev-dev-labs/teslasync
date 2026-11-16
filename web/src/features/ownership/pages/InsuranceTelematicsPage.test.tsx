@@ -8,6 +8,7 @@
  * render for real.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -207,6 +208,8 @@ beforeEach(() => {
   mockUpsert.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('InsuranceTelematicsPage — confirm-gated delete', () => {
   it('adopts the existing contribution track and original fill for all designs without changing geometry or source color', () => {

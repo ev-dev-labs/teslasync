@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -85,6 +86,8 @@ function response(items: AutomationHistory[], total = items.length): AutomationH
     trend: items.map((item) => ({ day: '2026-09-05', status: item.status, count: 1 })),
   };
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Automation History', () => {
   beforeEach(() => {

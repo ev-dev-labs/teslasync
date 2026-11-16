@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -119,6 +120,8 @@ beforeEach(() => {
     }),
   });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('EnergyStatsWidget redesign', () => {
   it('converts chart SI values and preserves gaps', () => {

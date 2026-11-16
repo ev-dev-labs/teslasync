@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ReactNode } from 'react';
@@ -116,6 +117,8 @@ beforeEach(() => {
   state.mutate.mockReset();
   state.webhook.mockReset();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('notifications-late-01 real source-to-consumer adoption (source-only)', () => {
   it.each(PACK_IDS)('%s owns independent records, definitions, controls and full fact bodies', pack => {

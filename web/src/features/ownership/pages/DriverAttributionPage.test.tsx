@@ -8,6 +8,7 @@
  * dialog render for real.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -195,6 +196,8 @@ afterEach(() => {
     setGlobalPrecision(originalFormatterPreferences.precision);
   });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('DriverAttributionPage — confirm-gated delete', () => {
   it('retains every attribution quantity and ambiguity caption in the real brief without labelling a drive', () => {

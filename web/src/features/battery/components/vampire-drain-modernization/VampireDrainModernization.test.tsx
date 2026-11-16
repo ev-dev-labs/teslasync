@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -119,6 +120,8 @@ beforeEach(() => {
     return {} as never;
   });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Vampire drain modernization — authored runtime preservation', () => {
   it('retries only the failed event source from the sessions empty state', async () => {

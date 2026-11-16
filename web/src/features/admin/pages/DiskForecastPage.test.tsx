@@ -23,6 +23,7 @@
  * so the page's own `isApiError`/`ApiError` 503 branch is exercised honestly.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -71,6 +72,8 @@ vi.mock('react-i18next', async () => {
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   }
 })
+
+setupMeasuredChartContainers(800, 320)
 
 describe('DiskForecastPage semantic and mobile adoption', () => {
   it('keeps quota and compression measurements accessible in mobile row details', async () => {

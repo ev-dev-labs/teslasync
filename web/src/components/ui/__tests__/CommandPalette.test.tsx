@@ -2608,7 +2608,11 @@ describe('CommandPalette latest-callback commit semantics', () => {
     })
 
     it('hands vehicle selection to the actual list for Arrow, Enter and Back', async () => {
-      requestMock.mockResolvedValue({ success: true, result: 'success' })
+      requestMock.mockImplementation((path: string) => {
+        if (path === '/vehicles') return Promise.resolve(makeVehicles())
+        if (path === '/alerts' || path === '/saved-views') return Promise.resolve([])
+        return Promise.resolve({ success: true, result: 'success' })
+      })
       render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
       let input = screen.getByRole('combobox')
       await waitFor(() => expect(input).toHaveFocus())
@@ -2635,7 +2639,13 @@ describe('CommandPalette latest-callback commit semantics', () => {
 
     it('hands alert selection to the actual list and restores search with Backspace', async () => {
       const second = makeAlert({ id: 10, title: 'Second open alert' })
-      requestMock.mockResolvedValue({ ...second, acknowledged_at: '2026-08-24T17:00:00Z', events: [] })
+      const acknowledged = { ...second, acknowledged_at: '2026-08-24T17:00:00Z', events: [] }
+      requestMock.mockImplementation((path: string) => {
+        if (path === '/alerts') return Promise.resolve([makeAlert(), acknowledged])
+        if (path === '/vehicles') return Promise.resolve(makeVehicles())
+        if (path === '/saved-views') return Promise.resolve([])
+        return Promise.resolve(acknowledged)
+      })
       render(<CommandPalette initialOpen />, {
         wrapper: makeWrapper(makeVehicles(), [], { acknowledge: { query: 'acknowledge', hits: [] } }, [makeAlert(), second]),
       })

@@ -1,7 +1,7 @@
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TeslaApiUsageCard } from '../TeslaApiUsageCard'
 import type { APIUsage } from '@/api/types'
 import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
@@ -9,6 +9,11 @@ const settings = vi.hoisted(() => ({
   locale: 'en-US', decimal_precision: 2, currency_symbol: '$',
   tz_display_default: 'user', timezone_user: 'UTC',
 }))
+beforeEach(() => { vi.spyOn(console, 'error') })
+afterEach(() => {
+  try { expect(console.error).not.toHaveBeenCalled() }
+  finally { vi.mocked(console.error).mockRestore() }
+})
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings, locale: settings.locale, settingsUnavailable: false }),

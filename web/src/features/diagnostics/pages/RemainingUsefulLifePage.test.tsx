@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -109,6 +110,8 @@ beforeEach(() => {
   }));
   sources.detail.mockReturnValue(query(detail));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('RemainingUsefulLifePage independent sources', () => {
   it.each(PACK_IDS)('%s composes all real definition rows while retaining projection gates and selection', pack => {

@@ -1,4 +1,5 @@
 /** AUTHORED NOT RUN: additive regressions for the parent's acceptance window. */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -35,6 +36,8 @@ function bodyCells(table: HTMLElement) {
   return within(table).getAllByRole('row').slice(1)
     .map(row => within(row).getAllByRole('cell').map(cell => cell.textContent));
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('efficiency chart data alternatives (AUTHORED NOT RUN)', () => {
   it.each([false, true])('exposes every plotted observation in display units (miles=%s)', miles => {

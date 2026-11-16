@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -57,6 +58,8 @@ function delivery(overrides: Partial<NotificationLog> = {}): NotificationLog {
     ...overrides,
   };
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Notification briefs use the actual validated raw bridge', () => {
   beforeEach(() => {

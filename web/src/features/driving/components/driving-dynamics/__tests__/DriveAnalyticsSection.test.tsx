@@ -25,6 +25,7 @@
  * ChartContainer.a11y test pattern.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -170,6 +171,8 @@ function bucketCount(figureName: RegExp, rangeLabel: string): string {
   const cells = within(row).getAllByRole('cell')
   return (cells[cells.length - 1].textContent ?? '').trim()
 }
+
+setupMeasuredChartContainers(800, 320)
 
 describe('DriveAnalyticsSection — speed distribution bucketing', () => {
   it('lets all three analytical plots use their responsive frame allocation', () => {

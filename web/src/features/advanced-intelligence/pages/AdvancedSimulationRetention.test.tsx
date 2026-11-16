@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ComponentType, ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
@@ -141,6 +142,8 @@ beforeEach(() => {
   state.resilience.mockReset();
   window.localStorage.clear();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe.each(subjects)('$name publication retention with actual mutation transitions', current => {
   it.each(['success', 'error'] as const)('retains the successful brief/source/chart through pending and %s refresh', async outcome => {

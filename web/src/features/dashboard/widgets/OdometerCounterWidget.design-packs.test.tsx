@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -100,6 +101,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('OdometerCounterWidget design packs', () => {
   it.each(appearances)('%s composes the actual odometer, period samples, original statistics and refresh', async (pack, appearance) => {
     const state = stateQuery();
@@ -148,7 +151,7 @@ describe('OdometerCounterWidget design packs', () => {
     expect(screen.getByText('No measured distance for these periods')).toBeInTheDocument();
     expect(screen.getByText('This week')).toBeInTheDocument();
     expect(screen.getByText('This year')).toBeInTheDocument();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(within(container).queryByText('0')).not.toBeInTheDocument();
   });
 
   it('keeps Classic and unknown pack recovery on the original full and compact bodies', () => {

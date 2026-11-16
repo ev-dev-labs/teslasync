@@ -28,6 +28,7 @@
  *   - a11y + interaction: labelled region landmarks, the projection chart image
  *     label, without a duplicate vehicle-scope combobox.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalMetricUnavailable, assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -347,6 +348,8 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockHealth.mockReturnValue(makeQuery({ data: HEALTH }));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('BatteryDegradationPage — date-preference boundary', () => {
   it('zooms the native projection brush without dropping forecast bands, thresholds or full-source alternatives', () => {

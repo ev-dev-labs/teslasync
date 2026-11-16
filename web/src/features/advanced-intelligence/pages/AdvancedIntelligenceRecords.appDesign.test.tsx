@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ComponentType, ReactNode } from 'react';
@@ -149,6 +150,8 @@ afterEach(() => {
   clients.forEach(client => client.clear());
   clients.length = 0;
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Advanced intelligence recorded surface gaps (source-only)', () => {
   it.each([

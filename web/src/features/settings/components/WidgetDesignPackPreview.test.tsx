@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,6 +7,8 @@ import WidgetDesignPackPreview from './WidgetDesignPackPreview';
 import { APPLICATION_DESIGNS } from '@/components/ui/app-designs/designs';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('widget preview preservation', () => {
   it('retains all five widget panels, real vehicle imagery and inert commands in the application sandbox', async () => {

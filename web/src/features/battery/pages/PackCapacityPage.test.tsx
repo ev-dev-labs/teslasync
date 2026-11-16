@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import {
   QueryClient,
   QueryClientProvider,
@@ -237,6 +238,8 @@ beforeEach(() => {
   h.sessions = query({ data: readyHistory() });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PackCapacityPage', () => {
   it('renders all fourteen analytical shells from the capped canonical hook', () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { queryResult, renderWidget as renderController } from '../components/continuation-dashboard-2/testSupport';
@@ -7,6 +7,11 @@ import { PackBoundary } from './designPacks/PackBoundary';
 import { PACK_IDS } from './designPacks/types';
 
 const hooks = vi.hoisted(() => ({ items: vi.fn(), records: vi.fn(), forecast: vi.fn() }));
+beforeEach(() => { vi.spyOn(console, 'error'); });
+afterEach(() => {
+  try { expect(console.error).not.toHaveBeenCalled(); }
+  finally { vi.mocked(console.error).mockRestore(); }
+});
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useMaintenance: () => hooks.items(),
   useServiceRecords: () => hooks.records(),

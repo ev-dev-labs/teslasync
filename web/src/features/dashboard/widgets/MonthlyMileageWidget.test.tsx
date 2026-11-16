@@ -25,6 +25,7 @@
  * distance preference), so the conversion math is exercised for real. Network
  * is never touched — the two data hooks are mocked and driven per-test.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -100,6 +101,8 @@ vi.mock('@/components/charts', async (importOriginal) => {
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import MonthlyMileageWidget, { shortMonth, currentMonthKey } from './MonthlyMileageWidget';
+
+setupMeasuredChartContainers(800, 320);
 
 it.each([1, 2, 3])('identifies monthly mileage at %i columns', (cols) => {
   renderWidget({ size: { cols, rows: 4 } });

@@ -36,6 +36,7 @@
  * react-router (navigate / <Link>), so the tree is wrapped in
  * QueryClientProvider + MemoryRouter.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -250,6 +251,8 @@ function dataRowCells(label: string): string[] {
 beforeEach(() => {
   unitsMock.mockReturnValue(unitsResult(UNIT_PREFS_KM));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('TripDrivesChart — chrome + a11y', () => {
   it('renders the title, the accessible chart frame, and the SR fallback table', () => {

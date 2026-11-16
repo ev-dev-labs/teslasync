@@ -19,6 +19,7 @@
  * default precision (2) + `en-US` locale, so the formatted strings are
  * deterministic without touching the global settings singleton.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -74,6 +75,8 @@ function renderRow(props: {
 }) {
   return render(<ChartsRow {...props} />);
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ChartsRow — populated panels', () => {
   it('renders both panel headings with decorative, aria-hidden icons (a11y)', () => {

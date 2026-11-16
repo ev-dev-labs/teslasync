@@ -36,6 +36,7 @@
  * feed resolves, so "data loaded" is signalled by the timeline's count badge
  * (`waitForCount`), never a heading.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -273,6 +274,8 @@ afterEach(() => {
 });
 
 // ─── 1. Happy path — shell, KPI band, analytics, timeline ─────────────────────
+
+setupMeasuredChartContainers(800, 320);
 
 describe('CommandHistoryPage — happy path', () => {
   it('renders the page shell and fetches history for the derived active vehicle (snake_case, no /api/v1)', async () => {
@@ -548,7 +551,7 @@ describe('CommandHistoryPage — filters & interactions', () => {
 
     await waitForCount(5);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Failed' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Failed' }));
 
     // 2 of 5 commands failed → timeline narrows; the success-only "Wake Up" leaves.
     await screen.findByText('2 commands');
@@ -662,7 +665,7 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
 
     // Switch to "failed" (4 items → single page). Page resets; timeline is not blank.
-    fireEvent.click(screen.getByRole('button', { name: 'Failed' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Failed' }));
 
     await screen.findByText('4 commands');
     expect(within(timelinePanel()).getAllByText('Honk horn')).toHaveLength(4);

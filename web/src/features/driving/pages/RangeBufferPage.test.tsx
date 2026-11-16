@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -301,6 +302,8 @@ beforeEach(() => {
   h.drives = query({ data: readyDrives() });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('RangeBufferPage', () => {
   it('keeps all low-arrival fields available in the mobile quick view', () => {

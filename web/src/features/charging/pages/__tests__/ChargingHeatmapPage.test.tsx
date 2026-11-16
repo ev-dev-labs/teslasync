@@ -22,6 +22,7 @@
  * state, and settings-driven unit/format hooks all run for real so the SI →
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor, fireEvent, within } from '@testing-library/react';
@@ -276,6 +277,8 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Tesla charging history — live-only manual sync', () => {
   function setup() {

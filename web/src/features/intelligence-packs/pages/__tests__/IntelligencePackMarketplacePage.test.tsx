@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -33,6 +34,8 @@ function renderPage() {
     </QueryClientProvider>,
   );
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('IntelligencePackMarketplacePage', () => {
   beforeEach(() => {

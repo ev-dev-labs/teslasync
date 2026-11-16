@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -60,6 +61,8 @@ function mount(state: PackCapacityQueryState, result = emptyResult) {
       view.rerender(tree(nextState, nextResult)),
   };
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PackCapacitySocWindowProfile source-aware accessible data', () => {
   it.each([

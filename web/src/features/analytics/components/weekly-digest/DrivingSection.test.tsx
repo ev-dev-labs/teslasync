@@ -33,6 +33,7 @@
  * `@testing-library/user-event` is intentionally NOT a dependency of this repo;
  * `fireEvent.click` is the established interaction convention for the Retry CTA.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -189,6 +190,8 @@ function title(): HTMLElement {
 function chartRegion(): HTMLElement | null {
   return screen.queryByRole('img', { name: /daily driving distance/i });
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('DrivingSection — structure & always-on regions', () => {
   it('renders the panel title as an h3 whose accessible name excludes the decorative Car icon', () => {
@@ -444,7 +447,7 @@ describe('DrivingSection — null safety', () => {
 
     expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('0.00 h')).toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByTitle('Drives').nextElementSibling).toHaveTextContent(/^0$/);
     // prevAvgEfficiency ?? 0 = 0 → efficiency change collapses to "—".
     expect(screen.getByText('—')).toBeInTheDocument();
   });

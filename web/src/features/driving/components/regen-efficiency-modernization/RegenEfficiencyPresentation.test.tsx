@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -139,6 +140,8 @@ beforeEach(() => {
   h.aggregate = query(aggregate, { refetch: retryAggregate });
   h.detail = query([drive], { refetch: retryDetail });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('live regen presentation preservation', () => {
   it('retries resolved-empty summary sources together and detailed distribution independently', () => {

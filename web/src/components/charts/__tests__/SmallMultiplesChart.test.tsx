@@ -6,6 +6,7 @@
  * structure (one cell per series, label, no-data placeholder, click /
  * keyboard activation) rather than chart pixels.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { projectSmallMultipleSeries, SmallMultiplesChart } from '../SmallMultiplesChart';
@@ -38,6 +39,8 @@ const sampleData = [
   { timestamp: '2024-01-01T10:01:00Z', sigA: 2, sigB: 110, sigC: null },
   { timestamp: '2024-01-01T10:02:00Z', sigA: 3, sigB: 120, sigC: null },
 ];
+
+setupMeasuredChartContainers(800, 320);
 
 describe('SmallMultiplesChart', () => {
   it('renders one cell per series', () => {

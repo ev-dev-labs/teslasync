@@ -15,6 +15,7 @@
  * `enabled:false`, and the test-configured result when enabled — so the
  * page's own `enabled: vehicleId !== null` wiring is exercised.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -197,6 +198,8 @@ async function openBriefDrawer() {
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   return screen.findByRole('dialog', { name: 'Snapshot metrics details' });
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('LiveSignalInspectorPage — empty fleet', () => {
   it('shows a per-section "pick a vehicle" affordance in every data panel and disables refresh', async () => {

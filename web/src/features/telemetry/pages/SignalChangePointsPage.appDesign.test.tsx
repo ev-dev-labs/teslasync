@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
@@ -66,6 +67,8 @@ beforeEach(() => {
   source.retry.mockClear();
   source.history = { data: history([]), isSuccess: true, dataUpdatedAt: 12345 };
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('real signal interpretation surface consumers', () => {
   it.each([

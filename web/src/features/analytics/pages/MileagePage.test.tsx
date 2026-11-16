@@ -25,6 +25,7 @@
  *   - null-safety: null first/last drive timestamps fall back to the "—" glyph.
  *   - a11y/actions: labelled region landmarks without a duplicate vehicle picker.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -236,6 +237,8 @@ beforeEach(() => {
   mockDaily.mockReturnValue(makeQuery({ data: DAILY }));
   mockMonthly.mockReturnValue(makeQuery({ data: MONTHLY }));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MileagePage — no vehicle selected', () => {
   it('renders the NoVehicleSelected empty state and no data scaffolding', () => {

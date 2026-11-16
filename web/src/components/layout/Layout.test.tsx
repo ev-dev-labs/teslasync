@@ -395,11 +395,12 @@ vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
   const { default: Logo } = await import('@/components/ui/Logo')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
-    const { children, variant, size, loading, icon, ...rest } = props
+    const { children, variant, size, loading, icon, wrapLabel, ...rest } = props
     void variant
     void size
     void loading
     void icon
+    void wrapLabel
     return (
       <button ref={ref} {...(rest as Record<string, unknown>)}>
         {children as React.ReactNode}

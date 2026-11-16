@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -99,6 +100,8 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Range Simulator canonical presentation preservation', () => {
   it('keeps calibrated pack, quantiles, odds, trial count and both interactive controls', () => {

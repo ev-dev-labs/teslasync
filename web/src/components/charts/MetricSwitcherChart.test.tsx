@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -31,6 +32,8 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
+
+setupMeasuredChartContainers(800, 320);
 
 describe('resolveYAxisProps', () => {
   it('forces integer ticks for integer-only series', () => {

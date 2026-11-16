@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -151,6 +152,8 @@ afterEach(() => {
   cleanup();
   for (const name of Object.keys(getAppDesignAttributes('classic'))) document.documentElement.removeAttribute(name);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('battery-late-03 native source ownership', () => {
   it.each(PACK_IDS)('%s activates the real records/readings and preserves all native matrix cells', pack => {

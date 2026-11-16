@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@tanstack/react-query';
@@ -56,6 +57,8 @@ afterEach(() => {
   client?.clear();
   onlineManager.setOnline(true);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Emergency resilience scoped modernization', () => {
   it('preserves seven section identities and independent guardian without implying a completed plan', async () => {

@@ -10,9 +10,10 @@ postcss.parse(readFileSync(
 )).walkRules(rule => { rules.push(rule); });
 
 export function matchesAppDesignCss(node: Element, contract = '') {
+  if (!node.ownerDocument.contains(node)) return [];
   return rules.flatMap(rule => rule.selectors
     .filter(selector => selector.includes(contract)
-      && [...node.ownerDocument.querySelectorAll(selector)].includes(node))
+      && node.matches(selector))
     .map(selector => {
       const declarations: Record<string, string> = {};
       rule.walkDecls(declaration => { declarations[declaration.prop] = declaration.value; });

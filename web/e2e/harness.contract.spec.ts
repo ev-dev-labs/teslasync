@@ -2873,7 +2873,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   const designFilter = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
   expect(chromiumRun?.env?.QUALITY_PARTITION).toBe('${{ matrix.partition }}');
   expect(chromiumRun?.run).toContain(`ordinary) set -- --grep-invert='${designFilter}' ;;`);
-  expect(chromiumRun?.run).toContain(`design) set -- --grep='${designFilter}' ;;`);
+  expect(chromiumRun?.run).toContain(`design) set -- --workers=4 --grep='${designFilter}' ;;`);
   expect(chromiumRun?.run).toContain(`'') set -- ;;`);
   expect(chromiumRun?.run).toContain('Unknown quality partition');
   for (const [suite, count] of [['a11y', 13], ['performance', 1]] as const) {

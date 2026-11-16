@@ -24,6 +24,7 @@
  * is wrapped in QueryClient + MemoryRouter because <QueryError> reaches for
  * `useNavigate`.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -182,6 +183,8 @@ const PANEL_TITLES = [
   'Returned charging cost distribution',
   'Monthly charging trend',
 ];
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ChargingDetailSection — populated', () => {
   it('labels count-based shares as sessions and does not invent charger-type prices', () => {

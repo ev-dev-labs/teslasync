@@ -521,21 +521,75 @@ export function restoreSharedAxisRoleSource(file: string, source: string): strin
   return source;
 }
 
+export const sharedGridCompositionSources: Readonly<Record<string, { before: string; after: string; children: number }>> = {
+  'web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx': {
+    before: '0670d3c9b83ec1a10d82b43614e0bc79cb94eab6e58812f19d41b41043fd3ea9',
+    after: '39a79a92681156d9a9cafae1bee5162ff788bf774558eeb4625c650a1b489a45', children: 1,
+  },
+  'web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx': {
+    before: 'b88e7e169bc386c2dbac199fc4f893fba5d14870e7a5caec76a9df575f25d58b',
+    after: '573ad07db251ae35d14b557bb32d2cec41ef9028176592a3d766e0d357146581', children: 1,
+  },
+  'web/src/features/charging/components/charging-curve/SessionCurveChart.tsx': {
+    before: 'ae0d290bea982f04676035b15c131dd7226cfc60c18f43fef7699e7d25388c4b',
+    after: 'e75764a5d06b5e6bb8b7fd6102a179b8888f6bf08b9d6c1e9b93289e1c2a89f4', children: 1,
+  },
+  'web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx': {
+    before: '9efafa52d7be196fc110688acced5bbdc14c8795e52738148b9a33216066a3ca',
+    after: '05b7db293a08dcfabda13bcbd698f3f9e07945fbe2af3d012643c041c1f3458c', children: 1,
+  },
+  'web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx': {
+    before: '8068935fcbf293b7a2af77ef4ae0641846e5673bc4d3506f09840755b54283a7',
+    after: 'd5531d35d0603766d817fdf4eef76021b80c4e91c1bb10447b6cbc8b73bbf707', children: 1,
+  },
+  'web/src/features/charging/components/cost-analysis/CostForecastSection.tsx': {
+    before: '3f0ce2b949e2522cacb1dc0b81d9d4a3c338d699f06454ca7e88337427f98dff',
+    after: '8f9310d8c1558992033e0dc69eec3e8a5a0c55aeb992278930156f743efa9639', children: 2,
+  },
+  'web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx': {
+    before: '721ccaa6a37e4fa0dff12f688324f60d0fe9fda5834da0ee0770fa6a4cd98020',
+    after: 'dd6f162778556e1b5248cc9a1909bc6f35d56451bc52b37c93fd802c80c43a22', children: 1,
+  },
+  'web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx': {
+    before: 'e5109b2d0cd1ef94476c2b7270592bebb2bef5e2d8d02445e394a6a2636d2fbd',
+    after: '2162f953d107f2bae1054b79e4a9963be64f522e1d87400a71ea809671e66c31', children: 1,
+  },
+  'web/src/features/charging/components/stat-modernization/CostForecastSection.tsx': {
+    before: '665b71986046aba20ccea7ea670117cc21b08001a2178dc98cf96084ee062901',
+    after: '34186f205431f13fc781273cf683e7bf50e4ca8649b89d6fa93af85a94a62acb', children: 2,
+  },
+  'web/src/features/sharing/pages/SharedDrivePage.tsx': {
+    before: '9757949a654dedc2546aa9b572ed4a2457bf53e0ce55ca34563e8cd0fd2e6251',
+    after: '8452f385f96fdce644a95fed8cc10204e8725bd2bd71a5519bc98c67f843bb8a', children: 2,
+  },
+  'web/src/features/sharing/pages/SharedSessionReport.tsx': {
+    before: 'be20a0b7bf4005eea2a02ab8f7c0a16c2dd5dccd34ded4011e6e67eab32c7325',
+    after: 'ac5984b08997a4610d86338b27b3659e945f3b258b3bea16f6d468d9baee7bbe', children: 1,
+  },
+  'web/src/features/trips/components/TripReplayElevation.tsx': {
+    before: '4b10e18c0be4d2cd68c3dfffb68cf94c2dd61e700e8ba1da96fe40febea4aff7',
+    after: '19732b3c512a705d7204ca93207548452bfd1d902193a13400061dc03a35b247', children: 1,
+  },
+};
+
 export function restoreSharedGridCompositionSource(file: string, source: string): string {
-  if (file !== 'web/src/features/sharing/pages/SharedDrivePage.tsx') return source;
+  const repair = sharedGridCompositionSources[file];
+  if (!repair) return source;
   expect(hash(source), file + ': exact shared grid composition successor')
-    .toBe('8452f385f96fdce644a95fed8cc10204e8725bd2bd71a5519bc98c67f843bb8a');
+    .toBe(repair.after);
   const shared = readFileSync(resolve(process.cwd(), 'src/components/charts/chartUtils.tsx'), 'utf8');
   expect(hash(shared), file + ': actual shared grid element and unchanged paint')
     .toBe('81838b20d8a725ec3c2895ebec127302bdadf493915826c4108487c3cb552ddf');
   nativeRepairPredecessor('web/src/lib/tokens.ts');
-  const imports = '  AreaChart, Area, LineChart, Line, XAxis, YAxis,\n';
+  const multiline = source.includes('\n  YAxis,\n');
+  const imports = multiline ? '\n  YAxis,\n' : 'YAxis,';
+  const originalImports = multiline ? '\n  YAxis,\n  CartesianGrid,\n' : 'YAxis, CartesianGrid,';
   expect(source.split(imports), file + ': unique corrected import').toHaveLength(2);
-  expect(source.split('{chartGrid}'), file + ': both corrected chart children').toHaveLength(3);
-  const previous = source.replace(imports, imports.replace('YAxis,', 'YAxis, CartesianGrid,'))
+  expect(source.split('{chartGrid}'), file + ': every corrected chart child').toHaveLength(repair.children + 1);
+  const previous = source.replace(imports, originalImports)
     .replaceAll('{chartGrid}', '<CartesianGrid {...chartGrid} />');
   expect(hash(previous), file + ': complete unchanged historical source')
-    .toBe(appDesign.sources.find(entry => entry.file === file)?.after);
+    .toBe(repair.before);
   return previous;
 }
 

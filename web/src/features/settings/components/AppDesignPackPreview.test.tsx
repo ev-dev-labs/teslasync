@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,6 +13,8 @@ function preview(packId: keyof typeof APPLICATION_DESIGNS = 'classic') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={client}><BrowserRouter><AppDesignPackPreview packId={packId} /></BrowserRouter></QueryClientProvider>);
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('isolated complete application preview', () => {
   it('scopes all 27 profiles locally without changing document attributes or saved preferences', () => {

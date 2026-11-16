@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,6 +20,8 @@ function renderPage() {
     </MemoryRouter>,
   );
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('IntelligencePackMarketplacePage tab relationships', () => {
   beforeEach(() => {

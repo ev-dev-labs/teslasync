@@ -25,6 +25,7 @@
  * `useSelectedVehicle` is mocked so no vehicles query fires.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -336,6 +337,8 @@ beforeEach(() => {
 });
 
 /* ───────────────────────── Pure helper unit tests ───────────────────────── */
+
+setupMeasuredChartContainers(800, 320);
 
 describe('compareDailyRows', () => {
   it.each(['energy_wh', 'distance_m', 'efficiency_wh_per_m'] as const)(

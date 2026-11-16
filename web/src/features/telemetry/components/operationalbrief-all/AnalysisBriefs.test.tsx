@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ComponentType, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -140,6 +141,8 @@ function selectSignals(testCase: AnalysisCase) {
     fireEvent.change(screen.getByRole('combobox', { name: 'Signal B' }), { target: { value: 'OtherSignal' } });
   }
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe.each(cases)('$testId actual raw analysis adoption', testCase => {
   it('retains the exact existing algorithm operands, original precision, requested period and real drawer', () => {

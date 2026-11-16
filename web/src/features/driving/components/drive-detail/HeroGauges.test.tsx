@@ -52,7 +52,7 @@ vi.mock('./JourneySequence', () => ({
     <ol data-testid="journey-sequence">
       <li data-overview-metric="distance"><span>Distance</span> {distance}</li>
       <li data-overview-metric="duration"><span>Duration</span> {duration}</li>
-      <li>{comparisons}</li>
+      <li>{comparisons?.map((item, index) => <span key={index}>{item}</span>)}</li>
     </ol>
   ),
 }));

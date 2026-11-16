@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ReactNode } from 'react';
@@ -53,6 +54,8 @@ function mount(children: ReactNode) {
 function comparison() {
   return screen.getByText('Energy vs. last week').closest('[data-app-card-kind="record"]')!;
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('analytics-late-01 weekly-digest footers (source-only, real shared renderers)', () => {
   it.each(PACK_IDS)('%s binds both independent footers without absorbing plots or changing measurements', pack => {

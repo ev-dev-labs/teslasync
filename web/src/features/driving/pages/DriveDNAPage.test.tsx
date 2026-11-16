@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   fireEvent,
@@ -356,6 +357,8 @@ beforeEach(() => {
     value: vi.fn(),
   });
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('DriveDNAPage', () => {
   it('omits header freshness and refresh when no vehicle is selected, even with cached query errors', () => {

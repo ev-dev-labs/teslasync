@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance, type i18n } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
@@ -19,6 +19,12 @@ const state = vi.hoisted(() => ({
   retry: vi.fn(),
   translations: null as i18n | null,
 }));
+
+beforeEach(() => { vi.spyOn(console, 'error'); });
+afterEach(() => {
+  try { expect(console.error).not.toHaveBeenCalled(); }
+  finally { vi.mocked(console.error).mockRestore(); }
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

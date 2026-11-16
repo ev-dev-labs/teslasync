@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
-import { MockResizeObserver } from '@/test/setup';
+import { setupMeasuredChartContainers, MockResizeObserver } from '@/test/setup';
 import PreviewChart from './PreviewChart';
 
 afterEach(() => {
@@ -11,6 +11,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', '/');
 });
+
+setupMeasuredChartContainers(800, 320);
 
 it('isolates real legend toggles between previews and removes only their temporary URL keys on close', async () => {
   // Supply jsdom layout only; the real chart, legend, URL hook and router remain mounted.

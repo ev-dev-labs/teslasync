@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -121,7 +122,6 @@ function driveAt(startTs: string, overrides: Partial<Drive> = {}): Drive {
     id: nextId++,
     vehicleId: 7,
     startTs,
-    endTs,
     durationS,
     distanceM: 20_000,
     startAddress: 'Home',
@@ -254,6 +254,8 @@ beforeEach(() => {
   h.history = query({ data: readyHistory() });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ArrivalReliabilityPage', () => {
   it.each(['failed', 'blocked'] as const)(
