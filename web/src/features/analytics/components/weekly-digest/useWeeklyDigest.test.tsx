@@ -28,9 +28,9 @@
 //
 // Network is stubbed at the request() boundary (the module useWeeklyDigest AND
 // the real useVehicles hook both import from). Week fixtures are anchored to the
-// live getWeekRange() output so assertions are deterministic on any weekday.
+// UTC getWeekRange() output, matching the hook's fixture display zone.
 
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -94,11 +94,11 @@ function makeVehicle(over: Partial<Vehicle> & Pick<Vehicle, 'id' | 'vin'>): Vehi
   };
 }
 
-/** ISO instant at 12:00 local, `dayOffset` days after `base` (a week Monday). */
+/** ISO instant at 12:00 UTC, `dayOffset` days after the fixture's UTC Monday. */
 function atNoon(base: Date, dayOffset: number): string {
   const d = new Date(base);
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(12, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + dayOffset);
+  d.setUTCHours(12, 0, 0, 0);
   return d.toISOString();
 }
 
@@ -179,7 +179,7 @@ const callsFor = (prefix: string) => urlsCalled().filter((u) => u.startsWith(pre
 
 describe('scoped alert history regression', () => {
   it('counts fleet and multi-vehicle rules without treating an excluded subset as fleet-wide', async () => {
-    const [start] = getWeekRange(0);
+    const [start] = getWeekRange(0, 'UTC');
     const created_at = atNoon(start, 0);
     installRoutes();
     mockedRequest.mockImplementation((url: string) => {
@@ -198,8 +198,8 @@ describe('scoped alert history regression', () => {
   });
 
   it('traverses scoped pages and re-keys alerts when navigating to an older week', async () => {
-    const [start] = getWeekRange(0);
-    const [olderStart] = getWeekRange(-1);
+    const [start] = getWeekRange(0, 'UTC');
+    const [olderStart] = getWeekRange(-1, 'UTC');
     const created_at = atNoon(start, 1);
     const firstPage = Array.from({ length: 1000 }, (_, index) => ({
       id: 2000 - index, vehicle_id: 1, severity: 'info', created_at,
@@ -264,7 +264,7 @@ describe('scoped alert history regression', () => {
   });
 
   it('surfaces stalled cursors through the digest error channel instead of healthy zero', async () => {
-    const [start] = getWeekRange(0);
+    const [start] = getWeekRange(0, 'UTC');
     const page = Array.from({ length: 1000 }, (_, index) => ({
       id: 1000 - index, vehicle_id: 1, severity: 'info', created_at: atNoon(start, 0),
     }));
@@ -294,7 +294,7 @@ describe('scoped alert history regression', () => {
   });
 
   it('preserves valid signed and fractional measurements while fetching scoped alerts', async () => {
-    const [start] = getWeekRange(0);
+    const [start] = getWeekRange(0, 'UTC');
     installRoutes({
       drives: [makeDrive({
         id: 1, startTs: atNoon(start, 0), distanceM: 10.5, energyUsedWh: -2.25,
@@ -318,8 +318,8 @@ describe('scoped alert history regression', () => {
 
 /* ── A representative fully-populated week ── */
 function seedFullWeek() {
-  const [curStart] = getWeekRange(0);
-  const [prevStart] = getWeekRange(-1);
+  const [curStart] = getWeekRange(0, 'UTC');
+  const [prevStart] = getWeekRange(-1, 'UTC');
 
   const drives: Drive[] = [
     // current week
@@ -354,9 +354,14 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  // Monday in UTC is still Sunday on the local Windows development host.
+  vi.setSystemTime(new Date('2026-11-16T07:30:00Z'));
   window.localStorage.clear();
   mockedRequest.mockReset();
 });
+
+afterEach(() => vi.useRealTimers());
 
 /* ── Vehicle selection ── */
 describe('vehicle selection', () => {
@@ -506,7 +511,7 @@ describe('aggregated metrics', () => {
 /* ── Hardening / regression ── */
 describe('malformed-row hardening', () => {
   it('coerces NaN / undefined numeric fields to 0 instead of poisoning the aggregate', async () => {
-    const [curStart] = getWeekRange(0);
+    const [curStart] = getWeekRange(0, 'UTC');
     const good = makeDrive({
       id: 1,
       startTs: atNoon(curStart, 0),
@@ -562,7 +567,7 @@ describe('chart series', () => {
   });
 
   it('builds alert pie slices with severity colours and a CHART_COLORS fallback', async () => {
-    const [curStart] = getWeekRange(0);
+    const [curStart] = getWeekRange(0, 'UTC');
     const alerts: Alert[] = [
       { id: 1, vehicle_id: 1, severity: 'warning', created_at: atNoon(curStart, 0) },
       { id: 2, vehicle_id: 1, severity: 'mystery', created_at: atNoon(curStart, 1) },
@@ -599,7 +604,7 @@ describe('fun fact', () => {
   });
 
   it('suppresses the fun fact below the 10 km floor', async () => {
-    const [curStart] = getWeekRange(0);
+    const [curStart] = getWeekRange(0, 'UTC');
     installRoutes({
       drives: [makeDrive({ id: 1, startTs: atNoon(curStart, 0), distanceM: 3_000 })],
       charging: [],

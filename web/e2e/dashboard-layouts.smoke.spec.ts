@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test'
-import { assertMockApiComplete, expectThemeApplied, fulfillApiMock, installApiMocks, resolveApiFixture, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { expect } from '@playwright/test'
+import { test } from './app-design-test'
+import { assertMockApiComplete, closeMockedPage, expectThemeApplied, fulfillApiMock, installApiMocks, resolveApiFixture, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [390, 1440]) {
@@ -41,9 +42,8 @@ for (const theme of ['dark', 'light'] as const) {
       await expect.poll(() => page.evaluate(() =>
         localStorage.getItem('teslasync-dashboard-pending-save'))).toBeNull()
       await waitForHarnessReady(page, mockApi)
-      await assertMockApiComplete(page, mockApi)
       const browserContext = page.context()
-      await page.close()
+      await closeMockedPage(page, mockApi)
 
       const restoredPage = await browserContext.newPage()
       await seedBrowserState(restoredPage, theme, '/', { preserveDashboardState: true })
@@ -52,8 +52,7 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
       await expect.poll(() => restoredMockApi?.seen.has('GET /settings/dashboard-layouts')).toBe(true)
       await waitForHarnessReady(restoredPage, restoredMockApi)
-      await assertMockApiComplete(restoredPage, restoredMockApi)
-      await restoredPage.close()
+      await closeMockedPage(restoredPage, restoredMockApi)
       const reopenedPage = await browserContext.newPage()
       await seedBrowserState(reopenedPage, theme, '/', { preserveDashboardState: true })
       const reopenedMockApi = await installApiMocks(reopenedPage, 'populated', theme)
@@ -61,8 +60,7 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(reopenedPage.getByText('No widgets yet')).toBeVisible()
       await expect.poll(() => reopenedMockApi?.seen.has('GET /settings/dashboard-layouts')).toBe(true)
       await waitForHarnessReady(reopenedPage, reopenedMockApi)
-      await assertMockApiComplete(reopenedPage, reopenedMockApi)
-      await reopenedPage.close()
+      await closeMockedPage(reopenedPage, reopenedMockApi)
     })
   }
 }
@@ -110,7 +108,7 @@ test('creates a populated layout and restores its widgets in a new browser', asy
       JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{ id: string; widgets: unknown[] }>,
     )
     expect(hydrated.find((dashboard) => dashboard.id === saved.active_id)?.widgets).toHaveLength(7)
-    await assertMockApiComplete(restored, restoredMockApi)
+    await closeMockedPage(restored, restoredMockApi)
   } finally {
     await context.close()
   }

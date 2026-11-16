@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { test } from './app-design-test'
 import { closeMockedPage, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 import type { AutomationHistoryListResponse } from '../src/api/types'
 import { beginNativeDashboardDrag } from './dashboardDragPrecondition'
@@ -521,10 +522,10 @@ test('repairs oversized layouts restored from the server and syncs the healed si
   await page.route('**/api/v1/settings/dashboard-layouts', async (route) => {
     if (route.request().method() === 'PUT') {
       saves.push(route.request().postDataJSON())
-      await route.fulfill({ status: 200, json: { dashboards: saves[saves.length - 1]?.dashboards, active_id: serverDashboard.id } })
+      await fulfillApiFixture(route, mockApi, { status: 200, json: { dashboards: saves[saves.length - 1]?.dashboards, active_id: serverDashboard.id } })
       return
     }
-    await route.fulfill({ status: 200, json: { dashboards: [serverDashboard], active_id: serverDashboard.id } })
+    await fulfillApiFixture(route, mockApi, { status: 200, json: { dashboards: [serverDashboard], active_id: serverDashboard.id } })
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mockApi)

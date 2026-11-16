@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expect, test, type Page } from '@playwright/test'
-import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { expect, type Page } from '@playwright/test'
+import { test } from './app-design-test'
+import { assertMockApiAfterNavigation, installApiMocks, prepareMockApiNavigation, seedBrowserState, waitForHarnessReady } from './mockApi'
 import { measureTz, type TzSweep } from './timezoneSweep'
 import { auditCardGeometry, measureCardGeometry, type CardGeometry, type CardLayoutViolation } from './cardLayoutGeometry'
 import { installCardLayoutFixtures } from './cardLayoutFixtures'
@@ -540,7 +541,10 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           theme, geometry: [], layout: [], networkEscapes: [], unmatchedMocks: [], runtimeErrors: [],
         }
         try {
+          const previousOrigin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null
+          await prepareMockApiNavigation(page)
           await page.goto(route, { waitUntil: 'domcontentloaded' })
+          if (previousOrigin) await assertMockApiAfterNavigation(page, previousOrigin)
           await settle(page, mockApi)
           record.networkEscapes = [...networkEscapes]
           record.unmatchedMocks = [...mockApi.unmatched]

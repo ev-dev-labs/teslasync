@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
 import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
-import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
@@ -1466,7 +1466,10 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         await expectNeutral(page, true);
         neutralBefore[publicPath] = await isolationAppearance(page.locator('body'));
       }
+      const navigationOrigin = new URL(page.url()).origin;
+      await prepareMockApiNavigation(page);
       await page.goto('/settings');
+      await assertMockApiAfterNavigation(page, navigationOrigin);
       await waitForHarnessReady(page, mocks);
       let picker = await appearance(page, width);
       await expect(picker.getByRole('button', { name: 'Classic active', exact: true })).toBeDisabled();
@@ -1506,7 +1509,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
       for (const path of phase.kind === 'route' ? [phase.path] : []) {
         energySources.setActive(path === energyReviewPath);
         const routeSignatures = new Map<string, PackId[]>();
+        await prepareMockApiNavigation(page);
         await page.goto(path);
+        await assertMockApiAfterNavigation(page, navigationOrigin);
         const domStabilityTimeoutMs = path === chargingReviewPath ? 20_000
           : path.startsWith('/drives/') ? 30_000 : undefined;
         await waitForHarnessReady(page, mocks, { domStabilityTimeoutMs });
@@ -1855,7 +1860,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         expect(incomplete.memphis, 'an incomplete real preview and its body portals remain neutral under either outer pack')
           .toEqual(incomplete.blueprint);
       }
+      await prepareMockApiNavigation(page);
       await page.reload();
+      await assertMockApiAfterNavigation(page, navigationOrigin);
       await waitForHarnessReady(page, mocks);
       await expectProfile(page, saved.pack_id);
       const neutralAfter: Record<string, unknown> = {};

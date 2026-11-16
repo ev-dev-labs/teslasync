@@ -154,17 +154,17 @@ for (const theme of ['light', 'dark'] as const) {
       expect(await sourcePeriod(page, brief), 'request failure is not a new observation')
         .toBe(initialScope);
       await waitForHarnessReady(page, mocks);
-      // Each query attempt makes direct + resilient fallback HTTP reads; QueryClient retries once.
-      expect(source.reads.map(read => read.status)).toEqual([200, 503, 503, 503, 503]);
+      // One transport per attempt; QueryClient owns the single read retry.
+      expect(source.reads.map(read => read.status)).toEqual([200, 503, 503]);
       expect(source.reads.slice(1).map(read => read.phase))
-        .toEqual(Array(4).fill('failed-refresh'));
+        .toEqual(Array(2).fill('failed-refresh'));
       assertSleepRetentionLedger(mocks, source.reads);
       await reviewRetained(page, brief);
       await transitionOnlyReadings(page, brief);
       await expect(notice).toBeVisible();
       expect(await publication(brief)).toEqual(initialPublication);
       expect(source.reads.map(read => read.status), 'Review details does not retry the source')
-        .toEqual([200, 503, 503, 503, 503]);
+        .toEqual([200, 503, 503]);
 
       source.restore();
       await refresh.focus();
@@ -179,7 +179,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(notice).toHaveCount(0);
       await expect(refresh).not.toHaveAccessibleName(/error/i);
       await waitForHarnessReady(page, mocks);
-      expect(source.reads.map(read => read.status)).toEqual([200, 503, 503, 503, 503, 200]);
+      expect(source.reads.map(read => read.status)).toEqual([200, 503, 503, 200]);
       expect(source.reads[source.reads.length - 1]?.phase).toBe('recovered');
       assertSleepRetentionLedger(mocks, source.reads);
       await expectNoHorizontalOverflow(page);

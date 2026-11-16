@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { test } from './app-design-test'
 import type { RepairCase, RepairCaseCorrectionPreview } from '../src/api/hooks/useDataRepair'
-import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 import { confirmSensitiveAction } from './actionConfirmation'
 
 for (const theme of ['light', 'dark'] as const) {
@@ -42,7 +43,7 @@ for (const theme of ['light', 'dark'] as const) {
         const current = cases.get(id)
         if (url.pathname.endsWith('/stats')) {
           const all = [...cases.values()]
-          await route.fulfill({ json: {
+          await fulfillApiFixture(route, api, { json: {
             open: all.filter(item => item.status === 'open').length,
             in_review: all.filter(item => item.status === 'in_review').length,
             applied: all.filter(item => item.status === 'applied').length,
@@ -56,7 +57,7 @@ for (const theme of ['light', 'dark'] as const) {
           expect(body).toMatchObject({ status: 'in_review', expected_updated_at: current.updated_at })
           const next = { ...current, status: 'in_review' as const, updated_at: '2026-08-25T10:00:00Z' }
           cases.set(id, next)
-          await route.fulfill({ json: next })
+          await fulfillApiFixture(route, api, { json: next })
           return
         }
         if (current && (url.pathname.endsWith('/correction-preview') || url.pathname.endsWith('/correction'))) {
@@ -95,17 +96,17 @@ for (const theme of ['light', 'dark'] as const) {
             writes.push(body)
             cases.set(id, { ...current, status: 'applied', updated_at: '2026-08-25T11:00:00Z' })
           }
-          await route.fulfill({ json: result })
+          await fulfillApiFixture(route, api, { json: result })
           return
         }
         if (current && url.pathname.endsWith(`/${id}`)) {
-          await route.fulfill({ json: { case: current, comments: [], quarantine: null } })
+          await fulfillApiFixture(route, api, { json: { case: current, comments: [], quarantine: null } })
           return
         }
         const status = url.searchParams.get('status')
         const matching = [...cases.values()].filter(item => !status || status === item.status
           || (status === 'active' && (item.status === 'open' || item.status === 'in_review')))
-        await route.fulfill({ json: { cases: matching, has_more: false, next_cursor: null } })
+        await fulfillApiFixture(route, api, { json: { cases: matching, has_more: false, next_cursor: null } })
       })
 
       await page.goto('/data-repair')

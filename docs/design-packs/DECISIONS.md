@@ -3235,6 +3235,84 @@ BROWSER_PROBE_API_ESCAPE=0
 ```
 ## 2026-11-16: accepted design and bounded finalization
 
+The one requested full local frontend run completed:
+
+```text
+npm test -- --maxWorkers=4
+Test Files  9 failed | 2941 passed (2950)
+Tests  29 failed | 101850 passed | 4 skipped (101883)
+Duration  6959.17s
+```
+
+Seven failing files had loaded the old catalog projection before its repair.
+Six passed in the documented 7-file focused run below; the remaining
+`final-four-localization-gaps.test.ts` subsequently passed all 7 tests.
+The weekly-digest fixture mixed local week boundaries with its UTC display
+zone, which diverged on Sunday evening in the Windows host timezone.
+Anchored the existing fixtures to UTC and pinned only Date at that boundary,
+without changing production date logic, metrics or assertions. Its 40 tests
+passed. The intelligence-pack contract's full-run timeout passed unchanged
+on its one focused rerun (8 tests, including the original 30-second budget).
+
+```text
+npm test -- src\features\analytics\components\weekly-digest\useWeeklyDigest.test.tsx src\features\intelligence-packs\components\__tests__\IntelligencePacksLateNative.appDesign.test.tsx --maxWorkers=2
+Test Files  2 passed (2)
+Tests  48 passed (48)
+npm test -- src\i18n\final-four-localization-gaps.test.ts --maxWorkers=1
+Test Files  1 passed (1)
+Tests  7 passed (7)
+```
+
+Browser reproduction correction: Docker `--network none` made the browser
+offline, so operational writes were correctly disabled and error reporting
+buffered instead of transmitting. Those diagnostic runs are not passing
+CI evidence and their offline failures do not justify product changes.
+Subsequent browser runs use the task-owned internal Docker network
+`teslasync-final-browser`, which provides a live interface without external
+egress or access to the shared application containers.
+
+The existing thermal-source browser assertions still counted the duplicate
+direct-request/resilient-fallback transport removed by the rate-limit
+integration in `46871c6b8a`. Updated their exact ledgers to one direct attempt
+plus the single QueryClient retry, retaining the nonzero data, unavailable,
+manual-retry and source-isolation assertions. This corrects the stale test,
+not the production retry policy or a tolerance.
+
+```text
+npm run e2e:quality -- operationalbrief-contracts/charging.smoke.spec.ts --grep="thermal numeric selection"
+8 passed (4.9m)
+E2E preview proxy escape check: 0 errors
+```
+
+Several Chromium jobs passed every browser case but failed the existing
+preview-network gate on late `/api/v1/web-errors` requests. The affected
+smoke tests used raw Playwright teardown or direct reload/close rather than
+the existing navigation capture/validation lifecycle. Reusing the existing
+fixture and preparing explicit navigations keeps routes alive while the
+document is retired; late payload schemas, unmatched requests and delivery
+dispositions remain asserted. No production transport, preview escape gate,
+retry threshold or design styling is changed by this repair.
+
+Docker finalization: rebuilt the main-integrated source including the Pixel
+and scoped Twin phone repairs as `teslasync-web:design-packs-v2-final-candidate`.
+The image embeds the truthful pre-commit working-build identity
+`8625f37a85-final-working`; its digest is
+`sha256:eae419e7637b8a1506926be5481ef9d6d08d19bfaa27d616c7489df72a9dfe94`.
+Preflighted on loopback port 3131, then replaced only the task-owned
+`teslasync-design-packs-v2` container on port 3120. Kept the previous container
+stopped as `teslasync-design-packs-v2-rollback-cead512118c7`; other containers
+were not changed. The temporary preflight container was removed.
+
+```text
+docker build -f Dockerfile.web --build-arg VITE_GIT_SHA=8625f37a85-final-working -t teslasync-web:design-packs-v2-final-candidate .
+exit 0
+preview=200
+auth-proxy=200
+health=200
+ready=200
+true sha256:eae419e7637b8a1506926be5481ef9d6d08d19bfaa27d616c7489df72a9dfe94
+```
+
 The user accepted the pack designs and ended redesign work. Only dashboard
 Digital Twin accessibility failures, Firefox chart axes, phone overflow or
 unreadable text, generated-artifact freshness, merge regressions and failing
@@ -3299,4 +3377,75 @@ Windows ARM64 cannot run Go race instrumentation, so the exact package command
 was run in the Go 1.27.4 Linux container instead. Both Twin widget source files
 gained one className line; their sections, hooks and URLs are unchanged.
 No screenshots were created or replaced by these check-only runs.
+
+The existing route-layout chunk and Main custom-desktop core-interactions
+phase passed after the navigation lifecycle repair, with the unchanged
+preview escape gate reporting zero errors. The same local invocation also
+ran the unchanged widget-overflow case: its first 121-widget geometry pass
+reported zero violations, but element screenshot stability exhausted its
+existing time budget. That invocation is therefore a failure, not a clean
+suite result. No timeout, assertion, screenshot or geometry threshold was
+removed or relaxed.
+
+```text
+npm run e2e:quality -- widget-design-packs.app.spec.ts route-layout-guard.smoke.spec.ts dashboard-widget-overflow.smoke.spec.ts --grep="Application design languages at 1440px in custom.*core interactions|route layout guard chunk 0 at 375px in dark|widget bodies never overflow horizontally"
+1 failed
+2 passed (17.2m)
+E2E preview proxy escape check: 0 errors
+npx tsc --noEmit
+exit 0
+npx eslint [all modified TypeScript test files]
+exit 0
+```
+
+Responsive shard 29 subsequently passed all 24 cases on the old PR head but
+failed the same late `/web-errors` proxy gate (job 133152263385). It belongs
+to the existing navigation-lifecycle fix, not a new design defect. Duplicate
+completion assertions immediately before `closeMockedPage` were removed:
+that helper already performs the identical assertion before retiring the
+document. Local follow-up runs may disable failure-only video/trace capture
+and use one worker to reduce ARM64 capture overhead; test assertions and
+timeouts remain unchanged, and repository/CI configuration is untouched.
+
+The 48-case lifecycle invocation ended with `11 failed`, `1 flaky`,
+`36 passed (30.5m)` and zero proxy escapes. Four failures exposed custom
+data-repair fixtures calling raw `route.fulfill`, leaving their request
+ledger pending despite successful responses. Those five fixture branches
+now use the existing `fulfillApiFixture` helper; response bodies, write
+confirmation requirements and business assertions are unchanged. The other
+failures exhausted existing local timing budgets.
+
+The sequential 16-case follow-up (layout reopening, motion states and thermal
+source retention) exited zero: `14 passed`, `2 flaky (19.5m)`, zero proxy
+escapes. All eight thermal cases passed on the corrected online/internal
+network; all four sleep-retention cases passed in the preceding lifecycle
+run. The two timing-sensitive cases and all four repaired data-correction
+cases then passed without retries using native Edge against a newly built
+application, retaining the existing Vite proxy-escape gate:
+
+```text
+npm run e2e:build
+vite v6.4.6 building for production...
+✓ built in 1m 59s
+npm run e2e:quality -- dashboard-layouts.smoke.spec.ts dashboard-widget-motion.smoke.spec.ts data-repair-correction.smoke.spec.ts --config=playwright.finish.local.config.ts --workers=1 --grep="390px in light mode|375px in dark|reviewed corrections remain explicit"
+7 passed (2.1m)
+E2E preview proxy escape check: 0 errors
+```
+
+The temporary native-browser config selected installed Edge and disabled
+failure-artifact recording only; it changed no assertion, timeout or retry
+count and was removed afterward. An initial session-directory config failed
+module loading before tests started, not an application test. Build output
+still includes the existing i18n inventory, vendor annotation and bundle-size
+warnings. Responsive shard 27 also finished all 24 cases on the old head
+before the same proxy-escape gate failed; it is covered by this lifecycle
+repair. Existing design screenshots remain untouched.
+
+The final lifecycle review found the same raw-fulfillment ledger gap in
+the server-restored dashboard layout fixture. Its two responses now use
+`fulfillApiFixture`. The existing drag-persistence and server-restoration
+cases passed with strict teardown: `2 passed (22.9s)`, proxy escapes `0`.
+Final TypeScript and targeted ESLint commands exited zero. No workflow,
+threshold, production API, design styling or committed screenshot changed
+in this CI-contract batch.
 

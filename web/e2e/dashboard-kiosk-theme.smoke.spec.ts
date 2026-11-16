@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { test } from './app-design-test'
 import { expectThemeApplied, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 for (const theme of ['dark', 'light'] as const) {

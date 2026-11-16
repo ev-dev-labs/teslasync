@@ -6,5 +6,5 @@
 - Existing Firefox notification-axis tests passed dark, light and custom-font/locale cases (3 cases).
 - Generated-artifact freshness passed all checks and verified 282 registered paths byte-identical; TypeScript and full frontend lint passed.
 - CI rate-limit integration contracts are repaired without relaxing thresholds: 7 frontend files / 7,744 tests passed; the Guard package passed Linux race tests with 87.2% coverage.
-- The single local full frontend test run and rebuilt Docker candidate are in progress. Final PR workflow acceptance is pending.
+- Docker preview at http://localhost:3120 is deployed. The one full test run completed; all 9 failed files passed focused reruns. Lifecycle/retry repairs passed targeted browser runs (including 7 native cases without retries); latest-commit PR workflows remain pending.
 - Existing screenshots are preserved. Deferred matrix, contrast-incomplete, 0.5px desktop and token-coverage work is listed in FOLLOWUPS.md.

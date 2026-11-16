@@ -1540,7 +1540,10 @@ export async function closeMockedPage(
   controller: MockApiController | null,
 ): Promise<void> {
   await assertMockApiComplete(page, controller);
+  const origin = new URL(page.url()).origin;
+  await prepareMockApiNavigation(page);
   await page.goto('about:blank');
+  await assertMockApiAfterNavigation(page, origin);
   await page.close();
 }
 
