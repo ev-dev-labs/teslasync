@@ -3485,3 +3485,119 @@ pass or grounds for changing accepted designs. The previous GitHub
 390px/dark WebKit job passed, but only the latest-commit checks can establish
 final acceptance.
 
+On `c49504c576`, responsive shard 5 still emitted late `/web-errors` at
+the overflow guard's min-to-default and default-to-large document changes.
+Its documented geometry contract intentionally exercises error/empty states
+for sources outside the smoke catalog; replacing those with populated
+fixtures would change the test subjects. Navigation telemetry validation
+was therefore extracted from the existing full checker, preserving payload,
+origin, size, beacon, pending-request and delivery-disposition assertions.
+The ordinary full checker still rejects every unmatched API request.
+Only the existing geometry test uses telemetry-only validation for its
+previously permitted error-state sources, including teardown. Its six
+121-widget geometry passes, screenshots, thresholds and timeout are unchanged.
+
+That job also exposed a pricing-retry fixture race: the fixture became
+healthy before waiting for its 429 cooldown, allowing another settings
+observer to recover the page and remove Retry before the intended click.
+Moving recovery immediately before the click still left a smaller race:
+the full local shard completed with `111 passed (19.4m)`, one pricing-retry
+flake, and `E2E preview proxy escape check: 0 errors`. The fixture now
+allows recovery only once the real Retry click reaches its capture listener,
+using a test-owned session-storage flag read by the fixture. Background reads
+before that click still fail. The 429 response, cooldown duration, native
+click, unknown-price assertions and recovered-value assertions are preserved.
+
+Responsive shards 22 and 17 on the same head exposed readiness ordering at
+`/period-compare` and `/compare`. Their downloaded traces show exactly
+`pending: 0`, `incomplete: []`, and `quiet: false`, not missing fixtures or
+escaped requests. Moving validation after application settlement did not
+fix the local reproduction; that attempted test change was removed.
+The network trace revealed 181 settings requests, including repeated reads
+roughly 20ms apart. `/compare` redirects to the same period comparison page.
+Its inline Recharts tooltip function changed component identity on every
+render, remounting the shared tooltip's settings observer and triggering
+another read. The tooltip renderer is now memoized over its existing metrics
+and number formatter, following the established CostForecastWidget pattern.
+Content, formatting, chart styling, API contracts and settings revalidation
+policy remain unchanged. No readiness assertion or timeout was weakened.
+
+The existing navigation/beacon selection passed all six cases with zero
+proxy escapes. The existing harness-contract suite, using its supported
+`DESIGN_PACK_BROWSER_CHANNEL=msedge` setting on this host, returned
+`96 passed (3.1m)`. No new suite or matrix was introduced.
+
+The repaired period-comparison probe returned `1 passed (20.1s)`, and both
+native-click pricing cases returned `2 passed (16.6s)`; both preview gates
+reported zero proxy escapes. The two existing period-comparison unit files
+returned `Test Files 2 passed (2)` and `Tests 31 passed (31)` in 17.26s.
+Their existing jsdom zero-size chart warnings remain visible in the output.
+Production TypeScript and changed-file ESLint exited zero. The chart audit
+reported no violations; its line count is 112 -> 116, retaining one
+LayoutCard, one EmbeddedChart and one Tooltip. No hook URL changed.
+
+The Docker preview was rebuilt with the same production tooltip repair:
+`docker build -f Dockerfile.web --build-arg VITE_GIT_SHA=c49504c576-working-tooltip -t teslasync-web:design-packs-v2-ci-repairs .`
+exited zero, including the production build and service-worker typecheck.
+Only the task-owned container on `127.0.0.1:3120` was replaced; its previous
+image/container is retained for rollback. The replacement reported
+`image=sha256:a156135a846ef3f932fa42c76664b9002208fbd3477ede27c13e6112ee835b4d health=healthy`
+and `HTTP 200`. Its build identity explicitly denotes the working tree,
+not a fabricated committed SHA. Other local previews were untouched.
+
+The complete existing ordinary CI selections now returned
+`111 passed (24.2m)` for shard 22/24 and `112 passed (27.7m)` for shard
+17/24, both with `E2E preview proxy escape check: 0 errors`. The attempted
+route-guard readiness reordering is not part of the patch; the production
+tooltip identity repair passes the original unchanged assertions.
+
+Later native jobs (responsive 26, 27, 28, 29 and 31) passed their test
+selections but failed the same proxy-escape gate. The shared
+`energySources.leaveToSettings()` return path still performed an unprepared
+full navigation after real-route review, including dashboard review.
+It now uses the existing prepare/validate lifecycle, retaining the original
+fixture lifetime and readiness checks. A pre-fix three-case local diagnostic
+passed without an escape, so this is not represented as a deterministic
+local reproduction of the CI timing. Existing native CI selections are
+being used for verification; the proxy gate remains mandatory.
+
+Responsive 30 also finished its 24 tests successfully and failed the same
+navigation proxy-escape gate. It is included in the return-navigation repair.
+
+The charging-heatmap custom-phone case additionally exposed a profile-switch
+stall (CI v6 to v7; local untraced runs v1 to v2). The CI trace shows successful
+PUT and GET responses containing the new pack, not a lost broadcast or stale
+fixture response. A bounded browser CPU profile measured 11.47 of 11.92 seconds
+inside the shared Tooltip position callback while processing the switch.
+An experimental repair coalesced its ancestry-mutation measurements into the
+next animation frame. It did not fix the original untraced browser case on any
+of its three attempts and was fully reverted, including its frame-aware unit
+assertion. Browser layout profiling is investigating the measured hot path;
+no assertion timeout is increased. Temporary CPU instrumentation was removed.
+The clean trace-enabled baseline passed once in 6.6 minutes with zero proxy
+escapes, confirming timing sensitivity rather than proving the defect fixed.
+An earlier trace diagnostic hit an occupied task preview port and was stopped;
+that run is not acceptance evidence.
+
+The rejected candidate passed all 45 existing tooltip tests, TypeScript,
+changed-tooltip ESLint and its violations audit, but those are not evidence
+that it fixes the browser stall. Its isolated production build retained the
+existing Rollup annotation/chunk-size warnings. The original complete native
+shard 2/8, with the navigation repair and without that candidate, returned
+`24 passed (29.9m)` and `E2E preview proxy escape check: 0 errors`.
+
+The browser timeline narrows the stall to a synchronous Layout event
+(5,645 layout objects, 41 dirty), entered from the tooltip measurement.
+The tooltip callback is therefore a layout trigger, not proof it is the root
+cause. A diagnostic giving the clipped chart fallback table a normal inline
+width also failed all three attempts; that candidate was removed. Further
+isolation is limited to the hidden fallback's layout containment and preserves
+its content and the original assertions. No visual restyling is authorized.
+
+The containment diagnostic also failed all three attempts. All three candidate
+repairs (deferred tooltip measurements, wider hidden fallback, hidden fallback
+containment) and their diagnostic instrumentation were removed. Following the
+three-attempt rule, the untraced native-Edge charging-switch investigation is
+temporarily parked while the already-identified CI navigation failures are
+verified. It must be revisited before final handoff; it is not reported fixed.
+

@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
-import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { assertMockApiTelemetryAfterNavigation, installApiMocks, prepareMockApiNavigation, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 /**
  * Row-16 guard: every dashboard widget body must never scroll horizontally,
@@ -29,8 +29,20 @@ import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockAp
  * `assertMockApiComplete` is intentionally NOT called: rendering every
  * widget hits endpoints outside the smoke fixtures (those widgets render
  * error/empty states, which are still valid geometry subjects). API
- * completeness stays enforced by the contract specs.
+ * completeness stays enforced by the contract specs. Navigation telemetry,
+ * payload schemas and delivery dispositions are still checked here.
  */
+
+async function navigateGeometryPage(page: Page, path: string) {
+  const origin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null
+  await prepareMockApiNavigation(page)
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  if (origin) await assertMockApiTelemetryAfterNavigation(page, origin)
+}
+
+test.afterEach(async ({ page }) => {
+  await navigateGeometryPage(page, 'about:blank')
+})
 
 interface WidgetSizeEntry {
   id: string
@@ -447,14 +459,14 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
 
   for (const size of ['min', 'default', 'large'] as const) {
     // Seed on the static same-origin shell without aborting an application mid-boot.
-    await page.goto('/offline.html', { waitUntil: 'domcontentloaded' })
+    await navigateGeometryPage(page, '/offline.html')
     await page.evaluate((seed) => {
       localStorage.setItem('teslasync-dashboards', JSON.stringify(seed.dashboards))
       localStorage.setItem('teslasync-active-dashboard', seed.active)
       localStorage.setItem('teslasync-row-height-version', '2')
       localStorage.removeItem('teslasync-dashboard-pending-save')
     }, buildSeed(size))
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await navigateGeometryPage(page, '/')
     await waitForGeometrySettled(page, mockApi)
 
     for (const mode of ['view', 'edit'] as const) {

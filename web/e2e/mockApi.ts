@@ -1454,6 +1454,13 @@ export async function prepareMockApiNavigation(page: Page): Promise<void> {
 }
 
 export async function assertMockApiAfterNavigation(page: Page, origin: string): Promise<void> {
+  await assertMockApiTelemetryAfterNavigation(page, origin);
+  const controller = mockPageStates.get(page)?.controller;
+  if (!controller) return;
+  expect([...controller.unmatched], 'unmatched E2E API requests after navigation').toEqual([]);
+}
+
+export async function assertMockApiTelemetryAfterNavigation(page: Page, origin: string): Promise<void> {
   const controller = mockPageStates.get(page)?.controller;
   if (!controller) return;
   const storage = await page.context().storageState();
@@ -1469,13 +1476,16 @@ export async function assertMockApiAfterNavigation(page: Page, origin: string): 
     body: string | null;
     size: number;
   }>;
+  const unmatchedNavigation: string[] = [];
   for (const record of records) {
     const path = record.path.replace(/^\/api\/v1/, '');
     const reviewed = record.origin === origin && record.method === 'POST'
       && ALLOWED_BEACON_PATHS.some(allowed => allowed === record.path)
       && !record.hasSearch && !record.hasHash;
     if (!reviewed) {
-      controller.unmatched.add(`${record.method} ${record.origin === origin ? record.path : '[off-origin]'}`);
+      const unmatched = `${record.method} ${record.origin === origin ? record.path : '[off-origin]'}`;
+      controller.unmatched.add(unmatched);
+      unmatchedNavigation.push(unmatched);
       continue;
     }
     const violations = validateRumBody(path, record.contentType, record.body);
@@ -1512,7 +1522,7 @@ export async function assertMockApiAfterNavigation(page: Page, origin: string): 
     message: 'late navigation API activity escaped or did not settle',
     timeout: 5_000,
   }).toEqual({ pending: 0, quiet: true, incomplete: [] });
-  expect([...controller.unmatched], 'unmatched E2E API requests after navigation').toEqual([]);
+  expect(unmatchedNavigation, 'unmatched E2E API requests after navigation').toEqual([]);
   expect(controller.invalidRum, 'invalid fetch/xhr RUM payloads after navigation').toEqual([]);
   const rawBeacons = originStorage?.find(entry => entry.name === UNLOAD_BEACONS_KEY)?.value;
   const beacons = rawBeacons == null ? [] : JSON.parse(rawBeacons) as CapturedBeacon[];

@@ -1,3 +1,4 @@
+import { useCallback, type ComponentProps, type ReactElement } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,10 +19,24 @@ interface PeriodDeltaChartProps {
   onRetry: () => void;
 }
 
+type DeltaTooltipRenderer = Exclude<NonNullable<ComponentProps<typeof Tooltip>['content']>, ReactElement>;
+
 /** Unitless A-vs-B specialist chart; all original chart actions stay delegated. */
 export function PeriodDeltaChart({ data, metrics, error, loading, onRetry }: PeriodDeltaChartProps) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
+  const renderTooltip = useCallback<DeltaTooltipRenderer>(({ active, payload, label }) => (
+    <ChartTooltip
+      active={active}
+      payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+      label={label as string}
+      valueFormatter={(value) =>
+        metrics.find((m) => m.label === label)?.b === 0
+          ? '—'
+          : `${fmtNumber(Number(value ?? 0))}%`
+      }
+    />
+  ), [fmtNumber, metrics]);
   return (
     <LayoutCard title={t('compare.deltaChartTitle', 'Change vs period B (%)')}>
       {error ? (
@@ -78,18 +93,7 @@ export function PeriodDeltaChart({ data, metrics, error, loading, onRetry }: Per
                     domain={[(dataMin: number) => Math.min(0, dataMin), (dataMax: number) => Math.max(0, dataMax)]}
                   />
                   <YAxis type="category" dataKey="name" tick={axisTick} width={112} />
-                  <Tooltip content={({ active, payload, label }) => (
-                    <ChartTooltip
-                      active={active}
-                      payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                      label={label as string}
-                      valueFormatter={(value) =>
-                        metrics.find((m) => m.label === label)?.b === 0
-                          ? '—'
-                          : `${fmtNumber(Number(value ?? 0))}%`
-                      }
-                    />
-                  )} />
+                  <Tooltip content={renderTooltip} />
                   <ReferenceLine x={0} stroke="var(--glass-border)" />
                   <Bar
                     dataKey="delta"
