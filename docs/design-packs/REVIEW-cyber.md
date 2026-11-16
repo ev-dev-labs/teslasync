@@ -1,5 +1,29 @@
 # Cyberdeck review
 
+## 2026-11-16 incomplete-node review
+
+The existing screenshot-free captures of Dashboard, Drives and Energy at
+390px and desktop reported 74 incomplete contrast nodes and no Axe
+violations. Their complete computed ancestor chains, text rectangles and
+gradient tile geometry were reviewed. All 74 have conservative background
+contrast bounds above the applicable requirement; the minimum is 4.9403:1.
+The corner gradients are 14px non-repeating tiles and a 1px top rule, not
+three full-panel translucent fills. Disjoint tiles cannot paint behind the
+measured text. The Cyber canvas and widget scanlines have no pseudo-element
+overlay; their remaining translucent paints are included in the bounds.
+Scrolled targets remain hit-testable, including SVG text.
+
+This resolves those 74 nodes, not every light-theme route or state. The same
+capture reproduced a separate 12px QuickNav explanation on phones. Its
+existing audit now includes that paragraph, and the shared phone rule applies
+the existing body-size token without changing desktop or protected copy.
+The corresponding three harness cases passed, including every pack at 360px
+and 430px, both forced-color modes, both existing text scales, and the
+unchanged 12px desktop/protected text. Rebuilt-page verification is pending.
+
+Raw diagnostic evidence is in this session's `contrast-geometry.log` and
+`contrast-geometry.bounds.json`. Existing committed images were not changed.
+
 ## Grid contrast follow-up
 
 The canvas grid now paints intersecting traces in one token-based layer

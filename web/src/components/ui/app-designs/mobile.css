@@ -25,7 +25,7 @@
     font-size: var(--app-body-size);
   }
 
-  :where(p:not([data-typography-role], .text-xs, [data-app-part~="metric-label"], [data-app-part~="metric-context"]), a[href]:not(.sr-only)):not(:where([data-role="status-bar"] *, [data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
+  :where(p:not([data-typography-role], .text-xs, [data-app-part~="metric-label"], [data-app-part~="metric-context"]), [data-instrument-family="actions"] p.text-xs, a[href]:not(.sr-only)):not(:where([data-role="status-bar"] *, [data-app-design-preserve], [data-app-design-preserve] *))[data-app-design-owner] {
     font-size: var(--app-body-size);
     line-height: var(--app-body-leading);
     overflow-wrap: anywhere;

@@ -5,7 +5,6 @@ import { createReviewPreference, installPackReview, selectReviewPack } from './w
 import { alternateConversation, syntheticConversation } from './widget-design-packs.specialized.fixtures';
 import { installSpecializedReviewSources } from './widget-design-packs.specialized.mock';
 
-test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic Helix fixtures');
 test.afterAll(async () => { await closeMockApiFixtures(); });
 
 async function openChat(page: Page, testInfo: TestInfo, width: number) {

@@ -293,6 +293,7 @@ export const BODY_ROLE_SELECTOR = [
 export async function findSmallBodyText(page: Page) {
   return page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>(
     'p:not([data-typography-role]):not(.text-xs):not([data-app-part~="metric-label"]):not([data-app-part~="metric-context"]), '
+    + '[data-instrument-family="actions"] p.text-xs, '
     + '[data-typography-role="body"], [data-typography-role="bodySm"], '
     + '.text-sm[class~="text-[var(--text-primary)]"], .text-sm[class~="text-[var(--text-secondary)]"], .text-sm[class~="text-[var(--text-muted)]"], '
     + '[data-app-part~="feedback-title"], [data-app-part~="feedback-message"], [data-chart-subtitle], [data-chart-legend-label], '

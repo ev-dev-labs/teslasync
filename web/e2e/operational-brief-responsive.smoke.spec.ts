@@ -5,7 +5,6 @@ import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { createReviewPreference, installPackReview } from './widget-design-packs.mock';
 
-test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic application fixtures');
 test.afterAll(async () => { await closeMockApiFixtures(); });
 
 for (const theme of ['dark', 'light'] as const) {

@@ -1152,7 +1152,9 @@ async function settlePointer(host: Locator) {
   await host.evaluate(async element => {
     await Promise.all(element.getAnimations({ subtree: true })
       .filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime))
-      .map(animation => animation.finished.catch(() => {})));
+      .map(animation => animation.finished.catch(error => {
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') throw error;
+      })));
   });
 }
 

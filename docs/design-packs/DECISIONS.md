@@ -1,5 +1,77 @@
 # Design Pack Decisions
 
+## 2026-11-16 resumed repair scope
+
+Observed clean `design-packs-v2` at `41ba181ee4`; PR #259 already targets
+`main` and is non-draft. Fetching main returned no missing main commits
+(`244 0` for `HEAD...origin/main`), so no redundant base change or merge is
+needed. A fresh production build and 90-second CI watcher were started.
+The current request reopens the prior contrast, token-coverage and half-pixel
+deferrals; they are not proven impossible. FIXLIST.md tracks acceptance.
+
+Added-line scans against both main and feature/app-design-themes found four
+conditional `test.skip` calls in new synthetic-browser specs. These are
+fixture-mode guards, not observed CI failure workarounds, but the explicit
+no-new-skips requirement applies. Remove them and keep the tests hermetic
+through their existing local fixture installation; do not remove tests or
+weaken their assertions.
+The existing `installPackReview` guard still rejects live/unmocked mode:
+an unsupported synthetic test invocation fails explicitly instead of silently
+skipping or touching a live application's data.
+
+The shared AreaChartWrapper duplicated the existing `axisTick` and
+`chartGrid` definitions. It now consumes those exact shared values for both
+axis measurement and SVG rendering. The 11px default, colors, grid stroke,
+dash and opacity are unchanged; this closes a concrete token-adoption gap
+without restyling a pack. Theme palette definitions and vehicle artwork are
+not interchangeable with arbitrary hardcoded component colors.
+
+The suppression review also found broad catches in browser readiness cleanup,
+cancellation reporting and animation settling. Observer cleanup and binding
+failures now propagate; handle disposal remains guaranteed. Animation settling
+accepts only the Web Animations API's expected cancellation `AbortError` and
+rethrows other errors. Deliberate negative network tests are distinguished
+from suppressions: their rejected transports are checked through exact request
+ledgers, and production Query failures remain observable in Query state.
+
+CI on `41ba181ee4` exposed two distinct test defects. Shards 1/3 reject the
+phone popup class added in `8edd91f937`: their whole-source receipt predates
+that repair. The historical JSON fixture and every historical fingerprint stay
+unchanged. An explicit successor verifies the complete new LayoutSwitcher
+bytes and its unique containment line, reverses only that line, then runs the
+unchanged historical byte check and compares the ACTUAL new translation
+projection. This is not a new baseline or an ignored producer.
+
+Shard 5's SQL whitespace-clear test awaits the empty textarea but checks
+localStorage outside that wait. Persistence runs in a passive effect, so the
+DOM can already be empty while storage still holds whitespace. The test now
+awaits both outcomes together, matching the neighboring Clear tests. No
+production persistence behavior, assertion, timeout or threshold changes.
+
+The existing Cyber phone capture exposed a 12px QuickNav explanatory paragraph.
+The existing text audit missed it because it excludes generic captions. Add
+the action-instrument paragraph to that existing audit; do not broaden label
+typography or alter desktop styling. Contrast diagnostics also need the full
+ancestor chain and actual gradient tile/text geometry: treating all three
+disjoint corner decorations as full-panel overlapping fills gives invalid
+contrast conclusions. Extend only the existing opt-in diagnostic payload,
+without adding a suite, changing Axe rules, or updating screenshots.
+
+The strengthened capture failed exactly on the 12px QuickNav explanation
+(one failed, five passed). The repair adds that action-family paragraph to
+the existing owner-qualified phone body rule; desktop and preserved widgets
+keep their prior size. Three existing harness cases passed after extending
+their fixtures. The two delayed route handlers now finish before fixture
+teardown via `unrouteAll({ behavior: 'wait' })`, replacing blanket fulfill
+error catches. Deliberate rejected-fetch tests retain their strict request
+ledger assertions; ordinary Query recovery retains errors in Query state.
+
+Current CI's coverage/frontend/all-check aggregates fail because they consume
+the five failed unit shards, not because of a separate coverage threshold.
+The exact eight affected files passed locally with the CI coverage/blob
+options: 8383 tests. Full frontend lint and both production/E2E TypeScript
+checks passed; a fresh production build passed after chart-token adoption.
+
 ### Pixel Cockpit final-matrix evidence
 
 The pinned matrix reported `1014 passed, 2 failed`. Both phone dashboards

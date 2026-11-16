@@ -1298,29 +1298,45 @@ for (const route of routes) {
                 scrollTop: document.getElementById('main-content')?.scrollTop ?? null,
                 points, chain,
               };
-            }).catch(error => ({ error: String(error) }));
+            });
             console.log(`  Contrast initial geometry: ${JSON.stringify(initial)}`);
             await target.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
             const context = await target.evaluate(element => {
               const rect = element.getBoundingClientRect();
               const chain: Array<Record<string, string>> = [];
-              for (let ancestor: Element | null = element; ancestor && chain.length < 12; ancestor = ancestor.parentElement) {
+              for (let ancestor: Element | null = element; ancestor; ancestor = ancestor.parentElement) {
                 const style = getComputedStyle(ancestor);
+                const bounds = ancestor.getBoundingClientRect();
                 chain.push({
                   tag: ancestor.tagName.toLowerCase(), color: style.color,
                   background: style.backgroundColor, image: style.backgroundImage,
-                  fill: style.fill, fontSize: style.fontSize,
+                  backgroundSize: style.backgroundSize, backgroundPosition: style.backgroundPosition,
+                  backgroundRepeat: style.backgroundRepeat, backgroundOrigin: style.backgroundOrigin,
+                  borderTop: style.borderTopWidth, borderRight: style.borderRightWidth,
+                  borderBottom: style.borderBottomWidth, borderLeft: style.borderLeftWidth,
+                  bounds: JSON.stringify({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }),
+                  fill: style.fill, fontSize: style.fontSize, fontWeight: style.fontWeight,
                   opacity: style.opacity, filter: style.filter, backdrop: style.backdropFilter,
                 });
+              }
+              const textRects: Array<{ x: number; y: number; width: number; height: number }> = [];
+              const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+              for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+                if (!text.textContent?.trim()) continue;
+                const range = document.createRange();
+                range.selectNodeContents(text);
+                for (const box of range.getClientRects()) {
+                  textRects.push({ x: box.x, y: box.y, width: box.width, height: box.height });
+                }
               }
               const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
               return {
                 html: element.outerHTML.slice(0, 300),
                 rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
                 hit: hit?.tagName.toLowerCase() ?? null, hitContainsText: !!hit && (hit === element || element.contains(hit)),
-                chain,
+                chain, textRects,
               };
-            }).catch(error => ({ error: String(error) }));
+            });
             console.log(`  Contrast context: ${JSON.stringify(context)}`);
           }
         }

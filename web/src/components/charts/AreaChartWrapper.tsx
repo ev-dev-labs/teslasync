@@ -6,12 +6,12 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
 } from 'recharts';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
 import { ChartTooltip } from './ChartTooltip';
 import { ChartLegend } from './ChartLegend';
+import { axisTick, chartGrid } from './chartUtils';
 import { resolveChartHeights } from './chartSizing';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useMeasuredAxisWidth } from './useMeasuredAxisWidth';
@@ -87,7 +87,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
       }
       return [...labels];
     }, [safeData, safeSeries, formatY]);
-    const axisWidth = useMeasuredAxisWidth({ labels: axisLabels, fontSize: 11, minWidth: 60, padding: 24 });
+    const axisWidth = useMeasuredAxisWidth({ labels: axisLabels, fontSize: axisTick.fontSize, minWidth: 60, padding: 24 });
 
     return (
       <div
@@ -116,22 +116,18 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
               ))}
             </defs>
 
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={chartTokens.gridStroke}
-              strokeOpacity={0.4}
-            />
+            {chartGrid}
 
             <XAxis
               dataKey={xKey}
               stroke={chartTokens.axisStroke}
-              tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
+              tick={axisTick}
               tickFormatter={xFormatter}
             />
             <YAxis
               width={axisWidth}
               stroke={chartTokens.axisStroke}
-              tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
+              tick={axisTick}
               tickFormatter={formatY}
             />
 

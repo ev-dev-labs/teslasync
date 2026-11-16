@@ -101,6 +101,14 @@ export function restoreMobilePresentationSource(file: string, source: string): s
   expect(hash(JSON.stringify(mobilePresentation)), 'pinned mobile presentation successor').toBe(mobileFingerprint);
   const patch = mobilePresentation.find(entry => entry.file === file);
   if (!patch) return source;
+  const actualSource = source;
+  if (file === 'web/src/features/dashboard/components/LayoutSwitcher.tsx') {
+    expect(hash(source), file + ': exact phone menu containment repair')
+      .toBe('b98148c3037df4252fab0167a0fe46e3422b416a6bb4d367a29a1083ab55ac93');
+    const containment = "            'max-sm:w-full max-sm:min-w-0 max-sm:max-w-full',\n";
+    expect(source.split(containment), file + ': unique phone menu containment').toHaveLength(2);
+    source = source.replace(containment, '');
+  }
   expect(hash(source), file + ': actual mobile presentation source').toBe(patch.after);
   const lines = source.split('\n');
   for (const hunk of [...patch.hunks].reverse()) {
@@ -110,7 +118,7 @@ export function restoreMobilePresentationSource(file: string, source: string): s
   }
   const previous = lines.join('\n');
   expect(hash(previous), file + ': preserved pre-mobile source').toBe(patch.before);
-  const currentProjection = producerProjection(file, source);
+  const currentProjection = producerProjection(file, actualSource);
   const previousProjection = producerProjection(file, previous);
   expect(currentProjection.bindings, file + ': original translation bindings').toEqual(previousProjection.bindings);
   const remaining = currentProjection.calls.map(call => ({

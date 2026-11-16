@@ -450,7 +450,7 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
     if (route.request().headers()['x-test-wait'] === '1'
       || new URL(route.request().url()).port === '54322') {
       await new Promise(resolve => setTimeout(resolve, 300));
-      await route.fulfill({ json: { mode: 'open' } }).catch(() => undefined);
+      await route.fulfill({ json: { mode: 'open' } });
     } else {
       await route.abort('aborted');
     }
@@ -532,7 +532,11 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
     })).toBe(false);
     await expect(assertMockApiComplete(page, controller)).rejects.toThrow('API requests escaped or were blocked by Playwright routing');
   } finally {
-    await closeMockApiFixtures();
+    try {
+      await page.unrouteAll({ behavior: 'wait' });
+    } finally {
+      await closeMockApiFixtures();
+    }
   }
 });
 
@@ -551,7 +555,7 @@ test('reinstalling mock fixtures keeps request accounting and in-flight cancella
   await page.route('**/api/v1/system/auth-mode', async route => {
     markRouted();
     await new Promise(resolve => setTimeout(resolve, 1_000));
-    await route.fulfill({ json: { mode: 'open' } }).catch(() => undefined);
+    await route.fulfill({ json: { mode: 'open' } });
   });
   try {
     await page.goto('http://127.0.0.1:54321/');
@@ -578,7 +582,11 @@ test('reinstalling mock fixtures keeps request accounting and in-flight cancella
     await assertMockApiComplete(page, first);
     await assertMockApiComplete(page, second);
   } finally {
-    await closeMockApiFixtures();
+    try {
+      await page.unrouteAll({ behavior: 'wait' });
+    } finally {
+      await closeMockApiFixtures();
+    }
   }
 });
 
@@ -737,10 +745,16 @@ test('phone explanations use the body floor in every pack without altering prote
       <span id="provenance" class="text-xs" data-app-design-owner>Source limitations after the summary.</span>
       <p id="panel-copy" class="text-sm" data-app-design-owner>A detailed explanation inside a panel.</p>
       <p id="chart-copy" class="text-xs" data-chart-subtitle data-app-design-owner>A chart's source and limitations.</p>
+      <div data-instrument-family="actions">
+        <p id="action-copy" class="text-xs" data-app-design-owner>Navigation does not depend on telemetry freshness.</p>
+      </div>
     </section>
     <div data-app-design-preserve>
       <section data-operational-brief></section>
       <span id="protected-copy" class="text-xs" data-app-design-owner>Protected widget details.</span>
+      <div data-instrument-family="actions">
+        <p id="protected-action-copy" class="text-xs" data-app-design-owner>Protected action details.</p>
+      </div>
     </div>
   `);
   const styles = resolve('src', 'components', 'ui', 'app-designs');
@@ -766,6 +780,7 @@ test('phone explanations use the body floor in every pack without altering prote
           const sizes = await page.evaluate(() => {
             const font = (selector: string) => parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
             return { intro: font('#intro'), provenance: font('#provenance'), panelCopy: font('#panel-copy'), chartCopy: font('#chart-copy'), metadata: font('#metadata'),
+              actionCopy: font('#action-copy'), protectedActionCopy: font('#protected-action-copy'),
               protectedCopy: font('#protected-copy'), scrollWidth: document.documentElement.scrollWidth };
           });
           const context = `${pack}, ${forcedColors}, ${width}px, scale ${scale}`;
@@ -773,6 +788,8 @@ test('phone explanations use the body floor in every pack without altering prote
           expect(sizes.provenance, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
           expect(sizes.panelCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
           expect(sizes.chartCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.actionCopy, context).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.1);
+          expect(sizes.protectedActionCopy, context).toBe(12);
           expect(sizes.metadata, context).toBe(12);
           expect(sizes.protectedCopy, context).toBe(12);
           expect(sizes.scrollWidth, context).toBeLessThanOrEqual(width);
@@ -780,6 +797,8 @@ test('phone explanations use the body floor in every pack without altering prote
       }
     }
   }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('#action-copy')).toHaveCSS('font-size', '12px');
 });
 
 test('phone report navigation and complete weekday-hour evidence fit every pack', async ({ page }) => {

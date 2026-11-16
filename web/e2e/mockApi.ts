@@ -1152,7 +1152,8 @@ export async function installApiMocks(
           const notify = (window as Window & {
             __teslasyncE2EReadCancelled?: (requestId: string) => Promise<void>;
           }).__teslasyncE2EReadCancelled;
-          if (notify) void notify(id).catch(() => undefined);
+          if (!notify) throw new Error('E2E cancellation tracking binding is missing');
+          void notify(id);
         };
         signal.addEventListener('abort', report, { once: true });
         const result = originalFetch.call(window, input, { ...init, headers });
@@ -1262,8 +1263,11 @@ export async function waitForHarnessReady(
       await settled.dispose();
     }
   } finally {
-    await state.evaluate(sample => sample.observer?.disconnect()).catch(() => undefined);
-    await state.dispose();
+    try {
+      await state.evaluate(sample => sample.observer?.disconnect());
+    } finally {
+      await state.dispose();
+    }
   }
 }
 
