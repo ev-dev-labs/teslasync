@@ -72,7 +72,7 @@ test('browser shards reuse one build and retain isolated performance and Windows
   const pattern = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
   assert.equal(run.env.QUALITY_PARTITION, '${{ matrix.partition }}');
   assert.ok(run.run.includes(`ordinary) set -- --grep-invert='${pattern}' ;;`));
-  assert.ok(run.run.includes(`design) set -- --grep='${pattern}' ;;`));
+  assert.ok(run.run.includes(`design) set -- --workers=4 --grep='${pattern}' ;;`));
   assert.ok(run.run.includes(`'') set -- ;;`));
   assert.match(run.run, /Unknown quality partition/);
   assert.match(run.run, /--shard=\$\{\{ matrix\.shard \}\} "\$@"/);

@@ -174,7 +174,7 @@ jobs:
         run: |
           case "$QUALITY_PARTITION" in
             ordinary) set -- --grep-invert='widget-design-packs\.(app|energy|native)\.spec\.ts' ;;
-            design) set -- --grep='widget-design-packs\.(app|energy|native)\.spec\.ts' ;;
+            design) set -- --workers=4 --grep='widget-design-packs\.(app|energy|native)\.spec\.ts' ;;
             '') set -- ;;
             *) echo "Unknown quality partition: $QUALITY_PARTITION" >&2; exit 1 ;;
           esac
