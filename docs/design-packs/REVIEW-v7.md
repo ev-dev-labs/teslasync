@@ -88,3 +88,25 @@ A subsequent screenshot-free check of Drives, Energy, and Vehicles at 360px
 and 430px in dark and light modes reported `12 passed`. The enabled contrast
 scan reported zero violations and zero nodes requiring manual review in each
 case. This does not cover the protected dashboard or establish visual acceptance.
+
+## Final matrix and distance-unit follow-up
+
+The pinned full matrix reported `1014 passed, 2 failed (46.7m)`; both
+failures were the phone dashboard. All 1,016 matrix PNGs passed signature,
+chunk-CRC and viewport-dimension checks. The dashboard audit also found a
+12px Charge Status distance unit, so the phone body-size rule now covers
+owned stat-card units and context while excluding preserved and specialized
+surfaces.
+
+A screenshot-free browser regression passed in dark and light modes at
+360, 390 and 430px, three font scales, and normal and forced colors
+(`2 passed`). The selected preservation regressions passed (`12 passed`);
+TypeScript and focused ESLint exited 0, and the scoped CSS audit reported no
+violations.
+
+The two dashboard pages were recaptured against the current Vite source.
+Both still failed on protected twin targets and text, but no longer
+reported the small distance unit. Their PNG integrity and dimensions were
+verified; the card itself is below the initial viewport. The remaining
+matrix images use the older pinned build, so this mixed-build evidence does
+not establish full visual or mobile acceptance.

@@ -1,5 +1,45 @@
 # Design Pack Decisions
 
+### Pixel Cockpit final-matrix evidence
+
+The pinned matrix reported `1014 passed, 2 failed`. Both phone dashboards
+reported protected twin targets and text, plus a 12px Charge Status distance
+unit. All 1,016 PNGs passed signature, chunk-CRC and viewport-dimension
+checks. The v7 phone selector now covers owned stat-card units and context,
+without changing protected or specialized surfaces.
+
+```text
+V7_DISTANCE_BROWSER_EXIT=0  # 2 passed: dark/light, three phone widths, scales and forced colors
+V7_PRESERVATION_EXIT=0      # 12 passed
+FRONTEND_TSC_EXIT=0
+TOUCHED_ESLINT_EXIT=0
+```
+
+The two dashboard pages were recaptured against current Vite source. Both
+still failed on protected twin targets and text, but the small unit was no
+longer reported. Their PNG integrity and dimensions were verified, though
+the initial viewport does not include that card. The matrix and recaptures
+represent mixed builds, not full acceptance.
+
+### Generated-artifact Git output
+
+CI at `23e0cf85c9` failed its generated-artifact gate when `git ls-files -z`
+exceeded Node's default synchronous child-process output buffer. The Git
+wrapper now allows 64 MiB and reports the underlying spawn error without
+printing truncated stdout. The regression creates 10,000 virtual tracked
+files and verifies both tracked-file and worktree listings over 1 MiB.
+
+```text
+FRESHNESS_LARGE_INDEX_RED_EXIT=1  # reproduced the truncated Git listing
+FRESHNESS_CONTRACT_EXIT=0         # 11 passed
+FRONTEND_TSC_EXIT=0
+FRESHNESS_TEST_ESLINT_EXIT=0
+FRESHNESS_SCRIPT_SYNTAX_EXIT=0
+```
+
+The complete generated-artifact gate is running in a separate detached
+worktree so ongoing screenshot writes cannot affect its mutation check.
+
 ### Expressive Form final-matrix evidence
 
 The pinned matrix reported `1014 passed, 2 failed (49.5m)`. Both phone
@@ -58,6 +98,26 @@ twin findings remain open.
 
 ### Latest Docker preview
 
+The committed frontend at `cead512118c7` was built into the immutable image
+`teslasync-web:design-packs-v2-cead512118c7`. The candidate passed health,
+asset, authentication-proxy and initial-route browser checks before replacing
+the task-owned preview at `localhost:3120`. The previous container remains
+stopped for rollback.
+
+```text
+PREVIEW_BUILD_SHA=cead512118c7 PREVIEW_BUILD_EXIT=0
+PREVIEW_HEALTH=healthy INDEX_HTTP=200 ASSET_HTTP=200 AUTH_PROXY_HTTP=200
+PREVIEW_BROWSER width=360  http=200 main=visible overflow=0 pageErrors=0
+PREVIEW_BROWSER width=430  http=200 main=visible overflow=0 pageErrors=0
+PREVIEW_BROWSER width=1440 http=200 main=visible overflow=0 pageErrors=0
+SYSTEM_HEALTH_PROXY_HTTP=503
+```
+
+These are initial-route smoke checks, not all-page acceptance. The later
+Pixel Cockpit charge-unit fix is not in this image.
+
+### Previous Docker preview (`f9c93755bfa2`)
+
 The committed frontend at `f9c93755bfa2` was built into the immutable image
 `teslasync-web:design-packs-v2-f9c93755bfa2`. A separate loopback candidate
 passed its Docker health check, index, static-asset and authentication-proxy
@@ -76,7 +136,7 @@ SYSTEM_HEALTH_PROXY_HTTP=503 BACKEND_HTTP=503
 These are initial-route smoke checks, not all-page acceptance. The later
 Expressive Form charge-unit fix was not in this image and needs a new build.
 
-### Previous Docker preview
+### Earlier Docker preview (`98debceb5a8b`)
 
 The committed frontend at `98debceb5a8b` was built into the immutable image
 `teslasync-web:design-packs-v2-98debceb5a8b`. A separate candidate passed its
