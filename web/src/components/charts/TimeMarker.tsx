@@ -1,6 +1,7 @@
 import { ReferenceLine } from 'recharts';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
+import { axisTickSm } from './chartUtils';
 
 export { severityTokens } from '@/lib/tokens';
 
@@ -80,7 +81,7 @@ export function TimeMarker({
         value: label,
         position: 'top',
         fill: stroke,
-        fontSize: 10,
+        fontSize: axisTickSm.fontSize,
       }}
     />
   );

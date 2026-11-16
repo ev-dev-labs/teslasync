@@ -116,13 +116,13 @@ export const baseConfig: PlaywrightTestConfig = {
       {
         name: 'app-design-firefox',
         testMatch: /widget-design-packs\.app\.spec\.ts$/,
-        fullyParallel: false,
+        fullyParallel: true,
         use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
       },
       {
         name: 'app-design-webkit',
         testMatch: /widget-design-packs\.app\.spec\.ts$/,
-        fullyParallel: false,
+        fullyParallel: true,
         use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
       },
     ] : []),

@@ -25,6 +25,9 @@
   }
 }
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-widget-pack="observatory"] [class~="text-[var(--text-muted)]"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-observatory"]) {
+    color: var(--text-secondary);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-observatory"]) {
     background-color: var(--app-surface-canvas, var(--bg-app));
     background-image: none;

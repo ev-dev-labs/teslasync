@@ -66,7 +66,7 @@ export default function InstrumentLayout({
         appearance === 'pixel' && '[&>svg]:[shape-rendering:crispEdges]',
       )}>{icon}</span>}
       <div data-app-part={radial ? 'metric' : undefined} data-app-metric={radial ? 'ring' : undefined}
-        className={cn('relative min-w-0', radial && 'flex size-32 shrink-0 items-center justify-center p-4')}>
+        className={cn('relative min-w-0', radial && 'flex size-[max(8rem,calc(8rem*var(--font-scale,1)))] shrink-0 items-center justify-center p-4')}>
         {radial && <svg data-app-part="chart-gauge" data-chart-family="radial-gauge" data-chart-variant="embedded"
           data-chart-gauge-shape={appearance === 'analog' ? 'needle' : 'arc'}
           viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
@@ -84,7 +84,7 @@ export default function InstrumentLayout({
             stroke={reading?.color ?? 'var(--theme-primary)'} strokeWidth={appearance === 'iconic' ? 8 : 5}
             pathLength="100" strokeDasharray={`${ratio * 100} 100`} />}
         </svg>}
-        <div className="relative min-w-0">{headline}</div>
+        <div className={cn('relative min-w-0', radial && '[&>div]:flex-col [&>div]:items-center [&>div]:justify-center [&_[data-app-metric=headline]]:items-center [&_[data-app-metric=headline]]:text-center')}>{headline}</div>
       </div>
     </div>
   ) : null;

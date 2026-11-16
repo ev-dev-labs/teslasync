@@ -19,7 +19,10 @@ existing audit now includes that paragraph, and the shared phone rule applies
 the existing body-size token without changing desktop or protected copy.
 The corresponding three harness cases passed, including every pack at 360px
 and 430px, both forced-color modes, both existing text scales, and the
-unchanged 12px desktop/protected text. Rebuilt-page verification is pending.
+unchanged 12px desktop/protected text. The rebuilt Dashboard/Drives/Energy
+captures now pass all 12 phone/desktop cases in both themes. The separate
+light-axis repair also passes its real Drives capture; all 12 incomplete
+nodes there have conservative bounds above AA (minimum 5.5802:1).
 
 Raw diagnostic evidence is in this session's `contrast-geometry.log` and
 `contrast-geometry.bounds.json`. Existing committed images were not changed.

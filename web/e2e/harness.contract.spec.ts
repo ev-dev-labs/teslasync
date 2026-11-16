@@ -1088,6 +1088,32 @@ test('shared phone heatmap and opted-in table wrap without losing cells or label
   }
 });
 
+test('light chart ticks retain AA contrast on the shared raised surface', async ({ page }) => {
+  await page.setContent(`
+    <div id="surface" style="background:var(--surface-2)">
+      <svg width="200" height="40">
+        <text id="axis" class="recharts-text recharts-cartesian-axis-tick-value" x="10" y="20">Nov 10</text>
+      </svg>
+    </div>
+  `);
+  await page.addStyleTag({ content: await readFile(resolve('src', 'index.css'), 'utf8') });
+  await page.locator('html').evaluate(root => root.classList.add('light-mode'));
+  const ratio = await page.evaluate(() => {
+    const luminance = (value: string) => {
+      const match = /^rgb\(([\d.,\s]+)\)$/.exec(value);
+      if (!match) throw new Error(`Expected opaque sRGB chart color: ${value}`);
+      return match[1].split(',').map(channel => {
+        const normalized = Number(channel) / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    };
+    const foreground = luminance(getComputedStyle(document.getElementById('axis')!).fill);
+    const background = luminance(getComputedStyle(document.getElementById('surface')!).backgroundColor);
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  });
+  expect(ratio).toBeGreaterThanOrEqual(4.5);
+});
+
 test('phone chart legends keep readable labels without changing protected widgets', async ({ page }) => {
   test.setTimeout(60_000);
   await page.setContent(`

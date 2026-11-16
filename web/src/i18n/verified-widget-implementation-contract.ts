@@ -504,7 +504,25 @@ export function restoreHelpColdSource(
   return previous;
 }
 
+export function restoreSharedAxisRoleSource(file: string, source: string): string {
+  if (file === 'web/src/components/charts/SmallMultiplesChart.tsx') {
+    expect(hash(source), file + ': exact shared axis role successor')
+      .toBe('87e0823f7639afa2ec84126038c4fe1af9ef40fa6d1b2541d9b05ef21a5e987e');
+    const shared = readFileSync(resolve(process.cwd(), 'src/components/charts/chartUtils.tsx'), 'utf8');
+    expect(hash(shared), file + ': actual unchanged-value axis role')
+      .toBe('81838b20d8a725ec3c2895ebec127302bdadf493915826c4108487c3cb552ddf');
+    nativeRepairPredecessor('web/src/lib/tokens.ts');
+    const sharedImport = "import { axisTickXs } from './chartUtils';\n";
+    expect(source.split(sharedImport), file + ': unique shared axis import').toHaveLength(2);
+    expect(source.split('tick={axisTickXs}'), file + ': both axis consumers').toHaveLength(3);
+    source = source.replace(sharedImport, '')
+      .replaceAll('tick={axisTickXs}', "tick={{ fill: 'var(--text-muted)', fontSize: 9 }}");
+  }
+  return source;
+}
+
 export function restoreAppDesignSource(file: string, source: string): string {
+  source = restoreSharedAxisRoleSource(file, source);
   source = restoreNativeSourceRepair(file, source);
   source = restorePreviewChartQuerySource(file, source);
   source = restoreSettingsPreviewInvokerSource(file, source);

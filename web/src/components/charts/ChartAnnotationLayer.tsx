@@ -1,6 +1,7 @@
 import { ReferenceLine } from 'recharts';
 import { ANNOTATION_COLORS } from '@/types/annotations';
 import type { DataAnnotation } from '@/types/annotations';
+import { axisTickSm } from './chartUtils';
 
 /**
  * Returns an array of ReferenceLine elements for chart annotations.
@@ -31,7 +32,7 @@ export function renderAnnotationLines(
           value: ann.label ?? '',
           position: 'top',
           fill: color,
-          fontSize: 10,
+          fontSize: axisTickSm.fontSize,
           fontWeight: 500,
         }}
       />

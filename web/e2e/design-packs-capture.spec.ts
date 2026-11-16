@@ -1268,8 +1268,16 @@ for (const route of routes) {
       });
       console.log(`Contrast: ${results.violations.length} violated rules, `
         + `${results.incomplete.reduce((count, rule) => count + rule.nodes.length, 0)} nodes require manual review`);
-      for (const rule of results.incomplete) {
-        for (const node of rule.nodes) {
+      let pixelReviewIndex = 0;
+      const manualGroups = results.incomplete.map(rule => rule.nodes.map(node => ({
+        target: [node.target.join(' ')], failureSummary: node.failureSummary,
+      })));
+      const requestedReview = process.env.DESIGN_PACK_CONTRAST_SELECTOR;
+      if (requestedReview) {
+        manualGroups.push([{ target: [requestedReview], failureSummary: 'Explicit manual contrast review target' }]);
+      }
+      for (const nodes of manualGroups) {
+        for (const node of nodes) {
           console.log(`  Manual contrast review: ${node.target.join(' > ')} — ${node.failureSummary ?? 'unknown'}`);
           if (process.env.DESIGN_PACK_CONTRAST_CONTEXT === '1') {
             const target = page.locator(node.target.join(' ')).first();
@@ -1338,6 +1346,40 @@ for (const route of routes) {
               };
             });
             console.log(`  Contrast context: ${JSON.stringify(context)}`);
+            if (process.env.DESIGN_PACK_CONTRAST_PIXELS === '1' && context.chain.some(ancestor =>
+              ancestor.image !== 'none' || ancestor.opacity !== '1' || ancestor.filter !== 'none' || ancestor.backdrop !== 'none')) {
+              const prefix = `contrast-painted-${pixelReviewIndex++}`;
+              const contextPath = testInfo.outputPath(`${prefix}.json`);
+              const paintedPath = testInfo.outputPath(`${prefix}.png`);
+              const backgroundPath = testInfo.outputPath(`${prefix}-background.png`);
+              await writeFile(contextPath, JSON.stringify(context, null, 2));
+              await testInfo.attach(`${prefix}.json`, {
+                path: contextPath, contentType: 'application/json',
+              });
+              await target.screenshot({ path: paintedPath, animations: 'disabled' });
+              await testInfo.attach(`${prefix}.png`, {
+                path: paintedPath, contentType: 'image/png',
+              });
+              const originalStyle = await target.getAttribute('style');
+              try {
+                await target.evaluate(element => {
+                  if (!(element instanceof HTMLElement || element instanceof SVGElement)) {
+                    throw new Error('Contrast review requires a styleable text element');
+                  }
+                  for (const property of ['fill', '-webkit-text-fill-color']) {
+                    element.style.setProperty(property, 'transparent', 'important');
+                  }
+                  element.style.setProperty('text-shadow', 'none', 'important');
+                });
+                await target.screenshot({ path: backgroundPath, animations: 'disabled' });
+                await testInfo.attach(`${prefix}-background.png`, { path: backgroundPath, contentType: 'image/png' });
+              } finally {
+                await target.evaluate((element, style) => {
+                  if (style === null) element.removeAttribute('style');
+                  else element.setAttribute('style', style);
+                }, originalStyle);
+              }
+            }
           }
         }
       }

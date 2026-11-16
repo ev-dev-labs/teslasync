@@ -342,12 +342,12 @@ jobs:
       - name: Run every application design phase
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: app-design-results.json
-        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep="$APP_DESIGN_PROFILE_TITLE" --workers=1 --reporter=line,json --output=test-results/app-design-profile
+        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep="$APP_DESIGN_PROFILE_TITLE" --workers=2 --reporter=line,json --output=test-results/app-design-profile
       - name: Preserve engine replay contract
         if: matrix.width == 1440 && matrix.theme == 'dark'
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: app-design-replay-results.json
-        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep-invert="Application design languages at" --workers=1 --reporter=line,json --output=test-results/app-design-replay
+        run: npm run e2e -- widget-design-packs.app.spec.ts --project="app-design-$APP_DESIGN_BROWSER" --grep-invert="Application design languages at" --workers=2 --reporter=line,json --output=test-results/app-design-replay
       - name: Upload application design evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2

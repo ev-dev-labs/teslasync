@@ -1,4 +1,37 @@
 # Design packs wrap-up handoff
+
+## Current continuation: 2026-11-16
+
+Work has resumed. This section supersedes the stopped-session record below.
+PR #259 still targets main, is ready/non-draft, mergeable and unmerged.
+Refreshed main integration is `245 0` before the next repair commit.
+`FIXLIST.md` is the current issue tracker; the prior follow-up deferrals are
+not accepted as impossible.
+
+The next repair batch fixes five packs' phone stat-card units, real
+Blueprint/Observatory patterned-text contrast, the radial Verified-label
+overlap, light chart ticks, the ElevationProfile grid and identical-value
+chart/heatmap token adoption. It preserves historical source receipts with
+exact inverse proofs rather than changing baselines. Production build,
+TypeScript, scoped lint/audits, affected unit tests and actual browser checks
+passed. See DECISIONS.md for raw counts and measured contrast evidence.
+Ten existing repaired dashboard images were replaced; no other shot changed.
+
+CI is still being monitored, not declared green. Quality run 43923744808 was
+cancelled/rerun once after over-age checks; its log exposed serial execution,
+not a deadlock. The batch enables two workers without removing any cases.
+Four existing all-pack phone cases passed in pinned Linux Firefox/WebKit in
+parallel, with zero loopback proxy errors. No full local unit shard run was
+performed in this continuation.
+
+Remaining work: final REVIEW/suppression reconciliation, the existing
+saved-layout popup case, latest-head exact desktop restoration gates, Docker
+3120 refresh, template-preserving PR description and final all-green receipt.
+The mutable diagnostic preview is on 50659; the completed frozen 50660 review
+server has been stopped. Other users' services remain untouched.
+
+## Historical stopped-session record
+
 Stopped at user request on 2026-11-16; resume only when requested.
 Branch: `design-packs-v2`; PR #259: https://github.com/ev-dev-labs/teslasync/pull/259 ; base: `main`; open, non-draft, unmerged.
 Repair head: `8edd91f9377e725d72a762bcb2c4fdb2db4b6b90`; the following documentation-only handoff commit is the current head (`git rev-parse HEAD`).

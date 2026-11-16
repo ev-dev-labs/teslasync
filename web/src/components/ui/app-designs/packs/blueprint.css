@@ -37,6 +37,9 @@
 }
 
 @media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="blueprint"] [data-widget-pack="blueprint"] [class~="text-[var(--text-muted)]"]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-blueprint"]) {
+    color: var(--text-secondary);
+  }
   :is(:root, [data-app-design-preview])[data-app-design-pack="blueprint"]:where([data-app-design-owner~="pack-blueprint"]) {
     --app-surface-canvas: var(--bg-app, var(--surface-1));
     --app-surface-panel: var(--panel-bg, var(--surface-1));

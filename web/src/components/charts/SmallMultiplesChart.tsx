@@ -41,6 +41,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { ChartTooltip } from './ChartTooltip';
+import { axisTickXs } from './chartUtils';
 import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
@@ -348,7 +349,7 @@ function SmallMultiplesCell({
             />
             <XAxis
               dataKey={xKey}
-              tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
+              tick={axisTickXs}
               tickFormatter={(v: string) => formatTime(v)}
               minTickGap={24}
               tickLine={false}
@@ -356,7 +357,7 @@ function SmallMultiplesCell({
             <YAxis
               tickFormatter={kind === 'count' ? (value: number) => fmtInt(value)
                 : kind === 'measurement' ? (value: number) => fmtNumber(value) : undefined}
-              tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
+              tick={axisTickXs}
               width={32}
               tickLine={false}
               domain={['auto', 'auto']}

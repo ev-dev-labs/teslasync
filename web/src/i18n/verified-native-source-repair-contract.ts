@@ -74,8 +74,12 @@ export const actualRepairSource = (file: string): string =>
 
 function restoreRepairDependency(file: string, source: string): string {
   if (file !== touchTokenFile) return source;
-  expect(hash(source), file + ': exact touch target successor').toBe(touchTargetSuccessor);
-  let previous = source;
+  expect(hash(source), file + ': exact shared heatmap cell successor')
+    .toBe('f798659dc9392ec7d651d0947d803b62f6fb02f6a8104442aa76060654d786f0');
+  const heatmapAddition = "  heatmap: {\n    cell: 'rounded-[3px] border border-[var(--border-subtle)]',\n  },\n";
+  expect(source.split(heatmapAddition), file + ': unique shared heatmap cell addition').toHaveLength(2);
+  let previous = source.replace(heatmapAddition, '');
+  expect(hash(previous), file + ': exact touch target successor').toBe(touchTargetSuccessor);
   for (const addition of touchTokenAdditions) {
     expect(previous.split(addition), file + ': unique touch target addition').toHaveLength(2);
     previous = previous.replace(addition, '');

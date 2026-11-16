@@ -382,6 +382,9 @@ export function resolveGaugeColor(tone?: GaugeTone, color?: string): string {
 // axes do the theming work).
 
 export const chartTokens = {
+  heatmap: {
+    cell: 'rounded-[3px] border border-[var(--border-subtle)]',
+  },
   /** Stroke color for axis lines and ticks — theme-aware muted text. */
   axisStroke: 'var(--text-muted)',
   /** Stroke color for cartesian grid lines — theme-aware subtle border. */

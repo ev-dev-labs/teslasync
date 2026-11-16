@@ -319,7 +319,7 @@
   }
 }
 @media screen and (max-width: 767px) {
-  :is(:root, [data-app-design-preview])[data-app-design-pack="brutal"] [data-widget-pack="brutal"] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
+  :is(:root, [data-app-design-preview])[data-app-design-pack="brutal"] [data-widget-pack="brutal"] :is([data-app-metric="headline"], [data-app-metric="stat-card"]) :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where(
     [data-app-design-preserve], [data-app-design-preserve] *, [data-vehicle-twin], [data-vehicle-twin] *,
     [data-app-metric-grid="native-gauge"] *, [data-app-metric="bar"] *, [data-app-metric="ring"] *,
     [data-app-metric="composition"] *, [data-app-metric="score"] *, [data-app-metric="segments"] *,

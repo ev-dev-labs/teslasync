@@ -1,5 +1,7 @@
 import { Caption } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
+import { chartTokens } from '@/lib/tokens';
 import { HeatmapCell } from './HeatmapCell';
 
 interface HeatmapLegendProps {
@@ -22,7 +24,7 @@ export function HeatmapLegend({ label, less, more, unavailable }: HeatmapLegendP
         <Caption>{less}</Caption>
         <span className="flex items-center gap-1.5" aria-hidden="true">
           {HEATMAP_LEVELS.map(level => (
-            <span key={level} data-heatmap-level={level} className="h-3.5 w-3.5 rounded-[3px] border border-[var(--border-subtle)]"
+            <span key={level} data-heatmap-level={level} className={cn('h-3.5 w-3.5', chartTokens.heatmap.cell)}
               style={{ backgroundColor: heatmapColor(level) }} />
           ))}
         </span>

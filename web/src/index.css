@@ -1022,7 +1022,7 @@ html[data-status-bar='off'] {
 
 /* Recharts light mode — axis ticks, tooltips, legend */
 :root.light-mode .recharts-cartesian-axis-tick-value {
-  fill: #64748b !important;
+  fill: var(--text-secondary) !important;
 }
 :root.light-mode .recharts-default-tooltip {
   background-color: var(--surface-elevated) !important;

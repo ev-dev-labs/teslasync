@@ -327,7 +327,7 @@
     font-size: var(--app-body-size, 1rem);
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-widget-pack] [data-testid="widget-body"] + div a[href]:not(:where([data-app-design-preserve], [data-app-design-preserve] *)):where([data-app-design-owner~="pack-warm"]),
-  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-widget-pack] [data-app-metric="headline"] :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-warm"]) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] [data-widget-pack] :is([data-app-metric="headline"], [data-app-metric="stat-card"]) :where([data-app-part~="metric-context"], [data-app-part~="metric-unit"]):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *)):where([data-app-design-owner~="pack-warm"]) {
     font-size: var(--app-body-size, 1rem);
     line-height: var(--app-body-leading, 1.4);
   }

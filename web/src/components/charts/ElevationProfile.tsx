@@ -1,8 +1,8 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceLine, ChartContainer, chartGrid, axisTick,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ReferenceLine, ChartContainer, chartGrid, axisTick, axisTickSm,
   AREA_DEFAULTS, areaGradient, ChartTooltip,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
@@ -121,17 +121,17 @@ export function ElevationProfile({
           className={cn(onClickIndex && 'cursor-pointer')}
         >
           {areaGradient('elevGrad', CHART_COLORS[2], 0.4)}
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis
             dataKey="distance"
             {...axisTick}
             tickFormatter={(value: number) => fmtNumber(value)}
-            label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: CHART_NEUTRAL } }}
+            label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: axisTickSm.fontSize, fill: CHART_NEUTRAL } }}
           />
           <YAxis
             {...axisTick}
             tickFormatter={(value: number) => fmtNumber(value)}
-            label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: CHART_NEUTRAL } }}
+            label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: axisTickSm.fontSize, fill: CHART_NEUTRAL } }}
           />
           <Tooltip
             content={<ChartTooltip />}

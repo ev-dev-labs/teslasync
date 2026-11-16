@@ -36,6 +36,7 @@ import {
   restoreTableEmptyViewportSource,
   restoreSettingsPreviewInvokerSource,
   restorePreviewChartQuerySource,
+  restoreSharedAxisRoleSource,
 } from './verified-widget-implementation-contract';
 
 describe('additive widget implementation preservation', () => {
@@ -85,7 +86,8 @@ describe('additive widget implementation preservation', () => {
       const designCurrent = restoreNativeSourceRepair(patch.file, current);
       expect(hash(restoreRuntimeV9Source(patch.file,
         restoreTableNoMatchSource(patch.file,
-          restoreCommandDeckModalSource(patch.file, restoreTableEmptyViewportSource(patch.file, designCurrent)))))).toBe(patch.after);
+          restoreCommandDeckModalSource(patch.file, restoreTableEmptyViewportSource(patch.file,
+            restoreSharedAxisRoleSource(patch.file, designCurrent))))))).toBe(patch.after);
       expect(hash(previous)).toBe(patch.before);
       expect(previous).not.toBe(current);
       const moved = appDesign.relocations.filter(([owner]) => owner === patch.file)

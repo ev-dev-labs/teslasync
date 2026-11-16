@@ -522,7 +522,7 @@ for (const [pack, mode] of phoneMetricPacks.flatMap(
     const preference = createReviewPreference();
     preference.pack_id = pack;
     preference.app_wide = true;
-    const widgets = [['recent-drives', 'Recent drives'], ['battery-gauge', 'Battery'],
+    const widgets = [['recent-drives', 'Recent drives'], ['battery-gauge', 'Battery'], ['charge-status', 'Charge status'],
       ['vehicle-twin', 'Digital Twin'], ['digital-twin-mini', 'Digital Twin Mini']] as const;
     const mocks = await installPackReview(page, mode, 390, false, widgets, true, preference, origin);
     await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
@@ -536,15 +536,18 @@ for (const [pack, mode] of phoneMetricPacks.flatMap(
       .locator('xpath=ancestor::*[@data-widget-pack][1]');
     const context = recent.locator('[data-app-metric="headline"] [data-app-part~="metric-context"]');
     const unit = battery.locator('[data-app-metric="headline"] [data-app-part~="metric-unit"]');
+    const distanceUnit = page.locator('[data-widget-id="pack-review-charge-status"] [data-app-metric="stat-card"] [data-app-part~="metric-unit"]')
+      .filter({ hasText: /^km$/ });
     await expect(context).toBeVisible();
     await expect(unit).toBeVisible();
+    await expect(distanceUnit).toBeVisible();
     for (const forcedColors of ['none', 'active'] as const) {
       await page.emulateMedia({ forcedColors });
       for (const width of [360, 390, 430]) {
         await page.setViewportSize({ width, height: 900 });
         for (const scale of [0.85, 1, 1.35]) {
           await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
-          for (const [name, slot] of [['context', context], ['unit', unit]] as const) {
+          for (const [name, slot] of [['context', context], ['unit', unit], ['distance unit', distanceUnit]] as const) {
             const geometry = await slot.evaluate(element => {
               const bounds = element.getBoundingClientRect();
               const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
@@ -587,7 +590,7 @@ for (const mode of ['dark', 'light'] as const) {
     const preference = createReviewPreference();
     preference.app_wide = true;
     const mocks = await installPackReview(page, mode, 390, false,
-      [['recent-drives', 'Recent drives']], true, preference, origin);
+      [['recent-drives', 'Recent drives'], ['charge-status', 'Charge status']], true, preference, origin);
     await routeBuiltApplication(page, new URL(origin).origin, ['/'], process.env.DESIGN_PACK_DIST_DIR);
     await page.goto('/');
     await waitForHarnessReady(page, mocks);
@@ -600,12 +603,18 @@ for (const mode of ['dark', 'light'] as const) {
       const context = pack === 'classic'
         ? recent.locator('.widget-detail-list .text-xs')
         : recent.locator('[data-app-metric="headline"] [data-app-part~="metric-context"]');
+      const charge = page.getByRole('heading', { name: 'Charge status', exact: true })
+        .locator('xpath=ancestor::*[@data-widget-pack][1]');
+      await expect(charge).toHaveAttribute('data-widget-pack', pack);
+      const distanceUnit = charge.locator('[data-app-metric="stat-card"] [data-app-part~="metric-unit"]')
+        .filter({ hasText: /^km$/ });
+      await expect(distanceUnit).toHaveCount(1);
       await expect.poll(() => context.count(), { message: `${pack} context` }).toBeGreaterThan(0);
       for (const width of [360, 390, 430]) {
         await page.setViewportSize({ width, height: 900 });
         for (const scale of [0.85, 1, 1.35]) {
           await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
-          const results = await context.evaluateAll(elements => elements.map(element => {
+          const results = await context.or(distanceUnit).evaluateAll(elements => elements.map(element => {
             const bounds = element.getBoundingClientRect();
             const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
             return {

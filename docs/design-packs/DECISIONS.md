@@ -1,5 +1,128 @@
 # Design Pack Decisions
 
+## 2026-11-16 painted contrast and completed phone-unit review
+
+The frozen, existing 27-pack Dashboard/Drives/Energy review finished with
+314 passed and 10 failed captures. The ten failures are the two phone themes
+of Editorial, Terminal, Bauhaus, Warm Modern and Neo Brutal: Charge Status's
+`km` stat-card unit was omitted by their headline-only phone rule. Warm
+Modern receives the same narrowly scoped selector correction. The expanded
+existing metric-context cases passed 16/16 after the first four repairs.
+The existing two all-pack context cases then passed against the final build,
+covering Charge Status units in all 27 packs, both themes, 360/390/430px and
+saved scales 0.85/1/1.35. No additional matrix or case family was created.
+
+Actual original/transparent-text image pairs found genuine patterned-widget
+contrast defects that Axe classified as incomplete: Blueprint footer text
+reached 4.3381:1, and Observatory metadata reached 3.4865:1. Owner-qualified,
+preserve-excluding, forced-colors-gated rules promote only those widgets'
+muted text to the existing secondary ink. The accepted grid/dot backgrounds
+and palettes are unchanged. Rebuilt phone/desktop captures passed in both
+themes. All 64 Blueprint painted nodes pass, minimum 5.6363:1; all 48
+Observatory nodes pass, minimum 4.5695:1.
+
+Observatory's Verified label also physically crossed its radial arc,
+measuring 1.7559:1 before repair. The shared radial layout now centers the
+stacked headline and status rather than wrapping them against the left edge.
+It retains the 128px default ring and grows with saved font scales above 1.
+SVG view boxes, radii, strokes, needles, values and nonradial layouts are
+unchanged. Four more real-page captures at scale 1.35 passed; all 50 painted
+nodes, including the explicitly selected label, pass (minimum 4.5695:1).
+The existing native composition/ownership tests also pass.
+
+Rebuilt light Drives captures for V1, V2, Material, Warm Modern and Cyber
+all pass. Their 33 incomplete nodes now have conservative bounds above AA;
+the lowest is 5.5802:1. The frozen Cyber dashboard capture also passes the
+previously failing QuickNav phone-prose check.
+
+The exact-value heatmap cell token and 9px small-axis role preserve their
+previous rendered values. Their historical source tests initially rejected
+the new file bytes. Explicit, unique inverse hunks now verify the complete
+new source and its real shared dependencies before comparing the unchanged
+historical hashes. Actual current translation calls remain the input to
+producer assertions. No historical fixture, snapshot or baseline changed.
+Both affected preservation files pass: 628 tests.
+
+## 2026-11-16 over-age CI execution
+
+Quality run 43923744808 was cancelled and its unfinished jobs rerun once
+after checks had been queued/running for 45 minutes. The direct completed-job
+log shows Firefox was making progress, not deadlocked: it had reached only
+phase 18/23 after roughly 43 minutes. These phases already use independent
+page/context fixtures, but the application-design projects explicitly
+disabled parallel execution and the workflow forced one worker.
+
+Enable the existing projects' normal parallel execution with two workers.
+Keep every phase, all 27 packs, all profile-registration assertions, the
+complementary replay cases, required job names and thresholds. This adds no
+matrix or suite. The separate performance-measurement job remains serial.
+Local Firefox validation first stopped because the pinned engine was absent;
+install it in session-local storage rather than altering shared browser caches.
+That download timed out. The existing pinned Linux image then ran the same
+four cases in Firefox and WebKit with two workers: `4 passed (2.7m)`.
+A loopback asset proxy matched CI's browser origin and rejected any unmocked
+API request; it reported `Loopback preview errors: 0`. A preliminary
+non-loopback HTTP-origin run was not valid CI evidence and is not counted.
+`actionlint`, changed-file ESLint and E2E TypeScript also pass.
+
+Ten existing dashboard screenshots were replaced after ten successful
+targeted captures: the five repaired phone-unit packs, Blueprint and
+Observatory phone/desktop, and Cyber's repaired phone prose. Capture output
+was staged outside the repository and copied only onto those ten tracked
+paths. No image was deleted, no new screenshot profile was added, and all
+other committed images remain untouched.
+
+## 2026-11-16 continued real-page review
+
+The existing screenshot-free captures reproduced a 12px Charge Status `km`
+unit on Editorial and Terminal phones in both themes. Extending the existing
+metric-context fixture with Charge Status reproduces 10.2px at saved scale
+0.85. Editorial, Terminal, Bauhaus and Neo Brutal share the same
+omission: their existing phone rule covers headline context/units but not
+stat-card context/units. Extend those existing selectors just as the earlier
+v4/v6/v7 repairs do. Keep all protected, gauge, report and kiosk exclusions;
+do not change desktop typography or pack treatments. No new suite or matrix
+is introduced. The expanded existing cases returned eight failed and eight
+passed before repair, with zero proxy escapes. Atlas already passes through
+its other existing typography rule and is left unchanged.
+
+V4's two blurred-header contrast incompletes needed actual paint evidence,
+not an assumption that backdrop blur can be ignored. Opt-in diagnostics in
+the existing capture attach the original text crop and its background with
+only that text made transparent, restoring the original style afterward.
+The 1,900 background pixels per theme were uniformly `(17,21,28)` dark and
+`(250,251,252)` light. Against the actual foregrounds, the minimum ratios
+are 17.0263:1 and 17.2314:1. Evidence is session-only; committed screenshots
+are unchanged. Explicit review targets do not alter Axe's reported results.
+
+GitHub's in-progress job-log endpoint returned HTTP 404 / BlobNotFound;
+completed job logs and check states remain available and are monitored.
+
+## 2026-11-16 shared chart consumer follow-up
+
+The running existing pack captures exposed a real contrast failure inside
+V1 Drives' Axe-incomplete nodes: light axis text `rgb(100,116,139)` on
+`rgb(241,245,249)` measures 4.3439:1. The root cause is the old global
+`#64748b !important` tick override, which defeats the pack's existing
+secondary-ink token. Use `--text-secondary` in that light-only rule; retain
+dark-mode colors, chart geometry and series palettes. A regression in the
+existing harness using the actual stylesheet failed at 3.5899:1 with its
+default raised-surface variables before the fix. No Axe exclusions are added.
+The repaired existing harness case passed. The actual rebuilt V1 Drives
+light capture passed; all six remaining incomplete nodes have conservative
+contrast bounds above their requirements (minimum 5.6353:1).
+
+The token review found a concrete pre-existing ElevationProfile defect: it
+spread the `chartGrid` React element as props on another CartesianGrid. The
+new focused regression failed because the rendered grid had no theme stroke;
+the real shared export's stroke, dash and opacity were all lost. Render the
+shared element directly. Keep the existing axis palettes and geometry.
+Elevation labels, TimeMarker and ChartAnnotationLayer also reuse the existing
+10px small-axis size rather than duplicate it; their rendered sizes do not
+change. No historical i18n fixture or acceptance threshold is modified.
+SmallMultiplesChart now also consumes one shared 9px extra-small axis role
+instead of duplicating that same size and muted foreground on both axes.
+
 ## 2026-11-16 resumed repair scope
 
 Observed clean `design-packs-v2` at `41ba181ee4`; PR #259 already targets
