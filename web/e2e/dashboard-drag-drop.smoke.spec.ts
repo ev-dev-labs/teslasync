@@ -3,6 +3,7 @@ import { test } from './app-design-test'
 import { closeMockedPage, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 import type { AutomationHistoryListResponse } from '../src/api/types'
 import { beginNativeDashboardDrag } from './dashboardDragPrecondition'
+import { resolveCardLayoutContractSource } from './cardLayoutContractSources'
 import { GRID_COLS, resolveBreakpointFromWidth } from '../src/features/dashboard/hooks/useDashboardLayout'
 import { attachDiagnostics, expectNoRuntimeFailures, monitorPage, type PageDiagnostics } from './qualityAssertions'
 
@@ -159,6 +160,12 @@ test(`docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
   await page.setViewportSize({ width, height: 900 })
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
+  await page.route('**/api/v1/mileage/daily?**', route => {
+    const request = route.request()
+    const source = resolveCardLayoutContractSource(new URL(request.url()))
+    if (request.method() !== 'GET' || source === undefined) return route.fallback()
+    return fulfillApiFixture(route, mockApi, { json: source })
+  })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mockApi)
   await createCommuter(page)

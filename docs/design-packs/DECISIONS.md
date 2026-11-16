@@ -3449,3 +3449,39 @@ Final TypeScript and targeted ESLint commands exited zero. No workflow,
 threshold, production API, design styling or committed screenshot changed
 in this CI-contract batch.
 
+On commit `127896f3b3`, responsive shard 3 passed 110 cases and failed the two
+docked-picker cases because strict teardown exposed an unmocked
+`GET /mileage/daily` read from the newly dropped Odometer widget. The test now
+registers that specific source using the existing typed card-layout fixture
+resolver. Unknown vehicles, query shapes and methods still fall through to
+the unmatched-request gate. No production endpoint, widget or assertion was
+changed.
+
+While CI ran, the existing WebKit phone core-interactions phase was started
+locally. Unlike Chromium, this engine reports offline on Docker's internal
+network without a default route. That invalid attempt was stopped; a
+task-owned bridge network (not the shared application network) reported
+`navigator.onLine === true` before the existing phase was restarted.
+
+The repaired CI ordinary-shard selection passed locally with all 112
+registrations intact, using installed native Edge and one worker:
+
+```text
+npm run e2e:quality -- --shard=3/24 --grep-invert="widget-design-packs\.(app|energy|native)\.spec\.ts" --config=playwright.finish.local.config.ts --workers=1
+112 passed (11.1m)
+E2E preview proxy escape check: 0 errors
+npx tsc --noEmit
+exit 0
+npx eslint e2e/dashboard-drag-drop.smoke.spec.ts
+exit 0
+```
+
+The temporary config was removed. The existing shard also wrote 41 tracked
+charging/dashboard screenshots outside the design-pack directory; only
+those test-generated changes were restored to their committed bytes.
+No design-pack screenshot changed. The online ARM64 WebKit diagnostic had
+click and screenshot timing failures; these are not presented as a local
+pass or grounds for changing accepted designs. The previous GitHub
+390px/dark WebKit job passed, but only the latest-commit checks can establish
+final acceptance.
+
