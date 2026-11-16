@@ -698,20 +698,9 @@ jobs:
         run: |
           npm ci --prefix apps/desktop
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm version $env:VERSION --no-git-tag-version --prefix apps/desktop
+          npm test --prefix apps/desktop
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run dist --prefix apps/desktop -- --win nsis appx
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $appx = @(Get-ChildItem apps/desktop/release -Filter *.appx)
-          $exe = @(Get-ChildItem apps/desktop/release -Filter *.exe)
-          if ($appx.Count -ne 1 -or $exe.Count -ne 1) {
-            throw "Expected one AppX and one NSIS installer; found $($appx.Count) and $($exe.Count)."
-          }
-          ./apps/desktop/package-msix.ps1 -Appx $appx[0].FullName -Msix "apps/desktop/release/TeslaSync-$env:VERSION.msix"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Path release-assets | Out-Null
-          Copy-Item $exe[0].FullName "release-assets/TeslaSync-$env:VERSION-setup.exe"
-          Copy-Item "apps/desktop/release/TeslaSync-$env:VERSION.msix" release-assets/
+          .\apps\desktop\build-windows.ps1 -Version $env:VERSION -AssetsDirectory release-assets
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -800,7 +789,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(find release-assets -maxdepth 1 -name '*.exe' | wc -l)" -eq 1
-          test "$(find release-assets -maxdepth 1 -name '*.msix' | wc -l)" -eq 1
+          test "$(find release-assets -maxdepth 1 -name '*.msix' | wc -l)" -eq 2
+          test "$(find release-assets -maxdepth 1 -name '*.msixbundle' | wc -l)" -eq 1
           test "$(find release-assets -maxdepth 1 -name '*.apk' | wc -l)" -eq 1
 
       - name: Create and push tag
@@ -885,9 +875,11 @@ jobs:
 
           ### 📱 Desktop and Android downloads
 
-          Download the Windows NSIS installer (\`.exe\`), unsigned Windows package
-          (\`.msix\`), or debug-signed Android test build (\`-debug.apk\`) from the
-          assets below. The MSIX needs signing with a trusted publisher certificate
+          Download the universal Windows NSIS installer (\`.exe\`), unsigned Windows
+          packages (\`.msix\`), multi-architecture Store bundle (\`.msixbundle\`),
+          or debug-signed Android test build (\`-debug.apk\`) from the assets below.
+          The installer selects native ARM64 on Windows on Arm and x64 on Intel/AMD.
+          MSIX packages and the bundle need signing with a trusted publisher certificate
           before sideloading; the Store signs packages installed through the Store.
           The debug APK is for testing, **not** Play Store distribution.
           Its signing key changes per CI run; uninstall an older CI APK before
@@ -943,8 +935,10 @@ jobs:
           | Automation Worker | \`ghcr.io/${{ github.repository }}-automation-worker:${VERSION}\` |
           | Fleet Telemetry | \`ghcr.io/${{ github.repository }}-fleet-telemetry:${VERSION}\` |
           | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
-          | Windows installer | \`TeslaSync-${VERSION}-setup.exe\` |
-          | Windows MSIX (unsigned) | \`TeslaSync-${VERSION}.msix\` |
+          | Windows installer (native x64 + ARM64) | \`TeslaSync-${VERSION}-setup.exe\` |
+          | Windows x64 MSIX (unsigned) | \`TeslaSync-${VERSION}.msix\` |
+          | Windows ARM64 MSIX (unsigned) | \`TeslaSync-${VERSION}-arm64.msix\` |
+          | Windows Store bundle (x64 + ARM64, unsigned) | \`TeslaSync-${VERSION}.msixbundle\` |
           | Android test APK (debug-signed) | \`TeslaSync-${VERSION}-debug.apk\` |
           NOTES_EOF
 

@@ -49,12 +49,12 @@ jobs:
             --clientSecret $env:AZURE_AD_APPLICATION_SECRET
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Submit MSIX to Microsoft Store
+      - name: Submit MSIX bundle to Microsoft Store
         shell: pwsh
         run: |
-          $packages = @(Get-ChildItem release-assets -Filter *.msix -File)
+          $packages = @(Get-ChildItem release-assets -Filter *.msixbundle -File)
           if ($packages.Count -ne 1) {
-            throw "Expected exactly one MSIX artifact; found $($packages.Count)."
+            throw "Expected exactly one x64 + ARM64 MSIX bundle; found $($packages.Count)."
           }
           msstore publish "$($packages[0].FullName)" -id "9NKH07ZV3V96"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
