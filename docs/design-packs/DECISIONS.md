@@ -3601,3 +3601,37 @@ three-attempt rule, the untraced native-Edge charging-switch investigation is
 temporarily parked while the already-identified CI navigation failures are
 verified. It must be revisited before final handoff; it is not reported fixed.
 
+The untraced native 3/8 run completed with `23 passed (1.3h)`, one failing
+phone accessibility-preview case, and zero proxy escapes. Its three attempts
+timed out evaluating different preview DOMs, rather than reporting an axe
+violation. CI's corresponding selection passed all 24 cases before its
+navigation gate failed. The temporary native-Edge configuration had disabled
+tracing for resource savings, unlike CI's `retain-on-failure` policy. Further
+local selections retain the actual CI tracing policy; neither assertions nor
+timeouts change. The two timing-sensitive cases will be revisited with that
+policy before concluding whether a product change is justified.
+
+The final ordinary shard 5/24, now including the actual Retry-click pricing
+fixture, returned `112 passed (19.9m)` and zero proxy escapes.
+
+Responsive 32 subsequently returned `26 passed (2.6h)` but failed its proxy
+gate. Its log attributes repeated escapes to the native records/progress/state
+loops (including 108 during compact coverage), which still used unprepared
+`goto`/`reload` calls. Those paths now use the same guarded navigation lifecycle,
+and the native spec uses the existing retiring-page fixture. Held initial-loading
+reads are released before validating navigation, so loading assertions remain
+observable and no pending-read gate is bypassed. The dependent Chromium aggregate
+failed solely because its required browser jobs failed. No workflow or gate is
+changed. All old-head workflows have finished; latest-head verification still
+requires the pending local selections and the batched push.
+
+With the actual CI trace policy, the original phone accessibility-preview and
+custom-phone charging cases both passed unchanged: `2 passed (16.2m)`,
+zero proxy escapes. Native 4/8 and 5/8 also returned `24 passed (1.1h)` and
+`24 passed (1.2h)`, respectively, with zero proxy escapes. This revisits the
+parked timing investigation without a speculative product/style change;
+the separate untraced native-Edge behavior is not claimed repaired.
+The native state-navigation patch passes changed-file ESLint and all 96
+existing harness contracts (`96 passed (4.1m)`). Full native 6/8, 7/8 and
+8/8 selections are running with the same CI tracing policy and original gates.
+

@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { waitForHarnessReady, type MockApiController } from './mockApi';
+import { assertMockApiAfterNavigation, prepareMockApiNavigation, waitForHarnessReady, type MockApiController } from './mockApi';
+import { navigateAppDesign } from './app-design-test';
 import { compositionGeometry } from './widget-design-packs.acceptance';
 import { nativeSignalNames, type NativeLiveMode } from './widget-design-packs.native.fixtures';
 import { inspectCompactSignalCoverage, inspectNativeGap, inspectNativeTrack } from './widget-design-packs.native';
@@ -39,7 +40,7 @@ export async function inspectNativeRecordStates(
       surface: await compositionGeometry(focus) };
   };
   sources.setLive('stale');
-  await page.goto('/signal-gaps');
+  await navigateAppDesign(page, '/signal-gaps');
   await waitForHarnessReady(page, mocks);
   const freshness = page.locator('[data-app-part~="panel"]').filter({
     has: page.getByRole('heading', { name: 'Freshness', exact: true }),
@@ -62,16 +63,19 @@ export async function inspectNativeRecordStates(
   await inspectNativeGap(page);
 
   const releaseLive = sources.holdLive();
+  const origin = new URL(page.url()).origin;
   try {
+    await prepareMockApiNavigation(page);
     await page.reload();
     await expect(freshness.locator('[data-app-part="skeleton"]')).toBeVisible();
     await expect(freshness.locator('[data-app-metric="ring"]')).toHaveCount(0);
     await snapshot('gap-initial-loading', freshness);
   } finally { releaseLive(); }
+  await assertMockApiAfterNavigation(page, origin);
   await waitForHarnessReady(page, mocks);
   await inspectNativeGap(page);
   sources.failLive();
-  await page.reload();
+  await navigateAppDesign(page, null);
   await expect(freshness.getByRole('alert')).toBeVisible();
   await expect(freshness.locator('[data-app-metric="ring"]')).toHaveCount(0);
   await snapshot('gap-initial-error', freshness);
@@ -90,6 +94,7 @@ export async function inspectNativeRecordStates(
   sources.setHistory(4);
   const releaseHistory = sources.holdHistory();
   try {
+    await prepareMockApiNavigation(page);
     await page.goto(signalPath);
     const skeleton = catalog.locator('[data-app-part="skeleton"]');
     await expect(skeleton).toHaveCount(1);
@@ -100,6 +105,7 @@ export async function inspectNativeRecordStates(
     expect(size.height).toBeCloseTo(18, 0);
     await snapshot('trend-initial-loading', catalog);
   } finally { releaseHistory(); }
+  await assertMockApiAfterNavigation(page, origin);
   await expect(trend).toBeVisible();
   sources.failHistory();
   await invalidateRead(page, sources, mocks, historyKey, historyPath);
@@ -119,7 +125,7 @@ export async function inspectNativeRecordStates(
     await snapshot(`trend-${count}-samples`, catalog);
   }
   sources.failHistory();
-  await page.reload();
+  await navigateAppDesign(page, null);
   await expect(catalog.getByRole('img', { name: 'Failed to load trend', exact: true })).toBeVisible();
   await snapshot('trend-initial-error', catalog);
   sources.setHistory(4);
@@ -139,7 +145,7 @@ export async function inspectNativeProgressStates(
     states[name] = { page: await compositionGeometry(page.locator('body')),
       surface: await compositionGeometry(focus) };
   };
-  await page.goto('/vehicle-comparison?leftId=7&rightId=8');
+  await navigateAppDesign(page, '/vehicle-comparison?leftId=7&rightId=8');
   await waitForHarnessReady(page, mocks);
   const status = page.locator('section[aria-labelledby="fleet-compare-status-title"]');
   const tracks = status.locator('[data-metric-track][role="progressbar"]');
@@ -163,7 +169,7 @@ export async function inspectNativeProgressStates(
   sources.setBattery(25.5);
   await invalidateRead(page, sources, mocks, ['vehicle-state', 8], '/vehicles/8/state');
   sources.setMileage(10_000);
-  await page.goto('/');
+  await navigateAppDesign(page, '/');
   await waitForHarnessReady(page, mocks);
   const mileage = page.locator('[data-widget-id="pack-review-mileage-stats"]');
   const health = page.locator('[data-widget-id="pack-review-signal-health"]');

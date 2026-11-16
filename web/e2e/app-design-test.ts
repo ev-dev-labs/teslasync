@@ -17,6 +17,14 @@ export async function routeBuiltApplication(page: Page, origin: string, paths: s
   });
 }
 
+export async function navigateAppDesign(page: Page, destination: string | null) {
+  const origin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null;
+  await prepareMockApiNavigation(page);
+  if (destination === null) await page.reload();
+  else await page.goto(destination);
+  if (origin) await assertMockApiAfterNavigation(page, origin);
+}
+
 export const test = base.extend({
   page: async ({ page }, runTest, testInfo) => {
     try {

@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { navigateAppDesign, test } from './app-design-test';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
 import { assertContained, compositionGeometry } from './widget-design-packs.acceptance';
@@ -29,7 +30,7 @@ for (const family of families) {
         const mocks = await installPackReview(page, theme, width, false, nativeWidgets, false, saved,
           info.project.use.baseURL);
         const sources = await installNativeReviewSources(page, mocks, width);
-        await page.goto('/');
+        await navigateAppDesign(page, '/');
         await waitForHarnessReady(page, mocks);
         const signatures = new Map<string, Set<string>>();
         const evidence: Record<string, unknown> = {};
@@ -56,7 +57,7 @@ for (const family of families) {
               else for (const path of required) {
                 sources.setLive('stale');
                 sources.setHistory(4);
-                await page.goto(path);
+                await navigateAppDesign(page, path);
                 await waitForHarnessReady(page, mocks);
                 let surface: unknown;
                 if (path === '/') surface = await inspectNativeDashboard(page, packId, info, width);
@@ -115,7 +116,7 @@ test('Native compact signal coverage preserves measured, missing, zero and full 
     info.project.use.baseURL);
   const sources = await installNativeReviewSources(page, mocks, 390);
   const evidence: Record<string, unknown> = {};
-  await page.goto('/');
+  await navigateAppDesign(page, '/');
   await waitForHarnessReady(page, mocks);
   try {
     for (const packId of Object.keys(packNames) as PackId[]) {
@@ -124,7 +125,7 @@ test('Native compact signal coverage preserves measured, missing, zero and full 
         const states: Record<string, unknown> = {};
         for (const [mode, percentage] of [['stale', 14], ['empty', null], ['zero', 0], ['fresh', 100]] as const) {
           sources.setLive(mode);
-          await page.goto('/');
+          await navigateAppDesign(page, '/');
           await waitForHarnessReady(page, mocks);
           await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', packId);
           const health = page.locator('[data-widget-id="pack-review-signal-health"]');
