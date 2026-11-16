@@ -337,7 +337,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {lastServiceEntries.length > 0 ? (
             <ul data-app-part="list" aria-label={t('widget.maintenance.recentService', 'Recent service')} className={cn('m-0 list-none space-y-2 p-0', timeline?.feed)}>
               {recentRecords.slice(0, 3).map((rec, index) => (
-                <li key={rec.itemId || index} className={cn('border-b border-[var(--border-subtle)] py-2 last:border-b-0', timeline?.row)}>
+                <li key={`${rec.itemId}:${rec.date}:${index}`} className={cn('border-b border-[var(--border-subtle)] py-2 last:border-b-0', timeline?.row)}>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>

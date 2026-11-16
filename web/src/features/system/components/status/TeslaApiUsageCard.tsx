@@ -90,8 +90,8 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
           key: 'history',
           title: t('teslaUsage.history', 'Prior 30-day cycles'),
           items: apiUsage.history.length
-            ? apiUsage.history.map(c => ({
-                key: c.start,
+            ? apiUsage.history.map((c, index) => ({
+                key: `${c.start}:${index}`,
                 label: `${formatDateRange(c.start, c.end)} · ${fmtInt(count(c))} ${t('teslaUsage.eventsShort', 'events')}`,
                 value: formatUsd(c.estimated_usd),
               }))

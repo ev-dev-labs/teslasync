@@ -146,10 +146,10 @@ export default function ComponentSurvivalPage() {
                   <Text as="h4" variant="label">
                     {t('advancedIntelligence.survival.risks.title', 'Competing risks')}
                   </Text>
-                  {(item.competing_risks ?? []).length > 0 ? item.competing_risks.map((risk) => (
+                  {(item.competing_risks ?? []).length > 0 ? item.competing_risks.map((risk, riskIndex) => (
                     risk.probability_pct != null ? (
                       <MetricBar
-                        key={risk.risk}
+                        key={`${risk.risk}:${riskIndex}`}
                         label={`${componentLabel(risk.risk)} · ${t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}`}
                         value={risk.probability_pct}
                         max={100}
@@ -158,7 +158,7 @@ export default function ComponentSurvivalPage() {
                         sublabel={`${fmtNumber(risk.probability_pct)}%`}
                       />
                     ) : (
-                      <div key={risk.risk} data-app-part="metric" data-app-metric="tile" data-app-state="missing"
+                      <div key={`${risk.risk}:${riskIndex}`} data-app-part="metric" data-app-metric="tile" data-app-state="missing"
                         className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
                         <Text as="span" data-app-part="metric-label" variant="bodySm" className="min-w-0 break-words">
                           {componentLabel(risk.risk)} · {t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}
