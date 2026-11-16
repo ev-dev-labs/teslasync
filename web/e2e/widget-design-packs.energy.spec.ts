@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ChargingSession } from '../src/api/types';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
-import { attachJsonEvidence, routeBuiltApplication } from './app-design-test';
+import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { findSmallBodyText } from './design-packs-capture';
 import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';

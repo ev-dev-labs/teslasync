@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { EnergyFlowSnapshot } from '../src/api/hooks/useEnergy';
 import type { EnergyStats } from '../src/types/energy';
 import {
@@ -35,7 +35,7 @@ export const unknownEnergyFlow: EnergyFlowSnapshot = {
 type Endpoint = 'history' | 'flow';
 type ReadPlan =
   | { kind: 'success'; body: EnergyStats | EnergyFlowSnapshot }
-  | { kind: 'error' }
+  | { kind: 'error'; recoverOnClick?: boolean }
   | { kind: 'held'; body: EnergyStats | EnergyFlowSnapshot; ready: Promise<void> };
 
 export type EnergyReviewSources = Awaited<ReturnType<typeof installEnergyReviewSources>>;
@@ -74,7 +74,15 @@ export async function installEnergyReviewSources(page: Page, mocks: MockApiContr
           status: 599, json: { error: 'Unexpected energy review request' },
         });
       }
-      const plan = plans[endpoint];
+      let plan = plans[endpoint];
+      if (plan.kind === 'error' && plan.recoverOnClick && await page.evaluate(key => {
+        const clicked = sessionStorage.getItem(key) === 'clicked';
+        if (clicked) sessionStorage.removeItem(key);
+        return clicked;
+      }, `teslasync-e2e-energy-recovery:${endpoint}`)) {
+        reset(endpoint);
+        plan = plans[endpoint];
+      }
       reads.push({ endpoint, kind: plan.kind });
       if (plan.kind === 'held') {
         mocks.pending += 1;
@@ -104,6 +112,15 @@ export async function installEnergyReviewSources(page: Page, mocks: MockApiContr
     setFlow(body: EnergyFlowSnapshot) { plans.flow = { kind: 'success', body }; },
     setHistory(body: EnergyStats) { plans.history = { kind: 'success', body }; },
     fail(endpoint: Endpoint) { plans[endpoint] = { kind: 'error' }; },
+    async recoverOnClick(endpoint: Endpoint, trigger: Locator) {
+      // Polling must not recover the source before its real Retry/Refresh click.
+      await trigger.evaluate((element, key) => {
+        sessionStorage.removeItem(key);
+        element.addEventListener('click', () => sessionStorage.setItem(key, 'clicked'),
+          { capture: true, once: true });
+      }, `teslasync-e2e-energy-recovery:${endpoint}`);
+      plans[endpoint] = { kind: 'error', recoverOnClick: true };
+    },
     reset,
     hold(endpoint: Endpoint) {
       let resolve: () => void = () => {};

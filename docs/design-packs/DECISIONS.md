@@ -3635,3 +3635,49 @@ The native state-navigation patch passes changed-file ESLint and all 96
 existing harness contracts (`96 passed (4.1m)`). Full native 6/8, 7/8 and
 8/8 selections are running with the same CI tracing policy and original gates.
 
+Native 7/8 completed with `27 passed (1.1h)` and zero proxy escapes.
+The native 8/8 local run exposed an energy source-state fixture race:
+initial-error assertions began at DOMContentLoaded while route delivery was
+still catching up, and resetting the live source before clicking Retry let
+polling remove that button before the native click. The retained trace shows
+the history panel still loading and the first 500 response arriving late in
+the assertion window. Energy reloads now use the same guarded navigation
+lifecycle; held initial reads are still observed before release and validation.
+Recovery fixtures remain failed until the real Retry/Refresh click occurs.
+The four existing source-state cases are queued for verification without
+changing production behavior, assertion timeouts, retries or coverage.
+One mobile-header tooltip assertion also failed on its first attempt; its
+existing retry is still running, so it is not yet classified or reported fixed.
+
+Native 6/8 returned `24 passed (1.5h)`, zero proxy escapes. The energy lifecycle
+patch passed changed-file lint and the 96 existing harness contracts
+(`96 passed (3.0m)`). Its browser rerun caught an assertion integration error:
+the preference snapshot counted the two harness-owned unload ledgers as user
+preferences. It now excludes only those exact keys; their payloads and delivery
+remain checked by the strict navigation validator. All application storage
+keys still participate in the unchanged equality assertion.
+
+The native 8/8 progress case also reproduced a real clipped saved-layout popup
+on the 390px Analog dashboard. The existing failure frame shows its right side
+outside the viewport, although the document itself does not scroll horizontally.
+The popup now fits its trigger container below the existing `sm` breakpoint;
+desktop sizing, commands, focus behavior and pack treatments are unchanged.
+The superseded native 8/8 and energy rerun were stopped once their failures
+were understood, before rebuilding their shared test assets. Their partial
+results are not reported as passing selections.
+
+The phone popup change passes `npx tsc --noEmit`, changed-file ESLint and all
+55 existing `LayoutSwitcher.test.tsx` tests. Its violations audit reports no
+violations; the component is 502 lines versus 501, with no removed sections.
+`npm run e2e:build` passed in 3m33s with the existing chunk-size warning.
+The original 26-case native 8/8 selection is running against those rebuilt
+assets, including all four energy source-state cases and the existing popup
+and tooltip checks. No full frontend unit suite was repeated.
+
+Work stopped at the user's handoff request. The replacement native 8/8 run
+and its log watcher were terminated; the log reached case 15/26 with no
+reported failure, not a completed passing result. The full frontend lint
+command passed. The local Edge configuration is retained without its old
+session-specific output directory so the next session can reproduce the run.
+The Docker preview remains healthy on 3120 but predates the popup repair.
+

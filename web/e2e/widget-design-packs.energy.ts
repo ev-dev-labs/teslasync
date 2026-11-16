@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
+import { navigateAppDesign } from './app-design-test';
+import { assertMockApiAfterNavigation, prepareMockApiNavigation } from './mockApi';
 import { assertContained, assertOwnedTree, compositionGeometry } from './widget-design-packs.acceptance';
 import { selectReviewPack } from './widget-design-packs.mock';
 import {
@@ -31,7 +33,12 @@ export async function inspectEnergyReview(
   const chip = charging.locator('[data-app-part~="badge"]');
   const meter = diagram.getByRole('meter', { name: 'Battery', exact: true });
   const evidence: Record<string, unknown> = {};
-  const savedStorage = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+  // Navigation telemetry has its own strict ledger validation, not user preferences.
+  const readPreferences = () => page.evaluate(() => Object.fromEntries(
+    Object.entries(localStorage).filter(([key]) =>
+      key !== '__TESLASYNC_E2E_UNLOAD_REQUESTS__' && key !== '__TESLASYNC_E2E_UNLOAD_BEACONS__'),
+  ));
+  const savedStorage = await readPreferences();
 
   async function shells(background = false) {
     await expect(main.getByRole('heading', {
@@ -243,9 +250,10 @@ export async function inspectEnergyReview(
     if (endpoint === 'flow') await facts(['11.00 kW', '0.00 kW', 'N/A', 'N/A']);
     else await expect(summary).toContainText('30.00');
     await snapshot(`${endpoint}-retained`, surface);
-    sources.reset(endpoint);
+    const recover = surface.getByRole('button', { name: 'Refresh', exact: true });
+    await sources.recoverOnClick(endpoint, recover);
     const readsBefore = sources.reads.filter(read => read.endpoint === endpoint).length;
-    await surface.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await recover.click();
     await expect.poll(() => sources.reads.filter(read => read.endpoint === endpoint).length).toBeGreaterThan(readsBefore);
     await expect(surface.getByTestId('stale-refresh-warning')).toHaveCount(0);
     await success();
@@ -257,28 +265,31 @@ export async function inspectEnergyReview(
   for (const endpoint of ['flow', 'history'] as const) {
     const surface = endpoint === 'flow' ? power : card('Daily energy usage');
     const release = sources.hold(endpoint);
+    const origin = new URL(page.url()).origin;
     try {
-      await page.reload({ waitUntil: 'domcontentloaded' });
+      await prepareMockApiNavigation(page);
+      await page.reload();
       await expect(surface.locator('[data-app-part~="skeleton"]').first()).toBeVisible();
       await neighbor(endpoint);
       await snapshot(`${endpoint}-initial-loading`, surface);
     } finally { release(); }
+    await assertMockApiAfterNavigation(page, origin);
     await success();
     await plots();
     sources.fail(endpoint);
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await navigateAppDesign(page, null);
     const retry = surface.getByRole('button', { name: 'Retry', exact: true });
     await expect(retry).toBeVisible();
     await neighbor(endpoint);
     await snapshot(`${endpoint}-initial-error`, surface);
-    sources.reset(endpoint);
+    await sources.recoverOnClick(endpoint, retry);
     await retry.click();
     await expect(retry).toHaveCount(0);
     await success();
     await plots();
     await snapshot(`${endpoint}-recovered`, surface);
   }
-  expect(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))),
+  expect(await readPreferences(),
     'local source-state review preserves all user preferences').toEqual(savedStorage);
   return evidence;
 }
