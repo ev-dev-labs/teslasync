@@ -259,12 +259,12 @@ it.each(['classic', 'v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus
   } finally { view.dispose(); }
 });
 
-it('keeps Expressive Form stat-card phone typography outside protected and specialized surfaces', async () => {
-  const view = fixture('v6');
+it.each(['v6', 'v7'] as const)('keeps %s stat-card phone typography outside protected and specialized surfaces', async pack => {
+  const view = fixture(pack);
   try {
-    const rules = sheets.find(sheet => sheet.pack === 'v6')!.rules;
+    const rules = sheets.find(sheet => sheet.pack === pack)!.rules;
     const widget = view.doc.createElement('section');
-    widget.setAttribute('data-widget-pack', 'v6');
+    widget.setAttribute('data-widget-pack', pack);
     const metric = '<div data-app-metric="stat-card"><span data-app-part="metric-unit">km</span><span data-app-part="metric-context">Context</span></div>';
     widget.innerHTML = `
       <div data-case="ordinary">${metric}</div>
@@ -279,7 +279,7 @@ it('keeps Expressive Form stat-card phone typography outside protected and speci
     for (const kind of ['ordinary', 'preserved', 'twin', 'gauge', 'ring', 'report', 'kiosk']) {
       for (const part of ['metric-unit', 'metric-context']) {
         const element = widget.querySelector(`[data-case="${kind}"] [data-app-part~="${part}"]`)!;
-        element.setAttribute('data-app-design-owner', 'pack-v6');
+        element.setAttribute('data-app-design-owner', `pack-${pack}`);
         const typography = declarations(element, rules).filter(({ property }) => property === 'font-size');
         if (kind === 'ordinary') {
           expect(typography, `${kind} ${part}`).toEqual(expect.arrayContaining([

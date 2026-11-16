@@ -3233,3 +3233,23 @@ passed against the same committed build in isolated Chromium:
 5 passed (1.3m)
 BROWSER_PROBE_API_ESCAPE=0
 ```
+## 2026-11-16: accepted design and bounded finalization
+
+The user accepted the pack designs and ended redesign work. Only dashboard
+Digital Twin accessibility failures, Firefox chart axes, phone overflow or
+unreadable text, generated-artifact freshness, merge regressions and failing
+PR workflows remain in scope. No new test suites or screenshot matrices
+will be introduced. Existing screenshots will be committed unchanged;
+only an explicitly repaired page may have its existing capture replaced.
+Deferred work is recorded in FOLLOWUPS.md.
+
+The matrix process (shell 7795) was stopped. The pause extension failed, so
+the known task-owned process was stopped directly; unrelated servers and
+containers were left alone.
+
+GitHub rejected the requested direct base edit because #259 belonged to
+native stack #260. Both members were open drafts with no auto-merge.
+The stack association was removed, #258 was left open against main, and
+#259 was retargeted to main. No branches were rewritten or force-pushed.
+Fetched origin/main was already an ancestor of design-packs-v2.
+

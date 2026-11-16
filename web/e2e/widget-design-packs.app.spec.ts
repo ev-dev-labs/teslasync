@@ -454,7 +454,7 @@ for (const mode of ['dark', 'light'] as const) {
 }
 
 const phoneMetricPacks = ['v4', 'v6', 'v7', 'editorial', 'terminal', 'atlas', 'bauhaus', 'brutal'] as const;
-for (const [pack, mode] of (['v4', 'v6'] as const).flatMap(
+for (const [pack, mode] of (['v4', 'v6', 'v7'] as const).flatMap(
   pack => (['dark', 'light'] as const).map(mode => [pack, mode] as const),
 )) {
   test(`${packNames[pack]} dashboard distance units remain readable outside preserved widgets in ${mode}`, async ({ page }, testInfo) => {
