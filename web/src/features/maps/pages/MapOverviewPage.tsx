@@ -107,6 +107,8 @@ export default function MapOverviewPage() {
   /* ---- unit prefs: format at the display boundary from SI ---- */
   const { formatSpeed, formatDistance, formatPower } = useUnits();
   const { reduce } = useMotionPreference();
+  // Replacing Leaflet's icon during a refresh can detach a pressed pointer target.
+  const markerIcon = useMemo(() => vehicleIcon(), []);
 
   /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -397,7 +399,7 @@ export default function MapOverviewPage() {
                   >
                     <MapTileLayer style={mapStyle} />
                     <MapInvalidator />
-                    <Marker position={[latest.latitude, latest.longitude]} icon={vehicleIcon()}>
+                    <Marker position={[latest.latitude, latest.longitude]} icon={markerIcon}>
                       <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
                     </Marker>
                     {trailPositions.length > 1 && (
