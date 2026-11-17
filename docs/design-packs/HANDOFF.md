@@ -1,11 +1,52 @@
 # Design packs wrap-up handoff
 
-## Current remote head: `73f72f9581`
+## Verified URL repair: `fc04304732`; next action is the batched push
 
-The verified batch is pushed. Monitor `pr-watch-73f72`, pinned to the full
+The exact 17 failed native cases now pass in pinned Linux:
+**17 passed (1.0h)**, 3,737,814ms, zero failures/retries/skips/proxy errors.
+Existing cross-engine replay/teardown selection: **16 passed (1.9m)**.
+Full lint, explicit TypeScript, build and the engineering audit pass.
+Suppression scans against both bases are clear; main is current (270/0
+before the repair commit). Production sources and screenshots are unchanged.
+
+The superseded `44074313691` run is now terminal/cancelled. All three
+interrupted desktop WebKit logs are collected: zero named failures,
+retries or global deadlines. Dark core interactions completes in 14m41s;
+all desktop themes advance past that phase. All six Firefox and all
+three WebKit phone profiles pass without retries. Full latest-head
+acceptance still requires the replacement run; do not infer it from
+these partial desktop logs.
+
+Finish the documentation build/commit, push the held batch once, and
+start a fresh strict monitor pinned to the new SHA. Do not revive the
+old-head monitor. Docker 3120 already contains the latest production tree.
+
+## Previous remote head: `8c85d7f51b` (historical receipt)
+
+The verified batch and its contract correction are pushed. Monitor
+`pr-watch-8c85-native-aggregate-known`, pinned to the full
 remote SHA, every 90 seconds; it stops immediately on a new failed step/job
-or the 45-minute inspection threshold. CI is `44071957895`; Frontend
-Quality Gates is `44071957729`. The first failure and repair are below.
+or the 45-minute inspection threshold. CI is `44074313491`; Frontend
+Quality Gates is `44074313691`. Its newly reported native-route failure
+and local repair are described below.
+CI, Security, Ops Gate, SI Canonical Gate and Auto Label are now successful
+on this head. Only Frontend Quality Gates remains active.
+Quality attempt 1 is cancelled after 21 jobs queue for 45.4 minutes.
+All interrupted logs are collected, with no named test failure or retry.
+Attempt 2 is the sole unchanged retry; do not request a third.
+Its previous dark-desktop receipt verifies Linux x64, Node 26.13.1,
+four CPUs and one worker. The log advances through seven real routes
+before cancellation, rather than hanging on one test.
+`Chromium responsive-32` now reports 17 initial-navigation failures.
+All 17 reproduce in pinned Linux (64.3s): relative `location.assign('/')`
+has no valid base in `about:blank`. A local two-line change in
+`app-design-test.ts` resolves the destination against the configured
+Playwright base URL. `native-navigation-all-fixed` is running all 17 exact
+cases; nothing is pushed. Other jobs remain under
+`pr-watch-8c85-native-aggregate-known`, with only the inspected shard and
+its dependent Chromium aggregate acknowledged. All six Firefox profiles
+and all three WebKit phone profiles pass without retries. The three
+desktop WebKit profiles remain running; their completion is not inferred.
 CI-MAP is refreshed from every registered workflow on this head, using
 the committed workflow definitions rather than uncommitted local settings.
 The PR body is updated, the PR remains ready, and no merge is authorized.
@@ -13,13 +54,13 @@ The PR body is updated, the PR remains ready, and no merge is authorized.
 The receipts below describe the pre-push verification; do not push them
 again or mistake their old-head statuses for current CI acceptance.
 
-Frontend lint now fails its additional Node workflow contract, which was
-not part of `npm run lint`. The old worker-expression assertion reproduces
-in pinned Linux and is fixed/verified in local `3e0f01f5ef` (one case).
-Nothing is pushed yet for this correction. Monitor
-`pr-watch-73f72-lint-known` continues watching all other jobs, with only
-the already-inspected lint job acknowledged. CI-MAP includes its exact
-failing test; no environment or suppression workaround is involved.
+Old-head frontend lint failed an additional Node workflow contract outside
+`npm run lint`. Its obsolete expression reproduced in pinned Linux and
+was fixed/verified in `3e0f01f5ef` (one case), pushed with the evidence as
+`8c85d7f51b`. Current-head Frontend lint, workflow lint and browser discovery
+all pass. Every superseded run is terminal; all interrupted logs are
+collected and contain no additional named failure beyond that contract.
+There is no environment or suppression workaround.
 
 ## Verified resource repair; next action is the batched push
 

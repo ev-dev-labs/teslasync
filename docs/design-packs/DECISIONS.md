@@ -1,5 +1,52 @@
 # Design Pack Decisions
 
+## 2026-11-17 initial native-route navigation requires the configured base URL
+
+Chromium responsive-32 (`134035130962`) reports 17 failures while the other
+profiles continue. Every native-family case waits for DOMContentLoaded at
+its first navigation. The shared browser-owned navigation introduced in
+`440b0d720e` passed relative destinations directly to `location.assign`;
+unlike Playwright's `page.goto`, that cannot resolve `/` from `about:blank`.
+The local trace shows the actual invalid-URL exception. The clock callback
+does execute, so do not change clock handling or increase the event timeout.
+
+All 17 named failures reproduce in pinned Linux, four workers/four CPUs:
+**17 failed (64.3s)**, all with the same eight-second event timeout, zero
+proxy errors. Resolve non-null destinations against the public configured
+`test.info().project.use.baseURL` before entering the existing drain/native
+navigation barrier. Reloads, request accounting, clocks, assertions and
+deadlines are unchanged. Commit `fc04304732` passes the exact selection:
+**17 passed (1.0h)**, 3,737,814ms, zero failures, retries, skips or proxy
+errors. All original 27-pack loops, native states and captures remain.
+The existing cross-engine replay/teardown selection also passes:
+**16 passed (1.9m)**. Full lint, explicit TypeScript, build and the required
+engineering audit pass. Suppression scans against both bases find zero
+matches; production sources and screenshots are unchanged.
+
+The superseded run is cancelled only after this acceptance. All three
+interrupted desktop WebKit logs contain zero named failures, retries or
+whole-test timeouts. Dark core interactions completes between 13:09:36
+and 13:24:17 UTC (14m41s); light/custom also advance past that phase.
+This is actual hosted evidence for the resource repair, not full-profile
+acceptance. All six Firefox and three WebKit phone profiles finish without
+retries. No additional cause is exposed before the replacement batch.
+
+## 2026-11-17 current-head queue threshold and sole retry
+
+On `8c85d7f51b`, all five non-Quality workflows pass. Quality has 21
+jobs still queued after 45.4 minutes while 20 jobs occupy runners. Apply
+the requested single cancellation/failed-job retry to `44074313691`.
+All interrupted first-attempt logs are collected before the retry; they
+contain no named test failure or retry. Live job-log retrieval returns
+HTTP 404 until completion, so it cannot supply an earlier log stream.
+
+The actual dark-desktop receipt confirms Node 26.13.1, Linux x64, four
+available CPUs and one requested worker. Its log advances through seven
+real-route phases without a retry before cancellation. It is not stuck
+on the initial case; preserving the full 23-phase workload requires
+extended execution. The sole same-head retry is active under
+`pr-watch-8c85-attempt2`. Do not issue a third unchanged attempt.
+
 ## 2026-11-17 additional CI-only command retains the obsolete worker policy
 
 The single batch is pushed as `73f72f9581`. Frontend lint job
@@ -20,6 +67,12 @@ discovery, replay, artifact and aggregate assertions remain unchanged.
 No tests or assertions are removed or added. The production/frontend tree
 is unchanged from the successful final lint, TypeScript and build.
 Monitoring continues while the correction is held for a batch push.
+
+The correction is pushed with its evidence as `8c85d7f51b`. Frontend lint
+job `134009052808`, workflow lint and browser discovery all pass on this
+head. All superseded runs are terminal and their interrupted logs are
+collected; no additional named failure appears beyond the corrected
+source contract. Other current-head checks remain in progress.
 
 ## 2026-11-17 dark WebKit global-budget failure exposed before pushing
 
