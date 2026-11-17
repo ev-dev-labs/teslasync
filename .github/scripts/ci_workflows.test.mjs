@@ -110,7 +110,7 @@ test('all application design profiles run in both engines without skipping repla
   assert.equal(job.env.E2E_APP_DESIGN_CROSS_BROWSER, '1');
   assert.equal(job.env.E2E_REUSE_BUILD, '1');
   assert.equal(job.env.HOME, '/root');
-  assert.equal(job.env.APP_DESIGN_WORKERS, "${{ matrix.browser == 'webkit' && '2' || '4' }}");
+  assert.equal(job.env.APP_DESIGN_WORKERS, "${{ matrix.browser == 'webkit' && (matrix.width == 1440 && '1' || '2') || '4' }}");
   const registration = job.steps.find(step => step.name === 'Require complete profile registration');
   assert.match(registration.run, /tests\.length.*=== 1440 \? 23 : 21/);
   assert.match(registration.run, /projectName === `app-design-\$\{process\.env\.APP_DESIGN_BROWSER\}`/);
