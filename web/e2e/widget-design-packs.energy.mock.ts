@@ -2,9 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 import type { EnergyFlowSnapshot } from '../src/api/hooks/useEnergy';
 import type { EnergyStats } from '../src/types/energy';
 import {
-  assertMockApiAfterNavigation, fulfillApiFixture, prepareMockApiNavigation,
-  waitForHarnessReady, type MockApiController,
+  fulfillApiFixture, waitForHarnessReady, type MockApiController,
 } from './mockApi';
+import { navigateAppDesign } from './app-design-test';
 
 // Copied from energy-flow-adoption-browser-qa.json. Only vehicle_id is rebound
 // from its example vehicle 1 to the existing isolated review fleet's vehicle 7.
@@ -102,10 +102,7 @@ export async function installEnergyReviewSources(page: Page, mocks: MockApiContr
     reads,
     setActive(value: boolean) { active = value; },
     async leaveToSettings() {
-      const origin = new URL(page.url()).origin;
-      await prepareMockApiNavigation(page);
-      await page.goto('/settings');
-      await assertMockApiAfterNavigation(page, origin);
+      await navigateAppDesign(page, '/settings');
       await waitForHarnessReady(page, mocks);
       active = false;
     },

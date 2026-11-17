@@ -147,18 +147,21 @@ test('keeps live energy reads mocked while navigating away', async ({ page }, te
   await page.goto(energyReviewPath);
   await waitForHarnessReady(page, mocks);
 
-  const navigate = page.goto.bind(page);
   let finalPollStatus = 0;
-  page.goto = async (url, options) => {
-    finalPollStatus = await page.evaluate(async () =>
-      (await fetch('/api/v1/vehicles/7/energy/flow')).status);
-    return navigate(url, options);
-  };
-  try {
-    await sources.leaveToSettings();
-  } finally {
-    page.goto = navigate;
-  }
+  await page.exposeFunction('recordEnergyExitPoll', (status: number) => { finalPollStatus = status; });
+  await page.evaluate(() => {
+    const owner = window as Window & {
+      __teslasyncNavigateAfterReads?: (destination: string | null) => Promise<void>;
+      recordEnergyExitPoll: (status: number) => Promise<void>;
+    };
+    const navigate = owner.__teslasyncNavigateAfterReads;
+    if (!navigate) throw new Error('Application navigation tracker is missing');
+    owner.__teslasyncNavigateAfterReads = async destination => {
+      await owner.recordEnergyExitPoll((await fetch('/api/v1/vehicles/7/energy/flow')).status);
+      await navigate(destination);
+    };
+  });
+  await sources.leaveToSettings();
   expect(finalPollStatus).toBe(200);
   await assertMockApiComplete(page, mocks);
 });
