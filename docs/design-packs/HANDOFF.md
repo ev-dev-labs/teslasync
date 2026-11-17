@@ -1,6 +1,69 @@
 # Design packs wrap-up handoff
 
-## Current held batch: periodic preference refetch and pricing fixture
+## Active continuation: CI repair and measured performance program
+
+Remote head remains `c287aad7c571678f7184448e3968029726dd83c4`.
+The owner's latest instruction is to commit the improvements locally; the
+owner will push. This explicitly supersedes holding the local performance
+commit for a later repair batch. Do not push or cancel the current run.
+This session has not pushed, cancelled or rerun anything.
+CI `44147087063` completed successfully. At 2026-11-17 20:52 UTC,
+Quality `44147086805` has 100 successful jobs, three running desktop WebKit
+profiles and one intentionally skipped optional production-smoke job.
+No job has failed. This is not a complete green run or proof of a hang:
+the supplied dark-profile log has advanced to case 19/23.
+All status statements below are historical unless independently refreshed.
+
+The owner additionally authorized measured CI optimization. The performance
+agent owns the two workflows, duration-sharding helper/manifest, workflow
+contracts, the existing harness layout contract, and `CI-PERF.md`. Its prepared
+changes preserve all test identities and coverage. The orchestrator confirmed
+the affected browser-free contracts, workflow contracts and actionlint.
+The local continuation commit includes the workflow improvements, helper,
+measured manifest, corrected existing harness contract and evidence together.
+Actual post-change performance has not been measured. `DECISIONS.md` records
+the rationale and capacity limitation; Phase 5 options are proposals only.
+The next complete modified-layout run must supply real timing/cache figures
+to `CI-PERF.md`; revert any optimization demonstrated to make execution slower.
+Final local verification passes: full frontend lint, explicit
+`npx tsc --noEmit`, production build and postbuild gates, docs build (22.06s),
+both workflow actionlint checks, ten workflow contracts and the three
+affected browser-free harness contracts. Changed-line grep audits and the
+added-suppression scan against `origin/main` report zero candidates.
+No snapshot baseline or file under `shots` changed.
+
+No old session monitor or preview shell is assumed alive. Exact current CI
+application assets are preserved in the session files directory. Native
+Playwright 1.63/Node 26 Chromium/Firefox/WebKit launch probes pass. Linux amd64
+Chromium under this ARM64 host's QEMU crashes before a page opens, so do not
+claim native amd64 browser reproduction. Use the pinned native Linux image
+and state the architecture difference. Task-only dependency volumes were
+removed after the probes, and local Quality watchers were stopped for the
+owner's commit-only handoff. No shared application container was changed.
+
+## Current remote head: `c287aad7c5`
+
+**Execution hold:** do not push or cancel anything until Frontend Quality
+Gates run `44147086805` finishes completely. Investigate and repair locally
+while it runs. After completion, collect every failed test from every failed
+job, verify the complete batch locally, then push once. This explicit hold
+supersedes earlier cancellation/retry timing instructions.
+
+The verified polling and pricing-fixture repairs are pushed together:
+`9d167a3a33`, `f6c29287eb`, and evidence commit `c287aad7c5`.
+Replacement CI is `44147087063`; Frontend Quality Gates is `44147086805`.
+Monitor `pr-watch-c287-repairs` is pinned to the exact new head and inspects
+successful-job retries as well as failed jobs/steps. No unchanged retry has
+been used on this head. The template-preserving PR description is updated.
+The PR is main-based, ready, mergeable and unmerged; ancestry is 278/0.
+Checks are still running, not accepted as green.
+
+Docker 3120 contains the latest production tree at `9d167a3a33`, healthy.
+The shared backend's aggregate health/status still return 503; the existing
+external authorization prerequisite is unchanged. Current CI-MAP reflects
+the replacement head. Earlier sections below are historical evidence.
+
+## Verified batch: periodic preference refetch and pricing fixture
 
 The sole unchanged retry of Quality `44130431395` is now cancelled before
 replacement. All 14 interrupted-job logs are collected and contain no

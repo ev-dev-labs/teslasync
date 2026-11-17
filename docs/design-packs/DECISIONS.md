@@ -1,5 +1,70 @@
 # Design Pack Decisions
 
+## 2026-11-17 measured CI scheduling and evidence packaging
+
+The owner explicitly authorized the CI performance program after the repair
+handoff, then explicitly requested committing the improvements locally and
+reserved the push for themselves. That latest instruction authorizes this
+local continuation commit instead of holding it for another repair batch.
+Run `44147086805` remains untouched. No earlier cancellation or unchanged-retry
+instruction applies to this session.
+
+The three latest complete, non-cancelled branch samples for each workflow
+show Quality median wall time 3:31:25 and 1,998.98 occupied runner-minutes,
+with eligible queue waits up to 73:23. CI median wall time is 25:05.
+`CI-PERF.md` records all six run IDs, timestamp definitions, per-job
+measurements, the thirty slowest cases, and limitations. Twenty concurrent
+jobs were observed; this is not proof of an organization quota.
+
+Preserve the single shared application build and all required summary names.
+Exact dependency/browser caches, duration-weighted positive test partitions,
+and mandatory native blob merging address measured setup, queue and long-pole
+costs. The browser execution matrix changes from 99 to 49 jobs while retaining
+the exact 3,412 product test identities, 97 harness contracts, every engine,
+width, theme and pack, and the 23/21 desktop/phone profile registrations.
+Capacity-based worker counts, assertions, retries, deadlines, cancellation
+policy and Windows baselines are unchanged. The obsolete layout contract is
+updated to enforce the new partitions, not removed or weakened.
+
+Always retain compact native blobs and small JSON so required summaries can
+verify exact executed-test unions. Successful binary attachments become
+digest/size metadata only after assertions finish; failed/flaky resources
+remain intact. Heavy failure directories and combined HTML upload only on
+failure. A browser-free native reporter fixture verifies unchanged outcomes,
+errors, assertion steps and failed/shared resource bytes through real report
+merging. This packaging change does not alter screenshot assertions or
+`shots`.
+
+The orchestrator independently confirms the three affected browser-free
+contracts (3 passed, 844ms), all ten workflow contracts, and actionlint on both
+workflows. Per-partition discovery and native packaging evidence are recorded
+in `CI-PERF.md`. Full replacement-run acceptance and actual before/after
+performance remain pending. A sub-25-minute full signal is not claimed:
+the latest baseline's occupied runner work alone implies 106.32 minutes at
+the observed twenty-way concurrency before setup savings. Merge queues,
+larger runners, custom images and impact analysis remain proposals only.
+Final local full lint, explicit TypeScript, production build with postbuild
+gates and documentation build (22.06s) pass. Changed-line grep audits,
+staged diff whitespace checks and the suppression scan against `origin/main`
+are clear. Existing warnings and thresholded audit messages are not hidden.
+
+## 2026-11-17 repair batching process
+
+Effective after `c287aad7c5`, documentation changes accompany the source fix
+they describe in the same commit; no further documentation-only commits.
+Before each push, collect every failing test from all failed latest-head
+jobs, group by shared cause, and verify every selected failure locally in
+its matching environment. Prefer repairing existing shared timing,
+teardown, request-draining and clock helpers over individual test patches.
+Any workflow-file change requires its justification here before editing.
+No unrelated features are in scope. Current status notes remain uncommitted
+until there is a genuine repair batch; do not invent source changes to ship notes.
+
+Run `44147086805` must finish completely before any push or cancellation.
+Continue local investigation during execution, then collect all failures
+from all failed jobs and verify the whole repair batch before one push.
+Elapsed queue/runtime alone does not override this explicit hold.
+
 ## 2026-11-17 pricing recovery fixture loses its listener on remount
 
 The sole unchanged Quality retry exposes Chromium responsive-5 job

@@ -2871,38 +2871,68 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   )) as { jobs: Record<string, {
     needs?: string | string[];
     if?: string;
+    env?: Record<string, string>;
     steps: WorkflowStep[];
-    strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{ name: string; suite: string; partition?: string; shard: string }> } };
+    strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{
+      name?: string; suite?: string; browser?: string; width?: number; theme?: string; shard: string;
+    }> } };
   }> };
+  const helper = readFileSync(resolve(
+    process.cwd(), '..', '.github', 'scripts', 'playwright-duration-shards.mjs',
+  ), 'utf8');
   const build = workflow.jobs['browser-build'];
   const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
-  expect(visualShards).toEqual(Array.from({ length: 32 }, (_, index) => index + 1));
+  expect(visualShards).toEqual([1, 2, 3, 4]);
   const visualSteps = workflow.jobs['visual-tests'].steps;
-  const comparison = visualSteps.find(step => step.run?.startsWith('npm run e2e:visual '));
+  const comparison = visualSteps.find(step => step.run?.includes('playwright-duration-shards.mjs run --suite=visual'));
   expect(comparison).toBeDefined();
   expect(comparison?.if).toBeUndefined();
   expect(visualSteps.some(step => step.run?.includes('e2e:update-visual'))).toBe(false);
+  expect(helper).toContain("if (suite === 'visual') return { script: 'e2e:visual', args: ['--config=playwright.visual.config.ts'], workers: 2 }");
   const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
-  const qualityRows = chromiumRows.filter(row => row.suite === 'quality');
+  const qualityRows = chromiumRows.filter(row => row.suite === 'ordinary' || row.suite === 'design');
   expect(qualityRows.map(row => row.name))
-    .toEqual(Array.from({ length: 32 }, (_, index) => `responsive-${index + 1}`));
-  for (const [partition, count] of [['ordinary', 24], ['design', 8]] as const) {
-    expect(qualityRows.filter(row => row.partition === partition).map(row => row.shard))
-      .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
-  }
-  const chromiumRun = workflow.jobs['chromium-tests'].steps.find(step => step.name === 'Run isolated Chromium suite');
-  const designFilter = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
-  expect(chromiumRun?.env?.QUALITY_PARTITION).toBe('${{ matrix.partition }}');
-  expect(chromiumRun?.run).toContain(`ordinary) set -- --grep-invert='${designFilter}' ;;`);
-  expect(chromiumRun?.run).toContain(`design) set -- --workers=4 --grep='${designFilter}' ;;`);
-  expect(chromiumRun?.run).toContain(`'') set -- ;;`);
-  expect(chromiumRun?.run).toContain('Unknown quality partition');
-  for (const [suite, count] of [['a11y', 13], ['performance', 1]] as const) {
+    .toEqual(Array.from({ length: 16 }, (_, index) => `responsive-${index + 1}`));
+  for (const [suite, count] of [['ordinary', 4], ['design', 12], ['a11y', 1], ['performance', 1]] as const) {
     expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))
       .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
   }
+  expect(chromiumRows).toHaveLength(18);
+  const chromiumRun = workflow.jobs['chromium-tests'].steps.find(step => step.name === 'Run isolated Chromium suite');
+  const designFilter = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
+  expect(chromiumRun?.run).toBe('node ../.github/scripts/playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}');
+  expect(helper).toContain(`const designPattern = String.raw\`${designFilter}\``);
+  expect(helper).toContain("if (suite === 'ordinary') return { script: 'e2e:quality', args: [...quality, `--grep-invert=${designPattern}`], workers: 2 }");
+  expect(helper).toContain("if (suite === 'design') return { script: 'e2e:quality', args: [...quality, `--grep=${designPattern}`], workers: 4 }");
+  expect(helper).toContain("if (suite === 'a11y') return { script: 'e2e:a11y', args: ['--project=chromium-a11y', '--fully-parallel'], workers: 1 }");
+  expect(helper).toContain("assert.equal(suite, 'profile')");
+  expect(helper).toContain("Number(width) === 1440 ? 23 : 21, 'Incomplete full profile registration'");
+  expect(helper).toContain('assertUnion(selected, actual)');
+  expect(helper).toContain('assertUnion(parts[0].data.full, parts.flatMap(part => part.data.selected))');
+  expect(helper).toContain('assertUnion(parts[0].data.full, resultInventory(report))');
   expect(workflow.jobs['cross-browser-tests'].strategy?.matrix)
-    .toEqual({ browser: ['firefox', 'webkit', 'edge'], shard: [1, 2, 3] });
+    .toEqual({ browser: ['firefox', 'webkit', 'edge'] });
+  const profiles = workflow.jobs['app-design-tests'];
+  const profileRows = profiles.strategy?.matrix?.include ?? [];
+  expect(profileRows).toHaveLength(24);
+  for (const browser of ['firefox', 'webkit']) {
+    for (const width of [1440, 390]) {
+      for (const theme of ['dark', 'light', 'custom']) {
+        const count = browser === 'webkit' ? width === 1440 ? 4 : 2 : 1;
+        expect(profileRows.filter(row => row.browser === browser && row.width === width && row.theme === theme)
+          .map(row => row.shard))
+          .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
+      }
+    }
+  }
+  expect(profiles.env?.APP_DESIGN_WORKERS)
+    .toBe("${{ matrix.browser == 'webkit' && (matrix.width == 1440 && '1' || '2') || '4' }}");
+  const replay = profiles.steps.find(step => step.name === 'Preserve engine replay contract');
+  expect(replay?.if)
+    .toBe("always() && matrix.width == 1440 && matrix.theme == 'dark' && (matrix.shard == '1/1' || matrix.shard == '1/4')");
+  expect(replay?.run)
+    .toBe('node ../.github/scripts/playwright-duration-shards.mjs run --suite=replay --browser=${{ matrix.browser }} --shard=1/1 --out=ci-evidence/replay');
+  expect(chromiumRows.length + profileRows.length + 3 + visualShards.length).toBe(49);
   const engines = workflow.jobs['cross-browser'];
   expect(engines.if).toBe('always()');
   expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests', 'app-design-tests']);
@@ -2917,16 +2947,32 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist/', 'if-no-files-found': 'error' });
 
   for (const [id, command] of [
-    ['chromium-tests', "npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} \"$@\" ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}"],
-    ['cross-browser-tests', 'npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3'],
-    ['visual-tests', `npm run e2e:visual -- --shard=\${{ matrix.shard }}/${visualShards.length} --workers=2`],
+    ['chromium-tests', 'playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}'],
+    ['cross-browser-tests', 'playwright-duration-shards.mjs run --suite=engine --browser=${{ matrix.browser }} --shard=1/1'],
+    ['visual-tests', `playwright-duration-shards.mjs run --suite=visual --shard=\${{ matrix.shard }}/${visualShards.length}`],
+    ['app-design-tests', 'playwright-duration-shards.mjs run --suite=profile --browser=${{ matrix.browser }} --width=${{ matrix.width }} --theme=${{ matrix.theme }} --shard=${{ matrix.shard }}'],
   ]) {
     const job = workflow.jobs[id];
     expect(job.needs).toBe('browser-build');
     expect(job.steps.find(step => step.uses?.startsWith('actions/download-artifact'))?.with)
       .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist' });
-    expect(job.steps.find(step => step.run?.includes(command))?.env)
-      .toMatchObject({ E2E_REUSE_BUILD: '1', E2E_MOCKS: '1' });
+    const execution = job.steps.find(step => step.run?.includes(command));
+    expect(execution).toBeDefined();
+    expect({ ...job.env, ...execution?.env }).toMatchObject({ E2E_REUSE_BUILD: '1', E2E_MOCKS: '1' });
+    const evidence = job.steps.find(step => step.with?.path === 'web/ci-evidence/');
+    expect(evidence?.if).toBe('always()');
+    expect(evidence?.with?.['if-no-files-found']).toBe('error');
+    expect(job.steps.find(step => step.name === 'Upload heavy failure evidence')?.if).toBe('failure()');
+  }
+  for (const id of ['chromium-quality', 'cross-browser', 'visual']) {
+    const summary = workflow.jobs[id];
+    expect(summary.if).toBe('always()');
+    expect(summary.steps.find(step => step.run?.includes('playwright-duration-shards.mjs merge --family=')))
+      .toBeDefined();
+    expect(summary.steps.find(step => step.name === 'Upload merged suite JSON')?.if).toBe('always()');
+    expect(summary.steps.find(step => step.name === 'Upload combined failure HTML')?.if)
+      .toBe("failure() || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')");
+    expect(summary.steps.find(step => step.run?.includes('all(job["result"] == "success"'))?.if).toBe('always()');
   }
 
   const { scripts } = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {

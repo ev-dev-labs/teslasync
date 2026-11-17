@@ -53,16 +53,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - &web-node
+        uses: actions/setup-node@v5
+        id: node
         with:
           node-version: "26"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+      - &web-dependencies
+        uses: actions/cache@v5
+        id: dependencies
+        with:
+          path: web/node_modules
+          key: modules-v1-${{ runner.os }}-${{ runner.arch }}-host-node-${{ steps.node.outputs.node-version }}-${{ hashFiles('web/package-lock.json') }}
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
       - run: npm ci --legacy-peer-deps
+        if: steps.dependencies.outputs.cache-hit != 'true'
         working-directory: web
       - name: Registry coverage + freshness + non-mutation
         run: node scripts/check-generated-freshness.mjs
@@ -318,12 +325,11 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - *web-node
+      - *web-dependencies
+      - &web-install
+        run: npm ci --legacy-peer-deps
+        if: steps.dependencies.outputs.cache-hit != 'true'
       - name: Lint
         if: matrix.check == 'lint'
         run: npm run lint
@@ -356,12 +362,9 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - *web-node
+      - *web-dependencies
+      - *web-install
       - name: Test shard with native coverage blob
         env:
           NODE_OPTIONS: '--no-experimental-webstorage'
@@ -390,13 +393,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --legacy-peer-deps
+      - *web-node
+      - *web-dependencies
+      - *web-install
       - uses: actions/download-artifact@v8
         with:
           pattern: frontend-test-*
@@ -446,12 +445,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - *web-node
+      - uses: actions/cache@v5
+        id: dependencies
         with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: docs/package-lock.json
+          path: docs/node_modules
+          key: modules-v1-${{ runner.os }}-${{ runner.arch }}-host-node-${{ steps.node.outputs.node-version }}-${{ hashFiles('docs/package-lock.json') }}
       - run: npm ci --legacy-peer-deps
+        if: steps.dependencies.outputs.cache-hit != 'true'
         working-directory: docs
       - name: Build docs
         env:
