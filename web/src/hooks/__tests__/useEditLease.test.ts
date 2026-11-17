@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 
 import {
   useEditLease,
@@ -121,15 +121,15 @@ describe('useEditLease', () => {
         resourceKey: TEST_KEY,
         tabId: 'peer-tab-aaa',
       })
-      await flushBroadcast()
-
-      const granted = peerInbox.find(
-        (m): m is Extract<BroadcastMessage, { type: 'lease.granted' }> =>
-          m.type === 'lease.granted',
-      )
-      expect(granted).toBeDefined()
-      expect(granted?.resourceKey).toBe(TEST_KEY)
-      expect(granted?.tabId).toBe(TAB_ID)
+      await waitFor(() => {
+        const granted = peerInbox.find(
+          (m): m is Extract<BroadcastMessage, { type: 'lease.granted' }> =>
+            m.type === 'lease.granted',
+        )
+        expect(granted).toBeDefined()
+        expect(granted?.resourceKey).toBe(TEST_KEY)
+        expect(granted?.tabId).toBe(TAB_ID)
+      })
       peer.close()
     })
   })

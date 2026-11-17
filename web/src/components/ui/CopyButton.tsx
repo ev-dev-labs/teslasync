@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Copy } from 'lucide-react'
 import { Button, type ButtonProps } from './Button'
@@ -80,10 +80,10 @@ export function CopyButton({
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setCopied(false)
     return () => {
-      // Invalidate pending writes as well as feedback for the previous text.
+      // Invalidate at commit, before a pending write can beat passive cleanup.
       copyAttempt.current += 1
       clearCopyTimer()
     }
