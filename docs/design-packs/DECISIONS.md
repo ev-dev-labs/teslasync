@@ -1,5 +1,167 @@
 # Design Pack Decisions
 
+## 2026-11-17 native marker target replacement
+
+Further inspection of the actual failed Swiss click finds an identity change
+that geometry-only decoding missed: the action snapshot references the old
+marker children, while the after snapshot contains entirely new child nodes.
+The outer marker and its geometry remain unchanged. `MapOverviewPage` calls
+`vehicleIcon()` on every render; React Leaflet consequently calls `setIcon`,
+and Leaflet replaces the marker's inner HTML.
+
+An initial focus/refetch diagnostic passes without detaching the target;
+global queries disable focus refetch, so that probe does not exercise the
+suspected ordering. A session-only overlay instead triggers a same-location
+router update during a native mouse press, with a 500ms press duration.
+The existing custom-desktop Firefox Live case fails at V1 with the same
+eight-second missing-Aurora-popup assertion. Its event receipt shows the
+mouse-down core disconnected by mouse-up and **no click event**. The first
+Classic interaction, whose target remains connected, succeeds. No scrolling
+or synthetic marker click is involved; proxy errors remain zero.
+
+Memoize the page's unchanged vehicle icon so unrelated renders cannot replace
+a pressed target. Keep the marker coordinates, popup, query cadence, CSS,
+theme-responsive color and all committed browser assertions unchanged.
+The diagnostic overlay is session-only and is not a new committed test or
+suite.
+
+Commit `9e7b411ccf` passes the same diagnostic on rebuilt assets:
+**1 passed (2.0m)**, all 27 native clicks delivered, zero disconnected
+pressed targets. The original, unmodified Firefox dark/custom Live cases
+pass **2 tests (2.2m)** and WebKit dark Live passes **1 test (3.4m)**.
+All runs have zero retries and zero proxy errors. An initial fixed-asset
+replay targeted occupied port 50730; discard it as acceptance, leave that
+existing listener alone, and repeat on the owned, byte-verified preview
+at 50739. The figures above are the repeated owned-preview results.
+
+Full lint, explicit TypeScript, production build and hermetic browser build
+pass. Both affected existing map suites pass **73 tests (10.15s)**.
+The required violations script reports zero in all six categories and
+TypeScript passes. The page grows from 712 to 714 lines; its three
+GlassPanel/ChartContainer occurrences and every endpoint remain unchanged.
+Both branch suppression scans report zero added markers/empty inline
+catches. No tests, screenshots, styles, workflow settings or budgets change.
+Production startup JavaScript remains 399.2 KB.
+
+The `9e7b411ccf` Docker image builds and replaces only the owned 3120
+preview; its prior container is preserved as
+`teslasync-design-packs-v2-rollback-before-9e7b411ccf`. Docker reports
+healthy, and served entry `/assets/index-CUjJBk_Z.js` contains the new
+source identity. Index, entry, actual auth-mode endpoint, liveness and
+readiness return 200. The same shared-backend aggregate 503/no-token
+prerequisite remains; no shared backend or unrelated listener is changed.
+`npm run docs:build` passes (24.21s).
+
+## 2026-11-17 latest-head retry evidence and native marker diagnosis
+
+The single unchanged CI shard retry passes, including coverage and both
+aggregates. This does not invalidate the observed commit-ordering and
+fixed-sleep defects repaired locally in `a117f70157`.
+
+Quality attempt 1 reaches the required inspection threshold with ten jobs
+queued for 46.4 minutes. The oldest native job's live log still returns
+HTTP 404; its phase step is running. Cancel, collect every available
+interrupted-job log, then request the sole failed-job retry. Do not retry
+this Quality head a third time. All three phone Firefox profiles pass;
+the cancelled native profiles were progressing through existing cases,
+not sitting in an empty runner. Desktop WebKit dark/light had started only
+11 of 23 phases after about 35 minutes of execution; custom desktop had
+started 15. Worker allocation remains an active throughput investigation,
+not permission to add a matrix or increase a deadline.
+
+The newly exposed actual failure is Firefox custom-desktop `/live`, Swiss:
+the native marker click returns but its Aurora popup is absent. Its exact
+unchanged pinned-Linux replay passes **1 test (1.9m)**, zero proxy errors.
+The actual CI trace shows native point `(480, 642)` over the marker, with
+unchanged main scroll and map/marker transforms before, during and after
+the click. The immediate following painted frame temporarily omits the
+marker. This does not prove a production resize loop or justify a CSS fix.
+
+A session-only diagnostic overlay repeats the existing dark/custom Live
+cases twice with four workers/four CPUs: **4 passed (4.0m)**, zero proxy
+errors. All 108 marker interactions have native mouse pointer events and
+zero internal map scroll. This rules out a demonstrated fixed-clock
+double-tap or internal focus-scroll cause in those reproductions; no
+speculative production or interaction workaround is committed.
+
+Replay the same four previously failing WebKit custom-desktop phases
+(battery cells, drive detail, core interactions, responsive 1280px) with
+four workers on four CPUs after the atomic profile-poll repair. This is a
+bounded scheduling comparison of existing cases, not a local full profile,
+new suite or matrix. No worker configuration changes before its result.
+
+The comparison completes with **4 passed (24.2m)**, zero retries and zero
+proxy errors. It does not demonstrate a throughput improvement over the
+earlier two-worker selection (20.6m, including one failure). Keep the
+existing two-worker WebKit allocation; do not make a speculative workflow
+change or run the entire profile locally.
+
+The sole Quality retry crosses 45 minutes with ten jobs still executing.
+Inspect their active steps and request the live WebKit log; GitHub again
+returns HTTP 404. Other jobs continue completing (132 successes becomes
+137), and the interrupted first-attempt logs already establish slow phase
+progress rather than an idle loop. Preserve this retry's running evidence
+instead of cancelling it merely because total elapsed time exceeds the
+inspection threshold. Continue checking failures and unfinished failed
+steps every 90 seconds; no third rerun, deadline increase, ignored failure,
+or workflow change. Current monitor: `pr-watch-6c649-inspected`.
+
+## 2026-11-17 asynchronous commit and native broadcast ordering
+
+Head `6c64927f13` exposes two timing failures in CI shard 7, job
+`133884508960`. The coverage merger repeats those same failures; the two CI
+aggregates reject their failed dependencies. Neither aggregate exposes a
+third cause. The other seven unit shards pass.
+
+Run both exact named cases before editing in the pinned Linux Playwright
+image with Node 26.13.1, two Vitest workers, native BroadcastChannel and the
+CI coverage/blob flags: **2 passed (507.45s)**, including full coverage
+collection. Eight bounded repetitions of only these two existing cases,
+with one CPU and coverage scoped to the affected production files, also
+pass. These are attempted reproductions, not a claim that the CI failures
+reproduced locally. Linux ARM64 scheduling differs from the x64 CI runner.
+The first attempt could not start because the Windows checkout lacked
+Linux Rollup/esbuild binaries; install only the exact existing versions into
+session storage and bind them into the container. No dependency manifest or
+lockfile changes.
+
+The Grafana failure establishes the ordering: the existing test observes
+the committed empty editor before resolving its earlier clipboard promise,
+yet receives the obsolete success message. CopyButton invalidates pending
+writes only in passive-effect cleanup, which can run after that promise's
+continuation. Move the same cleanup/reset into a layout effect, so text
+changes and unmounts invalidate writes during commit. Keep the existing
+callbacks, visible design, clipboard errors and feedback unchanged. The
+page and its test are unchanged.
+
+The lease test assumes two native BroadcastChannel deliveries complete
+within a fixed five-millisecond sleep. Await its existing three message
+assertions instead, using Testing Library's existing default wait. Keep
+the real transport, 250ms application election, test deadline and all
+message fields unchanged. This replaces a scheduling guess, not a product
+performance requirement.
+
+All three directly affected existing suites pass in pinned Linux:
+**3 files / 69 tests passed (59.34s)** with coverage/blob reporting.
+Intentional clipboard-denial/unavailable-API diagnostics remain visible.
+The required production-file audit reports zero violations and TypeScript
+passes; the changed lease test also has zero reported violations. No tests,
+jobs, matrices, snapshots, thresholds or suppressions are added.
+
+Request the one permitted unchanged CI shard retry. GitHub initially
+rejects it while the workflow is running; after workflow completion the
+same job-specific rerun is accepted. Its dependent aggregates rerun too.
+Quality continues independently; no new push has occurred.
+
+Commit `a117f70157` contains the two repairs. Full lint, explicit
+`npx tsc --noEmit`, production build and both branch suppression/empty-catch
+scans pass. Startup JavaScript remains 399.2 KB. The rebuilt Docker preview
+is healthy on loopback 3120, and `/assets/index-REA2gfYs.js` contains the new
+commit. Preserve the prior container as
+`teslasync-design-packs-v2-rollback-before-a117f70157`; no shared backend or
+other preview is redeployed. Both aggregate backend health endpoints still
+return 503, with `/system/status` explicitly reporting `no_token`.
+
 ## 2026-11-17 sole retry and native chatbot click ordering
 
 The sole Quality retry again crosses the inspection threshold: eight jobs

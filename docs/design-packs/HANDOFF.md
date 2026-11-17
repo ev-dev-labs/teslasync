@@ -1,5 +1,63 @@
 # Design packs wrap-up handoff
 
+## Local verified repairs through `9e7b411ccf`; remote head `6c64927f13`
+
+The Live marker failure now has a reproduced cause and production repair:
+each render recreated its Leaflet icon, replacing the pressed inner target.
+The same-location-rerender diagnostic fails before the repair (no click
+after target detachment), then passes all 27 packs after memoizing the icon.
+Original Firefox dark/custom Live cases pass (2.2m), WebKit dark Live passes
+(3.4m), and both affected map suites pass 73 tests. Lint, TypeScript, build,
+audit and suppression scans pass. No committed test, style or snapshot
+changes. Docker 3120 is rebuilt and healthy on `9e7b411ccf`; its entry
+`/assets/index-CUjJBk_Z.js` verifies that source identity. The previous
+container is preserved as
+`teslasync-design-packs-v2-rollback-before-9e7b411ccf`.
+Owned fixed-asset helper 50739 is `preview-marker-fixed-owned`; preserve
+the unrelated listener discovered on 50730. Helper 50729 remains the old
+CI-artifact preview.
+
+The previous eight-case browser repair batch is pushed. Latest-head CI
+exposes two unrelated asynchronous ordering failures in unit shard 7:
+native lease-message delivery after an assumed five-millisecond hop, and
+stale clipboard success after the Grafana editor commits a clear.
+The coverage merger and two aggregate failures repeat those two causes.
+All other unit shards pass. The sole job-specific CI retry passes, including
+coverage and both aggregates. Quality attempt 1 is cancelled after ten jobs
+queue for 46.4 minutes; every interrupted log is collected. Its sole retry
+is active under `pr-watch-6c649-inspected`, pinned to the remote SHA.
+Do not request a third unchanged Quality attempt.
+
+Both named baseline cases pass in pinned Linux, including eight bounded
+timing replays; the CI failures are not falsely claimed as reproduced
+locally. Commit `a117f70157` moves CopyButton invalidation into the commit
+phase and awaits the existing lease-message assertions. All three directly
+affected suites pass: 69 tests in 59.34s. Full lint, TypeScript, build,
+changed-file audits and both suppression/empty-catch diff scans pass.
+Startup JavaScript is 399.2 KB under the unchanged 400 KB cap. No tests,
+matrices, styling, screenshots or thresholds change.
+
+Docker index, entry, `/api/v1/system/auth-mode`, liveness and readiness
+return 200. Preserve all earlier rollback containers. Shared backend
+authorization still causes the documented 503s.
+
+No follow-up push has occurred. Batch any newly exposed failures before
+pushing; CI-MAP now includes non-passing CI jobs as well as Quality jobs.
+Latest-head acceptance and final FIXLIST reconciliation remain required.
+The interrupted Quality log exposes Firefox custom-desktop Swiss `/live`
+missing its native marker popup. Exact unchanged replay passes (1.9m);
+four session-only instrumented dark/custom repetitions pass (4.0m), 108
+native mouse interactions, no internal map scroll, zero proxy errors.
+Actual CI transforms and main scroll are unchanged around the miss; the
+later node-identity investigation above establishes its cause. The four-worker/four-CPU replay
+of four previously failing WebKit custom-desktop phases passes (24.2m),
+zero retries/proxy errors. It does not show a throughput improvement, so
+worker configuration is unchanged. The sole Quality retry's 45-minute
+escalation is inspected; live logs still return 404. Preserve its running
+evidence while polling failures rather than cancel slow progressing work
+again. No third rerun or increased deadline.
+Older sections below are historical.
+
 ## Verified repair batch: `1e9be3085b`
 
 Only two existing browser-harness helpers change: atomic profile metadata
