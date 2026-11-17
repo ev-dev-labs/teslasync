@@ -16,12 +16,14 @@ import {
 } from './routeRegistry';
 import { CAPTURE_VIEWPORTS, captureRoutes, clearCaptureImages, findClippedBottomNavigationLabels, findClippedWorkspaceRangeLabels, findHorizontalScrollRegions, findOverlappingWorkspaceInputActions, findSmallBodyText, findSmallTouchTargets, findSplitBottomNavigationWords, findSplitOperationalMetricWords, selectCaptureRoutes, skipExistingCapture, writeCaptureImages } from './design-packs-capture';
 import { assertOwnerGuardActivation, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
+import { ensureMockSseServer } from './mockSseServer';
 
 appDesignTest.describe('application design teardown', () => {
   appDesignTest.describe.configure({ mode: 'serial' });
   let server: Server;
   let origin: string;
   let previousApi: MockApiController | null = null;
+  let sseOrigin: string;
   const escaped: string[] = [];
 
   appDesignTest.beforeAll(async () => {
@@ -53,7 +55,13 @@ appDesignTest.describe('application design teardown', () => {
   appDesignTest('captures a pagehide error report during actual navigation', async ({ page }) => {
     previousApi = await installApiMocks(page);
     if (!previousApi) throw new Error('Mock API is required');
+    sseOrigin = (await ensureMockSseServer()).origin;
     await page.goto(origin);
+    await page.evaluate(() => new Promise<void>((resolveConnected, reject) => {
+      const events = new EventSource('/api/v1/events');
+      events.addEventListener('connected', () => resolveConnected(), { once: true });
+      events.addEventListener('error', () => reject(new Error('Mock SSE connection failed')), { once: true });
+    }));
     await assertMockApiComplete(page, previousApi);
     await page.evaluate(() => {
       window.addEventListener('pagehide', () => {
@@ -65,7 +73,7 @@ appDesignTest.describe('application design teardown', () => {
             userAgent: 'TeslaSync E2E', occurredAt: '2026-08-26T16:00:00.000Z',
           }),
           keepalive: true,
-        }).catch(() => undefined);
+        });
       }, { once: true });
     });
   });
@@ -75,9 +83,16 @@ appDesignTest.describe('application design teardown', () => {
       .toEqual([expect.objectContaining({ method: 'POST', disposition: 'fulfilled' })]);
     expect(previousApi?.invalidRum).toEqual([]);
     expect(escaped).toEqual([]);
+    await expect(fetch(`${sseOrigin}/closed-probe`)).rejects.toMatchObject({
+      cause: { code: 'ECONNREFUSED' },
+    });
+    sseOrigin = (await ensureMockSseServer()).origin;
   });
 
   test('rejects invalid and unreviewed requests during actual navigation', async ({ page }) => {
+    await expect(fetch(`${sseOrigin}/closed-probe`)).rejects.toMatchObject({
+      cause: { code: 'ECONNREFUSED' },
+    });
     for (const [path, message] of [
       ['/api/v1/web-errors', 'invalid fetch/xhr RUM payloads after navigation'],
       ['/api/v1/unreviewed', 'unmatched E2E API requests after navigation'],
@@ -92,7 +107,7 @@ appDesignTest.describe('application design teardown', () => {
             headers: { 'Content-Type': 'application/json' },
             body: '{}',
             keepalive: true,
-          }).catch(() => undefined);
+          });
         }, { once: true });
       }, path);
       await prepareMockApiNavigation(page);
@@ -457,7 +472,7 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
   });
   try {
     await page.goto('http://127.0.0.1:54321/');
-    await page.evaluate(async () => {
+    const outcomes = await page.evaluate(async () => {
       const cancelled = new AbortController();
       const cancelledVehicles = new AbortController();
       const stillActive = new AbortController();
@@ -471,38 +486,40 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
       ].map(path => ({ path, controller: new AbortController() }));
       const delayed = fetch('/api/v1/system/auth-mode', {
         signal: cancelled.signal, headers: { 'x-test-wait': '1' },
-      }).catch(() => undefined);
+      });
       const delayedVehicles = fetch('/api/v1/vehicles', {
         signal: cancelledVehicles.signal, headers: { 'x-test-wait': '1' },
-      }).catch(() => undefined);
+      });
       const blocked = fetch('/api/v1/system/auth-mode', { signal: cancelledAfterFailure.signal })
-        .catch(() => undefined).then(() => cancelledAfterFailure.abort());
+        .finally(() => cancelledAfterFailure.abort());
       const blockedVehicles = fetch('/api/v1/vehicles', { signal: vehiclesCancelledAfterFailure.signal })
-        .catch(() => undefined).then(() => vehiclesCancelledAfterFailure.abort());
+        .finally(() => vehiclesCancelledAfterFailure.abort());
       setTimeout(() => {
         cancelled.abort(); cancelledVehicles.abort(); unexpected.abort();
         additionalReads.forEach(({ controller }) => controller.abort());
       }, 100);
       const unreviewed = { signal: unexpected.signal, headers: { 'x-test-wait': '1' } };
-      await Promise.all([
+      const results = await Promise.allSettled([
         delayed, delayedVehicles, blocked, blockedVehicles,
-        fetch('/api/v1/system/auth-mode').catch(() => undefined),
-        fetch('/api/v1/system/auth-mode', { signal: stillActive.signal }).catch(() => undefined),
-        fetch('/api/v1/system/auth-mode?unreviewed=1', unreviewed).catch(() => undefined),
-        fetch('/api/v1/system/auth-mode', { ...unreviewed, method: 'POST' }).catch(() => undefined),
-        fetch('/api/v1/vehicles?unreviewed=1', unreviewed).catch(() => undefined),
-        fetch('/api/v1/vehicles', { ...unreviewed, method: 'POST' }).catch(() => undefined),
-        fetch('/api/v1/pinned?type=automation', unreviewed).catch(() => undefined),
-        fetch('/api/v1/pinned?type=navigation&unreviewed=1', unreviewed).catch(() => undefined),
-        fetch('/api/v1/pinned?type=navigation', { ...unreviewed, method: 'POST' }).catch(() => undefined),
-        fetch('/api/v1/pinned?type=vehicle&unreviewed=1', unreviewed).catch(() => undefined),
-        fetch('/api/v1/pinned?type=vehicle', { ...unreviewed, method: 'POST' }).catch(() => undefined),
-        fetch('/api/v1/unreviewed', unreviewed).catch(() => undefined),
-        fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }).catch(() => undefined),
+        fetch('/api/v1/system/auth-mode'),
+        fetch('/api/v1/system/auth-mode', { signal: stillActive.signal }),
+        fetch('/api/v1/system/auth-mode?unreviewed=1', unreviewed),
+        fetch('/api/v1/system/auth-mode', { ...unreviewed, method: 'POST' }),
+        fetch('/api/v1/vehicles?unreviewed=1', unreviewed),
+        fetch('/api/v1/vehicles', { ...unreviewed, method: 'POST' }),
+        fetch('/api/v1/pinned?type=automation', unreviewed),
+        fetch('/api/v1/pinned?type=navigation&unreviewed=1', unreviewed),
+        fetch('/api/v1/pinned?type=navigation', { ...unreviewed, method: 'POST' }),
+        fetch('/api/v1/pinned?type=vehicle&unreviewed=1', unreviewed),
+        fetch('/api/v1/pinned?type=vehicle', { ...unreviewed, method: 'POST' }),
+        fetch('/api/v1/unreviewed', unreviewed),
+        fetch('http://127.0.0.1:54322/api/v1/system/auth-mode', { signal: unexpected.signal }),
         ...additionalReads.map(({ path, controller }) =>
-          fetch(path, { signal: controller.signal, headers: { 'x-test-wait': '1' } }).catch(() => undefined)),
+          fetch(path, { signal: controller.signal, headers: { 'x-test-wait': '1' } })),
       ]);
+      return results.map(result => result.status);
     });
+    expect(outcomes).toEqual(Array(23).fill('rejected'));
     await expect.poll(() => controller.requests.length).toBe(23);
     await expect.poll(() => controller.requests.filter(record => record.disposition === 'cancelled').length).toBe(8);
     expect(controller.requests.filter(record => record.disposition === 'pending')).toHaveLength(15);
@@ -523,13 +540,10 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
       expect.objectContaining({ method: 'GET', origin: 'http://127.0.0.1:54321', path: '/api/v1/pinned', resourceType: 'fetch' }),
     ]));
     expect(await page.evaluate(async () => {
-      try {
-        await fetch('http://[').catch(() => undefined);
-        return false;
-      } catch {
-        return true;
-      }
-    })).toBe(false);
+      const pending = fetch('http://[');
+      const [result] = await Promise.allSettled([pending]);
+      return result.status;
+    })).toBe('rejected');
     await expect(assertMockApiComplete(page, controller)).rejects.toThrow('API requests escaped or were blocked by Playwright routing');
   } finally {
     try {
@@ -564,13 +578,16 @@ test('reinstalling mock fixtures keeps request accounting and in-flight cancella
     const pending = page.evaluate(async () => {
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 500);
-      await fetch('/api/v1/system/auth-mode', { signal: controller.signal }).catch(() => undefined);
+      const [result] = await Promise.allSettled([
+        fetch('/api/v1/system/auth-mode', { signal: controller.signal }),
+      ]);
+      return result.status;
     });
     await requestStarted;
     await routed;
     const second = await installApiMocks(page, 'error');
     if (!second) throw new Error('Mock API is required');
-    await pending;
+    expect(await pending).toBe('rejected');
     expect(await page.evaluate(async () => (await fetch('/api/v1/settings')).status)).toBe(503);
     await expect.poll(() => ({
       dispositions: first.requests.map(record => record.disposition), failures,

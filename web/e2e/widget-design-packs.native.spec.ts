@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { navigateAppDesign, test } from './app-design-test';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
-import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, waitForHarnessReady } from './mockApi';
 import { assertContained, compositionGeometry } from './widget-design-packs.acceptance';
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { nativeWidgets } from './widget-design-packs.native.fixtures';
@@ -15,7 +15,6 @@ import { inspectNativeProgressStates, inspectNativeRecordStates } from './widget
 // Same existing 27-pack acceptance budget; no workflow, performance cap or
 // ratchet changes. Split substantive families instead of dropping slow states.
 test.setTimeout(1_800_000);
-test.afterAll(async () => { await closeMockApiFixtures(); });
 const families = ['records', 'progress', 'record-states', 'progress-states'] as const;
 for (const family of families) {
   for (const theme of ['dark', 'light'] as const) {

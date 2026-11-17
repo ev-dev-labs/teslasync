@@ -2,14 +2,26 @@
 
 ## Current CI loop: `7a70264b45`
 
-Latest update: CI, Security, Ops, SI and Auto Label pass. Quality attempt 1
-was cancelled at the 46-minute queue threshold; its single permitted retry
-is active under `pr-watch-7a702-attempt2`. No further unchanged rerun is
-permitted. Newly exposed WebKit custom-desktop core interactions, battery
-details and drive-detail marker waits remain open. Exact CI assets are served
-by task helper 50727 for a bounded native replay. Docker 3120 is unchanged.
-The uncommitted fixture batch passes 33 files/2,240 tests plus 31 helper-parity
-cases, lint, types, audit and build; see the newest DECISIONS entry.
+Latest update: CI, Security, Ops, SI and Auto Label pass. Quality's single
+permitted retry again exceeded 45 minutes for all six WebKit profiles and
+is cancelled/completed. No monitor is active and no further unchanged rerun
+is permitted. All eight interrupted logs were collected.
+Suite-level SSE cleanup forced fixed unequal parallel groups; cleanup now
+belongs to an automatic test-scoped fixture (including browser-only cases).
+All seven affected teardown/cancellation contracts pass, with 22 empty
+Promise catches replaced by explicit outcomes or removed.
+The four affected native phases are replaying with independent scheduling
+and two WebKit workers on four CPUs (`7a702-independent-phases`).
+The distinct replay `/healthz` error starts during reload: the direct root
+probe bypassed the API client's existing document-lifetime guard. Two
+focused regressions fail before repair; the same guard is now applied.
+Hook/client/lifecycle tests pass 89 cases; lint/types/audit and production
+build pass (399.1 KB startup). Its exact native replay is active on repaired
+helper 50728. Native results and a rebuilt Docker preview are still required.
+Exact old CI assets are served by task helper 50727; Docker 3120 is unchanged.
+The fixture batch is committed locally as `dcaa19a9d7`, not yet pushed.
+It passes 33 files/2,240 tests plus 31 helper-parity cases, lint, types, audit
+and build; see the newest DECISIONS entry. Refreshed main ancestry is `259 0`.
 Earlier monitoring statements below are historical, not current acceptance.
 
 Pushed `3128e15a53` and receipt commit `7a70264b45`. Superseded Quality run

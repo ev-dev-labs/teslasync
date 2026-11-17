@@ -7,7 +7,7 @@ import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designP
 import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { findSmallBodyText } from './design-packs-capture';
-import { assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { inspectEnergyReview } from './widget-design-packs.energy';
 import { energyReviewPath, installEnergyReviewSources } from './widget-design-packs.energy.mock';
@@ -15,7 +15,6 @@ import { energyReviewPath, installEnergyReviewSources } from './widget-design-pa
 // Separate the substantive source-state work from the existing four all-route
 // cases, without another project/workflow or reloading on ordinary pack changes.
 test.setTimeout(1_800_000);
-test.afterAll(async () => { await closeMockApiFixtures(); });
 
 test('phone charger details stay legible on a contrast-checkable Terminal chart', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });

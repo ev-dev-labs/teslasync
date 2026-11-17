@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { test as base, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
-import { assertMockApiAfterNavigation, prepareMockApiNavigation } from './mockApi';
+import { assertMockApiAfterNavigation, closeMockApiFixtures, prepareMockApiNavigation } from './mockApi';
 
 export async function attachJsonEvidence(testInfo: TestInfo, name: string, value: unknown) {
   const path = testInfo.outputPath(name);
@@ -25,7 +25,14 @@ export async function navigateAppDesign(page: Page, destination: string | null) 
   if (origin) await assertMockApiAfterNavigation(page, origin);
 }
 
-export const test = base.extend({
+export const test = base.extend<{ mockApiLifetime: void }>({
+  mockApiLifetime: [async ({ browserName }, runTest) => {
+    try {
+      await runTest();
+    } finally {
+      await base.step(`Close ${browserName} mock API listener`, closeMockApiFixtures);
+    }
+  }, { auto: true }],
   page: async ({ page }, runTest, testInfo) => {
     try {
       await runTest(page);

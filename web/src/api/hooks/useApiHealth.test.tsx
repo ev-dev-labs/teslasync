@@ -20,6 +20,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { __resetDocumentCancellationForTests } from '@/lib/documentCancellation';
+import { documentLifecycleDriver } from '@/test/documentLifecycle';
 
 import {
   bucket,
@@ -50,6 +52,7 @@ function makeWrapper() {
 }
 
 afterEach(() => {
+  __resetDocumentCancellationForTests();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -72,6 +75,24 @@ describe('bucket', () => {
 });
 
 describe('probe', () => {
+  it.each(['beforeunload', 'pagehide'] as const)(
+    'rejects late probes after %s without fetching or reporting an outage, then resumes on pageshow',
+    async event => {
+      const lifecycle = documentLifecycleDriver();
+      const fetchMock = vi.fn(async () => okResponse);
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(probe()).resolves.toMatchObject({ ok: true });
+
+      lifecycle(event);
+      await expect(probe()).rejects.toMatchObject({ name: 'AbortError' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      lifecycle('pageshow');
+      await expect(probe()).resolves.toMatchObject({ ok: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it('reports ok for a 2xx response and records a valid ISO timestamp + numeric latency', async () => {
     const fetchMock = vi.fn(async () => okResponse);
     vi.stubGlobal('fetch', fetchMock);

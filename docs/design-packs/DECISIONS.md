@@ -1,5 +1,118 @@
 # Design Pack Decisions
 
+## 2026-11-17 final lifecycle ownership and explicit negative outcomes
+
+The energy tooltip case owns browser contexts directly and does not request
+the default page. Therefore the final SSE owner is an automatic **test-scoped**
+fixture, not just page teardown and not a worker-scoped fixture. It closes the
+listener after dependent teardown and also covers browser-only cases. The
+existing serial contract now starts a second listener in its page-less case
+and verifies refusal in the following case; mixed derived/base tests remain
+in the same worker. Five lifecycle contracts pass (13.7s).
+
+The broader added-line scan also found 22 empty Promise catches in the
+existing harness contracts. Remove the unnecessary unload catches. Negative
+transport controls now collect and explicitly assert all 23 rejected
+outcomes, preserve the original eight-cancelled/fifteen-pending ledger, and
+assert rejection for malformed URLs and fixture-reinstallation cancellation.
+No expected failure is silently discarded. All seven affected browser
+contracts pass (22.2s), with no retries. Scoped ESLint, diff checks and all
+six workflow contracts pass; no lint configuration changed.
+
+Health-hook/client/document-lifecycle tests: **3 files / 89 passed**.
+The hook audit reports zero violations in all six categories and TypeScript
+passes. Full frontend lint passed before the final two-line production
+guard; scoped ESLint and TypeScript also pass afterward. Production build
+and postbuild gates pass: **399.1 KB startup JS / unchanged 400 KB cap**.
+The root `/healthz` registration is confirmed at `internal/api/router.go:2430`.
+No page, section, hook URL, styling, screenshot or historical fingerprint
+changed. Native scheduling and actual replay checks are still running;
+their outcomes are not assumed.
+
+## 2026-11-17 root health probe bypassed document ownership
+
+The interrupted custom desktop replay trace locates the `/healthz` exception
+59 ms after `page.reload()` starts, while the old document's health polling
+timer runs. This root-endpoint hook intentionally bypasses the prefixed API
+client, but also bypassed its existing `assertDocumentActive()` guard.
+Apply that same guard before allocating the probe timer or invoking fetch.
+Cancellation propagates instead of being converted into an offline reading;
+genuine network failures and five-second probe deadlines are unchanged.
+No console errors are excluded and no browser clock is paused.
+
+Two focused cases in the existing health-hook test file fail before repair:
+both browser-owned beforeunload and pagehide still start a second request.
+They require no fetch during teardown, an AbortError rather than an outage,
+and successful reads again after pageshow. Reuse the existing trusted-event
+driver and document-lifecycle implementation, including its cancelled
+navigation and synthetic-event semantics.
+
+The relocated SSE lifecycle separately passes all five existing navigation
+teardown contracts (15.5s), including real EventSource closure, late report
+accounting, invalid payload rejection and no unmocked beacon escape.
+The four native phases are now replaying with independent scheduling.
+
+## 2026-11-17 suite cleanup pins unequal parallel groups
+
+The worker-only comparison exposed a second concrete cause of long jobs:
+the suite-level `afterAll(closeMockApiFixtures)` makes Playwright partition
+fully-parallel cases into fixed contiguous groups, rather than individually
+dispatching them to available workers. The installed runner explicitly uses
+`ceil(parallelWithHooks.tests.length / expectedParallelism)` for these groups.
+In the four-case/two-worker experiment, the core interactions and responsive
+case are pinned together while the other worker finishes its two routes.
+In the full profile this strands the expensive core/width phases together.
+The three phone CI logs are still starting their 320px phase after 38-43
+minutes. This is not a reason to add another matrix or raise a deadline.
+
+Stop the obsolete worker-only experiment (explicit task-container stop,
+exit 137; not a passing receipt). Keep its comparative native timings, but
+do not claim a complete two-worker pass. Move the owned SSE listener cleanup
+to the existing page fixture, after navigation and request-accounting
+teardown, with `finally` coverage even when teardown fails. Remove only the
+now-redundant pure cleanup hooks from the four specs using that fixture.
+No test, assertion, discovery entry or evidence step is removed.
+
+Strengthen the existing two-case teardown contract with a real EventSource
+and an exact closed-port assertion. Before the lifecycle repair it reports
+**1 failed / 1 passed (11.7s)**: the server still answers after page teardown.
+The original late-report, invalid-RUM and no-escape assertions remain.
+The repaired contract and independently schedulable phases require
+validation before shipping.
+
+Quality attempt 2 again exceeded 45 minutes for all six WebKit profiles.
+It is cancelled/completed; all eight interrupted logs were collected.
+No third unchanged rerun. Light desktop reports native click/capture waits;
+custom desktop also reports an unhandled `/healthz` access-control error
+in the replay phase. That distinct error remains an investigation item,
+not an accepted console exclusion. Five other workflows pass on `7a70264b45`.
+
+## 2026-11-17 bounding concurrent native WebKit rendering
+
+The exact current CI artifact passes all four newly exposed custom-desktop
+phases locally: **4 passed (24.1m)**, four workers/four CPUs, no retries,
+zero proxy errors. This is ARM64 evidence, not proof of x64 CI acceptance.
+The native Timeline still shows a costly first form capture: 4.939 seconds,
+including a 2.063-second delay before its first stability frame while ordinary
+timers continue firing. The run consumes essentially all four CPUs.
+Its first battery details capture takes 1.531 seconds. The former transition
+storm is absent; another CSS or font-wait workaround is not justified.
+
+Compare the same four phases, artifact, Node/browser versions, Timeline probe
+and four-CPU allocation with two workers. The first form capture drops to
+2.374 seconds and the battery capture to 0.885 seconds. This changes scheduling,
+not the page or native operation. Four competing WebKit renderers leave too
+little native-frame headroom under the unchanged eight-second action budget.
+Use two workers for WebKit profiles and replay; retain four for Firefox and
+Chromium design partitions. The complete two-worker replay is still running
+and must pass before this candidate is pushed.
+
+Extend the existing workflow contract to require the exact engine-specific
+allocation and its use by both commands. Every profile, case, replay,
+discovery assertion, screenshot/video/trace mode, deadline and aggregate
+remains unchanged. No suite or matrix is added, and no failing assertion is
+removed or relaxed.
+
 ## 2026-11-17 current-head retry and native stability investigation
 
 CI, Security, Ops, SI and Auto Label pass on `7a70264b45`. Quality attempt 1

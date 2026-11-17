@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
 import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
-import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
+import { assertMockApiAfterNavigation, assertMockApiComplete, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
@@ -1344,8 +1344,6 @@ async function expectNeutral(page: Page, noLocalScopes = false) {
     }
   }
 }
-
-test.afterAll(async () => { await closeMockApiFixtures(); });
 
 test('Replay legend restoration survives seek persistence across application designs', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });

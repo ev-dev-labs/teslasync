@@ -2,11 +2,10 @@ import { expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { routeBuiltApplication, test } from './app-design-test';
-import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installPackReview } from './widget-design-packs.mock';
 
 test.use({ screenshot: 'off', trace: 'off', video: 'off' });
-test.afterAll(async () => { await closeMockApiFixtures(); });
 
 test('Cyber grid tokens do not leak into neutral or other pack previews', async ({ page }) => {
   await page.setContent(`
