@@ -524,6 +524,13 @@
   }
 }
 
+@media screen and (forced-colors: none) {
+  /* Clipped tables retain real headers; visual card labels are only needed when exposed. */
+  [data-chart-alternative][data-app-design-owner] [data-mobile-stack-table][data-app-design-owner] td[data-app-design-owner]::before {
+    content: none;
+  }
+}
+
 @media screen and (max-width: 639px), screen and (min-width: 640px) and (any-pointer: coarse) {
   [data-heatmap-label-day][data-app-design-owner] {
     --heatmap-label-day: attr(data-heatmap-label-day);

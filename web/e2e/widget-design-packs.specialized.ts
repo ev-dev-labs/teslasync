@@ -5,6 +5,7 @@ import { DRIVE_DETAIL_ID } from './driveDetailFixtures';
 import type { SpecializedReviewSources } from './widget-design-packs.specialized.mock';
 import { alternateConversation, chargingReviewPath, syntheticConversation } from './widget-design-packs.specialized.fixtures';
 import { energyReviewPath } from './widget-design-packs.energy.mock';
+import { withRunningObservationClock } from './observationClock';
 
 // These routes are registered in App.tsx. EfficiencyLandscape is deliberately
 // not assigned an invented URL: its owner must supply a real route disposition.
@@ -12,17 +13,6 @@ export const specializedReviewRoutes = [
   '/battery-cells', chargingReviewPath, '/signal-mutual-information', energyReviewPath,
   `/drives/${DRIVE_DETAIL_ID}`, `/drives/${DRIVE_DETAIL_ID}/replay`, '/live', '/chatbot', '/statistics',
 ] as const;
-
-async function withRunningObservationClock(page: Page, interact: () => Promise<void>) {
-  const observationTime = await page.evaluate(() => Date.now());
-  // Leaflet auto-pan and Recharts' mousemove throttle both measure elapsed Date time.
-  await page.clock.setSystemTime(observationTime);
-  try {
-    await interact();
-  } finally {
-    await page.clock.setFixedTime(observationTime);
-  }
-}
 
 export interface RouteVectorSegment {
   index: number; space: string; d: string; length: number;
@@ -137,7 +127,9 @@ async function inspectOpenDialog(
   await expect(dialog).toHaveAttribute('data-app-design-owner', new RegExp(`^pack-${packId}(?:\\s|$)`));
   await assertContained(dialog, 'real specialized route open details');
   const geometry = await compositionGeometry(dialog);
-  await dialog.screenshot({ path: testInfo.outputPath(file), animations: 'disabled' });
+  await withRunningObservationClock(page, () => dialog.screenshot({
+    path: testInfo.outputPath(file), animations: 'disabled',
+  }));
   if (await dialog.getAttribute('aria-modal') === 'true') {
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
@@ -206,7 +198,7 @@ export async function sampleHeatmapPaint(plot: Locator) {
       }),
     };
   });
-  const pixels = await plot.screenshot({ animations: 'disabled' });
+  const pixels = await withRunningObservationClock(plot.page(), () => plot.screenshot({ animations: 'disabled' }));
   const paint = await plot.evaluate(async (_element, { imageData, geometry }) => {
     const image = new Image();
     image.src = `data:image/png;base64,${imageData}`;
@@ -297,7 +289,7 @@ export async function inspectSpecializedRoute(
       evidence.speedCompact = await renderedGeometry(heatmap);
     } else {
       await expect(plot).toHaveCount(1);
-      await plot.scrollIntoViewIfNeeded();
+      await withRunningObservationClock(page, () => plot.scrollIntoViewIfNeeded());
       await expect(plot.locator('rect')).toHaveCount(168);
       const { pixels, paint } = await sampleHeatmapPaint(plot);
       await testInfo.attach(`${prefix}-speed-heatmap.png`, { body: pixels, contentType: 'image/png' });
@@ -389,7 +381,9 @@ export async function inspectSpecializedRoute(
     expect(await detail.evaluate(element => Boolean(element.closest('[data-app-design-portal]')))).toBe(true);
     await assertContained(detail, 'real portaled charging partial-zero detail');
     evidence.partialZero = await compositionGeometry(detail);
-    await detail.screenshot({ path: testInfo.outputPath(`${prefix}-partial-zero.png`), animations: 'disabled' });
+    await withRunningObservationClock(page, () => detail.screenshot({
+      path: testInfo.outputPath(`${prefix}-partial-zero.png`), animations: 'disabled',
+    }));
     const before = await detail.boundingBox();
     const previousAnchor = await recorded.boundingBox();
     const recordedSlot = Number(await recorded.getAttribute('data-heatmap-slot'));
@@ -708,7 +702,8 @@ export async function inspectSpecializedRoute(
     evidence.passiveLegend = await renderedGeometry(legend);
     await expect(main).toContainText('Add more vehicles to compare');
     const sector = sectors.first();
-    await sector.scrollIntoViewIfNeeded();
+    // Responsive pie paths can be replaced while their containing figure remains mounted.
+    await states.scrollIntoViewIfNeeded();
     // An annular sector's bounding-box center can be in its unpainted hole.
     const paintedPoint = await sector.evaluate(element => {
       if (!(element instanceof SVGPathElement)) throw new Error('Expected a real pie sector path');

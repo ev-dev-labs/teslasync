@@ -2717,10 +2717,14 @@ test('error scenarios keep appearance startup available while failing feature da
   if (!controller) throw new Error('Mock API is required');
   await page.goto('http://127.0.0.1:54321/');
   const statuses = await page.evaluate(async () => Promise.all(
-    ['/api/v1/settings/widget-design-pack', '/api/v1/analytics/battery-health']
+    ['/healthz', '/api/v1/settings/widget-design-pack', '/api/v1/analytics/battery-health']
       .map(async path => (await fetch(path)).status),
   ));
-  expect(statuses).toEqual([200, 503]);
+  expect(statuses).toEqual([200, 200, 503]);
+  expect(controller.requests.find(request => request.path === '/healthz')).toMatchObject({
+    method: 'GET', disposition: 'fulfilled',
+  });
+  expect(resolveApiFixture('/healthz', 'GET', 'populated').matched).toBe(false);
   await assertMockApiComplete(page, controller);
 });
 

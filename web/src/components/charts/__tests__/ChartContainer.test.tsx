@@ -264,6 +264,48 @@ it('keeps short annotated titles intrinsically word-sized beside the full canoni
   expect(screen.getByRole('button', { name: /Add annotation/i })).toBeVisible();
 });
 
+it('omits redundant visual labels only while the complete accessible table is clipped', () => {
+  const { container, unmount } = renderWithProviders(
+    <section data-app-design-preview {...getAppDesignAttributes('v2')}>
+      <ChartContainer title="Recorded observations" ariaLabel="Recorded observations"
+        data={[{ count: 0 }, { count: null }]}
+        dataColumns={[{ key: 'count', label: 'Sessions' }]}>
+        <span>Original plot</span>
+      </ChartContainer>
+    </section>,
+  );
+  const release = observeAppDesignScopes(container);
+  try {
+    const table = screen.getByRole('table', { hidden: true });
+    const cells = within(table).getAllByRole('cell', { hidden: true });
+    expect(within(table).getByRole('columnheader', { name: 'Sessions', hidden: true })).toBeInTheDocument();
+    expect(cells.map(cell => cell.textContent)).toEqual(['0', '—']);
+    const rules: Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'mobile.css'), 'utf8'))
+      .walkRules(rule => {
+        if (rule.selectors.some(selector => selector.endsWith('::before')
+          && cells[0].matches(selector.slice(0, -'::before'.length)))
+          && rule.nodes.some(node => node.type === 'decl' && node.prop === 'content' && node.value === 'none')) {
+          rules.push(rule);
+        }
+      });
+    expect(rules).toHaveLength(1);
+    const rule = rules[0];
+    expect(rule.parent?.type).toBe('atrule');
+    if (rule.parent?.type !== 'atrule') throw new Error('Hidden-label rule must be media-gated');
+    expect(rule.parent.params).toBe('screen and (forced-colors: none)');
+    const alternative = table.closest('[data-chart-alternative]')!;
+    alternative.removeAttribute('data-chart-alternative');
+    expect(rule.selectors.some(selector => cells[0].matches(selector.slice(0, -'::before'.length)))).toBe(false);
+    alternative.setAttribute('data-chart-alternative', '');
+    cells[0].removeAttribute('data-app-design-owner');
+    expect(rule.selectors.some(selector => cells[0].matches(selector.slice(0, -'::before'.length)))).toBe(false);
+  } finally {
+    unmount();
+    release();
+  }
+});
+
 it('shares explicit host summary and action slots for a differently titled embedded plot without displacing its body', () => {
   renderWithProviders(
     <LayoutCard title="Run-length distribution" summary={<span>Original source scope</span>}>

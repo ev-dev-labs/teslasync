@@ -847,7 +847,7 @@ function requestRecord(
   request: PlaywrightRequest,
 ): ApiRequestRecord | null {
   const url = new URL(request.url());
-  if (!url.pathname.startsWith('/api/')) return null;
+  if (!url.pathname.startsWith('/api/') && url.pathname !== '/healthz') return null;
   const existing = controller.requestIndex.get(request);
   if (existing) return existing;
   const record: ApiRequestRecord = {
@@ -926,7 +926,7 @@ async function fulfill(
   const request = route.request();
   const url = new URL(request.url());
   const record = requestRecord(controller, request);
-  if (!url.pathname.startsWith('/api/v1/')) {
+  if (!url.pathname.startsWith('/api/v1/') && url.pathname !== '/healthz') {
     // Vite-dev module graph: source requests such as /src/api/* match the
     // '**/api/**' intercept glob but are same-origin static assets, not API
     // escapes. Let them through unrecorded (preview builds issue no such
@@ -956,7 +956,10 @@ async function fulfill(
       await fulfillSse(route, path, controller, sseOrigin);
       return;
     }
-    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density, accentTheme);
+    const rootHealthProbe = url.pathname === '/healthz' && !url.search && request.method() === 'GET';
+    const resolution = rootHealthProbe
+      ? matched({ status: 'ok' })
+      : resolveApiFixture(path, request.method(), scenario, theme, density, accentTheme);
     if (!resolution.matched) {
       controller.unmatched.add(
         `${request.method()} ${url.pathname}${url.search ? '?<redacted>' : ''}`,
@@ -969,7 +972,7 @@ async function fulfill(
       });
       return;
     }
-    const requiredShellFixture =
+    const requiredShellFixture = rootHealthProbe ||
       path === '/vehicles' ||
       path === '/auth/status' ||
       path === '/auth/session' ||
@@ -1193,9 +1196,11 @@ export async function installApiMocks(
     });
   }
   const pageState = state;
-  await page.route('**/api/**', route =>
+  const fulfillRoute = (route: Route) =>
     fulfill(route, scenario, pageState.requestOwners.get(route.request()) ?? controller,
-      theme, density, sseServer.origin, accentTheme));
+      theme, density, sseServer.origin, accentTheme);
+  await page.route('**/api/**', fulfillRoute);
+  await page.route(url => url.pathname === '/healthz', fulfillRoute);
   return controller;
 }
 

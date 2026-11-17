@@ -14,6 +14,7 @@ import { chargingReviewPath, specializedDrives } from './widget-design-packs.spe
 import { inspectEnergyReview } from './widget-design-packs.energy';
 import { energyReviewPath, installEnergyReviewSources } from './widget-design-packs.energy.mock';
 import { analysisRows, deliveryRows, NOW as notificationNow } from './operationalbrief-contracts/notifications.fixtures';
+import { withRunningObservationClock } from './observationClock';
 
 test.setTimeout(1_800_000);
 const packIds = Object.keys(packNames) as PackId[];
@@ -1611,7 +1612,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
             await expect(preview.getByRole('button', { name: action, exact: true })).toBeDisabled();
           }
           if (phase.kind === 'interactions') {
-            await inspectPreviewInteractions(page, preview, testInfo, packId);
+            await withRunningObservationClock(page, () => inspectPreviewInteractions(page, preview, testInfo, packId));
             observe(packId, 'controls-forms', await compositionGeometry(preview.locator('[data-preview-section="form"]')), 'selected-applied');
             observe(packId, 'tables-lists', await compositionGeometry(preview.locator('[data-preview-section="table"]')), 'sort-page-filter-recovered');
             observe(packId, 'charts-gauges', await compositionGeometry(preview.locator('[data-preview-section="chart"]')), 'legend-restored-tooltip-checked');
@@ -1733,9 +1734,9 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await page.setViewportSize({ width, height: 1000 });
           if (phase.kind === 'accessibility') {
             for (const section of ['overview', 'chart', 'map', 'table', 'form', 'feedback', 'widgets']) {
-              await preview.locator(`[data-preview-section="${section}"]`).screenshot({
+              await withRunningObservationClock(page, () => preview.locator(`[data-preview-section="${section}"]`).screenshot({
                 path: testInfo.outputPath(`${packId}-${section}.png`), animations: 'disabled',
-              });
+              }));
             }
             await page.emulateMedia({ forcedColors: 'active' });
             const forcedColorsActive = await page.evaluate(() => matchMedia('(forced-colors: active)').matches);
