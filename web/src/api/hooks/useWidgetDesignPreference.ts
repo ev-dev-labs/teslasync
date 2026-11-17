@@ -35,7 +35,11 @@ export function useWidgetDesignRevalidation(origin: string, enabled: boolean) {
         if (document.visibilityState === 'hidden') return;
         void client.refetchQueries({ queryKey: widgetDesignIdentityKey(origin), exact: true, type: 'active' })
           .then(() => {
-            if (active) return client.refetchQueries({ queryKey: ['widget-design-preference', origin], type: 'active' });
+            // A periodic check shares a newer focus/broadcast read instead of aborting it.
+            if (active) return client.refetchQueries(
+              { queryKey: ['widget-design-preference', origin], type: 'active' },
+              { cancelRefetch: false },
+            );
           });
       }, 20_000);
       entry = { users: 0, stop: () => { active = false; window.clearInterval(timer); } };
