@@ -67,8 +67,36 @@ export async function inspectEnergyReview(
     const start = sources.reads.length;
     const button = main.locator('[data-app-part~="page-header"]')
       .getByRole('button', { name: /^Refresh data ·/ });
+    await button.scrollIntoViewIfNeeded();
     await expect(button).toBeEnabled();
-    await button.click();
+    const activationKey = 'teslasync-e2e-energy-refresh-activation';
+    // A real poll can make this focusable control busy between native down/up.
+    // Repeat only that rejected activation, never an accepted refresh.
+    await expect.poll(async () => {
+      await button.evaluate((element, key) => {
+        sessionStorage.removeItem(key);
+        const recordClick = () => sessionStorage.setItem(key,
+          element.getAttribute('aria-disabled') === 'true' ? 'busy' : 'accepted');
+        element.addEventListener('click', recordClick, { capture: true, once: true });
+        element.addEventListener('pointerup', () => {
+          // Replacing the dot with its busy icon can also cancel native click dispatch.
+          if (element.getAttribute('aria-disabled') === 'true') {
+            sessionStorage.setItem(key, 'busy');
+            element.removeEventListener('click', recordClick, true);
+          }
+        }, { capture: true, once: true });
+      }, activationKey);
+      await button.click();
+      const activation = await page.evaluate(key => {
+        const result = sessionStorage.getItem(key);
+        sessionStorage.removeItem(key);
+        return result;
+      }, activationKey);
+      if (activation !== 'busy' && activation !== 'accepted') {
+        throw new Error('Native refresh click did not reach the energy header control');
+      }
+      return activation;
+    }, { message: 'native energy refresh activates an available control' }).toBe('accepted');
     await expect.poll(() => new Set(sources.reads.slice(start).map(read => read.endpoint)).size).toBe(2);
     await expect(button).toBeEnabled();
   }
