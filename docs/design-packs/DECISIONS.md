@@ -1,5 +1,26 @@
 # Design Pack Decisions
 
+## 2026-11-17 additional CI-only command retains the obsolete worker policy
+
+The single batch is pushed as `73f72f9581`. Frontend lint job
+`134000138598` fails the existing Node test **all application design
+profiles run in both engines without skipping replay or accepting partial
+discovery**, before the other jobs finish. The job runs
+`.github/scripts/ci_workflows.test.mjs` as an additional command outside
+`npm run lint`. The local pre-push selection covered the browser workflow
+contract but missed this separate source contract; this is a command-
+selection difference, not a Linux-versus-Windows runtime failure.
+
+The exact selected case reproduces in pinned Linux before editing
+(0 passed / 1 failed). It still expects the old unconditional two-worker
+WebKit expression. Commit `3e0f01f5ef` updates only that strict expected
+expression to the measured desktop/phone allocation. The same selected
+case then passes (1 passed, 0 failed). All engine/profile matrix, complete
+discovery, replay, artifact and aggregate assertions remain unchanged.
+No tests or assertions are removed or added. The production/frontend tree
+is unchanged from the successful final lint, TypeScript and build.
+Monitoring continues while the correction is held for a batch push.
+
 ## 2026-11-17 dark WebKit global-budget failure exposed before pushing
 
 The cancelled old-head job retains both failed traces. Its core-interactions

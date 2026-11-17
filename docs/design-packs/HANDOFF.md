@@ -1,5 +1,26 @@
 # Design packs wrap-up handoff
 
+## Current remote head: `73f72f9581`
+
+The verified batch is pushed. Monitor `pr-watch-73f72`, pinned to the full
+remote SHA, every 90 seconds; it stops immediately on a new failed step/job
+or the 45-minute inspection threshold. CI is `44071957895`; Frontend
+Quality Gates is `44071957729`. The first failure and repair are below.
+CI-MAP is refreshed from every registered workflow on this head, using
+the committed workflow definitions rather than uncommitted local settings.
+The PR body is updated, the PR remains ready, and no merge is authorized.
+
+The receipts below describe the pre-push verification; do not push them
+again or mistake their old-head statuses for current CI acceptance.
+
+Frontend lint now fails its additional Node workflow contract, which was
+not part of `npm run lint`. The old worker-expression assertion reproduces
+in pinned Linux and is fixed/verified in local `3e0f01f5ef` (one case).
+Nothing is pushed yet for this correction. Monitor
+`pr-watch-73f72-lint-known` continues watching all other jobs, with only
+the already-inspected lint job acknowledged. CI-MAP includes its exact
+failing test; no environment or suppression workaround is involved.
+
 ## Verified resource repair; next action is the batched push
 
 Cancelling the old run exposes repeated whole-test timeouts
