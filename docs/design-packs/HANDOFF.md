@@ -1,5 +1,26 @@
 # Design packs wrap-up handoff
 
+## Latest CI follow-through: 2026-11-17
+
+The published `a3285f3d30` batch exposed two failures immediately: discovery
+matched the hidden-label optimization against a visible fixture, and
+Security mistook an API-like filename/digest tuple for a credential.
+`a0d22c505b` repairs both without changing assertions, source digests,
+scanner configuration or allowlists. Exact browser reproduction passes
+(34.6s), the ChartContainer/source-contract files pass 32/161 tests, full
+lint/types/build pass, and the full pinned secret scan reports no leaks.
+Other CI jobs continued during repairs; only those two failures were present
+at the final batch check. Latest-head CI acceptance remains mandatory.
+
+The task-owned Docker preview on 3120 is healthy on
+`teslasync-web:design-packs-v2-a0d22c505b`. Entry
+`/assets/index-CFmuNir9.js` contains the exact repair SHA; health/readiness/
+auth-mode return 200. Startup JavaScript is 399.2 KB under the unchanged
+400 KB cap. Rollback: `teslasync-design-packs-v2-rollback-before-a0d22c505b`.
+Both temporary Vite helpers are stopped. Fresh main ancestry at the repair
+commit is `255 0`; both added-line suppression scans report zero matches.
+PR #259 remains main-based, ready and unmerged.
+
 ## Current continuation: 2026-11-17
 
 The verified local repair batch is ready for latest-head CI acceptance:

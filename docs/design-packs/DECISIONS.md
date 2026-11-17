@@ -1,5 +1,44 @@
 # Design Pack Decisions
 
+## 2026-11-17 immediate latest-head CI follow-through
+
+The first `a3285f3d30` poll with failures exposed discovery and Security;
+repairs began while other jobs continued. Discovery's original visible
+chart-alternative fixture correctly requires mobile labels in both normal
+and forced colors. The optimization was scoped by semantic attribute, not
+actual clipping, so it matched that visible surface too. Require the existing
+`sr-only` class as well. Extend the same unit regression to remove that class
+and prove the optimization no longer matches; do not change the browser test.
+
+The exact failing browser case passes all its original 27-pack, three-width,
+three-font-scale and two-color-mode assertions: **1 passed (34.6s)**,
+zero proxy errors. The existing ChartContainer file again passes 32 tests;
+scoped ESLint and TypeScript exit 0. A first local lint attempt correctly
+rejected the test authoring the hiding utility directly. The regression now
+removes/restores the canonical component's emitted class attribute instead,
+without duplicating that utility or changing the audit. The final existing
+ChartContainer file again passes 32 tests; full lint and production build
+exit 0.
+
+The pinned secret scan reproduces exactly one finding: the positional tuple
+containing the `TeslaApiUsageCard.tsx` path and its historical SHA-256 digest.
+Its redacted match is the API-like filename followed by the digest, not a
+credential. Represent all three records with explicit `file` and `sha256`
+fields, retaining every digest byte and every strict source/predecessor
+assertion. The same source-contract file passes **161 tests** with CI coverage
+options and scoped ESLint. The full pinned scanner passes against the
+tracked-only checkout with that correction: **122.40 MB scanned, no leaks
+found (1m44s)**. Its configuration and all allowlists remain unchanged.
+
+Commit `a0d22c505b` contains both repairs. Its Docker build passes with
+399.2 KB startup JavaScript and the task-owned preview is healthy.
+The actual entry `/assets/index-CFmuNir9.js` contains `a0d22c505b`; root
+health, readiness and auth-mode return 200. Its predecessor is preserved as
+`teslasync-design-packs-v2-rollback-before-a0d22c505b`. Fresh main ancestry is
+`255 0`; added-line suppression scans against both bases again report zero.
+Other jobs continued throughout these repairs; the final pre-push check
+still identifies only the same two failures, both covered by this batch.
+
 ## 2026-11-17 verified clipped-table and native-observation repairs
 
 The native-layout differential isolates the complete hidden chart-alternative
