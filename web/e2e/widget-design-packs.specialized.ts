@@ -638,7 +638,10 @@ export async function inspectSpecializedRoute(
     await expect(suggestions).toHaveCount(4);
     for (const suggestion of await suggestions.all()) {
       const prompt = await suggestion.innerText();
-      await suggestion.click();
+      await withRunningObservationClock(page, async () => {
+        await suggestion.scrollIntoViewIfNeeded();
+        await suggestion.click();
+      });
       await expect(composer).toHaveValue(prompt);
       await expect(composer).toBeFocused();
     }

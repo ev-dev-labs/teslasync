@@ -1329,10 +1329,16 @@ async function preservedPreferences(page: Page) {
 }
 
 async function expectProfile(page: Page, packId: PackId) {
-  for (const [attribute, value] of Object.entries(getAppDesignAttributes(packId))) {
-    await expect(page.locator('html')).toHaveAttribute(attribute, value);
-  }
-  await expect(page.locator('html')).toHaveAttribute('data-app-design-owner', new RegExp(`^pack-${packId}(?:\\s|$)`));
+  const expected = {
+    ...getAppDesignAttributes(packId),
+    'data-app-design-owner': expect.stringMatching(new RegExp(`^pack-${packId}(?:\\s|$)`)),
+  };
+  // Root locator mismatches build the entire accessibility tree on each poll,
+  // blocking the preference response this assertion is waiting to observe.
+  await expect.poll(() => page.locator('html').evaluate(
+    (root, attributes) => Object.fromEntries(attributes.map(attribute => [attribute, root.getAttribute(attribute)])),
+    Object.keys(expected),
+  )).toEqual(expected);
 }
 
 async function expectNeutral(page: Page, noLocalScopes = false) {
