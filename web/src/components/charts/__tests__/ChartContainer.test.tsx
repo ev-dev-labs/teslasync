@@ -295,6 +295,10 @@ it('omits redundant visual labels only while the complete accessible table is cl
     if (rule.parent?.type !== 'atrule') throw new Error('Hidden-label rule must be media-gated');
     expect(rule.parent.params).toBe('screen and (forced-colors: none)');
     const alternative = table.closest('[data-chart-alternative]')!;
+    const hiddenClasses = alternative.getAttribute('class')!;
+    alternative.removeAttribute('class');
+    expect(rule.selectors.some(selector => cells[0].matches(selector.slice(0, -'::before'.length)))).toBe(false);
+    alternative.setAttribute('class', hiddenClasses);
     alternative.removeAttribute('data-chart-alternative');
     expect(rule.selectors.some(selector => cells[0].matches(selector.slice(0, -'::before'.length)))).toBe(false);
     alternative.setAttribute('data-chart-alternative', '');

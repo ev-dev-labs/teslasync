@@ -47,13 +47,22 @@ const calls = (file: string, text: string) => producerProjection(file, text).cal
 
 describe('exact e1fb native source repair successor (not native certification)', () => {
   it.each([
-    ['web/src/features/advanced-intelligence/pages/ComponentSurvivalPage.tsx', 'deff0b009d17029953dcdc2494453cc19ee34776b3de0d7ea5641e69749b96ee'],
-    ['web/src/features/dashboard/widgets/MaintenanceTrackerWidget.tsx', '411f3a8cbb68bd5007cf4fb860f317e8f0c7298499493607d3c28e2c726a9d1f'],
-    ['web/src/features/system/components/status/TeslaApiUsageCard.tsx', '3abc8237c4a02ae7dd467d10ccf2f7cb5720b1dc9a8e80ed360fe9b2167277ec'],
-  ])('preserves complete source through the key-only repair: %s', (file, before) => {
+    {
+      file: 'web/src/features/advanced-intelligence/pages/ComponentSurvivalPage.tsx',
+      sha256: 'deff0b009d17029953dcdc2494453cc19ee34776b3de0d7ea5641e69749b96ee',
+    },
+    {
+      file: 'web/src/features/dashboard/widgets/MaintenanceTrackerWidget.tsx',
+      sha256: '411f3a8cbb68bd5007cf4fb860f317e8f0c7298499493607d3c28e2c726a9d1f',
+    },
+    {
+      file: 'web/src/features/system/components/status/TeslaApiUsageCard.tsx',
+      sha256: '3abc8237c4a02ae7dd467d10ccf2f7cb5720b1dc9a8e80ed360fe9b2167277ec',
+    },
+  ])('preserves complete source through the key-only repair: $file', ({ file, sha256 }) => {
     const current = source(file);
     const previous = restoreKeyIdentitySource(file, current);
-    expect(hash(previous)).toBe(before);
+    expect(hash(previous)).toBe(sha256);
     expect(() => restoreNativeSourceRepair(file, current)).not.toThrow();
     for (const altered of [previous, current + '\n', current.replace(/\bkey(?==|:)/, 'invalidKey')]) {
       expect(() => restoreKeyIdentitySource(file, altered)).toThrow();
