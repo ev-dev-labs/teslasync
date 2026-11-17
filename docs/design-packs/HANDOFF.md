@@ -1,5 +1,81 @@
 # Design packs wrap-up handoff
 
+## Verified resource repair; next action is the batched push
+
+Cancelling the old run exposes repeated whole-test timeouts
+in **WebKit / 1440px / dark / phase core interactions**. Both retained
+attempts hit 30 minutes; checkbox/screenshot errors are secondary to global
+teardown. Exact Linux replay `webkit-dark-interactions-baseline` passes
+on the source-equivalent old production preview (50729), four CPUs and
+the requested two-worker setting (one selected test uses one worker).
+
+Artifacts: session `6c649-webkit-dark-attempt2`; both core-interactions trace
+directories and error contexts are present. The first trace spends 936s in
+637 clicks and 486s in 147 screenshots. Investigate actual native execution
+cost/resource contention; preserve every case, screenshot and deadline.
+The three failed critical-smoke aggregate jobs reject the cancelled
+prerequisite, not additional browser-test failures. CI-MAP has five
+non-passing entries (including conditional production smoke).
+
+The single selected case passes (14.2m), all 27 packs. Resource samples
+reach 303% CPU for one WebKit worker. The two-repetition/two-worker comparison
+passes (20.1m), but per-case time grows by 42.4% while CPU reaches 384%.
+This reproduces contention, not the hosted 30-minute timeout.
+
+Commit `411c828975` assigns one worker to desktop WebKit only,
+retains phone WebKit/Firefox allocation, and records hardware/runtime in
+the existing receipt. Actionlint, unchanged-inventory comparisons and the
+existing pinned-Linux workflow contract pass (1 test, 9.4s).
+`webkit-dark-interactions-final` passes on current assets (50739):
+**1 passed (14.8m)** with configured `--workers=1`, all 27 packs,
+zero retries/proxy errors. Final lint, explicit TypeScript and build also
+pass; startup JavaScript remains 399.1 KB. No deadline, assertion, case,
+job or matrix is changed. All named failures are now locally covered;
+push the held batch once documentation validation/commit completes.
+
+The old monitor has stopped on deliberate cancellation. All old-head jobs
+are complete; start a fresh strict monitor after the eventual batched push.
+Five repair/evidence commits through `411c828975` remain unpushed at this
+receipt. Commit these documentation updates, push once, then monitor the
+new head. Main is current, the PR is ready/open/mergeable, and suppression
+diffs against both bases are clear. Do not equate local passes with CI.
+
+## Verified replay repair batch through `440b0d720e`
+
+The batch includes `a117f70157` (clipboard/lease ordering), `9e7b411ccf`
+(stable Live marker), `1c6f23f149` (evidence) and `440b0d720e` (native
+preview/navigation ordering). Remote remains `6c64927f13` until the single
+batch push. No new-head CI acceptance is claimed.
+
+The completed dark Firefox job exposes three retry-only replay failures.
+Pre-scroll fixes the two painted-target mismatches without changing native
+clicks or deadlines. A session-only probe reproduces the third failure:
+navigation immediately after a real preference fetch starts leaves the
+same pending `NS_BINDING_ABORTED` ledger record as CI.
+
+The shared fixture now drains real fetch responses and initiates navigation
+in the same browser turn as the idle check. Trusted beforeunload closes the
+existing production transport gate; DOMContentLoaded confirms the new
+document. No clocks, queries, responses, cancellation allowances or strict
+ledger assertions are changed. The identical probe passes (34.9s).
+Original cases across the existing engines: 9 passed (1.8m). Final original
+Firefox cases plus existing teardown contracts: 10 passed (1.1m), zero
+retries/proxy errors. Full lint, explicit TypeScript, build, scoped ESLint,
+required audit and suppression scans pass. Startup JavaScript is 399.1 KB.
+
+Custom and light desktop WebKit jobs on the old head each pass all 23
+phases without retries (1.9h). The remaining old-head Quality run is
+cancelled before replacement; its final partial dark-profile log and
+artifact are collected. No third unchanged retry.
+CI-MAP is the observed inventory, not a declaration that the new head
+has passed. Keep the final monitor/fix loop active after the push.
+
+Docker 3120 already contains the latest production tree at `9e7b411ccf`.
+The new repairs are test-only; screenshots and shared services are unchanged.
+Session evidence includes `firefox-navigation-overlap-baseline`,
+`firefox-navigation-overlap-fixed`, `navigation-original-replays` and
+`navigation-final-contracts`. The earlier sections below are historical.
+
 ## Local verified repairs through `9e7b411ccf`; remote head `6c64927f13`
 
 The Live marker failure now has a reproduced cause and production repair:

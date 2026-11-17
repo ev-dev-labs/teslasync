@@ -1,5 +1,140 @@
 # Design Pack Decisions
 
+## 2026-11-17 dark WebKit global-budget failure exposed before pushing
+
+The cancelled old-head job retains both failed traces. Its core-interactions
+phase ran twice for 30 minutes and was on its third attempt when cancelled.
+Both error contexts identify the unchanged 1,800,000ms whole-test deadline.
+The missing Complete checkbox and screenshot's about:blank navigation are
+secondary teardown effects; do not weaken those interaction assertions.
+
+The first attempt spends 936s in 637 native clicks and 486s in 147 locator
+screenshots. Pack steps generally take 70-98s. A named-case Linux replay is
+running before another repair. Its preserved preview has the same production
+source as `6c64927f13` (`git diff 2a0010a47d..6c64927f13 -- web/src` is empty),
+but a different build identity; do not claim byte-identical assets. The
+current fixture includes the already-verified `440b0d720e` navigation repair.
+
+The three new critical-smoke failures are aggregate checks rejecting the
+cancelled prerequisite, not three additional failing browser cases. CI-MAP
+records their exact failing step and the actual repeated WebKit case.
+No new push or speculative production/style change has occurred.
+
+The selected case passes alone: **1 passed (14.2m)**, all 27 packs, no
+retries/proxy errors. Six CPU samples from that owned container range from
+102.48% to 303.40% (sample mean 223.35%; not a whole-run CPU average).
+The repository is confirmed public; its job uses the standard Linux runner.
+Native ARM64 versus hosted x64 remains an explicit hardware difference.
+
+Two repetitions of only the same case with two workers/four CPUs finish:
+**2 passed (20.1m)**, no retries/proxy errors. Their test-body durations
+are 1,193,186ms and 1,192,267ms, versus 837,693ms alone: about 42.4%
+slower per case. Both advance from the first pack through V7 in about
+318s, versus 219s alone; observed container CPU is 383.68%.
+This demonstrates rendering contention, not a local reproduction of the
+hosted 30-minute timeout. Native ARM64 finishes sooner than hosted x64.
+
+Give each existing desktop WebKit profile one worker; retain two workers
+for WebKit phones and four for Firefox. Preserve all profile registration,
+27-pack loops, captures, assertions, replay cases and deadlines. Add actual
+Node/architecture/CPU/worker metadata to the existing build receipt so the
+next hosted result has explicit environment evidence. No job, shard, matrix
+or step is added or removed. Actionlint passes and a structural comparison
+confirms unchanged job/step inventories, matrices and dependencies.
+Commit `411c828975` contains only this resource/receipt change. The existing
+workflow contract passes in pinned Linux: **1 passed (9.4s)**, no retries
+or proxy errors. The final exact case with `--workers=1` against current
+production assets (50739) passes: **1 passed (14.8m)**, all 27 packs,
+zero retries/proxy errors. The ordinary slow-file advisory remains visible;
+it is not a failed assertion or an authorization to split the suite.
+
+Final `npm run lint`, `npx tsc --noEmit` and `npm run build` all exit 0.
+Startup JavaScript remains 399.1 KB against the unchanged 400 KB cap.
+The receipt generator executes successfully with its new runtime fields.
+Added-line scans against both main and the original feature base report
+zero suppression directives, disabled/focused tests, `any` casts or empty
+catches. No screenshot changed in this repair batch. Main ancestry is
+current (no commits behind); PR #259 remains ready, open and mergeable.
+These are local results, not new-head CI acceptance.
+The updated documentation build also passes (21.75s).
+
+## 2026-11-17 completed Firefox replay still exposes three first-attempt failures
+
+The dark Firefox profile passes 23 phases (56.1m). Its separate replay step
+passes 54 cases and reports three flaky cases after their existing retries:
+Quiet desktop restoration inside Blueprint, and custom nested preview
+restoration at 390px/1440px. Do not equate the green job with clean first
+attempts. CI-MAP continues listing only non-passing jobs as requested;
+these observed failures are tracked in FIXLIST instead of mislabelling
+their successful job.
+
+Run exactly these three cases in pinned Linux before editing:
+**3 passed (32.9s)**, zero retries and zero proxy errors. This baseline does
+not reproduce their CI timing. Actual CI traces establish the two desktop
+click misses: layout locates the Quiet button at `(1065,522)` or `(956,605)`,
+but painted frames immediately before and after the native click still
+show the top Appearance panel rather than the scrolled gallery. Apply the
+same explicit pre-scroll ordering already proven for chatbot suggestions,
+through one helper used by both affected existing cases. Native click,
+visibility/geometry assertions and all deadlines remain unchanged.
+The corrected helper passes the same three cases (33.3s).
+
+The phone case passes its body and fails only its navigation ledger:
+the preference GET starts 32ms after teardown's about:blank navigation
+begins. The strict ledger retains the aborted pending read. The existing
+production transport already checks document lifetime immediately before
+fetch. Do not guess at another guard, expand cancellation allowances or
+freeze timers to conceal this ordering; its lifecycle investigation remains
+active until the following native reproduction.
+
+Four lifecycle probes pass (57.8s), establishing that revalidation can
+start while teardown preparation is running, before trusted beforeunload.
+Two browser-owned navigation probes pass (35.4s); native beforeunload runs
+synchronously before `location.replace` returns. An intercepted-response
+delay passes and is not accepted as a reproduction.
+
+A session-only probe then initiates real navigation immediately after the
+next real preference fetch starts. It does not fake lifecycle events,
+freeze timers or alter the response. The original custom-phone case now
+fails with the exact pending `NS_BINDING_ABORTED` preference record seen
+in CI. This identifies fixture shutdown interrupting an already-started
+read, rather than a transport read escaping after document shutdown.
+
+The shared fixture now tracks response completion without consuming the
+application's response, drains in-flight fetches, and initiates native
+navigation in the same browser turn as the idle check. A new document's
+DOMContentLoaded event, not a possibly same-document history event,
+confirms completion. Timers, queries and original fetch promises remain
+unchanged. No endpoint, cancellation code, ledger assertion or deadline
+is relaxed; failures still propagate through the application's original
+promise and the original strict ledger.
+
+The same overlapping-read probe passes (34.9s) with this barrier. The
+seven existing teardown/cancellation contracts pass (14.5s), including
+invalid/unreviewed navigation and beacon rejection. The probe is stored
+only in session artifacts; no tests, cases, jobs or matrices are added.
+Commit `440b0d720e` contains both replay repairs. The three original cases
+pass in the existing Chromium/Firefox/WebKit projects: **9 passed (1.8m)**.
+After tightening the navigation completion event, the original three Firefox
+cases and seven existing contracts pass together: **10 passed (1.1m)**.
+All browser runs have zero retries and zero proxy errors.
+
+Full lint, explicit TypeScript and production build pass; final scoped
+ESLint also passes. The required navigation-helper audit reports zero
+violations in all six categories and TypeScript passes. Both base diffs
+contain zero added suppression directives, focused/disabled tests, `any`
+casts or empty inline catches. No baseline/allowlist source file is changed
+against main, and this repair batch changes no workflow. Startup JavaScript
+is 399.1 KB under the unchanged 400 KB cap. The production tree remains
+the one already deployed at Docker source `9e7b411ccf`.
+
+The old-head custom and light desktop WebKit profiles each complete
+23 phases without retries (1.9h). With all observed repairs locally
+verified, cancel the remaining old-head Quality run before the batch push
+and collect its partial dark-profile log. This is replacement by changed
+code, not a third unchanged rerun or a claim that the old dark profile
+passed. Any newly exposed failure must join the same local repair batch.
+
 ## 2026-11-17 native marker target replacement
 
 Further inspection of the actual failed Swiss click finds an identity change
