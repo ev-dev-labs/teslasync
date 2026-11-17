@@ -1,0 +1,491 @@
+run,id,job,conclusion,queue,runner,setup,execution,other
+44175378266,134366913129,"Shared hermetic browser build","success",1.52,2.52,1.4,1.05,0.07
+44175378266,134366913777,"Route registry and test discovery","success",2.38,3.25,1.28,0.02,1.95
+44175378266,134369464218,"Windows visual snapshots (3/4)","success",0.07,4.17,2.85,1.02,0.3
+44175378266,134369464219,"Windows visual snapshots (1/4)","success",12.93,2.63,1.68,0.9,0.05
+44175378266,134369464247,"edge critical smoke (1/1)","success",10.22,2.67,2.35,0,0.32
+44175378266,134369464265,"Windows visual snapshots (4/4)","success",0.32,3.53,2.42,0.87,0.25
+44175378266,134369464266,"firefox critical smoke (1/1)","success",7.45,2.8,2.32,0,0.48
+44175378266,134369464376,"Windows visual snapshots (2/4)","success",12.82,2.22,1.33,0.78,0.1
+44175378266,134369464445,"webkit critical smoke (1/1)","success",8.87,3.63,2.88,0,0.75
+44175378266,134369464593,"Chromium responsive-6","success",5.47,26.8,1.83,24.88,0.08
+44175378266,134369464627,"Chromium responsive-5","success",7.18,35.85,1.48,34.32,0.05
+44175378266,134369464629,"Chromium responsive-3","success",0.43,50.82,2.72,48.05,0.05
+44175378266,134369464649,"Chromium responsive-13","success",8.48,32.08,1.6,30.45,0.03
+44175378266,134369464650,"Chromium responsive-1","success",2.97,58.27,2.8,55.42,0.05
+44175378266,134369464652,"Chromium responsive-4","success",6.57,45.42,1.63,43.7,0.08
+44175378266,134369464661,"Chromium responsive-10","success",7.43,34.65,1.67,32.92,0.07
+44175378266,134369464664,"Chromium responsive-2","success",1.35,47.25,2.43,44.75,0.07
+44175378266,134369464675,"Chromium responsive-9","success",2.4,33.52,2.75,30.73,0.03
+44175378266,134369464676,"Chromium responsive-16","success",3.17,26.95,2.78,24.1,0.07
+44175378266,134369464691,"Chromium responsive-11","success",4.27,30.53,2.8,27.68,0.05
+44175378266,134369464715,"Chromium accessibility","success",3.88,3.25,2.22,0.98,0.05
+44175378266,134369464726,"Chromium responsive-7","success",4.57,38,2.82,35.12,0.07
+44175378266,134369464744,"Chromium responsive-8","success",0.97,33.5,2.8,30.65,0.05
+44175378266,134369464755,"Chromium responsive-12","success",6.48,30.77,1.73,28.95,0.08
+44175378266,134369464812,"Chromium performance","success",4.27,4.53,4,0.5,0.03
+44175378266,134369464835,"firefox application designs (1440px/dark, 1/1)","success",35.85,53.47,1.67,51.75,0.05
+44175378266,134369464854,"firefox application designs (390px/dark, 1/1)","success",48.63,35.47,1.65,33.75,0.07
+44175378266,134369464866,"Chromium responsive-15","success",4.27,23.08,1.93,21.12,0.03
+44175378266,134369464884,"webkit application designs (1440px/dark, 1/4)","success",42.62,66.25,1.87,64.32,0.07
+44175378266,134369464905,"firefox application designs (390px/custom, 1/1)","success",51.3,24.25,2,22.2,0.05
+44175378266,134369464910,"firefox application designs (1440px/custom, 1/1)","success",34.83,62.37,1.67,60.67,0.03
+44175378266,134369464913,"firefox application designs (1440px/light, 1/1)","success",12.53,44.92,1.8,43.1,0.02
+44175378266,134369464923,"Chromium responsive-14","success",1.63,34.18,2.55,31.57,0.07
+44175378266,134369464955,"firefox application designs (390px/light, 1/1)","success",57.5,24.68,1.7,22.92,0.07
+44175378266,134369464984,"webkit application designs (1440px/dark, 4/4)","success",52.02,49.37,1.55,47.78,0.03
+44175378266,134369465013,"webkit application designs (1440px/light, 4/4)","success",32.43,43.8,1.82,41.92,0.07
+44175378266,134369465038,"webkit application designs (1440px/light, 1/4)","success",63.98,42.07,2.07,39.92,0.08
+44175378266,134369465079,"webkit application designs (390px/dark, 2/2)","success",14.4,31.82,1.82,29.93,0.07
+44175378266,134369465098,"webkit application designs (1440px/custom, 4/4)","success",42.12,42.53,2.72,39.77,0.05
+44175378266,134369465099,"webkit application designs (1440px/light, 3/4)","success",15.6,48.33,1.18,47.1,0.05
+44175378266,134369465110,"webkit application designs (1440px/dark, 2/4)","success",30.28,48.4,1.85,46.52,0.03
+44175378266,134369465111,"webkit application designs (390px/light, 2/2)","success",40.62,40.52,1.73,38.73,0.05
+44175378266,134369465127,"webkit application designs (390px/light, 1/2)","success",35.97,30.57,1.63,28.88,0.05
+44175378266,134369465136,"webkit application designs (1440px/light, 2/4)","success",61.3,37.12,1.7,35.35,0.07
+44175378266,134369465204,"webkit application designs (1440px/custom, 3/4)","success",43.08,46.87,1.58,45.22,0.07
+44175378266,134369465206,"webkit application designs (390px/dark, 1/2)","success",34.52,32.78,1.83,30.88,0.07
+44175378266,134369465263,"webkit application designs (1440px/dark, 3/4)","success",27.4,50.65,1.6,49,0.05
+44175378266,134369465273,"webkit application designs (390px/custom, 1/2)","success",66.58,33,2.02,30.9,0.08
+44175378266,134369465303,"webkit application designs (1440px/custom, 1/4)","success",15.07,53.5,1.67,51.8,0.03
+44175378266,134369465347,"webkit application designs (390px/custom, 2/2)","success",37.3,32.37,1.68,30.6,0.08
+44175378266,134369466127,"webkit application designs (1440px/custom, 2/4)","success",46.25,47.63,1.55,46.03,0.05
+44175378266,134379156201,"Deliberate visual snapshot gate (Windows baseline)","success",51.78,1.28,1.22,0.02,0.05
+44175378266,134406745064,"Chromium responsive, a11y, keyboard, and performance","success",7.37,4.73,4.12,0.57,0.05
+44175378266,134433656973,"edge critical smoke","success",0.03,1.33,1.27,0,0.07
+44175378266,134433656982,"webkit critical smoke","success",0.03,1.73,1.43,0.22,0.08
+44175378266,134433657037,"firefox critical smoke","success",0.03,1.42,1.03,0.33,0.05
+44175378477,134365196285,"GitHub Actions workflow lint","success",0.05,1.23,0.93,0.27,0.03
+44175378477,134365196575,"Go build (notification-worker)","success",0.07,1.82,1.43,0.32,0.07
+44175378477,134365196696,"Backend database (rollback)","success",0.05,1.68,1.58,0.07,0.03
+44175378477,134365196755,"Backend architecture","success",0.05,1.53,1.02,0.45,0.07
+44175378477,134365196790,"Docs (build + asset validation)","success",0.07,1.85,1.22,0.58,0.05
+44175378477,134365196792,"Backend database (replay)","success",0.52,5.47,1.43,3.22,0.82
+44175378477,134365196854,"Frontend lint","success",3.73,3.38,1,2.3,0.08
+44175378477,134365196857,"Backend race tests (3/8)","success",0.05,4.2,1.5,2.63,0.07
+44175378477,134365196883,"Generated artifacts are current","success",0.07,2.63,2.33,0.23,0.07
+44175378477,134365196892,"Go build (export-worker)","success",0.83,1.42,0.65,0.72,0.05
+44175378477,134365196897,"Backend race tests (2/8)","success",0.05,5.78,1.77,3.95,0.07
+44175378477,134365196937,"Frontend build","success",0.05,4.23,1.87,2.33,0.03
+44175378477,134365196977,"Frontend tests (8/8)","success",0.05,14.2,2.1,12.07,0.03
+44175378477,134365196982,"Docker · fleet-telemetry","success",0.05,1.33,1.2,0.08,0.05
+44175378477,134365196988,"Backend lint","success",1.33,4.03,0.77,3.18,0.08
+44175378477,134365197034,"Backend race tests (5/8)","success",0.48,3.12,1.52,1.53,0.07
+44175378477,134365197037,"Backend race tests (4/8)","success",0.22,4.95,1.67,3.22,0.07
+44175378477,134365197064,"Backend race tests (6/8)","success",0.48,4.13,1.65,2.42,0.07
+44175378477,134365197067,"Docker · api","success",2.02,9.37,1.72,7.58,0.07
+44175378477,134365197077,"Frontend tests (4/8)","success",1.62,11.68,1.67,9.95,0.07
+44175378477,134365197089,"Backend race tests (8/8)","success",2.83,5.33,1.73,3.55,0.05
+44175378477,134365197100,"Frontend tests (2/8)","success",1.57,9.48,1.52,7.92,0.05
+44175378477,134365197109,"Frontend tests (1/8)","success",1.78,12.45,1.38,11,0.07
+44175378477,134365197116,"Backend race tests (7/8)","success",2.28,5.5,1.83,3.62,0.05
+44175378477,134365197260,"Frontend tests (3/8)","success",1.97,11.28,2.47,8.75,0.07
+44175378477,134365197296,"Frontend tests (6/8)","success",1.87,13.43,1.65,11.72,0.07
+44175378477,134365197333,"Docker · export-worker","success",3.63,7.45,1.55,5.85,0.05
+44175378477,134365197362,"Frontend tests (7/8)","success",1.43,9.83,1.58,8.18,0.07
+44175378477,134365197428,"Frontend tests (5/8)","success",5.88,11.13,1.2,9.87,0.07
+44175378477,134365197478,"Backend race tests (1/8)","success",6.02,3.77,1.78,1.92,0.07
+44175378477,134365197621,"Go build (teslasync)","success",4.3,2.95,1.23,1.65,0.07
+44175378477,134365197795,"Docker · notification-worker","success",4.67,4.55,1.02,3.52,0.02
+44175378477,134365198093,"Docker · web","success",5.4,4.58,1.37,3.15,0.07
+44175378477,134371280245,"Merge backend coverage","success",1.52,0.98,0.77,0.17,0.05
+44175378477,134372836026,"Backend (lint + test + build)","success",1.02,0.07,0,0,0.07
+44175378477,134375788949,"Merge frontend coverage","success",0.12,2.48,1.3,1.15,0.03
+44175378477,134377413263,"Frontend (lint + test + build)","success",17.4,0.07,0,0,0.07
+44175378477,134388117434,"CI (all checks)","success",2.08,0.07,0,0,0.07
+42844688965,129928911674,"Shared hermetic browser build","success",0.05,2.08,0.63,1.38,0.07
+42844688965,129928912510,"Route registry and test discovery","success",0.77,0.92,0.68,0.02,0.22
+42844688965,129930257342,"firefox critical smoke (1/3)","success",7.6,1.03,0.83,0,0.2
+42844688965,129930257372,"edge critical smoke (1/3)","success",6.93,1.5,1.33,0,0.17
+42844688965,129930257401,"webkit critical smoke (3/3)","success",0.33,4.25,4,0,0.25
+42844688965,129930257420,"firefox critical smoke (2/3)","success",9.87,1.1,0.95,0,0.15
+42844688965,129930257423,"webkit critical smoke (2/3)","success",8.2,1.28,1.07,0,0.22
+42844688965,129930257451,"webkit critical smoke (1/3)","success",7.37,1.32,1.12,0,0.2
+42844688965,129930257452,"firefox critical smoke (3/3)","success",0.33,1.18,0.92,0,0.27
+42844688965,129930257496,"edge critical smoke (3/3)","success",6.08,1.47,1.27,0,0.2
+42844688965,129930257500,"edge critical smoke (2/3)","success",7.6,1.58,1.4,0,0.18
+42844688965,129930257918,"Windows visual snapshots (3/32)","success",1.13,1.6,1.02,0.25,0.33
+42844688965,129930258002,"Windows visual snapshots (2/32)","success",1.55,4.7,4.13,0.25,0.32
+42844688965,129930258016,"Windows visual snapshots (19/32)","success",8.55,1.47,1.12,0.12,0.23
+42844688965,129930258017,"Windows visual snapshots (1/32)","success",8.77,1.5,0.97,0.27,0.27
+42844688965,129930258019,"Windows visual snapshots (5/32)","success",9.6,1.92,1.3,0.28,0.33
+42844688965,129930258023,"Windows visual snapshots (17/32)","success",5.92,1.4,0.95,0.15,0.3
+42844688965,129930258093,"Windows visual snapshots (20/32)","success",10.52,1.9,1.28,0.17,0.45
+42844688965,129930258112,"Windows visual snapshots (13/32)","success",10.3,1.5,1,0.18,0.32
+42844688965,129930258129,"Windows visual snapshots (16/32)","success",7.67,1.5,0.95,0.18,0.37
+42844688965,129930258135,"Windows visual snapshots (15/32)","success",11.33,1.28,0.9,0.13,0.25
+42844688965,129930258158,"Windows visual snapshots (22/32)","success",5.92,1.7,1.15,0.22,0.33
+42844688965,129930258163,"Windows visual snapshots (6/32)","success",9.45,1.27,0.8,0.22,0.25
+42844688965,129930258164,"Windows visual snapshots (9/32)","success",9.93,1.62,0.98,0.3,0.33
+42844688965,129930258180,"Windows visual snapshots (18/32)","success",10.57,1.38,1.02,0.07,0.3
+42844688965,129930258217,"Windows visual snapshots (8/32)","success",10.92,1.63,0.93,0.47,0.23
+42844688965,129930258229,"Windows visual snapshots (21/32)","success",11.57,1.65,1.13,0.18,0.33
+42844688965,129930258232,"Windows visual snapshots (12/32)","success",10.93,1.42,0.87,0.25,0.3
+42844688965,129930258255,"Windows visual snapshots (24/32)","success",8.3,1.52,1.1,0.08,0.33
+42844688965,129930258260,"Windows visual snapshots (10/32)","success",22.53,1.38,0.85,0.23,0.3
+42844688965,129930258268,"Windows visual snapshots (31/32)","success",5.5,1.63,1.25,0.07,0.32
+42844688965,129930258316,"Windows visual snapshots (25/32)","success",11.15,1.57,0.95,0.32,0.3
+42844688965,129930258320,"Windows visual snapshots (27/32)","success",10.07,1.37,0.98,0.08,0.3
+42844688965,129930258325,"Windows visual snapshots (14/32)","success",8.68,1.63,1.12,0.17,0.35
+42844688965,129930258362,"Windows visual snapshots (11/32)","success",10.93,1.58,1.02,0.33,0.23
+42844688965,129930258396,"Windows visual snapshots (30/32)","success",10.75,1.38,1,0.07,0.32
+42844688965,129930258432,"Windows visual snapshots (29/32)","success",9.22,1.65,1.22,0.07,0.37
+42844688965,129930258433,"Windows visual snapshots (26/32)","success",9.23,1.65,1.03,0.28,0.33
+42844688965,129930258556,"Windows visual snapshots (23/32)","success",10.37,1.37,0.93,0.17,0.27
+42844688965,129930258641,"Windows visual snapshots (4/32)","success",21.63,1.78,1.15,0.3,0.33
+42844688965,129930258642,"Windows visual snapshots (28/32)","success",10.3,1.47,1,0.2,0.27
+42844688965,129930258700,"Windows visual snapshots (7/32)","success",10.77,1.65,0.95,0.37,0.33
+42844688965,129930258774,"Chromium responsive-13","success",11.78,5.38,0.78,4.55,0.05
+42844688965,129930258809,"Chromium responsive-12","success",24.07,7.58,0.97,6.55,0.07
+42844688965,129930258814,"Windows visual snapshots (32/32)","success",12.57,1.37,0.97,0.07,0.33
+42844688965,129930258820,"Chromium responsive-3","success",12.47,5.12,0.97,4.1,0.05
+42844688965,129930258878,"Chromium responsive-2","success",13.32,6.68,1.1,5.52,0.07
+42844688965,129930258894,"Chromium responsive-9","success",11.48,5,0.82,4.13,0.05
+42844688965,129930258896,"Chromium responsive-6","success",12.4,11.5,0.78,10.67,0.05
+42844688965,129930258929,"Chromium responsive-5","success",24.1,11.02,3.87,7.08,0.07
+42844688965,129930258956,"Chromium responsive-8","success",11.82,6.77,1.1,5.6,0.07
+42844688965,129930258964,"Chromium responsive-16","success",22.22,5.17,0.9,4.22,0.05
+42844688965,129930259006,"Chromium responsive-27","success",12.47,10.88,0.9,9.9,0.08
+42844688965,129930259012,"Chromium responsive-21","success",11.6,9.95,1.23,8.67,0.05
+42844688965,129930259027,"Chromium responsive-20","success",12.2,5.52,1.07,4.38,0.07
+42844688965,129930259034,"Chromium responsive-23","success",13.43,13.45,1.13,12.23,0.08
+42844688965,129930259036,"Chromium responsive-25","success",13.27,11.95,1,10.88,0.07
+42844688965,129930259040,"Chromium responsive-4","success",18.07,5.73,0.78,4.92,0.03
+42844688965,129930259046,"Chromium responsive-14","success",11.85,5.6,1.07,4.45,0.08
+42844688965,129930259047,"Chromium responsive-1","success",12.58,3.9,0.88,2.97,0.05
+42844688965,129930259055,"Chromium responsive-19","success",22.15,6.57,0.8,5.72,0.05
+42844688965,129930259155,"Chromium responsive-10","success",17.63,6.97,1.02,5.88,0.07
+42844688965,129930259211,"Chromium responsive-7","success",12,7.87,0.97,6.8,0.1
+42844688965,129930259216,"Chromium responsive-18","success",12.77,5.42,0.73,4.65,0.03
+42844688965,129930259217,"Chromium accessibility-13","success",23.93,1.02,0.83,0.13,0.05
+42844688965,129930259223,"Chromium responsive-26","success",23.85,10.78,0.82,9.93,0.03
+42844688965,129930259237,"Chromium accessibility-4","success",16.53,1.07,0.85,0.17,0.05
+42844688965,129930259267,"Chromium responsive-24","success",12.67,11.83,0.85,10.93,0.05
+42844688965,129930259275,"Chromium accessibility-6","success",21,1.17,1,0.13,0.03
+42844688965,129930259282,"Chromium accessibility-12","success",22.22,1.08,0.95,0.1,0.03
+42844688965,129930259286,"Chromium responsive-30","success",15.45,9.68,1.17,8.45,0.07
+42844688965,129930259294,"Chromium accessibility-2","success",22.88,1.17,1,0.15,0.02
+42844688965,129930259299,"Chromium responsive-22","success",13.98,13.58,0.8,12.73,0.05
+42844688965,129930259330,"Chromium responsive-17","success",17.75,4.43,0.83,3.55,0.05
+42844688965,129930259331,"Chromium responsive-32","success",18.25,4.5,0.77,3.67,0.07
+42844688965,129930259334,"Chromium accessibility","success",13.92,1.23,1.03,0.13,0.07
+42844688965,129930259347,"Chromium accessibility-7","success",17.5,1.07,0.85,0.17,0.05
+42844688965,129930259352,"Chromium accessibility-11","success",18.23,1.28,1.12,0.12,0.05
+42844688965,129930259363,"Chromium responsive-31","success",14.2,3.82,0.8,2.97,0.05
+42844688965,129930259399,"Chromium accessibility-8","success",12.73,1.13,0.97,0.13,0.03
+42844688965,129930259418,"Chromium accessibility-3","success",17.22,4.88,4.63,0.22,0.03
+42844688965,129930259427,"Chromium performance","success",23.95,1.43,0.83,0.57,0.03
+42844688965,129930259458,"Chromium responsive-28","success",19.47,9.32,1.02,8.25,0.05
+42844688965,129930259467,"Chromium responsive-29","success",18.62,12.28,0.8,11.45,0.03
+42844688965,129930259534,"Chromium responsive-11","success",18.62,5.1,1.02,4.03,0.05
+42844688965,129930259546,"Chromium accessibility-5","success",23.4,1.2,0.97,0.17,0.07
+42844688965,129930259675,"Chromium responsive-15","success",23.65,5.03,1.02,3.93,0.08
+42844688965,129930259928,"Chromium accessibility-9","success",23.45,1.15,0.97,0.13,0.05
+42844688965,129930260007,"Chromium accessibility-10","success",23.02,0.98,0.82,0.12,0.05
+42844688965,129937087310,"edge critical smoke","success",13.57,0.03,0,0,0.03
+42844688965,129937087425,"webkit critical smoke","success",13.65,0.05,0,0,0.05
+42844688965,129937087548,"firefox critical smoke","success",13.65,0.05,0,0,0.05
+42844688965,129945144984,"Deliberate visual snapshot gate (Windows baseline)","success",0.73,0.05,0,0,0.05
+42844688965,129951712935,"Chromium responsive, a11y, keyboard, and performance","success",0.05,0.07,0,0,0.07
+42772532579,129683432643,"Route registry and test discovery","success",2.27,0.7,0.48,0.02,0.2
+42772532579,129683432862,"Shared hermetic browser build","success",3.47,2.03,0.57,1.42,0.05
+42772532579,129685478549,"webkit critical smoke (1/3)","success",0.42,1.33,1.17,0,0.17
+42772532579,129685478582,"firefox critical smoke (3/3)","success",2.02,1.37,1.15,0,0.22
+42772532579,129685478591,"webkit critical smoke (3/3)","success",3.13,1.07,0.8,0,0.27
+42772532579,129685478594,"edge critical smoke (3/3)","success",3.28,5.83,5.63,0,0.2
+42772532579,129685478595,"webkit critical smoke (2/3)","success",2.82,1.28,1.08,0,0.2
+42772532579,129685478600,"edge critical smoke (1/3)","success",2.5,1.23,1.1,0,0.13
+42772532579,129685478636,"firefox critical smoke (1/3)","success",3.42,1.07,0.9,0,0.17
+42772532579,129685478641,"edge critical smoke (2/3)","success",2.68,1.4,1.27,0,0.13
+42772532579,129685478781,"firefox critical smoke (2/3)","success",6.73,1.13,0.97,0,0.17
+42772532579,129685478881,"Windows visual snapshots (6/32)","success",4.53,1.6,1.02,0.32,0.27
+42772532579,129685478892,"Windows visual snapshots (1/32)","success",4.23,1.52,1,0.28,0.23
+42772532579,129685478906,"Windows visual snapshots (5/32)","success",1,1.65,1.05,0.27,0.33
+42772532579,129685478942,"Windows visual snapshots (3/32)","success",3.43,1.5,0.9,0.28,0.32
+42772532579,129685478972,"Windows visual snapshots (9/32)","success",4.15,1.53,0.98,0.28,0.27
+42772532579,129685478980,"Windows visual snapshots (11/32)","success",5.8,1.57,0.97,0.32,0.28
+42772532579,129685478997,"Windows visual snapshots (4/32)","success",3.57,1.62,1.05,0.25,0.32
+42772532579,129685479002,"Windows visual snapshots (7/32)","success",6.75,1.58,0.98,0.3,0.3
+42772532579,129685479007,"Windows visual snapshots (10/32)","success",1.1,1.55,0.95,0.27,0.33
+42772532579,129685479016,"Windows visual snapshots (2/32)","success",4.63,1.32,0.83,0.25,0.23
+42772532579,129685479026,"Windows visual snapshots (12/32)","success",1.8,1.45,0.87,0.32,0.27
+42772532579,129685479071,"Windows visual snapshots (27/32)","success",4.53,1.62,1.23,0.08,0.3
+42772532579,129685479081,"Windows visual snapshots (8/32)","success",7.72,1.65,1.02,0.32,0.32
+42772532579,129685479100,"Windows visual snapshots (28/32)","success",3.8,1.08,0.67,0.2,0.22
+42772532579,129685479116,"Windows visual snapshots (31/32)","success",8.08,1.25,0.88,0.1,0.27
+42772532579,129685479118,"Windows visual snapshots (13/32)","success",3.78,1.53,1.03,0.17,0.33
+42772532579,129685479120,"Windows visual snapshots (20/32)","success",4.93,1.63,1.12,0.17,0.35
+42772532579,129685479136,"Windows visual snapshots (19/32)","success",4.12,1.07,0.72,0.12,0.23
+42772532579,129685479137,"Windows visual snapshots (23/32)","success",5.1,1.6,1.23,0.07,0.3
+42772532579,129685479141,"Windows visual snapshots (17/32)","success",5.37,1.27,0.82,0.15,0.3
+42772532579,129685479145,"Windows visual snapshots (26/32)","success",6.18,1.45,0.97,0.2,0.28
+42772532579,129685479146,"Windows visual snapshots (14/32)","success",6.28,1.5,1.05,0.2,0.25
+42772532579,129685479148,"Windows visual snapshots (22/32)","success",6.52,1.53,0.98,0.2,0.35
+42772532579,129685479165,"Chromium responsive-1","success",4.97,4.45,0.77,3.63,0.05
+42772532579,129685479166,"Windows visual snapshots (18/32)","success",5.73,1.4,1.05,0.12,0.23
+42772532579,129685479168,"Windows visual snapshots (25/32)","success",5.23,1.25,0.8,0.2,0.25
+42772532579,129685479176,"Windows visual snapshots (16/32)","success",6,1.68,1.15,0.17,0.37
+42772532579,129685479181,"Chromium responsive-4","success",4.7,5.88,0.85,4.97,0.07
+42772532579,129685479186,"Windows visual snapshots (24/32)","success",7.92,1.53,1.13,0.08,0.32
+42772532579,129685479193,"Windows visual snapshots (21/32)","success",5.27,1.12,0.7,0.18,0.23
+42772532579,129685479209,"Windows visual snapshots (29/32)","success",5.08,1.17,0.82,0.1,0.25
+42772532579,129685479212,"Windows visual snapshots (15/32)","success",7.82,1.12,0.78,0.12,0.22
+42772532579,129685479219,"Chromium responsive-5","success",6.3,7.88,0.9,6.92,0.07
+42772532579,129685479227,"Chromium responsive-7","success",6.28,7.32,0.78,6.48,0.05
+42772532579,129685479264,"Chromium responsive-6","success",6.6,10.22,0.97,9.2,0.05
+42772532579,129685479283,"Windows visual snapshots (32/32)","success",7.67,1.03,0.72,0.1,0.22
+42772532579,129685479328,"Chromium responsive-25","success",15.52,10.65,0.97,9.62,0.07
+42772532579,129685479345,"Windows visual snapshots (30/32)","success",8.55,1.35,0.93,0.12,0.3
+42772532579,129685479363,"Chromium responsive-17","success",8.48,4.93,0.98,3.88,0.07
+42772532579,129685479372,"Chromium responsive-21","success",14.65,8.82,0.88,7.9,0.03
+42772532579,129685479375,"Chromium responsive-3","success",12.82,5.18,1.13,4,0.05
+42772532579,129685479385,"Chromium responsive-13","success",14.52,5.38,0.8,4.53,0.05
+42772532579,129685479391,"Chromium responsive-26","success",10.77,10.92,0.87,10,0.05
+42772532579,129685479396,"Chromium responsive-9","success",9.65,4.9,1.08,3.75,0.07
+42772532579,129685479405,"Chromium responsive-15","success",10.48,5.02,1,3.95,0.07
+42772532579,129685479409,"Chromium responsive-10","success",9.93,5.8,0.92,4.83,0.05
+42772532579,129685479410,"Chromium responsive-19","success",6.18,5.33,0.93,4.37,0.03
+42772532579,129685479417,"Chromium responsive-24","success",11.57,10.75,0.83,9.88,0.03
+42772532579,129685479443,"Chromium responsive-23","success",11.75,13.73,0.98,12.68,0.07
+42772532579,129685479444,"Chromium responsive-2","success",9.45,6.03,0.82,5.18,0.03
+42772532579,129685479468,"Chromium responsive-12","success",8.98,7.52,1.07,6.42,0.03
+42772532579,129685479474,"Chromium responsive-8","success",14.6,7.25,0.98,6.22,0.05
+42772532579,129685479479,"Chromium accessibility-3","success",11.63,1.13,0.93,0.13,0.07
+42772532579,129685479482,"Chromium accessibility-2","success",10.45,1.15,0.97,0.13,0.05
+42772532579,129685479517,"Chromium responsive-20","success",10.35,5.47,1.07,4.33,0.07
+42772532579,129685479532,"Chromium accessibility-4","success",8.65,1.28,1.07,0.15,0.07
+42772532579,129685479558,"Chromium responsive-14","success",14.22,5.33,0.72,4.57,0.05
+42772532579,129685479572,"Chromium responsive-18","success",13.33,4.92,0.85,4,0.07
+42772532579,129685479579,"Chromium responsive-28","success",15.3,10.78,0.93,9.82,0.03
+42772532579,129685479580,"Chromium performance","success",9.98,1.43,0.77,0.62,0.05
+42772532579,129685479583,"Chromium responsive-22","success",11.45,13.22,0.78,12.38,0.05
+42772532579,129685479590,"Chromium responsive-32","success",10.62,4.65,1.07,3.53,0.05
+42772532579,129685479596,"Chromium responsive-11","success",8.75,5.85,1.03,4.75,0.07
+42772532579,129685479619,"Chromium accessibility-7","success",9.15,1.15,0.93,0.15,0.07
+42772532579,129685479632,"Chromium responsive-31","success",9.5,3.77,0.78,2.95,0.03
+42772532579,129685479636,"Chromium accessibility","success",10.05,1,0.8,0.15,0.05
+42772532579,129685479646,"Chromium responsive-30","success",16.53,7.85,0.78,7,0.07
+42772532579,129685479656,"Chromium responsive-29","success",13.4,12.68,0.83,11.8,0.05
+42772532579,129685479668,"Chromium responsive-27","success",15.05,10.52,0.78,9.68,0.05
+42772532579,129685479679,"Chromium responsive-16","success",15.77,5.47,0.77,4.67,0.03
+42772532579,129685479688,"Chromium accessibility-9","success",16.72,1.08,0.92,0.13,0.03
+42772532579,129685479742,"Chromium accessibility-10","success",10.73,0.97,0.83,0.1,0.03
+42772532579,129685479756,"Chromium accessibility-11","success",16.88,1.15,0.93,0.13,0.08
+42772532579,129685479761,"Chromium accessibility-8","success",8.75,1.25,1.08,0.15,0.02
+42772532579,129685479772,"Chromium accessibility-5","success",15.87,0.97,0.8,0.13,0.03
+42772532579,129685479815,"Chromium accessibility-6","success",16.87,1.05,0.83,0.18,0.03
+42772532579,129685479878,"Chromium accessibility-12","success",15.63,1.05,0.9,0.12,0.03
+42772532579,129685479928,"Chromium accessibility-13","success",13.75,1.27,1.08,0.12,0.07
+42772532579,129688860694,"firefox critical smoke","success",8.73,0.05,0,0,0.05
+42772532579,129688860745,"webkit critical smoke","success",8.82,0.07,0,0,0.07
+42772532579,129688860773,"edge critical smoke","success",8.85,0.05,0,0.02,0.03
+42772532579,129689146216,"Deliberate visual snapshot gate (Windows baseline)","success",8.13,0.05,0.02,0,0.03
+42772532579,129695199775,"Chromium responsive, a11y, keyboard, and performance","success",0.03,0.05,0,0,0.05
+42687900000,129399554492,"Route registry and test discovery","success",0.05,1.02,0.78,0.02,0.22
+42687900000,129399555052,"Shared hermetic browser build","success",0.05,2.17,0.65,1.47,0.05
+42687900000,129400796457,"firefox critical smoke (2/3)","success",0.95,1.08,0.92,0,0.17
+42687900000,129400796485,"firefox critical smoke (1/3)","success",0.98,1.08,0.92,0,0.17
+42687900000,129400796545,"webkit critical smoke (3/3)","success",2.12,1.08,0.88,0,0.2
+42687900000,129400796684,"webkit critical smoke (2/3)","success",2.7,1.27,1.12,0,0.15
+42687900000,129400796752,"edge critical smoke (3/3)","success",2.2,1.55,1.33,0,0.22
+42687900000,129400796870,"edge critical smoke (2/3)","success",3.52,1.32,1.17,0,0.15
+42687900000,129400796890,"firefox critical smoke (3/3)","success",7.77,1.17,0.92,0,0.25
+42687900000,129400796892,"webkit critical smoke (1/3)","success",3.25,1.07,0.92,0,0.15
+42687900000,129400796900,"edge critical smoke (1/3)","success",3.47,1.47,1.3,0,0.17
+42687900000,129400797551,"Windows visual snapshots (12/32)","success",3.98,1.6,1.03,0.25,0.32
+42687900000,129400797576,"Windows visual snapshots (2/32)","success",5.8,1.72,1.08,0.3,0.33
+42687900000,129400797639,"Windows visual snapshots (21/32)","success",4.43,1.73,1.23,0.17,0.33
+42687900000,129400797647,"Windows visual snapshots (15/32)","success",6.67,1.4,1,0.08,0.32
+42687900000,129400797666,"Windows visual snapshots (30/32)","success",4.18,1.37,1.05,0.05,0.27
+42687900000,129400797678,"Windows visual snapshots (27/32)","success",4.02,1.7,1.28,0.08,0.33
+42687900000,129400797684,"Windows visual snapshots (9/32)","success",7.25,1.75,1.07,0.42,0.27
+42687900000,129400797712,"Windows visual snapshots (13/32)","success",7.67,1.6,1.13,0.17,0.3
+42687900000,129400797743,"Windows visual snapshots (5/32)","success",6.2,1.6,0.97,0.3,0.33
+42687900000,129400797746,"Windows visual snapshots (16/32)","success",8.13,1.35,0.9,0.22,0.23
+42687900000,129400797747,"Windows visual snapshots (25/32)","success",1.63,1.8,1.18,0.23,0.38
+42687900000,129400797753,"Windows visual snapshots (31/32)","success",2.55,1.38,0.98,0.13,0.27
+42687900000,129400797756,"Windows visual snapshots (4/32)","success",7.07,1.45,0.93,0.22,0.3
+42687900000,129400797758,"Windows visual snapshots (24/32)","success",7.57,1.57,1.17,0.08,0.32
+42687900000,129400797787,"Windows visual snapshots (19/32)","success",5.58,1.43,0.97,0.13,0.33
+42687900000,129400797798,"Windows visual snapshots (26/32)","success",8.57,2.02,1.25,0.37,0.4
+42687900000,129400797802,"Windows visual snapshots (17/32)","success",7.83,1.47,1,0.18,0.28
+42687900000,129400797807,"Windows visual snapshots (28/32)","success",8.98,1.75,1.23,0.2,0.32
+42687900000,129400797811,"Windows visual snapshots (32/32)","success",3.52,1.58,1.18,0.07,0.33
+42687900000,129400797843,"Windows visual snapshots (3/32)","success",9.52,1.6,1.07,0.28,0.25
+42687900000,129400797854,"Windows visual snapshots (20/32)","success",8.98,1.38,0.93,0.17,0.28
+42687900000,129400797868,"Windows visual snapshots (23/32)","success",7.28,1.78,1.35,0.08,0.35
+42687900000,129400797878,"Windows visual snapshots (1/32)","success",11.55,1.62,1.08,0.27,0.27
+42687900000,129400797880,"Windows visual snapshots (8/32)","success",10.32,1.4,0.92,0.28,0.2
+42687900000,129400797887,"Windows visual snapshots (18/32)","success",12,1.52,1.07,0.08,0.37
+42687900000,129400797900,"Windows visual snapshots (14/32)","success",12,1.43,0.98,0.2,0.25
+42687900000,129400797902,"Windows visual snapshots (11/32)","success",9.53,1.9,1.23,0.32,0.35
+42687900000,129400797904,"Windows visual snapshots (10/32)","success",13.02,1.92,1.27,0.38,0.27
+42687900000,129400797925,"Windows visual snapshots (7/32)","success",10.78,1.2,0.7,0.27,0.23
+42687900000,129400798044,"Windows visual snapshots (6/32)","success",10.47,1.5,0.98,0.22,0.3
+42687900000,129400798096,"Windows visual snapshots (22/32)","success",10.37,1.6,1.07,0.2,0.33
+42687900000,129400798142,"Windows visual snapshots (29/32)","success",11.48,1.55,1.12,0.17,0.27
+42687900000,129400798509,"Chromium responsive-14","success",5.13,4.97,0.9,4,0.07
+42687900000,129400798529,"Chromium responsive-16","success",4.63,5.68,0.83,4.8,0.05
+42687900000,129400798626,"Chromium responsive-2","success",11.12,5.23,0.82,4.35,0.07
+42687900000,129400798655,"Chromium responsive-17","success",10.15,4.2,0.87,3.3,0.03
+42687900000,129400798656,"Chromium responsive-7","success",13.97,7.5,0.82,6.63,0.05
+42687900000,129400798660,"Chromium responsive-10","success",9.18,6.62,1.03,5.52,0.07
+42687900000,129400798687,"Chromium responsive-9","success",13.93,4.93,0.85,4.03,0.05
+42687900000,129400798729,"Chromium responsive-23","success",16.37,13.62,0.88,12.68,0.05
+42687900000,129400798736,"Chromium responsive-8","success",9.23,7.08,1.03,5.98,0.07
+42687900000,129400798759,"Chromium responsive-22","success",16.4,13.07,0.77,12.27,0.03
+42687900000,129400798785,"Chromium responsive-6","success",14.77,10.42,0.93,9.43,0.05
+42687900000,129400798793,"Chromium responsive-3","success",13.13,5.57,1.03,4.47,0.07
+42687900000,129400798799,"Chromium responsive-5","success",9.27,7.75,1.33,6.35,0.07
+42687900000,129400798843,"Chromium responsive-1","success",13.22,3.82,0.9,2.87,0.05
+42687900000,129400798866,"Chromium responsive-11","success",15.85,5.48,0.95,4.48,0.05
+42687900000,129400798923,"Chromium responsive-4","success",16.7,5.15,0.83,4.3,0.02
+42687900000,129400798935,"Chromium responsive-12","success",18.48,8.03,0.88,7.1,0.05
+42687900000,129400798970,"Chromium responsive-15","success",17.08,5.52,0.77,4.72,0.03
+42687900000,129400798990,"Chromium responsive-18","success",19.88,5.4,0.8,4.57,0.03
+42687900000,129400798998,"Chromium responsive-13","success",16.4,5.7,0.93,4.73,0.03
+42687900000,129400799006,"Chromium accessibility-2","success",9.32,0.97,0.78,0.15,0.03
+42687900000,129400799008,"Chromium responsive-20","success",13.57,4.58,0.87,3.68,0.03
+42687900000,129400799009,"Chromium responsive-24","success",9.12,10.03,0.83,9.15,0.05
+42687900000,129400799015,"Chromium responsive-30","success",10.33,8.32,0.9,7.35,0.07
+42687900000,129400799019,"Chromium responsive-28","success",10.63,10.55,0.9,9.58,0.07
+42687900000,129400799049,"Chromium responsive-27","success",9.05,10.13,0.95,9.1,0.08
+42687900000,129400799105,"Chromium responsive-29","success",13.08,12.33,0.9,11.37,0.07
+42687900000,129400799123,"Chromium responsive-19","success",19.93,5.77,0.97,4.73,0.07
+42687900000,129400799129,"Chromium responsive-31","success",9.33,4.58,0.8,3.73,0.05
+42687900000,129400799131,"Chromium accessibility-4","success",15.63,1.02,0.82,0.17,0.03
+42687900000,129400799148,"Chromium responsive-25","success",3.52,12.07,1.03,10.97,0.07
+42687900000,129400799149,"Chromium responsive-32","success",17.73,4.52,0.75,3.73,0.03
+42687900000,129400799179,"Chromium accessibility-5","success",15.13,1.22,1.03,0.13,0.05
+42687900000,129400799189,"Chromium responsive-21","success",14.4,12.55,3.83,8.67,0.05
+42687900000,129400799198,"Chromium responsive-26","success",19.18,10.88,0.85,10,0.03
+42687900000,129400799254,"Chromium accessibility","success",18.18,1.07,0.93,0.1,0.03
+42687900000,129400799303,"Chromium accessibility-12","success",19.3,1.07,0.88,0.13,0.05
+42687900000,129400799325,"Chromium accessibility-3","success",21.35,1.07,0.87,0.15,0.05
+42687900000,129400799383,"Chromium performance","success",19.93,2.05,1.17,0.82,0.07
+42687900000,129400799394,"Chromium accessibility-7","success",21.33,1.13,0.9,0.17,0.07
+42687900000,129400799421,"Chromium accessibility-6","success",18.75,1.03,0.82,0.17,0.05
+42687900000,129400799437,"Chromium accessibility-8","success",18.8,1.08,0.92,0.13,0.03
+42687900000,129400799444,"Chromium accessibility-9","success",19.93,1.35,1.15,0.15,0.05
+42687900000,129400799579,"Chromium accessibility-13","success",21.23,1.1,0.92,0.13,0.05
+42687900000,129400799584,"Chromium accessibility-11","success",20.42,0.9,0.72,0.12,0.07
+42687900000,129400799641,"Chromium accessibility-10","success",18.92,0.98,0.8,0.12,0.07
+42687900000,129405824213,"edge critical smoke","success",12.45,0.07,0,0,0.07
+42687900000,129405824393,"webkit critical smoke","success",12.58,0.03,0,0.02,0.02
+42687900000,129405824441,"firefox critical smoke","success",12.55,0.05,0,0,0.05
+42687900000,129409224892,"Deliberate visual snapshot gate (Windows baseline)","success",6.63,0.07,0,0,0.07
+42687900000,129417732285,"Chromium responsive, a11y, keyboard, and performance","success",0.05,0.07,0,0,0.07
+42844688982,129928911821,"GitHub Actions workflow lint","success",0.07,0.65,0.3,0.3,0.05
+42844688982,129928912011,"Generated artifacts are current","success",0.07,0.95,0.68,0.2,0.07
+42844688982,129928912079,"Frontend tests (7/8)","success",0.05,10.32,0.63,9.63,0.05
+42844688982,129928912089,"Frontend tests (6/8)","success",0.05,9.63,0.62,8.97,0.05
+42844688982,129928912126,"Frontend tests (3/8)","success",0.05,12.78,0.67,12.07,0.05
+42844688982,129928912166,"Backend database (rollback)","success",0.07,1.12,1.02,0.05,0.05
+42844688982,129928912168,"Frontend tests (8/8)","success",0.05,12.33,0.62,11.67,0.05
+42844688982,129928912170,"Backend race tests (7/8)","success",0.05,3.58,1.08,2.45,0.05
+42844688982,129928912185,"Docker · export-worker","success",0.07,3.07,0.73,2.3,0.03
+42844688982,129928912194,"Frontend tests (5/8)","success",1.13,11.43,0.38,11.02,0.03
+42844688982,129928912238,"Docs (build + asset validation)","success",1.22,0.65,0.25,0.35,0.05
+42844688982,129928912242,"Frontend tests (1/8)","success",1.15,10.37,0.4,9.88,0.08
+42844688982,129928912262,"Go build (export-worker)","success",1.97,1.22,0.23,0.92,0.07
+42844688982,129928912263,"Backend race tests (8/8)","success",0.07,4.1,1.3,2.73,0.07
+42844688982,129928912272,"Go build (notification-worker)","success",0.05,1.05,0.47,0.53,0.05
+42844688982,129928912274,"Frontend build","success",0.75,3.27,0.38,2.83,0.05
+42844688982,129928912280,"Backend architecture","success",1.58,0.82,0.27,0.48,0.07
+42844688982,129928912281,"Backend race tests (3/8)","success",3.7,4.27,1.1,3.08,0.08
+42844688982,129928912285,"Frontend lint","success",0.07,3.42,0.6,2.7,0.12
+42844688982,129928912288,"Go build (teslasync)","success",0.07,2.35,0.58,1.68,0.08
+42844688982,129928912295,"Backend database (replay)","success",1.9,6.23,0.98,4.12,1.13
+42844688982,129928912366,"Docker · fleet-telemetry","success",0.05,0.65,0.5,0.08,0.07
+42844688982,129928912416,"Docker · notification-worker","success",2.18,2.57,0.72,1.8,0.05
+42844688982,129928912437,"Docker · web","success",2.1,4.32,0.5,3.77,0.05
+42844688982,129928912482,"Backend lint","success",1.73,3.28,0.27,2.95,0.07
+42844688982,129928912483,"Docker · api","success",1.55,6.95,0.65,6.23,0.07
+42844688982,129928912745,"Backend race tests (2/8)","success",4.8,5.48,1.15,4.27,0.07
+42844688982,129928912799,"Backend race tests (5/8)","success",3.18,3.15,1.22,1.88,0.05
+42844688982,129928912814,"Backend race tests (4/8)","success",4.07,4.25,1.37,2.83,0.05
+42844688982,129928912935,"Backend race tests (1/8)","success",4.92,2.68,1.02,1.6,0.07
+42844688982,129928912946,"Backend race tests (6/8)","success",8.37,3.63,1.22,2.33,0.08
+42844688982,129928912955,"Frontend tests (2/8)","success",5.07,11.22,0.4,10.78,0.03
+42844688982,129928913096,"Frontend tests (4/8)","success",6.38,9.02,0.48,8.48,0.05
+42844688982,129936387165,"Merge backend coverage","success",0.25,0.77,0.5,0.2,0.07
+42844688982,129937037879,"Backend (lint + test + build)","success",0.12,0.05,0,0,0.05
+42844688982,129939064343,"Merge frontend coverage","success",2.37,1.67,0.68,0.92,0.07
+42844688982,129941609267,"Frontend (lint + test + build)","success",3.33,0.03,0,0,0.03
+42844688982,129943713537,"CI (all checks)","success",1.2,0.03,0,0,0.03
+42772532057,129683427504,"Backend database (replay)","success",0.05,6.22,1.05,4.07,1.1
+42772532057,129683427707,"Backend database (rollback)","success",0.05,1.27,0.95,0.27,0.05
+42772532057,129683427738,"Generated artifacts are current","success",0.05,1.05,0.67,0.35,0.03
+42772532057,129683427762,"Backend race tests (3/8)","success",0.05,4.15,1.12,2.98,0.05
+42772532057,129683427828,"Frontend lint","success",0.05,2.65,0.47,2.13,0.05
+42772532057,129683427854,"GitHub Actions workflow lint","success",0.03,0.5,0.22,0.23,0.05
+42772532057,129683427863,"Frontend tests (8/8)","failure",0.05,9.95,0.55,9.38,0.02
+42772532057,129683427869,"Backend race tests (5/8)","success",0.03,4.1,1.13,2.9,0.07
+42772532057,129683427896,"Docs (build + asset validation)","success",0.03,0.97,0.4,0.52,0.05
+42772532057,129683427897,"Frontend build","success",0.58,2.83,0.42,2.37,0.05
+42772532057,129683427925,"Backend race tests (4/8)","failure",0.03,3.38,1.07,2.25,0.07
+42772532057,129683427934,"Docker · web","success",0.03,3.98,0.57,3.37,0.05
+42772532057,129683427962,"Go build (export-worker)","success",0.05,1.65,0.4,1.22,0.03
+42772532057,129683427963,"Backend race tests (1/8)","success",0.05,4.5,1.08,3.35,0.07
+42772532057,129683427972,"Frontend tests (4/8)","success",0.05,8.87,0.57,8.27,0.03
+42772532057,129683427981,"Backend lint","success",0.05,4.58,0.5,4.03,0.05
+42772532057,129683427984,"Docker · api","success",1.37,6.6,0.58,5.98,0.03
+42772532057,129683427994,"Go build (teslasync)","success",0.03,1.45,0.33,1.07,0.05
+42772532057,129683428011,"Backend race tests (7/8)","success",6.3,5.47,0.93,4.48,0.05
+42772532057,129683428013,"Frontend tests (7/8)","success",8.2,5.75,0.33,5.37,0.05
+42772532057,129683428019,"Docker · notification-worker","success",0.03,2.3,0.55,1.72,0.03
+42772532057,129683428025,"Backend race tests (8/8)","success",3.27,3.2,1.12,2.03,0.05
+42772532057,129683428047,"Frontend tests (2/8)","success",0.03,7.47,0.55,6.85,0.07
+42772532057,129683428054,"Frontend tests (1/8)","success",0.05,9,0.53,8.4,0.07
+42772532057,129683428068,"Frontend tests (5/8)","success",3.98,5.28,0.3,4.95,0.03
+42772532057,129683428090,"Frontend tests (3/8)","success",5.55,10.38,0.4,9.95,0.03
+42772532057,129683428093,"Backend race tests (6/8)","success",7.5,3.07,1.08,1.93,0.05
+42772532057,129683428102,"Go build (notification-worker)","success",6.62,0.83,0.23,0.53,0.07
+42772532057,129683428103,"Docker · export-worker","success",5.03,2.45,0.45,1.98,0.02
+42772532057,129683428107,"Backend race tests (2/8)","success",3.18,3.98,1.1,2.83,0.05
+42772532057,129683428125,"Docker · fleet-telemetry","success",4.6,0.62,0.47,0.08,0.07
+42772532057,129683428160,"Backend architecture","success",7.53,0.75,0.25,0.45,0.05
+42772532057,129683428221,"Frontend tests (6/8)","success",6.68,9.53,0.4,9.1,0.03
+42772532057,129687800431,"Merge backend coverage","failure",0.43,0.4,0.22,0.15,0.03
+42772532057,129688107227,"Backend (lint + test + build)","failure",1.37,0.05,0,0,0.05
+42772532057,129689446654,"Merge frontend coverage","failure",0.38,1.85,0.72,1.07,0.07
+42772532057,129690290788,"Frontend (lint + test + build)","failure",0.37,0.05,0,0,0.05
+42772532057,129690449218,"CI (all checks)","failure",0.3,0.05,0,0,0.05
+42687899893,129399552728,"GitHub Actions workflow lint","success",0.05,0.5,0.23,0.22,0.05
+42687899893,129399553117,"Generated artifacts are current","success",0.05,0.73,0.53,0.12,0.08
+42687899893,129399553211,"Frontend tests (7/8)","success",0.05,5.65,0.55,5.07,0.03
+42687899893,129399553242,"Go build (export-worker)","success",0.05,1.1,0.42,0.63,0.05
+42687899893,129399553260,"Docker · api","success",0.05,5.63,0.78,4.83,0.02
+42687899893,129399553289,"Backend race tests (3/8)","success",0.05,4.67,0.93,3.68,0.05
+42687899893,129399553294,"Go build (notification-worker)","success",0.07,0.55,0.48,0.02,0.05
+42687899893,129399553301,"Frontend lint","success",0.07,3.5,0.6,2.78,0.12
+42687899893,129399553310,"Frontend tests (3/8)","success",0.07,9.77,0.55,9.17,0.05
+42687899893,129399553312,"Docker · notification-worker","success",0.05,2.25,0.67,1.53,0.05
+42687899893,129399553335,"Frontend tests (6/8)","success",0.07,6.28,0.53,5.7,0.05
+42687899893,129399553344,"Backend race tests (8/8)","success",0.05,3.12,1.13,1.92,0.07
+42687899893,129399553349,"Backend race tests (2/8)","success",0.05,5.63,1.2,4.38,0.05
+42687899893,129399553371,"Go build (teslasync)","success",0.07,1.22,0.4,0.77,0.05
+42687899893,129399553385,"Frontend tests (1/8)","success",0.05,6.47,0.48,5.92,0.07
+42687899893,129399553397,"Backend lint","success",0.83,4.03,0.33,3.62,0.08
+42687899893,129399553417,"Docker · web","success",1.2,4.05,0.28,3.7,0.07
+42687899893,129399553429,"Docker · export-worker","success",0.05,2.58,0.72,1.82,0.05
+42687899893,129399553498,"Docker · fleet-telemetry","success",3.48,0.3,0.2,0.05,0.05
+42687899893,129399553521,"Frontend build","success",1.12,2.32,0.32,1.97,0.03
+42687899893,129399553544,"Frontend tests (2/8)","success",2.98,5.38,0.32,5.02,0.05
+42687899893,129399553579,"Backend database (replay)","success",2.68,6.15,0.92,4.15,1.08
+42687899893,129399553590,"Backend race tests (4/8)","success",0.67,3.67,0.85,2.78,0.03
+42687899893,129399553624,"Backend database (rollback)","success",4.38,1.32,1.1,0.15,0.07
+42687899893,129399553629,"Frontend tests (8/8)","success",2.27,8.88,0.42,8.42,0.05
+42687899893,129399553642,"Backend architecture","success",3.62,0.75,0.3,0.38,0.07
+42687899893,129399553645,"Backend race tests (1/8)","success",6.02,3.9,1.22,2.62,0.07
+42687899893,129399553686,"Docs (build + asset validation)","success",7.85,0.72,0.23,0.45,0.03
+42687899893,129399553820,"Frontend tests (4/8)","success",7.98,7.15,0.65,6.43,0.07
+42687899893,129399553825,"Backend race tests (5/8)","success",7.2,4.2,0.88,3.25,0.07
+42687899893,129399553856,"Backend race tests (7/8)","success",7.1,4.6,0.98,3.07,0.55
+42687899893,129399553906,"Backend race tests (6/8)","success",8.62,3.88,1.02,2.78,0.08
+42687899893,129399553931,"Frontend tests (5/8)","success",8.42,8.88,0.43,8.4,0.05
+42687899893,129406583395,"Merge backend coverage","success",0.13,0.65,0.38,0.22,0.05
+42687899893,129407026294,"Backend (lint + test + build)","success",0.68,0.05,0,0,0.05
+42687899893,129409310218,"Merge frontend coverage","success",1,1.58,0.58,0.93,0.07
+42687899893,129410773202,"Frontend (lint + test + build)","success",1,0.07,0,0,0.07
+42687899893,129411396608,"CI (all checks)","success",1.08,0.05,0,0,0.05

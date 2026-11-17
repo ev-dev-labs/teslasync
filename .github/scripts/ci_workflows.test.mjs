@@ -3,12 +3,16 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { assertUnion, balance, familyGroups, inventory, resultInventory, suiteOptions } from './playwright-duration-shards.mjs';
+import { backendRequired } from './ci-scope.mjs';
+import { requireResults } from './ci-job-results.mjs';
+import { summarize } from './ci-perf.mjs';
 
 const require = createRequire(new URL('../../web/package.json', import.meta.url));
 const { load } = require('js-yaml');
 const workflow = name => load(readFileSync(new URL(`../workflows/${name}`, import.meta.url), 'utf8'));
 const ci = workflow('ci.yml');
 const browser = workflow('frontend-quality.yml');
+const performance = workflow('perf.yml');
 const commands = job => job.steps.map(step => step.run ?? '').join('\n');
 
 test('unit shard matrices match strict merge counts and never fail-fast', () => {
@@ -17,8 +21,8 @@ test('unit shard matrices match strict merge counts and never fail-fast', () => 
     const job = ci.jobs[`${domain}-tests`];
     assert.deepEqual(job.strategy.matrix.shard, Array.from({ length: count }, (_, i) => i + 1));
     assert.equal(job.strategy['fail-fast'], false);
-    assert.equal(job.needs, undefined);
-    assert.equal(ci.jobs[`${domain}-coverage`].needs, `${domain}-tests`);
+    assert.equal(job.needs, domain === 'backend' ? 'changes' : undefined);
+    assert.deepEqual(ci.jobs[`${domain}-coverage`].needs, domain === 'backend' ? ['changes', 'backend-tests'] : 'frontend-tests');
     assert.match(commands(ci.jobs[`${domain}-coverage`]), /ci_test_shards\.py merge|check_vitest_blobs\.mjs/);
   }
   assert.ok(ci.jobs['backend-tests'].services.postgres);
@@ -30,11 +34,11 @@ test('unit shard matrices match strict merge counts and never fail-fast', () => 
 test('existing required summary names and complete dependency gates remain strict after report merging', () => {
   for (const [jobs, id, name, dependencies] of [
     [ci.jobs, 'backend', 'Backend (lint + test + build)',
-      ['backend-checks', 'backend-tests', 'backend-coverage', 'backend-database', 'backend-build']],
+      ['changes', 'backend-checks', 'backend-tests', 'backend-coverage', 'backend-database', 'backend-build']],
     [ci.jobs, 'frontend', 'Frontend (lint + test + build)',
       ['frontend-checks', 'frontend-tests', 'frontend-coverage']],
     [ci.jobs, 'ci-gate', 'CI (all checks)',
-      ['workflow-lint', 'generated', 'backend', 'frontend', 'docs', 'docker']],
+      ['changes', 'workflow-lint', 'generated', 'backend', 'frontend', 'docs', 'docker']],
     [browser.jobs, 'chromium-quality', 'Chromium responsive, a11y, keyboard, and performance',
       ['contract', 'browser-build', 'chromium-tests']],
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
@@ -46,7 +50,7 @@ test('existing required summary names and complete dependency gates remain stric
     assert.equal(job.name, name);
     assert.equal(job.if, 'always()');
     assert.deepEqual(job.needs, dependencies);
-    const gate = job.steps.find(step => /all\(job\["result"\] == "success" for job in results\.values\(\)\)/.test(step.run ?? ''));
+    const gate = job.steps.find(step => /all\(job\["result"\] == "success" for job in results\.values\(\)\)|ci-job-results\.mjs/.test(step.run ?? ''));
     assert.ok(gate, `${id}: missing strict result gate`);
     assert.equal(gate.env.RESULTS, '${{ toJSON(needs) }}');
     if (jobs === browser.jobs) assert.equal(gate.if, 'always()');
@@ -54,7 +58,7 @@ test('existing required summary names and complete dependency gates remain stric
 });
 
 test('cheap validations and unit tests start independently of the shared browser build', () => {
-  for (const id of ['workflow-lint', 'generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'frontend-tests', 'docs', 'docker']) {
+  for (const id of ['workflow-lint', 'generated', 'frontend-checks', 'frontend-tests', 'docs']) {
     assert.equal(ci.jobs[id].needs, undefined);
   }
   assert.equal(browser.jobs.contract.needs, undefined);
@@ -62,7 +66,7 @@ test('cheap validations and unit tests start independently of the shared browser
   assert.equal(ci.jobs.docker.if, undefined);
   const build = ci.jobs.docker.steps.find(step => step.uses?.startsWith('docker/build-push-action'));
   assert.equal(build.with.push, false);
-  for (const config of [ci, browser]) {
+  for (const config of [ci, browser, performance]) {
     assert.equal(config.concurrency['cancel-in-progress'], "${{ github.event_name == 'pull_request' }}");
     for (const job of Object.values(config.jobs)) {
       if (job.strategy) assert.equal(job.strategy['fail-fast'], false);
@@ -71,7 +75,7 @@ test('cheap validations and unit tests start independently of the shared browser
 });
 
 test('node_modules caches require exact OS, architecture, resolved Node and lockfile keys, without fallbacks', () => {
-  for (const config of [ci, browser]) {
+  for (const config of [ci, browser, performance]) {
     for (const [id, job] of Object.entries(config.jobs)) {
       const installs = job.steps.filter(step => step.run?.includes('npm ci --legacy-peer-deps'));
       if (!installs.length) continue;
@@ -115,13 +119,17 @@ test('browser caches use actual Playwright versions and Edge caches its real sys
   }
 });
 
-test('49 execution jobs reuse the sole build while balancing heavy cases and consolidating tiny shards', () => {
+test('20 Chromium runners mix heavy and ordinary cases with isolated single-worker cheap suites', () => {
   const rows = browser.jobs['chromium-tests'].strategy.matrix.include;
-  assert.deepEqual(rows.slice(0, 16).map(row => row.name), Array.from({ length: 16 }, (_, i) => `responsive-${i + 1}`));
-  for (const [suite, count] of [['ordinary', 4], ['design', 12], ['a11y', 1], ['performance', 1]]) {
-    assert.deepEqual(rows.filter(row => row.suite === suite).map(row => row.shard),
-      Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
-  }
+  assert.deepEqual(rows.map(row => row.name), Array.from({ length: 20 }, (_, i) => `responsive-${i + 1}`));
+  assert.deepEqual(rows.map(row => row.shard), Array.from({ length: 20 }, (_, i) => `${i + 1}/20`));
+  assert.deepEqual(familyGroups('chromium'), [['quality', 20], ['a11y', 1], ['performance', 1]]);
+  assert.deepEqual(rows.filter(row => row.extra).map(row => row.extra), ['a11y', 'performance']);
+  assert.equal(suiteOptions('quality').workers, 4);
+  for (const suite of ['a11y', 'performance']) assert.equal(suiteOptions(suite).workers, 1);
+  const extra = browser.jobs['chromium-tests'].steps.find(step => step.run?.includes('--suite=${{ matrix.extra }}'));
+  assert.equal(extra.if, "always() && matrix.extra != ''");
+  assert.match(extra.run, /--out=ci-evidence\//);
   assert.deepEqual(browser.jobs['cross-browser-tests'].strategy.matrix, { browser: ['firefox', 'webkit', 'edge'] });
   assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard, [1, 2, 3, 4]);
   assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
@@ -137,7 +145,7 @@ test('49 execution jobs reuse the sole build while balancing heavy cases and con
     assert.equal(job.steps.find(step => step.with?.path === 'web/ci-evidence/').if, 'always()');
     assert.equal(job.steps.find(step => step.name === 'Upload heavy failure evidence').if, 'failure()');
   }
-  assert.equal(rows.length + browser.jobs['app-design-tests'].strategy.matrix.include.length + 3 + 4, 49);
+  assert.equal(rows.length + 3 + 4, 27);
 });
 
 test('full engine/width/theme profiles and replay have exact partitions with unchanged capacity workers', () => {
@@ -164,6 +172,90 @@ test('full engine/width/theme profiles and replay have exact partitions with unc
   const envelope = job.steps.find(step => step.name === 'Bind application design evidence to its source and build');
   assert.match(envelope.run, /indexSHA256: hash\('e2e\/\.app-dist\/index\.html'\)/);
   assert.match(envelope.run, /acceptanceSourceSHA256: hash\('e2e\/widget-design-packs\.app\.spec\.ts'\)/);
+});
+
+test('application profiles run before merge, nightly and manually, never on a PR or main push', () => {
+  const events = 'contains(fromJSON(\'["merge_group","schedule","workflow_dispatch"]\'), github.event_name)';
+  assert.equal(browser.jobs['app-design-tests'].if, events);
+  assert.equal(browser.env.APP_DESIGNS, `\${{ ${events} }}`);
+  assert.ok(browser.on.schedule[0].cron);
+  assert.equal(browser.on.pull_request.paths, undefined, 'Required browser summaries must report on every PR');
+  for (const config of [ci, browser, workflow('security.yml')]) {
+    assert.deepEqual(config.on.merge_group, { types: ['checks_requested'] });
+  }
+  const summary = browser.jobs['cross-browser'];
+  assert.ok(commands(summary).includes('--profiles=${{ env.APP_DESIGNS }}'));
+  const gate = summary.steps.find(step => step.run?.includes('ci-job-results.mjs'));
+  assert.equal(gate.env.SKIPPED_JOBS, "${{ env.APP_DESIGNS != 'true' && 'app-design-tests' || '' }}");
+  for (const family of ['firefox', 'webkit']) {
+    assert.deepEqual(familyGroups(family, false), [[`engine-${family}`, 1]]);
+    assert.equal(familyGroups(family, true).length, 8);
+  }
+});
+
+test('backend paths fail closed and only PRs may avoid backend execution', () => {
+  for (const path of ['internal/app/new.go', 'cmd/main.go', 'pkg/shared.go', 'go.mod', 'go.sum',
+    'migrations/001.sql', 'helm/teslasync/values.yaml', 'Dockerfile', 'Dockerfile.notification',
+    'Dockerfile.export-worker', 'Dockerfile.fleet-telemetry', 'docker-compose.yml', '.dockerignore',
+    '.golangci.yml', 'Makefile', 'scripts/check.sh', '.github/workflows/ci.yml',
+    '.github/scripts/ci-scope.mjs', 'unknown/new-input', 'docs/example.go']) {
+    assert.equal(backendRequired('pull_request', [path]), true, path);
+  }
+  const frontend = ['web/src/App.tsx', 'web/package-lock.json', 'docs/ci/CI-PERF.md', 'README.md',
+    'Dockerfile.web', '.github/workflows/frontend-quality.yml', '.github/scripts/playwright-test-durations.json'];
+  assert.equal(backendRequired('pull_request', frontend), false);
+  assert.equal(backendRequired('pull_request', [...frontend, 'internal/deleted.go']), true);
+  for (const event of ['push', 'merge_group', 'workflow_dispatch', 'schedule']) {
+    assert.equal(backendRequired(event, frontend), true);
+    assert.equal(backendRequired(event, []), true);
+  }
+  for (const id of ['backend-checks', 'backend-tests', 'backend-build', 'backend-database']) {
+    assert.equal(ci.jobs[id].needs, 'changes');
+    assert.equal(ci.jobs[id].if, "needs.changes.outputs.backend == 'true'");
+  }
+  assert.equal(ci.jobs['backend-coverage'].if, "always() && needs.changes.outputs.backend == 'true'");
+  assert.equal(ci.jobs.docker.needs, 'changes');
+  assert.equal(ci.jobs.docker.steps.find(step => step.uses?.startsWith('docker/build-push-action')).if,
+    "matrix.image == 'web' || needs.changes.outputs.backend == 'true'");
+  assert.equal(ci.jobs.backend.steps.find(step => step.run?.includes('ci-job-results.mjs')).env.SKIPPED_JOBS,
+    "${{ needs.changes.outputs.backend == 'false' && 'backend-checks,backend-tests,backend-coverage,backend-database,backend-build' || '' }}");
+});
+
+test('summaries accept only explicit skips and reject failures, cancellations, unexpected skips and failed scope', () => {
+  const good = { changes: { result: 'success' }, backend: { result: 'success' } };
+  requireResults(good);
+  requireResults({ ...good, backend: { result: 'skipped' } }, ['backend']);
+  for (const result of ['failure', 'cancelled', 'skipped']) {
+    assert.throws(() => requireResults({ ...good, backend: { result } }));
+  }
+  for (const result of ['success', 'failure', 'cancelled']) {
+    assert.throws(() => requireResults({ ...good, backend: { result } }, ['backend']));
+  }
+  assert.throws(() => requireResults({ changes: { result: 'failure' }, backend: { result: 'skipped' } }, ['backend']));
+  assert.throws(() => requireResults(good, ['unknown']));
+  assert.throws(() => requireResults({}));
+});
+
+test('timings use ready-job creation for queue, exclude skipped jobs and reject unfinished runs', () => {
+  const run = { id: 1, status: 'completed', created_at: '2026-11-17T00:00:00Z' };
+  const job = {
+    id: 2, name: 'Chromium', status: 'completed', conclusion: 'success',
+    created_at: '2026-11-17T00:03:00Z', started_at: '2026-11-17T00:05:00Z', completed_at: '2026-11-17T00:10:00Z',
+    steps: [
+      { name: 'Run actions/checkout@v7', started_at: '2026-11-17T00:05:00Z', completed_at: '2026-11-17T00:06:00Z' },
+      { name: 'Run isolated Chromium suite', started_at: '2026-11-17T00:06:00Z', completed_at: '2026-11-17T00:09:00Z' },
+    ],
+  };
+  const summary = summarize(run, [job, { ...job, conclusion: 'skipped' }]);
+  assert.equal(summary.jobs, 1);
+  assert.equal(summary.skipped, 1);
+  assert.equal(summary.wall, 10);
+  assert.equal(summary.queue, 2);
+  assert.equal(summary.runner, 5);
+  assert.equal(summary.setup, 1);
+  assert.equal(summary.execution, 3);
+  assert.equal(summary.other, 1);
+  assert.throws(() => summarize({ ...run, status: 'in_progress' }, [job]));
 });
 
 test('summary jobs require every suite blob merge and publish combined failure HTML only on failure', () => {
@@ -203,6 +295,10 @@ test('duration balancing uses every full test identity once and rejects missing 
   assertUnion(cases, shards.flatMap(shard => shard.tests));
   assert.throws(() => assertUnion(cases, [...cases.slice(1), cases[1]]), /multiset union/);
   assert.throws(() => balance(cases, 5), /shard count/);
+  assert.throws(() => balance(cases, 2, 0), /worker count/);
+  const workerShards = balance(cases, 2, 2);
+  assertUnion(cases, workerShards.flatMap(shard => shard.tests));
+  assert.ok(workerShards.every(shard => shard.projectedSeconds <= shard.seconds));
   const report = { suites: [{ title: 'sample.spec.ts', file: 'sample.spec.ts', suites: ['phone', 'desktop'].map(title => ({
     title, specs: [{ file: 'sample.spec.ts', title: 'same leaf', tests: [{ projectName: 'chromium-smoke' }] }],
   })) }] };

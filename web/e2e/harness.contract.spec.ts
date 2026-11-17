@@ -2874,7 +2874,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     env?: Record<string, string>;
     steps: WorkflowStep[];
     strategy?: { matrix?: { shard?: number[]; browser?: string[]; include?: Array<{
-      name?: string; suite?: string; browser?: string; width?: number; theme?: string; shard: string;
+      name?: string; extra?: string; browser?: string; width?: number; theme?: string; shard: string;
     }> } };
   }> };
   const helper = readFileSync(resolve(
@@ -2890,20 +2890,17 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   expect(visualSteps.some(step => step.run?.includes('e2e:update-visual'))).toBe(false);
   expect(helper).toContain("if (suite === 'visual') return { script: 'e2e:visual', args: ['--config=playwright.visual.config.ts'], workers: 2 }");
   const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
-  const qualityRows = chromiumRows.filter(row => row.suite === 'ordinary' || row.suite === 'design');
-  expect(qualityRows.map(row => row.name))
-    .toEqual(Array.from({ length: 16 }, (_, index) => `responsive-${index + 1}`));
-  for (const [suite, count] of [['ordinary', 4], ['design', 12], ['a11y', 1], ['performance', 1]] as const) {
-    expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))
-      .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
-  }
-  expect(chromiumRows).toHaveLength(18);
+  expect(chromiumRows.map(row => row.name))
+    .toEqual(Array.from({ length: 20 }, (_, index) => `responsive-${index + 1}`));
+  expect(chromiumRows.map(row => row.shard))
+    .toEqual(Array.from({ length: 20 }, (_, index) => `${index + 1}/20`));
+  expect(chromiumRows.filter(row => row.extra).map(row => row.extra)).toEqual(['a11y', 'performance']);
+  const extraRun = workflow.jobs['chromium-tests'].steps.find(step => step.run?.includes('--suite=${{ matrix.extra }}'));
+  expect(extraRun?.if).toBe("always() && matrix.extra != ''");
+  expect(extraRun?.run).toContain('--out=ci-evidence/${{ matrix.extra }}');
   const chromiumRun = workflow.jobs['chromium-tests'].steps.find(step => step.name === 'Run isolated Chromium suite');
-  const designFilter = String.raw`widget-design-packs\.(app|energy|native)\.spec\.ts`;
-  expect(chromiumRun?.run).toBe('node ../.github/scripts/playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}');
-  expect(helper).toContain(`const designPattern = String.raw\`${designFilter}\``);
-  expect(helper).toContain("if (suite === 'ordinary') return { script: 'e2e:quality', args: [...quality, `--grep-invert=${designPattern}`], workers: 2 }");
-  expect(helper).toContain("if (suite === 'design') return { script: 'e2e:quality', args: [...quality, `--grep=${designPattern}`], workers: 4 }");
+  expect(chromiumRun?.run).toBe('node ../.github/scripts/playwright-duration-shards.mjs run --suite=quality --shard=${{ matrix.shard }}');
+  expect(helper).toContain("if (suite === 'quality') return { script: 'e2e:quality', args: quality, workers: 4 }");
   expect(helper).toContain("if (suite === 'a11y') return { script: 'e2e:a11y', args: ['--project=chromium-a11y', '--fully-parallel'], workers: 1 }");
   expect(helper).toContain("assert.equal(suite, 'profile')");
   expect(helper).toContain("Number(width) === 1440 ? 23 : 21, 'Incomplete full profile registration'");
@@ -2932,12 +2929,14 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toBe("always() && matrix.width == 1440 && matrix.theme == 'dark' && (matrix.shard == '1/1' || matrix.shard == '1/4')");
   expect(replay?.run)
     .toBe('node ../.github/scripts/playwright-duration-shards.mjs run --suite=replay --browser=${{ matrix.browser }} --shard=1/1 --out=ci-evidence/replay');
-  expect(chromiumRows.length + profileRows.length + 3 + visualShards.length).toBe(49);
+  expect(chromiumRows.length + profileRows.length + 3 + visualShards.length).toBe(51);
+  expect(profiles.if).toBe('contains(fromJSON(\'["merge_group","schedule","workflow_dispatch"]\'), github.event_name)');
   const engines = workflow.jobs['cross-browser'];
   expect(engines.if).toBe('always()');
   expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests', 'app-design-tests']);
   expect(engines.strategy?.matrix?.browser).toEqual(['firefox', 'webkit', 'edge']);
-  expect(engines.steps.find(step => step.run?.includes('all(job["result"] == "success"'))).toBeDefined();
+  expect(engines.steps.find(step => step.run?.includes('ci-job-results.mjs'))?.env?.SKIPPED_JOBS)
+    .toBe("${{ env.APP_DESIGNS != 'true' && 'app-design-tests' || '' }}");
   const buildSteps = Object.values(workflow.jobs).flatMap(job =>
     job.steps.filter(step => step.run?.includes('npm run e2e:build')));
   expect(buildSteps).toHaveLength(1);
@@ -2947,7 +2946,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist/', 'if-no-files-found': 'error' });
 
   for (const [id, command] of [
-    ['chromium-tests', 'playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}'],
+    ['chromium-tests', 'playwright-duration-shards.mjs run --suite=quality --shard=${{ matrix.shard }}'],
     ['cross-browser-tests', 'playwright-duration-shards.mjs run --suite=engine --browser=${{ matrix.browser }} --shard=1/1'],
     ['visual-tests', `playwright-duration-shards.mjs run --suite=visual --shard=\${{ matrix.shard }}/${visualShards.length}`],
     ['app-design-tests', 'playwright-duration-shards.mjs run --suite=profile --browser=${{ matrix.browser }} --width=${{ matrix.width }} --theme=${{ matrix.theme }} --shard=${{ matrix.shard }}'],
@@ -2972,7 +2971,8 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
     expect(summary.steps.find(step => step.name === 'Upload merged suite JSON')?.if).toBe('always()');
     expect(summary.steps.find(step => step.name === 'Upload combined failure HTML')?.if)
       .toBe("failure() || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')");
-    expect(summary.steps.find(step => step.run?.includes('all(job["result"] == "success"'))?.if).toBe('always()');
+    expect(summary.steps.find(step => step.run?.includes(id === 'cross-browser'
+      ? 'ci-job-results.mjs' : 'all(job["result"] == "success"'))?.if).toBe('always()');
   }
 
   const { scripts } = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {

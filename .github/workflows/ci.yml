@@ -31,6 +31,17 @@ env:
   FRONTEND_SHARDS: '8'
 
 jobs:
+  changes:
+    name: Classify CI paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require backend work unless this is an exclusively frontend or docs PR
+        id: scope
+        run: node .github/scripts/ci-scope.mjs
+
   workflow-lint:
     name: GitHub Actions workflow lint
     runs-on: ubuntu-latest
@@ -85,6 +96,8 @@ jobs:
 
   backend-checks:
     name: Backend ${{ matrix.check }}
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -115,6 +128,8 @@ jobs:
 
   backend-tests:
     name: Backend race tests (${{ matrix.shard }}/8)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     # Race instrumentation needs GCC/CGO; ARC does not currently provide GCC.
     runs-on: ubuntu-latest
     env:
@@ -168,8 +183,8 @@ jobs:
 
   backend-coverage:
     name: Merge backend coverage
-    if: always()
-    needs: backend-tests
+    if: always() && needs.changes.outputs.backend == 'true'
+    needs: [changes, backend-tests]
     runs-on: ubuntu-latest
     env:
       CGO_ENABLED: 1
@@ -216,6 +231,8 @@ jobs:
 
   backend-database:
     name: Backend database (${{ matrix.suite }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -286,6 +303,8 @@ jobs:
 
   backend-build:
     name: Go build (${{ matrix.binary }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -304,14 +323,15 @@ jobs:
   backend:
     name: Backend (lint + test + build)
     if: always()
-    needs: [backend-checks, backend-tests, backend-coverage, backend-database, backend-build]
+    needs: [changes, backend-checks, backend-tests, backend-coverage, backend-database, backend-build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
       - name: Require every backend job
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: |
-          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required backend job failed, was cancelled, or was skipped"'
+          SKIPPED_JOBS: ${{ needs.changes.outputs.backend == 'false' && 'backend-checks,backend-tests,backend-coverage,backend-database,backend-build' || '' }}
+        run: node .github/scripts/ci-job-results.mjs
 
   frontend-checks:
     name: Frontend ${{ matrix.check }}
@@ -464,6 +484,7 @@ jobs:
 
   docker:
     name: Docker · ${{ matrix.image }}
+    needs: changes
     # Build on independent runners alongside the test shards. The final CI
     # gate below still requires generated, backend, frontend, and every image.
     # Pin to ubuntu-latest because self-hosted arc-runner pods have been
@@ -489,8 +510,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
+        if: matrix.image == 'web' || needs.changes.outputs.backend == 'true'
 
       - name: Build ${{ matrix.image }}
+        if: matrix.image == 'web' || needs.changes.outputs.backend == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -500,6 +523,15 @@ jobs:
           tags: teslasync-${{ matrix.image }}:ci
           cache-from: type=gha,scope=ci-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=ci-${{ matrix.image }}
+
+      - name: Verify the backend path decision
+        env:
+          SCOPE_RESULT: ${{ needs.changes.result }}
+          BACKEND: ${{ needs.changes.outputs.backend }}
+        run: |
+          test "$SCOPE_RESULT" = success
+          test "$BACKEND" = true || test "$BACKEND" = false
+          echo "Backend build required: $BACKEND"
 
       - name: Web image ships no source maps
         # CLEAN-04: the runtime stage copies dist/ straight into the nginx
@@ -548,7 +580,7 @@ jobs:
   ci-gate:
     name: CI (all checks)
     if: always()
-    needs: [workflow-lint, generated, backend, frontend, docs, docker]
+    needs: [changes, workflow-lint, generated, backend, frontend, docs, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Require every CI job
