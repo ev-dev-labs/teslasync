@@ -87,7 +87,14 @@ test('reduced-motion mode neutralizes transitions and ambient animation', async 
   const motion = await page.evaluate(() => {
     const probe = document.createElement('div');
     probe.className = 'animate-pulse transition-all';
+    probe.style.transitionDelay = '1s';
+    const plain = document.createElement('span');
+    plain.textContent = 'Reduced motion';
+    plain.style.opacity = '0';
+    probe.append(plain);
     document.body.append(probe);
+    plain.getBoundingClientRect();
+    plain.style.opacity = '1';
     const style = getComputedStyle(probe);
     const toMilliseconds = (duration: string) => {
       const value = Number.parseFloat(duration);
@@ -98,6 +105,8 @@ test('reduced-motion mode neutralizes transitions and ambient animation', async 
       animationDurationMs: toMilliseconds(style.animationDuration),
       animationIterations: Number.parseFloat(style.animationIterationCount),
       transitionDurationMs: toMilliseconds(style.transitionDuration),
+      transitionDelayMs: toMilliseconds(style.transitionDelay),
+      plainTransitions: plain.getAnimations().filter(animation => animation instanceof CSSTransition).length,
       scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
     };
     probe.remove();
@@ -106,7 +115,9 @@ test('reduced-motion mode neutralizes transitions and ambient animation', async 
   expect(motion.mediaMatches).toBe(true);
   expect(motion.animationDurationMs).toBeLessThanOrEqual(0.1);
   expect(motion.animationIterations).toBeLessThanOrEqual(1);
-  expect(motion.transitionDurationMs).toBeLessThanOrEqual(0.1);
+  expect(motion.transitionDurationMs).toBe(0);
+  expect(motion.transitionDelayMs).toBe(0);
+  expect(motion.plainTransitions).toBe(0);
   expect(motion.scrollBehavior).toBe('auto');
   await assertMockApiComplete(page, mockApi);
 });
