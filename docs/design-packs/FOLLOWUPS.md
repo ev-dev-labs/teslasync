@@ -14,7 +14,7 @@ test matrix, or bulk screenshot regeneration is authorized.
 
 ## Shared preview's live Tesla authorization
 
-The rebuilt `9e7b411ccf` frontend is healthy on loopback 3120. Index, entry
+The rebuilt `9d167a3a33` frontend is healthy on loopback 3120. Index, entry
 asset, `/api/v1/system/auth-mode`, `/healthz` and `/readyz` return 200.
 The shared backend's aggregate `/api/v1/system/health` and `/system/status`
 return 503: the latter explicitly reports `tesla_api.status=no_token`,

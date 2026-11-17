@@ -1,8 +1,74 @@
 # Design packs wrap-up handoff
 
+## Current held batch: periodic preference refetch and pricing fixture
+
+The sole unchanged retry of Quality `44130431395` is now cancelled before
+replacement. All 14 interrupted-job logs are collected and contain no
+additional numbered failure or retry. Do not issue a third attempt. Attempt 1 had
+30 jobs queued for 45.4 minutes. All 20 interrupted logs are collected;
+Firefox light replay exposes an earlier preference-read cancellation.
+All five non-Quality workflows pass on `8658d427f1`.
+
+The complete trace in session `8658-firefox-light` proves this is NOT
+another navigation-drain failure: the cancelled GET is 154 seconds before
+navigation, at the periodic identity / broadcast overlap. The original
+exact local case passes (1.9m); a session-only real-poll probe reproduces
+`NS_BINDING_ABORTED` before editing, then passes (2.2m) after the periodic
+preference refetch shares in-flight work via `cancelRefetch: false`.
+Only `web/src/api/hooks/useWidgetDesignPreference.ts` changes in production;
+all assertions, polling frequency, identity/mutation safeguards and design
+styling remain unchanged.
+
+Commit `9d167a3a33` passes the original case (2.1m), overlap probe (2.2m),
+20 existing hook tests (33.79s), full lint, explicit TypeScript, build and
+audit (zero violations). The first unit invocation's unrelated whole-project
+coverage collection was stopped after its 20 tests passed; the completed
+rerun scopes coverage to the two relevant source files.
+New owned hermetic preview is 50740
+(`preview-preference-poll-owned`); 50739 retains the source-equivalent
+baseline. Docker 3120 now serves the new source revision and is healthy;
+all four readiness URLs return 200 and the entry asset contains its SHA.
+Rollback is `teslasync-design-packs-v2-rollback-before-9d167a3a33`.
+The session-only
+probe is `preference-poll-diagnostic.ts`; remove its empty host mount
+`web/e2e/widget-design-packs.mock.original.ts` after diagnostics finish.
+That scratch file is absent. No new repair has been pushed.
+
+The latest monitor found Chromium responsive-5 job `134238926689` retrying
+the dark drive-pricing recovery case. CI-MAP includes it. Exact original
+Linux replay passes (19.7s); complete artifact is in session
+`8658-pricing-trace`. Its click trace proves the button with the fixture's
+recovery listener detaches, then Playwright clicks a replacement without
+that listener. Subsequent synthetic settings responses remain 429.
+The session `pricing-remount-overlay.mjs` inserts a real settings invalidation
+between listener installation and native clicking. It reproduces the exact
+unknown-cost failure before editing. The fixture now delegates the filtered
+capture listener from the stable Overview section, preserving actual native
+Retry input and every assertion. Original light/dark cases pass (24.9s);
+the same remount probe passes (19.9s), zero retries/proxy errors.
+`pricing-fixture-audit` passes with zero violations; `pricing-static-gates`
+passes full lint, explicit TypeScript and production build. This fixture
+repair is committed as `f6c29287eb`. Both source repairs await one batch push.
+Documentation build passes (26.08s). The earlier cancellation preceded its
+replacement push; do not repeat that ordering. Push replacements first, then
+cancel only superseded runs.
+
+## Current remote head: `8658d427f1`
+
+Both energy repairs and their verified evidence are pushed in one batch.
+CI is `44130431512`; Frontend Quality Gates is `44130431395`.
+The current monitor is pinned to the full head SHA and inspects successful
+job logs for retry-only failures as well as failed steps/jobs. The sole
+unchanged retry has been used on this head.
+The PR description contains both exact acceptance commands/results and
+preserves the repository template. The PR remains ready and unmerged.
+The old run is terminal/cancelled, not an acceptance receipt.
+Latest documentation build passed in 25.09s. No diagnostic scratch file
+remains in the checkout.
+
 ## Verified energy repair batch; replacement CI required
 
-Local commits `c68837b103` and `adcb738605` are not pushed. The exit diagnostic
+Commits `c68837b103` and `adcb738605` are in this batch. The exit diagnostic
 passes (3.7m), and the original Chromium/Firefox phase plus existing final
 energy-poll case pass (3 cases, 3.5m). Full lint, explicit TypeScript and
 build pass. Both required audits pass with zero violations. Linux Node's
@@ -28,9 +94,8 @@ bases are clear. Main is current (273/0 before the refresh repair).
 Docker 3120 remains healthy; all four readiness URLs return 200.
 Its production tree still matches HEAD and screenshots are unchanged.
 
-Finish the documentation build/commit, push the held batch once, and
-start a fresh strict monitor pinned to that SHA. Do not retry the cancelled
-old-head run again. Reconcile historical FIXLIST pending statuses only
+Do not retry the cancelled old-head run again or push this batch twice.
+Reconcile historical FIXLIST pending statuses only
 after actual replacement-head acceptance. The PR is main-based, ready,
 mergeable and unmerged.
 CI-MAP records both causes. No monitor remains active on the cancelled run.

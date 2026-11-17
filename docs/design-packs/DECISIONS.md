@@ -1,5 +1,87 @@
 # Design Pack Decisions
 
+## 2026-11-17 pricing recovery fixture loses its listener on remount
+
+The sole unchanged Quality retry exposes Chromium responsive-5 job
+`134238926689`: the dark drive-pricing recovery case retries after the
+cost remains unknown. The exact original pinned-Linux case passes locally
+(1 case, 19.7s), zero proxy errors. Its complete CI trace shows native
+click actionability detaching the original Retry button at 656595.121ms,
+then successfully clicking its replacement at 658421.472ms. Every later
+settings handler still reads the recovery flag as false. The fixture
+attaches that flag's listener to the discarded button, so a valid user
+retry never enables the synthetic successful response. This is not
+evidence of a pricing calculation defect.
+
+A session-only overlay invalidates the real settings query after listener
+installation, observes the original button detach, then makes the unchanged
+native click on its replacement. Before editing, the existing case reproduces
+the exact expected `$0.77` / received unknown failure at the unchanged 8000ms
+deadline. Attach the filtered capture listener to the stable Overview section
+instead; only an actual Retry click enables recovery, and the listener removes
+itself after that click. No production calculation, request, assertion,
+deadline, test case or design changes.
+
+Commit `f6c29287eb` passes the identical remount probe (1 case, 19.9s); both original light/dark
+cases pass (2 cases, 24.9s), zero retries or proxy errors. The fixture audit
+passes with zero violations and TypeScript passes. Full lint, explicit
+TypeScript and production build pass. The superseded Quality attempt is
+cancelled; all 14 interrupted-job logs are collected and contain no additional
+numbered failure or retry. Both repairs are ready for one batch push.
+
+The cancellation was issued before the replacement push, leaving a temporary
+cancelled latest-head run. That ordering was premature. Subsequent replacement
+pushes must precede cancellation of superseded runs; a locally prepared batch
+is not yet a replacement run. Documentation build passes (26.08s).
+
+## 2026-11-17 periodic preference revalidation cancels a newer broadcast read
+
+On `8658d427f1`, CI, Security, Ops Gate, SI Canonical Gate and Auto Label
+pass. Quality has 30 jobs queued for 45.4 minutes with 20 runners occupied.
+Its sole cancellation/failed-job retry is applied. All 20 interrupted logs
+are collected; Firefox light job `134207199442` exposes a replay-phase
+retry. Attempt 2 continues while this cause is repaired.
+
+The final navigation audit reports a widget-preference `NS_BINDING_ABORTED`,
+but the complete trace disproves a navigation cause: the aborted GET starts
+at 456350.322ms, over 154 seconds before the 610893.126ms navigation call.
+An automatic identity read starts at 456298.436ms, a synthetic pack PUT at
+456336.996ms, and a replacement preference GET at 456361.945ms. The audit
+checks the entire request ledger, so its label is not the failure's timestamp.
+Do not weaken the ledger or change the repaired navigation barrier.
+
+The exact original Linux replay passes unchanged (1 case, 1.9m). A
+session-only overlay holds the real periodic identity response, starts the
+existing broadcast-driven preference read, then releases identity while
+that preference response has 800ms latency. Before editing, the existing
+case fails explicitly with `Periodic revalidation cancelled the broadcast
+read: NS_BINDING_ABORTED`. This reproduces the actual earlier cancellation
+mechanism, not an unload approximation. Its initial eight-second setup
+wait did not span the real twenty-second polling period; the corrected
+probe awaits that real event without changing any committed deadline.
+
+The production periodic preference refetch now uses `cancelRefetch: false`
+to share an already-running read instead of cancelling and replacing it.
+The poll interval, identity verification, broadcast invalidation, mutation
+cancellation and logout revocation remain unchanged. No test cases,
+allowlist entries, assertions, transport exemptions or appearance change.
+Commit `9d167a3a33` passes the same overlap probe (1 case, 2.2m) and the
+unmodified original case (1 case, 2.1m), zero proxy errors. The existing hook
+suite passes all 20 tests (33.79s) with coverage restricted to the two
+relevant source files. An earlier invocation passed the same 20 tests but
+spent seven minutes collecting unrelated whole-project coverage; that
+specific container was stopped, not reported as a successful runner.
+Full lint, explicit `npx tsc --noEmit`, production build and the engineering
+audit pass (zero violations). Suppression scans against both bases find
+zero added directives, focused/disabled tests, `any` casts, empty catches
+or Axe exclusions. Main ancestry is 276/0.
+
+Docker 3120 now serves `teslasync-web:design-packs-v2-9d167a3a33`, healthy;
+index, healthz, readyz and auth-mode return 200. Its entry script contains
+the exact source revision. The prior container is preserved as
+`teslasync-design-packs-v2-rollback-before-9d167a3a33`; shared services and
+screenshots are unchanged. No new repair has been pushed.
+
 ## 2026-11-17 energy refresh races a real automatic poll
 
 The interrupted Chromium responsive-32 log (`134127212477`) contains two
