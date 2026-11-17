@@ -1,5 +1,197 @@
 # Design Pack Decisions
 
+## 2026-11-17 sole retry and native chatbot click ordering
+
+The sole Quality retry again crosses the inspection threshold: eight jobs
+have run for 46.7 minutes. Their active test-step logs still return HTTP 404.
+Cancel the run, collect all interrupted logs, and do not request a third
+unchanged attempt. Firefox desktop dark/light, all phone Firefox profiles,
+all Windows baselines and all engine smoke shards pass. Newly exposed
+failures are custom-desktop Firefox dashboard/drive-detail root assertions
+(the same starvation cause), and the custom-phone WebKit chatbot's fourth
+suggestion retaining the preceding prompt. Aggregate failures merely reflect
+cancelled required jobs; no gate is made optional.
+
+Before applying the correction to the newly exposed cases, replay them with
+the exact committed spec bind-mounted over the working spec. Firefox:
+**2 passed (3.4m)**; WebKit chatbot: **1 passed (2.9m)**; zero proxy errors.
+These ARM64 passes do not erase the x64 CI evidence.
+
+The actual chatbot trace proves native hit-test/scroll ordering, not a lost
+React update. The fourth suggestion click uses `(189, 647.58)` after
+scroll-into-view. The last painted frame before dispatch still places the
+third suggestion at that point; the first following frame places the fourth
+there. The composer retains the third prompt, exactly matching the stale
+painted target. Explicitly scroll each suggestion before invoking its normal
+native click, within the existing running observation-clock boundary. The
+click's original stability checks now run after scrolling rather than before
+it. Keep all four value/focus assertions, native hit testing and deadlines;
+no delay, forced click, synthetic dispatch or styling change.
+
+The first five cases pass with atomic profile polling: Firefox **4 passed
+(8.0m)** and WebKit Live **1 passed (4.5m)**, zero proxy errors. Additional
+Firefox custom dashboard/drive-detail cases pass **2 tests (3.2m)**.
+The final explicit-pre-scroll chatbot replay passes **1 test (2.8m)**,
+including every original prompt/focus assertion across all 27 packs.
+All eight named cases now pass locally with zero proxy errors and no retries.
+Commit `1e9be3085b` contains only the two existing harness-helper corrections.
+The final `npm run lint && npx tsc --noEmit && npm run build` passes;
+startup JavaScript remains 399.2 KB under the unchanged 400 KB cap.
+Both changed files have zero reported engineering violations. Added-line
+suppression/empty-catch scans against main and the feature base remain zero.
+The docs package's `npm run docs:build` passes (32.96s); running that command
+from the repository root first reported a missing script, corrected by using
+the documented `docs` package directory.
+
+The persistent Docker preview remains healthy on `2a0010a47d`, verified in
+its served entry asset. Production source, Docker configuration and images
+are unchanged by this test/documentation-only batch; the already-completed
+preview rebuild therefore still includes every production fix and main.
+Latest-head CI acceptance is still required after the single batched push.
+
+## 2026-11-17 native Firefox profile isolates assertion-induced starvation
+
+The four-case native Gecko diagnostic reproduces the charging preference
+stall: **1 failed / 3 passed (6.2m), zero proxy errors**. Dark charging expects
+`swiss` but retains `warm` during the unchanged eight-second assertion.
+Profiling is diagnostic overhead, not an uninstrumented acceptance result.
+The failed browser's local profile (`gecko-460.json`) records an 8.561-second
+continuous main-thread awake interval, including 2.660-, 1.723-, and
+2.387-second microtask processing intervals. Initially filtering for
+application frames incorrectly emphasized tooltip positioning (73 sampled
+leaves). Coalescing its mutation callbacks does not solve the defect:
+Firefox reports **2 failed / 2 passed (11.6m)**, including the same warm-to-
+swiss stall and a drive-detail atlas-to-analog stall; WebKit passes (6.4m).
+Withdraw that candidate completely. Its 36 passing component contracts and
+passing lint/types/build/audit do not establish a repair.
+
+Including automation frames reveals the dominant stack:
+`expect -> _ariaSnapshotForExpect -> ariaSnapshotForExpectFailure ->
+generateAriaTree -> getCSSContent` (395 sampled JavaScript leaves).
+Each temporarily mismatching root-attribute locator assertion walks the
+entire page's accessibility tree, repeatedly blocking the preference response
+and rendering it is waiting for. The tooltip work was not the main cause.
+
+Correct the existing `expectProfile` helper to poll one atomic DOM attribute
+snapshot and compare every original profile attribute plus the same owner
+prefix. Keep the configured assertion timeout, native DOM, full accessibility
+checks, failure reporting and traces. This does not disable an accessibility
+rule: the failing assertion checks design metadata, not accessible content.
+No tests, assertions, jobs, matrices, snapshots or suppressions are added or
+removed; the same ten metadata conditions are now checked together.
+The five named cases are replaying against the unchanged current CI assets
+on 50729, without concurrent local builds.
+
+The Firefox Live trace also confirms `data-map-mode="live"` and the normal
+28px vehicle marker before and after the failed native click. A stale
+Recent-mode marker is therefore not the explanation; no mode-wait or map
+code change is justified by that hypothesis.
+
+## 2026-11-17 first-attempt queue limit and newly available native failures
+
+At 05:59 UTC, sixteen Quality jobs had remained queued for 45.4 minutes.
+Cancel attempt 1 of `44022303965` and use its one permitted failed/cancelled
+job retry. Attempt 2 is monitored by `pr-watch-2a001-attempt2`; do not issue
+another unchanged retry. The other five workflows pass. Live job-log
+retrieval still returned HTTP 404 before cancellation; completed-job logs
+then exposed failures that occurred earlier inside the unfinished steps.
+CI-MAP retains their actual names and source-job links across the retry.
+
+The observed failures form three investigation groups:
+
+- Delayed application of a saved preference: Firefox desktop dark/custom
+  charging phases (two jobs). The dark trace records successful PUT and GET
+  responses containing `cyber`, followed by the old root profile during the
+  unchanged eight-second assertion; the next snapshot contains `cyber`.
+  This is not evidence that the broadcast or server write was lost.
+- Missing native Live-map popup after a completed marker click: Firefox and
+  WebKit desktop dark (two jobs). Keep the original marker interaction and
+  popup assertions; no synthetic click, popup substitution or deadline change.
+- Navigation ledger retains a Firefox `NS_BINDING_ABORTED` preference read:
+  Firefox desktop dark drive detail (one job). The ledger currently requires
+  a correlated explicit client abort and a Chromium-specific failure spelling
+  for its existing cancellable targets. This request is outside those targets;
+  neither a new cancellation allowance nor ignoring the failure is justified.
+
+Before any code change, replay all five named cases against the exact current
+CI assets in the pinned Linux image with Node 26.13.1 and four allocated CPUs.
+The four Firefox cases pass together with four workers: **4 passed (6.1m),
+zero proxy errors**. The sole WebKit case passes with the existing two-worker
+setting (one selected test): **1 passed (4.2m), zero proxy errors**.
+Both local runs remain ARM64, unlike CI x64; the earlier emulated x64 startup
+failure is not silently treated as matching native hardware. No additional
+test cases, assertions, baselines, jobs or matrices are introduced.
+
+The required local static gate also passes unchanged:
+`npm run lint && npx tsc --noEmit && npm run build`. Startup JS is 399.2 KB
+under the existing 400 KB cap. Refreshed main ancestry is `260 0`; added
+suppression-marker/empty-catch scans against both main and the feature base
+return zero, and `git diff --check` passes. These receipts are not a claim
+that the still-running Quality retry is green.
+
+## 2026-11-17 current-artifact native capture diagnostic
+
+The latest-head CI workflow now passes. Frontend Quality Gates is still
+running; no failed job or failed step has been reported at this checkpoint.
+The inventory is refreshed from that run, not from superseded failures.
+Its literal workflow expressions are protected with `v-pre`; the existing
+`npm run docs:build` passes (27.22s).
+
+The single existing custom-desktop WebKit core-interactions case passes
+against the exact current CI assets in the pinned native Linux ARM64 image:
+**1 passed (16.0m), zero proxy errors**, all 27 packs and 162 captures.
+The session-only native Timeline diagnostic changes no screenshot arguments,
+assertions or deadlines. Its slowest capture is 3.195s. That capture spends
+2.438s in style recalculation, including native animation preparation and
+Leaflet popup measurement; this does not establish a resize loop or justify
+a speculative map/CSS change. The earlier concurrent replay failure remains
+recorded, rather than being erased by this instrumented single-case pass.
+
+The x64-emulated attempt fails at initial page readiness, before reaching the
+target Analog capture. It is not a reproduction of that capture failure and
+does not justify increasing readiness deadlines. Neither diagnostic is
+described as native x64 hardware parity. No production code, test, matrix
+or visual baseline has changed under the revised strategy.
+
+## 2026-11-17 latest-head failure inventory and matching-environment gate
+
+The revised strategy supersedes the earlier shipping loop: reproduce only
+the failing named tests before another fix, in the requested OS/browser
+environment; add or expand no tests, jobs, shards or matrices. Do not push
+again until every mapped test passes locally together with lint, TypeScript
+and build. Deliberate redesign snapshot updates are now owner-approved only
+through the existing snapshot process; record exact files if one is needed.
+No snapshot change is currently justified by an observed latest-head failure.
+
+On the next actual query the PR already points to `2a0010a47d`, and fresh
+workflows have started. CI's earlier green result belongs to `7a70264b45`,
+not this new head. `CI-MAP.md` lists only current quality-job inventory,
+runner OS, source commands and failing names actually present in logs.
+Queued/running jobs are not represented as failed tests. The active monitor
+is `pr-watch-2a001`; Quality run is `44022303965`.
+
+The previous four-phase native replay finished **1 failed / 3 passed (20.6m)**,
+zero proxy errors. Core interactions still times out capturing the Analog
+map popup after fonts load. Battery, drive detail and responsive 1280px pass.
+Therefore the scheduling change is not a complete native-stability repair.
+The exact repaired health replay separately passes **1 test (5.5m)**, all
+27 packs, no retries and zero proxy errors.
+
+The old local image is Linux ARM64 while CI is Linux x64. A matching x64
+image based on pinned Playwright `v1.63.0-noble` with Node 26.13.1 is prepared;
+the first dependency probe demonstrates missing Linux-x64 Sharp, restored
+outside the repository at the locked 0.35.5 version. Exact `2a0010a47d` CI
+assets are downloaded and served on task helper 50729. This host still uses
+x64 emulation, not native x64 hardware; timing parity is not assumed.
+Both obsolete helpers 50727/50728 are stopped and no longer listen.
+
+Docker preview 3120 now serves committed `2a0010a47d`, running/healthy.
+Actual entry `/assets/index-BFpbsxTl.js` contains that SHA. Index, liveness,
+readiness and auth-mode return 200. Shared Tesla aggregate endpoints still
+return 503, covered by the existing OAuth prerequisite. Rollback
+`teslasync-design-packs-v2-rollback-before-2a0010a47d` is preserved, alongside
+the earlier rollback; unrelated services are untouched.
+
 ## 2026-11-17 final lifecycle ownership and explicit negative outcomes
 
 The energy tooltip case owns browser contexts directly and does not request

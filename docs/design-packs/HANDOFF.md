@@ -1,5 +1,86 @@
 # Design packs wrap-up handoff
 
+## Verified repair batch: `1e9be3085b`
+
+Only two existing browser-harness helpers change: atomic profile metadata
+polling avoids assertion-induced accessibility-tree starvation, and native
+chatbot clicks explicitly scroll before their original stability checks.
+No production code, styles, tests, matrices, snapshots, thresholds or
+required gates are added, removed or weakened.
+
+All eight named CI cases pass in the pinned Linux image with Node 26.13.1:
+six Firefox cases (4 in 8.0m; 2 in 3.2m), WebKit desktop Live (4.5m) and
+WebKit phone chatbot (2.8m). Zero proxy errors; no retries. This host is
+ARM64, not CI x64. Full lint, TypeScript, build and changed-file audits pass;
+startup JS is 399.2 KB. The docs package build passes (32.96s). Main ancestry
+and both suppression-marker/empty-catch diffs are verified before the batch.
+
+The single push must be followed by latest-head CI acceptance. The old
+Quality retry is cancelled/completed; no third unchanged attempt is allowed.
+Docker 3120 remains healthy on the unchanged production tree at `2a0010a47d`;
+the rejected tooltip candidate is entirely removed. Helper 50729 serves
+original CI assets; helper 50730 is stopped. The older sections below are
+the investigation history, not a claim that the next head's CI passed.
+
+## Current strategy and head: `2a0010a47d`
+
+The user's revised strategy is active: CI-MAP contains only latest-head
+quality jobs, OS, exact commands and observed failing test names. Reproduce
+only named failures in the requested matching environment before fixing;
+add or expand no tests/jobs/shards/matrices, and no new push until all mapped
+tests plus lint/types/build pass locally. Owner-approved intentional visual
+baselines may use the existing deliberate process; no snapshot change has
+been made under this strategy.
+
+The remote PR points to `2a0010a47d`; CI, Security, Ops, SI and Auto Label
+pass. Quality `44022303965`'s sole retry is cancelled after eight jobs exceed
+46.7 minutes; `pr-watch-2a001-attempt2` exited 2. All interrupted logs are
+collected. Attempt 1 was cancelled after sixteen jobs queued
+for 45.4 minutes. No third unchanged attempt is permitted. Collected logs
+expose Firefox dark/custom charging preference delays, Firefox/WebKit dark
+Live-map popup misses, and a Firefox dark drive-detail cancellation-ledger
+failure. CI-MAP preserves those names across the retry.
+
+All five exact cases pass unchanged locally against current CI assets:
+four Firefox cases together (6.1m, four workers), and WebKit Live separately
+(4.2m), zero proxy errors. Linux ARM64 remains different from CI x64.
+No code change under the revised strategy is justified by these passes alone.
+Subsequent native Gecko profiling reproduces dark charging (1 failed /
+3 passed, 6.2m). The attempted Tooltip scheduling change is withdrawn:
+Firefox still fails two cases (11.6m), despite passing static gates and
+36 component contracts. Full profiling stacks identify repeated
+`ariaSnapshotForExpectFailure` accessibility-tree walks during root metadata
+polls, not primarily application tooltip work. The existing `expectProfile`
+now polls all original attributes and the owner prefix atomically, retaining
+the timeout and all separate accessibility checks. No production change.
+`profile-poll-firefox-replay` passes four cases (8.0m);
+`profile-poll-webkit-replay` passes Live (4.5m), zero proxy errors.
+Additional original-helper replays pass Firefox custom dashboard/drive
+detail (3.4m) and WebKit phone chatbot (2.9m). Final-helper replays pass
+those Firefox cases (3.2m). The chatbot CI trace proves scrolling changed the painted
+target during the native click; explicit pre-scroll now precedes the
+existing click stability checks. Its final replay passes (2.8m), all four
+prompt/focus checks across all 27 packs. All eight mapped cases pass.
+`profile-poll-final-static` is running before the single batched push.
+Original assets remain on 50729; candidate helper 50730 is stopped.
+Full lint, TypeScript and build also pass; startup JS is 399.2 KB. Refreshed
+main ancestry is `260 0`; both suppression-marker/empty-catch scans are zero.
+Four-phase native replay: 1 failed / 3 passed (20.6m), Analog core map-popup
+stability still open. Health replay: 1 passed (5.5m), zero proxy errors.
+The instrumented single-case core replay against exact current CI assets
+passes (16.0m), all 27 packs/162 captures, zero proxy errors. It establishes
+no map resize-loop defect and does not erase the earlier concurrent failure.
+The x64-emulated attempt fails initial readiness before reaching that capture.
+Exact current CI assets are on helper 50729; helpers 50727/50728 are stopped.
+The prepared x64 browser image uses pinned Playwright and Node 26.13.1,
+but runs through emulation on this ARM64 host; do not claim hardware parity.
+
+Docker 3120 is healthy on `teslasync-web:design-packs-v2-2a0010a47d`,
+verified in `/assets/index-BFpbsxTl.js`. The previous preview is retained as
+`teslasync-design-packs-v2-rollback-before-2a0010a47d`. Shared Tesla OAuth
+remains the only proven external prerequisite in FOLLOWUPS.md.
+All older "current" sections below are historical.
+
 ## Current CI loop: `7a70264b45`
 
 Latest update: CI, Security, Ops, SI and Auto Label pass. Quality's single
