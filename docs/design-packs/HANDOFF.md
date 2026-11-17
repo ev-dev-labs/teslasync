@@ -1,6 +1,71 @@
 # Design packs wrap-up handoff
 
+## Current continuation: 2026-11-17
+
+The verified local repair batch is ready for latest-head CI acceptance:
+`103f6ded2c` after `2cd9c273d0` and `5cd8e01e49`. The latest main fetch
+showed `252 0` before that new repair commit. The PR is main-based, ready,
+mergeable and unmerged.
+Quality run 43968015395 attempt 2 is now cancelled after repeated 46.5-minute
+jobs were inspected; all fifteen interrupted logs were saved and reviewed.
+CI remains failed on the old source guards; Ops, SI Canonical, Auto Label
+and Security passed. The old-head monitor is stopped ahead of the shipping
+batch; start the new-head monitor immediately after pushing.
+
+The failed viewport-crop experiments are removed. Original native captures
+inside the existing running-clock boundary pass four exact Firefox/WebKit
+dashboard/charging phases (9.2m), with all assertions retained. The shared
+`e2e/observationClock.ts` also wraps affected details/core capture boundaries.
+Ten existing WebKit follow-up phases passed (30.0m), four workers, no
+retries, zero proxy errors; receipt `413-second-attempt-followup.log`.
+The newly audited root `/healthz` fixture passes all 85 existing changed-file
+harness contracts. Chromium light-phone accessibility also passes. The
+transport acknowledgement failed and is removed, together with all temporary
+profiling instrumentation. Native traces isolate costly layout of hidden
+chart-alternative tables, not lost preference delivery.
+
+A nonvisual CSS repair removes redundant generated cell labels only
+while those complete accessible tables are clipped in normal colors.
+Forced-colors presentation is unchanged. The longest measured initial
+Layout drops from 6.349 to 3.099 seconds; exact four-worker Chromium
+regressions pass **4 cases (8.7m)**, no retries, zero proxy errors; receipt
+`413-hidden-label-regression.log`. The existing ChartContainer file
+passes 32 tests; scoped lint, TypeScript, full lint and production build
+exit 0. The scoped audit reports zero violations; added-line suppression
+scans against both main and `feature/app-design-themes` report zero matches.
+
+No screenshots or historical baselines changed. Docker 3120 now serves
+`teslasync-web:design-packs-v2-103f6ded2c`; its actual entry
+`/assets/index-4blmuSGL.js` contains that commit. Root, health, readiness and
+auth-mode return 200. Its Docker build passes with 399.2 KB startup JavaScript
+under the unchanged 400 KB cap. The stopped rollback container is
+`teslasync-design-packs-v2-rollback-before-103f6ded2c`.
+Both static helpers on 50723
+and 50724 are stopped (verified child PIDs 24044 and 15848 terminated and
+direct connections refused). Keep Docker and unrelated shared services intact.
+
 ## Current continuation: 2026-11-16
+
+Latest pushed head is still `413631d463`; locally, `5cd8e01e49` fixes three
+nonvisual record identities and `2cd9c273d0` commits the verified fixture,
+source-receipt and navigation repairs. Neither follow-up commit is pushed yet.
+The last main fetch showed `252 0` at local `2cd9c273d0`; the PR is ready,
+mergeable and unmerged, but CI is not green.
+Current runs: CI 43968015239 (old source-contract failures), Frontend Quality
+Gates 43968015395 attempt 2 (one mandated rerun after the 45-minute queue
+threshold); Ops, SI Canonical, Auto Label and Security pass. The 131-file
+local run passed 130 files/12,444 cases; its sole timeout was repaired and
+its eight-case file passes separately, as do 145 selector-helper consumers.
+The 97 harness contracts and three earlier exact WebKit phases also pass.
+Newly accessible cancelled-job logs are active FIXLIST work, with bounded
+browser reproductions underway; no new suites, baselines or suppressions.
+
+Docker 3120 is healthy on `teslasync-web:design-packs-v2-5cd8e01e49`;
+entry `/assets/index-BXHnTkVI.js` contains that commit. Its predecessor is
+preserved as `teslasync-design-packs-v2-rollback-before-5cd8e01e49`.
+A task-only CI-equivalent static preview of those assets currently runs on
+50723 for the bounded browser cases. Stop it and verify connection refusal
+after those checks; no unrelated shared service was changed.
 
 Work has resumed. This section supersedes the stopped-session record below.
 PR #259 still targets main, is ready/non-draft, mergeable and unmerged.

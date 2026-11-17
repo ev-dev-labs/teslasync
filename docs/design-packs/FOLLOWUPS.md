@@ -14,12 +14,13 @@ test matrix, or bulk screenshot regeneration is authorized.
 
 ## Shared preview's live Tesla authorization
 
-The rebuilt `5e23bbb1ca` frontend is healthy on loopback 3120. Index, entry
+The rebuilt `103f6ded2c` frontend is responsive on loopback 3120. Index, entry
 asset, `/api/v1/system/auth-mode`, `/healthz` and `/readyz` return 200.
 The shared backend's aggregate `/api/v1/system/health` and `/system/status`
 return 503: the latter explicitly reports `tesla_api.status=no_token`,
 `breaker=closed` and Fleet Telemetry disabled. Database, Redis and MQTT
-report healthy. These observations were taken on 2026-11-16 after deployment.
+report healthy. Missing Tesla authorization and both 503 responses were
+reconfirmed on 2026-11-17 after the frontend-only deployment.
 
 The application deliberately reports a missing/expired Tesla token as a health
 failure (`internal/app/new.go:1720-1726`); the status handler exposes the same

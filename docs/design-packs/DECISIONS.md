@@ -1,5 +1,331 @@
 # Design Pack Decisions
 
+## 2026-11-17 verified clipped-table and native-observation repairs
+
+The native-layout differential isolates the complete hidden chart-alternative
+subtree: temporarily omitting it reduces the longest Layout from 6.349 seconds
+to 0.061 seconds. Omitting accessible content is diagnostic only and is not
+a repair. Its one-pixel clipping box contains a 176,763-pixel-tall mobile
+table. No-wrap, native table display, caption container/grid changes, a
+viewport-width inner allocation and removing nested scroll overflow do not
+repair the initial Layout (maximums 5.531-6.707 seconds).
+
+Removing only generated visual cell labels reduces the initial longest
+Layout to 3.099 seconds. These labels already have empty accessibility
+alternatives and duplicate the real table headers. The production repair
+therefore omits their generated boxes only in normal colors, while the
+entire alternative is visually clipped. Forced-colors rendering retains its
+original mobile labels, cards, values and geometry. No rows, headers, cells,
+accessible text or visible presentation are removed.
+
+All temporary CDP/prototype/style probes and the unsuccessful transport
+acknowledgement are removed; the original preference helper is restored.
+The existing ChartContainer file passes 32 tests, including a scoped
+source-to-consumer regression preserving zero/null values and real headers.
+Scoped ESLint, `npx tsc --noEmit`, full `npm run lint` and `npm run build`
+exit 0. The original four Chromium phases pass against these production
+assets: **4 passed (8.7m)**, four workers, no retries, zero proxy errors.
+This includes both previously failing light/custom phone charging phases,
+desktop charging and light-phone accessibility, retaining their original
+forced-colors and geometry assertions. The single-worker diagnostic passes
+are not used as acceptance evidence.
+
+Commit `103f6ded2c` contains the production repair, the shared observation
+clock and the root-health fixture. The changed CSS guideline audit reports
+zero violations and TypeScript passes. Added-line suppression scans against
+both `origin/main` and `feature/app-design-themes` report zero matches.
+No page/component sections, API hooks, screenshots or historical fingerprints
+were changed by this batch. The production build reports 399.0 KB startup
+JavaScript under the unchanged 400 KB cap. Browser helpers on 50723 and
+50724 are stopped; their exact surviving Vite child PIDs were checked before
+termination and both direct connections subsequently refused.
+
+The task-only Docker rebuild also passes:
+`docker build -f Dockerfile.web --build-arg VITE_GIT_SHA=103f6ded2c -t teslasync-web:design-packs-v2-103f6ded2c .`.
+It reports 399.2 KB startup JavaScript. The replacement keeps the same
+loopback binding, network and restart policy, preserving its predecessor as
+`teslasync-design-packs-v2-rollback-before-103f6ded2c`.
+The deployed entry `/assets/index-4blmuSGL.js` contains `103f6ded2c`; index,
+health, readiness and auth-mode return 200. Shared aggregate status still
+returns 503 with Tesla `no_token`; no shared backend service was redeployed.
+
+## 2026-11-17 measured preference-transition stall
+
+The transport acknowledgement did not fix the Chromium phone failures.
+Both phone charging phases failed its unchanged eight-second deadline.
+The trace proves the PUT and subsequent GET contain the requested `v2`;
+the GET transport took about ten milliseconds, but obtaining its body and
+running another page evaluation stalled for roughly ten seconds. This is
+not evidence of a lost BroadcastChannel message.
+
+A temporary CPU profile of the same existing light-phone phase attributes
+7.097 of 7.752 seconds to the production Tooltip positioning callback
+(`index-BXHnTkVI.js`, zero-based line 19, column 30745). The isolated run
+then failed at `v4`, so extra workers are not the sole cause. Native timeline
+measurement is underway to distinguish repeated forced layouts from one
+expensive layout before choosing a repair. Profiling instrumentation is
+temporary and must be removed before commit. No deadline or assertion was
+relaxed; no production fix is claimed yet.
+
+The four-case Chromium replay finished **2 failed / 2 passed (8.9m)**,
+zero proxy errors. The complete light-phone accessibility phase passes with
+the shared native-observation boundary; its original forced-colors geometry
+assertions remain unchanged. Light-desktop charging also passes. The two
+phone charging failures remain open.
+
+The native timeline isolates one **6.349-second Layout** with 41 dirty
+objects among 5,645 layout objects; style recalculation is only 0.125 seconds
+across the entire capture. This rules out blaming repeated stylesheet
+selector matching or blindly batching Tooltip observers as the repair.
+The positioning callback forces that layout, but it is not yet established
+that the callback causes the underlying expensive layout. A bounded diagnostic
+records the root/page ownership present at the slow read.
+
+All ten existing WebKit follow-up phases pass: **10 passed (30.0m)**,
+four workers, no retries, zero proxy errors. This verifies the shared clock
+extensions, root-health fixture, desktop core/detail observations and the
+dark-phone charging/geofence cases without changing their assertions.
+
+The slow read sees complete matching `v2` ownership on both root and page;
+partial ownership is not its cause. Widening the clipped chart caption and
+temporarily removing only the visible heatmap viewport do not reduce it
+(maximum native Layout 6.693 and 6.462 seconds respectively). These are
+diagnostic-only experiments, not repairs or acceptable hidden-content changes.
+The next isolation measures the accessible-table subtree; all temporary DOM
+changes are restored before the original behavioral assertions.
+
+## 2026-11-17 native observation and completed retry logs
+
+Discard every experimental viewport-crop/global-animation gate described
+below. None is a verified repair; the v5 containment failure persisted even
+with native DOM bounds. The original locator screenshots, animation handling,
+scrolling and pixel assertions are restored. Instead, use the existing
+running observation-clock boundary for screenshot/scroll operations and
+return its result generically. Four unchanged custom-desktop dashboard and
+charging phases pass across Firefox and WebKit with four workers, no retries,
+zero proxy errors: **4 passed (9.2m)**. The fixture epoch is restored in
+`finally`; no deadline, geometry tolerance or paint assertion changed.
+The helper is now shared by the affected details-dialog, core-interaction
+and accessibility-section capture call sites. Those extensions are under
+bounded verification, not yet claimed green.
+
+Quality attempt 2 again exceeded the user's inspection threshold: nine jobs
+were still running at 46.5 minutes. Its active WebKit phase step was inspected;
+the live job-log endpoint still returned 404. Cancelled this already failing
+old-head attempt and collected all fifteen interrupted-job logs, rather than
+starting a third unchanged attempt. The additional aggregate failures report
+the cancelled prerequisites and the already repaired old discovery assertion.
+The logs expose more desktop WebKit native-action waits, another root-health
+console error, Chromium charging preference acknowledgements remaining on the
+preceding pack, and a Chromium phone preview locator disappearing. These are
+active FIXLIST entries, not impossible-to-fix follow-ups.
+
+The root `/healthz` probe was absent from the hermetic API routes and request
+accounting. It therefore escaped to Vite rather than the synthetic backend.
+Provide and account for its actual GET response (`{"status":"ok"}` from
+`internal/api/health.go:64`, registered in `internal/api/router.go:2430`).
+Keep it separate from nonexistent `/api/v1/healthz`; do not add a console
+exclusion or cancellation allowance. The existing changed harness file
+passes **85 tests (1.6m)**, including the actual root request, its fulfilled
+ledger entry and rejection by the versioned fixture resolver. Scoped ESLint
+and TypeScript exit 0. The first local command's malformed file-selector
+regex was corrected; it ran no tests and is not passing evidence.
+
+The synthetic selection sender previously closed immediately after posting
+invalidation. Its candidate repair keeps the channel alive until the
+application's own GET acknowledges the selected pack, within the unchanged
+eight-second limit; the complete root-profile assertions remain afterward.
+This acknowledgement change and the additional Chromium observation require
+their exact existing phase replays before commit or push.
+
+## 2026-11-16 measured-fixture follow-through
+
+The expanded affected-file run exposed a real fixture-performance problem:
+the existing complete intelligence-pack profile case exceeded its unchanged
+30-second limit, and its single scoped retry did too. Real allocated charts
+add DOM nodes; the shared CSS assertion helper previously searched the whole
+document once per selector for each already-known target. Use native
+`Element.matches` instead, retaining the original document-membership check.
+The checked stylesheet has no context-sensitive `:scope`/`:host` selectors
+or pseudo-elements. All eight existing cases pass; the unchanged all-27-pack
+case takes 6.7 seconds rather than timing out. Additional existing consumers
+remain under verification. No assertion, case, timeout or baseline changed.
+
+The complete frontend lint command, production build and audit/TypeScript
+gate passed before that final test-helper optimization. Production startup
+is 399.1 KB against the unchanged 400 KB cap. The three key-only production
+repairs are committed as `5cd8e01e49`; its task-owned Docker image is building.
+No screenshots or historical JSON fixtures changed. Added-line suppression
+scans against both main and feature/app-design-themes return zero matches.
+
+The corrected UTC monitor found 23 quality jobs queued for 45.4 minutes on
+run 43968015395 at 23:04 UTC. Requested the mandated first cancellation and
+inspected active steps. Completed-job logs are being collected as cancellation
+settles; running-job log downloads returned 404. Rerun once after completion.
+The Chromium and Windows aggregate failures immediately following this
+cancellation reflect cancelled prerequisites, not independently observed
+product failures.
+
+Attempt 2 was started after cancellation completed. The nine interrupted
+engine logs also expose previously inaccessible failures: Firefox retaining
+the preceding pack, WebKit custom-desktop stable-element/click waits, phone
+navigation/readiness and one live-map health-probe diagnostic. These are
+active FIXLIST work, not deferrals. The exact three desktop WebKit route
+phases are being replayed against the newly deployed image, without retries.
+The selector optimization additionally passes 145 existing shared-component
+cases with coverage, plus scoped ESLint and TypeScript. The preview is healthy
+on 3120 and its actual entry asset contains `5cd8e01e49`; its predecessor
+remains stopped as `teslasync-design-packs-v2-rollback-before-5cd8e01e49`.
+
+The expanded 131-file coverage run finished with 130 files/12,444 cases
+passing and only the subsequently repaired selector timeout failing.
+Unallocated-chart, duplicate-key and unkeyed-child diagnostics are zero.
+Its remaining real diagnostic was an incomplete Fetch double in the existing
+shared-library companion: provide a fresh real JSON Response for bootstrap,
+then require its pass-through warning spy to stay untouched. That case and
+scoped ESLint pass. Expected error-boundary/network-negative messages and
+Motion's informational reduced-motion notice remain visible. These verified
+fixture/source-receipt repairs are committed as `2cd9c273d0`, not pushed yet.
+
+The interrupted-engine follow-up reproduces WebKit's dashboard SVG screenshot
+wait; its drive-detail and charging phases pass unchanged (2 passed, 1 failed,
+9.9m). A temporary diagnostic observes thirty identical native SVG bounds
+over 1.76 seconds; its isolated phase passes. Remove that diagnostic rather
+than keep an arbitrary delay. The actual repair scrolls the containing
+heatmap and captures the already-visible native pixel crop without another
+SVG/portal auto-scroll, requiring exact before/after bounds. All original
+pixel samples, paint ordering, outline and interaction assertions remain.
+Four existing cross-engine phases are under verification. Firefox's unchanged
+dark dashboard phase passes all 27 packs (2.0m), with zero proxy errors.
+
+The first crop replay correctly rejected two intermediate defects in the
+new helper: centering the whole v5 card left part of its actual SVG below
+the viewport, and Firefox's final Memphis transition changed the SVG width
+from 465 to 589 during capture. Keep those strict viewport/exact-bounds
+assertions. Center the real SVG using native instant scrolling, and require
+running finite transitions to finish before the existing eight-second
+geometry-settling window can succeed. No deadline or geometry tolerance is
+increased. Both existing custom-desktop dashboard phases are being rechecked;
+the additional phone navigation cases continue independently.
+
+The third local capture candidate failed its newly added global-animation
+readiness check: WebKit reports 1,544 running finite effects on the dashboard
+and 1,874 on charging after eight seconds. Do not retry another speculative
+fix or raise the deadline. Re-read the complete failing log and workflow,
+then inspect the actual effects and their targets/timing before the next
+change. The original source-contract/fixture commits remain separate and
+unpublished. The three additional phone phases pass (5.1m), and the unchanged
+custom desktop live-map phase passes (3.7m), all without retries or proxy
+errors; its complete console ledger remains enforced.
+
+The diagnostic single-worker run passed the experimental global-animation
+gate but reproduced the v5 containment failure. That gate did not establish
+capture readiness and is removed, not added as a new acceptance requirement.
+A subsequent exact-bounds probe recorded a 60px vertical shift during
+screenshot preparation in v2. The installed Playwright implementation
+finishes finite animations before capturing; dashboard intrinsic-height
+observers can reflow the grid after the earlier geometry sample.
+The next candidate keeps readiness within the existing expectation deadline:
+recenter only an out-of-view region, capture its viewport-relative pixels,
+and accept them only when exact before/after native bounds match. Failed
+readiness does not run the paint assertions; once ready, every original
+pixel, outline and interaction assertion executes without retries.
+This also corrects the candidate's document-offset addition: Playwright
+page screenshot clips use viewport coordinates, unlike element screenshots.
+Four existing cross-engine phases are running; scoped ESLint and
+`npx tsc --noEmit` both exit 0. No production styling changed.
+
+## 2026-11-16 shipping-head contract and WebKit follow-up
+
+The verified batch shipped as `413631d463`; superseded quality run
+43944846908 was cancelled, and its previously unavailable partial logs were
+read immediately. Besides the repaired radial failures, they exposed
+WebKit's initial-navigation quiet audit, a chatbot suggestion interaction
+and a detached Statistics SVG path. These remain explicit FIXLIST work.
+
+The Statistics detachment reproduced locally. Its pie paths are replaced
+during responsive layout, whereas the containing figure stays mounted.
+Scroll that actual figure before locating the painted SVG point; preserve
+the real pointer hover, hit testing and tooltip assertions. The navigation
+audit now follows the already-required page readiness check instead of
+running during initial data loading. Its timeout, quiet period and complete
+request/error assertions are unchanged; readiness does not clear the ledger.
+The chatbot interaction assertions remain unchanged while they are rechecked.
+
+The first local route rerun used production Nginx headers, whose correct
+`connect-src` policy rejects the harness's separate loopback SSE origin.
+That environmental result is not passing evidence. The task-only rerun now
+serves an exact copy of image `5e23bbb1ca` assets through Vite's normal static
+preview, matching CI; production CSP and port 3120 are untouched.
+
+The latest-head discovery failure is a second, stale exact worker-command
+assertion in the existing browser harness. Update it to the actual four-worker
+design command, not a broader match. Unit shards 1/4/7 independently expose
+historical source guards missing the new grid and Atlas successors.
+Inventory both JSON and literal producer receipts, then invert only the
+reviewed actual-byte changes before their unchanged historical comparisons.
+The grid guard checks its real shared dependency and every child/import;
+the Atlas guard preserves complete prior bytes and producer controls, also
+when consumed as a CommandDeck dependency. Stale/altered source is rejected.
+No historical fingerprint, baseline, acceptance threshold or fixture is
+refreshed to make the new source pass.
+
+Verification: all 97 existing harness contracts pass (1.6m), with zero proxy
+errors. The three exact WebKit phases pass (8.0m), zero proxy errors and no
+retries, including unchanged chatbot suggestions across all 27 packs.
+The seven source-guard files pass 2,766 tests; two newly reported shard-3
+wrappers pass another 5,749 tests with coverage enabled. TypeScript and the
+complete frontend lint command pass. Session-only Linux Sharp dependencies
+were restored for the existing harness; no dependency manifest changed.
+The temporary static preview was stopped and connection refusal verified;
+the persistent production preview remains untouched.
+
+The completed coverage-merge report repeats the same 36 source assertions,
+but also exposes further missing jsdom chart allocations and fixture
+diagnostics across the remaining shards. These are new explicit FIXLIST
+work, not hidden by the passing targeted source tests. Repair measured
+fixtures and actual lifecycle/data identities rather than filtering output,
+inventing global layout, changing historical baselines or weakening CI.
+
+The merged report identifies 115 existing fixtures with unallocated real
+charts. They now explicitly opt into the existing measured-container helper
+with per-test restoration and a scoped text-measurement canvas double, using
+the same deterministic glyph width as the existing chart-wrapper tests.
+Other element geometry is not fabricated. The mobile-table helper now
+composes the underlying measurement implementation rather than recursively
+calling the same Vitest spy after replacing its implementation.
+
+The first bounded run reported 3,606 passing and 39 failing cases. Actual SVG
+rendering exposed wrong expectations that SVG export was absent, selectors
+that confused legends with filters or reference labels, and Recharts'
+off-screen measurement node being mistaken for visible metric evidence.
+Assertions now target their actual named controls, tables, legends and
+widget roots; SVG export is exercised, not excluded. No test is removed.
+The duplicate `endTs` initializer in the arrival fixture is removed while
+retaining its final post-override value.
+
+Three diagnostics are real production identity bugs: repeated service
+records used only the maintenance-item identity, competing-risk rows could
+repeat a category, and malformed billing-cycle dates could supply no key.
+Keys now distinguish every source occurrence without changing content,
+order, styling or data. The three existing suites pass 197 cases with
+pass-through console-error observers that assert silence rather than
+suppressing diagnostics. Exact inverse proofs pin both complete source
+versions and preserve translation calls and controls, normalizing only the
+new key ordinal parameter. Historical receipts remain untouched.
+
+Additional fixture repairs await actual lazy imports before teardown, keep
+the real journey comparison wrappers, consume Button-only props in the DOM
+double, and return arrays for collection endpoints after mutations.
+Intentional malformed-payload tests retain their visible safeArray warnings;
+these are expected negative-path evidence, not broken positive fixtures.
+
+The task-only monitor also preserves typed UTC timestamps returned by
+PowerShell JSON conversion rather than parsing a timezone-less string again.
+Queued age uses the actual GitHub job creation time, not monitor startup.
+This changes no workflow or timeout; it makes the requested 45-minute
+inspection rule accurate across monitor restarts.
+
 ## 2026-11-16 scaled containment, grid composition and lifecycle repairs
 
 The three Firefox phone profiles failed Material at 320px, RTL, 200% text and
