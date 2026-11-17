@@ -1,5 +1,58 @@
 # Design packs wrap-up handoff
 
+## Verified energy repair batch; replacement CI required
+
+Local commits `c68837b103` and `adcb738605` are not pushed. The exit diagnostic
+passes (3.7m), and the original Chromium/Firefox phase plus existing final
+energy-poll case pass (3 cases, 3.5m). Full lint, explicit TypeScript and
+build pass. Both required audits pass with zero violations. Linux Node's
+default 2GB heap exhausted during the audit compiler; explicitly allocating
+6GB inside the existing 12GB container fixes execution without changing
+any audit rule or source configuration.
+
+The superseded `44099225361` run is now cancelled. Its interrupted
+responsive-32 log exposes an additional failure: light desktop energy
+source states fails twice because refresh observes only one endpoint.
+Both complete traces are in session `fc7d-chromium-responsive32`.
+The exact native Linux baseline passes (1 case, 12.7m). A session-only
+real-poll/native-press overlap reproduces the exact two-source failure.
+Pointer evidence identifies a busy icon replacing the pressed dot before
+release. The helper repeats only an observed busy rejection; missing input
+and accepted refresh failures still fail. Original selection
+`energy-refresh-original-fixed` passes (1 case, 13.9m); diagnostic
+`energy-refresh-overlap-accepted` passes (1 case, 14.3m). Both retain all
+27 packs, with zero test retries or proxy errors. Full lint, explicit
+TypeScript and build pass; final scoped lint/types and the completed
+helper audit pass, with zero violations. Suppression scans against both
+bases are clear. Main is current (273/0 before the refresh repair).
+Docker 3120 remains healthy; all four readiness URLs return 200.
+Its production tree still matches HEAD and screenshots are unchanged.
+
+Finish the documentation build/commit, push the held batch once, and
+start a fresh strict monitor pinned to that SHA. Do not retry the cancelled
+old-head run again. Reconcile historical FIXLIST pending statuses only
+after actual replacement-head acceptance. The PR is main-based, ready,
+mergeable and unmerged.
+CI-MAP records both causes. No monitor remains active on the cancelled run.
+All earlier sections below are historical receipts.
+
+## Current remote head: `fc7d10a6d1`
+
+The URL repair batch is pushed. CI `44099225363`, Security, Ops Gate,
+SI Canonical Gate and Auto Label pass. Quality `44099225361` is on its
+sole unchanged retry after 16 jobs queue for 46.2 minutes. All interrupted
+logs are collected, with no named test failure or retry. Monitor
+`pr-watch-fc7d-extended-profiles`; do not issue a third unchanged attempt.
+The nine 46-minute jobs were inspected: each is executing its native
+browser phase, with no failed step. Live job-log requests still return
+404 until completion. The session monitor now also reads each completed
+successful job's log once and stops on retry-only failures; it does not
+equate a green job with a clean first attempt.
+All 17 exact native failures already pass locally; do not rerun them
+without a new failure or source change. Only final CI acceptance and
+documentation reconciliation remain; no product defect is currently
+reported on this head.
+
 ## Verified URL repair: `fc04304732`; next action is the batched push
 
 The exact 17 failed native cases now pass in pinned Linux:

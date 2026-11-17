@@ -1,5 +1,89 @@
 # Design Pack Decisions
 
+## 2026-11-17 energy refresh races a real automatic poll
+
+The interrupted Chromium responsive-32 log (`134127212477`) contains two
+failures of `Energy flow real source states at 1440px in light`. Both
+traces place a flow poll between click actionability and native input,
+with no history request afterward. The original exact Linux selection
+passes unchanged: 1 passed (12.7m), zero proxy errors.
+
+A session-only overlay aligns one native 400ms press with the next real
+automatic poll and delays that response by 800ms. Before editing, the
+existing test reproduces the exact failure: expected two endpoints,
+received one, unchanged 8000ms predicate deadline. Pointer instrumentation
+then proves the button remains connected, its pressed dot is detached,
+and pointer-up lands on the replacement spinner while `aria-disabled`
+is true. No click event is dispatched. Pre-scrolling alone cannot repair
+that busy transition; observing only click events also fails explicitly.
+
+The helper now pre-scrolls and observes native activation. Only a gesture
+actually rejected while the control is busy may be repeated, within the
+existing default assertion timeout. An enabled click must be observed;
+missing/unclassified input throws immediately. The strict two-source
+assertion remains outside that readiness loop with its original timeout:
+an accepted refresh that fails to fetch both sources is never retried.
+No polling, clock, product behavior, appearance, test case, or matrix changes.
+
+The probe's initial synchronization was moved before the availability
+wait so its artificial wait for a preceding poll does not consume that
+wait's entire budget. Its native overlap and response latency are unchanged.
+Commit `adcb738605` passes the exact original selection (1 case, 13.9m)
+and the corrected overlap probe (1 case, 14.3m), all 27 packs, no test
+retries or proxy errors. Full lint, explicit TypeScript and build pass;
+the completed helper additionally passes scoped ESLint, explicit types
+and its engineering audit (zero violations). Added-line suppression scans
+against both bases are clear. Production sources and screenshots remain
+unchanged; Docker 3120 is healthy and its four readiness URLs return 200.
+Both energy repairs are held for one batched push with this evidence.
+
+## 2026-11-17 retry-only energy exit still uses direct navigation
+
+The new successful-job inspection catches Firefox light job `134127204435`:
+the energy-flow phase retries after `leaveToSettings` aborts a widget-pack
+preference GET (`NS_BINDING_ABORTED`). This shared energy helper still uses
+`page.goto`, bypassing the already-repaired browser-owned drain. No other
+check is stopped while the cause is investigated.
+
+The exact native Linux case passes unchanged (2.8m); the hosted failure is
+an overlapping-request timing difference, not a different design. A
+session-only overlay adds 500ms transport latency to a real preference
+read at exit. Before editing, the existing case fails because navigation
+aborts that read, with zero proxy errors. This reproduces the cancellation
+mechanism; the diagnostic observes it directly rather than claiming the
+same late-ledger window. The actual CI trace archive is truncated after a
+teardown timeout, but its complete job log identifies the helper and GET.
+
+Use the existing `navigateAppDesign` wrapper in `leaveToSettings`, retaining
+readiness, source activation and every ledger assertion. The existing
+energy-navigation test instruments `page.goto`, which is no longer the
+exit mechanism; move its final real-poll observation to the browser-owned
+navigation boundary. Keep the same status/ledger assertions and test count.
+The timing overlay is session-only and is not committed as a test.
+
+Commit `c68837b103` passes that diagnostic (1 case, 3.7m) and the original
+Chromium/Firefox phase plus existing final-poll case (3 cases, 3.5m).
+Full lint, explicit TypeScript, build and both engineering audits pass.
+Linux Node's default 2GB heap exhausted in the audit compiler; explicitly
+allocating 6GB inside the 12GB container fixes execution without changing
+any audit rule. This repair remains held with the refresh repair.
+
+## 2026-11-17 replacement batch and queue retry
+
+The verified URL repair and documentation are pushed as `fc7d10a6d1`.
+CI, Security, Ops Gate, SI Canonical Gate and Auto Label all pass on this
+head. Quality run `44099225361` has 16 jobs queued for 46.2 minutes while
+20 runners remain occupied. Apply the requested single cancellation and
+failed-job retry. Every interrupted log is collected; no named test
+failure or retry is reported. Attempt 2 is the only unchanged retry.
+Continue inspecting extended jobs rather than issuing a third attempt.
+At 46.1 minutes, nine running jobs are inspected: all remain in their
+native phase step, with no failed step. Live dark-WebKit and native-shard
+log endpoints return 404 until completion. Preserve the existing cases
+and deadlines rather than interpreting elapsed full-profile time as a
+failed individual case. The session-only monitor additionally inspects
+successful job logs once each and stops on retry-only failures.
+
 ## 2026-11-17 initial native-route navigation requires the configured base URL
 
 Chromium responsive-32 (`134035130962`) reports 17 failures while the other
