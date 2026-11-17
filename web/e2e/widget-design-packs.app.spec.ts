@@ -33,6 +33,12 @@ const acceptanceFamilies = [
   'responsive-accessibility', 'real-page-adoption', 'distinct-rendered-identity',
 ] as const;
 
+async function clickQuietPreview(picker: Locator) {
+  const button = picker.getByRole('button', { name: 'Preview Quiet Form', exact: true });
+  await button.scrollIntoViewIfNeeded();
+  await button.click();
+}
+
 for (const [pack, theme] of [
   ['classic', 'light'], ['v7', 'light'], ['cyber', 'dark'], ['blueprint', 'custom'],
 ] as const) {
@@ -730,7 +736,7 @@ for (const outer of ['memphis', 'blueprint'] as const) {
     const picker = await appearance(page, 1440);
     await selectReviewPack(page, outer);
     await expectProfile(page, outer);
-    await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+    await clickQuietPreview(picker);
     const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
     const preview = dialog.locator('[data-preview-synthetic="true"]');
     await expect(preview).toBeVisible();
@@ -772,7 +778,7 @@ for (const { theme, width, allocation } of [
     for (const outer of ['memphis', 'blueprint'] as const) {
       await selectReviewPack(page, outer);
       await expectProfile(page, outer);
-      await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
+      await clickQuietPreview(picker);
       const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
       const preview = dialog.locator('[data-preview-synthetic="true"]');
       await expect(preview).toBeVisible();

@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { test as base, type Page, type TestInfo } from '@playwright/test';
 import { resolve } from 'node:path';
+import { installAppDesignNavigation, navigateAppDesignDocument } from './app-design-navigation';
 import { assertMockApiAfterNavigation, closeMockApiFixtures, prepareMockApiNavigation } from './mockApi';
 
 export async function attachJsonEvidence(testInfo: TestInfo, name: string, value: unknown) {
@@ -20,8 +21,7 @@ export async function routeBuiltApplication(page: Page, origin: string, paths: s
 export async function navigateAppDesign(page: Page, destination: string | null) {
   const origin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null;
   await prepareMockApiNavigation(page);
-  if (destination === null) await page.reload();
-  else await page.goto(destination);
+  await navigateAppDesignDocument(page, destination);
   if (origin) await assertMockApiAfterNavigation(page, origin);
 }
 
@@ -34,6 +34,7 @@ export const test = base.extend<{ mockApiLifetime: void }>({
     }
   }, { auto: true }],
   page: async ({ page }, runTest, testInfo) => {
+    await installAppDesignNavigation(page);
     try {
       await runTest(page);
     } finally {
@@ -51,7 +52,7 @@ export const test = base.extend<{ mockApiLifetime: void }>({
           try {
             await prepareMockApiNavigation(page);
           } finally {
-            await page.goto('about:blank');
+            await navigateAppDesignDocument(page, 'about:blank');
           }
           if (testInfo.status === testInfo.expectedStatus) {
             await assertMockApiAfterNavigation(page, origin);
