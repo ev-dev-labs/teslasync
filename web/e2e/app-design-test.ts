@@ -20,8 +20,9 @@ export async function routeBuiltApplication(page: Page, origin: string, paths: s
 
 export async function navigateAppDesign(page: Page, destination: string | null) {
   const origin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null;
+  const target = destination === null ? null : new URL(destination, base.info().project.use.baseURL).href;
   await prepareMockApiNavigation(page);
-  await navigateAppDesignDocument(page, destination);
+  await navigateAppDesignDocument(page, target);
   if (origin) await assertMockApiAfterNavigation(page, origin);
 }
 
