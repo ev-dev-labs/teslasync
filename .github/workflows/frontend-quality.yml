@@ -293,8 +293,8 @@ jobs:
       APP_DESIGN_PROFILE_WIDTH: ${{ matrix.width }}
       APP_DESIGN_PROFILE_THEME: ${{ matrix.theme }}
       APP_DESIGN_PROFILE_TITLE: Application design languages at ${{ matrix.width }}px in ${{ matrix.theme }}
-      # WebKit rendering competes with native frame stability on four-core runners.
-      APP_DESIGN_WORKERS: ${{ matrix.browser == 'webkit' && '2' || '4' }}
+      # Desktop WebKit needs the runner's rendering capacity for each native phase.
+      APP_DESIGN_WORKERS: ${{ matrix.browser == 'webkit' && (matrix.width == 1440 && '1' || '2') || '4' }}
       HOME: /root
     steps:
       - uses: actions/checkout@v7
@@ -313,10 +313,15 @@ jobs:
           node --input-type=module <<'NODE'
             import { createHash } from "node:crypto";
             import { readFileSync, writeFileSync } from "node:fs";
+            import { availableParallelism } from "node:os";
             const hash = path => createHash("sha256").update(readFileSync(path)).digest("hex");
             writeFileSync("app-design-run-envelope.json", JSON.stringify({
               checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
               workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: "e2e-app",
+              runtime: {
+                node: process.version, architecture: process.arch,
+                availableCPUs: availableParallelism(), requestedWorkers: Number(process.env.APP_DESIGN_WORKERS),
+              },
               indexSHA256: hash("e2e/.app-dist/index.html"),
               acceptanceSourceSHA256: hash("e2e/widget-design-packs.app.spec.ts"),
               project: `app-design-${process.env.APP_DESIGN_BROWSER}`,
