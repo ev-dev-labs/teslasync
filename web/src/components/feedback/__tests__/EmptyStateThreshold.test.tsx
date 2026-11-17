@@ -40,6 +40,7 @@ describe('EmptyStateThreshold', () => {
     );
     expect(screen.getByTestId('est')).toHaveTextContent(/at least 30 sessions/i);
     expect(screen.getByTestId('est')).toHaveTextContent(/5 so far/i);
+    expect(screen.getByText(/at least 30 sessions/i)).toHaveClass('text-sm', 'text-[var(--text-muted)]');
   });
 
   it('falls back to "items" when no noun is provided', () => {
@@ -80,6 +81,7 @@ describe('EmptyStateThreshold', () => {
       />,
     );
     expect(screen.getByTestId('est')).toHaveTextContent('A subtitle that explains the section');
+    expect(screen.getByText('A subtitle that explains the section')).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
   });
 
   it('renders the action slot', () => {

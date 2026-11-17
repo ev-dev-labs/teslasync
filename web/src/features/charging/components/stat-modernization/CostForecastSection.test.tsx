@@ -25,7 +25,7 @@ vi.mock('./CostStatSection', () => ({
     children: ReactNode; isEmpty: boolean; emptyMessage: string;
   }) => <section>{isEmpty ? emptyMessage : children}</section>,
 }));
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
   const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const Rows = ({ data, children }: { data: unknown[]; children?: ReactNode }) =>
     <div data-testid="chart-rows" data-rows={JSON.stringify(data)}>{children}</div>;
@@ -46,7 +46,8 @@ vi.mock('@/components/charts', () => {
     ResponsiveContainer: Pass, ComposedChart: Rows, LineChart: Rows,
     Area: Series, Line: Series, ChartLegend: () => null, ChartTooltip: () => null,
     CartesianGrid: () => null, Tooltip: () => null, XAxis: () => null, YAxis: () => null,
-    chartGrid: {}, axisTickSm: {}, AREA_DEFAULTS: {}, areaGradient: () => null,
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
+    axisTickSm: {}, AREA_DEFAULTS: {}, areaGradient: () => null,
   };
 });
 

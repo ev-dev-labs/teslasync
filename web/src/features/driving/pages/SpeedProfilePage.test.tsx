@@ -36,7 +36,7 @@
  */
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
@@ -48,6 +48,9 @@ import { calendarRangeToInstants } from '@/lib/dateRange';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { axisTick } from '@/components/charts/chartUtils';
 import { Car, TrendingUp, Gauge } from 'lucide-react';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + PageContainer read it at
 // module load for the reduced-motion preference.
@@ -516,6 +519,46 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByText('200.00')).toBeInTheDocument(); // 60-75 efficiency
   });
 
+  it('binds independent profile counts, unavailable detail and the factual insight in every design, then retains recovered detail', () => {
+    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({
+      data: { ...PROFILE, distribution: [{ speedBucket: '0-15', readings: 0 }] },
+    }));
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ error: new Error('detail unavailable') }));
+    const { container, rerenderPage } = renderPage();
+    const definitions = () => screen.getByRole('region', { name: 'Speed Buckets' })
+      .querySelector('[data-app-list="definitions"]')!;
+    const facts = definitions();
+    expect([...facts.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent))
+      .toEqual(['0.00%', '0', 'Unavailable', 'Unavailable']);
+    const message = screen.getByText(/Drives around 54\.00 km\/h show the best energy efficiency/);
+    const notice = message.closest('[data-app-feedback-kind="notice"]')!;
+    expect(notice.querySelector(':scope > [data-app-part="feedback-content"]')).toContainElement(message);
+    expect(notice.querySelector(':scope > [data-app-part="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(message).toHaveTextContent('This profile does not quantify efficiency gains from reducing highway speed.');
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const design = APPLICATION_DESIGNS[pack];
+        for (const reading of facts.querySelectorAll('[data-app-part="metric-reading"]')) {
+          expectAppDesignDataMode(reading, design.data, '[data-app-list="definitions"]');
+        }
+        expect(matchesAppDesignCss(notice, `[data-app-feedback="${design.feedback}"]`)
+          .some(match => match.declarations['border-inline-start'] || match.declarations['border-block-start'])).toBe(true);
+        expect(facts).toHaveTextContent('Unavailable');
+        expect(facts).toHaveTextContent('0.00%');
+      } finally { release(); }
+    }
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES, error: new Error('refresh failed') }));
+    rerenderPage();
+    const recovered = definitions();
+    expect(recovered.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('Retained source');
+    expect([...recovered.querySelectorAll('[data-app-part="metric-value"]')].map(node => node.textContent))
+      .toEqual(['0.00%', '0', '10.80 km/h', '120.00']);
+    expect(screen.getByText('0-15')).toBeInTheDocument();
+  });
+
   it('uses the endpoint drive-count population rather than durations or the separate drive query', () => {
     drivesMock.mockReturnValue(makeQuery<Drive[]>({
       data: [
@@ -801,7 +844,7 @@ describe('SpeedProfilePage', () => {
     expect(captured.scatterData).toHaveLength(2);
     const format = captured['axis-speed'] as (value: number) => string;
     expect(format(12.5)).toContain('12,5');
-    setGlobalLocale('en-US');
+    act(() => { setGlobalLocale('en-US'); });
   });
 
   it.each([

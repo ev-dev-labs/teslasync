@@ -65,7 +65,7 @@ export function NormalizationVersionPanel({
             )}
           />
         ) : (
-          <ul className="space-y-3">
+          <ul data-app-part="list" className="space-y-3">
             {buckets.map((bucket) => {
               const isLegacy = bucket.version == null;
               const belowContract =

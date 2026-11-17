@@ -3,6 +3,18 @@ import { render, screen } from '@testing-library/react';
 
 import { SystemHealthCard } from './SystemHealthCard';
 import { healthSeverity } from './anomalyHelpers';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+
+const frameRules = new Map(PACK_IDS.map(pack => {
+  const rules: Rule[] = [];
+  postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack]), 'utf8'))
+    .walkRules(rule => { rules.push(rule); });
+  return [pack, rules];
+}));
 
 // t(key, fallback) → fallback, mirroring the repo's presentational-component
 // test convention (see SourceLayerBadge / ScoreBadge). This keeps the render
@@ -25,6 +37,27 @@ function renderCard(props: { category: string | null | undefined; status: string
 }
 
 describe('SystemHealthCard', () => {
+  it.each(PACK_IDS)('%s owns the actual horizontal health frame without reclassifying unknown evidence', pack => {
+    const { container } = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <ul><SystemHealthCard category="future-category" status="unknown-future-state" /></ul>
+    </div>);
+    const release = observeAppDesignScopes(container.firstElementChild!);
+    try {
+      const frame = screen.getByRole('listitem');
+      expect(frame).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(frameRules.get(pack)?.some(rule => rule.selectors.some(selector =>
+        selector.includes('[data-app-part~="card"]') && frame.matches(selector))
+        && rule.nodes.some(node => node.type === 'decl' && ['border', 'border-radius', 'background-color'].includes(node.prop)))).toBe(true);
+      expect(frame).toHaveClass('flex', 'items-center', 'gap-3');
+      expect(screen.getByText('unknown-future-state').closest('[data-app-part~="badge"]'))
+        .toHaveClass('bg-[var(--semantic-info-bg)]');
+      expect(screen.getByText('unknown-future-state').closest('[data-app-part~="badge"]'))
+        .not.toHaveClass('bg-[var(--semantic-success-bg)]');
+      expect(screen.getByText('future-category')).toHaveAttribute('title', 'future-category');
+      expect(frame.querySelector('svg.lucide-shield')).toHaveAttribute('aria-hidden', 'true');
+    } finally { release(); }
+  });
+
   it('renders the category glyph, label, and status badge for a normal battery row', () => {
     const { container } = renderCard({ category: 'battery', status: 'normal' });
 

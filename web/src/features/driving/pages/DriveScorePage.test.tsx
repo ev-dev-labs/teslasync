@@ -29,6 +29,7 @@
  * English fallback with {{placeholder}} interpolation applied.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { gaugeTone } from '@/lib/tokens';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -302,6 +303,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('DriveScorePage', () => {
   function periodValue(label: string) {

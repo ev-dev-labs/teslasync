@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { KVList } from '@/components/data-display';
 
 import { useMotorStats } from './useMotorStats';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
@@ -54,9 +55,11 @@ export default function MotorEfficiencyInsights({
           </PanelTitle>
           {motorStats?.avgTorque != null ? (
             <div className="space-y-2 text-sm text-[var(--text-secondary)]">
-              <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.avgTorque)} Nm</Text></div>
-              <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.maxTorque)} Nm</Text></div>
-              <div className="flex justify-between gap-3"><span>{t('dynamics.evidence.torqueSamples', 'Torque samples above 200 Nm')}</span><Text as="span" mono>{motorStats.highTorquePct != null ? `${fmtNumber(motorStats.highTorquePct)}%` : '—'}</Text></div>
+              <KVList wrap items={[
+                { label: t('dynamics.avgTorque', 'Avg Torque'), value: <Text as="span" mono>{fmtNumber(motorStats.avgTorque)} Nm</Text> },
+                { label: t('dynamics.maxTorque', 'Max Torque'), value: <Text as="span" mono>{fmtNumber(motorStats.maxTorque)} Nm</Text> },
+                { label: t('dynamics.evidence.torqueSamples', 'Torque samples above 200 Nm'), value: <Text as="span" mono>{motorStats.highTorquePct != null ? `${fmtNumber(motorStats.highTorquePct)}%` : '—'}</Text> },
+              ]} />
               <Text as="p" variant="caption">{t('dynamics.evidence.torqueMeaning', 'Sum of reported axle torque. Sample share is not time spent under load or a driver rating.')}</Text>
             </div>
           ) : noData}
@@ -70,18 +73,11 @@ export default function MotorEfficiencyInsights({
           </PanelTitle>
           {motorStats?.avgPower != null ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-                <span>{t('dynamics.avgPower', 'Avg Power')}</span>
-                <Text as="span" mono>{power(motorStats.avgPower)}</Text>
-              </div>
-              <div className="flex items-center justify-between">
-                <Text as="span" size="sm" color="secondary">{t('dynamics.peakPower', 'Peak Power')}</Text>
-                <Text as="span" mono>{power(motorStats.peakPower)}</Text>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <Text as="span" size="sm" color="secondary">{t('dynamics.peakRegen', 'Peak Regen')}</Text>
-                <Text as="span" mono>{power(motorStats.peakRegen)}</Text>
-              </div>
+              <KVList wrap items={[
+                { label: t('dynamics.avgPower', 'Avg Power'), value: <Text as="span" mono>{power(motorStats.avgPower)}</Text> },
+                { label: t('dynamics.peakPower', 'Peak Power'), value: <Text as="span" mono>{power(motorStats.peakPower)}</Text> },
+                { label: t('dynamics.peakRegen', 'Peak Regen'), value: <Text as="span" mono>{power(motorStats.peakRegen)}</Text> },
+              ]} />
               <Text as="p" variant="caption">{t('dynamics.evidence.powerMeaning', 'Measured motor output, not pedal position. Power alone cannot classify driving style.')}</Text>
             </div>
           ) : noData}
@@ -95,14 +91,10 @@ export default function MotorEfficiencyInsights({
           </PanelTitle>
           {motorStats?.avgMotorTemp != null ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-                <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
-                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp))}{tempUnit}</Text>
-              </div>
-              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-                <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
-                <Text as="span" mono>{motorStats.maxMotorTemp != null ? `${fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp))}${tempUnit}` : '—'}</Text>
-              </div>
+              <KVList wrap items={[
+                { label: t('dynamics.avgMotorTemp', 'Avg Motor Temp'), value: <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp))}{tempUnit}</Text> },
+                { label: t('dynamics.maxMotorTemp', 'Max Motor Temp'), value: <Text as="span" mono>{motorStats.maxMotorTemp != null ? `${fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp))}${tempUnit}` : '—'}</Text> },
+              ]} />
               <Text as="p" variant="caption">{t('dynamics.evidence.thermalMeaning', 'Average of the hotter reported motor in each sample. Temperature alone does not establish thermal limiting or powertrain health.')}</Text>
             </div>
           ) : noData}

@@ -29,6 +29,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -118,6 +119,23 @@ describe('previewValue', () => {
 });
 
 describe('FlagsTable', () => {
+  it('keeps flag values and edit/delete actions available on phones', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const row = { key: 'alpha.flag', value: { enabled: true } };
+      const { container, props } = renderTable({ rows: [row] });
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent('alpha.flag');
+      expect(grid).toHaveTextContent('{"enabled":true}');
+      fireEvent.click(within(grid).getByRole('button', { name: 'Edit flag alpha.flag' }));
+      fireEvent.click(within(grid).getByRole('button', { name: 'Delete flag alpha.flag' }));
+      expect(props.onEdit).toHaveBeenCalledWith(row);
+      expect(props.onAskDelete).toHaveBeenCalledWith(row);
+      fireEvent.click(within(grid).getByRole('button', { name: 'Quick view' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('{"enabled":true}');
+    } finally { bounds.mockRestore(); }
+  });
+
   it('renders one row per flag with its value preview and the three column headers', () => {
     const rows: FeatureFlagEntry[] = [
       { key: 'flag.bool', value: true },

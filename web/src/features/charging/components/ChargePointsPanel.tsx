@@ -65,7 +65,7 @@ export function ChargePointsPanel() {
           )}
         />
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {points.map((cp) => (
             <li
               key={cp.id}
@@ -106,7 +106,7 @@ export function ChargePointsPanel() {
           <Text variant="bodySm" className="mb-2 font-medium">
             {t('ocpp.recentSessions', 'Recent sessions')}
           </Text>
-          <ul className="space-y-2">
+          <ul data-app-part="list" className="space-y-2">
             {sessions.map((s) => (
               <li
                 key={s.transaction_id}

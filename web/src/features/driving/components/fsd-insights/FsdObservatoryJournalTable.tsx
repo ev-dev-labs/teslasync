@@ -21,7 +21,7 @@ export function FsdObservatoryJournalTable({ events }: { events: FsdObservatoryE
       header: t('fsd.observatory.columns.date', 'Date / time'),
       defaultWidth: 210,
       render: event => event.kind === 'drive' && event.drive_id != null
-        ? <Link to={`/drives/${event.drive_id}`} className={driveLinkClassName}>{formatDateTime(event.at)}</Link>
+        ? <Link data-app-part="button" data-app-variant="ghost" data-app-size="sm" to={`/drives/${event.drive_id}`} className={driveLinkClassName}>{formatDateTime(event.at)}</Link>
         : formatDateTime(event.at),
     },
     {

@@ -52,16 +52,18 @@ export function SymptomMatchesPanel({
         )}
         onRetry={onRetry}
       >
-        <ol className="space-y-3">
+        <ol data-app-part="list" data-app-list="records" className="space-y-3">
           {symptoms.map((symptom, index) => (
             <li
               key={`${symptom.finding_id}-${symptom.signal}-${symptom.observed_at}-${index}`}
+              data-app-part="card"
+              data-app-card-kind="record"
               className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
+              <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <Text variant="body" mono>{symptom.signal}</Text>
-                  <Caption className="mt-1 block">
+                  <Text data-app-part="record-title" variant="body" mono>{symptom.signal}</Text>
+                  <Caption data-app-part="record-context" className="mt-1 block">
                     {t('serviceIntelligence.symptoms.campaign', 'Campaign {{id}}', {
                       id: symptom.finding_id,
                     })}
@@ -85,8 +87,8 @@ export function SymptomMatchesPanel({
                   </Badge>
                 </div>
               </div>
-              <Text as="p" variant="bodySm" className="mt-2">{symptom.evidence}</Text>
-              <Caption className="mt-2 block">
+              <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-2">{symptom.evidence}</Text>
+              <Caption data-app-part="record-context" className="mt-2 block">
                 <DateTime value={symptom.observed_at} variant="full" />
               </Caption>
             </li>

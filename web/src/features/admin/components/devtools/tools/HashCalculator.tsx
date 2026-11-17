@@ -81,13 +81,13 @@ export function HashCalculatorTool() {
           {t('devtools.utils.computeSha256', 'Compute SHA256')}
         </Button>
         {errorMsg && (
-          <p role="alert" className="text-sm text-rose-300">
+          <p data-app-part="feedback" role="alert" className="text-sm text-rose-300">
             {errorMsg}
           </p>
         )}
         {hashResult && (
-          <div role="status" className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
-            <code className="flex-1 break-all text-xs font-mono text-rose-300">{hashResult}</code>
+          <div data-app-part="status panel" data-app-panel-kind="code" role="status" className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
+            <code data-app-code-slot="body" className="flex-1 break-all text-xs font-mono text-rose-300">{hashResult}</code>
             <CopyButton text={hashResult} />
           </div>
         )}

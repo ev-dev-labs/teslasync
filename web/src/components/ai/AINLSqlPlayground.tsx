@@ -213,6 +213,8 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
       {draft && (
         <>
           <div
+            data-app-part="card"
+            data-surface-variant="standalone"
             role="group"
             aria-label={t('powerSql.aiDrafter.previewLabel', 'Proposed SQL (review before applying)')}
             data-testid="ai-sql-draft-preview"

@@ -391,7 +391,7 @@ function RoadmapCard({ item }: { item: RoadmapEntry }) {
           <PhaseChip phase={item.phase} label={t(meta.labelKey, meta.labelFallback)} />
         </div>
 
-        <ul className="mt-4 space-y-1.5">
+        <ul data-app-part="list" className="mt-4 space-y-1.5">
           {features.map((feature, i) => (
             <li key={i} className="flex items-start gap-2">
               <StatusIcon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', c.text)} aria-hidden="true" />
@@ -427,11 +427,11 @@ function DeliveryProgress({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
-        <div className="shrink-0 lg:w-56">
-          <SectionTitle>{t('roadmap.progress.title', 'Delivery progress')}</SectionTitle>
-          <div className="mt-1 flex items-baseline gap-2">
-            <Text as="span" variant="metricValue">{shipped}</Text>
-            <Text as="span" variant="caption">
+        <div data-app-part="metric" data-app-metric="headline" className="shrink-0 lg:w-56">
+          <SectionTitle data-app-part="metric-label">{t('roadmap.progress.title', 'Delivery progress')}</SectionTitle>
+          <div data-app-part="metric-reading" className="mt-1 flex items-baseline gap-2">
+            <Text as="span" data-app-part="metric-value" variant="metricValue">{shipped}</Text>
+            <Text as="span" data-app-part="metric-context" variant="caption">
               {t('roadmap.progress.ofTotal', 'of {{total}} initiatives shipped', { total })}
             </Text>
           </div>

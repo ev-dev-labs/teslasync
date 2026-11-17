@@ -82,7 +82,7 @@ export function AccessOverviewPanel({
     }
     if (state.isRefreshBlocked) {
       return (
-        <div role="status" className="space-y-2">
+        <div data-app-part="status" role="status" className="space-y-2">
           <Text color="secondary">{t('dataSources.status.paused', 'Refresh paused')}</Text>
           {state.retry && (
             <Button variant="ghost" size="sm" className="min-h-11 md:min-h-9" onClick={state.retry}>
@@ -150,7 +150,7 @@ export function AccessOverviewPanel({
             {!driversState.hasData ? sourcePlaceholder(driversState, t('vehicleAccess.drivers.resource', 'Drivers')) : roles.length === 0 ? (
               <Caption>{t('vehicleAccess.overview.noDrivers', 'No drivers yet')}</Caption>
             ) : (
-              <ul className="flex flex-wrap gap-2">
+              <ul data-app-part="list" className="flex flex-wrap gap-2">
                 {roles.map((slice) => (
                   <li key={slice.role}>
                     <Badge variant="neutral">

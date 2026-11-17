@@ -87,7 +87,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         <Activity className="h-4 w-4 text-status-info" aria-hidden="true" />{' '}
         {t('telemetry.vehicleState', 'Vehicle state')}
         {sseConnected && (
-          <span
+          <span data-app-part="status"
             className="ml-auto flex items-center gap-1 text-2xs text-emerald-300"
             role="status"
           >

@@ -9,7 +9,7 @@ export function FlowGrid({ children }: { children: ReactNode }) {
   const cells = Children.toArray(children);
   const horizontal = cells.length > 0 && width >= cells.length * 200 + (cells.length - 1) * 12;
   return (
-    <div ref={ref} data-flow-grid data-flow-axis={horizontal ? 'row' : 'column'}
+    <div ref={ref} data-flow-grid data-app-part="grid" data-flow-axis={horizontal ? 'row' : 'column'}
       className={cn('grid min-w-0 items-center gap-3 [&>*]:min-w-0',
         horizontal ? 'grid-flow-col auto-cols-fr' : 'grid-cols-1')}>
       {children}

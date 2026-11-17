@@ -257,12 +257,14 @@ export function ScheduledExportsPanel() {
       {showForm ? (
         <form
           onSubmit={submit}
+          data-app-part="card"
+          data-surface-variant="standalone"
           className="mt-6 space-y-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
           data-testid="scheduled-exports-form"
           aria-busy={savePending}
         >
-          <fieldset disabled={savePending} className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
-            <label className="block">
+          <fieldset data-app-part="field" disabled={savePending} className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.name', 'Name')}
               </Text>
@@ -277,7 +279,7 @@ export function ScheduledExportsPanel() {
                 required
               />
             </label>
-            <label className="block">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.scheduleCron', 'Cron expression')}
               </Text>
@@ -295,7 +297,7 @@ export function ScheduledExportsPanel() {
                 )}
               </Text>
             </label>
-            <label className="block">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.exportType', 'Export type')}
               </Text>
@@ -310,7 +312,7 @@ export function ScheduledExportsPanel() {
                 options={EXPORT_TYPES.map((opt) => ({ value: opt, label: opt }))}
               />
             </label>
-            <label className="block">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.format', 'Format')}
               </Text>
@@ -325,7 +327,7 @@ export function ScheduledExportsPanel() {
                 options={FORMATS.map((opt) => ({ value: opt, label: opt }))}
               />
             </label>
-            <label className="block">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.rangeWindow', 'Range window')}
               </Text>
@@ -342,7 +344,7 @@ export function ScheduledExportsPanel() {
                 )}
               </Text>
             </label>
-            <label className="block">
+            <label data-app-part="field-label" className="block">
               <Text as="span" size="xs" color="secondary" className="tracking-wide">
                 {t('dataExport.scheduled.form.deliveryKind', 'Delivery kind')}
               </Text>
@@ -361,7 +363,7 @@ export function ScheduledExportsPanel() {
               />
             </label>
             {form.delivery.kind !== 'download' ? (
-              <label className="block md:col-span-2">
+              <label data-app-part="field-label" className="block md:col-span-2">
                 <Text as="span" size="xs" color="secondary" className="tracking-wide">
                   {t('dataExport.scheduled.form.deliveryTarget', 'Delivery target')}
                 </Text>
@@ -447,40 +449,40 @@ export function ScheduledExportsPanel() {
         ) : (
           <div className="max-w-full overflow-x-auto" data-testid="scheduled-exports-table">
             <Table>
-              <thead>
-                <tr>
-                  <th scope="col">{t('dataExport.scheduled.table.name', 'Name')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.type', 'Type')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.cron', 'Cron')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.lastRun', 'Last run')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.status', 'Status')}</th>
-                  <th scope="col" className="text-right">{t('dataExport.scheduled.table.actions', 'Actions')}</th>
+              <thead data-app-part="table-head">
+                <tr data-app-part="table-row">
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.name', 'Name')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.type', 'Type')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.cron', 'Cron')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.lastRun', 'Last run')}</th>
+                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.status', 'Status')}</th>
+                  <th data-app-part="table-cell" scope="col" className="text-right">{t('dataExport.scheduled.table.actions', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr
+                  <tr data-app-part="table-row"
                     key={row.id}
                     data-testid={`scheduled-exports-row-${row.id}`}
                     className={row.enabled ? '' : 'opacity-50'}
                   >
-                    <td className="font-medium">{row.name}</td>
-                    <td>{row.export_type} ({row.format})</td>
-                    <td><Code>{row.schedule_cron}</Code></td>
-                    <td>
+                    <td data-app-part="table-cell" className="font-medium">{row.name}</td>
+                    <td data-app-part="table-cell">{row.export_type} ({row.format})</td>
+                    <td data-app-part="table-cell"><Code>{row.schedule_cron}</Code></td>
+                    <td data-app-part="table-cell">
                       {row.delivery.kind}
                       {row.delivery.target ? ` → ${row.delivery.target}` : ''}
                     </td>
-                    <td>
+                    <td data-app-part="table-cell">
                       {row.next_run_at ? (
                         <TimeStamp value={row.next_run_at} />
                       ) : (
                         <Text as="span" color="muted">—</Text>
                       )}
                     </td>
-                    <td>
+                    <td data-app-part="table-cell">
                       {row.last_run_at ? (
                         <TimeStamp value={row.last_run_at} />
                       ) : (
@@ -489,7 +491,7 @@ export function ScheduledExportsPanel() {
                         </Text>
                       )}
                     </td>
-                    <td>
+                    <td data-app-part="table-cell">
                       {row.last_status === 'ok' ? (
                         <Badge variant="success">{t('dataExport.scheduled.status.ok', 'OK')}</Badge>
                       ) : row.last_status === 'failed' ? (
@@ -498,7 +500,7 @@ export function ScheduledExportsPanel() {
                         <Text as="span" color="muted">—</Text>
                       )}
                     </td>
-                    <td>
+                    <td data-app-part="table-cell">
                       <div className="flex flex-wrap justify-end gap-2 md:gap-1">
                         <Button
                           size="sm"

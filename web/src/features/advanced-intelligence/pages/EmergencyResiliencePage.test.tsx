@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@tanstack/react-query';
@@ -56,6 +57,8 @@ afterEach(() => {
   client?.clear();
   onlineManager.setOnline(true);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Emergency resilience scoped modernization', () => {
   it('preserves seven section identities and independent guardian without implying a completed plan', async () => {
@@ -144,6 +147,12 @@ describe('Emergency resilience scoped modernization', () => {
     for (const risk of ['supported', 'modeled', 'depleted']) expect(within(table).getByText(risk)).toBeInTheDocument();
     expect(within(table).getAllByRole('row')).toHaveLength(4);
     expect(screen.getAllByRole('article')[0]).toHaveTextContent('#2');
+    const priority = screen.getAllByRole('article')[0];
+    expect(priority.firstElementChild).toHaveAttribute('data-app-part', 'card');
+    expect(priority.firstElementChild).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(priority.firstElementChild).toHaveClass('p-3', 'bg-[var(--surface-2)]');
+    expect(priority).toHaveTextContent('Recommendation only.');
+    expect(within(priority).queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByText('• Review evacuation reserve.')).toBeInTheDocument();
     expect(screen.getAllByText('• Modeled outage, not a weather observation.').length).toBeGreaterThan(0);
     const before = table.textContent;

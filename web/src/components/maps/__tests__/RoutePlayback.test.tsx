@@ -114,6 +114,8 @@ describe('RoutePlayback', () => {
   it('renders the empty state when no points are supplied', () => {
     render(<RoutePlayback points={[]} emptyMessage="Nothing to replay" />);
     expect(screen.getByText('Nothing to replay')).toBeInTheDocument();
+    expect(screen.getByText('Nothing to replay').closest('[data-app-part~="map"]'))
+      .toHaveAttribute('data-map-state', 'empty');
   });
 
   it('fires onPositionChange with index 0 on initial mount when points are present', () => {
@@ -298,6 +300,40 @@ describe('RoutePlayback', () => {
     paints.resolve.mockClear();
     await act(async () => { document.documentElement.removeAttribute('data-theme'); });
     expect(paints.resolve).not.toHaveBeenCalled();
+  });
+
+  it('refreshes pack-scoped paint without resetting playback, geometry or keyboard focus', async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <div data-app-design-preview="" data-app-design-pack="v3" data-app-map="instrument">
+        <RoutePlayback points={trail} onPositionChange={onChange} />
+      </div>,
+    );
+    const preview = container.firstElementChild!;
+    const slider = screen.getByRole('slider', { name: 'Playback progress' });
+    slider.focus();
+    fireEvent.keyDown(slider, { key: 'End' });
+    onChange.mockClear();
+    paints.setView.mockClear();
+    paints.fitBounds.mockClear();
+    paints.resolve.mockReturnValue('rgb(78, 90, 123)');
+    await act(async () => {
+      preview.setAttribute('data-app-design-pack', 'atlas');
+      preview.setAttribute('data-app-map', 'atlas');
+    });
+    expect(paints.polyline).toHaveBeenLastCalledWith({
+      positions: trail.map(({ lat, lng }) => [lat, lng]),
+      pathOptions: { color: 'rgb(78, 90, 123)', weight: 4, opacity: 0.8 },
+    });
+    expect(screen.getByText('3/3')).toBeInTheDocument();
+    expect(slider).toHaveFocus();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(paints.setView).not.toHaveBeenCalled();
+    expect(paints.fitBounds).not.toHaveBeenCalled();
+    expect(screen.getByRole('application').parentElement).toHaveAttribute('data-app-part', 'panel map');
+    expect(slider.closest('[data-map-control="playback"]')).toHaveAttribute('data-app-part', 'map-toolbar');
+    expect(screen.getByText('3/3').closest('[data-app-part~="map-legend"]'))
+      .toHaveAttribute('data-map-legend', 'playback');
   });
 
   it('refreshes forced-colors and color-scheme events and removes media listeners on unmount', () => {

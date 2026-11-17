@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { deriveDataState } from '@/api/dataState';
 import { FreshnessDot } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Badge, Button, Text } from '@/components/ui';
+import { Badge, Button, Card, Text } from '@/components/ui';
 import type { CarbonQueryState, CarbonQueryStates } from './types';
 
 interface CarbonSourceRowProps {
@@ -108,7 +108,7 @@ export function CarbonSourceRow({
   });
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+    <Card padding="sm" className="rounded-xl border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-none">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <Text as="p" variant="label">{name}</Text>
@@ -170,6 +170,6 @@ export function CarbonSourceRow({
           )}
         </AlertBanner>
       ) : null}
-    </div>
+    </Card>
   );
 }

@@ -1,4 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, type RefObject } from 'react'
+import { AppDesignPortal } from './AppDesignPortal'
+import { captureAppDesignOrigin, readAppDesignInvocation, type AppDesignOriginSnapshot } from './appDesignOrigin'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from '@/components/motion/runtime'
 import {
@@ -313,16 +315,24 @@ interface CommandPaletteProps {
   onOpen?: () => void
   /** Used by the lazy host so the invocation that loaded the chunk is not lost. */
   initialOpen?: boolean
+  /** Original invoker retained by the lazy host before mounting this chunk. */
+  initialOrigin?: HTMLElement | null
+  /** Verified invocation profile/locale retained before the lazy chunk mounts. */
+  initialDesignOrigin?: AppDesignOriginSnapshot
   /** Live visible shell control when opening intentionally hides the original invoker. */
   returnFocusFallbackRef?: RefObject<HTMLElement | null>
   onPin?: (path: string) => void
   onUnpin?: (path: string) => void
 }
 
-export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbackRef, onPin, onUnpin }: CommandPaletteProps) {
+export function CommandPalette({ onOpen, initialOpen = false, initialOrigin = null, initialDesignOrigin, returnFocusFallbackRef, onPin, onUnpin }: CommandPaletteProps) {
   const { t } = useTranslation()
   const { reduce, durationMs } = useMotionPreference()
   const [open, setOpen] = useState(initialOpen)
+  const [designOrigin, setDesignOrigin] = useState<{ origin: HTMLElement | null; snapshot?: AppDesignOriginSnapshot }>(() => ({
+    origin: initialOrigin,
+    snapshot: initialDesignOrigin ?? (initialOrigin ? captureAppDesignOrigin(initialOrigin) : undefined),
+  }))
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [mode, setMode] = useState<PaletteMode>('search')
@@ -1071,10 +1081,15 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
   // Ctrl+K outside a form field. Listening here keeps the palette in sync
   // with the global shortcut layer without duplicating focus rules.
   useEffect(() => {
-    function handleToggle() { setOpen(prev => !prev) }
+    function handleToggle(event: Event) {
+      if (!open) {
+        setDesignOrigin(readAppDesignInvocation(event))
+      }
+      setOpen(prev => !prev)
+    }
     window.addEventListener('toggle-command-palette', handleToggle as EventListener)
     return () => window.removeEventListener('toggle-command-palette', handleToggle as EventListener)
-  }, [])
+  }, [open])
 
   // Focus input when opened; close sidebar on mobile. On close, focus returns
   // to whatever owned it before the palette took over (the header trigger, a
@@ -1252,7 +1267,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
   return (
     <AnimatePresence>
       {open && (
-        <>
+        <AppDesignPortal inline origin={designOrigin.origin} originSnapshot={designOrigin.snapshot}>
           <motion.div
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1269,6 +1284,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
           />
           <div
             data-command-palette-positioner
+            data-app-part="overlay"
             // Viewport-centered at EVERY width and zoom level. The palette
             // deliberately does NOT offset by the sidebar width: that made the
             // panel jump horizontally the moment the `xl` breakpoint flipped
@@ -1294,12 +1310,14 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
             >
               <div
                 role="dialog"
+                data-app-part="dialog"
+                data-app-dialog-kind="command-palette"
                 aria-modal="true"
                 aria-label={t('palette.dialogLabel', 'Command palette')}
                 className="flex max-h-command-palette flex-col overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3"
               >
               {/* Search input / contextual selection header */}
-              <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b border-[var(--border-default)] px-4 py-4 sm:px-5">
+              <div data-app-part="dialog-header" className="flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b border-[var(--border-default)] px-4 py-4 sm:px-5">
                 {mode !== 'search' ? (
                   <>
                     <Button
@@ -1441,6 +1459,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
               {/* Results */}
               <div
                 ref={listRef}
+                data-app-part="dialog-body"
                 id={PALETTE_LISTBOX_ID}
                 role="listbox"
                 tabIndex={-1}
@@ -1621,7 +1640,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
               </div>
             </motion.div>
           </div>
-        </>
+        </AppDesignPortal>
       )}
     </AnimatePresence>
   )

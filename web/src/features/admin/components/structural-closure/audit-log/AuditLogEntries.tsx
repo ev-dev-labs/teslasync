@@ -1,11 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { History } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
-import { Button, DataTable, Caption } from '@/components/ui';
+import { Button, DataTable, Caption, type MobileDataTablePresentation } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, QueryError, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { AuditExpandedDetail } from '../../continuation-admin-2/AuditExpandedDetail';
 import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
 import { useAuditLogColumns } from './auditLogColumns';
@@ -14,7 +15,24 @@ type Props = { controller: ReturnType<typeof useAuditLogPage> };
 
 export function AuditLogEntries({ controller }: Props) {
   const { t, limit, offset, setOffset, expanded, setExpanded, logQuery, subsystemMissing, tableError, rows } = controller;
+  const { formatDateTime } = useDateFormat();
   const columns = useAuditLogColumns(controller);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<AuditLogRow>>(() => ({
+    roles: { action: 'title', ts: 'primary', success: 'badge', actor: 'meta', category: 'meta', entity: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'action': return row.action;
+        case 'ts': return formatDateTime(row.ts);
+        case 'success': return row.success === true
+          ? t('admin.auditLog.statusOk', 'OK')
+          : row.success === false ? t('admin.auditLog.statusFail', 'Fail') : '—';
+        case 'actor': return row.actor || '—';
+        case 'category': return row.category || '—';
+        case 'entity': return row.entity_id == null ? row.entity_type : `${row.entity_type} #${row.entity_id}`;
+        default: return null;
+      }
+    },
+  }), [formatDateTime, t]);
   const exportFilename = `audit-log-${new Date().toISOString().slice(0, 10)}`;
   const handleExport = useCallback((format: 'csv' | 'json', loadedRows: readonly AuditLogRow[]) => {
     // Audit evidence is independent of the operator's visible-column layout.
@@ -98,6 +116,7 @@ export function AuditLogEntries({ controller }: Props) {
                 searchable
                 columns={columns}
                 mobileColumns={['action', 'success', 'ts']}
+                mobilePresentation={mobilePresentation}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('admin.auditLog.emptyTable', 'No entries')}

@@ -31,7 +31,7 @@ export function SettingField({
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-1">
-        <label
+        <label data-app-part="field-label"
           htmlFor={htmlFor}
           className="block text-xs font-medium tracking-wider text-[var(--text-muted)]"
         >

@@ -76,7 +76,7 @@ export function AlertsSection({
             <Caption className="block">
               {t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}
             </Caption>
-            <div
+            <div data-app-part="list"
               className="grid gap-3"
               role="list"
               aria-label={t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}

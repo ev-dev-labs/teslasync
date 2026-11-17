@@ -71,15 +71,18 @@ function ReleaseNoteCard({ note }: { note: ReleaseNote }) {
 
   return (
     <article
+      data-app-part="card"
+      data-app-record-kind="release-note"
+      data-surface-variant="standalone"
       data-testid="release-note"
       data-release-version={note.version}
       className="rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3"
     >
       <header className="flex flex-wrap items-center gap-2">
-        <Text as="span" size="sm" weight="medium" color="primary">
+        <Text as="span" size="sm" weight="medium" color="primary" data-app-record-slot="label">
           {note.version}
         </Text>
-        <span className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+        <span data-app-record-slot="context" className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
           <CalendarDays className="h-3 w-3" aria-hidden />
           {formatDate(note.date)}
         </span>
@@ -107,6 +110,8 @@ function ReleaseNoteCard({ note }: { note: ReleaseNote }) {
           {note.audiences.map((audience) => (
             <span
               key={audience}
+              data-app-part="badge"
+              data-app-variant="neutral"
               data-release-audience={audience}
               className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs tracking-wide text-[var(--text-muted)]"
             >
@@ -116,7 +121,7 @@ function ReleaseNoteCard({ note }: { note: ReleaseNote }) {
         </div>
       </div>
 
-      <ul className="mt-3 space-y-1.5">
+      <ul data-app-part="list" data-app-record-slot="body" className="mt-3 space-y-1.5">
         {items.map((item, index) => (
           <li key={`${note.version}-${index}`} className="flex items-start gap-2">
             <span

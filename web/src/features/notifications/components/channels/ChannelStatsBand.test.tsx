@@ -24,9 +24,8 @@
  *   5. Accessibility — the four lucide glyphs are decorative and hidden from
  *      assistive tech.
  *
- * `@/components/data-display` (pulled in via MetricCard) drags motion-driven
- * siblings into the module graph, so framer-motion is stubbed to a passthrough
- * to keep module load hermetic in jsdom. react-i18next echoes the English
+ * Shared motion primitives use the real test-root provider.
+ * react-i18next echoes the English
  * fallback so copy is deterministic without booting the real catalog.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -40,26 +39,6 @@ import {
   assertOperationalBriefDisclosure,
   assertOperationalMetricUnavailable,
 } from '@/test/operationalBriefAssertions';
-
-vi.mock('framer-motion', () => ({
-  m: new Proxy(
-    {},
-    {
-      get: () => (props: Record<string, unknown>) => {
-        const Component = (props.as as string) ?? 'div';
-        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
-        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
-      },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useReducedMotion: () => true,
-  useInView: () => true,
-  useMotionValue: (v: unknown) => ({ get: () => v, set: vi.fn(), on: vi.fn() }),
-  useSpring: (v: unknown) => ({ get: () => v, set: vi.fn(), on: vi.fn() }),
-  useTransform: () => ({ get: () => 0, set: vi.fn(), on: vi.fn() }),
-  animate: vi.fn(() => ({ stop: vi.fn() })),
-}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

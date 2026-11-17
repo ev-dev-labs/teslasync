@@ -226,7 +226,8 @@ export function RoutePlayback({
     // Observe inherited theme roles, not probe children or Leaflet transforms.
     for (let node: HTMLElement | null = paintContext; node; node = node.parentElement) {
       observer?.observe(node, {
-        attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme', 'data-mode', 'data-app-design-pack', 'data-app-map'],
       });
     }
     const media = ['(prefers-color-scheme: dark)', '(forced-colors: active)']
@@ -375,9 +376,9 @@ export function RoutePlayback({
         }
       />
     );
-    if (bare) return empty;
+    if (bare) return <div data-app-part="map" data-map-kind="playback" data-map-state="empty">{empty}</div>;
     return (
-      <GlassPanel className={cn('overflow-hidden', className)}>
+      <GlassPanel data-app-part="panel map" data-map-kind="playback" data-map-state="empty" className={cn('overflow-hidden', className)}>
         {empty}
       </GlassPanel>
     );
@@ -392,7 +393,7 @@ export function RoutePlayback({
   const Frame = bare ? 'div' : GlassPanel;
 
   return (
-    <Frame className={bare ? cn('flex h-full min-h-0 w-full flex-col', className) : cn('overflow-hidden', className)}>
+    <Frame data-app-part={bare ? 'map' : 'panel map'} data-map-kind="playback" className={bare ? cn('flex h-full min-h-0 w-full flex-col', className) : cn('overflow-hidden', className)}>
       <div
         className={bare ? 'relative min-h-0 w-full flex-1' : 'relative w-full'}
         style={bare ? undefined : { height: heightStyle }}
@@ -458,7 +459,7 @@ export function RoutePlayback({
           )}
         </MapContainer>
         {(!paint.trail || !paint.start || (endPos && !paint.end)) && (
-          <div role="status" data-map-paint="unresolved" className="absolute bottom-2 left-2 z-map-control rounded-lg bg-[var(--panel-bg)] px-3 py-1.5">
+          <div role="status" data-app-part="map-legend" data-map-state="unavailable" data-map-paint="unresolved" className="absolute bottom-2 left-2 z-map-control rounded-lg bg-[var(--panel-bg)] px-3 py-1.5">
             <Text variant="caption">
               {t('maps.routePlayback.mapLabel', 'Route playback map')}: {t('common.unavailable', 'Unavailable')}
             </Text>
@@ -467,7 +468,7 @@ export function RoutePlayback({
 
         {/* Inline metric chip — top-right. */}
         {cp && (
-          <div className="pointer-events-none absolute right-2 top-2 z-map-control flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--panel-bg)] px-3 py-1.5">
+          <div data-app-part="map-legend" data-map-legend="playback" className="pointer-events-none absolute right-2 top-2 z-map-control flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--panel-bg)] px-3 py-1.5">
             <Flag className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text variant="caption" mono>
               {currentIndex + 1}/{points.length}
@@ -483,7 +484,7 @@ export function RoutePlayback({
       </div>
 
       {showControls && (
-        <div className="border-t border-[var(--border-default)] p-3">
+        <div data-app-part="map-toolbar" data-map-control="playback" className="border-t border-[var(--border-default)] p-3">
           <PlaybackControls
             framed={false}
             isPlaying={isPlaying}

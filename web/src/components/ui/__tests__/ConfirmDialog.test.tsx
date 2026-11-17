@@ -7,10 +7,21 @@
  * coverage in `useConfirm.test.tsx`.
  */
 import '@/i18n';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { useState } from 'react';
+import { parse, type Rule } from 'postcss';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, cleanup, act, waitFor } from '@testing-library/react';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { Button } from '../Button';
+import { APPLICATION_DESIGNS, getAppDesignAttributes } from '../app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { isSilenced } from '@/lib/confirmSilence';
+
+const noticeRules: Rule[] = [];
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+  .walkRules(rule => { noticeRules.push(rule); });
 
 beforeEach(() => {
   localStorage.clear();
@@ -22,6 +33,43 @@ afterEach(() => {
 });
 
 describe('ConfirmDialog — silenceKey', () => {
+  it.each(PACK_IDS)('%s composes the actual opened warning without bypassing its typed gate or focus engine', async pack => {
+    const onConfirm = vi.fn();
+    function Fixture() {
+      const [open, setOpen] = useState(false);
+      return (
+        <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+          <Button onClick={() => setOpen(true)}>Review changes</Button>
+          <ConfirmDialog open={open} title="Review" message="0 resources may be changed."
+            variant="warning" requireTypedConfirmation="REVIEW" typedConfirmationLabel="Exact review phrase"
+            onConfirm={onConfirm} onCancel={() => setOpen(false)} />
+        </div>
+      );
+    }
+    render(<Fixture />);
+    const trigger = screen.getByRole('button', { name: 'Review changes' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Review' });
+    const notice = screen.getByText('0 resources may be changed.').closest('[data-app-feedback-kind="notice"]')!;
+    await waitFor(() => expect(notice).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+    expect(dialog).toContainElement(notice);
+    expect(notice).toHaveAttribute('data-app-tone', 'warning');
+    expect(notice.querySelector('[data-app-part~="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(notice.querySelector('[data-app-part~="feedback-content"]')).toHaveTextContent('0 resources may be changed.');
+    const consumed = noticeRules.filter(rule => rule.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+      && rule.selector.includes('[data-app-feedback-kind="notice"]')
+      && Array.from(document.querySelectorAll(rule.selector)).includes(notice));
+    expect(consumed.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === 'display' && node.value === 'grid'))).toBe(true);
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Exact review phrase' }), { target: { value: 'REVIEW' } });
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('honors caller-owned validation before enabling confirmation', () => {
     const onConfirm = vi.fn();
     const { rerender } = render(

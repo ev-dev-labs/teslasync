@@ -56,15 +56,15 @@ export function JsonFormatterTool() {
           placeholder='{"key":"value"}'
         />
         {result.kind === 'ok' ? (
-          <div className="rounded bg-[var(--surface-overlay)] p-3">
-            <div className="flex items-center justify-between">
+          <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-overlay)] p-3">
+            <div data-app-code-slot="heading" className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-secondary)]">{formattedLabel}</span>
               <CopyButton text={result.formatted} />
             </div>
-            <pre className="mt-1 max-h-64 overflow-auto text-xs font-mono text-emerald-300">{result.formatted}</pre>
+            <pre data-app-code-slot="body" className="mt-1 max-h-64 overflow-auto text-xs font-mono text-emerald-300">{result.formatted}</pre>
           </div>
         ) : result.kind === 'error' ? (
-          <div role="alert" className="space-y-1">
+          <div data-app-part="feedback" role="alert" className="space-y-1">
             <p className="text-sm text-rose-300">{t('devtools.utils.jsonInvalid', 'Invalid JSON')}</p>
             {result.detail && <p className="text-xs text-[var(--text-muted)]">{result.detail}</p>}
           </div>

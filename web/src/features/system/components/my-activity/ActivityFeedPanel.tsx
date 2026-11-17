@@ -48,7 +48,7 @@ export function ActivityFeedPanel({
           {t('activity.myActivity.feed.title', 'Activity feed')}
         </PanelTitle>
         {isLoading ? (
-          <div
+          <div data-app-part="status"
             className="space-y-4"
             role="status"
             aria-busy="true"

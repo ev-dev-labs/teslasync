@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { request, ActionCanceledError, __resetActionConfirmationForTests } from '@/api/client';
 import { ActionConfirmationRoot } from '../ActionConfirmationRoot';
@@ -25,7 +25,13 @@ function start(path = '/api-keys/first', signal?: AbortSignal) {
 }
 function accept() {
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'CONFIRM' } });
+  expect(screen.getByRole('textbox')).toHaveValue('CONFIRM');
+  expect(screen.getByRole('button', { name: 'Confirm', exact: true })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: 'Confirm', exact: true }));
+}
+async function waitForDialog() {
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm sensitive action' });
+  await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 }
 
 beforeEach(() => {
@@ -45,6 +51,7 @@ describe('shared intent confirmation', () => {
   it('requires exact typed intent and never sends a declined action', async () => {
     render(<ActionConfirmationRoot />);
     const pending = start();
+    await waitForDialog();
     expect(screen.getByRole('button', { name: 'Confirm', exact: true })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'confirm' } });
     expect(screen.getByRole('button', { name: 'Confirm', exact: true })).toBeDisabled();
@@ -57,6 +64,7 @@ describe('shared intent confirmation', () => {
     render(<ActionConfirmationRoot />);
     const first = start();
     const second = start('/api-keys/second');
+    await waitForDialog();
     expect(screen.getByText('/api-keys/first')).toBeVisible();
     accept();
     await act(async () => { expect(await first).toEqual({ ok: true }); });
@@ -75,6 +83,7 @@ describe('shared intent confirmation', () => {
     const controller = new AbortController();
     const first = start('/api-keys/first', controller.signal);
     const second = start('/api-keys/second');
+    await waitForDialog();
     await act(async () => { await Promise.resolve(); controller.abort(); });
     expect(await first).toMatchObject({ name: 'AbortError' });
     expect(screen.getByText('/api-keys/second')).toBeVisible();

@@ -1,10 +1,13 @@
-import { act, cleanup, fireEvent, render as renderView, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render as renderView, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClipRecord } from '../../lib/types';
 import { RedactionEditor } from './RedactionEditor';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
 
 const render = (element: ReactElement) => renderView(element, { wrapper: MemoryRouter });
 
@@ -54,6 +57,35 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('redaction draft persistence', () => {
+  it.each(PACK_IDS)('%s owns each real mask frame and control body without writing or changing geometry', pack => {
+    const current = clip();
+    current.redactions.push({ ...current.redactions[0], id: 'second', kind: 'plate', label: 'Long private plate label' });
+    const original = JSON.stringify(current.redactions);
+    const { container } = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <RedactionEditor clip={current} />
+    </div>);
+    const release = observeAppDesignScopes(container.firstElementChild!);
+    try {
+      const records = screen.getAllByRole('listitem');
+      expect(records).toHaveLength(2);
+      records.forEach((record, index) => {
+        expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+        expectAppDesignDataMode(record, APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+        const bodies = record.querySelectorAll(':scope > [data-app-part~="record-body"]');
+        expect(bodies).toHaveLength(2);
+        for (const body of bodies) {
+          expectAppDesignDataMode(body, APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+        }
+        expect(within(record).getByRole('textbox', { name: 'Label' })).toHaveValue(current.redactions[index].label);
+        expect(within(record).getByRole('slider', { name: 'X' })).toHaveValue('0.1');
+        expect(within(record).getByRole('slider', { name: 'Width' })).toHaveValue('0.3');
+        expect(within(record).getByRole('button', { name: 'Remove region' })).toBeEnabled();
+      });
+      expect(storage.mutateAsync).not.toHaveBeenCalled();
+      expect(JSON.stringify(current.redactions)).toBe(original);
+    } finally { release(); }
+  });
+
   it('renders repeated visible shared labels with unique opaque field IDs without changing populated masks', () => {
     const current = clip();
     current.redactions.push({

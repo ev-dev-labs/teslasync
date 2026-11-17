@@ -36,6 +36,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDayKey } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 import { cn } from '@/lib/cn';
 import { gaugeTone, neonColorMap, typography, chartTokens } from '@/lib/tokens';
@@ -95,6 +96,7 @@ function riskFactorIcon(name: string) {
 export default function BatteryDegradationPage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const touchBrush = useMediaQuery('(max-width: 767px), (pointer: coarse)');
   // Only known product values are translation keys; future server values retain their readable fallback.
   const stressLabels: Record<string, string> = {
     "Low": t("battery.degradation.stressValue.Low", "Low"),
@@ -565,7 +567,16 @@ export default function BatteryDegradationPage() {
                       needed since the range chart below uses a different X-axis
                       dataKey ("date" vs "label").
                     */}
-                    <ChartBrush dataKey="label" />
+                    {ChartBrush({
+                      dataKey: 'label',
+                      ariaLabel: t('signalQuery.preset.aria', '{{label}} time range', {
+                        label: t('battery.degradation.trendTitle', 'Health trend & projection'),
+                      }),
+                      ...(touchBrush ? {
+                        height: chartTokens.brush.touchSize,
+                        travellerWidth: chartTokens.brush.touchSize,
+                      } : {}),
+                    })}
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -838,7 +849,7 @@ export default function BatteryDegradationPage() {
                 actionTo={activeId == null ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
                 action={activeId != null ? { label: t('common.retry', 'Retry'), onClick: () => { void healthState.retry?.(); } } : undefined} />
             ) : recommendations.length > 0 ? (
-              <ul className="space-y-3">
+              <ul data-app-part="list" className="space-y-3">
                 {recommendations.map((rec, i) => (
                   <li key={i} className="flex min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                     <Zap className={cn('mt-0.5 h-4 w-4 shrink-0', typography.color.secondary)} aria-hidden="true" />

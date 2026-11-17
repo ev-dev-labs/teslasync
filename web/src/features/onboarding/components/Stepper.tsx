@@ -111,7 +111,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
   }
 
   return (
-    <ol className="flex min-w-0 max-w-full flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
+    <ol data-app-part="list" data-app-list="steps" className="flex min-w-0 max-w-full flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
       {items.map((step, idx) => {
         const state = stepStateFor(step.done, idx, currentIndex);
         const isCurrent = idx === currentIndex;
@@ -121,6 +121,10 @@ export function Stepper({ steps, renderCta }: StepperProps) {
         return (
           <li
             key={step.key}
+            data-app-part="list-row"
+            data-app-step-kind="onboarding"
+            data-step-id={step.key}
+            data-state={state}
             id={`onboarding-step-${step.key}`}
             className="flex min-w-0 max-w-full gap-3 sm:gap-4"
             aria-current={isCurrent ? 'step' : undefined}
@@ -128,6 +132,8 @@ export function Stepper({ steps, renderCta }: StepperProps) {
           >
             <div className="relative flex shrink-0 flex-col items-center">
               <span
+                data-app-part="step-indicator"
+                data-state={state}
                 aria-hidden="true"
                 className={cn(
                   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
@@ -150,6 +156,8 @@ export function Stepper({ steps, renderCta }: StepperProps) {
               </span>
               {!isLast && (
                 <span
+                  data-app-part="step-connector"
+                  data-state={state}
                   aria-hidden="true"
                   className={cn(
                     'mt-1 w-px flex-1 min-h-[28px]',
@@ -159,12 +167,12 @@ export function Stepper({ steps, renderCta }: StepperProps) {
               )}
             </div>
 
-            <div className="min-w-0 flex-1 break-words pb-1 [overflow-wrap:anywhere]">
+            <div data-app-part="step-body" className="min-w-0 flex-1 break-words pb-1 [overflow-wrap:anywhere]">
               <VisuallyHidden>{statusLabel[state]}</VisuallyHidden>
-              <Heading level="panel" className={titleClasses[state]}>
+              <Heading data-app-part="step-title" level="panel" className={titleClasses[state]}>
                 {step.title}
               </Heading>
-              <Text as="p" size="sm" className={cn('mt-1 leading-relaxed', descriptionClasses[state])}>
+              <Text data-app-part="step-description" as="p" size="sm" className={cn('mt-1 leading-relaxed', descriptionClasses[state])}>
                 {step.description}
               </Text>
               {showCta && (

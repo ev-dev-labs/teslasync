@@ -59,55 +59,60 @@ export function FirmwareImpactDetails({
           )}
         />
       ) : (
-        <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
+        <ul data-app-part="list" data-app-list="records" className="grid min-w-0 gap-3 lg:grid-cols-2">
           {summary.impacts.map((i) => (
             <li
               key={`${i.version}-${i.installedMs}`}
+              data-app-part="card list-row"
+              data-app-card-kind="record"
+              data-surface-variant="standalone"
               className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
-              <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
-                <Text variant="body" className="break-words font-medium">{i.version}</Text>
+              <div data-app-part="record-header" className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
+                <Text data-app-part="record-title" variant="body" className="break-words font-medium">{i.version}</Text>
                 <Badge variant={VERDICT_BADGE[i.verdict]}>
                   {t(`firmwareImpact.verdict.${i.verdict}`, VERDICT_DEFAULT[i.verdict])}
                 </Badge>
-                <Text variant="caption">{formatDateShort(i.installedAt)}</Text>
+                <Text data-app-part="record-context" variant="caption">{formatDateShort(i.installedAt)}</Text>
               </div>
+              <div data-app-part="record-body">
               <Table aria-label={i.version}>
                 <tbody>
-                  <tr><th scope="row"><Text variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text variant="caption">
                     {t('firmwareImpact.before', 'Before')}
-                  </Text></th><td className="text-right"><Text variant="bodySm">
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                     {t('firmwareImpact.whPerKmN', '{{v}} Wh/km · n={{n}}', {
                       v: i.before.n > 0 ? Math.round(i.before.meanWhPerKm) : '—',
                       n: i.before.n,
                     })}
                   </Text></td></tr>
-                  <tr><th scope="row"><Text variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text variant="caption">
                     {t('firmwareImpact.after', 'After')}
-                  </Text></th><td className="text-right"><Text variant="bodySm">
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                     {t('firmwareImpact.whPerKmN', '{{v}} Wh/km · n={{n}}', {
                       v: i.after.n > 0 ? Math.round(i.after.meanWhPerKm) : '—',
                       n: i.after.n,
                     })}
                   </Text></td></tr>
-                  <tr><th scope="row"><Text variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text variant="caption">
                     {t('firmwareImpact.change', 'Change')}
-                  </Text></th><td className="text-right"><Text variant="bodySm">
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                     {i.before.n > 0 && i.after.n > 0
                       ? `${i.deltaWhPerKm > 0 ? '+' : ''}${Math.round(i.deltaWhPerKm * 10) / 10} Wh/km (${
                         i.deltaShare > 0 ? '+' : ''
                       }${Math.round(i.deltaShare * 1000) / 10}%)`
                       : '—'}
                   </Text></td></tr>
-                  <tr><th scope="row"><Text variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text variant="caption">
                     {t('firmwareImpact.stats', 'p · d')}
-                  </Text></th><td className="text-right"><Text variant="bodySm">
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                     {i.p != null && i.cohensD != null
                       ? `${i.p < 0.001 ? '<0.001' : fmtScientificNumber(i.p, 3)} · ${fmtNumber(Math.abs(i.cohensD))}`
                       : '—'}
                   </Text></td></tr>
                 </tbody>
               </Table>
+              </div>
             </li>
           ))}
         </ul>

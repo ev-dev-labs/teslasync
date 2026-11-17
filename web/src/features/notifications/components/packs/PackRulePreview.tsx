@@ -26,7 +26,7 @@ export default function PackRulePreview(props: Props) {
   const { t } = useTranslation()
   const { template, selection, selected, disabled, customized, channels, master, onToggle, onChange } = props
   const name = t(`alertPacks.rules.${template.id}.name`, template.rule.name)
-  return <section aria-label={name} className="space-y-3 rounded-lg border border-[var(--border-default)] p-3">
+  return <section data-app-part="card" data-surface-variant="standalone" aria-label={name} className="space-y-3 rounded-lg border border-[var(--border-default)] p-3">
     <div className="flex items-start gap-3">
       <Checkbox aria-label={name} checked={selected} onChange={onToggle} disabled={disabled} />
       <div className="min-w-0 flex-1 space-y-1">

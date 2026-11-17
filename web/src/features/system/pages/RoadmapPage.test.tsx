@@ -39,6 +39,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
@@ -207,6 +212,39 @@ describe('RoadmapPage — KPI band', () => {
 });
 
 describe('RoadmapPage — delivery progress', () => {
+  it('binds the existing shipped readout and context to deliberate consumers in all profiles, without adding a card or changing the composition', () => {
+    const { container } = renderPage();
+    const label = screen.getByRole('heading', { name: 'Delivery progress' });
+    const metric = label.closest('[data-app-metric="headline"]');
+    expect(metric).not.toBeNull();
+    const reading = metric!.querySelector('[data-app-part~="metric-reading"]')!;
+    expect(reading).not.toBeNull();
+    expect(reading.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent('10');
+    expect(reading.querySelector('[data-app-part~="metric-context"]')).toHaveTextContent('of 17 initiatives shipped');
+    expect(label).toHaveAttribute('data-app-part', 'metric-label');
+    expect(metric).not.toHaveAttribute('data-app-design-owner');
+    expect(metric!.querySelector('[data-app-part~="card"], [data-app-part~="panel"]')).toBeNull();
+    const track = screen.getByRole('img', { name: 'Roadmap initiatives by phase' });
+    const geometry = [...track.children].map(element => element.getAttribute('style'));
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-metric="headline"] > [data-app-part~="metric-reading"]')) rules.push(rule); });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as PackId[]) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        const matches = rules.filter(rule => reading.matches(rule.selector));
+        expect(matches.length, pack).toBeGreaterThan(0);
+        expect(matches.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === 'display' && node.value === 'flex')), pack).toBe(true);
+        expect([...track.children].map(element => element.getAttribute('style'))).toEqual(geometry);
+        expect(within(screen.getByRole('region', { name: 'Completed' })).getAllByRole('listitem')).toHaveLength(70);
+        reading.removeAttribute('data-app-design-owner');
+        expect(rules.some(rule => reading.matches(rule.selector)), `${pack}: final target required`).toBe(false);
+      } finally { release(); }
+    }
+  });
+
   it('renders the shipped/total summary, the accessible bar and a per-phase legend', () => {
     renderPage();
 

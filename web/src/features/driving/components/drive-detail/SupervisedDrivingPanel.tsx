@@ -114,6 +114,7 @@ export function SupervisedDrivingPanel({
           <div className="flex flex-col items-end gap-1">
             <Link
               to="/fsd"
+              data-app-action-link
               className={evidenceLinkClass}
             >
               {t('driveDetail.fsd.openInsights', 'Open FSD insights')}
@@ -122,6 +123,7 @@ export function SupervisedDrivingPanel({
             {insight?.firmware_version ? (
               <Link
                 to="/fsd#fsd-firmware-spotlight"
+                data-app-action-link
                 className={evidenceLinkClass}
               >
                 {t('driveDetail.fsd.afterFirmware', 'After firmware {{version}}', {
@@ -133,40 +135,40 @@ export function SupervisedDrivingPanel({
         </div>
 
         <Table variant="embedded" aria-label={t('driveDetail.fsd.title', 'Supervised driving')}>
-          <tbody><tr>
-            <th scope="row">
+          <tbody><tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row">
               <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
                 <Route className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('driveDetail.fsd.distance', 'Reported distance')}
               </Text>
             </th>
-            <td className="tabular-nums">
+            <td data-app-part="table-cell" className="tabular-nums">
               {insight?.fsd_distance_m == null
                 ? '—'
                 : `${confidence === 'high' ? '' : '~'}${formatDistance(
                     insight.fsd_distance_m,
                   )}`}
             </td>
-          </tr><tr>
-            <th scope="row">
+          </tr><tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row">
               <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
                 <Gauge className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('driveDetail.fsd.share', 'Share of drive')}
               </Text>
             </th>
-            <td className="tabular-nums">
+            <td data-app-part="table-cell" className="tabular-nums">
               {insight?.fsd_share_pct == null
                 ? '—'
                 : `${confidence === 'high' ? '' : '~'}${fmtNumber(insight.fsd_share_pct)}%`}
             </td>
-          </tr><tr>
-            <th scope="row">
+          </tr><tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row">
               <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('driveDetail.fsd.evidenceWindow', 'Evidence window')}
               </Text>
             </th>
-            <td>
+            <td data-app-part="table-cell">
               {firstEvidence && lastEvidence
                 ? <><time dateTime={firstEvidence} title={firstEvidence}>{formatDateTime(firstEvidence)}</time>{' - '}<time dateTime={lastEvidence} title={lastEvidence}>{formatDateTime(lastEvidence)}</time></>
                 : t('driveDetail.fsd.noPositiveEvidence', 'No positive counter increase')}

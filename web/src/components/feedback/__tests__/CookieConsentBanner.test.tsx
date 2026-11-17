@@ -10,6 +10,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from 'i18next'
@@ -125,5 +126,32 @@ describe('CookieConsentBanner', () => {
 
     fireEvent.click(toggle)
     expect(screen.queryByTestId('cookie-consent-details')).toBeNull()
+  })
+
+  it('keeps the shared disclosure keyboard operable without recording consent', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CookieConsentBanner testHookRequireConsent testHookConsentState="unknown" />,
+    )
+    const toggle = screen.getByRole('button', { name: 'Manage preferences' })
+    expect(toggle).toHaveAttribute('data-app-part', 'button')
+    expect(toggle).toHaveAttribute('type', 'button')
+    expect(toggle).toHaveClass('h-auto', 'p-0', 'font-normal', 'rounded-none', 'hover:bg-transparent')
+    expect(toggle).not.toHaveClass('h-9', 'px-3', 'font-medium')
+
+    await user.tab()
+    expect(toggle).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('aria-controls', screen.getByTestId('cookie-consent-details').id)
+    expect(toggle).toHaveFocus()
+    expect(getConsent()).toBe('unknown')
+
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByTestId('cookie-consent-details')).not.toBeInTheDocument()
+    expect(toggle).toHaveFocus()
+    expect(getConsent()).toBe('unknown')
+    expect(screen.getByTestId('cookie-consent-banner')).toBeInTheDocument()
   })
 })

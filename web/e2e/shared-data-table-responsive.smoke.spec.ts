@@ -23,6 +23,7 @@ for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 390, 550, 1440]) {
     for (const total of [13, 263]) {
       test(`pagination controls align at ${width}px with ${total} rows in ${theme}`, async ({ page }) => {
+        test.setTimeout(60_000);
         await page.setViewportSize({ width, height: 900 });
         await seedBrowserState(page, theme, '/notifications/audit');
         const mocks = await installApiMocks(page, 'populated', theme);
@@ -37,6 +38,47 @@ for (const theme of ['light', 'dark'] as const) {
         }));
         await page.goto('/notifications/audit');
         await waitForHarnessReady(page, mocks);
+        const mobile = page.getByRole('group', { name: 'Recent activity', exact: true });
+        if (await mobile.count()) {
+          const rows = mobile.locator('[data-row-key]');
+          const footer = mobile.locator('[data-app-part="pagination"]');
+          await mobile.getByRole('combobox', { name: 'Rows per page' }).selectOption('50');
+          await expect(rows).toHaveCount(Math.min(total, 50));
+          await expect(footer).toContainText(`Showing ${Math.min(total, 50)} of ${total}`);
+          await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toHaveCount(0);
+          if (total > 50) {
+            const more = footer.getByRole('button', { name: 'Load 50 more', exact: true });
+            const bounds = await more.boundingBox();
+            expect(bounds).not.toBeNull();
+            expect(bounds!.height).toBeGreaterThanOrEqual(44);
+            expect(bounds!.width).toBeGreaterThanOrEqual(44);
+            await more.click();
+            await expect(rows).toHaveCount(100);
+            await expect(footer).toContainText('Showing 100 of 263');
+            await mobile.getByRole('combobox', { name: 'Rows per page' }).selectOption('100');
+            await expect(rows).toHaveCount(100);
+            await footer.getByRole('button', { name: 'Load 100 more', exact: true }).click();
+            await expect(rows).toHaveCount(200);
+            await footer.getByRole('button', { name: 'Load 63 more', exact: true }).click();
+            await expect(rows).toHaveCount(263);
+            await expect(rows.last()).toHaveAttribute('data-row-key', '263');
+            await expect(footer).toContainText('Showing 263 of 263');
+          }
+          await expect(footer.getByRole('button', { name: /^Load \d+ more$/ })).toHaveCount(0);
+          const geometry = await footer.evaluate(node => {
+            const box = node.getBoundingClientRect();
+            return { left: box.left, right: box.right, overflow: node.scrollWidth - node.clientWidth };
+          });
+          expect(geometry.left).toBeGreaterThanOrEqual(0);
+          expect(geometry.right).toBeLessThanOrEqual(width);
+          expect(geometry.overflow).toBeLessThanOrEqual(1);
+          await expectNoHorizontalOverflow(page);
+          if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+            await footer.screenshot({ path: test.info().outputPath(`pagination-${width}-${total}-${theme}.png`) });
+          }
+          await assertMockApiComplete(page, mocks);
+          return;
+        }
         const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
         await expect(pagination).toBeVisible();
         await pagination.getByRole('combobox', { name: 'Rows per page' }).selectOption('50');
@@ -116,7 +158,9 @@ for (const theme of ['light', 'dark'] as const) {
             await expect(pagination.getByRole('button', { name, exact: true, includeHidden: true })).toBeDisabled();
           }
         }
-        await pagination.screenshot({ path: test.info().outputPath(`pagination-${width}-${total}-${theme}.png`) });
+        if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+          await pagination.screenshot({ path: test.info().outputPath(`pagination-${width}-${total}-${theme}.png`) });
+        }
         await assertMockApiComplete(page, mocks);
       });
     }
@@ -140,24 +184,36 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/notifications/audit');
       await waitForHarnessReady(page, mocks);
-      const table = page.getByRole('table', { name: 'Recent activity' });
+      const mobile = page.getByRole('group', { name: 'Recent activity', exact: true });
+      const mobileActive = await mobile.count() > 0;
+      const table = mobileActive ? mobile : page.getByRole('table', { name: 'Recent activity', exact: true });
       await expect(table).toBeVisible();
-      const details = table.locator('thead th[data-column-key="details"]');
-      await expect(details).toHaveCount(1);
-      // The details column stays in mobileColumns by design (visible at every
-      // width); containment on small screens comes from the scroll wrapper
-      // asserted below, not from hiding the column.
-      await expect(details).toBeVisible();
-      const scroll = table.locator('..');
-      const geometry = await scroll.evaluate((node) => ({
-        width: node.clientWidth, scrollWidth: node.scrollWidth,
-        right: node.getBoundingClientRect().right,
-        viewport: window.innerWidth,
-        overflow: getComputedStyle(node).overflowX,
-      }));
-      expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
-      expect(['auto', 'scroll']).toContain(geometry.overflow);
-      if (width <= 1024) expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
+      if (mobileActive) {
+        await expect(table.locator('[data-row-key]')).toHaveCount(1);
+        await table.getByRole('button', { name: 'configuration.updated', exact: true }).click();
+        const details = page.getByRole('dialog', { name: 'Recent activity', exact: true });
+        await expect(details).toContainText(`test-resource-${'identifier'.repeat(30)}`);
+        await expect(details).toContainText('Synthetic audit entry for responsive table coverage.');
+        expect(await details.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+        await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+        await expect(table.locator('[data-app-part="pagination"]')).toContainText('Showing 1 of 1');
+        await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toHaveCount(0);
+      } else {
+        const details = table.locator('thead th[data-column-key="details"]');
+        await expect(details).toHaveCount(1);
+        await expect(details).toBeVisible();
+        const scroll = table.locator('..');
+        const geometry = await scroll.evaluate((node) => ({
+          width: node.clientWidth, scrollWidth: node.scrollWidth,
+          right: node.getBoundingClientRect().right,
+          viewport: window.innerWidth,
+          overflow: getComputedStyle(node).overflowX,
+        }));
+        expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
+        expect(['auto', 'scroll']).toContain(geometry.overflow);
+        if (width <= 1024) expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
+        await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toBeVisible();
+      }
       const controls = await openTableToolbarControls(table.locator('xpath=ancestor::*[@data-grid-frame][1]'));
       const download = controls.getByRole('button', { name: 'Export list', exact: true });
       await expect(download).toBeVisible();
@@ -165,13 +221,12 @@ for (const theme of ['light', 'dark'] as const) {
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
       await closeTableToolbarControls(controls);
-      await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       const csv = await downloadAuditCsv(page);
       expect(csv.trim().split(/\r?\n/)).toHaveLength(2);
       expect(csv).toContain('configuration.updated');
       expect(csv).toContain(`test-resource-${'identifier'.repeat(30)}`);
-      if (width === 320 || width === 1440) {
+      if ((width === 320 || width === 1440) && process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
         await page.screenshot({ path: test.info().outputPath(`shared-table-${width}-${theme}.png`), fullPage: true });
       }
       await assertMockApiComplete(page, mocks);
@@ -257,7 +312,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(dialog.getByRole('textbox', { name: 'Search values', exact: true })).toBeInViewport();
       await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeInViewport();
       await expect(values.getByText('Automation 063', { exact: true })).toBeInViewport();
-      await page.screenshot({ path: test.info().outputPath(`complete-filter-${width}-${theme}.png`) });
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: test.info().outputPath(`complete-filter-${width}-${theme}.png`) });
+      }
       await dialog.getByRole('button', { name: 'Done', exact: true }).click();
 
       await expect(table.locator('[data-row-key]')).toHaveCount(1);

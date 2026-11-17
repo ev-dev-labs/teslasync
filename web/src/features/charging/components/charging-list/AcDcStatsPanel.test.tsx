@@ -5,6 +5,9 @@ import type { ReactNode } from 'react';
 
 import { AcDcStatsPanel, formatEnergyDisplay } from './AcDcStatsPanel';
 import type { AcDcBreakdown, AcDcBucket } from './helpers';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // English-fallback i18n with {{placeholder}} interpolation (repo convention).
 const translations = vi.hoisted(() => ({ values: {} as Record<string, string> }));
@@ -86,6 +89,104 @@ describe('formatEnergyDisplay', () => {
 });
 
 describe('AcDcStatsPanel — energy split bar', () => {
+  it('owns the original three-column distribution and every positive cell for all designs without changing grid geometry or paints', () => {
+    const breakdown = mixedBreakdown();
+    breakdown.unknown = makeBucket({ energy: 250, count: 2 });
+    const original = structuredClone(breakdown);
+    const { container } = render(<AcDcStatsPanel breakdown={breakdown} />);
+    const track = screen.getByRole('img', { name: 'Energy split: 30% AC, 70% DC, 25% unknown' });
+    expect(track).toHaveAttribute('data-app-part', 'metric');
+    expect(track).toHaveAttribute('data-app-metric', 'bar');
+    expect(track).toHaveAttribute('data-metric-track');
+    expect(track).toHaveClass('grid', 'h-4', 'rounded-full', 'overflow-hidden');
+    expect(track).not.toHaveClass('flex');
+    expect(track).toHaveStyle({ gridTemplateColumns: '30% 70% 25%' });
+    const fills = [...track.children];
+    expect(fills).toHaveLength(3);
+    for (const [index, fill] of fills.entries()) {
+      expect(fill).toHaveAttribute('data-metric-fill');
+      expect(fill).toHaveClass(`col-start-${index + 1}`, `bg-[var(--surface-${3 - index})]`);
+      expect(fill).not.toHaveAttribute('style');
+    }
+    expect(fills.map(fill => fill.textContent)).toEqual(['AC 30.00%', 'DC 70.00%', 'Unknown 25.00%']);
+    expect(matchesAppDesignCss(track, '[data-metric-track]')).toEqual([]);
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expectAppDesignDataMode(track, getAppDesignAttributes(pack)['data-app-data'], '[data-metric-track]');
+        for (const fill of fills) {
+          const selected = matchesAppDesignCss(fill, '[data-metric-fill]');
+          expect(selected.length).toBeGreaterThan(0);
+          for (const { declarations } of selected) {
+            expect(declarations).toEqual({ 'box-sizing': 'border-box', 'min-inline-size': '0' });
+          }
+        }
+        for (const { declarations } of matchesAppDesignCss(track, '[data-metric-track]')) {
+          expect(Object.keys(declarations)).toEqual(['outline', 'outline-offset']);
+        }
+        expect(track).toHaveStyle({ gridTemplateColumns: '30% 70% 25%' });
+        expect(track).not.toHaveAttribute('aria-valuenow');
+      } finally { release(); }
+    }
+    expect(screen.getByText('Total: 1.00 MWh')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(breakdown).toEqual(original);
+  });
+
+  it.each([
+    { ac: 300, dc: 700, unknown: undefined, columns: '30% 70%', labels: ['AC 30.00%', 'DC 70.00%'] },
+    { ac: 0, dc: 1000, unknown: 0, columns: '0% 100%', labels: ['DC 100.00%'] },
+    { ac: 1000, dc: 0, unknown: -20, columns: '100% 0%', labels: ['AC 100.00%'] },
+    { ac: 0, dc: 0, unknown: 1000, columns: '0% 0% 100%', labels: ['Unknown 100.00%'] },
+    { ac: 300, dc: 700, unknown: NaN, columns: '30% 70%', labels: ['AC 30.00%', 'DC 70.00%'] },
+    { ac: 300, dc: 700, unknown: Infinity, columns: '30% 70% Infinity%', labels: ['AC 30.00%', 'DC 70.00%', 'Unknown 0.00%'] },
+  ])('preserves source column/cell predicates for AC=$ac DC=$dc unknown=$unknown', ({ ac, dc, unknown, columns, labels }) => {
+    const breakdown = mixedBreakdown();
+    breakdown.ac.energy = ac;
+    breakdown.dc.energy = dc;
+    if (unknown !== undefined) breakdown.unknown = makeBucket({ energy: unknown, count: 1 });
+    render(<AcDcStatsPanel breakdown={breakdown} />);
+    const track = screen.getByRole('img');
+    expect(track).toHaveStyle({ gridTemplateColumns: columns });
+    expect([...track.querySelectorAll(':scope > [data-metric-fill]')].map(fill => fill.textContent)).toEqual(labels);
+    expect(track.childElementCount).toBe(labels.length);
+    for (const fill of track.children) expect(fill).toHaveClass(
+      fill.textContent?.startsWith('AC ') ? 'col-start-1'
+        : fill.textContent?.startsWith('DC ') ? 'col-start-2' : 'col-start-3',
+    );
+  });
+
+  it('keeps default/widget-only/incomplete profiles neutral and resolves nested complete ownership', () => {
+    const panel = <AcDcStatsPanel breakdown={mixedBreakdown()} />;
+    const { container } = render(<>
+      <section>{panel}</section>
+      <section data-widget-pack="v1">{panel}</section>
+      <section data-app-design-preview {...getAppDesignAttributes('v1')}>
+        {panel}
+        <section data-app-design-preview data-app-design-pack="v2">
+          {panel}
+          <section data-app-design-preview {...getAppDesignAttributes('v3')}>{panel}</section>
+        </section>
+      </section>
+    </>);
+    const tracks = screen.getAllByRole('img');
+    const release = observeAppDesignScopes(container);
+    try {
+      for (const index of [0, 1, 3]) {
+        for (const node of [tracks[index], ...tracks[index].children]) {
+          expect(node).not.toHaveAttribute('data-app-design-owner');
+          expect(matchesAppDesignCss(node, '[data-metric-')).toEqual([]);
+        }
+      }
+      expectAppDesignDataMode(tracks[2], 'instrument', '[data-metric-track]');
+      expectAppDesignDataMode(tracks[4], 'ledger', '[data-metric-track]');
+    } finally { release(); }
+  });
+
   it('translates authored split labels and summaries without changing numeric geometry', () => {
     translations.values = {
       'charging.detail.ac': 'Alternatif',
@@ -108,6 +209,22 @@ describe('AcDcStatsPanel — energy split bar', () => {
     expect(screen.getByText('Somme: 1.00 MWh')).toBeInTheDocument();
     expect(screen.getByText('Recharge alternative')).toBeInTheDocument();
     expect(screen.getByText('1 séances')).toBeInTheDocument();
+  });
+
+  it('retains the localized multioperand image name and original unknown-source rounding', () => {
+    translations.values = {
+      'charging.detail.ac': 'Alternatif',
+      'charging.detail.dc': 'Continu',
+      'charging.chargerTypes.unknown': 'Inconnu',
+      'charging.stats.energySplitUnknownAria': 'Répartition : {{ac}}% alternatif, {{dc}}% continu, {{unknown}}% inconnu',
+    };
+    const breakdown = mixedBreakdown();
+    breakdown.unknown = makeBucket({ energy: 12.345, count: 1 });
+    render(<AcDcStatsPanel breakdown={breakdown} />);
+    const track = screen.getByRole('img', { name: 'Répartition : 30% alternatif, 70% continu, 1% inconnu' });
+    expect(track).toHaveStyle({ gridTemplateColumns: `30% 70% ${(12.345 / 1000) * 100}%` });
+    expect(within(track).getByText('Inconnu 1.23%')).toHaveAttribute('data-metric-fill');
+    expect(track).not.toHaveAttribute('aria-valuenow');
   });
 
   it('keeps a DC-only split in its non-zero second track rather than the empty AC track', () => {

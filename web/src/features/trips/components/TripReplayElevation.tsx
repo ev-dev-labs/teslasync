@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, ChartTooltip, chartGrid, axisTick, AREA_DEFAULTS,
   areaGradient,
 } from '@/components/charts';
@@ -83,7 +83,7 @@ export function TripReplayElevation({
             }}
           >
             {areaGradient('replayElevationGrad', palette[0], 0.08)}
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis
               dataKey="distance"
               {...axisTick}

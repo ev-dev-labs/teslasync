@@ -28,7 +28,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, type NavigateOptions, type To } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import english from '@/i18n/en.json';
 
@@ -80,11 +80,18 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// Keep MemoryRouter / useSearchParams / useLocation real; only intercept the
-// imperative navigate the alert-rule bulk action uses.
+// URL-state setters also navigate; keep those real and intercept only the bulk-action destination.
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
-  return { ...actual, useNavigate: () => mockNavigate };
+  const { useCallback } = await import('react');
+  return { ...actual, useNavigate: () => {
+    const navigate = actual.useNavigate();
+    return useCallback((to: To | number, options?: NavigateOptions) => {
+      if (typeof to === 'string' && to.startsWith('/alert-studio?')) return mockNavigate(to);
+      if (typeof to === 'number') return navigate(to);
+      return navigate(to, options);
+    }, [navigate]);
+  } };
 });
 
 // FadeIn renders eagerly (no IntersectionObserver / matchMedia dance).

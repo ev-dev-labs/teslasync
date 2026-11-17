@@ -41,13 +41,13 @@ export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
       </div>
       <Table aria-label={t('physicsLedger.charge.title', 'Charge physics')}>
         <tbody>
-          <tr>
-            <th scope="row" className="font-normal">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="row" className="font-normal">
               <Text as="span" size="sm">
                 {t('physicsLedger.charge.added', 'Energy added')}
               </Text>
             </th>
-            <td className="text-right tabular-nums">
+            <td data-app-part="table-cell" className="text-right tabular-nums">
               <Text as="span" size="sm">
                 {c.energy_added_wh != null ? formatEnergy(c.energy_added_wh) : unknownLabel(t)}
               </Text>

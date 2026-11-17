@@ -68,6 +68,8 @@ interface DashboardGridProps {
 // onDropDragOver overrides w/h per dragged widget every time.
 const DROPPING_ITEM = { i: '__dropping__', x: 0, y: 0, w: 1, h: 2 };
 
+const preservesWidgetDesign = (id: string) => id === 'vehicle-twin' || id === 'digital-twin-mini';
+
 /* ─── Fullscreen Overlay ─── */
 interface FullscreenOverlayProps {
   widget: WidgetInstance;
@@ -100,7 +102,8 @@ function FullscreenOverlay({
           <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
         </UiButton>
       </div>
-      <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused} data-widget-pack={packId}>
+      <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused} data-widget-pack={packId}
+        data-app-design-preserve={preservesWidgetDesign(widget.widgetId) ? '' : undefined}>
         <Suspense fallback={<Skeleton className="h-full" />}>
           <WidgetHeaderContext.Provider value={{ showTitle: widget.config?.showTitle, fallbackTitle: def.name }}>
             <Component
@@ -433,6 +436,7 @@ export const DashboardGrid = memo(function DashboardGrid({
       <div
         key={widget.id}
         data-widget-id={widget.id}
+        data-app-design-preserve={preservesWidgetDesign(widget.widgetId) ? '' : undefined}
         className={cn(
           'widget-container relative group',
           mobile && 'flex flex-col',

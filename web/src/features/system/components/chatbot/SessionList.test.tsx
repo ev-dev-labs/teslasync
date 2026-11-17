@@ -33,6 +33,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { Drawer } from '@/components/ui';
 import { SessionList } from './SessionList';
 import type { ChatSessionInfo } from '@/api/types';
 
@@ -99,7 +100,10 @@ function makeSession(overrides: Partial<ChatSessionInfo> = {}): ChatSessionInfo 
   };
 }
 
-function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {}) {
+function renderList(
+  props: Partial<React.ComponentProps<typeof SessionList>> = {},
+  { inMain = false }: { inMain?: boolean } = {},
+) {
   const handlers = {
     onSelect: vi.fn(),
     onNewChat: vi.fn(),
@@ -108,7 +112,7 @@ function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {
   };
   const sessions = props.sessions ?? [makeSession()];
   const activeSessionId = props.activeSessionId ?? '';
-  const utils = render(
+  const list = (
     <SessionList
       sessions={sessions}
       activeSessionId={activeSessionId}
@@ -117,12 +121,68 @@ function renderList(props: Partial<React.ComponentProps<typeof SessionList>> = {
       onRename={props.onRename ?? handlers.onRename}
       onDelete={props.onDelete ?? handlers.onDelete}
       isLoading={props.isLoading}
-    />,
+      source={props.source}
+    />
   );
+  const utils = render(inMain ? <main>{list}</main> : list);
   return { ...utils, ...handlers };
 }
 
 describe('SessionList', () => {
+  it('keeps a mouse selection in place if focus scrolls its workspace', () => {
+    const { onSelect } = renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    vi.spyOn(session, 'focus').mockImplementation(options => {
+      main.scrollTop = 0;
+      HTMLElement.prototype.focus.call(session, options);
+    });
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    Object.defineProperty(down, 'pointerType', { value: 'mouse' });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(true);
+    expect(session).toHaveFocus();
+    fireEvent.click(session);
+    expect(onSelect).toHaveBeenCalledWith('s1');
+  });
+
+  it('leaves normal mouse focus and clicks unchanged when no scroll jump occurs', () => {
+    const { onSelect } = renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    Object.defineProperty(down, 'pointerType', { value: 'mouse' });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(false);
+    expect(session).toHaveFocus();
+    fireEvent.click(session);
+    expect(onSelect).toHaveBeenCalledWith('s1');
+  });
+
+  it.each([
+    ['touch', 0],
+    ['mouse', 2],
+  ])('does not intercept %s pointer button %i', (pointerType, button) => {
+    renderList({}, { inMain: true });
+    const main = screen.getByRole('main');
+    const session = screen.getByRole('button', { name: /Trip planning/ });
+    main.scrollTop = 300;
+    const focus = vi.spyOn(session, 'focus');
+    const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button });
+    Object.defineProperty(down, 'pointerType', { value: pointerType });
+    fireEvent(session, down);
+
+    expect(main.scrollTop).toBe(300);
+    expect(down.defaultPrevented).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+  });
+
   it('renders the New Chat control + Sessions header and fires onNewChat', () => {
     const { onNewChat } = renderList({ sessions: [] });
 
@@ -153,6 +213,74 @@ describe('SessionList', () => {
     expect(screen.getByText('Existing chat')).toBeInTheDocument();
     // The loading placeholder is reserved for the initial empty load only.
     expect(screen.queryByText('Loading...')).toBeNull();
+  });
+
+  it('retains cached sessions and their rename draft on a refresh failure, with an independent retry', async () => {
+    const retry = vi.fn();
+    const cached = [makeSession({ title: 'Cached chat' })];
+    const view = renderList({ sessions: cached, source: { data: cached } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    const editor = screen.getByRole('textbox', { name: 'Rename conversation' });
+    fireEvent.change(editor, { target: { value: '  recoverable name  ' } });
+    view.rerender(
+      <SessionList sessions={cached} activeSessionId=""
+        onSelect={view.onSelect} onNewChat={view.onNewChat} onRename={view.onRename} onDelete={view.onDelete}
+        source={{ data: cached, isError: true, refetch: retry }} />,
+    );
+    expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(editor).toHaveValue('  recoverable name  ');
+    await userEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Sessions' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    // Leaving the editor still follows the existing rename-on-blur contract.
+    expect(view.onRename).toHaveBeenCalledWith('s1', 'recoverable name');
+  });
+
+  it.each([
+    { isError: true, fetchStatus: 'idle' as const, label: 'Failed' },
+    { isPending: true, fetchStatus: 'paused' as const, label: 'Refresh paused' },
+  ])('does not call an unavailable session source empty ($label)', ({ label, ...source }) => {
+    renderList({ sessions: [], source: { ...source, refetch: vi.fn() } });
+    expect(screen.queryByText('No conversations yet')).toBeNull();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeEnabled();
+  });
+
+  it('does not commit or cancel a session name while an IME is composing', () => {
+    const { onRename } = renderList();
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    const editor = screen.getByRole('textbox', { name: 'Rename conversation' });
+    fireEvent.change(editor, { target: { value: '会話' } });
+    fireEvent.keyDown(editor, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(editor, { key: 'Enter', keyCode: 229 });
+    fireEvent.keyDown(editor, { key: 'Escape', isComposing: true });
+    expect(onRename).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('会話');
+  });
+
+  it('cancels inline rename before the enclosing history drawer handles Escape', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onRename = vi.fn();
+    render(
+      <Drawer open onClose={onClose} title="History">
+        <SessionList sessions={[makeSession()]} activeSessionId=""
+          onSelect={vi.fn()} onNewChat={vi.fn()} onRename={onRename} onDelete={vi.fn()} />
+      </Drawer>,
+    );
+    const history = screen.getByRole('dialog', { name: 'History' });
+    await user.click(within(history).getByRole('button', { name: 'Rename conversation' }));
+    const editor = within(history).getByRole('textbox', { name: 'Rename conversation' });
+    await user.clear(editor);
+    await user.type(editor, 'Cancelled revision');
+    await user.keyboard('{Escape}');
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onRename).not.toHaveBeenCalled();
+    expect(within(history).queryByRole('textbox', { name: 'Rename conversation' })).toBeNull();
+    expect(within(history).getByRole('button', { name: 'Rename conversation' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("renders a row's title, relative time and message count", () => {

@@ -243,8 +243,9 @@ export function WaitOraclePanel() {
             <QueryError error={forecastState.fatalError} onRetry={() => forecastState.retry?.()} />
           ) : forecast ? (
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Text as="span" size="xl" className="font-semibold tabular-nums">
+            <div data-app-part="metric" data-app-metric="headline">
+            <div data-app-part="metric-reading" className="flex flex-wrap items-center gap-2">
+              <Text data-app-part="metric-value" as="span" size="xl" className="font-semibold tabular-nums">
                 {expectedWait == null
                   ? t('common.unknown', 'Unknown')
                   : t('wait_oracle.expectedWait', '{{min}} min expected wait', {
@@ -258,16 +259,18 @@ export function WaitOraclePanel() {
                 })}
               </Badge>
             </div>
-            <Text as="p" size="sm" color="secondary" className="mt-2">
+            <Text data-app-part="metric-context" as="p" size="sm" color="secondary" className="mt-2">
               {t('wait_oracle.waitProb', '{{pct}}% chance of any wait · ~{{stalls}} stalls', {
                 pct: fmtNumber(forecast.wait_probability_pct),
                 stalls: forecast.stalls_estimated,
               })}
             </Text>
+            </div>
             {savedWait != null && savedWait >= 1 ? (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] p-3">
-                <Icons.sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.secondary}`} aria-hidden="true" />
-                <Text as="p" size="sm">
+              <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="info" className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] p-3">
+                <Icons.sparkles data-app-part="feedback-icon" className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.secondary}`} aria-hidden="true" />
+                <div data-app-part="feedback-content">
+                <Text data-app-part="feedback-message" as="p" size="sm">
                   {t(
                     'wait_oracle.bestHour',
                     'Arrive {{hour}}:00 instead to save ~{{min}} min.',
@@ -277,9 +280,10 @@ export function WaitOraclePanel() {
                     },
                   )}
                 </Text>
+                </div>
               </div>
             ) : null}
-            <ul className="mt-3 space-y-1">
+            <ul data-app-part="list" className="mt-3 space-y-1">
               {(forecast.evidence ?? []).map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}

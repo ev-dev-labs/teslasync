@@ -97,6 +97,8 @@ describe('ChatMessageItem', () => {
 
     expect(screen.getByText('Where is my car?')).toBeInTheDocument();
     expect(container.querySelector('[data-role="user"]')).not.toBeNull();
+    expect(container.querySelector('[data-print-card]')?.getAttribute('data-app-part')?.split(' ')).toContain('card');
+    expect(container.querySelector('[data-app-design-pack]')).toBeNull();
     expect(screen.getByTestId('avatar')).toHaveAttribute('data-avatar-kind', 'user');
     // A user message never routes through the markdown renderer.
     expect(screen.queryByTestId('markdown')).toBeNull();
@@ -171,6 +173,7 @@ describe('ChatMessageItem', () => {
     // streamedText wins over content during the reveal.
     expect(screen.getByTestId('markdown')).toHaveTextContent('The full');
     expect(screen.getByTestId('markdown')).not.toHaveTextContent('multi-line');
+    expect(container.querySelector('[data-print-card]')?.getAttribute('data-app-part')?.split(' ')).toContain('card');
     // Blinking caret is decorative and hidden from assistive tech.
     const caret = container.querySelector('span[aria-hidden="true"]');
     expect(caret).not.toBeNull();
@@ -242,6 +245,8 @@ describe('ChatMessageItem', () => {
 
     const box = screen.getByRole('textbox', { name: 'Edit message' }) as HTMLTextAreaElement;
     expect(box).toBeInTheDocument();
+    expect(box.closest('[data-app-part~="field"]')).toBeInTheDocument();
+    expect(box.closest('[data-print-card]')?.getAttribute('data-app-part')?.split(' ')).toContain('card');
     expect(box.value).toBe('original text');
     expect(document.activeElement).toBe(box);
   });
@@ -353,11 +358,25 @@ describe('ChatMessageItem', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Edit message' }), {
       target: { value: 'discarded draft' },
     });
+
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(onEditAndResend).not.toHaveBeenCalled();
     expect(screen.queryByRole('textbox', { name: 'Edit message' })).toBeNull();
     expect(screen.getByText('keep me')).toBeInTheDocument();
+  });
+
+  it('does not send or discard a revision when Enter or Escape belongs to IME composition', () => {
+    const onEditAndResend = vi.fn();
+    renderItem(makeMessage({ role: 'user', content: 'original' }), { onEditAndResend });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
+    const editor = screen.getByRole('textbox', { name: 'Edit message' });
+    fireEvent.change(editor, { target: { value: '改訂中' } });
+    fireEvent.keyDown(editor, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(editor, { key: 'Enter', keyCode: 229 });
+    fireEvent.keyDown(editor, { key: 'Escape', isComposing: true });
+    expect(onEditAndResend).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('改訂中');
   });
 
   it('tolerates a malformed payload with missing content without crashing on edit', () => {
@@ -411,11 +430,19 @@ describe('ChatMessageItem', () => {
         { sourceType: 'runbooks', sourceId: 'runbooks/alerts.md', chunkIdx: 1, excerpt: 'Check recent alerts.' },
       ],
     }));
-    fireEvent.click(screen.getByRole('button', { name: 'Inspect retrieved sources (2)' }));
+    const disclosure = screen.getByRole('button', { name: 'Inspect retrieved sources (2)' });
+    fireEvent.click(disclosure);
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(disclosure.getAttribute('aria-controls') ?? '')).toContainElement(
+      screen.getByText('Review charge settings.'),
+    );
     expect(screen.getByText(/docs: guide\/charging.md/)).toHaveTextContent('Cited in answer');
     expect(screen.getByText(/runbooks: runbooks\/alerts.md/)).toHaveTextContent('Retrieved, not cited');
     expect(screen.getByText('Review charge settings.')).toBeInTheDocument();
     expect(screen.getByText(/publication dates are unavailable/)).toBeInTheDocument();
+    fireEvent.click(disclosure);
+    expect(disclosure).not.toHaveAttribute('aria-controls');
+    expect(screen.queryByText('Review charge settings.')).toBeNull();
   });
 
   it('retains the exact revision while acceptance is pending and after rejection', async () => {
@@ -427,9 +454,14 @@ describe('ChatMessageItem', () => {
     fireEvent.change(editor, { target: { value: '  revised raw draft  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save & resend' }));
     expect(screen.getByRole('button', { name: 'Save & resend' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(editor).toHaveAttribute('readonly');
+    fireEvent.keyDown(editor, { key: 'Escape' });
     expect(editor).toHaveValue('  revised raw draft  ');
     settle(false);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save & resend' })).not.toBeDisabled());
+    expect(editor).not.toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
     expect(editor).toHaveValue('  revised raw draft  ');
     expect(screen.getByRole('button', { name: 'Save & resend' })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-8');
   });

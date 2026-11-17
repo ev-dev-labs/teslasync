@@ -187,7 +187,7 @@ export default function PowersharePage() {
         {vehiclesState.fatalError ? (
           <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
         ) : !vehiclesState.hasData ? (
-          <div role="status" aria-busy={!vehiclesState.isRefreshBlocked || undefined}>
+          <div data-app-part="status" role="status" aria-busy={!vehiclesState.isRefreshBlocked || undefined}>
             <Caption as="p">
               {vehiclesState.isRefreshBlocked
                 ? t('dataSources.status.paused', 'Refresh paused')

@@ -1,0 +1,665 @@
+(node:49408) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:21376) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 0 nodes require manual review
+  ✘  1 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (33.0s)
+(node:49948) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 1 nodes require manual review
+  Manual contrast review: .text-start.whitespace-normal.gap-3 > .text-\[var\(--text-secondary\)\].text-xs:nth-child(7) — Fix any of the following:
+  Element's background color could not be determined because it partially overlaps other elements
+  ✘  2 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (26.0s)
+(node:22448) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 0 nodes require manual review
+  ✘  3 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (23.9s)
+(node:55204) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (23.5s)
+(node:44868) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 4 nodes require manual review
+  Manual contrast review: tspan[dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="205"][text-anchor="end"] > tspan[dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="125"] > tspan[dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: th[aria-label="Max speed (km/h)"] > .justify-end.gap-1.flex > .justify-end.gap-1.flex > .text-size-inherit.h-auto.hover\:text-\[var\(--text-secondary\)\] > span — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  ✓  5 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (16.2s)
+Contrast: 0 violated rules, 13 nodes require manual review
+  Manual contrast review: tspan[x="199.625"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="379.125"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="144"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="109.25"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="74.5"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .recharts-cartesian-axis-tick.recharts-layer:nth-child(4) > text[y="12"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="144"][orientation="right"][text-anchor="start"] > tspan[x="432"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="109.25"][orientation="right"][text-anchor="start"] > tspan[x="432"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="74.5"][orientation="right"][text-anchor="start"] > tspan[x="432"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .recharts-cartesian-axis-tick.recharts-layer:nth-child(4) > text[y="12"][orientation="right"][text-anchor="start"] > tspan[x="432"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .h-44 > .recharts-responsive-container > .recharts-wrapper > .recharts-legend-wrapper > .\[\&_\.recharts-default-legend\]\:grid.\[\&_\.recharts-default-legend\]\:grid-cols-\[repeat\(auto-fit\,minmax\(min\(100\%\,9rem\)\,1fr\)\)\].\[\&_\.recharts-default-legend\]\:gap-1 > ul > .legend-item-0 > .recharts-legend-item-text > button[data-series-key="energy"][data-series-hidden="false"][data-chart-legend-label=""] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="count"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .mx-1 — Fix any of the following:
+  Element content contains only non-text characters
+  ✓  6 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (14.4s)
+
+
+  1) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ───────────────────
+
+    Error: bottom navigation text must remain visible
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 36
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 4,
+    +       "right": 194,
+    +       "top": 797,
+    +     },
+    +     "label": "Charging",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 76.421875,
+    +         "right": 142.609375,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 196,
+    +       "right": 386,
+    +       "top": 797,
+    +     },
+    +     "label": "More",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 282.203125,
+    +         "right": 320.828125,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    + ]
+
+      868 |     if (supportImage) await writeFile(supportPath, supportImage);
+      869 |     if (width < 768) {
+    > 870 |       expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
+          |                                                                                                                ^
+      871 |       expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);
+      872 |       expect.soft(await findClippedWorkspaceRangeLabels(page), 'workspace range text must remain visible').toEqual([]);
+      873 |       expect.soft(await findOverlappingWorkspaceInputActions(page), 'workspace actions must not overlap input text').toEqual([]);
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:870:112
+
+    Error: visible touch targets must be at least 44 by 44 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 24
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent",
+    +     "controlId": null,
+    +     "height": 36,
+    +     "id": "",
+    +     "label": "Open",
+    +     "part": "button",
+    +     "role": null,
+    +     "tag": "a",
+    +     "width": 36,
+    +   },
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 transition-none bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] text-sm h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent !h-7 !min-h-0 !min-w-0 !p-0 !w-2.5",
+    +     "controlId": null,
+    +     "height": 28,
+    +     "id": "",
+    +     "label": "Refresh data · Up to date · just now",
+    +     "part": "status",
+    +     "role": null,
+    +     "tag": "button",
+    +     "width": 10,
+    +   },
+    + ]
+
+      879 |       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+      880 |         [JSON.stringify(target), target])).values());
+    > 881 |       expect.soft(uniqueTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+          |                                                                                                ^
+      882 |     }
+      883 |     if (textAudit) {
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:881:96
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 98
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "h3",
+    +     "text": "Digital twin",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "p",
+    +     "text": "—",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Aurora",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "metric-context",
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Today 05:45 PM · 30 min",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "a",
+    +     "text": "All drives",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "metric-unit",
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "span",
+    +     "text": "km",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "a",
+    +     "text": "Open vehicle",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Fleet operations — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site he...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ────────────────
+
+    Error: bottom navigation text must remain visible
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 36
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 4,
+    +       "right": 194,
+    +       "top": 797,
+    +     },
+    +     "label": "Charging",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 76.421875,
+    +         "right": 142.609375,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 196,
+    +       "right": 386,
+    +       "top": 797,
+    +     },
+    +     "label": "More",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 282.203125,
+    +         "right": 320.828125,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    + ]
+
+      868 |     if (supportImage) await writeFile(supportPath, supportImage);
+      869 |     if (width < 768) {
+    > 870 |       expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
+          |                                                                                                                ^
+      871 |       expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);
+      872 |       expect.soft(await findClippedWorkspaceRangeLabels(page), 'workspace range text must remain visible').toEqual([]);
+      873 |       expect.soft(await findOverlappingWorkspaceInputActions(page), 'workspace actions must not overlap input text').toEqual([]);
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:870:112
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 42
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Drive history — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site heade...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-drives-drives--phone-390\error-context.md
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-drives-drives--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results-design-packs-capture\pack-v4\design-packs-capture-capture-drives-drives--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results-design-packs-capture\pack-v4\design-packs-capture-capture-drives-drives--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) ────────────────
+
+    Error: bottom navigation text must remain visible
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 36
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 4,
+    +       "right": 194,
+    +       "top": 797,
+    +     },
+    +     "label": "Charging",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 76.421875,
+    +         "right": 142.609375,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    +   Object {
+    +     "bounds": Object {
+    +       "bottom": 832,
+    +       "left": 196,
+    +       "right": 386,
+    +       "top": 797,
+    +     },
+    +     "label": "More",
+    +     "rects": Array [
+    +       Object {
+    +         "bottom": 837,
+    +         "left": 282.203125,
+    +         "right": 320.828125,
+    +         "top": 816,
+    +       },
+    +     ],
+    +   },
+    + ]
+
+      868 |     if (supportImage) await writeFile(supportPath, supportImage);
+      869 |     if (width < 768) {
+    > 870 |       expect.soft(await findClippedBottomNavigationLabels(page), 'bottom navigation text must remain visible').toEqual([]);
+          |                                                                                                                ^
+      871 |       expect.soft(await findSplitBottomNavigationWords(page), 'bottom navigation words must remain readable').toEqual([]);
+      872 |       expect.soft(await findClippedWorkspaceRangeLabels(page), 'workspace range text must remain visible').toEqual([]);
+      873 |       expect.soft(await findOverlappingWorkspaceInputActions(page), 'workspace actions must not overlap input text').toEqual([]);
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:870:112
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 42
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Energy — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site header":
+      -...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-energy-energy--phone-390\error-context.md
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-energy-energy--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results-design-packs-capture\pack-v4\design-packs-capture-capture-energy-energy--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results-design-packs-capture\pack-v4\design-packs-capture-capture-energy-energy--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ─────────────────────
+
+    Error: API requests escaped or were blocked by Playwright routing
+
+    API requests escaped or were blocked by Playwright routing
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "disposition": "pending",
+    +     "method": "GET",
+    +     "origin": "same-origin",
+    +     "path": "/api/v1/pinned",
+    +     "resourceType": "fetch",
+    +   },
+    + ]
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+       at mockApi.ts:1235
+
+      1233 |     message: 'API requests escaped or were blocked by Playwright routing',
+      1234 |     timeout: 5_000,
+    > 1235 |   }).toEqual([]);
+           |      ^
+      1236 |   await cleanupServiceWorkers(page);
+      1237 | }
+      1238 |
+        at assertMockApiComplete (D:\repos\teslasync\web\e2e\mockApi.ts:1235:6)
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:865:5
+
+    attachment #1: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Fleet operations — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Sections and shortcuts":
+        - button "Home" [expanded]
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "Batter...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--desktop\error-context.md
+
+    Error Context: test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--desktop\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results-design-packs-capture\pack-v4\design-packs-capture-capture-dashboard--desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ────────────────────
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ─────────────────
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) ─────────────────
+    [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ──────────────────────
+  2 passed (5.2m)

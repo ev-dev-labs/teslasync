@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
-import { DataTable, Select, Text } from '@/components/ui';
+import { DataTable, Select, Text, type MobileDataTablePresentation } from '@/components/ui';
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, pagination, time } from './PhysicsPageShell';
 import type { LogbookEntry } from '@/types/teslaPhysics';
@@ -22,14 +22,26 @@ export default function PhysicsLogbookSection({ physics }: { physics: PhysicsPag
   const lastGear = [...orderedStates].reverse().find((row) => row.kind === 'gear');
   const lastCharge = [...orderedStates].reverse().find((row) => row.kind === 'charge_state');
   const unlinked = entries.filter((row) => (row.kind === 'drive' || row.kind === 'charge') && row.id <= 0).length;
-  const word = (row: LogbookEntry) => (row.kind === 'drive' || row.kind === 'charge') && row.id > 0
-    ? <Link to={`/${row.kind === 'drive' ? 'drives' : 'charging'}/${row.id}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{row.word} →</Link> : row.word;
+  const word = useCallback((row: LogbookEntry) => (row.kind === 'drive' || row.kind === 'charge') && row.id > 0
+    ? <Link to={`/${row.kind === 'drive' ? 'drives' : 'charging'}/${row.id}`} className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{row.word} →</Link> : row.word, []);
   const columns = [
     { key: 'word', header: t('teslaOnly.word', 'Word'), render: word },
     { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (r: LogbookEntry) => r.kind },
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (r: LogbookEntry) => time(r.at, t) },
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (r: LogbookEntry) => time(r.ended_at, t) },
   ];
+  const mobilePresentation = useMemo<MobileDataTablePresentation<LogbookEntry>>(() => ({
+    roles: { word: 'title', at: 'primary', kind: 'meta', ended: 'meta' },
+    displayValue: (row, key) => {
+      if (key === 'word') return row.word;
+      if (key === 'kind') return row.kind;
+      if (key === 'at') return time(row.at, t);
+      if (key === 'ended') return time(row.ended_at, t);
+      return null;
+    },
+    inlineActions: (row) => (row.kind === 'drive' || row.kind === 'charge') && row.id > 0
+      ? word(row) : null,
+  }), [t, word]);
   return <>
     <Evidence title={physics.title} honesty={log?.honesty}>
       <PhysicsEvidenceBrief physics={physics} id="physics-logbook-summary" available={log != null}
@@ -53,12 +65,14 @@ export default function PhysicsLogbookSection({ physics }: { physics: PhysicsPag
       {entries.length === 0 && <Text as="p" variant="bodySm">{t('teslaOnly.logbookNoEntries', 'No historical changes or session boundaries returned in the bounded window. Unobserved states remain unknown.')}</Text>}
       <Text as="p" variant="bodySm">{t('teslaOnly.workbench.recentEntries', 'Latest recorded entries')}</Text>
       <DataTable tableId="physics:logbook-recent" data={entries.slice(-8).reverse()} columns={columns} pagination={pagination}
-        mobileColumns={['word', 'at']} keyExtractor={(r) => `${r.kind}-${r.id}-${r.at}-${r.word}`}
+        mobileColumns={['word', 'at']} mobilePresentation={mobilePresentation}
+        keyExtractor={(r) => `${r.kind}-${r.id}-${r.at}-${r.word}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')} />
       <Select label={t('teslaOnly.logbookFilter', 'Filter narrative by evidence kind')} value={selected} onChange={(event) => setFilter(event.target.value)}
         options={[{ value: '', label: t('teslaOnly.logbookAll', 'All returned entries') }, ...kinds.map((kind) => ({ value: kind, label: kind }))]} />
       <RawRows title={physics.title} rows={[...visible].reverse()} columns={columns} tableId="physics:logbook"
-        mobileColumns={['word', 'at']} keyExtractor={(r) => `${r.kind}-${r.id}-${r.at}-${r.word}`} t={t} />
+        mobileColumns={['word', 'at']} mobilePresentation={mobilePresentation} expandable
+        keyExtractor={(r) => `${r.kind}-${r.id}-${r.at}-${r.word}`} t={t} />
     </Evidence>
   </>;
 }

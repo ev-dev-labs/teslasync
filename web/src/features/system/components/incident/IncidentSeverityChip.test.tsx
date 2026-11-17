@@ -92,6 +92,8 @@ describe('IncidentSeverityChip', () => {
 
       const chip = screen.getByText(label)
       expect(chip.tagName).toBe('SPAN')
+      expect(chip).toHaveAttribute('data-app-part', 'badge')
+      expect(chip).toHaveAttribute('data-app-variant', severity === 'critical' ? 'danger' : 'warning')
       expect(chip.className).toContain(bg)
       expect(chip.className).toContain(border)
       expect(chip.className).toContain(text)

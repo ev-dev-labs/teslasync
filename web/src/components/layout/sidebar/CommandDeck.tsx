@@ -59,17 +59,30 @@ export function CommandDeck(props: CommandDeckProps) {
   const [homeView, setHomeView] = useState<DeckSelection | null>(null)
   const [phoneSheet, setPhoneSheet] = useState<'more' | 'section' | null>(null)
   const [viewport, setViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
+  const currentViewport = useRef(viewport)
+  const [deferTabletPanel, setDeferTabletPanel] = useState(false)
+  const panelVisible = panelOpen && !(viewport === 'tablet' && deferTabletPanel)
   const previousPath = useRef(pathname)
   const previousBrowse = useRef(mobileBrowseOpen)
   useEffect(() => {
-    const resize = () => setViewport(window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
+    const resize = () => {
+      const next = window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop'
+      if (next !== currentViewport.current) {
+        // Keep the docked preference without mounting a competing modal on resize.
+        setDeferTabletPanel(next === 'tablet' && document.querySelector(
+          '[aria-modal="true"]:not(.sidenav-tablet-panel):not(.sidenav-sheet)',
+        ) !== null)
+        currentViewport.current = next
+      }
+      setViewport(next)
+    }
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
   useEffect(() => {
     if (mobileBrowseOpen && !previousBrowse.current) {
       if (viewport === 'phone') setPhoneSheet('more')
-      else onPanelOpenChange(true)
+      else { setDeferTabletPanel(false); onPanelOpenChange(true) }
     }
     previousBrowse.current = mobileBrowseOpen
   }, [mobileBrowseOpen, viewport, onPanelOpenChange])
@@ -106,24 +119,25 @@ export function CommandDeck(props: CommandDeckProps) {
   }
   const select = (selection: DeckSelection) => {
     if (selection.kind !== 'section') return
+    setDeferTabletPanel(false)
     setHomeView(null)
     setBrowsed({ pathname, title: selection.title })
     setStored(selection)
     if (viewport === 'phone') setPhoneSheet('section')
-    else onPanelOpenChange(!(panelOpen && title === selection.title))
+    else onPanelOpenChange(!(panelVisible && title === selection.title))
   }
   const view: DeckSelection = title === 'Home' && homeView ? homeView : { kind: 'section', title }
   const panel = <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}
     onClose={close} onHomeViewChange={setHomeView}
     onItemSelect={() => { setPhoneSheet(null); if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />
-  return <div data-role="command-deck" className="sidenav-deck">
+  return <div data-role="command-deck" data-panel-open={panelVisible} className="sidenav-deck">
     {viewport !== 'phone' && <>
       <div data-testid="command-deck-rail" className="sidenav-rail-column"><SectionRail {...props} sections={sections} navSectionTitle={sectionLabel} alertCount={props.alertCount ?? 0}
         onUtilityActivate={() => { if (viewport === 'tablet') { onPanelOpenChange(false); onItemSelect?.() } }}
         itemRef={(key, element) => { const name = key.replace(/^section:/, ''); if (element) railItems.current.set(name, element); else railItems.current.delete(name) }}
-        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelOpen} /></div>
+        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelVisible} /></div>
       {viewport === 'desktop' && panelOpen && <div data-testid="command-deck-secondary" className="sidenav-context-column">{panel}</div>}
-      <Modal open={viewport === 'tablet' && panelOpen} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}
+      <Modal open={viewport === 'tablet' && panelVisible} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}
         className="sidenav-tablet-panel">{panel}</Modal>
     </>}
     {viewport === 'phone' && <>
@@ -133,7 +147,7 @@ export function CommandDeck(props: CommandDeckProps) {
         ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })} className="sidenav-sheet">
         {phoneSheet === 'more' ? <div className="sidenav-section-grid">{sections.filter(section => !PHONE_TAB_SECTIONS.some(title => title === section.title)).map(section => {
           const Icon = resolveSectionIcon(section.title)
-          return <Button key={section.title} type="button" variant="ghost" aria-current={section.title === activeSectionTitle ? 'true' : undefined} className={section.title === activeSectionTitle ? 'is-selected' : undefined} onClick={() => select({ kind: 'section', title: section.title })}>
+          return <Button data-app-part="nav-item" key={section.title} type="button" variant="ghost" aria-current={section.title === activeSectionTitle ? 'true' : undefined} className={section.title === activeSectionTitle ? 'is-selected' : undefined} onClick={() => select({ kind: 'section', title: section.title })}>
             <Icon className="h-5 w-5" aria-hidden /><span>{sectionLabel(section)}</span>
           </Button>
         })}</div> : panel}

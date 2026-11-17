@@ -12,7 +12,6 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from '@/components/charts';
@@ -102,7 +101,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
           data={monthlyTrend}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
         >
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis dataKey="month" tick={axisTickSm} />
           <YAxis
             tick={axisTickSm}

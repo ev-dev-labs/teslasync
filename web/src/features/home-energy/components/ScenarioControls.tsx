@@ -151,11 +151,12 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Caption>{t('homeEnergy.scenario.powerwallGroup', 'Home battery (editable assumption)')}</Caption>
             <Toggle
               label={t('homeEnergy.scenario.powerwallEnabled', 'Present')}
               size="sm"
+              className="shrink-0"
               checked={scenario.powerwall.enabled}
               onChange={(checked) => updateScenario({ powerwall: { ...scenario.powerwall, enabled: checked } })}
             />

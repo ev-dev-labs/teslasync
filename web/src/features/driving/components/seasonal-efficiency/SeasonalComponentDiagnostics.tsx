@@ -36,14 +36,14 @@ export function SeasonalComponentDiagnostics({
           {t('seasonalEfficiency.diagnostics.subtitle', 'Fit magnitude and evidence support are reported separately. R² is explicitly in-sample and descriptive.')}
         </Text>
         <SeasonalSectionBody state={state}>
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <dl data-app-part="list" data-app-list="definitions" className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {rows.map(([label, value]) => (
-              <div key={label} className="flex items-baseline justify-between gap-3 border-b border-[var(--panel-border)] pb-2">
-                <Text variant="caption">{label}</Text>
-                <Text variant="bodySm" className="text-right">{state.isResolved && !state.error ? value : '—'}</Text>
+              <div data-app-part="list-row" key={label} className="flex items-baseline justify-between gap-3 border-b border-[var(--panel-border)] pb-2">
+                <Text data-app-part="metric-label" as="dt" variant="caption">{label}</Text>
+                <Text data-app-part="metric-reading" as="dd" variant="bodySm" className="text-right"><span data-app-part="metric-value">{state.isResolved && !state.error ? value : '—'}</span></Text>
               </div>
             ))}
-          </div>
+          </dl>
         </SeasonalSectionBody>
       </GlassPanel>
     </section>

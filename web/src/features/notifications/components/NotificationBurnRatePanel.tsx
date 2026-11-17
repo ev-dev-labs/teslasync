@@ -23,6 +23,7 @@ import {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useNotificationPhoneChartAxes } from '../lib/useNotificationPhoneChartAxes';
 
 const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
   healthy: 'Healthy',
@@ -35,6 +36,7 @@ export function NotificationBurnRatePanel() {
   const { formatTime, formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const phoneAxes = useNotificationPhoneChartAxes();
   const logsQuery = useNotificationDeliveryLogs();
   const source = useDataState(logsQuery, { provenance: 'historical' });
   const [frozenNowMs] = useState(() => Date.now());
@@ -57,6 +59,10 @@ export function NotificationBurnRatePanel() {
     })),
     [summary.timeline, formatTime],
   );
+  const countWidth = phoneAxes?.numericWidth(timelineData.reduce(
+    (max, row) => Math.max(max, row.sent + row.failed + row.deferred), 0,
+  ));
+  const timelineMargin = phoneAxes?.marginFor(timelineData.map(({ time }) => time));
   const sourceDescriptor = { id: 'notification-burn-rate', label: t('notificationBurnRate.title', 'Notification burn rate'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
   const isBlocked = !source.hasData && source.isRefreshBlocked;
@@ -162,6 +168,7 @@ export function NotificationBurnRatePanel() {
         ) : (
           <ChartContainer
             title={t('notificationBurnRate.timeline.title', 'Delivery outcomes by hour')}
+            className={phoneAxes?.className}
             subtitle={t(
               'notificationBurnRate.timeline.subtitle',
               'Deferred quiet-hours notifications remain visible but never consume delivery error budget',
@@ -174,6 +181,7 @@ export function NotificationBurnRatePanel() {
             loading={isLoading}
             empty={summary.longWindow.total === 0}
             height={330}
+            mobileHeight={phoneAxes ? Math.ceil(330 + phoneAxes.tick.fontSize * 4) : undefined}
             data={timelineData}
             dataColumns={[
               { key: 'time', label: t('notificationBurnRate.columns.time', 'Hour') },
@@ -187,10 +195,16 @@ export function NotificationBurnRatePanel() {
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={timelineData}>
+                <BarChart data={timelineData} margin={timelineMargin}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={24} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+                  <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} dataKey="time"
+                    tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}
+                    minTickGap={phoneAxes?.minTickGap ?? 24}
+                    {...(phoneAxes ? { height: phoneAxes.xHeight, tickMargin: phoneAxes.tickMargin } : {})} />
+                  <YAxis key={phoneAxes ? `y-${phoneAxes.key}` : 'desktop-y'}
+                    tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 11 }}
+                    {...(phoneAxes ? { width: countWidth, minTickGap: phoneAxes.minTickGap } : {})}
+                    allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <ChartLegend />
                   <Bar
@@ -248,10 +262,13 @@ export function NotificationBurnRatePanel() {
                 return (
                 <div
                   key={severity.severity}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium">
+                  <div data-app-part="record-header" className="mb-2 flex items-center justify-between gap-2">
+                    <Text data-app-part="record-title" variant="body" className="min-w-0 break-words font-medium">
                       {severity.severity}
                     </Text>
                     <Badge
@@ -265,7 +282,7 @@ export function NotificationBurnRatePanel() {
                         : '—'}
                     </Badge>
                   </div>
-                  <Text as="p" variant="caption">
+                  <Text data-app-part="record-body record-context" as="p" variant="caption">
                     {t(
                       'notificationBurnRate.severity.outcomes',
                       '{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending',

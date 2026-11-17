@@ -82,7 +82,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
         </Caption>
         {hasEnergy ? (
           <>
-            <div
+            <div data-app-part="metric" data-app-metric="bar" data-metric-track
               className="grid h-4 rounded-full overflow-hidden"
               role="img"
               aria-label={unknownEnergy > 0
@@ -96,17 +96,17 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
               style={{ gridTemplateColumns: unknownPct > 0 ? `${acPct}% ${dcPct}% ${unknownPct}%` : `${acPct}% ${dcPct}%` }}
             >
               {acEnergy > 0 && (
-                <div className="col-start-1 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-3)]">
+                <div data-metric-fill className="col-start-1 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-3)]">
                   {t('charging.detail.ac', 'AC')} {fmtPercent(acPct)}
                 </div>
               )}
               {dcEnergy > 0 && (
-                <div className="col-start-2 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-2)]">
+                <div data-metric-fill className="col-start-2 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-2)]">
                   {t('charging.detail.dc', 'DC')} {fmtPercent(dcPct)}
                 </div>
               )}
               {unknownEnergy > 0 && (
-                <div className="col-start-3 flex items-center justify-center bg-[var(--surface-1)]">
+                <div data-metric-fill className="col-start-3 flex items-center justify-center bg-[var(--surface-1)]">
                   {t('charging.chargerTypes.unknown', 'Unknown')} {fmtPercent(unknownPct)}
                 </div>
               )}

@@ -60,6 +60,8 @@ export function LeadingSuccessorsDirectory({
             {origins.map((origin) => (
               <article
                 key={origin.key}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
@@ -89,7 +91,7 @@ export function LeadingSuccessorsDirectory({
                     {destinationEvidenceBandLabel(t, origin.support.band)}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div data-app-part="metric-grid" className="grid grid-cols-2 gap-2">
                   {[
                     {
                       label: t(
@@ -158,12 +160,14 @@ export function LeadingSuccessorsDirectory({
                   ].map((metric) => (
                     <div
                       key={metric.label}
+                      data-app-part="metric"
+                      data-app-metric="tile"
                       className="rounded-lg bg-[var(--surface-1)] p-2"
                     >
-                      <Text as="p" variant="caption">
+                      <Text data-app-part="metric-label" as="p" variant="caption">
                         {metric.label}
                       </Text>
-                      <Text as="p" variant="bodySm" weight="semibold">
+                      <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" weight="semibold">
                         {metric.value}
                       </Text>
                     </div>

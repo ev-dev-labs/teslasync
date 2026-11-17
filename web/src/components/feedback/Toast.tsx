@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { motion, AnimatePresence } from '@/components/motion'
 import { Link } from 'react-router-dom'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { cn } from '@/lib/cn'
 
@@ -41,7 +42,7 @@ type ToastType = 'success' | 'error' | 'info' | 'warning'
  *    Used by alert toasts for "View" links into the
  *    relevant context page (e.g. /battery?vehicle_id=12&t=...&signal=...).
  *
- *  - Callback action: `{ label, onClick }` renders a `<button>` that fires
+ *  - Callback action: `{ label, onClick }` renders a `<Button>` that fires
  *    the supplied handler then dismisses the toast. Used by undoable bulk
  *    operations where clicking "Undo" must run
  *    arbitrary mutation code rather than navigate.
@@ -168,6 +169,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             const s = styles[t.type]
             return (
               <motion.div
+                data-app-part="feedback"
+                data-app-feedback-kind="toast"
+                data-app-tone={t.type === 'error' ? 'danger' : t.type}
                 key={t.id}
                 role={ariaRole[t.type]}
                 aria-live={ariaRole[t.type] === 'alert' ? 'assertive' : 'polite'}
@@ -190,16 +194,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   s.border, s.glow
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <div className={cn('mt-0.5 flex-shrink-0', s.icon)} aria-hidden="true">
+                <div data-app-part="feedback-layout" className="flex items-start gap-3">
+                  <div data-app-part="feedback-icon" className={cn('mt-0.5 flex-shrink-0', s.icon)} aria-hidden="true">
                     {icons[t.type]}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{t.title}</p>
-                    {t.message && <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{t.message}</p>}
+                  <div data-app-part="feedback-content" className="flex-1 min-w-0">
+                    <p data-app-part="feedback-title" className="text-sm font-semibold text-[var(--text-primary)]">{t.title}</p>
+                    {t.message && <p data-app-part="feedback-message" className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{t.message}</p>}
                     {t.action && (
                       t.action.to ? (
                         <Link
+                          data-app-part="feedback-actions"
                           to={t.action.to}
                           onClick={() => dismiss(t.id)}
                           className={cn(
@@ -210,29 +215,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                           {t.action.label} →
                         </Link>
                       ) : t.action.onClick ? (
-                        <button
+                        <Button
+                          data-app-part="button feedback-actions"
+                          variant="ghost"
+                          size="sm"
                           type="button"
                           onClick={() => {
                             t.action!.onClick!()
                             dismiss(t.id)
                           }}
                           className={cn(
-                            'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
+                            'mt-2 inline-flex h-auto items-center gap-1 p-0 text-xs font-medium underline-offset-2 hover:bg-transparent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
                             s.icon,
                           )}
                         >
                           {t.action.label}
-                        </button>
+                        </Button>
                       ) : null
                     )}
                   </div>
-                  <button
+                  <Button
+                    data-app-part="button feedback-dismiss"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => dismiss(t.id)}
                     aria-label="Dismiss notification"
-                    className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+                    className="h-auto flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
+                  </Button>
                 </div>
               </motion.div>
             )

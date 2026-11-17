@@ -394,7 +394,7 @@ export function TreeSelect<T>({
   const showNoResults = !isLoading && !showEmpty && filtered.length === 0;
 
   return (
-    <div className={cn('flex flex-col gap-2', className)} aria-label={ariaLabel}>
+    <div data-app-part="field" className={cn('flex flex-col gap-2', className)} aria-label={ariaLabel}>
       {/* Search */}
       <div className="relative">
         <Input
@@ -455,6 +455,9 @@ export function TreeSelect<T>({
       {/* Body */}
       <div
         ref={containerRef}
+        data-app-part="field-control"
+        data-app-control-kind="tree"
+        aria-busy={isLoading || undefined}
         role="tree"
         aria-multiselectable="true"
         aria-label={ariaLabel}

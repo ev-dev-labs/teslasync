@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ConnectPage from './ConnectPage'
@@ -86,7 +86,7 @@ describe('ConnectPage', () => {
   it('keeps introductory guidance reachable from the compact header by keyboard focus', async () => {
     renderPage()
     const help = screen.getByRole('button', { name: /More info: Connect to your server/i })
-    help.focus()
+    act(() => { help.focus(); })
     fireEvent.focus(help)
     expect(await screen.findByText('Enter your TeslaSync address to continue.')).toBeInTheDocument()
   })

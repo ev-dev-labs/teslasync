@@ -10,6 +10,7 @@ import type { PackId } from './designPacks/types';
 import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import SignalExplorerWidget from './SignalExplorerWidget';
+import { measureChartContainers } from '@/test/setup';
 
 const { requestMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string) => Promise<unknown>>(),
@@ -93,7 +94,10 @@ function tree(pack: PackId = 'v1', cols = 2, config?: WidgetConfig, vehicleId = 
 }
 
 async function settled() {
-  await waitFor(() => expect(client.isFetching()).toBe(0), { timeout: 10_000 });
+  await waitFor(async () => {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(client.isFetching()).toBe(0);
+  }, { timeout: 10_000 });
 }
 
 async function presentation(container: HTMLElement, appearance: string) {
@@ -114,6 +118,7 @@ function historyRequests(name: string) {
 
 describe('SignalExplorerWidget design packs', () => {
   beforeEach(() => {
+    measureChartContainers(800, 300);
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
     requestMock.mockReset();
     failures = new Set();

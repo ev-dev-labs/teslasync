@@ -471,28 +471,32 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
     );
 
     return (
-      <div className={cn('relative', className)}>
+      <div data-app-part="field" className={cn('relative', className)}>
         {hideLabel ? (
           <VisuallyHidden as="label" htmlFor={inputId} id={labelId}>
             {labelContent}
           </VisuallyHidden>
         ) : (
-          <label htmlFor={inputId} id={labelId} className={visibleLabelClass}>
+          <label data-app-part="field-label" htmlFor={inputId} id={labelId} className={visibleLabelClass}>
             {labelContent}
           </label>
         )}
 
         <div
+          data-app-field-surface
+          data-disabled={disabled || undefined}
           className={fieldClass}
           onClick={() => {
             if (!disabled) inputRef.current?.focus();
           }}
         >
           {value.map((tag, i) => (
-            <span key={`${tag}-${i}`} className={chipBase}>
+            <span data-app-part="badge" key={`${tag}-${i}`} className={chipBase}>
               <span className="truncate">{tag}</span>
               <button
                 type="button"
+                data-app-part="button"
+                data-app-icon-only="true"
                 tabIndex={-1}
                 disabled={disabled}
                 onClick={(e) => {
@@ -513,6 +517,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
 
           <input
             ref={inputRef}
+            data-app-part="field-control"
+            data-app-control-kind="composite"
             id={inputId}
             type="text"
             value={pending}
@@ -550,12 +556,12 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
         </VisuallyHidden>
 
         {error && (
-          <ErrorText id={errorId} className="mt-1">
+          <ErrorText data-app-part="status" data-app-field-feedback="error" id={errorId} className="mt-1">
             {error}
           </ErrorText>
         )}
         {!error && (hint || atMax) && (
-          <HelperText id={helperId} className="mt-1">
+          <HelperText data-app-part="status" data-app-field-feedback="hint" id={helperId} className="mt-1">
             {atMax
               ? t('tagInput.maxReachedHint', 'Maximum {{count}} tags', {
                   count: maxTags ?? 0,

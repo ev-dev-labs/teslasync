@@ -1,9 +1,11 @@
 import { forwardRef, type AriaAttributes, type ReactNode, type Ref } from 'react';
+import { LoaderCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, BUTTON_BASE, BUTTON_VARIANTS } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Tooltip } from './Tooltip';
 import { useConfirm, type ConfirmOptions } from '@/hooks/useConfirm';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
 
 export type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
@@ -26,6 +28,8 @@ export interface IconButtonProps {
   href?: string;
   busy?: boolean;
   disabled?: boolean;
+  /** Keep unavailable buttons focusable for live status; activation stays blocked. */
+  focusableWhenDisabled?: boolean;
   tooltipSide?: 'top' | 'bottom' | 'left' | 'right';
   /**
    * Long labels (freshness sentences) wrap instead of forcing a
@@ -58,6 +62,7 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
   href,
   busy = false,
   disabled = false,
+  focusableWhenDisabled = false,
   tooltipSide = 'top',
   tooltipMultiline = false,
   'aria-label': ariaLabelOverride,
@@ -66,12 +71,17 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
 }, ref) {
   const restClass = variant === 'ghost' ? GHOST_AT_REST : undefined;
   const { confirm, dialogProps } = useConfirm();
+  const { reduce } = useMotionPreference();
+  const focusableDisabled = focusableWhenDisabled && (disabled || busy);
   const activate = confirmOptions && onClick
     ? () => { void confirm({ variant: 'danger', ...confirmOptions }).then((ok) => { if (ok) onClick(); }); }
     : onClick;
   const control = href ? (
     <Link
       ref={ref as Ref<HTMLAnchorElement>}
+      data-app-part="button"
+      data-app-variant={variant}
+      data-app-icon-only="true"
       to={href}
       aria-label={ariaLabelOverride ?? label}
       aria-busy={busy || undefined}
@@ -89,14 +99,19 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
   ) : (
     <Button
       ref={ref as Ref<HTMLButtonElement>}
+      data-app-icon-only="true"
       type="button"
       aria-label={ariaLabelOverride ?? label}
       variant={variant}
-      icon={icon}
-      loading={busy}
-      disabled={disabled}
-      onClick={activate}
-      className={cn(ICON_ONLY, restClass, className)}
+      icon={busy && focusableDisabled
+        ? <LoaderCircle aria-hidden="true" focusable="false" className={cn('h-4 w-4 shrink-0 motion-reduce:animate-none', !reduce && 'animate-spin')} />
+        : icon}
+      loading={busy && !focusableDisabled}
+      disabled={disabled && !focusableDisabled}
+      aria-disabled={focusableDisabled || undefined}
+      aria-busy={busy || undefined}
+      onClick={focusableDisabled ? undefined : activate}
+      className={cn(ICON_ONLY, restClass, focusableDisabled && 'text-[var(--text-secondary)] shadow-none', className)}
       {...ariaProps}
     />
   );

@@ -28,11 +28,12 @@ export function ServiceEvidencePrivacyPanel({ className }: ServiceEvidencePrivac
         {t('serviceEvidencePack.privacy.title', 'Privacy manifest')}
       </PanelTitle>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Text variant="body" weight="semibold" className="mb-1.5 block">
+        <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Text data-app-part="record-title" variant="body" weight="semibold" className="mb-1.5 block">
             {t('serviceEvidencePack.privacy.includedTitle', 'Included')}
           </Text>
-          <ul className="list-disc space-y-1 pl-5">
+          <ul data-app-part="list record-body" className="list-disc space-y-1 pl-5">
             {SERVICE_EVIDENCE_PACK_INCLUDED_VEHICLE_FIELDS.map((field) => (
               <li key={field}>
                 <Caption>{field}</Caption>
@@ -40,11 +41,12 @@ export function ServiceEvidencePrivacyPanel({ className }: ServiceEvidencePrivac
             ))}
           </ul>
         </div>
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-          <Text variant="body" weight="semibold" className="mb-1.5 block">
+        <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <Text data-app-part="record-title" variant="body" weight="semibold" className="mb-1.5 block">
             {t('serviceEvidencePack.privacy.excludedTitle', 'Never included')}
           </Text>
-          <ul className="list-disc space-y-1 pl-5">
+          <ul data-app-part="list record-body" className="list-disc space-y-1 pl-5">
             {SERVICE_EVIDENCE_PACK_EXCLUDED_FIELD_NOTES.map((field) => (
               <li key={field}>
                 <Caption>{field}</Caption>

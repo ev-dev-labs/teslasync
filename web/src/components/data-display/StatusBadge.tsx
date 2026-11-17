@@ -44,6 +44,7 @@ export function StatusBadge({ status, size = 'md', className, label: presentatio
 
   return (
     <span
+      data-app-part="status badge"
       className={cn(
         'inline-flex min-w-0 max-w-full items-center rounded-full border border-[var(--control-border)] bg-[var(--control-bg)] whitespace-normal break-words forced-colors:border-[CanvasText]',
         typography.weight.medium,

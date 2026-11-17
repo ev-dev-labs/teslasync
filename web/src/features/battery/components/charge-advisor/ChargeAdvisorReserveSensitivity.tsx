@@ -28,18 +28,19 @@ export function ChargeAdvisorReserveSensitivity({ analysis, state }: ChargeAdvis
         {analysis.reserveSensitivity.map((item) => (
           <article
             key={item.floorPct}
+            data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
           >
-            <div className="flex items-center justify-between gap-2">
-              <Text className="font-semibold">{fmtPercent(item.floorPct)}</Text>
+            <div data-app-part="record-header" className="flex items-center justify-between gap-2">
+              <Text data-app-part="record-title" className="font-semibold">{fmtPercent(item.floorPct)}</Text>
               {item.floorPct === analysis.reserveFloorPct && (
                 <Badge variant="info">{t('chargeAdvisor.sensitivity.selected', 'Selected')}</Badge>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div>
-                <Text variant="caption">{t('chargeAdvisor.sensitivity.mean', 'Mean path')}</Text>
-                <Text className="font-semibold">
+            <div data-app-part="record-body" className="mt-3 grid grid-cols-2 gap-2">
+              <div data-app-part="metric" data-app-metric="headline">
+                <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.sensitivity.mean', 'Mean path')}</Text>
+                <Text data-app-part="metric-reading metric-value" className="font-semibold">
                   {item.meanDaysToCross == null ? '—' : t(
                     'chargeAdvisor.sensitivity.days',
                     '{{count}} days',
@@ -47,9 +48,9 @@ export function ChargeAdvisorReserveSensitivity({ analysis, state }: ChargeAdvis
                   )}
                 </Text>
               </div>
-              <div>
-                <Text variant="caption">{t('chargeAdvisor.sensitivity.p75', 'Calendar-day p75')}</Text>
-                <Text className="font-semibold">
+              <div data-app-part="metric" data-app-metric="headline">
+                <Text data-app-part="metric-label" variant="caption">{t('chargeAdvisor.sensitivity.p75', 'Calendar-day p75')}</Text>
+                <Text data-app-part="metric-reading metric-value" className="font-semibold">
                   {item.p75DaysToCross == null ? '—' : t(
                     'chargeAdvisor.sensitivity.days',
                     '{{count}} days',

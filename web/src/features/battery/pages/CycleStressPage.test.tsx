@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import {
   QueryClient,
   QueryClientProvider,
@@ -307,6 +308,8 @@ beforeEach(() => {
   h.drives = query(refetchDrives, { data: history.drives });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('CycleStressPage', () => {
   it.each(['no vehicle', 'loading', 'paused initial', 'failure', 'empty', 'unqualified'] as const)(

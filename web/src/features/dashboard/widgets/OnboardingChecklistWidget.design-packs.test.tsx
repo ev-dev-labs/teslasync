@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { DataStateSource } from '@/api/dataState';
@@ -174,7 +174,7 @@ it('switches all registered packs on one real checklist subscription and preserv
   window.addEventListener('toggle-command-palette', palette);
   const { container, selectPack } = renderWidget('classic');
   const refreshControl = screen.getByRole('button', { name: /^Refresh data/i });
-  refreshControl.focus();
+  act(() => { refreshControl.focus(); });
   for (const [packId, appearance] of packs) {
     selectPack(packId);
     const view = await presentation(container, appearance);

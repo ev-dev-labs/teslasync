@@ -73,7 +73,7 @@ describe('MilestoneProgress definition and help contract', () => {
       'odometer-milestones', 'MilestoneProgress.tsx',
     ), 'utf8');
     expect(source.match(/<dl\b/g)).toHaveLength(1);
-    expect(source).toContain('<Text as="dt" variant="caption">');
+    expect(source).toContain('<Text data-app-part="metric-label" as="dt" variant="caption">');
     expect(source).toContain('as="dd"');
     expect(source.match(/key: '(previous|current|next|remaining)'/g)).toHaveLength(4);
     expect(source).not.toContain('chronologically first row');
@@ -95,9 +95,13 @@ describe('MilestoneProgress definition and help contract', () => {
     ]);
     expect(list).toHaveClass('grid', 'min-w-0', 'grid-cols-2', 'gap-3', 'lg:grid-cols-4');
     expect(list).toHaveAttribute('data-layout', 'responsive-columns');
+    expect(list).toHaveAttribute('data-app-list', 'definitions');
     expect(list.children).toHaveLength(4);
     Array.from(list.children).forEach((group, index) => {
       expect(group.tagName).toBe('DIV');
+      expect(group).toHaveAttribute('data-app-part', 'list-row');
+      expect(terms[index]).toHaveAttribute('data-app-part', 'metric-label');
+      expect(definitions[index]).toHaveAttribute('data-app-part', 'metric-value');
       expect(Array.from(group.children)).toEqual([terms[index], definitions[index]]);
       expect(group).toHaveClass('rounded-xl', 'p-3');
       expect(definitions[index]).toHaveClass('mt-1', 'tabular-nums');
@@ -177,6 +181,31 @@ describe('MilestoneProgress definition and help contract', () => {
     expect(screen.getByText(
       'Progress currently reflects calibration only; eligible drives will add observed growth.',
     )).toBeInTheDocument();
+  });
+
+  it.each([
+    { eligibleRows: 0, capReached: false, supported: false, copy: /calibration only/ },
+    { eligibleRows: 1000, capReached: true, supported: true, copy: /completeness is unknown/ },
+    { eligibleRows: 8, capReached: false, supported: true, copy: /projections can change/ },
+    { eligibleRows: 4, capReached: false, supported: false, copy: /no ETA is shown/ },
+  ])('keeps the independent warning evidence for $eligibleRows eligible rows', ({ eligibleRows, capReached, supported, copy }) => {
+    const original = summary();
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <MilestoneProgress summary={{
+          ...original,
+          accounting: { ...original.accounting, eligibleRows, capReached },
+          primaryPace: { ...original.primaryPace, supported },
+        }} state={ready} />
+      </I18nextProvider>,
+    );
+    const notice = container.querySelector('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveAttribute('data-app-tone', 'warning');
+    expect(notice?.querySelector('[data-app-part="feedback-icon"] svg')).toBeInTheDocument();
+    expect(notice?.querySelector('[data-app-part="feedback-content"] [data-app-part="feedback-message"]')).toHaveTextContent(copy);
+    expect(notice?.closest('dl')).toBeNull();
+    expect(screen.getAllByRole('definition')).toHaveLength(4);
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
   it('keeps the section, title and help action mounted during loading', () => {

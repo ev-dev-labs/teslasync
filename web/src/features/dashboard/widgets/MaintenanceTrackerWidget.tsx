@@ -281,7 +281,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           </div>
         </Drawer>
         {(forecastOverdue != null || forecastDueSoon != null) && (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-label={t('widget.maintenance.forecastStatus', 'Maintenance forecast status')}
             className="mb-2 flex min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] py-2"
@@ -335,9 +335,9 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           retainedMessage={t('widget.maintenance.recordsRetained', 'Previously loaded service records remain visible while they refresh.')}
         >
           {lastServiceEntries.length > 0 ? (
-            <ul aria-label={t('widget.maintenance.recentService', 'Recent service')} className={cn('m-0 list-none space-y-2 p-0', timeline?.feed)}>
+            <ul data-app-part="list" aria-label={t('widget.maintenance.recentService', 'Recent service')} className={cn('m-0 list-none space-y-2 p-0', timeline?.feed)}>
               {recentRecords.slice(0, 3).map((rec, index) => (
-                <li key={rec.itemId || index} className={cn('border-b border-[var(--border-subtle)] py-2 last:border-b-0', timeline?.row)}>
+                <li key={`${rec.itemId}:${rec.date}:${index}`} className={cn('border-b border-[var(--border-subtle)] py-2 last:border-b-0', timeline?.row)}>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>

@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -65,6 +66,8 @@ async function mountPresentation(appearance: LineAppearance, cols = 3) {
   await waitFor(() => expect(view.container.querySelector(`[data-line-appearance="${appearance}"]`)).not.toBeNull());
   return view;
 }
+
+setupCanvasTextMeasurement();
 
 describe.each(appearances)('drive telemetry %s', (packId, appearance) => {
   it('uses the real controller readings, duration and independent chart scales', async () => {

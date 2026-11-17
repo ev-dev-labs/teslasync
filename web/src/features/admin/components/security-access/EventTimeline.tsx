@@ -121,32 +121,34 @@ export function EventTimeline({ timelineEvents, sourceState, isLoading, error, o
       ) : isLoading || sourceState?.status === 'initial' ? (
         <Skeleton lines={8} />
       ) : events.length > 0 ? (
-        <ul aria-label={panelTitle} className="max-h-96 space-y-3 overflow-y-auto pr-1">
+        <ul data-app-part="list" data-app-list="records" aria-label={panelTitle} className="max-h-96 space-y-3 overflow-y-auto pr-1">
           {events.map((ev) => {
             const { title, subtitle } = getLabels(ev);
             return (
-              <li key={ev.id} className="flex items-start gap-3 rounded-lg bg-[var(--surface-2)] p-3">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                    variantChip[ev.variant],
-                  )}
-                >
-                  {timelineIcon(ev)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
-                    {title}
-                  </Text>
-                  <Text as="p" variant="caption" className="truncate">
-                    {subtitle}
-                  </Text>
+              <li data-app-part="card" data-app-card-kind="record" key={ev.id} className="flex items-start gap-3 rounded-lg bg-[var(--surface-2)] p-3">
+                <div data-app-part="record-body" className="flex min-w-0 w-full items-start gap-3">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                      variantChip[ev.variant],
+                    )}
+                  >
+                    {timelineIcon(ev)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Text data-app-part="record-title" as="p" size="sm" weight="medium" color="primary" className="truncate">
+                      {title}
+                    </Text>
+                    <Text data-app-part="record-context" as="p" variant="caption" className="truncate">
+                      {subtitle}
+                    </Text>
+                  </div>
+                  <TimeStamp
+                    value={ev.timestamp}
+                    className={cn('shrink-0 whitespace-nowrap', typography.size['2xs'], 'text-[var(--text-muted)]')}
+                  />
                 </div>
-                <TimeStamp
-                  value={ev.timestamp}
-                  className={cn('shrink-0 whitespace-nowrap', typography.size['2xs'], 'text-[var(--text-muted)]')}
-                />
               </li>
             );
           })}

@@ -200,7 +200,7 @@ export function SignalDiffTable({
 
   if (loading) {
     return (
-      <div className={cn('min-w-0 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-6', className)} role="status">
+      <div data-app-part="status" className={cn('min-w-0 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-6', className)} role="status">
         <Text as="div" variant="bodySm" className="text-center">
           {t('signalDiff.tableLoading', 'Loading…')}
         </Text>

@@ -8,6 +8,7 @@
  * through the real `unitConversion` boundary.
  */
 
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -283,6 +284,8 @@ beforeEach(() => {
   scienceMocks.tires.mockReturnValue(queryState({ data: tires() }));
   scienceMocks.notebook.mockReturnValue(queryState({ data: notebook() }));
 });
+
+setupCanvasTextMeasurement();
 
 describe('ScienceLabPage', () => {
   it.each(['loading', 'paused', 'failed', 'empty', 'retained-empty'] as const)(

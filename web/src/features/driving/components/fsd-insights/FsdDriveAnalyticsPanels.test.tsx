@@ -220,8 +220,13 @@ describe('FsdDriveAnalyticsPanels', () => {
       ['Outside a known drive', '2.0 km'],
       ['Drive distance unknown', 'Not measured'],
     ]) {
-      const bucket = within(panel).getByText(label).parentElement;
+      const badge = within(panel).getByText(label);
+      const bucket = badge.closest('[data-app-metric="tile"]');
       expect(bucket).not.toBeNull();
+      expect(bucket).toHaveAttribute('data-app-metric', 'tile');
+      expect(badge).toHaveAttribute('data-app-part', 'badge');
+      expect(badge.parentElement).toHaveAttribute('data-app-part', 'metric-label');
+      expect(bucket!.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent(value);
       expect(within(bucket!).getByText(value)).toBeInTheDocument();
     }
   });
@@ -334,6 +339,9 @@ describe('FsdDriveAnalyticsPanels', () => {
       within(screen.getByTestId('fsd-attribution')).getByRole('link', { name: '#295' }),
     ];
     for (const link of links) {
+      expect(link).toHaveAttribute('data-app-part', 'button');
+      expect(link).toHaveAttribute('data-app-variant', 'ghost');
+      expect(link).toHaveAttribute('data-app-size', 'sm');
       expect(link).toHaveClass('inline-flex', 'min-h-11', 'min-w-11', 'md:min-h-0', 'md:min-w-0');
       expect(link).toHaveClass('focus-visible:outline-2', 'whitespace-normal', 'break-words');
       expect(link).toHaveClass('text-[var(--text-primary)]', 'hover:bg-[var(--control-bg-hover)]');
@@ -605,7 +613,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     );
 
     const attribution = screen.getByTestId('fsd-attribution');
-    const unknown = within(attribution).getByText('Drive distance unknown').parentElement;
+    const unknown = within(attribution).getByText('Drive distance unknown').closest('[data-app-metric="tile"]');
     expect(unknown).not.toBeNull();
     expect(within(unknown as HTMLElement).getByText('Not measured')).toBeInTheDocument();
   });

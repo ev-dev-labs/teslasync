@@ -4,6 +4,7 @@ import {
   BarChart,
   CartesianGrid,
   CHART_COLORS,
+  ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -79,6 +80,7 @@ export function BenchmarkPercentileChart({
             <XAxis dataKey="metric" />
             <YAxis domain={[0, 100]} tickFormatter={fmtNumber} />
             <Tooltip
+              content={<ChartTooltip />}
               formatter={(value) => [
                 fmtNumber(value),
                 t('benchmarks.chart.percentile', 'Percentile'),

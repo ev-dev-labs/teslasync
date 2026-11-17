@@ -1,5 +1,6 @@
 import { Database, FlaskConical, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Grid } from '@/components/layout';
 
 import {
   Badge,
@@ -116,32 +117,32 @@ export function BatteryCareMethodology({
         </Badge>
       }
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{sessionsAvailable ? fmtInt(coverage.returnedSessions) : '—'}</MetricValue>
-          <MetricLabel>
+      <Grid minItemWidth="wide" gap={3}>
+        <div data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={!sessionsAvailable ? 'missing' : undefined} className="rounded-xl bg-[var(--surface-2)] p-3">
+          <MetricValue data-app-part="metric-reading metric-value">{sessionsAvailable ? fmtInt(coverage.returnedSessions) : '—'}</MetricValue>
+          <MetricLabel data-app-part="metric-label">
             {t('batteryCare.method.returnedSessions', 'Sessions returned')}
           </MetricLabel>
         </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{sessionsAvailable ? fmtInt(care.sessionsAnalyzed) : '—'}</MetricValue>
-          <MetricLabel>
+        <div data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={!sessionsAvailable ? 'missing' : undefined} className="rounded-xl bg-[var(--surface-2)] p-3">
+          <MetricValue data-app-part="metric-reading metric-value">{sessionsAvailable ? fmtInt(care.sessionsAnalyzed) : '—'}</MetricValue>
+          <MetricLabel data-app-part="metric-label">
             {t('batteryCare.method.eligibleSessions', 'End-SoC eligible')}
           </MetricLabel>
         </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{drivesAvailable ? fmtInt(coverage.returnedDrives) : '—'}</MetricValue>
-          <MetricLabel>
+        <div data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={!drivesAvailable ? 'missing' : undefined} className="rounded-xl bg-[var(--surface-2)] p-3">
+          <MetricValue data-app-part="metric-reading metric-value">{drivesAvailable ? fmtInt(coverage.returnedDrives) : '—'}</MetricValue>
+          <MetricLabel data-app-part="metric-label">
             {t('batteryCare.method.returnedDrives', 'Drives returned')}
           </MetricLabel>
         </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{drivesAvailable ? fmtInt(care.drivesAnalyzed) : '—'}</MetricValue>
-          <MetricLabel>
+        <div data-app-part="card metric" data-app-metric="tile" data-surface-variant="standalone" data-app-state={!drivesAvailable ? 'missing' : undefined} className="rounded-xl bg-[var(--surface-2)] p-3">
+          <MetricValue data-app-part="metric-reading metric-value">{drivesAvailable ? fmtInt(care.drivesAnalyzed) : '—'}</MetricValue>
+          <MetricLabel data-app-part="metric-label">
             {t('batteryCare.method.eligibleDrives', 'Arrival-SoC eligible')}
           </MetricLabel>
         </div>
-      </div>
+      </Grid>
 
       <div className="mt-4 space-y-3">
         <div className="flex items-start gap-2">
@@ -188,20 +189,22 @@ export function BatteryCareMethodology({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-[var(--border-subtle)] p-3">
-        <Text as="p" variant="caption">
-          {t(
-            'batteryCare.method.window',
-            'Returned dated evidence spans {{start}} to {{end}}. {{capMessage}}',
-            { start, end, capMessage },
-          )}
-        </Text>
-        <Text as="p" variant="caption" className="mt-2">
-          {t(
-            'batteryCare.method.limitation',
-            'The index describes observed habits only. It does not measure battery health, infer degradation, or know time spent at a given SoC.',
-          )}
-        </Text>
+      <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="neutral" className="mt-4 rounded-xl border border-[var(--border-subtle)] p-3">
+        <div data-app-part="feedback-content">
+          <Text as="p" variant="caption" data-app-part="feedback-message">
+            {t(
+              'batteryCare.method.window',
+              'Returned dated evidence spans {{start}} to {{end}}. {{capMessage}}',
+              { start, end, capMessage },
+            )}
+          </Text>
+          <Text as="p" variant="caption" data-app-part="feedback-detail" className="mt-2">
+            {t(
+              'batteryCare.method.limitation',
+              'The index describes observed habits only. It does not measure battery health, infer degradation, or know time spent at a given SoC.',
+            )}
+          </Text>
+        </div>
       </div>
     </BatteryCareSection>
   );

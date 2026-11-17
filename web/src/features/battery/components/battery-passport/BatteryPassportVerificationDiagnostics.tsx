@@ -139,30 +139,34 @@ export function BatteryPassportVerificationDiagnostics({
               </Button>
             ) : null}
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <Text as="p" variant="caption">
+          <dl data-app-part="list" data-app-list="definitions" className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div data-app-part="card list-row" data-surface-variant="standalone" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <Text as="dt" variant="caption" data-app-part="metric-label">
                 {t(
                   'batteryPassport.verification.expectedPrefix',
                   'Expected hash prefix',
                 )}
               </Text>
-              <Code className="mt-1 break-all">
-                {hashPrefix(expected)}
-              </Code>
+              <dd data-app-part="metric-reading" className="mt-1 min-w-0 break-all">
+                <Code data-app-part="metric-value">
+                  {hashPrefix(expected)}
+                </Code>
+              </dd>
             </div>
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <Text as="p" variant="caption">
+            <div data-app-part="card list-row" data-surface-variant="standalone" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <Text as="dt" variant="caption" data-app-part="metric-label">
                 {t(
                   'batteryPassport.verification.providedPrefix',
                   'Provided hash prefix',
                 )}
               </Text>
-              <Code className="mt-1 break-all">
-                {hashPrefix(provided)}
-              </Code>
+              <dd data-app-part="metric-reading" className="mt-1 min-w-0 break-all">
+                <Code data-app-part="metric-value">
+                  {hashPrefix(provided)}
+                </Code>
+              </dd>
             </div>
-          </div>
+          </dl>
           <AlertBanner
             className="mt-4"
             variant={

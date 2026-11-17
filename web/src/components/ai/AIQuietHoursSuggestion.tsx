@@ -233,14 +233,19 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
               )}
             </Button>
           </div>
-          <div className="rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-            <Text as="div" variant="label">
+          <div
+            data-app-part="feedback"
+            data-app-feedback-kind="insight"
+            data-app-tone="neutral"
+            className="rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
+          >
+            <Text data-app-part="feedback-title" as="div" variant="label">
               {t(
                 'notifications.quietHours.aiSuggestion.previewLabel',
                 'Proposed window (review before saving):',
               )}
             </Text>
-            <ul className="mt-1 list-inside list-disc">
+            <ul data-app-part="feedback-detail" className="mt-1 list-inside list-disc">
               <Text as="li" variant="bodySm">
                 {t(
                   'notifications.quietHours.aiSuggestion.previewWindow',

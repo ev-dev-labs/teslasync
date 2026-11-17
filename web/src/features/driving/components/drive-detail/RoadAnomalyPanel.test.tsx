@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { RoadAnomalyResponse } from '@/types/roadAnomalies';
@@ -69,6 +69,38 @@ function renderPanel() {
 }
 
 describe('RoadAnomalyPanel', () => {
+  it('selects the same map candidate from a phone row and retains quick-view details', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const ts = '2026-04-02T08:30:00Z';
+      setQuery({ drive_id: 42, status: 'candidates', analyzed_samples: 25, limitations: [],
+        candidates: [{ ts, latitude: 47.6, longitude: -122.3, speed_mps: 12, peak_jerk_g_per_s: 1.5 }] });
+      renderPanel();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = screen.getByRole('group', { name: 'drive-road-candidates' });
+      const timestamp = formatDateTime(ts, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+      fireEvent.click(within(mobile).getByRole('button', { name: timestamp }));
+      const selected = screen.getAllByRole('status').find(element => element.textContent?.includes('Possible jolt'));
+      expect(selected).toHaveTextContent(/47\.60000,\s*-122\.30000/);
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Quick view' }));
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('12 m/s');
+      expect(dialog).toHaveTextContent('47.60000, -122.30000');
+      expect(within(dialog).getByRole('button', { name: timestamp })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('uses warning paint for possible jolts without claiming confirmed potholes', () => {
     setQuery({ drive_id: 42, status: 'candidates', analyzed_samples: 25, limitations: [], candidates: [{ ts: '2026-04-02T08:30:00Z', latitude: 47.6, longitude: -122.3, speed_mps: 12, peak_jerk_g_per_s: 1.5 }] });
     renderPanel();

@@ -11,6 +11,9 @@ import { formatDateTime } from '@/lib/dateFormat';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { RootCauseSignalTimelineChart } from './RootCauseSignalTimelineChart';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-GB', tz: 'America/Los_Angeles' }));
 const chart = vi.hoisted(() => ({
@@ -61,6 +64,47 @@ function row(signal: string): HTMLElement {
 }
 
 describe('complete signal evidence source presentation', () => {
+  it.each(PACK_IDS)('%s activates actual source-state and record consumers without flattening unavailable neighbors', pack => {
+    const retained = response('Retained', [point('2026-10-06T00:05:00Z', 0)]);
+    const retry = vi.fn();
+    const sources: SignalEvidenceBundleSource[] = [
+      { signal: 'PendingSignal', state: deriveDataState<SignalHistoryResponse>({ isPending: true, isFetching: true }) },
+      { signal: 'PausedSignal', state: deriveDataState<SignalHistoryResponse>({ isPending: true, fetchStatus: 'paused', refetch: retry }) },
+      { signal: 'FailedSignal', state: deriveDataState<SignalHistoryResponse>({ error: new Error('Failed history'), refetch: retry }) },
+      { signal: 'Empty', state: deriveDataState({ data: response('Empty', []) }, { unavailable: true }) },
+      { signal: 'Retained', state: deriveDataState({ data: retained, error: new Error('Refresh failed'), refetch: retry }, { provenance: 'historical' }) },
+      { signal: 'ReadySignal', state: deriveDataState({ data: response('ReadySignal', [point('2026-10-06T00:00:00Z', false)]) }) },
+    ];
+    const { container } = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <SignalEvidenceSourceList label="History" sources={sources} />
+    </div>);
+    const release = observeAppDesignScopes(container.firstElementChild!);
+    try {
+      const list = screen.getByRole('list', { name: 'History' });
+      expect(list).toHaveAttribute('data-app-list', 'sources');
+      expect([...list.children].map(element => element.getAttribute('data-app-source-state')))
+        .toEqual(['pending', 'paused', 'failed', 'unavailable', 'refreshFailed', 'ready']);
+      for (const record of list.children) {
+        expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+        expectAppDesignDataMode(record, APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+        expectAppDesignDataMode(record.querySelector(':scope > [data-app-part~="record-body"]')!,
+          APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+      }
+      for (const [signal, rule] of [['PausedSignal', '2px dashed var(--semantic-warning)'],
+        ['FailedSignal', '3px solid var(--semantic-danger)'], ['Retained', '2px dashed var(--semantic-warning)']]) {
+        expect(matchesAppDesignCss(row(signal), '[data-app-list="sources"]')
+          .some(match => match.declarations['border-inline-start'] === rule)).toBe(true);
+      }
+      expect(within(row('PendingSignal')).queryByText(/sample\(s\)/)).toBeNull();
+      expect(within(row('Empty')).getByText('No data available for this period')).toBeInTheDocument();
+      expect(within(row('Retained')).getByText('1 sample(s)')).toBeInTheDocument();
+      fireEvent.click(within(row('Retained')).getByRole('button', { name: 'Retry' }));
+      expect(retry).toHaveBeenCalledOnce();
+      expect(sources[4].state.data).toBe(retained);
+      expect(retained.data[0].value).toBe(0);
+    } finally { release(); }
+  });
+
   it('allocates mobile retry targets locally, restores desktop sizing and preserves keyboard recovery and evidence', async () => {
     const user = userEvent.setup();
     const retry = vi.fn();

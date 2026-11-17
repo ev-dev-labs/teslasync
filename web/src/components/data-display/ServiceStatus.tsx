@@ -30,6 +30,8 @@ export function ServiceStatusBanner() {
           className="overflow-hidden"
         >
           <div
+            data-app-part="feedback"
+            data-app-tone="neutral"
             role="status"
             aria-live="polite"
             className={cn(
@@ -90,6 +92,7 @@ export function SystemHealthDot() {
 
   return (
     <span
+      data-app-part="status"
       role="img"
       aria-label={label}
       title={label}

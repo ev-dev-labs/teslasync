@@ -46,18 +46,23 @@ export function ScoreDistributionTipsSection({
             220,
             t('driveScore.noTips', 'Tips appear once drives are scored'),
             <Icons.lightbulb className="h-8 w-8" aria-hidden="true" />,
-          ) ?? (hasCategoryReadings ? (
-            <ul className="space-y-3">
+          ) ?? (hasCategoryReadings && relevantTips.length > 0 ? (
+            <ul data-app-part="list" className="space-y-3">
               {relevantTips.map((tip, idx) => (
                 <li
+                  data-app-part="feedback"
+                  data-app-feedback-kind="notice"
                   key={idx}
                   className="flex items-start gap-3 rounded-lg bg-[var(--surface-2)] p-3"
                 >
                   <Icons.lightbulb
+                    data-app-part="feedback-icon"
                     className="mt-0.5 h-5 w-5 shrink-0 text-amber-300"
                     aria-hidden="true"
                   />
-                  <Text variant="body">{tip.key}</Text>
+                  <div data-app-part="feedback-content">
+                    <Text data-app-part="feedback-message" variant="body">{tip.key}</Text>
+                  </div>
                 </li>
               ))}
             </ul>

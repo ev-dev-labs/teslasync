@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test'
-import { installApiMocks, seedBrowserState, waitForHarnessReady, assertMockApiComplete } from './mockApi'
+import { expect } from '@playwright/test'
+import { test } from './app-design-test'
+import { assertMockApiAfterNavigation, installApiMocks, prepareMockApiNavigation, seedBrowserState, waitForHarnessReady, assertMockApiComplete } from './mockApi'
 
 for (const theme of ['dark', 'light'] as const) {
   test(`rail fade boundaries ${theme}`, async ({ page }) => {
@@ -82,7 +83,10 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(pins.getByRole('option')).toHaveText(/MQTT inspector.*\/mqtt-inspector/)
     await page.keyboard.press('Escape')
     await expect(panel.getByRole('link', { name: 'Quick access: MQTT inspector', exact: true })).toBeVisible()
+    const origin = new URL(page.url()).origin
+    await prepareMockApiNavigation(page)
     await page.reload()
+    await assertMockApiAfterNavigation(page, origin)
     await waitForHarnessReady(page, api)
     await expect(rail.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'true')
     await rail.getByRole('button', { name: 'Diagnostics', exact: true }).click()

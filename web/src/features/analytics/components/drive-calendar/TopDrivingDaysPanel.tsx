@@ -61,34 +61,37 @@ export function TopDrivingDaysPanel({
         />
         )}
       >
-        <ol className="space-y-2">
+        <ol data-app-part="list" data-app-list="ranked" className="space-y-2">
           {days.map((day, index) => (
             <li
               key={day.date}
+              data-app-part="list-row"
               className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-white/[0.025] px-3 py-2.5"
               aria-label={t('driveCalendar.topDays.rank', 'Rank {{rank}}', {
                 rank: index + 1,
               })}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
-                <Text weight="semibold" color="primary" mono>
-                  {index + 1}
-                </Text>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                  <Text weight="semibold" color="primary" mono>
+                    {index + 1}
+                  </Text>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Text data-app-part="metric-label" weight="semibold" color="primary" className="block break-words">
+                    {formatDayKey(day.date, {
+                      style: 'long',
+                      locale: unitPrefs.locale,
+                    })}
+                  </Text>
+                  <Caption data-app-part="metric-context" className="block">
+                    {t('driveCalendar.topDays.dayDetails', '{{count}} drives', {
+                      count: day.drives,
+                    })}
+                  </Caption>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <Text weight="semibold" color="primary" className="block break-words">
-                  {formatDayKey(day.date, {
-                    style: 'long',
-                    locale: unitPrefs.locale,
-                  })}
-                </Text>
-                <Caption className="block">
-                  {t('driveCalendar.topDays.dayDetails', '{{count}} drives', {
-                    count: day.drives,
-                  })}
-                </Caption>
-              </div>
-              <MetricValue className="shrink-0 text-lg">
+              <MetricValue data-app-part="metric-reading metric-value" className="shrink-0 text-lg">
                 {formatDistance(day.distanceM)}
               </MetricValue>
             </li>

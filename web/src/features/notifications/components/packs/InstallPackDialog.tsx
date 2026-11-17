@@ -125,10 +125,10 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       value={master.channel_ids} channels={channels.data ?? []} disabled={install.isPending || !channelState.hasData}
       onChange={channel_ids => setMaster(previous => ({ ...previous, channel_ids }))} />
     <div className="space-y-1">
-      <label htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
+      <label data-app-part="field-label" htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
       <StaleRefreshWarning state={state} label={t('alertPacks.vehicles', 'Vehicles')} />
       {state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} /> : !state.hasData ? (
-        <div role="status" aria-label={t('alertPacks.vehicles', 'Vehicles')} className="space-y-2">
+        <div data-app-part="status" role="status" aria-label={t('alertPacks.vehicles', 'Vehicles')} className="space-y-2">
           {vehicles.isFetching ? <Spinner /> : <Caption>{state.isRefreshBlocked
             ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
           {!vehicles.isFetching && <Button variant="ghost" onClick={() => void vehicles.refetch()}>{t('common.retry', 'Retry')}</Button>}
@@ -200,7 +200,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       </div> : <div className="space-y-4">
         <StaleRefreshWarning state={channelState} label={t('alertPacks.channels', 'Channels')} />
         {channelState.fatalError && <ErrorDisplay error={channelState.fatalError} onRetry={() => void channels.refetch()} />}
-        {!channelState.hasData && !channelState.fatalError && <div role="status" aria-label={t('alertPacks.channels', 'Channels')} className="space-y-2">
+        {!channelState.hasData && !channelState.fatalError && <div data-app-part="status" role="status" aria-label={t('alertPacks.channels', 'Channels')} className="space-y-2">
           {channels.isFetching ? <Spinner /> : <Caption>{channelState.isRefreshBlocked
             ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
           {!channels.isFetching && <Button variant="ghost" onClick={() => void channels.refetch()}>{t('common.retry', 'Retry')}</Button>}
@@ -208,7 +208,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
         {channelState.hasData && !channelState.fatalError && channels.data?.length === 0 && <Caption className="block">{t('alertPacks.noConfiguredChannels', 'No external channels configured.')}</Caption>}
         {pack.id === 'custom' && <Input label={t('alertPacks.packName', 'Pack name')} value={name} maxLength={100} disabled={install.isPending} onChange={e => setName(e.target.value)} />}
         <div className="min-w-0 space-y-4">
-          {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+          {desktop ? <section data-app-part="panel" data-surface-variant="standalone" aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
             <PanelTitle>{t('alertPacks.masterSettings', 'Pack defaults')}</PanelTitle>{settings}
           </section> : <Accordion title={t('alertPacks.masterSettings', 'Pack defaults')} icon={<Icons.settings className="h-4 w-4" />}
             className="border-[var(--border-default)] bg-[var(--surface-2)]"
@@ -247,9 +247,9 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
               {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
             </>
               : <div className="space-y-2">{visible.map(template => <PackRulePreview key={template.id} {...ruleProps(template)} />)}</div>}
-            {filtered.length === 0 && <div className="space-y-2 rounded-lg border border-[var(--border-default)] p-4">
-              <Caption className="block">{t('alertPacks.noMatchingRules', 'No matching rules. Clear the search to see the full pack.')}</Caption>
-              <Button variant="secondary" size="sm" onClick={() => { setSearch(''); setView('all'); setPage(0) }}>{t('alertPacks.clearFilters', 'Clear filters')}</Button>
+            {filtered.length === 0 && <div data-app-part="feedback" data-app-feedback-kind="empty" className="space-y-2 rounded-lg border border-[var(--border-default)] p-4">
+              <Caption data-app-part="feedback-message" className="block">{t('alertPacks.noMatchingRules', 'No matching rules. Clear the search to see the full pack.')}</Caption>
+              <Button data-app-part="button feedback-actions" variant="secondary" size="sm" onClick={() => { setSearch(''); setView('all'); setPage(0) }}>{t('alertPacks.clearFilters', 'Clear filters')}</Button>
             </div>}
             {filtered.length > 10 && <div className="flex flex-wrap items-center justify-between gap-2">
               <Button variant="ghost" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('alertPacks.previous', 'Previous')}</Button>

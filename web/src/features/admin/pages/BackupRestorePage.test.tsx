@@ -37,6 +37,9 @@ import { render, screen, fireEvent, waitFor, within, act } from '@testing-librar
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // Mock only the network seam. Keep `apiUrl` / `ApiError` real so the download
 // test asserts the genuine /api/v1 URL builder and error tests use real errors.
@@ -391,6 +394,35 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByText('2.00 MB · 2')).toBeInTheDocument();
     // The single failed run surfaces in Recent Errors.
     expect(screen.getByText(/disk full/)).toBeInTheDocument();
+  });
+
+  it('owns the success-rate headline separately from the returned-run completed/total bar in every design', async () => {
+    const { container } = renderPage();
+    await waitForLoaded();
+    const headline = screen.getAllByText('Success rate')
+      .map(node => node.closest('[data-app-metric="headline"]')).find(Boolean)!;
+    expect(headline.querySelector(':scope > [data-app-part~="metric-reading"]')).toHaveTextContent('75.00%');
+    const reliability = screen.getByText('Completed vs total').closest('[data-app-metric="bar"]')!;
+    const bar = screen.getByRole('progressbar', { name: 'Completed vs total' });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expectAppDesignDataMode(headline, container.getAttribute('data-app-data')!, '[data-app-metric="headline"]');
+        expect(headline.querySelector(':scope > [data-app-part~="metric-label"]')).toHaveTextContent('Success rate');
+        expect(headline.querySelector('[role="progressbar"], [data-metric-track]')).toBeNull();
+        expect(bar).toHaveAttribute('aria-valuenow', '3');
+        expect(bar).toHaveAttribute('aria-valuemax', '4');
+        expect(reliability).toHaveTextContent('3 / 4');
+        expect(screen.getByText('Backup configurations')).toBeInTheDocument();
+        expect(screen.getByText('Backup history')).toBeInTheDocument();
+        expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+      } finally {
+        release();
+      }
+    }
+    expect(mockedRequest.mock.calls.filter(([, options]) => options?.method && options.method !== 'GET')).toHaveLength(0);
   });
 
   it('renders the history table and only exposes actions on completed runs', async () => {

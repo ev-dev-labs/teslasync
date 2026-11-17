@@ -29,6 +29,9 @@ import type { ComponentProps } from 'react';
 
 import { DeliveryOutlookPanel } from './DeliveryOutlookPanel';
 import type { OrderStats } from './teslaOrderStats';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('@/hooks/useDateFormat', () => {
   const tag = (label: string) => (v: unknown) => (v == null ? '' : `${label}:${String(v)}`);
@@ -178,6 +181,30 @@ describe('DeliveryOutlookPanel — empty', () => {
 });
 
 describe('DeliveryOutlookPanel — ready (populated)', () => {
+  it.each([
+    ['2026-01-15T00:00:00Z', false, 'day:2026-01-15T00:00:00Z'],
+    [null, true, 'Delivery date unknown'],
+    [null, false, 'None scheduled'],
+  ] as const)('owns the actual date/status readout without numeric coercion: %s / %s', (nextDelivery, hasUnknownDelivery, reading) => {
+    const { container } = renderPanel({ stats: makeStats({ nextDelivery, hasUnknownDelivery }) });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        const tile = screen.getByText(reading).closest('[data-app-metric="tile"]')!;
+        expectAppDesignDataMode(tile, container.getAttribute('data-app-data')!, '[data-app-metric="tile"]');
+        expect(tile.querySelector(':scope > [data-app-part~="metric-label"]')).toHaveTextContent('Next delivery');
+        expect(tile.querySelector(':scope > [data-app-part~="metric-reading"]')?.textContent).toBe(reading);
+        expect(tile.querySelector('[data-metric-track], [role="progressbar"]')).toBeNull();
+        expect(screen.getByText('4 / 5')).toBeInTheDocument();
+        expect(screen.getByText('synced-relative')).toBeInTheDocument();
+      } finally {
+        release();
+      }
+    }
+  });
+
   it('formats the next delivery date and lists every derived metric', () => {
     renderPanel({
       stats: makeStats({

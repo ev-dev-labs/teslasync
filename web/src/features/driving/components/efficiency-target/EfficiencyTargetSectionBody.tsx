@@ -30,7 +30,7 @@ export function EfficiencyTargetSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t(
           'effTarget.loading',

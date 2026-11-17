@@ -154,10 +154,10 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry, perio
         skeletonHeight={180}>
         <div className="space-y-3">
           {insights.map((insight, i) => (
-            <div key={i}
+            <div data-app-part="feedback" data-app-feedback-kind="insight" key={i}
               className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-              <Text variant="bodySm">{insight}</Text>
+              <Zap data-app-part="feedback-icon" className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+              <Text data-app-part="feedback-message" variant="bodySm">{insight}</Text>
             </div>
           ))}
         </div>

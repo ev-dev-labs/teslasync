@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 func TestNewClientSetsFields(t *testing.T) {
@@ -200,14 +201,19 @@ func TestDoRequest401(t *testing.T) {
 
 func TestDoRequest429(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "90")
 		w.WriteHeader(http.StatusTooManyRequests)
 	}))
 	defer server.Close()
 
 	c := newTestClient(server)
-	_, err := c.ListVehicles(context.Background())
+	ctx, capture := httputil.CaptureUpstreamRateLimit(context.Background())
+	_, err := c.ListVehicles(ctx)
 	if err == nil {
 		t.Fatal("expected rate limit error")
+	}
+	if source, retry := capture.Snapshot(); source != "tesla" || retry < 89 || retry > 90 {
+		t.Fatalf("upstream rate limit = (%q, %d), want tesla and 90 seconds", source, retry)
 	}
 }
 

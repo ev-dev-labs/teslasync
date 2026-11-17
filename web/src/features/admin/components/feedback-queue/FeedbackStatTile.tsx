@@ -33,7 +33,7 @@ export function FeedbackStatTile({ label, icon, color, value, loading, unknown =
   const { t } = useTranslation()
   if (loading || (!unknown && !isFiniteNumber(value))) {
     return (
-      <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading…')}>
+      <div data-app-part="status" role="status" aria-busy="true" aria-label={t('common.loading', 'Loading…')}>
         <Skeleton height={74} className="rounded-xl" />
       </div>
     )

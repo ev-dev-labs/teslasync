@@ -31,7 +31,7 @@
  *      state instead of throwing on `.length`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, within, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import type { Column } from '@/components/ui'
 
@@ -52,6 +52,8 @@ vi.mock('react-i18next', async () => {
 
 import { TelemetryErrorsPanel } from './TelemetryErrorsPanel'
 import type { TelemetryError } from './types'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 
 type PanelProps = ComponentProps<typeof TelemetryErrorsPanel>
 
@@ -133,6 +135,43 @@ afterEach(() => {
 })
 
 describe('TelemetryErrorsPanel', () => {
+  it.each(['classic', 'v2', 'v1'] as const)('%s composes each real non-table state without turning unknown into zero', async pack => {
+    const raw = { z: ['first', 'second'], a: 0 }
+    const tree = (overrides: Partial<PanelProps>) => <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <TelemetryErrorsPanel {...baseProps(overrides)} />
+    </div>
+    const view = render(tree({ requested: false }))
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      for (const [overrides, state, kind] of [
+        [{ requested: false }, 'idle', 'notice'],
+        [{ loading: true }, 'loading', 'notice'],
+        [{ error: 'first failure\nsecond failure' }, 'error', 'error'],
+        [{ ok: true }, 'empty', 'notice'],
+        [{ ok: false, rawData: raw }, 'unknown', 'notice'],
+      ] as const) {
+        view.rerender(tree(overrides))
+        const panel = view.container.querySelector(`[data-app-state="${state}"]`)!
+        await waitFor(() => expect(matchesAppDesignCss(panel, `[data-app-feedback-kind="${kind}"]`).length).toBeGreaterThan(0))
+        expect(panel).toHaveTextContent('Telemetry Errors')
+        expect(screen.queryByRole('table')).toBeNull()
+        if (state === 'loading') {
+          expect(panel).toHaveAttribute('aria-busy', 'true')
+          expect(panel.querySelectorAll('[data-app-skeleton="lines"] > [data-app-part~="skeleton"]')).toHaveLength(3)
+        }
+        if (state === 'error') expect(screen.getByRole('alert').textContent).toBe('first failure\nsecond failure')
+      }
+      expect(screen.getByText('?')).toBeInTheDocument()
+      expect(screen.queryByText('0')).toBeNull()
+      const disclosure = screen.getByText(RAW_LABEL).closest('details')!
+      fireEvent.click(disclosure.querySelector('summary')!)
+      const body = disclosure.querySelector('pre')!
+      expect(body.textContent).toBe(JSON.stringify(raw, null, 2))
+      expect(matchesAppDesignCss(body, '[data-app-panel-kind="code"]').length).toBeGreaterThan(0)
+      expect(body).toHaveClass('max-h-64', 'overflow-auto')
+    } finally { release() }
+  })
+
   it('renders the idle state with the title and idle copy before a request', () => {
     renderPanel({ requested: false, idleMessage: IDLE })
 
@@ -142,10 +181,13 @@ describe('TelemetryErrorsPanel', () => {
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByText(EMPTY)).toBeNull()
     expect(screen.queryByRole('button', { name: DOWNLOAD })).toBeNull()
+    expect(screen.getByText(IDLE).closest('[data-app-feedback-kind="notice"]')).toHaveAttribute('data-app-state', 'idle')
   })
 
   it('renders a loading skeleton (and nothing settled) while the request is pending', () => {
     const { container } = renderPanel({ requested: true, loading: true })
+    expect(container.firstChild).toHaveAttribute('aria-busy', 'true')
+    expect(container.firstChild).toHaveAttribute('data-app-state', 'loading')
 
     expect(screen.getByText('Telemetry Errors')).toBeInTheDocument()
     // The source's three-line decorative placeholder reserves pending geometry.
@@ -173,6 +215,7 @@ describe('TelemetryErrorsPanel', () => {
     renderPanel({ error: 'Tesla returned 502', ok: false, rawData: { foo: 1 } })
 
     expect(screen.getByText('Tesla returned 502')).toBeInTheDocument()
+    expect(screen.getByText('Tesla returned 502').closest('[data-app-feedback-kind="error"]')).toHaveAttribute('data-app-tone', 'danger')
     // The error state must NOT show the "no errors" empty copy or the raw
     // disclosure, even though ok=false + rawData are set.
     expect(screen.queryByText(EMPTY)).toBeNull()
@@ -239,6 +282,7 @@ describe('TelemetryErrorsPanel', () => {
     expect(screen.getByText(EMPTY)).toBeInTheDocument()
     const badge = screen.getByText('0')
     expect(badge).toBeInTheDocument()
+    expect(badge.closest('[data-app-feedback-kind="notice"]')).toHaveAttribute('data-app-state', 'empty')
     expect(badge).toHaveClass(
       'bg-[var(--semantic-success-bg)]',
       'border-[var(--semantic-success-border)]',
@@ -265,6 +309,13 @@ describe('TelemetryErrorsPanel', () => {
     expect(summary).toBeInTheDocument()
     expect(summary.closest('details')).not.toBeNull()
     expect(screen.getByText(/"unexpected": "wire-shape"/)).toBeInTheDocument()
+    fireEvent.click(summary.closest('summary')!)
+    const pre = summary.closest('details')?.querySelector('pre')
+    expect(pre).toHaveAttribute('data-app-panel-kind', 'code')
+    expect(pre).toHaveAttribute('data-app-code-slot', 'body')
+    expect(pre?.textContent).toBe(JSON.stringify(rawData, null, 2))
+    expect(pre).toHaveClass('max-h-64', 'overflow-auto')
+    expect(badge.closest('[data-app-feedback-kind="notice"]')).toHaveAttribute('data-app-state', 'unknown')
   })
 
   it('omits the raw disclosure when the shape is unknown but there is no raw payload', () => {

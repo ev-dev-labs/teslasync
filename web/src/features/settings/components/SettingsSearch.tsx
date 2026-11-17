@@ -143,7 +143,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
       />
 
       {showDropdown && (
-        <ul
+        <ul data-app-part="list popover"
           id={listboxId}
           role="listbox"
           aria-label={ariaLabel}

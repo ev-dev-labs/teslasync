@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, AREA_DEFAULTS, areaGradient } from '@/components/charts';
+import { ChartLegend, AreaChart, Area, XAxis, YAxis, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, AREA_DEFAULTS, areaGradient } from '@/components/charts';
 import { ChartCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -162,7 +162,7 @@ function TimelineChart({
           >
             {areaGradient('speedGrad', palette[0], 0.08)}
             {areaGradient('powerGrad', palette[1], 0.08)}
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis
               dataKey="time"
               type="number"

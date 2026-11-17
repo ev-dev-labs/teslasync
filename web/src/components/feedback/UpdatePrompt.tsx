@@ -64,6 +64,9 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
       className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9999] mx-auto max-w-md xl:inset-x-auto xl:right-4 xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] xl:w-[28rem]"
     >
       <GlassPanel
+        data-app-part="feedback"
+        data-app-feedback-kind="notice"
+        data-app-tone={required ? 'warning' : 'info'}
         className={`!p-4 flex items-start gap-3 shadow-lg max-w-full ${
           required
             ? 'border border-amber-400/40 shadow-amber-400/10'
@@ -71,6 +74,7 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
         }`}
       >
         <div
+          data-app-part="feedback-icon"
           className={`rounded-lg p-2 shrink-0 ${
             required ? 'bg-amber-400/10' : 'bg-theme-accent/10'
           }`}
@@ -82,13 +86,13 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
+        <div data-app-part="feedback-content" className="flex-1 min-w-0">
+          <p data-app-part="feedback-title" className="text-sm font-semibold text-[var(--text-primary)]">
             {required
               ? t('pwa.update.requiredTitle', 'Update required')
               : t('pwa.update.availableTitle', 'New version available')}
           </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+          <p data-app-part="feedback-message" className="text-xs text-[var(--text-secondary)] mt-0.5">
             {required
               ? t(
                   'pwa.update.requiredBody',
@@ -135,7 +139,7 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <div data-app-part="feedback-actions" className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
           {!required && (
             <Button
               variant="ghost"

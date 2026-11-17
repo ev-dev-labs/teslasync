@@ -124,7 +124,7 @@ export function KioskSettingsModal({
 
             {cfg.rotateInterval > 0 && safeDashboards.length > 1 && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--text-secondary)]">
+                <label data-app-part="field-label" className="text-sm font-medium text-[var(--text-secondary)]">
                   {t('kiosk.dashboardsToRotate', 'Dashboards to rotate')}
                 </label>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">

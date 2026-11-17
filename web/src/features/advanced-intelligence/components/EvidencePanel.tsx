@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent, type SourceState } from '@/components/layout';
-import { Badge, CardContent, Icon, Text, type BadgeProps } from '@/components/ui';
+import { Badge, Card, CardContent, Icon, Text, type BadgeProps } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import type { DataStateSource } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -115,11 +115,13 @@ export function EvidencePanel({
             </Text>
           </div>
           <SourceContent {...sourceContentProps} label={t('advancedIntelligence.evidence.sources', 'Evidence sources')}>
-          {evidenceItems.length > 0 ? evidenceItems.map((item, index) => (
-            <div key={`${item.source}-${index}`} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-              <Text as="p" variant="label">{item.source}</Text>
-              <Text as="p" variant="caption">{item.summary}</Text>
-              <Text as="p" variant="caption" className="mt-1">
+          {evidenceItems.length > 0 ? <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
+            {evidenceItems.map((item, index) => (
+            <Card key={`${item.source}-${index}`} padding="sm" data-app-part="card list-row"
+              className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] shadow-none">
+              <Text as="dt" data-app-part="metric-label" variant="label">{item.source}</Text>
+              <Text as="dd" data-app-part="metric-reading" variant="caption">{item.summary}</Text>
+              <Text as="dd" data-app-part="metric-context" variant="caption" className="mt-1">
                 {item.sample_count != null && Number.isFinite(item.sample_count)
                   ? t('advancedIntelligence.evidence.sampleLine', '{{formattedCount}} samples · {{date}}', {
                     count: item.sample_count,
@@ -128,8 +130,8 @@ export function EvidencePanel({
                   })
                   : formatDateTime(item.observed_at)}
               </Text>
-            </div>
-          )) : (
+            </Card>
+          ))}</dl> : (
             // no-action: which evidence sources a calc run returns is determined server-side by that specific run; there is no client action that adds evidence after the fact.
             <EmptyState
               className="py-8"
@@ -156,13 +158,16 @@ export function EvidencePanel({
           )}
           </SourceContent>
           {unsupportedItems.length > 0 ? (
-            <div className={cn('min-w-0 rounded-lg border p-3', neonColorMap.amber.border, neonColorMap.amber.bg)}>
-              <Text as="p" variant="label">
+            <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="warning"
+              className={cn('min-w-0 rounded-lg border p-3', neonColorMap.amber.border, neonColorMap.amber.bg)}>
+              <div data-app-part="feedback-content">
+              <Text as="p" data-app-part="feedback-title" variant="label">
                 {t('advancedIntelligence.unsupported.title', 'Explicitly unsupported')}
               </Text>
               {unsupportedItems.map((item, index) => (
-                <Text as="p" variant="caption" key={`${item}-${index}`}>• {item}</Text>
+                <Text as="p" data-app-part="feedback-message" variant="caption" key={`${item}-${index}`}>• {item}</Text>
               ))}
+              </div>
             </div>
           ) : null}
         </CardContent>

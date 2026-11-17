@@ -131,7 +131,7 @@ export function ExplorerMethodology({
 
         <ExplorerSectionBody state={state} className="mt-4 min-h-72">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-            <ul className="space-y-3">
+            <ul data-app-part="list" className="space-y-3">
               {methods.map((method) => (
                 <li key={method.id} className="flex items-start gap-2">
                   <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">
@@ -146,36 +146,36 @@ export function ExplorerMethodology({
               <Text as="p" variant="label" className="mb-3">
                 {t('explorer.method.minimums', 'Minimum evidence')}
               </Text>
-              <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>
+              <div data-app-part="metric-grid" className="grid grid-cols-3 gap-2 lg:grid-cols-1">
+                <div data-app-part="metric" data-app-metric="tile" className="rounded-xl bg-[var(--surface-2)] p-3">
+                  <MetricValue data-app-part="metric-reading metric-value">
                     {fmtInt(summary.eligibility.eligible)}/{MIN_BASE_ARRIVALS}
                   </MetricValue>
-                  <MetricLabel>
+                  <MetricLabel data-app-part="metric-label">
                     {t(
                       'explorer.method.locatedMinimum',
                       'Located arrivals for base distance',
                     )}
                   </MetricLabel>
                 </div>
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>
+                <div data-app-part="metric" data-app-metric="tile" className="rounded-xl bg-[var(--surface-2)] p-3">
+                  <MetricValue data-app-part="metric-reading metric-value">
                     {fmtInt(summary.inferredBase?.visits ?? 0)}/
                     {MIN_BASE_CLUSTER_VISITS}
                   </MetricValue>
-                  <MetricLabel>
+                  <MetricLabel data-app-part="metric-label">
                     {t(
                       'explorer.method.baseMinimum',
                       'Arrivals in inferred-base cluster',
                     )}
                   </MetricLabel>
                 </div>
-                <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                  <MetricValue>
+                <div data-app-part="metric" data-app-metric="tile" className="rounded-xl bg-[var(--surface-2)] p-3">
+                  <MetricValue data-app-part="metric-reading metric-value">
                     {fmtInt(summary.cadence.discoveries)}/
                     {MIN_DISCOVERIES_FOR_CADENCE}
                   </MetricValue>
-                  <MetricLabel>
+                  <MetricLabel data-app-part="metric-label">
                     {t(
                       'explorer.method.cadenceMinimum',
                       'Discoveries for cadence',

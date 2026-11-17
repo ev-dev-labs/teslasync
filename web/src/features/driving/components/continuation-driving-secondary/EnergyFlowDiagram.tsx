@@ -16,8 +16,9 @@ export function EnergyFlowDiagram({
 }: EnergyFlowDiagramProps) {
   const { t } = useTranslation();
   return (
-    <div className="min-w-0 overflow-x-auto">
+    <div data-app-part="chart" className="min-w-0 overflow-x-auto">
       <svg
+        data-app-part="chart-plot"
         viewBox={`0 0 ${sankey.width + 200} ${sankey.height + 20}`}
         className="min-w-[560px]"
         role="img"
@@ -74,7 +75,7 @@ export function EnergyFlowDiagram({
           })}
         </g>
       </svg>
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--border-subtle)] pt-3">
+      <ul data-app-part="chart-legend list" className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--border-subtle)] pt-3">
         {flows.map((flow) => (
           <li key={flow.key} className="flex items-center gap-1.5">
             <span

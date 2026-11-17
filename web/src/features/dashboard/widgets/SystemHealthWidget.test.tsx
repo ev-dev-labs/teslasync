@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { DataStateSource } from '@/api/dataState';
 import { PackBoundary } from './designPacks/PackBoundary';
@@ -241,7 +241,7 @@ describe.each(PACK_IDS)('SystemHealthWidget %s', (packId) => {
     mockVersion.mockReturnValue(query({ uptime_seconds: 1_036_800 }, { refetch: refetches[3] }));
     const view = await renderWidget(2, 'classic');
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    refresh.focus();
+    act(() => { refresh.focus(); });
 
     view.rerender(widgetTree(2, packId));
     if (packId !== 'classic') {

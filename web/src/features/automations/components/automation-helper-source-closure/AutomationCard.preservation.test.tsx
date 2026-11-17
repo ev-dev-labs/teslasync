@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { AutomationCard } from '../../pages/AutomationCard';
 import type { Automation } from '@/api/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { AutomationCardNotices } from './AutomationCardNotices';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -74,6 +78,59 @@ const menuName = 'Actions for Long automation name with every word retained';
 beforeEach(() => vi.clearAllMocks());
 
 describe('AutomationCard extraction preservation (mock callbacks only)', () => {
+  it.each(PACK_IDS)('%s paints source-derived notices with full ordered reasons and no new actions', pack => {
+    const a = automation({ enabled: false, auto_disabled: true, auto_disabled_reason: 'Exact auto-disabled reason' });
+    const callbacks = handlers();
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <AutomationCard automation={a} isFiring={false} {...callbacks} />
+    </div>);
+    const host = view.container.firstElementChild!;
+    const release = observeAppDesignScopes(host);
+    try {
+      const notices = host.querySelectorAll('[data-app-feedback-kind="notice"]');
+      expect(notices).toHaveLength(3);
+      expect([...notices].map(notice => notice.getAttribute('data-app-tone'))).toEqual(['danger', 'warning', 'info']);
+      expect([...notices].map(notice => notice.textContent)).toEqual([
+        'Exact auto-disabled reason',
+        'Conflict with "Warning peer" — Full warning reason',
+        'Conflict with "Information peer" — Full information reason',
+      ]);
+      for (const notice of notices) {
+        const matches = matchesAppDesignCss(notice, '[data-app-feedback-kind="notice"]')
+          .filter(match => match.selector.includes('[data-app-feedback='));
+        expect(matches.length).toBeGreaterThan(0);
+        expect(matches.every(match => match.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`))).toBe(true);
+        expect(matches.some(match => match.declarations.display === 'grid')).toBe(true);
+        const content = notice.querySelector('[data-app-part~="feedback-content"]')!;
+        expect(matchesAppDesignCss(content, '[data-app-part~="feedback-content"]').some(match => match.declarations['grid-column'] === '2')).toBe(true);
+        expect(matchesAppDesignCss(content, '[data-app-part~="feedback-message"]').length).toBeGreaterThan(0);
+        const icon = notice.querySelector('[data-app-part="feedback-icon"]')!;
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(matchesAppDesignCss(icon, '[data-app-part~="feedback-icon"]').length).toBeGreaterThan(0);
+        expect(notice.querySelector('button, a')).toBeNull();
+      }
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+      Object.values(callbacks).forEach(callback => expect(callback).not.toHaveBeenCalled());
+    } finally { release(); }
+  });
+
+  it('keeps the original visibility conditions and default neutrality', () => {
+    const a = automation({ auto_disabled: false, auto_disabled_reason: 'Do not show an inactive reason', conflicts: [] });
+    const view = render(<AutomationCardNotices automation={a} />);
+    expect(view.container).toBeEmptyDOMElement();
+    view.rerender(<AutomationCardNotices automation={{ ...a, auto_disabled: true }} />);
+    const notice = view.container.querySelector('[data-app-feedback-kind="notice"]')!;
+    expect(notice).toHaveTextContent('Do not show an inactive reason');
+    expect(notice).not.toHaveAttribute('data-app-design-owner');
+    view.rerender(<AutomationCardNotices automation={{ ...a, auto_disabled: true, auto_disabled_reason: null }} />);
+    expect(view.container).toBeEmptyDOMElement();
+    view.rerender(<AutomationCardNotices automation={{ ...a, conflicts: [
+      { automation_id: 0, automation_name: 'Unmodified peer', severity: 'info', reason: 'Unmodified information reason' },
+    ] }} />);
+    expect(view.container.querySelector('[data-app-feedback-kind="notice"]')).toHaveAttribute('data-app-tone', 'info');
+    expect(view.container.textContent).toBe('Conflict with "Unmodified peer" — Unmodified information reason');
+  });
+
   it('retains complete identity, metadata, formatter inputs and every ordered conflict', () => {
     const a = automation();
     const callbacks = handlers();

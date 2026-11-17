@@ -72,7 +72,7 @@ export default function WholeHomeEnergyPage() {
       query={queries}
     >
       {sourceStates.map(({ id, state }) => (
-        <div key={id} data-home-energy-source={id}>
+        <div key={id} data-home-energy-source={id} className="empty:hidden">
           <StaleRefreshWarning state={state} label={sourceLabels[id]}
             message={state.status === 'partial'
               ? t('homeEnergy.sources.partial', 'Some vehicle live readings are unavailable. The recommendation includes explicitly disclosed scenario assumptions.')

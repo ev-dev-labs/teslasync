@@ -2,9 +2,11 @@
  * ChargeQueuePlanner — posts per-vehicle rows; renders ordered slots.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 import type { QueueAdvice } from '@/types/charging';
 
@@ -181,9 +183,40 @@ describe('ChargeQueuePlanner', () => {
 
   it('renders the ordered queue with per-car windows', () => {
     mockAdvise.mockReturnValue({ mutate: vi.fn(), data: advice, isPending: false, isError: false, error: null });
-    render(<ChargeQueuePlanner />);
+    const { container } = render(<ChargeQueuePlanner />);
     expect(screen.getByText('All cars ready on time')).toBeTruthy();
     expect(screen.getByText('Charge in order.')).toBeTruthy();
     expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
+    const rows = container.querySelectorAll('[data-app-list="ranked"] > [data-app-part="list-row"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent('1Beta');
+    expect(rows[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('18:00–21:00 · 33.00 kWh · ready 06:00');
+    expect(within(rows[1] as HTMLElement).getByText('Alpha')).toBeInTheDocument();
+    expect(rows[1].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('21:00–00:00 · 22.50 kWh · ready 07:30');
+  });
+
+  it('activates every data composition for real feasible and infeasible ordered slots without changing the advice', () => {
+    const result = { ...advice, all_feasible: false,
+      slots: advice.slots.map((slot, index) => ({ ...slot, feasible: index === 0 })) };
+    const original = structuredClone(result);
+    mockAdvise.mockReturnValue({ mutate: vi.fn(), data: result, isPending: false, isError: false, error: null });
+    const { container } = render(<ChargeQueuePlanner />);
+    container.setAttribute('data-app-design-preview', '');
+    const rows = container.querySelectorAll('ol[data-app-list="ranked"] > [data-app-part="list-row"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelector('[data-app-part="badge"]')).toHaveAttribute('data-app-variant', 'neutral');
+    expect(rows[1].querySelector('[data-app-part="badge"]')).toHaveAttribute('data-app-variant', 'warning');
+    expect(matchingAppDesignDataRules(rows[0])).toEqual([]);
+    for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        rows.forEach(row => expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="ranked"]'));
+        expect(rows[0]).toHaveTextContent('1Beta18:00–21:00 · 33.00 kWh · ready 06:00');
+        expect(rows[1]).toHaveTextContent('2Alpha21:00–00:00 · 22.50 kWh · ready 07:30');
+        expect(screen.getByText('Queue overruns a ready-by')).toBeInTheDocument();
+      } finally { release(); }
+    }
+    expect(result).toEqual(original);
   });
 });

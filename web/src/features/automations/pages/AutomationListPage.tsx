@@ -203,7 +203,7 @@ export default function AutomationListPage() {
       {bulkFailures.length > 0 && (
         <AlertBanner variant="warning" role="status" aria-live="polite"
           title={t('common.error', 'Error')}>
-          <ul className="space-y-1">
+          <ul data-app-part="list" className="space-y-1">
             {bulkFailures.map((failure) => (
               <li key={failure.id}>
                 <Text as="span" color="secondary">#{failure.id}: {failure.reason}</Text>

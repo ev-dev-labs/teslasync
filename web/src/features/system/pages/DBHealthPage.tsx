@@ -367,68 +367,75 @@ export default function DBHealthPage() {
               <QueryError error={migrationError} onRetry={() => refetchMigration()} />
             ) : migrationData ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Caption>
-                    {t('dbHealth.currentVersion', 'Current version')}
-                  </Caption>
-                  <Text mono size="sm" weight="bold" color="primary">
-                    {String(migrationVersion)}
-                  </Text>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Caption>
-                    {t('dbHealth.status', 'Status')}
-                  </Caption>
-                  <Text
-                    size="xs"
-                    weight="medium"
-                    className={cn(
-                      'inline-flex items-center gap-1.5',
-                      migrationDirty == null ? typography.color.muted : migrationDirty ? neonColorMap.red.text : neonColorMap.green.text,
-                    )}
-                  >
-                    {migrationDirty == null ? null : migrationDirty ? (
-                      <Icon icon={XCircle} size="sm" />
-                    ) : (
-                      <Icon icon={CheckCircle2} size="sm" />
-                    )}
-                    {migrationDirty == null ? '—' : migrationDirty
-                      ? t('dbHealth.dirty', 'Dirty')
-                      : t('dbHealth.clean', 'Clean')}
-                  </Text>
-                </div>
-                {migrationPending != null && migrationPending > 0 && (
-                  <div className="flex items-center justify-between">
-                    <Caption>
-                      {t('dbHealth.pending', 'Pending')}
+                <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
+                  <div data-app-part="list-row" className="flex items-center justify-between">
+                    <Caption as="dt" data-app-part="metric-label">
+                      {t('dbHealth.currentVersion', 'Current version')}
                     </Caption>
-                    <Text size="xs" weight="medium" className={neonColorMap.amber.text}>
-                      {fmtInt(migrationPending)}
+                    <Text as="dd" data-app-part="metric-reading metric-value" mono size="sm" weight="bold" color="primary">
+                      {String(migrationVersion)}
                     </Text>
                   </div>
-                )}
+                  <div data-app-part="list-row" className="flex items-center justify-between">
+                    <Caption as="dt" data-app-part="metric-label">
+                      {t('dbHealth.status', 'Status')}
+                    </Caption>
+                    <Text
+                      as="dd"
+                      data-app-part="metric-reading metric-value"
+                      size="xs"
+                      weight="medium"
+                      className={cn(
+                        'inline-flex items-center gap-1.5',
+                        migrationDirty == null ? typography.color.muted : migrationDirty ? neonColorMap.red.text : neonColorMap.green.text,
+                      )}
+                    >
+                      {migrationDirty == null ? null : migrationDirty ? (
+                        <Icon icon={XCircle} size="sm" />
+                      ) : (
+                        <Icon icon={CheckCircle2} size="sm" />
+                      )}
+                      {migrationDirty == null ? '—' : migrationDirty
+                        ? t('dbHealth.dirty', 'Dirty')
+                        : t('dbHealth.clean', 'Clean')}
+                    </Text>
+                  </div>
+                  {migrationPending != null && migrationPending > 0 && (
+                    <div data-app-part="list-row" className="flex items-center justify-between">
+                      <Caption as="dt" data-app-part="metric-label">
+                        {t('dbHealth.pending', 'Pending')}
+                      </Caption>
+                      <Text as="dd" data-app-part="metric-reading metric-value" size="xs" weight="medium" className={neonColorMap.amber.text}>
+                        {fmtInt(migrationPending)}
+                      </Text>
+                    </div>
+                  )}
+                </dl>
                 <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
                   <Label className="mb-2 block">
                     {t('dbHealth.recentMigrations', 'Recent migrations')}
                   </Label>
                   {migrations.length > 0 ? (
-                    <ul className="max-h-44 space-y-1.5 overflow-auto">
+                    <ul data-app-part="list" data-app-list="ranked" className="max-h-44 space-y-1.5 overflow-auto">
                       {migrations
                         .slice(-5)
                         .reverse()
                         .map((m) => (
                           <li
                             key={m.version}
+                            data-app-part="list-row"
                             className="flex items-center justify-between"
                           >
-                            <Text mono size="xs" color="secondary" className="mr-2 truncate">
+                            <Text data-app-part="metric-label" mono size="xs" color="secondary" className="mr-2 truncate">
                               v{m.version} {m.name}
                             </Text>
                             {m.appliedAt && (
-                              <TimeStamp
-                                value={m.appliedAt}
-                                className={cn('shrink-0', typography.size['2xs'], typography.color.muted)}
-                              />
+                              <span data-app-part="metric-reading metric-value" className="shrink-0">
+                                <TimeStamp
+                                  value={m.appliedAt}
+                                  className={cn('shrink-0', typography.size['2xs'], typography.color.muted)}
+                                />
+                              </span>
                             )}
                           </li>
                         ))}
@@ -524,6 +531,7 @@ export default function DBHealthPage() {
               <QueryError error={poolError} onRetry={() => refetchPool()} />
             ) : pool?.maxOpen != null ? (
               <div className="space-y-3">
+                <dl data-app-part="list" data-app-list="definitions" className="space-y-3">
                 {[
                   { label: t('dbHealth.pool.maxOpen', 'Max open'), value: fmtInt(pool.maxOpen) },
                   { label: t('dbHealth.pool.open', 'Open'), value: pool.open != null ? fmtInt(pool.open) : '—' },
@@ -535,18 +543,19 @@ export default function DBHealthPage() {
                     value: pool.waitDurationMs != null ? `${fmtNumber(pool.waitDurationMs)}ms` : '—',
                   },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <Caption>{item.label}</Caption>
-                    <Text mono size="sm" color="primary">
+                  <div key={item.label} data-app-part="list-row" className="flex items-center justify-between">
+                    <Caption as="dt" data-app-part="metric-label">{item.label}</Caption>
+                    <Text as="dd" data-app-part="metric-reading metric-value" mono size="sm" color="primary">
                       {item.value}
                     </Text>
                   </div>
                 ))}
+                </dl>
                 {/* Usage bar */}
                 <div className="mt-2">
-                  <div className="mb-1 flex justify-between">
-                    <Text size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool usage')}</Text>
-                    <Text size="2xs" color="muted">{poolUsage != null ? `${fmtNumber(poolUsage)}%` : '—'}</Text>
+                  <div data-app-part="metric" data-app-metric="inline" className="mb-1 flex justify-between">
+                    <Text data-app-part="metric-label" size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool usage')}</Text>
+                    <Text data-app-part="metric-reading metric-value" size="2xs" color="muted">{poolUsage != null ? `${fmtNumber(poolUsage)}%` : '—'}</Text>
                   </div>
                   <MetricBar
                     value={poolUsage}

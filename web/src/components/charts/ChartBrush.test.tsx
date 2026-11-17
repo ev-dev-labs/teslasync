@@ -35,12 +35,16 @@ describe('ChartBrush', () => {
     const brush = ChartBrush({
       dataKey: 'observation_time',
       height: 40,
+      travellerWidth: 44,
+      ariaLabel: 'Health trend time range',
       startIndex: 0,
       endIndex: sampleData.length - 1,
       onChange,
     })
     expect(brush.props.dataKey).toBe('observation_time')
     expect(brush.props.height).toBe(40)
+    expect(brush.props.travellerWidth).toBe(44)
+    expect(brush.props.ariaLabel).toBe('Health trend time range')
     expect(brush.props.startIndex).toBe(0)
     expect(brush.props.endIndex).toBe(4)
     expect(brush.props.onChange).toBe(onChange)

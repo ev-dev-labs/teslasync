@@ -63,6 +63,12 @@ function clip(): ClipRecord {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (this: HTMLMediaElement) {
+    this.dispatchEvent(new Event('pause'));
+  });
+  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
+    this.dispatchEvent(new Event('emptied'));
+  });
   h.importError = null;
   h.importFiles.mockResolvedValue([]);
   vi.stubGlobal('URL', class extends URL {
@@ -152,6 +158,9 @@ describe('dashcam residual presentation preservation', () => {
     fireEvent.error(video);
     expect(screen.getByText('This browser could not decode the clip for a still export.')).toBeInTheDocument();
     expect(document.body.querySelector('video')).toBeNull();
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalledOnce();
+    expect(HTMLMediaElement.prototype.load).toHaveBeenCalledOnce();
+    expect(video).not.toHaveAttribute('src');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:still');
     expect(h.downloadBlob).not.toHaveBeenCalled();
     expect(screen.getByText(/not a redacted video file/)).toBeInTheDocument();

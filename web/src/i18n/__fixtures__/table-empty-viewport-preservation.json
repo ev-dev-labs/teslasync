@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the exact conditional inline-size container on DataTable's existing scroll wrapper and bounded logical-start native empty-cell content; recover the complete independently compiled Candidate28 predecessor before unchanged no-match API/caller and older source proofs.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v28/assets/Bb5_OaBE.js.map",
+    "mapSha256": "3c934103bb838d600de4f3c3a6114b3057e9326da2ee5eaa10c777304b0c79ee",
+    "mapSource": "D:/repos/teslasync/web/src/components/ui/DataTable.tsx",
+    "sha256": "555113bc67b988967d83f10c52a46985a74f8dea6ae5c3db465a22126c9cb87a"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "40b895c99a997822562bf9e78a9648d816a2c0085bb73c1f32ad651fa84f57af"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "fcb1c7a8a04d0f828acfea0082c2b3d139d20cc84a500ce05fc066ea024eeb8c"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "1522eb71205cfddd4ff92fe6db8287242d0e597a6ae064c4d4fe370634f8394e"
+    },
+    {
+      "file": "web/src/components/ui/tableValueFilters.ts",
+      "sha256": "86f2e409fc1d93af04b6ed6c0823481eef1943592871cb0cb096ebaa0e2d2462"
+    },
+    {
+      "file": "web/src/components/ui/DataTableValueFilter.tsx",
+      "sha256": "9dfe4c0321117b91fa9ee0fd2a8d3b14e1ecececd7dfef0ad1341349b727390c"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before": "555113bc67b988967d83f10c52a46985a74f8dea6ae5c3db465a22126c9cb87a",
+      "after": "a6013d4ff197eef2fa1dc25d8a41fa2211ef01c732187d0f7b31182b59154c2c",
+      "originalLineCount": 1923,
+      "currentLineCount": 1926,
+      "originalCallCount": 24,
+      "originalCallsSha256": "ae0bff140bbf7358c794c574e8d638534138a56b8b92928f02589d6e6ba80fad",
+      "originalProjectionSha256": "46f457aa4bbe1e68a23e68f75b1e9dd2614c0875804636a878ba6f179a919a8a",
+      "hunks": [
+        {
+          "start": 1382,
+          "old": [],
+          "new": [
+            "    filteredData.length === 0 && '[container-type:inline-size]',"
+          ]
+        },
+        {
+          "start": 1823,
+          "old": [
+            "                    {localFilterNoMatch ? (",
+            "                      <div className=\"space-y-3\">",
+            "                        <Text as=\"p\" variant=\"bodySm\" color=\"muted\" role=\"status\">{noMatchMessage}</Text>",
+            "                        <Button size=\"sm\" variant=\"secondary\" onClick={clearFilters}>{resetFiltersLabel}</Button>",
+            "                      </div>",
+            "                    ) : emptyMessage}"
+          ],
+          "new": [
+            "                    <div className=\"sticky start-0 w-full max-w-[calc(100cqw-2rem)] space-y-3 whitespace-normal break-words\">",
+            "                      {localFilterNoMatch ? (",
+            "                        <>",
+            "                        <Text as=\"p\" variant=\"bodySm\" color=\"muted\" role=\"status\">{noMatchMessage}</Text>",
+            "                        <Button size=\"sm\" variant=\"secondary\" onClick={clearFilters}>{resetFiltersLabel}</Button>",
+            "                        </>",
+            "                      ) : emptyMessage}",
+            "                    </div>"
+          ]
+        }
+      ]
+    }
+  ]
+}

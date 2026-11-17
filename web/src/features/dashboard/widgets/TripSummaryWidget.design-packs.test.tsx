@@ -262,7 +262,7 @@ it.each(packPresentations)('%s keeps the loading/fatal-error shell honest and pr
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
   expect(screen.queryByText('Distance')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^Refresh/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /^Refresh/i })).toHaveAttribute('aria-disabled', 'true');
 
   mocks.trips.mockReturnValue(query({
     data: undefined, dataUpdatedAt: 0, error: new Error('synthetic outage'), isError: true,

@@ -3,6 +3,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 
 import { BackgroundWorkersCard } from '../BackgroundWorkersCard'
+import { getAppDesignAttributes, observeAppDesignScopes, APPLICATION_DESIGNS } from '@/components/ui/app-designs/designs'
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 /** Open the brief's Review-details drawer and return the dialog for group assertions. */
 function openDrawer(container: HTMLElement) {
@@ -45,14 +48,51 @@ function makeHealth(workers: WorkerStatus[]): WorkersHealth {
 }
 
 describe('BackgroundWorkersCard', () => {
+  it.each(PACK_IDS)('%s qualifies real nested chips and raw diagnostic/guidance notices without losing replica distinctions', pack => {
+    const error = 'First diagnostic line\nSecond diagnostic line: original error preserved'
+    const health = makeHealth([
+      makeInstance({ name: 'export-worker', host: 'http://export-1:8082/healthz', status: 'down', error }),
+    ])
+    const view = harness(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <BackgroundWorkersCard health={health} retained />
+    </div>)
+    const release = observeAppDesignScopes(view.container)
+    try {
+      for (const chip of [screen.getByText('0 / 1 healthy'), screen.getByText('down')]) {
+        expect(chip).toHaveAttribute('data-app-part', 'badge')
+        expect(chip.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`)
+        expect(matchesAppDesignCss(chip, '[data-app-part~="badge"]').length).toBeGreaterThan(0)
+      }
+      const diagnostic = screen.getByText(error.replaceAll('\n', ' '))
+      expect(diagnostic.textContent).toBe(error)
+      const notice = diagnostic.closest('[data-app-feedback-kind="insight"]')!
+      expect(notice).toHaveAttribute('data-app-tone', 'danger')
+      expect(matchesAppDesignCss(notice, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`).length).toBeGreaterThan(0)
+      const guidance = screen.getByText(/Running multiple instances of a worker/).closest('[data-app-feedback-kind="insight"]')!
+      expect(matchesAppDesignCss(guidance, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`).length).toBeGreaterThan(0)
+      for (const name of ['NOTIFICATION_WORKER_HOSTS', 'EXPORT_WORKER_HOSTS', 'AUTOMATION_WORKER_HOSTS']) {
+        expect(screen.getByText(name).tagName).toBe('CODE')
+      }
+      const link = screen.getByRole('link', { name: 'API logs' })
+      expect(link).toHaveAttribute('href', '/api-logs')
+      expect(link).toHaveAttribute('data-app-part', 'button')
+      expect(link).toHaveAttribute('data-app-variant', 'ghost')
+    } finally {
+      release()
+      view.unmount()
+    }
+  })
+
   it('renders an empty state when no workers are reporting', () => {
     harness(<BackgroundWorkersCard health={makeHealth([])} />)
     expect(screen.getByText(/No Background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Background workers reporting/i).closest('[data-app-feedback-kind="insight"]')).not.toBeNull()
   })
 
   it('distinguishes an unavailable worker source from a confirmed empty set', () => {
     harness(<BackgroundWorkersCard health={undefined} />)
     expect(screen.getByText('Background worker health is unavailable.')).toBeInTheDocument()
+    expect(screen.getByText('Background worker health is unavailable.')).toHaveAttribute('data-app-part', 'feedback-message')
     expect(screen.queryByText(/No Background workers reporting/i)).not.toBeInTheDocument()
   })
 

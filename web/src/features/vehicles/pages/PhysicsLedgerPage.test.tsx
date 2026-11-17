@@ -9,6 +9,7 @@
  * the imperial block).
  */
 
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -289,6 +290,8 @@ afterEach(() => {
   resetColumnLayout('physics-ledger:epochs');
   vi.restoreAllMocks();
 });
+
+setupCanvasTextMeasurement();
 
 describe('PhysicsLedgerPage', () => {
   it('uses ordered chart presentation roles without changing source identity or saved IDs', () => {

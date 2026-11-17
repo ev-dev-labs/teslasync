@@ -87,6 +87,9 @@ export function HelpIcon({
     <Tooltip content={text} side={side} multiline>
       <button
         type="button"
+        data-app-part="button"
+        data-app-variant="ghost"
+        data-app-icon-only="true"
         aria-label={label}
         data-help-for={forId}
         onKeyDown={handleKeyDown}

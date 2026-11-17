@@ -96,7 +96,7 @@ export function FsdMethodologyNotes({ quality }: FsdMethodologyNotesProps) {
   ];
 
   return (
-    <ul className="space-y-3" data-testid="fsd-methodology-notes">
+    <ul data-app-part="list" className="space-y-3" data-testid="fsd-methodology-notes">
       {notes.map((note) => (
         <li key={note.text} className="flex items-start gap-2">
           <span className={`mt-0.5 shrink-0 ${typography.color.muted}`}>{note.icon}</span>

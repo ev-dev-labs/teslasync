@@ -11,6 +11,7 @@ import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import { restoreAcceptedShellSource } from './authorized-shell-preservation'
 import { assertCombinedCheckpoint, catalogBeforeDashboardPolish, currentOwnerCheckpointFiles } from './verified-combined-contract'
+import { restoreAppDesignSource } from './verified-widget-implementation-contract'
 
 const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
@@ -452,7 +453,7 @@ describe('same attempt3 authorized feature-owned scalar collision recovery', () 
     expect(expectedOwnerCalls.flat()).toHaveLength(115)
     for (const [index, file] of sourcePaths.entries()) {
       if (assertCombinedCheckpoint('owner', file)) continue
-      const text = readFileSync(resolve(process.cwd(), '..', file), 'utf8')
+      const text = restoreAppDesignSource(file, readFileSync(resolve(process.cwd(), '..', file), 'utf8'))
       const restored = restoreOwnerRecoverySource(file, text)
       const { tree, calls } = acceptedCalls(file, text)
       expect(calls.map(call => (call.arguments[0] as ts.StringLiteral).text), file)

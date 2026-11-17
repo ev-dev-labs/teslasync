@@ -410,6 +410,34 @@ afterEach(() => {
 /* ── Full render ──────────────────────────────────────────────────────── */
 
 describe('MapOverviewPage — full render', () => {
+  it('adapts the eight actual location definitions without gridding the map, sources or actions', async () => {
+    renderPage()
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    await within(panel).findByText('90.00 km/h')
+    await within(panel).findAllByText('Yes')
+    expect(within(panel).getAllByRole('term').map(term => term.textContent)).toEqual([
+      'Observed speed', 'Heading', 'Last observed', 'At home', 'At work',
+      'HomeLink nearby', 'Odometer', 'Coordinates',
+    ])
+    for (const term of within(panel).getAllByRole('term')) {
+      expect(term).toHaveAttribute('data-app-part', 'metric-label')
+      expect(term.parentElement).toHaveAttribute('data-app-part', 'list-row')
+      expect(term.nextElementSibling).toHaveAttribute('data-app-part', 'metric-value')
+      expect(term.closest('dl')).toHaveAttribute('data-app-list', 'definitions')
+    }
+    const hero = screen.getByTestId('map-overview-hero')
+    expect(hero).toHaveClass('grid', 'grid-cols-1', 'lg:grid-cols-[minmax(0,13fr)_minmax(300px,7fr)]')
+    expect(hero.children[0]).toBe(screen.getByRole('region', { name: 'Recorded location map' }))
+    expect(hero.children[1]).toBe(panel)
+    expect(hero).not.toHaveAttribute('data-app-list')
+    const actions = within(panel).getByRole('button', { name: 'Details' }).closest('[data-map-control="actions"]')
+    expect(actions).toHaveAttribute('data-app-part', 'map-toolbar')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Details' }))
+    const dialog = screen.getByRole('dialog', { name: 'Sources and method' })
+    expect(within(dialog).getByText(/missing GPS is not a measured zero/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/Polling every 15 s checks for positions/)).toBeInTheDocument()
+  })
+
   it('renders every surface once the fleet + position + location load (km)', async () => {
     renderPage()
 
@@ -889,6 +917,8 @@ describe('MapOverviewPage modernization preservation', () => {
     const panel = screen.getByRole('region', { name: 'Location details' })
     expect(await screen.findByText('Recorded location map may be out of date')).toBeInTheDocument()
     expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Recorded location map' })).toHaveAttribute('data-data-state', 'stale')
+    expect(screen.getByRole('region', { name: 'Recorded location map' })).not.toHaveAttribute('data-map-state', 'error')
     expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument()
     expect(within(panel).getByText('90.00 km/h')).toBeInTheDocument()
   })

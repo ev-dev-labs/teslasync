@@ -145,14 +145,14 @@ export default function ChargingForensicsPage() {
         key: 'limitations',
         label: t('advancedIntelligence.limitations.title', 'Limitations'),
         value: (row.limitations ?? []).length > 0
-          ? <ul className="list-disc space-y-2 ps-4">{row.limitations.map((limitation, index) =>
+          ? <ul data-app-part="list" className="list-disc space-y-2 ps-4">{row.limitations.map((limitation, index) =>
             <Text as="li" variant="bodySm" key={index}>{limitation}</Text>)}</ul>
           : t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.'),
       },
   ], [formatDateTime, fmtInt, t]);
 
   const renderRecordDetails = useCallback((row: ChargingForensicsItem) => (
-    <dl className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <dl data-app-part="list" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {[...columns.map(column => ({
         key: column.key, label: column.header, value: column.render(row),
       })), ...recordDetails(row)].map(field => (

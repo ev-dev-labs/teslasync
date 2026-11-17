@@ -80,16 +80,19 @@ export function CommandDomainBrowser({
 
       <div
         id={panelId}
+        data-app-part="card"
+        data-app-record-kind="command-domain"
+        data-surface-variant="standalone"
         role="region"
         aria-labelledby={`${browserId}-domain-${activeDomain.id}`}
         className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-white/[0.02] p-3 sm:p-4"
       >
         <div className="flex flex-col gap-1 border-b border-[var(--border-subtle)] pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Heading level="panel">
+            <Heading level="panel" data-app-record-slot="label">
               {t(activeDomain.labelKey, activeDomain.labelFallback)}
             </Heading>
-            <Text as="p" size="xs" color="muted" className="mt-1">
+            <Text as="p" size="xs" color="muted" className="mt-1" data-app-record-slot="context">
               {t(activeDomain.descriptionKey, activeDomain.descriptionFallback)}
             </Text>
           </div>
@@ -100,20 +103,22 @@ export function CommandDomainBrowser({
           </Badge>
         </div>
 
-        {activeDomain.categories.map((category, index) => {
-          const commands = COMMANDS_BY_CATEGORY.get(category) ?? [];
-          return (
-            <CollapsibleCommandGroup
-              key={category}
-              category={category}
-              vehicleKey={vehicleKey}
-              count={commands.length}
-              defaultOpen={index === 0}
-            >
-              {commands.map(renderTile)}
-            </CollapsibleCommandGroup>
-          );
-        })}
+        <div data-app-record-slot="body" className="space-y-3">
+          {activeDomain.categories.map((category, index) => {
+            const commands = COMMANDS_BY_CATEGORY.get(category) ?? [];
+            return (
+              <CollapsibleCommandGroup
+                key={category}
+                category={category}
+                vehicleKey={vehicleKey}
+                count={commands.length}
+                defaultOpen={index === 0}
+              >
+                {commands.map(renderTile)}
+              </CollapsibleCommandGroup>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

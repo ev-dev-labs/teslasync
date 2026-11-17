@@ -46,11 +46,12 @@ export default function DrivingTips({ vehicleId, historyQuery, showSourceNotice 
       {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.guidance.title', 'How to read this ride')} /> : null}
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       {query.isLoading && !state.hasData ? <Skeleton className="h-20" /> : tips.length > 0 ? (
-        <ul className="grid min-w-0 grid-cols-1 gap-3 @xl:grid-cols-2 @5xl:grid-cols-3">
+        <ul data-app-part="list" className="grid min-w-0 grid-cols-1 gap-3 @xl:grid-cols-2 @5xl:grid-cols-3">
           {tips.map(tip => (
             <li key={tip.id} data-tone={tip.tone}
+              data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone={tip.tone}
               className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-              <Text as="span" size="sm" color="secondary">{tip.text}</Text>
+              <Text data-app-part="feedback-message" as="span" size="sm" color="secondary">{tip.text}</Text>
             </li>
           ))}
         </ul>

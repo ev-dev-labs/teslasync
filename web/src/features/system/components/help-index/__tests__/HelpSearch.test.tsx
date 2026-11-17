@@ -93,6 +93,13 @@ describe('HelpSearch — keyboard', () => {
     fireEvent.change(input, { target: { value: 'battery' } })
 
     const options = screen.getAllByRole('option')
+    options.forEach(option => {
+      expect(option).toHaveAttribute('data-app-record-kind', 'help-result')
+      expect(option).toHaveAttribute('data-app-choice-surface', 'help-result')
+      expect(option.querySelector('[data-app-record-slot="label"]')).toBeInTheDocument()
+      expect(option.querySelector('[data-app-record-slot="body"]')).toBeInTheDocument()
+      expect(option.querySelector('[data-app-part="badge"][data-app-variant="neutral"]')).toBeInTheDocument()
+    })
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
 
@@ -176,6 +183,10 @@ describe('HelpSearch — informational results and empty-result reset', () => {
     const option = screen.getByRole('option')
     expect(option).toHaveAttribute('data-help-entry-id', 'troubleshooting:unavailable:filter_scope')
     expect(option).toHaveAttribute('aria-disabled', 'true')
+    expect(option).toHaveAttribute('data-app-record-kind', 'help-result')
+    expect(option.querySelector('[data-app-record-slot="context"]')).toHaveTextContent(
+      'The query succeeded and returned zero rows for the selected vehicle, date range and filters.',
+    )
     expect(option).not.toHaveClass('cursor-pointer')
     expect(within(option).getByText(
       'The query succeeded and returned zero rows for the selected vehicle, date range and filters.',

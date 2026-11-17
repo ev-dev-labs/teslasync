@@ -31,7 +31,7 @@ export function DrivingRhythmSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t(
           'rhythm.loading',

@@ -58,7 +58,7 @@ export function FSMBadge({ type, className }: FSMBadgeProps) {
     : type?.trim() || t('fsm.typeLabel.unknown', EMPTY_TYPE_LABEL);
 
   return (
-    <Badge variant={variant} className={className}>
+    <Badge data-app-part="badge" variant={variant} className={className}>
       {label}
     </Badge>
   );

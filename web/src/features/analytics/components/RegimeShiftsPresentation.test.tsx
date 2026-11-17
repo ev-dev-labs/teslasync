@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -84,6 +85,8 @@ function weeklyDrives(): Drive[] {
     };
   });
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('regime source frames preserve unknown versus returned-empty evidence', () => {
   it('a fatal source failure never reports zero analyzed weeks or a measured absence of shifts', () => {

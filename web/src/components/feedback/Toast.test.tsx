@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { StrictMode, useEffect } from 'react'
-import { ToastProvider, useToast } from './Toast'
+import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider, useToast, type ToastAction } from './Toast'
 
 // Mock framer-motion to render children immediately without animations
 vi.mock('framer-motion', () => ({
@@ -35,10 +37,10 @@ function ToastTrigger({ type, title, message, duration: _duration }: {
   )
 }
 
-function ToastTriggerWithDuration({ duration }: { duration: number }) {
+function ToastTriggerWithDuration({ duration, action }: { duration: number; action?: ToastAction }) {
   const toast = useToast()
   return (
-    <button onClick={() => toast.toast({ type: 'info', title: 'timed', duration })}>
+    <button onClick={() => toast.toast({ type: 'info', title: 'timed', duration, action })}>
       fire
     </button>
   )
@@ -170,6 +172,66 @@ describe('Toast', () => {
     fireEvent.click(dismissBtn!)
     expect(screen.queryByText('Dismiss me')).not.toBeInTheDocument()
     expect(vi.getTimerCount()).toBe(initialTimers)
+  })
+
+  it('keeps callback and dismissal controls keyboard operable without default button chrome', async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    const callback = vi.fn(() => {
+      expect(screen.getByText('timed')).toBeInTheDocument()
+    })
+    renderWithProvider(
+      <ToastTriggerWithDuration duration={0} action={{ label: 'Undo save', onClick: callback }} />,
+    )
+    await user.click(screen.getByRole('button', { name: 'fire' }))
+
+    const action = screen.getByRole('button', { name: 'Undo save' })
+    const dismiss = screen.getByRole('button', { name: 'Dismiss notification' })
+    expect(action).toHaveAttribute('data-app-part', 'button feedback-actions')
+    expect(action).toHaveAttribute('type', 'button')
+    expect(action).toHaveClass('h-auto', 'p-0', 'hover:bg-transparent')
+    expect(action).not.toHaveClass('h-9', 'px-3')
+    expect(action).not.toBeDisabled()
+    expect(action).not.toHaveAttribute('aria-busy')
+    expect(dismiss).toHaveAttribute('data-app-part', 'button feedback-dismiss')
+    expect(dismiss).toHaveClass('h-auto', 'p-1.5', 'rounded-lg')
+    expect(dismiss).not.toHaveClass('h-9', 'px-3')
+    expect(dismiss).not.toHaveAttribute('type')
+
+    await user.tab()
+    expect(action).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(callback).toHaveBeenCalledOnce()
+    expect(screen.queryByText('timed')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'fire' }))
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Dismiss notification' })).toHaveFocus()
+    await user.keyboard(' ')
+    expect(callback).toHaveBeenCalledOnce()
+    expect(screen.queryByText('timed')).not.toBeInTheDocument()
+  })
+
+  it('retains navigation precedence over callback actions', () => {
+    const callback = vi.fn()
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <ToastTriggerWithDuration
+            duration={0}
+            action={{ label: 'Review saved data', to: '/saved?source=toast', onClick: callback }}
+          />
+        </ToastProvider>
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'fire' }))
+    const link = screen.getByRole('link', { name: 'Review saved data →' })
+    expect(link).toHaveAttribute('href', '/saved?source=toast')
+    expect(screen.queryByRole('button', { name: 'Review saved data' })).not.toBeInTheDocument()
+    fireEvent.click(link)
+    expect(callback).not.toHaveBeenCalled()
+    expect(screen.queryByText('timed')).not.toBeInTheDocument()
   })
 
   it('falls back to a no-op toast API outside ToastProvider in tests', () => {

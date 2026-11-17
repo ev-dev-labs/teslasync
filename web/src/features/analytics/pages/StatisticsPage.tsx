@@ -10,7 +10,7 @@ import {
   ChartTooltip, ChartLegend,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { Skeleton, EmptyState, StaleRefreshWarning, DataStateNotice, DataSourceNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -241,7 +241,7 @@ export default function StatisticsPage() {
                   <Pie data={stateData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3}>
                     {stateData.map((entry, i) => <Cell key={`${entry.state}-${i}`} fill={entry.fill} />)}
                   </Pie>
-                  <Legend />
+                  <ChartLegend />
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>

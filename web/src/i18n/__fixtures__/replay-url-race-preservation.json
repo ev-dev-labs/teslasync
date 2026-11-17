@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed parent-owned Replay deferred URL writer repair; all earlier approvals and historical fingerprints remain immutable.",
+  "baselineCommit": "737cd60375a1cee64cc4e2c12572d0efd8c193ec",
+  "independentPredecessorProof": {
+    "receipt": "full-design-final-unit-source-freeze.json",
+    "manifestSha256": "83e3173a54a23fc3d3ce9c7d5310324d31b603c6f103036a3cc0615599f4c990",
+    "entry": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+    "sha256": "00ddb78ca752dc514eb05a70121f0dbc5247db762ec85fc79ab298c184edbfde"
+  },
+  "sources": [
+    {
+      "file": "web/src/features/trips/pages/TripReplayPage.tsx",
+      "before": "00ddb78ca752dc514eb05a70121f0dbc5247db762ec85fc79ab298c184edbfde",
+      "after": "cf0aa3273b1214deeecdf0e0f4eed8e834f03a45cd66391dcbcc3dad12f8de73",
+      "hunks": [
+        {
+          "start": 279,
+          "old": [],
+          "new": [
+            "  // Router setters retain their render's query; a queued write must use the latest one.",
+            "  const replayUrlWriterRef = useRef({ id, setSearchParams });",
+            "  replayUrlWriterRef.current = { id, setSearchParams };"
+          ]
+        },
+        {
+          "start": 317,
+          "old": [
+            "      setSearchParams("
+          ],
+          "new": [
+            "      const writer = replayUrlWriterRef.current;",
+            "      if (writer.id !== id) return;",
+            "      writer.setSearchParams("
+          ]
+        },
+        {
+          "start": 337,
+          "old": [
+            "  }, [id, replay.progress, replay.isPlaying, positions.length, setSearchParams]);"
+          ],
+          "new": [
+            "  }, [id, replay.progress, replay.isPlaying, positions.length]);"
+          ]
+        }
+      ],
+      "originalCallCount": 61,
+      "originalCallsSha256": "4b6caa103d11ad1ed7c70ca53a9d9e83b6e0608d4372569bf610524b154c6895"
+    }
+  ]
+}

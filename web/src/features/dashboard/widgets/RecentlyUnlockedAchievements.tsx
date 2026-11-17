@@ -118,7 +118,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
       onRefresh={handleRefresh}
     >
       {recent.length > 0 ? (
-        <ul
+        <ul data-app-part="list"
           data-timeline-appearance={timeline?.appearance}
           className={cn(timeline ? 'flex flex-col' : 'grid grid-cols-3 gap-2', timeline?.feed)}
           data-testid="recently-unlocked-list"

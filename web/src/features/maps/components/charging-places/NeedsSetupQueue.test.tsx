@@ -14,6 +14,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -93,9 +98,51 @@ describe('NeedsSetupQueue — loading/error/empty', () => {
     // The title itself always renders; only the numeric count Badge is conditional.
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
+
+  it('does not present an unresolved source as successful completion', () => {
+    const view = renderQueue();
+    const unavailable = screen.getByText('The place review queue is unavailable.');
+    expect(unavailable.closest('[data-app-part~="feedback"]')).toHaveAttribute('data-app-tone', 'info');
+    expect(screen.queryByText('All caught up — no auto-discovered places need review.')).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-app-part="card"]')).toBeNull();
+  });
 });
 
 describe('NeedsSetupQueue — rows', () => {
+  it.each(PACK_IDS)('%s owns the actual native queue records and retains source order and review actions', (pack) => {
+    const first = makePlace({ id: 8, name: 'Full provisional charging-place address '.repeat(5) });
+    const second = makePlace({ id: 2, name: 'Second observed place' });
+    const review = vi.fn();
+    const view = render(<MemoryRouter><div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <NeedsSetupQueue places={[first, second]} isLoading={false} error={new Error('refresh')} onReview={review} />
+    </div></MemoryRouter>);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const rows = screen.getAllByRole('listitem');
+      expect(rows).toHaveLength(2);
+      const sheet = postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'));
+      for (const row of rows) {
+        expect(row).toHaveAttribute('data-app-part', 'card');
+        expect(row).toHaveAttribute('data-surface-variant', 'standalone');
+        expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        let surfaceBound = false;
+        sheet.walkRules(rule => {
+          if (rule.selector.includes('[data-app-part~="card"]') && row.matches(rule.selector)) {
+            rule.walkDecls('border-radius', () => { surfaceBound = true; });
+          }
+        });
+        expect(surfaceBound).toBe(true);
+        expect(row).toHaveClass('flex', 'flex-wrap', 'gap-3');
+        expect(row.querySelector('[data-app-part~="metric"]')).toBeNull();
+      }
+      expect(rows[0]).toHaveTextContent(first.name.trim());
+      expect(rows[1]).toHaveTextContent(second.name);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Review' })[1]);
+      expect(review).toHaveBeenCalledExactlyOnceWith(second);
+      expect(screen.queryByText('All caught up — no auto-discovered places need review.')).not.toBeInTheDocument();
+    } finally { release(); }
+  });
+
   it('keeps source ordering, full names and exact review objects during a refresh failure', () => {
     const first = makePlace({ id: 42, name: 'Long provisional name '.repeat(8) });
     const second = makePlace({ id: 3, name: 'Second place' });

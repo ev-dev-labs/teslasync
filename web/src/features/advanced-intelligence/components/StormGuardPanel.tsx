@@ -138,7 +138,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
             query: statusQuery,
           }]} />
         ) : statusQuery.isLoading || statusQuery.isFetching || statusQuery.fetchStatus === 'fetching' ? (
-          <div role="status" aria-busy="true" aria-label={t('dataSources.status.loading', 'Loading')}>
+          <div data-app-part="status" role="status" aria-busy="true" aria-label={t('dataSources.status.loading', 'Loading')}>
             <Skeleton height={180} />
           </div>
         ) : (

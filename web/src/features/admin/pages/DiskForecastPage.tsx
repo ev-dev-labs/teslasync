@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Badge, DataTable, Icon, type Column } from '@/components/ui';
+import { Badge, DataTable, Icon, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -245,6 +245,24 @@ export default function DiskForecastPage() {
     [t, severityLabel, formatBytes, fmtNumber],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<HypertableSize>>(() => ({
+    roles: {
+      hypertable: 'title', total: 'primary', severity: 'badge',
+      split: 'meta', growth: 'meta', days: 'meta',
+    },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'hypertable': return row.hypertable_name;
+        case 'total': return formatBytes(row.total_bytes ?? 0);
+        case 'severity': return severityLabel[row.severity] ?? row.severity;
+        case 'split': return `${formatBytes(row.uncompressed_bytes ?? 0)} / ${formatBytes(row.compressed_bytes ?? 0)}`;
+        case 'growth': return `${formatBytes(row.growth_bytes_per_day ?? 0)}/d`;
+        case 'days': return row.est_days_to_quota == null ? '—' : fmtNumber(row.est_days_to_quota);
+        default: return null;
+      }
+    },
+  }), [formatBytes, fmtNumber, severityLabel]);
+
   const retry = () => query.refetch();
   const unmeasuredMessage = t(
     'dataSources.unavailableMessage',
@@ -396,7 +414,7 @@ export default function DiskForecastPage() {
                 </ResponsiveContainer>
               </EmbeddedChart>
               {!isLoading && !showError && severitySlices.length > 0 && (
-                <ul className="space-y-1.5">
+                <ul data-app-part="list" className="space-y-1.5">
                   {SEVERITY_ORDER.map((key) => (
                     <li key={key} className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
@@ -470,7 +488,7 @@ export default function DiskForecastPage() {
                 )}
               />
             ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
+              <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]">
                 {quotaWatch.map((r) => (
                   <li key={r.hypertable_name} className="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
                     <div className="min-w-0">
@@ -520,11 +538,12 @@ export default function DiskForecastPage() {
                   variant="embedded"
                   columns={columns}
                   mobileColumns={['hypertable', 'severity', 'days']}
+                  mobilePresentation={mobilePresentation}
                   expandable
                   expandedKeys={expandedKeys}
                   onExpandedChange={setExpandedKeys}
                   renderExpanded={(row) => (
-                    <dl className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <dl data-app-part="list" className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                       {columns.map((column) => (
                         <div key={column.key} className="min-w-0 break-words">
                           <Caption as="dt">{column.header}</Caption>

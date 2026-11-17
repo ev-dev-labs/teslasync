@@ -84,11 +84,12 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   );
 
   return (
-    <div className={cn('min-w-0 space-y-1', className)}>
+    <div data-app-part="field" data-app-field-kind="range" className={cn('min-w-0 space-y-1', className)}>
       {showLabel && (
         <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
           <label
             htmlFor={inputId}
+            data-app-part="field-label"
             className={cn(typography.role.subhead, 'min-w-0 break-words')}
           >
             {label}
@@ -101,6 +102,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
       <div className="flex h-11 items-center md:h-9">
         <input
           ref={ref}
+          data-app-part="field-control"
           id={inputId}
           type="range"
           min={min}

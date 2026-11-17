@@ -73,7 +73,7 @@ export function JwtDecoderTool() {
           onChange={(e) => setJwt(e.target.value)}
         />
         {decoded.error && (
-          <p role="alert" className="text-sm text-rose-300">
+          <p data-app-part="feedback" role="alert" className="text-sm text-rose-300">
             {t('devtools.utils.jwtInvalid', 'Invalid JWT')}
           </p>
         )}

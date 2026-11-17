@@ -112,7 +112,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           className="py-4"
         />
       ) : (
-        <div data-timeline-appearance={timeline?.appearance} className={cn('flex-1 min-h-0 overflow-y-auto', timeline?.feed)} role="list" aria-label={t('widget.automationHistory', 'Automation history')}>
+        <div data-app-part="list" data-timeline-appearance={timeline?.appearance} className={cn('flex-1 min-h-0 overflow-y-auto', timeline?.feed)} role="list" aria-label={t('widget.automationHistory', 'Automation history')}>
           {rows.map((entry, index) => (
             <div
               key={entry.id ?? `${entry.triggered_at ?? 'unknown'}-${index}`}

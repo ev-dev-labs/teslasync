@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -11,6 +11,10 @@ import { PrivacyControls } from './PrivacyControls';
 import { MetricComparisonGrid } from './MetricComparisonGrid';
 import { BenchmarkPercentileChart } from './BenchmarkPercentileChart';
 import { MethodologyPanel } from './MethodologyPanel';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-i18next')>()),
@@ -124,7 +128,7 @@ describe('phase 4 private benchmark presentation preservation', () => {
     expect(screen.getByText(/suitable for causal conclusions/)).toBeInTheDocument();
   });
 
-  it('revocation still requires exact typed confirmation and preserves the disclosure', () => {
+  it('revocation still requires exact typed confirmation and preserves the disclosure', async () => {
     const revoke = vi.fn();
     show(<PrivacyControls optedIn pending={false} error={null} onRevoke={revoke} />);
     fireEvent.click(screen.getByRole('button', { name: 'Revoke & delete contribution data' }));
@@ -134,7 +138,7 @@ describe('phase 4 private benchmark presentation preservation', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Type REVOKE to confirm' }), { target: { value: 'revoke' } });
     expect(confirm).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Type REVOKE to confirm' }), { target: { value: 'REVOKE' } });
-    fireEvent.click(confirm);
+    await act(async () => { fireEvent.click(confirm); });
     expect(revoke).toHaveBeenCalledOnce();
   });
 });

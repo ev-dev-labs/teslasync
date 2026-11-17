@@ -105,6 +105,11 @@ describe('BulkActionsToolbar — render gating', () => {
     const region = screen.getByRole('region', { name: /bulk actions/i });
     expect(region).toBeInTheDocument();
     expect(region).toHaveTextContent('3 selected');
+    const count = screen.getByText('3 selected');
+    expect(count).toHaveAttribute('data-app-part', 'badge');
+    expect(count).toHaveAttribute('data-app-variant', 'neutral');
+    expect(count).toHaveAttribute('aria-live', 'polite');
+    expect(region.querySelector('[data-app-part~="metric"]')).toBeNull();
   });
 });
 
@@ -232,6 +237,7 @@ describe('BulkActionsToolbar — caller-described selection', () => {
     expect(region).not.toHaveTextContent('of 100');
     expect(region).not.toHaveTextContent('2 selected');
     expect(screen.getByText(summary)).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByText(summary)).toHaveAttribute('data-app-part', 'badge');
   });
 
   it.each([undefined, null])('does not invent a denominator when total is %s', (total) => {

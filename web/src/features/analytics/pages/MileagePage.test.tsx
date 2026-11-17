@@ -25,6 +25,7 @@
  *   - null-safety: null first/last drive timestamps fall back to the "—" glyph.
  *   - a11y/actions: labelled region landmarks without a duplicate vehicle picker.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -38,6 +39,7 @@ import type {
 } from '@/types/analytics';
 import type { Vehicle } from '@/types/vehicle';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 const chartEvidence = vi.hoisted(() => vi.fn());
 
@@ -236,6 +238,8 @@ beforeEach(() => {
   mockMonthly.mockReturnValue(makeQuery({ data: MONTHLY }));
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('MileagePage — no vehicle selected', () => {
   it('renders the NoVehicleSelected empty state and no data scaffolding', () => {
     mockSelected.mockReturnValue(selected(null));
@@ -273,6 +277,23 @@ describe('MileagePage — loading', () => {
 });
 
 describe('MileagePage — populated (km)', () => {
+  it('shows formatted monthly distance and full details in the mobile grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = renderPage();
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      const may = grid.querySelector('[data-row-key="2024-05"]') as HTMLElement;
+      expect(may).toHaveTextContent('400.00 km');
+      fireEvent.click(may);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('Distance / drive (km)')).toBeInTheDocument();
+      expect(within(details).getByText('20.00')).toBeInTheDocument();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('derives honest KPI tiles from /mileage/stats', () => {
     renderPage();
     const kpi = kpiRegion();

@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -55,6 +56,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('actual fleet forecast complete data and existing export actions', () => {
   it('keeps all fourteen returned days and both uncertainty bounds at the real shared export boundary', async () => {
     const original = JSON.stringify(forecast);
@@ -85,6 +88,7 @@ describe('actual fleet forecast complete data and existing export actions', () =
 
     for (const [label, handler] of [
       ['Save as PNG', capture.png],
+      ['Save as SVG', capture.svg],
       ['Copy image to clipboard', capture.copy],
     ] as const) {
       fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
@@ -95,8 +99,8 @@ describe('actual fleet forecast complete data and existing export actions', () =
     }
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
     expect(screen.getByRole('menuitem', { name: 'Save as PNG' })).toBeEnabled();
-    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).not.toBeInTheDocument();
-    expect(capture.svg).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitem', { name: 'Save as SVG' })).toBeEnabled();
+    expect(capture.svg).toHaveBeenCalledOnce();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(JSON.stringify(forecast)).toBe(original);
   });

@@ -173,6 +173,8 @@ describe('MarkerCluster', () => {
     });
     const html = document.createElement('div');
     html.innerHTML = String(icon.options.html);
+    expect(html.firstElementChild).toHaveAttribute('data-app-part', 'map-marker');
+    expect(html.firstElementChild).toHaveAttribute('data-map-marker', 'cluster');
     expect(html.textContent?.trim()).toBe(String(count));
     expect(icon.options.html).toContain(`background:${color}`);
     expect(icon.options.html).toContain(`border:2px solid ${DATA_VISUAL_COLORS.canvasWhite}`);
@@ -198,6 +200,10 @@ describe('MarkerCluster', () => {
       html: expect.stringContaining('background:var(--semantic-info)'),
     });
     expect((marker.opts.icon as { html: string }).html).not.toMatch(/box-shadow|text-shadow|drop-shadow/);
+    const host = document.createElement('div');
+    host.innerHTML = (marker.opts.icon as { html: string }).html;
+    expect(host.firstElementChild).toHaveAttribute('data-app-part', 'map-marker');
+    expect(host.firstElementChild).toHaveAttribute('data-map-marker', 'point');
     expect(marker.popup).toBe(first.popupHtml);
 
     rerender(<MarkerCluster points={[{ ...first, id: 'next', popupHtml: '<p>Next popup</p>' }]} />);

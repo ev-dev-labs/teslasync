@@ -126,7 +126,9 @@ export function GeofenceDrawer({
       if (records.some(({ target }) => target instanceof Element && target.contains(context))) resolve();
     });
     observer?.observe(context.ownerDocument.documentElement, {
-      attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'], subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-theme', 'data-mode', 'data-app-design-pack', 'data-app-map'],
+      subtree: true,
     });
     const media = ['(forced-colors: active)', '(prefers-color-scheme: dark)']
       .map((query) => view?.matchMedia?.(query)).filter((item) => item != null);
@@ -179,6 +181,8 @@ export function GeofenceDrawer({
     });
     drawControlRef.current = drawControl;
     map.addControl(drawControl);
+    drawControl.getContainer()?.setAttribute('data-app-part', 'map-toolbar');
+    drawControl.getContainer()?.setAttribute('data-map-control', 'geofence');
     // Style the plugin's existing controls without replacing its focus/events.
     drawControl.getContainer()?.classList.add(
       '[&_.leaflet-bar]:!border-[var(--border-default)]',
@@ -284,7 +288,7 @@ export function GeofenceDrawer({
   }, [fences, ready, modes.join('|'), !!onDelete, !!onEdit]);
 
   return paint === null && typeof document !== 'undefined' ? createPortal(
-    <div className="absolute inset-x-2 top-2 z-map-control rounded-shape-lg bg-[var(--surface-1)]">
+    <div data-app-part="map-legend" data-map-state="unavailable" className="absolute inset-x-2 top-2 z-map-control rounded-shape-lg bg-[var(--surface-1)]">
       <EmptyState
         message={t('systemStatus.sourceUnavailable', { label: t('nav.geofences') })}
         action={{ label: t('common.retry'), onClick: () => setRetry((value) => value + 1) }}

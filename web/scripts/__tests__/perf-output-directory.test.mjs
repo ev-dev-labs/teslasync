@@ -9,6 +9,7 @@ import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { resolveDistRoot as pwaDistRoot } from '../check-pwa-precache.mjs'
+import { resolveDistRoot as pwaContractDistRoot } from '../check-pwa-contract.mjs'
 import { resolveDistRoot as shellDistRoot, sourcePath } from '../check-i18n-shell-closure.mjs'
 import { main as runRuntime, resolveDistRoot as runtimeDistRoot } from '../check-i18n-runtime.mjs'
 import { localeBrowserOptions, localeByteSummary } from '../probe-i18n-startup.mjs'
@@ -41,6 +42,21 @@ function checkCLI(script, args) {
     timeout: 10_000,
   })
 }
+
+test('PWA contract resolves default, relative and private build paths', () => {
+  assert.equal(pwaContractDistRoot([]), join(WEB_ROOT, 'dist'))
+  assert.equal(pwaContractDistRoot(['--dist', 'isolated-output']), join(WEB_ROOT, 'isolated-output'))
+  assert.equal(pwaContractDistRoot(['--dist', privateDist]), privateDist)
+})
+
+test('PWA contract rejects missing build directory arguments', () => {
+  for (const args of [['--dist'], ['--dist', '--source-only'], ['--dist', '']]) {
+    assert.throws(() => pwaContractDistRoot(args), /--dist requires a directory argument/)
+    const result = checkCLI('check-pwa-contract.mjs', args)
+    assert.equal(result.status, 1, result.stderr)
+    assert.match(result.stderr, /--dist requires a directory argument/)
+  }
+})
 
 for (const [script, resolveDistRoot] of checkers) {
   test(`${script}: default and relative paths use web root, absolute private paths survive`, () => {

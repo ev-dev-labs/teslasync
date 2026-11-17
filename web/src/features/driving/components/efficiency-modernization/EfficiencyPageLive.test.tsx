@@ -1,4 +1,5 @@
 /** AUTHORED NOT RUN. Real panel, stats, table, charts and ErrorDisplay; fake sources only. */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -91,6 +92,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
   it('retains every original section, 8+6 metrics, four charts, table, glossary and saved-view action', () => {

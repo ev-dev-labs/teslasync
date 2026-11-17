@@ -109,6 +109,8 @@ export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry
       </Accordion>
 
       <Link
+        data-app-part="button"
+        data-app-variant="secondary"
         to="/dev-tools?tab=fleet-api"
         className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-auto min-h-11 max-w-full whitespace-normal break-words px-4 py-2')}
       >

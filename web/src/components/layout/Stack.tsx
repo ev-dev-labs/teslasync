@@ -11,6 +11,7 @@ type StackProps<T extends ElementType = 'div'> = {
   gap?: StackGap;
   align?: StackAlign;
   justify?: StackJustify;
+  'data-app-part'?: string;
 } & ComponentPropsWithoutRef<T>;
 
 // Full, literal class strings (never string-interpolated) so Tailwind's JIT
@@ -35,11 +36,13 @@ const justifyMap: Record<StackJustify, string> = {
 };
 
 export function Stack<T extends ElementType = 'div'>({
-  as, direction = 'col', gap = 4, align, justify, className, ...props
+  as, direction = 'col', gap = 4, align, justify, className,
+  'data-app-part': appPart, ...props
 }: StackProps<T>) {
   const Component = as ?? 'div';
   return (
     <Component
+      data-app-part={appPart ? `stack ${appPart}` : 'stack'}
       className={cn(
         'flex',
         direction === 'col' ? 'flex-col' : 'flex-row',

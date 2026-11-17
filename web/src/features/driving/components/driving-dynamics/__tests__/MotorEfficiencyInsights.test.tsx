@@ -14,8 +14,11 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 
 import MotorEfficiencyInsights from '../MotorEfficiencyInsights'
 import type { MotorStats } from '../helpers'
@@ -115,6 +118,63 @@ describe('MotorEfficiencyInsights — temperature suffix never doubles °', () =
 })
 
 describe('MotorEfficiencyInsights — Throttle Behavior MetricBar suppression', () => {
+  it.each(PACK_IDS)('%s composes measured motor definitions without changing source values or units', pack => {
+    mockMotorStats = {
+      ...baseStats, avgTorque: 0, maxTorque: -20, avgPower: -2, peakRegen: -3,
+      avgMotorTemp: 0, maxMotorTemp: null, highTorquePct: null,
+    }
+    const before = JSON.stringify(mockMotorStats)
+    const { container } = render(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <MotorEfficiencyInsights vehicleId={1} toTemperatureDisplay={c => c * 9 / 5 + 32} tempUnit="°F" />
+      </div>,
+    )
+    const host = container.firstElementChild!
+    const release = observeAppDesignScopes(host)
+    try {
+      const definitions = host.querySelectorAll('[data-app-list="definitions"]')
+      expect(definitions).toHaveLength(3)
+      const rows = host.querySelectorAll('[data-app-list="definitions"] > [data-app-part~="list-row"]')
+      expect(rows).toHaveLength(8)
+      for (const row of rows) {
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]')
+        expect(matchesAppDesignCss(row, `[data-app-data="${APPLICATION_DESIGNS[pack].data}"]`)
+          .some(match => match.declarations.display != null)).toBe(true)
+        expect(row.querySelector('dt[data-app-part~="metric-label"]')).not.toBeEmptyDOMElement()
+        expect(row.querySelector('dd[data-app-part~="metric-value"]')).not.toBeEmptyDOMElement()
+      }
+      expect(within(definitions[0] as HTMLElement).getByText('0.00 Nm')).toBeInTheDocument()
+      expect(within(definitions[0] as HTMLElement).getByText('-20.00 Nm')).toBeInTheDocument()
+      expect(within(definitions[1] as HTMLElement).getByText('-2.00 kW')).toBeInTheDocument()
+      expect(within(definitions[1] as HTMLElement).getByText('-3.00 kW')).toBeInTheDocument()
+      expect(within(definitions[2] as HTMLElement).getByText('32.00°F')).toBeInTheDocument()
+      expect(within(definitions[2] as HTMLElement).getByText('—')).toBeInTheDocument()
+      expect(host).toHaveTextContent('Sample share is not time spent under load or a driver rating.')
+      expect(host).toHaveTextContent('Power alone cannot classify driving style.')
+      expect(host).toHaveTextContent('Temperature alone does not establish thermal limiting or powertrain health.')
+      expect(JSON.stringify(mockMotorStats)).toBe(before)
+    } finally { release() }
+  })
+
+  it('owns measured definitions while preserving zero, signed power, and independent absent groups', () => {
+    const { container, rerender } = renderInsights({
+      stats: { ...baseStats, avgTorque: 0, avgPower: -2, peakRegen: -3, avgMotorTemp: null },
+    })
+    const lists = container.querySelectorAll('[data-app-list="definitions"]')
+    expect(lists).toHaveLength(2)
+    expect(lists[0].tagName).toBe('DL')
+    expect(lists[0].querySelectorAll('dt')).toHaveLength(3)
+    expect(within(lists[0] as HTMLElement).getByText('0.00 Nm')).toBeInTheDocument()
+    expect(within(lists[1] as HTMLElement).getByText('-2.00 kW')).toBeInTheDocument()
+    expect(within(lists[1] as HTMLElement).getByText('-3.00 kW')).toBeInTheDocument()
+    expect(screen.getByText('No motor data recorded yet')).toBeInTheDocument()
+    expect(screen.getByText(/Power alone cannot classify driving style/)).toBeInTheDocument()
+    mockMotorStats = null
+    rerender(<MotorEfficiencyInsights vehicleId={1} toTemperatureDisplay={v => v} tempUnit="°C" />)
+    expect(container.querySelector('[data-app-list="definitions"]')).toBeNull()
+    expect(screen.getAllByText('No motor data recorded yet')).toHaveLength(3)
+  })
+
   it('does NOT render a stray "0.00" near the Conservative pill (sublabel="" honoured)', () => {
     renderInsights({
       stats: { ...baseStats, avgPower: 0 },

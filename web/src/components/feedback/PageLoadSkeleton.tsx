@@ -34,28 +34,29 @@ export function PageLoadSkeleton({
       aria-busy="true"
       aria-label={loadingLabel}
       data-testid="page-load-skeleton"
+      data-app-part="loading"
     >
       {showHeader && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-2">
-            <div className="h-7 w-48 rounded bg-[var(--surface-2)]" />
-            <div className="h-3 w-72 max-w-full rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" className="h-7 w-48 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" className="h-3 w-72 max-w-full rounded bg-[var(--surface-2)]" />
           </div>
-          <div className="h-9 w-32 rounded bg-[var(--surface-2)]" />
+          <div data-app-part="skeleton" className="h-9 w-32 rounded bg-[var(--surface-2)]" />
         </div>
       )}
 
       {/* Body panels */}
       {Array.from({ length: panels }).map((_, i) => (
-        <GlassPanel key={i} className="p-6">
+        <GlassPanel data-app-part="panel" key={i} className="p-6">
           <div className="space-y-4">
-            <div className="h-5 w-40 rounded bg-[var(--surface-2)]" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="h-20 rounded bg-[var(--surface-2)]" />
-              <div className="h-20 rounded bg-[var(--surface-2)]" />
-              <div className="h-20 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" className="h-5 w-40 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="metric-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div data-app-part="skeleton" className="h-20 rounded bg-[var(--surface-2)]" />
+              <div data-app-part="skeleton" className="h-20 rounded bg-[var(--surface-2)]" />
+              <div data-app-part="skeleton" className="h-20 rounded bg-[var(--surface-2)]" />
             </div>
-            <div className="h-32 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" className="h-32 rounded bg-[var(--surface-2)]" />
           </div>
         </GlassPanel>
       ))}

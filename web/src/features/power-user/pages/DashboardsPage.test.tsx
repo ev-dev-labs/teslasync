@@ -37,6 +37,10 @@ import { render, screen, within, fireEvent, waitFor, cleanup, act } from '@testi
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance } from 'i18next';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const descriptionI18n = createInstance();
 const descriptionT = descriptionI18n.t.bind(descriptionI18n);
@@ -133,6 +137,40 @@ afterEach(() => {
 });
 
 describe('DashboardsPage', () => {
+  it('binds passive workflow and actual catalog surfaces without claiming setup progress or changing the manual editor', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = renderPage();
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const steps = container.querySelectorAll('[data-app-list="steps"] > [data-app-step-kind="dashboard-workflow"]');
+      expect(steps).toHaveLength(3);
+      expect(Array.from(steps, step => step.getAttribute('data-step-id'))).toEqual(['pick', 'compose', 'copy']);
+      const records = container.querySelectorAll('[data-app-record-kind="dashboard-panel"]');
+      expect(Array.from(records, record => record.querySelector('[data-app-part="record-title"]')?.textContent)).toEqual(SORTED_PANEL_NAMES);
+      for (const element of [...steps, ...records]) {
+        expect(element.tagName).toBe('LI');
+        expect(element).not.toHaveAttribute('aria-current');
+        expect(element).not.toHaveAttribute('data-state');
+        const kind = element.getAttribute('data-app-step-kind') ?? element.getAttribute('data-app-record-kind')!;
+        const matches: string[] = [];
+        postcss.parse(feedbackCss).walkRules(rule => {
+          if (rule.selector.includes(kind === 'dashboard-workflow' ? '"dashboard-workflow"' : '[data-app-card-kind="record"]') && rule.nodes.some(node => node.type === 'decl')) {
+            matches.push(...rule.selectors.filter(selector => element.matches(selector)));
+          }
+        });
+        expect(matches.length).toBeGreaterThan(0);
+        element.removeAttribute('data-app-design-owner');
+        expect(matches.every(selector => !element.matches(selector))).toBe(true);
+      }
+      typeInEditor('  {"title":"Original manual draft"}  ');
+      expect(editor()).toHaveValue('  {"title":"Original manual draft"}  ');
+      expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeEnabled();
+      expect(container.querySelector('[role="progressbar"], [role="meter"]')).toBeNull();
+    } finally { release(); }
+  });
+
   it('retains the full draft for manual copy after denial and retries the trimmed payload', async () => {
     const writeText = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValueOnce(undefined);
     stubClipboard({ writeText });

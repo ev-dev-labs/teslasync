@@ -45,11 +45,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		subject = r.Header.Get(h.headerName)
 	}
 	scope := domain.Scope(subject, open)
-	var id string
+	var value domain.Preference
 	var err error
 	switch r.Method {
 	case http.MethodGet:
-		id, err = h.service.Get(ctx, scope)
+		value, err = h.service.Get(ctx, scope)
 	case http.MethodPut:
 		r.Body = http.MaxBytesReader(w, r.Body, 1024)
 		decoder := json.NewDecoder(r.Body)
@@ -63,8 +63,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			httputil.RespondError(w, http.StatusBadRequest, "INVALID_PACK", "invalid widget design pack")
 			return
 		}
-		id = input.PackID
-		err = h.service.Put(ctx, scope, id)
+		value, err = h.service.Put(ctx, scope, input.PackID, input.AppWide)
 	default:
 		w.Header().Set("Allow", "GET, PUT")
 		httputil.RespondError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "method not allowed")
@@ -81,7 +80,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(dto.WidgetDesignPreference{PackID: id, Scope: scope})
+	_ = json.NewEncoder(w).Encode(dto.WidgetDesignPreference{PackID: value.PackID, Scope: scope, AppWide: value.AppWide})
 }
 
 type widgetPreferenceFailure struct{}

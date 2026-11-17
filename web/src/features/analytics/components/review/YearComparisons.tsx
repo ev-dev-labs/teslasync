@@ -25,7 +25,7 @@ export function YearComparisons({ comparisons }: Props) {
   }
 
   return (
-    <div
+    <div data-app-part="list"
       role="list"
       className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]"
     >

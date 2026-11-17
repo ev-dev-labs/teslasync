@@ -11,7 +11,6 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   AREA_DEFAULTS,
@@ -109,7 +108,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis
               dataKey="soc"
               tick={axisTickSm}

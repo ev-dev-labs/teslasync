@@ -139,6 +139,9 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     const region = screen.getByRole('region', { name: 'Repair drive #202' });
     expect(region).toBeInTheDocument();
     expect(region).toHaveAttribute('id', 'drive-202-editor');
+    expect(region).toHaveAttribute('data-app-form-section');
+    expect(region).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(region.querySelector('[data-app-form-body]')).toContainElement(screen.getByLabelText('Distance (m)'));
 
     // Every field is labelled and seeded from SI columns (nullish → '').
     expect((screen.getByLabelText('End date/time (ISO)') as HTMLInputElement).value).toBe('');

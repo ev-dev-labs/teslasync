@@ -41,6 +41,8 @@ async function captureHandler() {
   const seen: Array<{ pattern: unknown; handler: RouteHandler }> = [];
   const page = {
     on: vi.fn(),
+    exposeBinding: vi.fn(async () => {}),
+    addInitScript: vi.fn(async () => {}),
     route: vi.fn(async (pattern: unknown, handler: RouteHandler) => {
       seen.push({ pattern, handler });
     }),

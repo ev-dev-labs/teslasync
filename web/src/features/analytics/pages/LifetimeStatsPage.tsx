@@ -345,7 +345,8 @@ export default function LifetimeStatsPage() {
             error={error} errorRecovery={{ onRetry: retry }}
             loadingContent={<Skeleton height={200} />}
           >
-            <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8">
+            <StaggerContainer>
+              <Grid minItemWidth="wide" gap={3}>
               {achievements.map(a => {
                 const isPulsing = pulsedId === a.id;
                 return (
@@ -366,6 +367,7 @@ export default function LifetimeStatsPage() {
                   </StaggerItem>
                 );
               })}
+              </Grid>
             </StaggerContainer>
           </SourceContent>
         </LayoutCard>

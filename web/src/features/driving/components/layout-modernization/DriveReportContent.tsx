@@ -49,10 +49,10 @@ export function DriveReportContent({
   const navigation = ['overview', 'energy', 'telemetry', 'supervised', 'physics', 'diagnostics'];
   return (
     <>
-      <nav aria-label={t('driveDetail.report.sections', 'Drive report sections')} data-print-hide
+      <nav aria-label={t('driveDetail.report.sections', 'Drive report sections')} data-print-hide data-drive-report-nav
         className="sticky top-0 z-20 flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-2 shadow-sm">
         {navigation.map(sectionId => (
-          <a key={sectionId} href={`#${sectionId}`}
+          <a key={sectionId} href={`#${sectionId}`} data-app-action-link
             className="shrink-0 rounded-lg px-3 py-2 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
             <Text as="span" variant="bodySm">{label(sectionId)}</Text>
           </a>

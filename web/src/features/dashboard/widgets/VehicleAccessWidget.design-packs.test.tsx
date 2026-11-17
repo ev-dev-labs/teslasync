@@ -269,7 +269,7 @@ it.each(Object.entries(PACK_APPEARANCES))('keeps partial source loading inside i
   expect(screen.getByText('Mobile access enabled')).toBeVisible();
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   const refresh = screen.getByRole('button', { name: /refresh/i });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(drivers.refetch).not.toHaveBeenCalled();
 });

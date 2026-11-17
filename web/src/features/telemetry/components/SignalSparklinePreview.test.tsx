@@ -168,10 +168,13 @@ describe('SignalSparklinePreview', () => {
       range: { hours: 1, limit: 30 },
     });
 
-    const pulse = container.querySelector('.animate-pulse');
-    expect(pulse).not.toBeNull();
+    const skeleton = container.querySelector('[data-app-part="skeleton"]');
+    expect(skeleton).not.toBeNull();
     // A dense tree renders hundreds of these — the skeleton must be silent to AT.
-    expect(pulse?.getAttribute('aria-hidden')).toBe('true');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ width: '80px', height: '18px' });
+    expect(skeleton).toHaveClass('inline-block');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
   });
 
   it('shows a DISTINCT, labelled error state (not the empty placeholder) when the fetch fails', () => {
@@ -262,10 +265,10 @@ describe('SignalSparklinePreview', () => {
       className: 'test-marker',
     });
 
-    const pulse = container.querySelector('.animate-pulse') as HTMLElement | null;
-    expect(pulse).not.toBeNull();
-    expect(pulse?.style.width).toBe('120px');
-    expect(pulse?.style.height).toBe('24px');
-    expect(pulse?.className).toContain('test-marker');
+    const skeleton = container.querySelector('[data-app-part="skeleton"]');
+    expect(skeleton).toHaveStyle({ width: '120px', height: '24px' });
+    expect(skeleton).toHaveClass('inline-block', 'test-marker');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('[data-app-part="panel"], [data-app-part="card"], [role="status"]')).toBeNull();
   });
 });

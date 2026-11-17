@@ -395,11 +395,12 @@ vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
   const { default: Logo } = await import('@/components/ui/Logo')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
-    const { children, variant, size, loading, icon, ...rest } = props
+    const { children, variant, size, loading, icon, wrapLabel, ...rest } = props
     void variant
     void size
     void loading
     void icon
+    void wrapLabel
     return (
       <button ref={ref} {...(rest as Record<string, unknown>)}>
         {children as React.ReactNode}
@@ -629,6 +630,23 @@ describe('Layout — unified sidebar wiring', () => {
   it('renders the CommandDeck as the only sidebar', async () => {
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+  })
+
+  it('marks existing shell owners without moving navigation after the workspace or adding a second main', async () => {
+    const { container } = renderLayout('/')
+    await screen.findByTestId('command-deck')
+    const shell = container.querySelector('[data-app-part~="shell"]')
+    const navigation = container.querySelector('[data-app-part~="shell-sidebar"]')
+    const workspace = container.querySelector('[data-app-part~="shell-main"]')
+    expect(shell).toHaveAttribute('data-presentation-mode', 'standard')
+    expect(navigation).toHaveAttribute('data-role', 'sidebar')
+    expect(navigation).toHaveAttribute('data-app-part', 'shell-sidebar navigation')
+    expect(navigation?.parentElement).toBe(shell)
+    expect(workspace?.parentElement).toBe(shell)
+    expect(navigation!.compareDocumentPosition(workspace!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(workspace).toContainElement(screen.getByRole('main'))
+    expect(screen.getAllByRole('main')).toHaveLength(1)
   })
 
   it('mounts one step-up challenge host for sensitive actions', () => {

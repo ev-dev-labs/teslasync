@@ -229,6 +229,8 @@ interface DataTableProps<T> {
   onSort?: (key: string) => void
   /** Caller-owned empty wording; internal filters that hide loaded rows use no-match copy instead. */
   emptyMessage?: string
+  /** Optional wording when local filters hide loaded rows, distinct from an empty source. */
+  noMatchMessage?: string
   className?: string
   /**
    * Legacy boolean density toggle. Equivalent to `density='compact'`.
@@ -499,6 +501,7 @@ export function DataTable<T>({
   sortDir,
   onSort,
   emptyMessage = 'No data',
+  noMatchMessage: callerNoMatchMessage,
   className,
   compact,
   density,
@@ -625,7 +628,7 @@ export function DataTable<T>({
   }
   // Incoming rows are loaded evidence, not full server history or the current pagination slice.
   const localFilterNoMatch = data.length > 0 && filteredData.length === 0
-  const noMatchMessage = t('combobox.noResults', 'No results')
+  const noMatchMessage = callerNoMatchMessage ?? t('combobox.noResults', 'No results')
   const resetFiltersLabel = t('common.clearFilters', 'Clear filters')
   const clearFilters = () => {
     searchControls?.onChange('')
@@ -1124,8 +1127,9 @@ export function DataTable<T>({
   // tbody can only hold <tr>, so the boundary fallback must also be a <tr>
   // to keep markup valid when a row renderer throws.
   const bodyFallback = (
-    <tr>
+    <tr data-app-part="table-row">
       <td
+        data-app-part="table-cell"
         colSpan={totalCols}
         className="px-4 py-8 text-center text-sm text-[var(--text-muted)]"
       >
@@ -1174,6 +1178,7 @@ export function DataTable<T>({
     const rows: ReactNode[] = [
       <tr
         key={`row:${reconciliationKey}`}
+        data-app-part="table-row"
         className={trClass}
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
@@ -1192,7 +1197,7 @@ export function DataTable<T>({
         tabIndex={isSelectable || expandable ? 0 : undefined}
       >
         {isSelectable && (
-          <td className="w-12 min-w-12 p-0 text-center align-middle">
+          <td data-app-part="table-cell" className="w-12 min-w-12 p-0 text-center align-middle">
             {selectable === 'multi' ? (
               <div className="flex justify-center">
                 <Checkbox
@@ -1209,6 +1214,7 @@ export function DataTable<T>({
             ) : (
               <input
                 type="radio"
+                data-app-part="field-control"
                 checked={selected}
                 onClick={(e) => {
                   e.stopPropagation()
@@ -1223,7 +1229,7 @@ export function DataTable<T>({
           </td>
         )}
         {expandable && (
-          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
+          <td data-app-part="table-cell" className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
             <Button
               type="button"
               variant="ghost"
@@ -1252,6 +1258,7 @@ export function DataTable<T>({
         {visibleColumns.map(col => (
           <td
             key={col.key}
+            data-app-part="table-cell"
             data-column-key={col.key}
             className={cn(
               cellPaddingClass,
@@ -1269,8 +1276,8 @@ export function DataTable<T>({
     ]
     if (expanded && renderExpanded) {
       rows.push(
-        <tr key={`expanded:${reconciliationKey}`} data-expanded-content="true">
-          <td colSpan={totalCols} className={tableTokens.expandedCell}>
+        <tr data-app-part="table-row" key={`expanded:${reconciliationKey}`} data-expanded-content="true">
+          <td data-app-part="table-cell" colSpan={totalCols} className={tableTokens.expandedCell}>
             {renderExpanded(row)}
           </td>
         </tr>,
@@ -1302,7 +1309,7 @@ export function DataTable<T>({
       let labelRendered = false
       const flush = () => {
         if (!span) return
-        cells.push(<td key={`label:${cells.length}`} colSpan={span} className={cellPaddingClass}>
+        cells.push(<td data-app-part="table-cell" key={`label:${cells.length}`} colSpan={span} className={cellPaddingClass}>
           {!labelRendered && groupLabel}
         </td>)
         labelRendered = true
@@ -1315,22 +1322,22 @@ export function DataTable<T>({
           return
         }
         flush()
-        cells.push(<td key={column.key} data-column-key={column.key} className={cn(
+        cells.push(<td data-app-part="table-cell" key={column.key} data-column-key={column.key} className={cn(
           cellPaddingClass, alignClass(column.align), column.groupStart && tableTokens.groupStart,
           colHiddenClass(column.key), column.className,
         )}>{action(key, rows)}</td>)
       })
       flush()
       if (!labelRendered && cells.length) {
-        return <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
-          <td colSpan={totalCols} className={cellPaddingClass}>
+        return <tr data-app-part="table-row" key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
+          <td data-app-part="table-cell" colSpan={totalCols} className={cellPaddingClass}>
             {groupLabel}
             <div className="flex flex-wrap gap-2">{visibleColumns.map(column =>
               actionColumns[column.key]?.(key, rows))}</div>
           </td>
         </tr>
       }
-      return <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>{cells}</tr>
+      return <tr data-app-part="table-row" key={`group:${key}`} data-row-group={key} className={tableTokens.row}>{cells}</tr>
     }
     const columnIndex = visibleColumns.findIndex(column => column.key === rowGrouping.actionsColumn)
     const column = !compactGroups && columnIndex >= 0 && totalCols > 1 ? visibleColumns[columnIndex] : undefined
@@ -1338,22 +1345,22 @@ export function DataTable<T>({
     const after = totalCols - before - 1
     const actions = rowGrouping.actions?.(key, rows)
     const actionCell = column && (
-      <td data-column-key={column.key} className={cn(cellPaddingClass, alignClass(column.align),
+      <td data-app-part="table-cell" data-column-key={column.key} className={cn(cellPaddingClass, alignClass(column.align),
         column.groupStart && tableTokens.groupStart, colHiddenClass(column.key), column.className)}>
         {actions}
       </td>
     )
     return (
-      <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
+      <tr data-app-part="table-row" key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
         {column && before === 0 && actionCell}
-        <td colSpan={column ? before || after : totalCols} className={cellPaddingClass}>
+        <td data-app-part="table-cell" colSpan={column ? before || after : totalCols} className={cellPaddingClass}>
           <div className="flex w-full max-w-[calc(100cqw-2rem)] flex-wrap items-center gap-2">
             {groupLabel}
             {!column && actions && <div className="ml-auto shrink-0">{actions}</div>}
           </div>
         </td>
         {column && before > 0 && actionCell}
-        {column && before > 0 && after > 0 && <td colSpan={after} className={cellPaddingClass} />}
+        {column && before > 0 && after > 0 && <td data-app-part="table-cell" colSpan={after} className={cellPaddingClass} />}
       </tr>
     )
   }
@@ -1373,6 +1380,7 @@ export function DataTable<T>({
 
   const wrapperClass = cn(
     'max-w-full overscroll-x-contain',
+    filteredData.length === 0 && '[container-type:inline-size]',
     effectiveStickyHeader || effectiveMaxHeight != null
       ? tableTokens.scrollContainer
       : 'overflow-x-auto',
@@ -1550,7 +1558,9 @@ export function DataTable<T>({
       rowGrouping && '[container-type:inline-size]',
       mobilePresentation && 'mgr-host',
     )}
-      data-grid-frame="" data-grid-variant={variant}>
+      data-app-part={variant === 'standalone' ? 'panel' : undefined}
+      data-surface-variant={variant}
+      data-app-table-frame="" data-grid-frame="" data-grid-variant={variant}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
@@ -1642,7 +1652,7 @@ export function DataTable<T>({
       )} style={wrapperStyle} data-grid-viewport="">
         {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
-        <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper,
+        <table data-app-part="table" data-app-table-variant={variant} data-app-virtualized={virtualizationActive || undefined} tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper,
           visibleColumns.some(column => column.fixedWidth != null) && 'table-fixed',
           footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
           onKeyDown={event => {
@@ -1669,12 +1679,13 @@ export function DataTable<T>({
               heading — duplicating it on screen would be redundant, but
               omitting it entirely leaves the table anonymous. */}
           <VisuallyHidden as="caption">{accessibleTableName}</VisuallyHidden>
-          <thead>
-            <tr className={headRowClass}>
+          <thead data-app-part="table-head">
+            <tr data-app-part="table-row" className={headRowClass}>
               {/* Selection header */}
               {isSelectable && (
                 <th
                   scope="col"
+                  data-app-part="table-cell"
                   className="w-12 min-w-12 p-0 text-center align-middle"
                 >
                   {selectable === 'multi' ? (
@@ -1697,6 +1708,7 @@ export function DataTable<T>({
               {expandable && (
                 <th
                   scope="col"
+                  data-app-part="table-cell"
                   aria-label={t('table.expand.column', 'Expand row')}
                   className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
                 />
@@ -1707,6 +1719,7 @@ export function DataTable<T>({
                 return (
                   <th
                     key={col.key}
+                    data-app-part="table-cell"
                     scope="col"
                     aria-label={col.header || undefined}
                     draggable={headerReorderEnabled || undefined}
@@ -1806,14 +1819,16 @@ export function DataTable<T>({
           <tbody className={tableTokens.body}>
             <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}`} fallback={bodyFallback}>
               {filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
-                    {localFilterNoMatch ? (
-                      <div className="space-y-3">
+                <tr data-app-part="table-row">
+                  <td data-app-part="table-cell" colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
+                    <div className="sticky start-0 w-full max-w-[calc(100cqw-2rem)] space-y-3 whitespace-normal break-words">
+                      {localFilterNoMatch ? (
+                        <>
                         <Text as="p" variant="bodySm" color="muted" role="status">{noMatchMessage}</Text>
                         <Button size="sm" variant="secondary" onClick={clearFilters}>{resetFiltersLabel}</Button>
-                      </div>
-                    ) : emptyMessage}
+                        </>
+                      ) : emptyMessage}
+                    </div>
                   </td>
                 </tr>
               ) : virtualizationActive ? (

@@ -78,26 +78,26 @@ export function UnixPermissionTool() {
         </div>
         {result.kind === 'ok' ? (
           <>
-            <ul
+            <ul data-app-part="list" data-app-list="definitions"
               className="grid gap-2 sm:grid-cols-3"
               aria-label={t('devtools.utils.unixPermResults', 'Permission breakdown by scope')}
             >
-              <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOwner', 'Owner')}</span>
-                <p className="font-mono text-sm text-emerald-300">{result.owner}</p>
+              <li data-app-part="list-row" className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
+                <span data-app-part="metric-label" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOwner', 'Owner')}</span>
+                <p data-app-part="metric-value" className="font-mono text-sm text-emerald-300">{result.owner}</p>
               </li>
-              <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermGroup', 'Group')}</span>
-                <p className="font-mono text-sm text-theme-accent">{result.group}</p>
+              <li data-app-part="list-row" className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
+                <span data-app-part="metric-label" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermGroup', 'Group')}</span>
+                <p data-app-part="metric-value" className="font-mono text-sm text-theme-accent">{result.group}</p>
               </li>
-              <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOther', 'Other')}</span>
-                <p className="font-mono text-sm text-amber-300">{result.other}</p>
+              <li data-app-part="list-row" className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
+                <span data-app-part="metric-label" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOther', 'Other')}</span>
+                <p data-app-part="metric-value" className="font-mono text-sm text-amber-300">{result.other}</p>
               </li>
             </ul>
-            <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <code className="text-sm font-mono text-[var(--text-primary)]">{result.symbolic}</code>
-              <CopyButton text={result.symbolic} />
+            <div data-app-part="panel" data-app-panel-kind="code" data-surface-variant="standalone" className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <code data-app-code-slot="body" className="text-sm font-mono text-[var(--text-primary)]">{result.symbolic}</code>
+              <span data-app-code-slot="actions"><CopyButton text={result.symbolic} /></span>
             </div>
           </>
         ) : (

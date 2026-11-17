@@ -181,6 +181,9 @@ export default function OnboardingChecklistWidget({ size }: WidgetProps) {
   )
   const progressMeter = (
     <div
+      data-app-part="metric"
+      data-app-metric="bar"
+      data-metric-track
       className={cn('mt-3 h-2 overflow-hidden bg-[var(--surface-2)]', dashboardTokens.radius.control)}
       role="progressbar"
       aria-valuemin={0}
@@ -192,6 +195,7 @@ export default function OnboardingChecklistWidget({ size }: WidgetProps) {
       })}
     >
       <div
+        data-metric-fill
         className={cn(
           'h-full transition-all duration-slow motion-reduce:transition-none',
           dashboardTokens.radius.control,
@@ -211,7 +215,7 @@ export default function OnboardingChecklistWidget({ size }: WidgetProps) {
       className="py-4 mt-3"
     />
   ) : (
-    <ul className="mt-3 flex flex-col" data-testid="onboarding-checklist">
+    <ul data-app-part="list" className="mt-3 flex flex-col" data-testid="onboarding-checklist">
       {tasks.map((task) => {
         const source = taskSources[task.id as keyof typeof taskSources]
         const unknown = source != null && !source.hasData

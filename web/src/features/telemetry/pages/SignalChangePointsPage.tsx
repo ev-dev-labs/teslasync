@@ -253,7 +253,7 @@ export default function SignalChangePointsPage() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={summary.changePoints.length > 0 ? 'warning' : 'success'}>
                     {summary.changePoints.length > 0
@@ -267,7 +267,7 @@ export default function SignalChangePointsPage() {
                     : t('signalChangePoints.stableText', 'No cumulative deviation cleared the alarm threshold in the returned samples. This does not establish stability or rule out drift; individual sample contributions are capped to resist spikes.')}
                 </Text>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{t('signalChangePoints.scope', 'Scope')}</Badge>
                 </div>

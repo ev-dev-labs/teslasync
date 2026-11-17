@@ -194,7 +194,7 @@ export function QueueJobDrawer({
             )}
           </Text>
         ) : (
-          <ul className="space-y-2" data-testid="queue-job-drawer-list">
+          <ul data-app-part="list" className="space-y-2" data-testid="queue-job-drawer-list">
             {jobs.map((job) => (
               <QueueJobRow key={job.id} job={job} />
             ))}

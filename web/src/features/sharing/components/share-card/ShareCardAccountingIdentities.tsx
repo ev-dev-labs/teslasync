@@ -44,7 +44,7 @@ export function ShareCardAccountingIdentities({
           )}
         </Text>
         <ShareCardSectionBody state={state}>
-          <ul className="grid gap-2 lg:grid-cols-2">
+          <ul data-app-part="list" className="grid gap-2 lg:grid-cols-2">
             {analysis.identities.map((check) => {
               const formatOperand = check.tolerance > 0
                 ? (value: number) => fmtScientificNumber(value, 12)
@@ -52,32 +52,36 @@ export function ShareCardAccountingIdentities({
               return (
               <li
                 key={check.id}
+                data-app-part="card"
+                data-app-card-kind="record"
+                data-app-record-kind="share-accounting-identity"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <Text as="p" variant="label">{labels[check.id] ?? check.id}</Text>
+                <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
+                  <Text data-app-part="record-title" as="p" variant="label">{labels[check.id] ?? check.id}</Text>
                   <Badge variant={check.passes ? 'success' : 'danger'}>
                     {check.passes
                       ? t('shareCard.accounting.balances', 'Balances')
                       : t('shareCard.accounting.outside', 'Outside tolerance')}
                   </Badge>
                 </div>
+                <div data-app-part="record-body">
                 <Table className="mt-2" aria-label={labels[check.id] ?? check.id}>
 
                   <tbody>
-                  <tr><th scope="row"><Text as="span" variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.expected', 'Expected')}
-                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text as="span" variant="caption" mono>
                     {formatOperand(check.expected)}
                   </Text></td></tr>
-                  <tr><th scope="row"><Text as="span" variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.actual', 'Actual')}
-                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text as="span" variant="caption" mono>
                     {formatOperand(check.actual)}
                   </Text></td></tr>
-                  <tr><th scope="row"><Text as="span" variant="caption">
+                  <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.residual', 'Residual / tolerance')}
-                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
+                  </Text></th><td data-app-part="table-cell" className="text-right"><Text as="span" variant="caption" mono>
                     {t('shareCard.accounting.residualValue', '{{residual}} / {{tolerance}}', {
                       residual: formatOperand(check.residual),
                       tolerance: formatOperand(check.tolerance),
@@ -85,6 +89,7 @@ export function ShareCardAccountingIdentities({
                   </Text></td></tr>
                   </tbody>
                 </Table>
+                </div>
               </li>
               );
             })}

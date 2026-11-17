@@ -67,6 +67,8 @@ export function OrderedStepList({
     <div dir={dir} className={cn('min-w-0 max-w-full', className)}>
       {/* eslint-disable-next-line jsx-a11y/no-redundant-roles -- Restore Safari list semantics when custom numbering removes native markers. */}
       <ol
+        data-app-part="list"
+        data-app-list="steps"
         id={id}
         role="list"
         aria-label={ariaLabel}
@@ -75,6 +77,7 @@ export function OrderedStepList({
       >
         {items.map((step, index) => (
           <li
+            data-app-part="list-row"
             key={step.id}
             data-step-id={step.id}
             data-state={step.state?.kind}
@@ -94,7 +97,7 @@ export function OrderedStepList({
             <div className="min-w-0 flex-1 space-y-1 break-words [overflow-wrap:anywhere] [&_*]:max-w-full">
               <Text as="div" size="sm" weight="medium" color="primary">{step.title}</Text>
               {step.state && (
-                <Text as="div" variant="bodySm">{step.state.label}</Text>
+                <Text data-app-part="status" as="div" variant="bodySm">{step.state.label}</Text>
               )}
               {step.description != null && (
                 <Text as="div" variant="bodySm">{step.description}</Text>

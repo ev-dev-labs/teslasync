@@ -1,5 +1,6 @@
-import { render } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { render, screen } from '@testing-library/react';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
+import type { ChartTooltipProps } from '@/components/charts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FleetUtilizationForecast } from '@/api/hooks/useFleetOps';
 import { chartTokens } from '@/lib/tokens';
@@ -13,7 +14,8 @@ const capture = vi.hoisted(() => ({
   card: vi.fn(),
 }));
 
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/charts')>(),
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   ComposedChart: (props: { children: ReactNode }) => {
     capture.chart(props);
@@ -23,7 +25,17 @@ vi.mock('@/components/charts', () => ({
   Line: (props: unknown) => { capture.line(props); return null; },
   YAxis: (props: unknown) => { capture.axis(props); return null; },
   XAxis: () => null,
-  Tooltip: () => null,
+  Tooltip: ({ content }: { content?: ReactNode }) => isValidElement<ChartTooltipProps>(content)
+    ? cloneElement(content, {
+      active: true,
+      label: '2026-10-01',
+      payload: [
+        { name: 'Lower bound', value: 10 },
+        { name: 'Uncertainty', value: 30 },
+        { name: 'Expected utilization', value: 25 },
+      ],
+    })
+    : null,
   axisTick: {},
   chartGrid: null,
 }));
@@ -61,6 +73,15 @@ const forecast: FleetUtilizationForecast = {
 beforeEach(() => vi.clearAllMocks());
 
 describe('utilization forecast presentation', () => {
+  it('retains the native band payload in the shared accessible tooltip rather than default vendor chrome', () => {
+    render(<UtilizationForecastChart forecast={forecast} loading={false} error={null} onRetry={vi.fn()} />);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveAttribute('data-app-part', 'chart-tooltip');
+    expect(tooltip).toHaveTextContent('2026-10-01');
+    expect(tooltip).toHaveTextContent('Lower bound:10.00');
+    expect(tooltip).toHaveTextContent('Uncertainty:30.00');
+    expect(tooltip).toHaveTextContent('Expected utilization:25.00');
+  });
   it('uses restrained chart roles while preserving the offset band, expected line and bounds', () => {
     render(<UtilizationForecastChart forecast={forecast} loading={false} error={null} onRetry={vi.fn()} />);
 

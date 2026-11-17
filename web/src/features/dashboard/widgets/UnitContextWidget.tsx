@@ -109,7 +109,7 @@ export default function UnitContextWidget({ vehicleId, config, size }: WidgetPro
     </div>
   );
   const settings = (
-    <ul className={cn('m-0 grid min-w-0 list-none gap-x-4 p-0', !compact && '@md:grid-cols-2')}
+    <ul data-app-part="list" className={cn('m-0 grid min-w-0 list-none gap-x-4 p-0', !compact && '@md:grid-cols-2')}
       aria-label={t('dashboardWidgets.telemetry.unitContext.subtitle', 'Telemetry preferences')}>
       {rows.map(row => (
         <li key={row.field} aria-label={row.label} className="min-w-0 space-y-2 border-b border-[var(--border-subtle)] py-3">

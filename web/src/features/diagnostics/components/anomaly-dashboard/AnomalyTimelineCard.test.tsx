@@ -24,6 +24,9 @@ import type { UnitPref } from '@/lib/unitConversion';
 
 import type { AnomalyEntry } from '@/api/hooks/useAnomalies';
 import { AnomalyTimelineCard } from './AnomalyTimelineCard';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
 
 const display = vi.hoisted((): { prefs: UnitPref } => ({
   prefs: {
@@ -94,6 +97,35 @@ describe('AnomalyTimelineCard', () => {
       distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
       energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US', precision: 2,
     };
+  });
+
+  it.each(PACK_IDS)('%s composes the actual anomaly record, subtype and full formatted readouts', pack => {
+    const anomaly = { ...makeAnomaly({ value: -12.5, baseline: 0 }), unit: '°C' };
+    const { container } = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+      <ul><AnomalyTimelineCard anomaly={anomaly} /></ul>
+    </div>);
+    const release = observeAppDesignScopes(container.firstElementChild!);
+    try {
+      const record = screen.getByRole('listitem');
+      expectAppDesignDataMode(record, APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+      expectAppDesignDataMode(record.querySelector(':scope > [data-app-part~="record-body"]')!,
+        APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+      const rows = record.querySelectorAll('[data-app-list="definitions"] > [data-app-part~="list-row"]');
+      expect(rows).toHaveLength(2);
+      expect([...rows].map(row => row.querySelector('dt')?.textContent)).toEqual(['Value:', 'Baseline:']);
+      expect([...rows].map(row => row.querySelector('dd')?.textContent)).toEqual(['-12.50°C', '0.00°C']);
+      for (const row of rows) {
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]');
+        expect(row.querySelector('[data-app-part~="metric-unit"]')).toBeNull();
+      }
+      const subtype = screen.getByText('Statistical');
+      expect(subtype).toHaveAttribute('data-app-variant', 'neutral');
+      expect(matchesAppDesignCss(subtype, '[data-app-part~="badge"]')
+        .some(match => match.declarations['white-space'] === 'normal')).toBe(true);
+      expect(record).toHaveTextContent('reading deviates sharply from the learned mean');
+      expect(anomaly.value).toBe(-12.5);
+      expect(anomaly.baseline).toBe(0);
+    } finally { release(); }
   });
 
   it.each([

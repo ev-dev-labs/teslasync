@@ -121,13 +121,13 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
             ]}
           />
 
-          <div className="space-y-2 rounded-lg bg-white/[0.03] px-3 py-2">
-            <HelperText className="break-all font-mono text-xs tabular-nums">
+          <div data-app-part="card" data-app-card-kind="record" className="space-y-2 rounded-lg bg-white/[0.03] px-3 py-2">
+            <HelperText data-app-part="record-header record-title" className="break-all font-mono text-xs tabular-nums">
               {t('resaleVault.certificate.signature', 'Signature: {{sig}}', {
                 sig: `${signature?.slice(0, 32)}…`,
               })}
             </HelperText>
-            <div className="flex flex-wrap gap-2">
+            <div data-app-part="record-body" className="flex flex-wrap gap-2">
               <CopyButton
                 text={JSON.stringify(issued.certificate)}
                 label={t('resaleVault.certificate.copyCert', 'Copy certificate')}

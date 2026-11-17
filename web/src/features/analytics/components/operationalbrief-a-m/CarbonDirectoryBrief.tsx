@@ -39,7 +39,7 @@ export function CarbonDirectoryBrief({ analysis, states, display }: CarbonSectio
       <Text as="p" variant="bodySm">{source.payloadPresent
         ? t('carbon.curve.empty', 'No valid hourly intensity rows are available.')
         : t('analytics.brief.unavailable', 'Evidence unavailable')}</Text>
-      {source.payloadPresent && <dl className="flex flex-wrap items-baseline gap-x-2">
+      {source.payloadPresent && <dl data-app-part="list" className="flex flex-wrap items-baseline gap-x-2">
         <Text as="dt" variant="caption">{t('carbon.coverage.returned', 'Rows returned')}</Text>
         <Text as="dd" variant="caption" mono>{display.formatNumber(source.returnedRows)}</Text>
       </dl>}
@@ -47,7 +47,7 @@ export function CarbonDirectoryBrief({ analysis, states, display }: CarbonSectio
         {t('carbon.coverage.expected', '24 expected clock-hours')}
       </Text> : analysis.curve.availability === 'invalid' ? <>
         <Text as="p" variant="caption">{t('carbon.coverage.incomplete', 'Coverage is incomplete because invalid or duplicate rows were returned.')}</Text>
-        <dl className="flex flex-wrap items-baseline gap-x-2">
+        <dl data-app-part="list" className="flex flex-wrap items-baseline gap-x-2">
           <Text as="dt" variant="caption">{t('carbon.coverage.unique', 'Valid unique hours')}</Text>
           <Text as="dd" variant="caption" mono>{display.formatNumber(source.validUniqueHours)}</Text>
         </dl>
@@ -61,12 +61,12 @@ export function CarbonDirectoryBrief({ analysis, states, display }: CarbonSectio
     </div> : <Table aria-label={t('carbon.directory.title', 'Ranked hourly directory and bands')}>
       <tbody>{analysis.curve.rankedRows.map(row => {
         const band = bandPresentation(row.band, t);
-        return <tr key={row.hour}>
-          <th scope="row"><Text as="p" variant="label">{t('carbon.directory.rank', 'Rank {{rank}} · {{hour}}', {
+        return <tr data-app-part="table-row" key={row.hour}>
+          <th data-app-part="table-cell" scope="row"><Text as="p" variant="label">{t('carbon.directory.rank', 'Rank {{rank}} · {{hour}}', {
             rank: row.rank, hour: display.formatHour(row.hour),
           })}</Text></th>
-          <td className="text-right"><Text as="p" variant="caption" mono>{display.formatIntensity(row.intensityGPerKwh)}</Text></td>
-          <td><Badge variant={band.variant}>{band.label}</Badge></td>
+          <td data-app-part="table-cell" className="text-right"><Text as="p" variant="caption" mono>{display.formatIntensity(row.intensityGPerKwh)}</Text></td>
+          <td data-app-part="table-cell"><Badge variant={band.variant}>{band.label}</Badge></td>
         </tr>;
       })}</tbody>
     </Table>}

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { deriveDataState } from '@/api/dataState';
 import type { GasPriceHistory } from '@/api/types';
 import { formatDate } from '@/lib/dateFormat';
@@ -39,10 +39,15 @@ vi.mock('@/components/charts', async (importOriginal) => {
     }) => <span data-testid="tick" data-tick={JSON.stringify(tick)} data-width={width}
       data-domain={JSON.stringify(domain)}>{tickFormatter(3)}</span>,
     CartesianGrid: ({ stroke }: { stroke: string }) => <span data-testid="grid" data-stroke={stroke} />,
-    Legend: ({ wrapperStyle }: { wrapperStyle: unknown }) =>
-      <span data-testid="legend" data-typography={JSON.stringify(wrapperStyle)} />,
+    ChartLegend: (props: ComponentProps<typeof original.ChartLegend>) =>
+      <div data-testid="legend" data-typography={JSON.stringify(props.wrapperStyle)}>
+        <original.ChartLegend {...props} payload={[
+          { value: 'Price/gallon', type: 'line', color: 'var(--text-secondary)' },
+          { value: 'Price/liter', type: 'line', color: 'var(--text-secondary)' },
+        ]} />
+      </div>,
     Tooltip: ({ content }: { content: ReactNode }) => <>{content}</>,
-    areaGradient: () => null,
+    areaGradient: (id: string) => <span data-testid="gradient" data-gradient-id={id} />,
   };
 });
 
@@ -61,15 +66,20 @@ function renderChart(data: GasPriceHistory[], error?: Error) {
 }
 
 afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
   document.documentElement.style.removeProperty('--font-sans');
   document.documentElement.style.removeProperty('--font-scale');
 });
 
 describe('GasTrendChart', () => {
   it('uses the saved font and text scale for axes and legend while retaining compact chart geometry', () => {
+    const errors = vi.spyOn(console, 'error');
     document.documentElement.style.setProperty('--font-sans', 'Preference Sans');
     document.documentElement.style.setProperty('--font-scale', '1.35');
     renderChart(history);
+    expect(screen.getAllByTestId('gradient')).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
     const tick = { fontFamily: 'Preference Sans', fontSize: 16, fill: chartTokens.axisStroke };
     expect(JSON.parse(screen.getByTestId('x-axis').dataset.tick ?? '{}')).toEqual(tick);
     expect(JSON.parse(screen.getByTestId('tick').dataset.tick ?? '{}')).toEqual(tick);
@@ -83,6 +93,10 @@ describe('GasTrendChart', () => {
       top: 8, right: 8, left: 0, bottom: 0,
     });
     expect(screen.getByTestId('grid')).toHaveAttribute('data-stroke', chartTokens.gridStroke);
+    const legend = screen.getByTestId('legend').querySelector('[data-app-part="chart-legend"]');
+    expect(legend).toHaveTextContent('Price/gallon');
+    expect(legend).toHaveTextContent('Price/liter');
+    expect(legend?.querySelector('button')).not.toBeInTheDocument();
   });
 
   it('keeps mixed source denominations in separate, labelled series without converting or joining gaps', () => {

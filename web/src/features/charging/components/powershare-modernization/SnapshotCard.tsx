@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout';
-import { Caption, Text, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { Caption, Text, DataTable, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { DateTime } from '@/components/data-display';
 import { typography } from '@/lib/tokens';
 import { safeArray } from '@/lib/safeArray';
+import { formatRelativeTime } from '@/lib/dateFormat';
 import type { SnapshotRow } from '../powershare';
 
 interface SnapshotCardProps {
@@ -16,6 +17,18 @@ interface SnapshotCardProps {
 }
 
 const snapshotKey = (row: SnapshotRow) => row.key;
+
+const snapshotMobilePresentation: MobileDataTablePresentation<SnapshotRow> = {
+  roles: { label: 'title', value: 'primary', ts: 'meta' },
+  displayValue: (row, key) => {
+    switch (key) {
+      case 'label': return row.label;
+      case 'value': return row.value;
+      case 'ts': return row.ts ? formatRelativeTime(row.ts) : '—';
+      default: return null;
+    }
+  },
+};
 
 function snapshotAccessor(row: SnapshotRow, key: string): number | string {
   if (key === 'ts') return row.ts ? Date.parse(row.ts) : Number.NEGATIVE_INFINITY;
@@ -55,6 +68,7 @@ export function SnapshotCard({ rows, isLoading, error, onRetry }: SnapshotCardPr
           tableId="charging:powershare-signals"
           columns={columns}
           mobileColumns={['label', 'value', 'ts']}
+          mobilePresentation={snapshotMobilePresentation}
           data={sortedRows}
           keyExtractor={snapshotKey}
           sortKey={sortKey}

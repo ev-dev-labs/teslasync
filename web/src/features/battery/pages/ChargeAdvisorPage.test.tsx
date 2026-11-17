@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -333,6 +334,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ChargeAdvisorPage', () => {
   it('keeps the daily-trend controls in its host header rather than above the shared plot start', () => {

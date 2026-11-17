@@ -24,6 +24,7 @@
  * SavedViewMenu) can fire.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -448,6 +449,8 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 /* ─────────────────────────── Pure helper unit tests ─────────────────────── */
+
+setupMeasuredChartContainers(800, 320);
 
 describe('formatHour', () => {
   it('formats the midnight and noon boundaries with the shared clock formatter', () => {

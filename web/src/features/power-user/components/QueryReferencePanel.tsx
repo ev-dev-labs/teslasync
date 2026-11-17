@@ -72,7 +72,7 @@ export function QueryReferencePanel() {
           'This is a read-only composing surface. Nothing runs in the browser.',
         )}
       </InlineCallout>
-      <ul className="space-y-2">
+      <ul data-app-part="list" className="space-y-2">
         {tips.map((tip) => (
           <li key={tip.id} className="flex items-start gap-2">
             <span

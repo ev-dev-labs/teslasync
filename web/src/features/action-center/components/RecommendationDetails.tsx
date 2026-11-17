@@ -256,7 +256,7 @@ export function RecommendationDetails({
                 defaultValue_other: '{{label}} loaded, {{count}} items',
               })}
             </Text>
-            <fieldset
+            <fieldset data-app-part="field"
               className="min-w-0"
               disabled={history.isFetching || historyState.isRefreshBlocked}
               aria-busy={history.isFetching}

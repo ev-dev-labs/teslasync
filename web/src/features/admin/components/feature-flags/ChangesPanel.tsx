@@ -198,7 +198,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       onExpandedChange={(keys) => setExpandedKeys(keys.filter((key): key is number => typeof key === 'number'))}
       rowLabel={(row) => row.flag_key ?? ''}
       renderExpanded={(row) => (
-        <dl className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+        <dl data-app-part="list" className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
           {columns.map((column) => (
             <div key={column.key} className="min-w-0">
               <Text as="dt" size="xs" color="muted">{column.header}</Text>

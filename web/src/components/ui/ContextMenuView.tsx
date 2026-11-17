@@ -1,8 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { closeContextMenu, type ContextMenuItem, type MenuState } from './contextMenuStore';
+import { AppDesignPortal } from './AppDesignPortal';
 
 const VIEWPORT_MARGIN = 8;
 
@@ -125,9 +125,10 @@ export default function ContextMenuView({ state }: { state: MenuState }) {
   };
   const containerStyle: CSSProperties = { position: 'fixed', left: state.x, top: state.y };
 
-  return createPortal(
+  return <AppDesignPortal origin={state.restoreFocusEl} key={state.nonce}>
     <div
       ref={containerRef}
+      data-app-part="popover"
       role="menu"
       tabIndex={-1}
       id={menuId}
@@ -147,6 +148,8 @@ export default function ContextMenuView({ state }: { state: MenuState }) {
           <li key={item.id} role="none">
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant={item.destructive ? 'danger' : 'ghost'}
               role="menuitem"
               ref={element => { itemRefs.current[index] = element; }}
               data-testid={`context-menu-item-${item.id}`}
@@ -187,7 +190,6 @@ export default function ContextMenuView({ state }: { state: MenuState }) {
           </li>
         ))}
       </ul>
-    </div>,
-    document.body,
-  );
+    </div>
+  </AppDesignPortal>;
 }

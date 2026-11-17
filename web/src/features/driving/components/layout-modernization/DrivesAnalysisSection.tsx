@@ -78,7 +78,7 @@ export function DrivesAnalysisSection({
                 />
               ) : (
                 <div className="space-y-4">
-                  <dl className="space-y-3">
+                  <dl data-app-part="list" className="space-y-3">
                     {rows.map(row => (
                       <div key={row.key} className="flex flex-wrap items-center justify-between gap-3">
                         <Text as="dt" size="sm" color="secondary" className="flex min-w-0 items-center gap-2">

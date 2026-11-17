@@ -32,7 +32,7 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
       <SearchInput value={search} onChange={setSearch} placeholder={t('alertPacks.search', 'Search packs...')} />
       <StaleRefreshWarning state={catalogState} label={t('alertPacks.title', 'Alert packs')} />
       {catalogState.fatalError ? <ErrorDisplay error={catalogState.fatalError} onRetry={() => void catalog.refetch()} /> : !catalogState.hasData ? (
-        <div role="status" aria-label={t('alertPacks.title', 'Alert packs')} className="space-y-2">
+        <div data-app-part="status" role="status" aria-label={t('alertPacks.title', 'Alert packs')} className="space-y-2">
           {catalog.isFetching ? <Spinner /> : <Caption>{catalogState.isRefreshBlocked
             ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
           {!catalog.isFetching && <Button variant="ghost" onClick={() => void catalog.refetch()}>{t('common.retry', 'Retry')}</Button>}
@@ -62,7 +62,7 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
       </div>
       <StaleRefreshWarning state={installationState} label={t('alertPacks.installedTitle', 'Installed packs')} />
       {installationState.fatalError ? <ErrorDisplay error={installationState.fatalError} onRetry={() => void installations.refetch()} /> : !installationState.hasData ? (
-        <div role="status" aria-label={t('alertPacks.installedTitle', 'Installed packs')}>
+        <div data-app-part="status" role="status" aria-label={t('alertPacks.installedTitle', 'Installed packs')}>
           {installations.isFetching ? <Spinner /> : <Caption>{installationState.isRefreshBlocked
             ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
         </div>

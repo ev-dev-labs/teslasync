@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -117,6 +118,8 @@ afterEach(() => {
   onlineManager.setOnline(true);
   localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('root-cause deferred catalog and evidence sources', () => {
   it.each([{ catalog: ['Soc', 'PackVoltage'] }, { catalog: [] }])('uses canonical neutral decorative picker icons for catalog $catalog', ({ catalog }) => {

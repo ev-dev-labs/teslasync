@@ -3,6 +3,7 @@
  * error recovery, stats and mobile table pipeline. Runtime/visual acceptance
  * belongs to the parent's serialized validation window.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import type { ComponentProps, ReactNode } from 'react';
@@ -150,6 +151,8 @@ afterEach(() => {
   setGlobalPrecision(previousPreferences.precision);
   setGlobalLocale(previousPreferences.locale);
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('drivetrain live modernization preservation (authored)', () => {
   it('reports actual latest-motor provenance without claiming freshness or continuous coverage or inventing an unknown source', () => {

@@ -228,6 +228,9 @@ export function DataTableColumnMenu({
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
+                          data-app-part="button"
+                          data-app-variant="ghost"
+                          data-app-icon-only="true"
                           onClick={() => handleMove(col.key, -1)}
                           disabled={upDisabled}
                           aria-label={t('table.columns.moveUp', 'Move {{col}} up', {
@@ -245,6 +248,9 @@ export function DataTableColumnMenu({
                         </button>
                         <button
                           type="button"
+                          data-app-part="button"
+                          data-app-variant="ghost"
+                          data-app-icon-only="true"
                           onClick={() => handleMove(col.key, 1)}
                           disabled={downDisabled}
                           aria-label={t('table.columns.moveDown', 'Move {{col}} down', {

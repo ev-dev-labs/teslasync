@@ -48,7 +48,7 @@ export const Label = forwardRef<HTMLLabelElement, LabelProps>(function Label({
 }, ref) {
   const { t } = useTranslation();
   return (
-    <label ref={ref} className={cn(typography.role.label, 'break-words', className)} {...rest}>
+    <label ref={ref} data-app-part="field-label" className={cn(typography.role.label, 'break-words', className)} {...rest}>
       {children}
       {required ? (
         <>

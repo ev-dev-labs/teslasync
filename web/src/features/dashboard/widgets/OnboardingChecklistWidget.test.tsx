@@ -306,10 +306,15 @@ describe('OnboardingChecklistWidget — active checklist', () => {
     expect(screen.queryByText('33%')).toBeNull();
 
     const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('data-app-part', 'metric');
+    expect(bar).toHaveAttribute('data-app-metric', 'bar');
+    expect(bar).toHaveAttribute('data-metric-track');
+    expect(bar).toHaveClass('mt-3', 'h-2');
     expect(bar).toHaveAttribute('aria-valuenow', '1');
     expect(bar).toHaveAttribute('aria-valuemax', '3');
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     const fill = bar.firstElementChild as HTMLElement | null;
+    expect(fill).toHaveAttribute('data-metric-fill');
     expect(fill?.style.width).toBe('33%');
     expect(container.querySelector('[data-testid="onboarding-checklist"]')).not.toBeNull();
   });
@@ -476,7 +481,11 @@ describe('OnboardingChecklistWidget — empty state', () => {
       screen.getByText('No setup steps available right now.'),
     ).toBeInTheDocument();
     expect(screen.getByText('0 of 0 done')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('aria-valuenow', '0');
+    expect(bar).toHaveAttribute('aria-valuemax', '0');
+    expect(bar).toHaveAttribute('data-metric-track');
+    expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ width: '0%' });
     // The empty branch replaces the task list entirely.
     expect(screen.queryByTestId('onboarding-checklist')).toBeNull();
   });

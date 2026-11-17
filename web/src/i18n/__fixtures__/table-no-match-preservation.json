@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the exact optional DataTable no-match override API and PreviewTable prop rename; recover both independently compiled predecessors before unchanged application-design/Fleet/canonical and preview producer proofs.",
+  "dependencies": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/fixtures.ts",
+      "sha256": "6223bd4ec1e17f4c4193b914702714c3c861f0866684f884b9e61ed30f277ae7"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "1522eb71205cfddd4ff92fe6db8287242d0e597a6ae064c4d4fe370634f8394e"
+    },
+    {
+      "file": "web/src/components/ui/tableValueFilters.ts",
+      "sha256": "86f2e409fc1d93af04b6ed6c0823481eef1943592871cb0cb096ebaa0e2d2462"
+    },
+    {
+      "file": "web/src/components/ui/DataTableValueFilter.tsx",
+      "sha256": "9dfe4c0321117b91fa9ee0fd2a8d3b14e1ecececd7dfef0ad1341349b727390c"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+    },
+    {
+      "file": "web/src/components/ui/index.ts",
+      "sha256": "b2fcbd2722d6bd3e802a7aea0ae19b722d76b68c3494ba63a725e80eb552c0c6"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before": "457005e75ef3bc7f8cd92db6bed78054b3bf0dcda2e236e6ddc64d224a0dbc06",
+      "after": "555113bc67b988967d83f10c52a46985a74f8dea6ae5c3db465a22126c9cb87a",
+      "independentPredecessorProof": {
+        "map": "full-design-runtime-candidate-dist-v14/assets/B6V4yPQb.js.map",
+        "mapSha256": "cbe13e3ee5d10fb6c08e826321027c40bc56b8f080d2be8a1e0c577cda8879bd",
+        "mapSource": "D:/repos/teslasync/web/src/components/ui/DataTable.tsx",
+        "sha256": "457005e75ef3bc7f8cd92db6bed78054b3bf0dcda2e236e6ddc64d224a0dbc06"
+      },
+      "originalLineCount": 1920,
+      "currentLineCount": 1923,
+      "originalCallCount": 24,
+      "originalCallsSha256": "ae0bff140bbf7358c794c574e8d638534138a56b8b92928f02589d6e6ba80fad",
+      "originalProjectionSha256": "181f062a3e08c634c7a69de2abe018d783a211f3faad3c126ba501c0f3274e5b",
+      "currentProjectionSha256": "46f457aa4bbe1e68a23e68f75b1e9dd2614c0875804636a878ba6f179a919a8a",
+      "hunks": [
+        {
+          "start": 231,
+          "old": [],
+          "new": [
+            "  /** Optional wording when local filters hide loaded rows, distinct from an empty source. */",
+            "  noMatchMessage?: string"
+          ]
+        },
+        {
+          "start": 503,
+          "old": [],
+          "new": [
+            "  noMatchMessage: callerNoMatchMessage,"
+          ]
+        },
+        {
+          "start": 630,
+          "old": [
+            "  const noMatchMessage = t('combobox.noResults', 'No results')"
+          ],
+          "new": [
+            "  const noMatchMessage = callerNoMatchMessage ?? t('combobox.noResults', 'No results')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewTable.tsx",
+      "before": "47d8fe973084cfda4b2bc15bfebdb7f0c3648da1217afea2c0a5a0070483d35f",
+      "after": "ff56272d6cdc2f981db0ab79f791b1b6b124b7b57c7c4d216225d98afdd91f3a",
+      "independentPredecessorProof": {
+        "map": "full-design-runtime-candidate-dist-v14/assets/D6d2l0-s.js.map",
+        "mapSha256": "b704b16251a7a3f53414d2d20a7d94be0bf5c988e3164d15fde50d07838cc4da",
+        "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewTable.tsx",
+        "sha256": "47d8fe973084cfda4b2bc15bfebdb7f0c3648da1217afea2c0a5a0070483d35f"
+      },
+      "originalLineCount": 47,
+      "currentLineCount": 47,
+      "originalCallCount": 16,
+      "originalCallsSha256": "0e91a2fad5bc869da80b8db6e37a63fb53d6ba848ac0b9c551e7d210d1850d73",
+      "originalProjectionSha256": "630a957c66322c8bf06fe4568dcc9de6123eb6c6a8e852d7fb1b1d14453f2f55",
+      "currentProjectionSha256": "630a957c66322c8bf06fe4568dcc9de6123eb6c6a8e852d7fb1b1d14453f2f55",
+      "hunks": [
+        {
+          "start": 43,
+          "old": [
+            "        showDensityControl={false} emptyMessage={t('theme.appDesignPreview.noRows', 'No sample journeys match.')} />"
+          ],
+          "new": [
+            "        showDensityControl={false} noMatchMessage={t('theme.appDesignPreview.noRows', 'No sample journeys match.')} />"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -87,7 +87,10 @@ describe('ChargePhysicsPanel', () => {
     expect(screen.getByText(/Disconnected\s*·\s*at limit/)).toBeInTheDocument();
     expect(screen.getByText('At limit, still plugged 10 min.')).toBeInTheDocument();
     expect(screen.getByText('Supercharger dwell after Complete: 10 min.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Tesla physics cockpit' })).toHaveAttribute('href', '/physics-cockpit');
+    expect(screen.getByRole('link', { name: 'Open Tesla physics cockpit' }))
+      .toHaveAttribute('href', '/physics-cockpit');
+    expect(screen.getByRole('link', { name: 'Open Tesla physics cockpit' }))
+      .toHaveAttribute('data-app-action-link');
   });
 
   it('shows a skeleton only during active initial loading', () => {

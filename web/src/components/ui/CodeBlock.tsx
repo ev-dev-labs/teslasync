@@ -41,6 +41,7 @@ export function CodeBlock({
   return (
     <div
       role="group"
+      data-app-part="panel"
       aria-label={ariaLabel ?? t('common.codeBlock.aria', '{{language}} code snippet', {
         language: langLabel,
       })}

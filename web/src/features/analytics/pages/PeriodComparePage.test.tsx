@@ -24,6 +24,7 @@
  * the mocked `request`) precisely so its async `undefined → []` transition
  * reproduces the banner-suppression bug the fix addresses.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
@@ -218,6 +219,8 @@ afterEach(() => {
   onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PeriodComparePage — happy path', () => {
   it('reviews both source windows and original baselines in the real OperationalBrief drawer', async () => {

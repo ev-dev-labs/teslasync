@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MotorSnapshot, DriveDynamicsSnapshot } from '@/api/types';
@@ -21,6 +21,10 @@ import SpeedGearPanel from './SpeedGearPanel';
 import DynamicsTripToolbar from './DynamicsTripToolbar';
 import { LiveSourceWarnings } from './LiveSourceWarnings';
 import { SignedMotorReading } from './SignedMotorReading';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const fixture = vi.hoisted(() => ({
   length: 'km', temperature: 'C', precision: undefined as number | undefined, locale: 'en-US',
@@ -243,7 +247,7 @@ describe('sample statistics, selected bounds and retained trust', () => {
     const bytes = JSON.stringify(fixture.history.data);
     const view = mount(<SummaryStats vehicleId={7} historyQuery={window} />);
     fixture.temperature = 'F'; fixture.precision = 3;
-    setGlobalPrecision(3); setGlobalLocale('de-DE');
+    act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
     view.rerender(<SummaryStats vehicleId={7} historyQuery={window} />);
     expect(metric('Avg Motor Temp')).toHaveTextContent('120,200');
     expect(metric('Avg Torque')).toHaveTextContent('100,000');

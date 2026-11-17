@@ -2,6 +2,7 @@ import { CalendarRange, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { Grid } from '@/components/layout';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   Badge,
@@ -87,10 +88,13 @@ export function WeekdayWeekendComparison({
             )}
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <>
+          <Grid minItemWidth="wide" gap={3}>
             {rows.map((row) => (
               <div
                 key={row.key}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -145,7 +149,8 @@ export function WeekdayWeekendComparison({
                 </Text>
               </div>
             ))}
-            <div className="flex items-start gap-2 sm:col-span-2">
+          </Grid>
+            <div className="mt-3 flex items-start gap-2">
               <Info
                 className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                 aria-hidden="true"
@@ -157,7 +162,7 @@ export function WeekdayWeekendComparison({
                 )}
               </Text>
             </div>
-          </div>
+          </>
         )}
       </DrivingRhythmSectionBody>
     </GlassPanel>

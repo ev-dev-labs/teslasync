@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   ChartTooltip, ChartGradient, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AREA_DEFAULTS,
+  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ChartLegend, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { chartTokens } from '@/lib/tokens';
@@ -42,7 +42,7 @@ export function TorqueHistory({ rows, state, loading }: MotorHistoryChartProps) 
           <XAxis dataKey="time" tick={torqueAxisTick} />
           <YAxis tickFormatter={value => fmtNumber(value)} tick={torqueAxisTick} />
           <Tooltip content={<ChartTooltip valueFormatter={torque} />} />
-          <Legend />
+          <ChartLegend />
           <Area
             {...AREA_DEFAULTS}
             dataKey="torque"

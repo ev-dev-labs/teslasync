@@ -37,6 +37,7 @@
  * falls to its generic network branch for a plain Error.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -204,6 +205,8 @@ function getRefreshButton(): HTMLButtonElement {
 beforeEach(() => {
   mockedRequest.mockReset();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('TeslaFeatureFlagsPage', () => {
   it('renders skeletons — no KPI values and no chart — while the source loads', () => {

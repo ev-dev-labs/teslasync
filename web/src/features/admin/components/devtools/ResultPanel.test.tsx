@@ -52,6 +52,7 @@ describe('ResultPanel', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     // idle background cue
     expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]')
+    expect(container.firstChild).toHaveAttribute('data-app-state', 'idle')
   })
 
   it('prefers a caller-supplied idleMessage over the default', () => {
@@ -71,6 +72,10 @@ describe('ResultPanel', () => {
     // 2-space indentation proves the JSON.stringify(_, null, 2) formatting path
     expect(pre?.textContent).toContain('"id": 7')
     expect(pre?.textContent).toContain('"name": "Model 3"')
+    expect(pre).toHaveAttribute('data-app-panel-kind', 'code')
+    expect(pre).toHaveAttribute('data-app-code-slot', 'body')
+    expect(pre).toHaveClass('max-h-64', 'overflow-auto')
+    expect(container.firstChild).toHaveAttribute('data-app-panel-kind', 'code')
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]')
   })
@@ -97,6 +102,8 @@ describe('ResultPanel', () => {
     expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument()
     expect(container.querySelector('pre')).toBeNull()
     expect(container.firstChild).toHaveClass('bg-[var(--semantic-danger-bg)]')
+    expect(container.firstChild).toHaveAttribute('data-app-feedback-kind', 'error')
+    expect(alert).toHaveAttribute('data-app-part', 'feedback-message')
   })
 
   it('treats falsy-but-present data (0 / false) as data, not idle', () => {

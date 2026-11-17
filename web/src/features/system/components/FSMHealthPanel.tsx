@@ -116,7 +116,7 @@ export function FSMHealthPanel({ transitions, sourceState, isLoading = false, hi
         {sourceState?.fatalError ? (
           <QueryError error={sourceState.fatalError} onRetry={sourceState.retry ?? undefined} />
         ) : isLoading && !sourceState?.isRefreshBlocked ? (
-          <div role="status" aria-label={t('common.loading', 'Loading')}>
+          <div data-app-part="status" role="status" aria-label={t('common.loading', 'Loading')}>
             <Skeleton height={24} />
           </div>
         ) : (
@@ -147,18 +147,21 @@ export function FSMHealthPanel({ transitions, sourceState, isLoading = false, hi
                 ? t('fsm.health.stuckTitle', 'Stuck sessions')
                 : t('fsm.health.loadedRecoveryTitle', 'Recovery transitions');
           return (
-            <div
+            <div data-app-part="feedback metric"
+              data-app-feedback-kind="notice"
+              data-app-tone={alert.severity}
+              data-app-metric="inline"
               key={alert.type}
               role="status"
               data-testid={`fsm-health-alert-${alert.type}`}
               className={`flex items-start gap-3 rounded-lg border p-3 ${tone.border} ${tone.bg}`}
             >
-              <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${tone.fg}`} aria-hidden="true" />
-              <div>
-                <Text variant="label" className={tone.fg}>{title}</Text>
-                <Text as="p" variant="bodySm" className="mt-0.5">{alert.message}</Text>
+              <Icon data-app-part="feedback-icon" className={`h-4 w-4 mt-0.5 shrink-0 ${tone.fg}`} aria-hidden="true" />
+              <div data-app-part="feedback-content">
+                <Text data-app-part="feedback-title metric-label" variant="label" className={tone.fg}>{title}</Text>
+                <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mt-0.5">{alert.message}</Text>
               </div>
-              <MetricValue className={`ml-auto ${tone.fg}`} aria-hidden="true">{fmtInt(alert.count)}</MetricValue>
+              <MetricValue data-app-part="metric-reading metric-value" className={`ml-auto ${tone.fg}`} aria-hidden="true">{fmtInt(alert.count)}</MetricValue>
             </div>
           );
         })}

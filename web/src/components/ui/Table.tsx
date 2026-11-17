@@ -30,6 +30,8 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
       >
         <table
           ref={ref}
+          data-app-part="table"
+          data-app-table-variant={variant}
           tabIndex={tabIndex}
           className={cn(
             tableTokens.wrapper,

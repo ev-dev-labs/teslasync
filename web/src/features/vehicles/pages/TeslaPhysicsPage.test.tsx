@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
@@ -6,6 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lazyBindings, sharedLoaderSpecifiers } from '@/__tests__/lazyRoutes.parse';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 import { formatDateTime } from '@/lib/dateFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { features } from '../components/tesla-physics/PhysicsPageShell';
 import TeslaPhysicsPage from './TeslaPhysicsPage';
 
@@ -529,6 +530,66 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByText('FSD: silent now; 14.00 h unknown in returned budget')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter returned signals by status'), { target: { value: 'silent' } });
     expect(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous system (1 rows)' })).toBeInTheDocument();
+  });
+
+  it('keeps signal attention details available in the phone grid', async () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = await renderAt('/tesla-physics/nervous-system');
+      const grid = await waitFor(() => {
+        const element = container.querySelector('[data-mobile-table]');
+        expect(element).not.toBeNull();
+        return element as HTMLElement;
+      });
+      expect(grid).toHaveTextContent('FSD');
+      expect(grid).toHaveTextContent('silent');
+      fireEvent.click(within(grid).getByRole('button', { name: 'Quick view' }));
+      const detail = screen.getByRole('dialog');
+      expect(within(detail).getByText('Field')).toBeInTheDocument();
+      expect(within(detail).getByText('Status')).toBeInTheDocument();
+      expect(within(detail).getByText('Detail')).toBeInTheDocument();
+      expect(within(detail).getByText('No recent sample.')).toBeInTheDocument();
+      fireEvent.click(within(detail).getAllByRole('button', { name: 'Close' })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous system (1 rows)' }));
+      const raw = await waitFor(() => {
+        const element = container.querySelectorAll('[data-mobile-table]')[1];
+        expect(element).toBeDefined();
+        return element as HTMLElement;
+      });
+      expect(raw).toHaveTextContent('No recent sample.');
+      fireEvent.click(within(raw).getByRole('button', { name: 'Expand row' }));
+      expect(raw.querySelector('dl[data-app-list="definitions"]')).toHaveTextContent('No recent sample.');
+    } finally { bounds.mockRestore(); }
+  });
+
+  it('keeps logbook session links and complete evidence available in the phone grid', async () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = await renderAt('/tesla-physics/logbook');
+      const grid = await waitFor(() => {
+        const element = container.querySelector('[data-mobile-table]');
+        expect(element).not.toBeNull();
+        return element as HTMLElement;
+      });
+      expect(within(grid).getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      const detail = screen.getByRole('dialog');
+      expect(within(detail).getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
+      for (const label of ['Word', 'Kind', 'Started', 'Ended']) {
+        expect(within(detail).getByText(label, { exact: true })).toBeInTheDocument();
+      }
+      expect(within(detail).getByText('unknown')).toBeInTheDocument();
+      fireEvent.click(within(detail).getAllByRole('button', { name: 'Close' })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Tesla-language logbook (2 rows)' }));
+      const raw = await waitFor(() => {
+        const element = container.querySelectorAll('[data-mobile-table]')[1];
+        expect(element).toBeDefined();
+        return element as HTMLElement;
+      });
+      expect(within(raw).getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
+      fireEvent.click(within(raw).getAllByRole('button', { name: 'Expand row' })[0]);
+      expect(raw.querySelector('dl[data-app-list="definitions"]')).toHaveTextContent('unknown');
+    } finally { bounds.mockRestore(); }
   });
 
   it('keeps Car Kept Living lag unknown without a paired ingest reading', async () => {

@@ -20,10 +20,21 @@ export const PACK_AVAILABILITY: Readonly<Record<PackId, boolean>> = {
   brutal: true, cyber: true, memphis: true,
 };
 
+const PACK_NAME_ALIASES: Readonly<Record<string, PackId>> = {
+  studio: 'v1',
+  elevated: 'v2',
+  precision: 'v3',
+  concierge: 'v4',
+  owner: 'v4',
+  iconic: 'v5',
+  expressive: 'v6',
+  pixel: 'v7',
+};
+
 export function resolvePackId(value: unknown): PackId {
-  return typeof value === 'string' && PACK_IDS.some(id => id === value)
-    ? value as PackId
-    : 'classic';
+  if (typeof value !== 'string') return 'classic';
+  if (PACK_IDS.some(id => id === value)) return value as PackId;
+  return PACK_NAME_ALIASES[value] ?? 'classic';
 }
 
 export function resolveAvailablePackId(value: unknown): PackId {

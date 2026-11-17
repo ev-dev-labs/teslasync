@@ -53,6 +53,8 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
 
   return (
     <div
+      data-app-part="metric-grid"
+      data-app-metric-grid="native-gauge"
       className={cn(
         'widget-gauge-hero flex h-full w-full min-w-0 flex-col items-center justify-center',
         dashboardTokens.density.sectionGap,
@@ -88,15 +90,17 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
           {items.map((stat, index) => (
             <div
               key={`${stat.label ?? 'stat'}-${index}`}
+              data-app-part="metric"
               className="flex min-w-0 flex-col items-center text-center"
             >
               <span
+                data-app-part="metric-label"
                 title={typeof stat.label === 'string' && stat.label !== '' ? stat.label : undefined}
                 className={cn('truncate text-center', dashboardTokens.metricLabel)}
               >
                 {stat.label ?? '—'}
               </span>
-              <span className="truncate text-center text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+              <span data-app-part="metric-value" className="truncate text-center text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                 {stat.value ?? '—'}
                 {stat.unit && (
                   <span className={cn('ms-0.5 text-center', dashboardTokens.unit)}>{stat.unit}</span>

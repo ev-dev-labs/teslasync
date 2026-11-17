@@ -95,6 +95,8 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
       icon={<Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
       actions={<Link
           to="/drives"
+          data-app-part="button"
+          data-app-variant="ghost"
           className={`${BUTTON_BASE} min-h-11 min-w-11 shrink-0 gap-1 px-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]`}
         >
           {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />

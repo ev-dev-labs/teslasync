@@ -12,7 +12,7 @@ export function StatusPageSkeleton() {
   const { t } = useTranslation()
 
   return (
-    <div
+    <div data-app-part="status"
       role="status"
       aria-busy="true"
       aria-label={t('systemStatus.skeletonLoading', 'Loading system status')}

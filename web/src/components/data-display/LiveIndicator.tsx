@@ -88,6 +88,7 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
   if (variant === 'dot') {
     return (
       <span
+        data-app-part="status"
         role="status"
         aria-label={v.label}
         title={v.label}
@@ -102,6 +103,7 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
 
   return (
     <span
+      data-app-part="status badge"
       role="status"
       aria-label={age ? `${v.label} · ${age}` : v.label}
       // The last-message age lives in the tooltip, not as visible text.

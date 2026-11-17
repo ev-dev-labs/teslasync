@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -234,7 +234,7 @@ describe('SystemPage independent retained feeds', () => {
     fireEvent.click(screen.getByTestId('queue-worker-card-notification'))
     await screen.findByText('Complete retained notification job')
     installRouter({ rate: () => Promise.reject(new Error('rate unavailable')), queue: () => Promise.reject(new Error('queue unavailable')) })
-    await client.invalidateQueries()
+    await act(async () => { await client.invalidateQueries() })
     await waitFor(() => expect(client.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
     expect(screen.getByTestId('rate-limit-rows')).toBeInTheDocument()
     expect(screen.getByTestId('queue-rows')).toBeInTheDocument()
@@ -249,7 +249,7 @@ describe('SystemPage independent retained feeds', () => {
     await screen.findByTestId('rate-limit-rows')
     await screen.findByTestId('queue-rows')
     installRouter({ rate: () => Promise.reject(new Error('rate unavailable')), queue: () => Promise.reject(new Error('queue unavailable')) })
-    await client.invalidateQueries()
+    await act(async () => { await client.invalidateQueries() })
     // Retained values stay on the face while the retained status moved to the drawer.
     const brief = screen.getByTestId('system-operational-brief')
     expect(within(brief).getByText('2 / 3')).toBeInTheDocument()

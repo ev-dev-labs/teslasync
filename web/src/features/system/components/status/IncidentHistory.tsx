@@ -26,7 +26,7 @@ export function IncidentHistory() {
       </Caption>
       <StaleRefreshWarning state={state} label={t('systemStatus.incidentHistory.title', 'Recent incidents')} />
       {isLoading && !data ? (
-        <div role="status" aria-label={t('systemStatus.incidentHistory.loading', 'Loading incident history')}>
+        <div data-app-part="status" role="status" aria-label={t('systemStatus.incidentHistory.loading', 'Loading incident history')}>
           <Skeleton className="h-16" />
         </div>
       ) : error ? (
@@ -36,7 +36,7 @@ export function IncidentHistory() {
           {t('systemStatus.incidentHistory.empty', 'No incidents recorded. This does not establish historical uptime.')}
         </Text>
       ) : (
-        <ul className="divide-y divide-[var(--glass-border)]">
+        <ul data-app-part="list" className="divide-y divide-[var(--glass-border)]">
           {incidents.map((incident) => (
             <li key={incident.id}>
               <Link

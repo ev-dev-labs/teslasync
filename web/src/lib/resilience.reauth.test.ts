@@ -280,6 +280,7 @@ describe('resilientFetch — GET-only version diagnostic', () => {
       expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/system/version', {
         method: 'GET',
         redirect: 'manual',
+        signal: expect.any(AbortSignal),
       })
       expect(assignSpy).toHaveBeenCalledTimes(1)
       expect(purgeMock).toHaveBeenCalledTimes(1)
@@ -289,7 +290,7 @@ describe('resilientFetch — GET-only version diagnostic', () => {
     }
   })
 
-  it('retains the initiating request and its TypeError when supported GET returns healthy JSON', async () => {
+  it('retains the initiating write and its TypeError without issuing a diagnostic read', async () => {
     const { resilientFetch } = await loadResilience()
     const networkError = new TypeError('Failed to fetch')
     const controller = new AbortController()
@@ -315,7 +316,7 @@ describe('resilientFetch — GET-only version diagnostic', () => {
         credentials: 'include',
         signal: controller.signal,
       })).rejects.toBe(networkError)
-      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/vehicles', {
         method: 'POST',
         body,
@@ -325,10 +326,6 @@ describe('resilientFetch — GET-only version diagnostic', () => {
       })
       expect(Array.from(new Headers(fetchMock.mock.calls[0][1]?.headers).entries()))
         .toEqual([['x-diagnostic-test', 'original']])
-      expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/system/version', {
-        method: 'GET',
-        redirect: 'manual',
-      })
       expect(controller.signal.aborted).toBe(false)
       expect(assignSpy).not.toHaveBeenCalled()
       expect(purgeMock).not.toHaveBeenCalled()

@@ -85,7 +85,7 @@ export function PostureTaxonomy({ counts, pending }: PostureTaxonomyProps) {
 
   return (
     <>
-      <dl
+      <dl data-app-part="list"
         className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
         data-testid="fleet-posture-taxonomy"
       >

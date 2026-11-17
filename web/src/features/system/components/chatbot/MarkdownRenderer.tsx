@@ -1,6 +1,8 @@
-import { lazy, Suspense, memo, type ReactNode } from 'react';
-import { Heading, Table, Text } from '@/components/ui';
+import { lazy, Suspense, memo, type JSX, type ReactNode } from 'react';
+import type { ExtraProps } from 'react-markdown';
+import { Heading, Text } from '@/components/ui';
 import { CodeBlock } from './CodeBlock';
+import { MarkdownTable, useMarkdownTableLabel } from './MarkdownTable';
 
 /**
  * MarkdownRenderer — renders an assistant chat message as sanitized markdown.
@@ -20,6 +22,11 @@ import { CodeBlock } from './CodeBlock';
  *
  * Code blocks delegate to `<CodeBlock>` for copy-to-clipboard and language tags.
  */
+
+function MarkdownTableCell({ children, node }: JSX.IntrinsicElements['td'] & ExtraProps) {
+  const label = useMarkdownTableLabel(node);
+  return <td data-app-part="table-cell" data-mobile-label={label}>{children}</td>;
+}
 
 const ReactMarkdownLazy = lazy(async () => {
   const [{ default: ReactMarkdown }, { default: remarkGfm }] = await Promise.all([
@@ -80,10 +87,10 @@ const ReactMarkdownLazy = lazy(async () => {
             );
           },
           ul({ children }) {
-            return <ul className="list-disc pl-5 my-1 space-y-0.5">{children}</ul>;
+            return <ul data-app-part="list" className="list-disc pl-5 my-1 space-y-0.5">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal pl-5 my-1 space-y-0.5">{children}</ol>;
+            return <ol data-app-part="list" className="list-decimal pl-5 my-1 space-y-0.5">{children}</ol>;
           },
           h1({ children }) {
             return <Heading level="panel" as="h1" className="mt-3 mb-1">{children}</Heading>;
@@ -102,25 +109,15 @@ const ReactMarkdownLazy = lazy(async () => {
               </Text>
             );
           },
-          table({ children }) {
-            return (
-              <div className="my-2 max-w-full overflow-x-auto">
-                <Table>
-                  {children}
-                </Table>
-              </div>
-            );
-          },
+          table: MarkdownTable,
           th({ children }) {
             return (
-              <th scope="col">
+              <th data-app-part="table-cell" scope="col">
                 {children}
               </th>
             );
           },
-          td({ children }) {
-            return <td>{children}</td>;
-          },
+          td: MarkdownTableCell,
         }}
       >
         {children}

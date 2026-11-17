@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentProps, ReactNode } from 'react';
@@ -67,6 +68,8 @@ beforeEach(() => {
 afterEach(() => {
   client.clear();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ChartPanels supported layout composition', () => {
   it('mounts all four real chart frames in order with zero and unknown source readings intact', () => {

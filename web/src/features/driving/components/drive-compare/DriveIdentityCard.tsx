@@ -86,14 +86,16 @@ export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div data-app-part="list" data-app-list="definitions" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {facts.map((fact) => (
                 <div
                   key={fact.label}
+                  data-app-part="list-row"
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <MetricLabel>{fact.label}</MetricLabel>
+                  <MetricLabel data-app-part="metric-label">{fact.label}</MetricLabel>
                   <Text
+                    data-app-part="metric-value"
                     as="div"
                     variant="body"
                     className="mt-1 whitespace-normal break-words"

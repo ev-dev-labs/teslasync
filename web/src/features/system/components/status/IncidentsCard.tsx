@@ -113,7 +113,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
         error={state.fatalError}
         errorRecovery={state.retry ? { onRetry: state.retry } : undefined}
       >
-      <ul className="space-y-1" aria-label={t('systemStatus.incidents.active', 'Active incidents')}>
+      <ul data-app-part="list" className="space-y-1" aria-label={t('systemStatus.incidents.active', 'Active incidents')}>
         {incidents.map((inc) => {
           const tone = SEVERITY_TONE[inc.severity] ?? FALLBACK_TONE
           const { Icon } = tone

@@ -37,6 +37,7 @@
  * real copy, and a MemoryRouter wraps every render because the error branch's
  * <QueryError> reaches for `useNavigate`.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -142,6 +143,8 @@ function severityRow(label: string): HTMLElement {
 }
 
 // ── 1. State-invariant chrome ────────────────────────────────────────────────
+
+setupMeasuredChartContainers(800, 320);
 
 describe('AlertsSection — state-invariant chrome', () => {
   it('renders the "Alerts" heading with a decorative icon in every state', () => {

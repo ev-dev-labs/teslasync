@@ -23,6 +23,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 import { fmtWithUnit } from '@/lib/numberFormat';
 import type { ChargerSpecsData, SpecEntry } from './helpers';
@@ -99,6 +101,35 @@ describe('ChargerSpecsPanel — empty & null states', () => {
 });
 
 describe('ChargerSpecsPanel — populated columns', () => {
+  it('binds real categorical rows to all 27 data consumers without inventing magnitude bars', () => {
+    const { container } = render(<div data-app-design-preview>
+      <ChargerSpecsPanel specs={makeSpecs({
+        voltage: [entry({ name: '240 V', count: 0, energy: 0 })],
+        brand: [entry({ name: 'Long recorded brand', count: 3, avgPower: 150 })],
+      })} />
+    </div>);
+    const host = container.firstElementChild!;
+    const rows = container.querySelectorAll('[data-app-list="definitions"] > [data-app-part="list-row"]');
+    expect(rows).toHaveLength(2);
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+      setAppDesignTestProfile(host, pack);
+      const release = observeAppDesignScopes(host);
+      try {
+        rows.forEach(row => expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="definitions"]'));
+        expect(rows[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent(`0 sessions · ${fmtWithUnit(0, 'kWh')}`);
+        expect(rows[1].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('3 sessions · 150 kW avg');
+      } finally { release(); }
+    }
+    host.removeAttribute('data-app-design-pack');
+    const release = observeAppDesignScopes(host);
+    try {
+      expect(matchingAppDesignDataRules(rows[0])).toEqual([]);
+      expect(screen.getByText('No phase data')).toBeInTheDocument();
+      expect(screen.getByText('No cable data')).toBeInTheDocument();
+      expect(container.querySelector('[role="meter"], [role="progressbar"]')).toBeNull();
+    } finally { release(); }
+  });
+
   it('renders the Brand column with session count and average power', () => {
     render(
       <ChargerSpecsPanel

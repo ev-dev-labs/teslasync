@@ -29,67 +29,70 @@ export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorCo
         {analysis.weekdayProfiles.map((profile) => (
           <article
             key={profile.weekday}
+            data-app-part="metric" data-app-metric="tile"
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
           >
-            <Text variant="caption">{t(
+            <Text data-app-part="metric-label" variant="caption">{t(
               `chargeAdvisor.day.${profile.weekday}`,
               labels[profile.weekday] ?? 'Day',
             )}</Text>
-            <Text className="mt-1 text-lg font-semibold text-theme-accent">
+            <Text data-app-part="metric-reading metric-value" className="mt-1 text-lg font-semibold text-theme-accent">
               {profile.medianPct == null ? '—' : fmtPercent(profile.medianPct)}
             </Text>
-            <Text variant="caption">{t('chargeAdvisor.weekday.median', 'Calendar-day median drop')}</Text>
-            <div className="mt-3 space-y-1">
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.mean', 'Calendar-day mean {{value}}', {
-                  value: profile.meanPct == null ? '—' : fmtPercent(profile.meanPct),
-                })}
-              </Text>
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.p75', 'Calendar-day p75 {{value}}', {
-                  value: profile.p75Pct == null ? '—' : fmtPercent(profile.p75Pct),
-                })}
-              </Text>
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.p90', 'Calendar-day p90 {{value}}', {
-                  value: profile.p90Pct == null ? '—' : fmtPercent(profile.p90Pct),
-                })}
-              </Text>
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.occurrences', '{{count}} calendar occurrences', {
-                  count: profile.calendarOccurrences,
-                })}
-              </Text>
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.drivingDays', '{{count}} driving days', {
-                  count: profile.drivingDays,
-                })}
-              </Text>
-              <Text variant="caption">
-                {t('chargeAdvisor.weekday.activeWeeks', '{{count}} active weeks', {
-                  count: profile.activeWeeks,
-                })}
-              </Text>
-              <Badge variant={
-                profile.support.band === 'strong'
-                  ? 'success'
-                  : profile.support.band === 'moderate'
-                    ? 'info'
-                    : profile.support.band === 'thin'
-                      ? 'warning'
-                      : 'neutral'
-              }>
-                {fmtPercent(profile.driveDayShare * 100)} {t('chargeAdvisor.weekday.share', 'active')} · {t(
-                  `chargeAdvisor.support.band.${profile.support.band}`,
+            <div data-app-part="metric-context">
+              <Text variant="caption">{t('chargeAdvisor.weekday.median', 'Calendar-day median drop')}</Text>
+              <div className="mt-3 space-y-1">
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.mean', 'Calendar-day mean {{value}}', {
+                    value: profile.meanPct == null ? '—' : fmtPercent(profile.meanPct),
+                  })}
+                </Text>
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.p75', 'Calendar-day p75 {{value}}', {
+                    value: profile.p75Pct == null ? '—' : fmtPercent(profile.p75Pct),
+                  })}
+                </Text>
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.p90', 'Calendar-day p90 {{value}}', {
+                    value: profile.p90Pct == null ? '—' : fmtPercent(profile.p90Pct),
+                  })}
+                </Text>
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.occurrences', '{{count}} calendar occurrences', {
+                    count: profile.calendarOccurrences,
+                  })}
+                </Text>
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.drivingDays', '{{count}} driving days', {
+                    count: profile.drivingDays,
+                  })}
+                </Text>
+                <Text variant="caption">
+                  {t('chargeAdvisor.weekday.activeWeeks', '{{count}} active weeks', {
+                    count: profile.activeWeeks,
+                  })}
+                </Text>
+                <Badge variant={
                   profile.support.band === 'strong'
-                    ? 'strong'
+                    ? 'success'
                     : profile.support.band === 'moderate'
-                      ? 'moderate'
+                      ? 'info'
                       : profile.support.band === 'thin'
-                        ? 'thin'
-                        : 'none',
-                )}
-              </Badge>
+                        ? 'warning'
+                        : 'neutral'
+                }>
+                  {fmtPercent(profile.driveDayShare * 100)} {t('chargeAdvisor.weekday.share', 'active')} · {t(
+                    `chargeAdvisor.support.band.${profile.support.band}`,
+                    profile.support.band === 'strong'
+                      ? 'strong'
+                      : profile.support.band === 'moderate'
+                        ? 'moderate'
+                        : profile.support.band === 'thin'
+                          ? 'thin'
+                          : 'none',
+                  )}
+                </Badge>
+              </div>
             </div>
           </article>
         ))}

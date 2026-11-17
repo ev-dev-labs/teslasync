@@ -40,23 +40,23 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
     .filter(Boolean).join('; ');
   const content = <>
     <Tooltip content={description} multiline>
-      <Text as="span" variant="metricLabel" data-stat-label className="block leading-5 text-[var(--text-secondary)]"
+      <Text as="span" variant="metricLabel" data-stat-label data-app-part="metric-label" className="block leading-5 text-[var(--text-secondary)]"
         tabIndex={metric.href ? undefined : 0}>{label}</Text>
     </Tooltip>
-    {loading ? <span aria-hidden="true" className="mt-1 block h-7 w-24 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
-      : <Text as="span" variant="metricValue" className={cn('mt-1 block leading-tight', styles.value,
+    {loading ? <span data-app-part="skeleton" aria-hidden="true" className="mt-1 block h-7 w-24 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
+      : <Text data-app-part="metric-reading" as="span" variant="metricValue" className={cn('mt-1 block leading-tight', styles.value,
         result.text.length > 18 && styles.longValue, result.text.length > 28 && styles.extremeValue)}>
-        <span data-stat-value>{result.value}</span>
+        <span data-stat-value data-app-part="metric-value">{result.value}</span>
         {result.unit && <>{['temperature', 'percent', 'score', 'multiplier'].includes(definition.format) ? '' : ' '}
-          <span data-stat-unit className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
+          <span data-stat-unit data-app-part="metric-unit" className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
       </Text>}
     {loading && <VisuallyHidden>{t('developerReference.stats.state.loading', 'Loading measurements')}</VisuallyHidden>}
-    {!loading && reason && <span className="mt-1 block text-xs text-[var(--text-secondary)]">{reason}</span>}
-    {!loading && metric.context != null && <div id={contextId} data-stat-context
+    {!loading && reason && <span data-app-part="metric-context" className="mt-1 block text-xs text-[var(--text-secondary)]">{reason}</span>}
+    {!loading && metric.context != null && <div id={contextId} data-stat-context data-app-part="metric-context"
       className="mt-1 text-xs text-[var(--text-secondary)]">{metric.context}</div>}
-    {!loading && metric.comparisonContent != null && <div id={specialistComparisonId} data-stat-specialist-comparison
+    {!loading && metric.comparisonContent != null && <div id={specialistComparisonId} data-stat-specialist-comparison data-app-part="metric-comparison"
       className="mt-1 text-xs">{metric.comparisonContent}</div>}
-    {!loading && delta && <span data-stat-delta data-comparison-state={delta.state}
+    {!loading && delta && <span data-stat-delta data-comparison-state={delta.state} data-app-part="metric-comparison"
       className="mt-1 block text-xs font-medium text-[var(--text-secondary)]">
       {comparison?.label}: {deltaText} · <span data-stat-comparison-period>{comparison?.period.label}</span>
       {comparisonPeriodReason && <span data-stat-comparison-period-reason className="mt-1 block">{comparisonPeriodReason}</span>}
@@ -65,6 +65,8 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
     </span>}
   </>;
   const props = {
+    'data-app-part': 'metric',
+    'data-app-metric': 'stat',
     'data-stat': true, 'data-metric': metric.metricId, 'data-state': loading ? 'loading' : result.state,
     'data-missing-reason': reason, 'aria-label': loading ? undefined : accessibleLabel,
     'aria-describedby': loading ? undefined : [

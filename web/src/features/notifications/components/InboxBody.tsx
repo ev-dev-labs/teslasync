@@ -709,8 +709,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </Button>
         </div>
       )}
-      {!archived && !isGrouped && unreadCount > 0 && (
-        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} disabled={bulkMarkReadMut.isPending}
+      {!archived && !isGrouped && (
+        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} disabled={bulkMarkReadMut.isPending || unreadCount === 0 || initialLoading}
           icon={<CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />}
           aria-label={t('notifications.markAllRead.action', 'Mark all read')}>
           {t('notifications.markAllRead.action', 'Mark all read')}

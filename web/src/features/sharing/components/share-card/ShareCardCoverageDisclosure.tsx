@@ -38,27 +38,27 @@ export function ShareCardCoverageDisclosure({
           </AlertBanner>
           <Table className="mt-4" aria-label={t('shareCard.coverage.title', 'Coverage and cap disclosure')}>
             <tbody>
-            <tr>
-              <th scope="row"><Text variant="label">{t('shareCard.coverage.earliest', 'Earliest evidence')}</Text></th>
-              <td><Text variant="bodySm">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Text variant="label">{t('shareCard.coverage.earliest', 'Earliest evidence')}</Text></th>
+              <td data-app-part="table-cell"><Text variant="bodySm">
                 {formatDateTime(analysis.earliestEvidence, dateOptions)}
               </Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Text variant="label">{t('shareCard.coverage.latest', 'Latest evidence')}</Text></th>
-              <td><Text variant="bodySm">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Text variant="label">{t('shareCard.coverage.latest', 'Latest evidence')}</Text></th>
+              <td data-app-part="table-cell"><Text variant="bodySm">
                 {formatDateTime(analysis.latestEvidence, dateOptions)}
               </Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Text variant="label">{t('shareCard.coverage.observedSpan', 'Observed span')}</Text></th>
-              <td className="text-right"><Text variant="bodySm">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Text variant="label">{t('shareCard.coverage.observedSpan', 'Observed span')}</Text></th>
+              <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                 {display.formatDuration(analysis.observedSpanS)}
               </Text></td>
             </tr>
-            <tr>
-              <th scope="row"><Text variant="label">{t('shareCard.coverage.activeDays', 'Active/requested days')}</Text></th>
-              <td className="text-right"><Text variant="bodySm">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="row"><Text variant="label">{t('shareCard.coverage.activeDays', 'Active/requested days')}</Text></th>
+              <td data-app-part="table-cell" className="text-right"><Text variant="bodySm">
                 {t('shareCard.coverage.dayRatio', '{{active}} / {{requested}}', {
                   active: analysis.activeDays,
                   requested: analysis.window.requestedCalendarDays ?? '—',

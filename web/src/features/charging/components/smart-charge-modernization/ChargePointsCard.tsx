@@ -47,24 +47,24 @@ export function ChargePointsCard() {
           icon={<PlugZap className="h-8 w-8" aria-hidden="true" />}
           message={t('ocpp.noChargePoints', 'No OCPP chargers reporting yet. Point a charger at the OCPP server to see it here.')} />
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" data-app-list="definitions" className="space-y-2">
           {points.map(cp => (
-            <li key={cp.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-              <div className="min-w-0">
+            <li data-app-part="list-row" key={cp.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+              <div data-app-part="metric-label" className="min-w-0">
                 <Text variant="bodySm" className="break-words font-medium">
                   {cp.vendor || cp.model ? `${cp.vendor} ${cp.model}`.trim() : cp.id}
                 </Text>
-                <Caption className="break-words tabular-nums">
+                <Caption data-app-part="metric-context" className="break-words tabular-nums">
                   {t('ocpp.lastSeen', 'last seen {{when}}', { when: formatDateTime(cp.last_seen_at) })}
                 </Caption>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div data-app-part="metric-reading" className="flex flex-wrap items-center gap-1.5">
                 {safeArray(cp.connectors).map(connector => (
                   <Badge key={connector.connector_id} variant={statusVariant(connector.status)} size="sm">
                     {t('ocpp.connector', '#{{id}} {{status}}', { id: connector.connector_id, status: connector.status })}
                   </Badge>
                 ))}
-                {cp.active_sessions > 0 && <Badge variant="success" size="sm">
+                {cp.active_sessions > 0 && <Badge data-app-part="badge metric-value" variant="success" size="sm">
                   {t('ocpp.activeSessions', '{{count}} active', { count: cp.active_sessions })}
                 </Badge>}
               </div>
@@ -82,12 +82,12 @@ export function ChargePointsCard() {
           <EmptyState /* no-action: transactions appear when chargers report sessions */
             message={t('chargePlanner.modernization.noOcppSessions', 'No recent OCPP charging sessions have been reported.')} />
         ) : (
-          <ul className="space-y-2">
+          <ul data-app-part="list" data-app-list="definitions" className="space-y-2">
             {sessions.map(session => (
-              <li key={session.transaction_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                <Caption className="min-w-0 break-words">{session.charge_point_id} · #{session.transaction_id}</Caption>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Text variant="bodySm" className="tabular-nums" aria-label={t('common.energy', 'Energy')}>
+              <li data-app-part="list-row" key={session.transaction_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                <Caption data-app-part="metric-label" className="min-w-0 break-words">{session.charge_point_id} · #{session.transaction_id}</Caption>
+                <div data-app-part="metric-reading" className="flex flex-wrap items-center gap-1.5">
+                  <Text data-app-part="metric-value" variant="bodySm" className="tabular-nums" aria-label={t('common.energy', 'Energy')}>
                     {session.energy_delivered_wh != null && Number.isFinite(session.energy_delivered_wh)
                       ? formatEnergy(session.energy_delivered_wh)
                       : t('common.unknown', 'Unknown')}

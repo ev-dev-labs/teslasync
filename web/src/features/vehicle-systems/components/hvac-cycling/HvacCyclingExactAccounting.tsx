@@ -25,16 +25,16 @@ function Identity({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <MetricLabel>{label}</MetricLabel>
+    <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <div data-app-part="record-header" className="flex flex-wrap items-center justify-between gap-2">
+        <MetricLabel data-app-part="record-title">{label}</MetricLabel>
         <Badge variant={balanced ? 'success' : 'danger'}>
           {balanced
             ? t('hvacCycling.accounting.balanced', 'Balances')
             : t('hvacCycling.accounting.mismatch', 'Mismatch')}
         </Badge>
       </div>
-      <Text as="p" variant="bodySm" className="mt-2">{equation}</Text>
+      <Text data-app-part="record-body" as="p" variant="bodySm" className="mt-2">{equation}</Text>
     </div>
   );
 }

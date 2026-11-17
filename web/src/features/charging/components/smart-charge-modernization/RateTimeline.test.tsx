@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type { HourlyRate } from '@/types/charging';
 import { RateTimeline } from './RateTimeline';
@@ -22,6 +27,38 @@ afterEach(() => {
 });
 
 describe('tariff wall-clock presentation', () => {
+  it('activates native tooltip consumers in all chart modes while preserving source bar geometry and semantics', () => {
+    const selectors: string[] = [];
+    postcss.parse(readFileSync(resolve(process.cwd(),
+      'src', 'components', 'ui', 'app-designs', 'charts.css'), 'utf8')).walkRules(rule => {
+      if (!rule.selector.includes('tooltip') || rule.parent?.type !== 'rule') return;
+      const parents = rule.parent.selectors;
+      parents.forEach(parent => rule.selectors.forEach(selector => selectors.push(selector.replace(/&/g, parent))));
+    });
+    const rates = [rate(23, 0), rate(0, -2.5), rate(1, 10), { ...rate(2), rate_cents: NaN }];
+    const original = structuredClone(rates);
+    const { container } = render(<div data-app-design-preview>
+      <RateTimeline rates={rates} chargeWindow={{ startHour: 22, endHour: 2 }} />
+    </div>);
+    const host = container.firstElementChild!;
+    const bars = screen.getAllByRole('img');
+    const sourcePresentation = bars.map(bar => [bar.title, bar.getAttribute('aria-label'), bar.lastElementChild?.getAttribute('style'),
+      bar.lastElementChild?.getAttribute('class')]);
+    const slots = Array.from(container.querySelectorAll('[data-app-part="chart-tooltip"], [data-chart-tooltip-label], [data-chart-tooltip-row], [data-chart-tooltip-value]'));
+    expect(slots).toHaveLength(16);
+    expect(slots.every(slot => !selectors.some(selector => slot.matches(selector)))).toBe(true);
+    for (const pack of ['classic', 'v4', 'v1', 'v2', 'v6'] as const) {
+      setAppDesignTestProfile(host, pack);
+      const release = observeAppDesignScopes(host);
+      try {
+        slots.forEach(slot => expect(selectors.some(selector => slot.matches(selector)), APPLICATION_DESIGNS[pack].chart).toBe(true));
+        expect(bars.map(bar => [bar.title, bar.getAttribute('aria-label'), bar.lastElementChild?.getAttribute('style'),
+          bar.lastElementChild?.getAttribute('class')])).toEqual(sourcePresentation);
+      } finally { release(); }
+    }
+    expect(rates).toEqual(original);
+  });
+
   it('updates labels, tooltips and accessible rows when the formatter locale changes', () => {
     const { container } = render(<RateTimeline rates={[rate(0), rate(12), rate(15)]} />);
     expect(screen.getAllByRole('img').map(bar => bar.getAttribute('aria-label'))).toEqual([
@@ -83,6 +120,16 @@ describe('tariff wall-clock presentation', () => {
     expect(bars[9].title).toContain(': 7.25¢ per kWh');
     expect(height(bars[9])).toBe('50%');
     expect(height(bars[10])).toBe('100%');
+    bars.forEach((bar, index) => {
+      const tooltip = bar.querySelector('[data-app-part="chart-tooltip"]');
+      expect(tooltip).not.toBeNull();
+      expect(tooltip?.parentElement).toHaveAttribute('aria-hidden', 'true');
+      expect(tooltip?.querySelector('[data-chart-tooltip-label]')).not.toBeNull();
+      const reading = tooltip?.querySelector('[data-chart-tooltip-row] > [data-chart-tooltip-value]');
+      expect(reading).toHaveClass('col-span-full');
+      expect(reading).toHaveTextContent(index < 7 ? '—' : `${[-0, -2.5, 7.25, 14.5][index - 7].toFixed(2)}¢/kWh`);
+      expect(bar).toHaveAttribute('title', bar.getAttribute('aria-label'));
+    });
   });
 
   it('does not turn missing or invalid hour coordinates into midnight', () => {

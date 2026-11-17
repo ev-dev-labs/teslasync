@@ -52,6 +52,7 @@ export function TopProgress() {
       aria-valuemax={100}
       aria-valuenow={valuenow}
       data-testid="top-progress"
+      data-app-part="loading"
       className={cn(
         'fixed top-0 left-0 right-0 z-[60] h-0.5 pointer-events-none',
         'bg-[var(--theme-primary)]',

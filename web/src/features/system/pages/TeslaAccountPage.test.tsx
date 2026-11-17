@@ -41,6 +41,9 @@ import { act, render, screen, fireEvent, within, waitFor, cleanup } from '@testi
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) and PageContainer's
 // <FreshnessDot> chip read it at module load. Install before any import
@@ -888,6 +891,74 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(within(panel('Profile')).getByRole('button', { name: 'Refresh from Tesla' }))
         .toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0', 'whitespace-normal');
       expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).toHaveClass('h-9', 'w-9');
+    });
+  });
+
+  describe('TeslaAccountPage — native sync readout ownership', () => {
+    it.each(PACK_IDS)('%s activates the actual timestamp inset, reading and context without another frame', pack => {
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = 'Pacific/Honolulu';
+      const mutation = makeMutation({ isPending: true });
+      const view = setup(makeQuery({ data: envelope(PROFILE), error: new Error('Retained profile refresh failure') }), mutation);
+      view.container.setAttribute('data-app-design-preview', '');
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) view.container.setAttribute(name, value);
+      const release = observeAppDesignScopes(view.container);
+      try {
+        const sync = panel('Sync');
+        const inset = within(sync).getByText('Last synced').parentElement!;
+        expectAppDesignDataMode(inset, APPLICATION_DESIGNS[pack].data, '[data-app-metric="tile"]');
+        const label = inset.querySelector(':scope > [data-app-part~="metric-label"]')!;
+        const reading = inset.querySelector(':scope > [data-app-part~="metric-reading"]')!;
+        const value = reading.querySelector('[data-app-part~="metric-value"]')!;
+        const context = inset.querySelector(':scope > [data-app-part~="metric-context"]')!;
+        for (const [part, slot] of [['metric-label', label], ['metric-reading', reading], ['metric-value', value], ['metric-context', context]] as const) {
+          expect(slot).not.toBeNull();
+          expect(matchesAppDesignCss(slot, `[data-app-part~="${part}"]`).length).toBeGreaterThan(0);
+        }
+        expect(label).toHaveTextContent('Last synced');
+        expect(value).toHaveTextContent(formatRelative(FETCHED_AT, datePreferences));
+        expect(context).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
+        expect(reading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+        expect(inset.querySelector('[data-print-card], [data-app-part~="panel"], [data-app-part~="card"]')).toBeNull();
+        expect(sync.querySelectorAll('[data-app-metric="tile"]')).toHaveLength(1);
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+        expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+        const refresh = within(sync).getByRole('button', { name: 'Refresh from Tesla' });
+        expect(refresh).toBeDisabled();
+        expect(refresh).toHaveAttribute('aria-busy', 'true');
+        fireEvent.click(refresh);
+        expect(mutation.mutate).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+    });
+
+    it.each([
+      { state: 'initial loading', query: () => makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }), text: null },
+      { state: 'paused initial', query: () => makeQuery({ isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 }), text: 'Unknown' },
+      { state: 'initial failure', query: () => makeQuery({ error: new Error('Profile unavailable'), dataUpdatedAt: 0 }), text: 'Unavailable' },
+      { state: 'resolved empty', query: () => makeQuery({ data: envelope(null, null) }), text: 'Not synced yet' },
+      { state: 'invalid profile time', query: () => makeQuery({ data: envelope({ ...PROFILE, fetched_at: 'invalid' }, FETCHED_AT) }), text: 'Unknown' },
+      { state: 'absent profile time', query: () => makeQuery({ data: envelope({ ...PROFILE, fetched_at: null as unknown as string }, null) }), text: 'Unknown' },
+    ])('keeps the $state inset without fabricated timestamp context or design opt-in', ({ query, text }) => {
+      const view = setup(query());
+      const release = observeAppDesignScopes(view.container);
+      try {
+        const inset = within(panel('Sync')).getByText('Last synced').parentElement!;
+        expect(inset).toHaveAttribute('data-app-metric', 'tile');
+        expect(inset).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesAppDesignCss(inset)).toHaveLength(0);
+        expect(inset.querySelector('[data-app-part~="metric-context"]')).toBeNull();
+        if (text == null) {
+          expect(inset.querySelector('[data-app-part~="metric-reading"]')).toBeNull();
+          expect(inset.querySelector('[data-app-part~="skeleton"]')).toBeInTheDocument();
+        } else {
+          expect(inset.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent(text);
+        }
+        for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) expect(panel(heading)).toBeInTheDocument();
+      } finally {
+        release();
+      }
     });
   });
 

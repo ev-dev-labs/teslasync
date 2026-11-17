@@ -118,6 +118,7 @@ export function WidgetFlowDiagram({
 
   return (
     <svg
+      data-app-part="chart-plot"
       viewBox={`${viewLeft} 0 360 ${vertical ? 300 : 150}`}
       className="widget-flow-diagram mx-auto h-full min-h-0 w-full"
       role="img"

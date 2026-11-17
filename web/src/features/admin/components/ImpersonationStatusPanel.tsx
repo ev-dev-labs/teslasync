@@ -40,7 +40,7 @@ export function ImpersonationStatusPanel({
       </PanelTitle>
 
       {isLoading ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('impersonation.status.loading', 'Loading session status…')}

@@ -1,8 +1,10 @@
 import {
   Children,
   cloneElement,
+  createContext,
   isValidElement,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -15,6 +17,10 @@ import {
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { AppDesignPortal } from './AppDesignPortal';
+
+/** Header compositions can move triggers without changing their allocated size. */
+export const TooltipPortalContext = createContext(false);
 
 export interface TooltipProps {
   /**
@@ -49,6 +55,8 @@ export interface TooltipProps {
   multiline?: boolean;
   /** Optional allocated surface that contains the bubble, such as a scrubber track. */
   boundaryRef?: RefObject<HTMLElement | null>;
+  /** Escape layout/scroll containers while retaining the trigger's complete design profile. */
+  portal?: boolean;
   children: ReactNode;
 }
 
@@ -99,6 +107,14 @@ function warnIfHardcodedTextColor(content: ReactNode, callerHint: string): void 
   );
 }
 
+// The build-time branch removes the diagnostic hook itself from production.
+function TooltipTextSentry({ content, tooltipId }: { content: ReactNode; tooltipId: string }) {
+  useEffect(() => {
+    warnIfHardcodedTextColor(content, `tooltip:${tooltipId}`);
+  }, [content, tooltipId]);
+  return null;
+}
+
 const sideClasses = {
   top: 'bottom-full mb-2',
   bottom: 'top-full mt-2',
@@ -146,9 +162,8 @@ function findClippingAncestors(trigger: HTMLElement): HTMLElement[] {
  * - When `children` is a single element, the tooltip id is added to that
  *   element's `aria-describedby` (preserving any existing value) so screen
  *   readers announce the tooltip text after the trigger's own name.
- * - The visibility CSS handles both `:hover` AND `:focus-within` so keyboard
- *   users (Tab into a button wrapped in a tooltip) get the same affordance as
- *   mouse users.
+ * - Hover and focus-within share visibility, using trigger events when the
+ *   bubble is portaled. Keyboard and mouse users get the same affordance.
  *
  * Touch devices:
  * - Wrap a focusable trigger (e.g. <button>) and tapping it grants focus,
@@ -159,14 +174,18 @@ function findClippingAncestors(trigger: HTMLElement): HTMLElement[] {
  * - The reveal respects reduced motion and low bandwidth without moving
  *   the content or animating viewport corrections.
  */
-export function Tooltip({ content, side = 'top', multiline, boundaryRef, children }: TooltipProps) {
+export function Tooltip({ content, side = 'top', multiline, boundaryRef, portal: portalProp, children }: TooltipProps) {
   const { reduce } = useMotionPreference();
+  const inheritedPortal = useContext(TooltipPortalContext);
+  const portal = portalProp ?? inheritedPortal;
   const tooltipId = useId();
   const triggerRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const [horizontalOffset, setHorizontalOffset] = useState(0);
+  const [verticalOffset, setVerticalOffset] = useState(12);
   const [maxWidth, setMaxWidth] = useState<number>();
   const [dismissed, setDismissed] = useState(false);
+  const [active, setActive] = useState(false);
   const hoveredRef = useRef(false);
 
   useEffect(() => {
@@ -195,7 +214,7 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     // inflates that ancestor's scrollWidth (phantom horizontal scrollbars)
     // and gets cut off on hover. Only horizontal: vertical placement stays
     // glued to the trigger side.
-    for (const clipper of findClippingAncestors(trigger)) {
+    for (const clipper of portal ? [] : findClippingAncestors(trigger)) {
       const rect = clipper.getBoundingClientRect();
       const borderLeft = Number.parseFloat(getComputedStyle(clipper).borderLeftWidth) || 0;
       leftBound = Math.max(leftBound, rect.left + borderLeft);
@@ -203,8 +222,8 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     }
     const availableWidth = rightBound - leftBound;
     if (availableWidth <= 0) return;
-    if (multiline || boundaryRef) setMaxWidth(availableWidth);
-    const width = multiline || boundaryRef
+    if (multiline || boundaryRef || portal) setMaxWidth(availableWidth);
+    const width = multiline || boundaryRef || portal
       ? Math.min(tooltip.offsetWidth, availableWidth) : tooltip.offsetWidth;
     const bounds = trigger.getBoundingClientRect();
     const desiredLeft = side === 'left'
@@ -215,14 +234,29 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     const left = Math.max(leftBound, Math.min(desiredLeft, rightBound - width));
     // Position the layout box itself. A negative translation only moves the
     // painted bubble: its original box can still enlarge scrollable overflow.
-    setHorizontalOffset(left - bounds.left);
-  }, [side, multiline, boundaryRef]);
+    setHorizontalOffset(portal ? left : left - bounds.left);
+    if (portal) {
+      const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+      const height = tooltip.offsetHeight;
+      const below = bounds.bottom + 8;
+      const above = bounds.top - height - 8;
+      let top = side === 'bottom' ? below
+        : side === 'top' ? above : bounds.top + (bounds.height - height) / 2;
+      if (side === 'bottom' && below + height > viewportHeight - 12 && above >= 12) top = above;
+      if (side === 'top' && above < 12 && below + height <= viewportHeight - 12) top = below;
+      setVerticalOffset(Math.max(12, Math.min(top, viewportHeight - height - 12)));
+    }
+  }, [side, multiline, boundaryRef, portal]);
 
   // Opacity-hidden bubbles still expand scrollable bounds before interaction.
   useLayoutEffect(() => {
     updatePosition();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(updatePosition) : null;
-    if (triggerRef.current) observer?.observe(triggerRef.current);
+    if (triggerRef.current) {
+      observer?.observe(triggerRef.current);
+      // Shell recomposition can move a fixed-size trigger without resizing it.
+      if (triggerRef.current.parentElement) observer?.observe(triggerRef.current.parentElement);
+    }
     if (tooltipRef.current) observer?.observe(tooltipRef.current);
     if (boundaryRef?.current) observer?.observe(boundaryRef.current);
     // A clipping ancestor can shrink after mount (e.g. a vertical scrollbar
@@ -231,22 +265,28 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     if (triggerRef.current) {
       for (const clipper of findClippingAncestors(triggerRef.current)) observer?.observe(clipper);
     }
+    // Complete-profile changes can recenter a fixed-size title without a
+    // ResizeObserver notification. Observe only the portaled trigger's ancestry,
+    // never the bubble whose measured offsets we write ourselves.
+    const layoutObserver = portal && typeof MutationObserver === 'function'
+      ? new MutationObserver(updatePosition) : null;
+    if (layoutObserver) {
+      for (let ancestor = triggerRef.current as HTMLElement | null; ancestor; ancestor = ancestor.parentElement) {
+        layoutObserver.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ['class', 'style', 'dir', 'data-app-design-owner'],
+        });
+      }
+    }
     window.addEventListener('resize', updatePosition);
+    if (portal) window.addEventListener('scroll', updatePosition, true);
     return () => {
       observer?.disconnect();
+      layoutObserver?.disconnect();
       window.removeEventListener('resize', updatePosition);
+      if (portal) window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [content, updatePosition, boundaryRef]);
-
-  // Stable per-mount fingerprint for the dev-time warn so we don't
-  // de-duplicate across distinct callsites that happen to share the same
-  // forbidden class.
-  const callerRef = useRef<string>('');
-  if (!callerRef.current) callerRef.current = `tooltip:${tooltipId}`;
-
-  useEffect(() => {
-    warnIfHardcodedTextColor(content, callerRef.current);
-  }, [content]);
+  }, [content, updatePosition, boundaryRef, portal]);
 
   // We try to attach `aria-describedby` directly to the trigger element so
   // assistive tech reads the tooltip after the trigger name. This works when
@@ -276,36 +316,31 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
         }) as ReactNode)
       : children;
 
-  return (
-    <span
-      ref={triggerRef}
-      className="relative inline-flex group/tip"
-      onMouseEnter={() => {
-        hoveredRef.current = true;
-        setDismissed(false);
-        updatePosition();
-      }}
-      onMouseLeave={() => { hoveredRef.current = false; }}
-      onFocus={() => {
-        setDismissed(false);
-        updatePosition();
-      }}
-    >
-      {enrichedChild}
+  const reveal = () => {
+    if (portal) setActive(true);
+    setDismissed(false);
+    updatePosition();
+  };
+
+  const bubble = (
       <span
         id={tooltipId}
         ref={tooltipRef}
+        data-app-part="tooltip"
         role="tooltip"
         style={{
           left: horizontalOffset,
-          ...(maxWidth !== undefined ? { maxWidth } : {}),
+          top: portal ? verticalOffset : undefined,
+          maxWidth,
         }}
         className={cn(
-          'pointer-events-none absolute z-50 rounded-shape-sm px-2.5 py-1.5',
+          'pointer-events-none z-50 rounded-shape-sm px-2.5 py-1.5',
+          portal ? 'fixed' : 'absolute',
           typography.size.xs, typography.weight.medium,
           multiline || boundaryRef
             ? 'w-80 max-w-tooltip-viewport whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
             : 'whitespace-nowrap',
+          portal && 'max-w-tooltip-viewport whitespace-normal break-words',
           'bg-[var(--text-primary)] shadow-e2',
           typography.color.inverse,
           // Forced-colors mode suppresses
@@ -316,15 +351,38 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
           // Windows High Contrast.
           'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
           // Viewport corrections must not animate with the hover/focus reveal.
-          'opacity-0 transition-opacity duration-fast ease-standard motion-reduce:transition-none',
-          'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',
+          'transition-opacity duration-fast ease-standard motion-reduce:transition-none',
+          portal && active ? 'opacity-100' : 'opacity-0',
+          !portal && 'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',
           reduce && 'transition-none',
           dismissed && '!opacity-0',
-          sideClasses[side],
+          !portal && sideClasses[side],
         )}
       >
         {content}
       </span>
+  );
+
+  return (
+    <span
+      ref={triggerRef}
+      className="relative inline-flex group/tip"
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+        reveal();
+      }}
+      onMouseLeave={() => {
+        hoveredRef.current = false;
+        if (portal) setActive(Boolean(triggerRef.current?.contains(document.activeElement)));
+      }}
+      onFocus={reveal}
+      onBlur={event => {
+        if (portal) setActive(hoveredRef.current || event.currentTarget.contains(event.relatedTarget));
+      }}
+    >
+      {import.meta.env.DEV && <TooltipTextSentry content={content} tooltipId={tooltipId} />}
+      {enrichedChild}
+      {portal ? <AppDesignPortal anchorRef={triggerRef}>{bubble}</AppDesignPortal> : bubble}
     </span>
   );
 }

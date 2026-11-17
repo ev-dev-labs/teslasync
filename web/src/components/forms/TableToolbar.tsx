@@ -61,7 +61,7 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
         <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('More', 'More')} size="sm">
           <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}{exportDescription}</div>
         </Modal>
-      </> : <div className="ms-auto flex max-w-full flex-wrap items-center gap-2">{secondaryControls}</div>);
+      </> : <div data-app-part="table-toolbar" data-app-toolbar-slot="actions" className="ms-auto flex max-w-full flex-wrap items-center gap-2">{secondaryControls}</div>);
   const leadingControls = <>
     {heading && <div className="min-w-0 flex-1 basis-48">{heading}</div>}
     {searchControl}
@@ -74,13 +74,13 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
     return <>
       {createPortal(headerControls, hostHeader.target)}
       {(heading || search || !compact && exportDescription) && createPortal(
-        <div data-card-table-summary className="flex min-w-0 flex-wrap items-center gap-3">{summary}</div>,
+        <div data-app-part="table-toolbar" data-card-table-summary className="flex min-w-0 flex-wrap items-center gap-3">{summary}</div>,
         hostHeader.summaryTarget,
       )}
     </>;
   }
   return (
-    <div className={cn('flex flex-wrap items-center gap-3', className)}>
+    <div data-app-part="table-toolbar" className={cn('flex flex-wrap items-center gap-3', className)}>
       {leadingControls}
       {headerControls}
       {!compact && exportDescription}

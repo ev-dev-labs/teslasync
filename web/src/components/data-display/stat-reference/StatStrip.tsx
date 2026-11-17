@@ -24,7 +24,7 @@ export function StatStrip({
   const items = metrics ?? [];
   const facts = breakdown ?? [];
   const banks = metricBanks(items, maxPerRow);
-  return <section id={id} data-testid={testId} data-stat-strip={id ?? `stat-${generatedId}`} data-period-kind={period.kind} data-max-per-row={maxPerRow} data-retained={retained}
+  return <section data-app-part="section panel" data-surface-variant={variant} id={id} data-testid={testId} data-stat-strip={id ?? `stat-${generatedId}`} data-period-kind={period.kind} data-max-per-row={maxPerRow} data-retained={retained}
     aria-busy={loading} aria-describedby={periodInHeader ? periodHeaderId : undefined}
     className={cn(styles.root, variant === 'standalone' &&
       'rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)]', className)}>
@@ -39,11 +39,11 @@ export function StatStrip({
       className="px-4 pb-2 text-[var(--text-secondary)]">{period.reason}</Text>}
     {!contextInHeader && period.kind !== 'unknown' && period.provenance && <Text as="p" variant="caption" data-stat-provenance
       className="px-4 pb-2 text-[var(--text-secondary)]">{period.provenance}</Text>}
-    {retained && <Text as="p" variant="caption" role="status" className="px-4 pb-2 text-[var(--text-secondary)]">
+    {retained && <Text data-app-part="feedback" data-app-state="retained" as="p" variant="caption" role="status" className="px-4 pb-2 text-[var(--text-secondary)]">
       {t('developerReference.stats.state.retained', 'Showing retained measurements')}
     </Text>}
-    {error && <Text as="p" variant="bodySm" role="alert" className="px-4 pb-2">{error}</Text>}
-    {items.length ? banks.map((bank, bankIndex) => <div key={bankIndex} className={styles.tiles} data-stat-bank
+    {error && <Text data-app-part="feedback error" data-app-tone="danger" as="p" variant="bodySm" role="alert" className="px-4 pb-2">{error}</Text>}
+    {items.length ? banks.map((bank, bankIndex) => <div key={bankIndex} className={styles.tiles} data-stat-bank data-app-part="metric-grid"
       data-testid={testId ? `${testId}-kpis${bankIndex ? `-${bankIndex}` : ''}` : undefined}
       data-columns={bank.length}>
       {bank.map((metric, index) => <StatTile key={metric.occurrenceId ?? `${metric.metricId}-${bankIndex}-${index}`}

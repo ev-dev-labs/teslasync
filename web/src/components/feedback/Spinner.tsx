@@ -45,6 +45,8 @@ export function Spinner({ size = 'md', label, className }: SpinnerProps) {
 
   return (
     <div
+      data-app-part="loading"
+      data-app-feedback-kind="spinner"
       className={cn('flex flex-col items-center gap-3', className)}
       role="status"
       aria-label={accessibleLabel}

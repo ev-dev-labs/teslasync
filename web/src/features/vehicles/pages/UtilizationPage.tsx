@@ -175,7 +175,7 @@ export default function UtilizationPage() {
             {pricingState.fatalError ? (
               <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
             ) : !pricingState.hasData && pricingState.isRefreshBlocked ? (
-              <div className="space-y-3" role="status">
+              <div data-app-part="status" className="space-y-3" role="status">
                 <Text as="p" variant="bodySm" color="secondary">
                   {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
                   {' · '}
@@ -186,7 +186,7 @@ export default function UtilizationPage() {
                 </Button> : null}
               </div>
             ) : pricingState.status === 'initial' ? (
-              <div role="status" aria-busy="true"
+              <div data-app-part="status" role="status" aria-busy="true"
                 aria-label={t('utilization.energyRate', 'Settings electricity rate')}>
                 <Skeleton className="h-11" />
               </div>

@@ -76,7 +76,7 @@ export function ActivityBreakdownPanel({
           // no-action: this shared breakdown panel's window is controlled by the RangePicker in the page header; a different range is the real recovery path, not a duplicate control here.
           <EmptyState icon={emptyIcon} message={emptyMessage} />
         ) : (
-          <ul className="space-y-3" data-testid="activity-breakdown-list">
+          <ul data-app-part="list" className="space-y-3" data-testid="activity-breakdown-list">
             {rows.map((slice) => {
               const label = slice.i18nKey
                 ? t(slice.i18nKey, slice.fallback || slice.label || slice.key)

@@ -9,6 +9,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -240,6 +245,38 @@ describe('StopScorePanel', () => {
     fireEvent.click(boxes[0]);
     expect(boxes[10]).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Score 9 stops' })).toBeEnabled();
+  });
+
+  it('connects the real scrollable candidate group to each profile without replacing its checkboxes', () => {
+    const { container } = renderPanel();
+    const group = screen.getAllByRole('group', { name: 'Candidate stops' })
+      .find(node => node.hasAttribute('data-app-field-surface'))!;
+    expect(group).toHaveAttribute('data-app-field-surface');
+    expect(group).toHaveClass('max-h-48', 'overflow-y-auto', 'sm:grid-cols-2');
+    expect(group).not.toHaveAttribute('data-app-part', 'card');
+    container.setAttribute('data-app-design-preview', '');
+    const sheet = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'));
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        let consumed = false;
+        sheet.walkRules(rule => {
+          if (rule.selector.includes('[data-app-field-surface]') &&
+            rule.selector.includes(`[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`) &&
+            rule.nodes.some(node => node.type === 'decl' && node.prop === 'background-color') &&
+            rule.selectors.some(selector => group.matches(selector))) consumed = true;
+        });
+        expect(consumed, pack).toBe(true);
+        expect(group).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+      } finally {
+        release();
+      }
+    }
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Kettleman City (200 visits)' }));
+    expect(screen.getByRole('checkbox', { name: 'Kettleman City (200 visits)' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Score 1 stops' })).toBeEnabled();
   });
 
   it('keeps the saved ranking while rescoring and reports failure without another automatic write', () => {

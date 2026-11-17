@@ -5,6 +5,7 @@ import * as numberFormat from '@/lib/numberFormat'
 import {
   createReactI18nextMock,
   installTestPolyfills,
+  patchWindowScroll,
 } from '@/test/setup'
 
 vi.mock('react-i18next', () => createReactI18nextMock({ language: 'en' }))
@@ -258,3 +259,4 @@ beforeEach(() => {
 })
 
 installTestPolyfills()
+if (typeof window !== 'undefined') patchWindowScroll()

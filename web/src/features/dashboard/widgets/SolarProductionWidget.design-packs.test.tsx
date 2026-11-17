@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -167,6 +168,8 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+setupCanvasTextMeasurement();
 
 describe.each(Object.entries(PACK_APPEARANCES))('Solar production %s (%s)', (packId, appearance) => {
   it('keeps every real solar sample, units, source context and refresh action', async () => {

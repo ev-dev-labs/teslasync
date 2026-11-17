@@ -46,7 +46,7 @@ export function SecurityMethodologyPanel() {
       <TrustDistinctionNote />
 
       <LayoutCard title={t('intelPacks.security.guaranteesTitle', 'Guarantees')}>
-        <ul className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
+        <ul data-app-part="list" className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
           {guarantees.map((g, i) => (
             <li key={i}>{g}</li>
           ))}
@@ -54,7 +54,7 @@ export function SecurityMethodologyPanel() {
       </LayoutCard>
 
       <LayoutCard title={t('intelPacks.security.nonGuaranteesTitle', 'Explicit non-guarantees')}>
-        <ul className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
+        <ul data-app-part="list" className="list-disc pl-5 space-y-1.5 text-xs text-[var(--text-secondary)]">
           {nonGuarantees.map((g, i) => (
             <li key={i}>{g}</li>
           ))}
@@ -65,14 +65,14 @@ export function SecurityMethodologyPanel() {
         <Table aria-label={t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}>
 
           <tbody>
-            <tr><th scope="row">{t('intelPacks.security.maxBytes', 'Max envelope size')}</th><td className="text-right tabular-nums">{fmtInt(MANIFEST_LIMITS.maxEnvelopeJsonBytes)} B</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.maxDepth', 'Max JSON depth')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonDepth}</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.maxNodes', 'Max JSON node count')}</th><td className="text-right tabular-nums">{fmtInt(MANIFEST_LIMITS.maxJsonNodeCount)}</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.maxExprNodes', 'Max AST nodes per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprNodesPerFormula}</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.maxExprDepth', 'Max AST depth per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprDepth}</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.sandboxSteps', 'Max sandbox evaluation steps')}</th><td className="text-right tabular-nums">{fmtInt(SANDBOX_BUDGETS.maxTotalSteps)}</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.sandboxDuration', 'Max sandbox wall-clock time')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxDurationMs} ms</td></tr>
-            <tr><th scope="row">{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxRows}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.maxBytes', 'Max envelope size')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{fmtInt(MANIFEST_LIMITS.maxEnvelopeJsonBytes)} B</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.maxDepth', 'Max JSON depth')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonDepth}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.maxNodes', 'Max JSON node count')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{fmtInt(MANIFEST_LIMITS.maxJsonNodeCount)}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.maxExprNodes', 'Max AST nodes per formula')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprNodesPerFormula}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.maxExprDepth', 'Max AST depth per formula')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprDepth}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.sandboxSteps', 'Max sandbox evaluation steps')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{fmtInt(SANDBOX_BUDGETS.maxTotalSteps)}</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.sandboxDuration', 'Max sandbox wall-clock time')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{SANDBOX_BUDGETS.maxDurationMs} ms</td></tr>
+            <tr data-app-part="table-row"><th data-app-part="table-cell" scope="row">{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</th><td data-app-part="table-cell" className="text-right tabular-nums">{SANDBOX_BUDGETS.maxRows}</td></tr>
           </tbody>
         </Table>
       </LayoutCard>
@@ -81,7 +81,7 @@ export function SecurityMethodologyPanel() {
         <Text as="p" variant="caption" className="mb-2">
           {t('intelPacks.security.capabilitiesIntro', 'There is no field for a "write", "command", or "network" capability anywhere in the schema — requesting one is structurally impossible, not merely denied.')}
         </Text>
-        <ul className="space-y-1.5">
+        <ul data-app-part="list" className="space-y-1.5">
           {PACK_CAPABILITY_CATALOG.map((c) => (
             <li key={c.id} className="text-xs">
               <span className="font-mono text-[var(--text-primary)]">{c.id}</span>

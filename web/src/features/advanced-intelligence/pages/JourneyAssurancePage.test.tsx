@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@t
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { JourneyAssuranceRequest, JourneyAssuranceResponse } from '@/types/advancedIntelligence';
 import JourneyAssurancePage from './JourneyAssurancePage';
@@ -53,6 +56,58 @@ afterEach(() => {
 });
 
 describe('Journey assurance scoped modernization', () => {
+  it.each(PACK_IDS)('%s composes real factor readings with full context and unchanged zero missing and finite scores', async pack => {
+    const response: JourneyAssuranceResponse = {
+      ...journey,
+      factors: [...journey.factors, {
+        factor: 'unclassified-factor', status: 'new_source_state', score_pct: 35.5,
+        explanation: 'A complete long source explanation; this is not a confidence estimate. '.repeat(5),
+      }],
+    };
+    const original = structuredClone(response);
+    state.run.mockResolvedValueOnce(response);
+    const view = renderPage();
+    fireEvent.click(runButton());
+    await waitFor(() => expect(screen.getByText('observed charge')).toBeVisible());
+    const factors = screen.getAllByRole('article');
+    expect(factors).toHaveLength(3);
+    for (const factor of factors) {
+      expect(factor).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesAppDesignCss(factor)).toHaveLength(0);
+    }
+    view.container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(view.container, pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const mode = APPLICATION_DESIGNS[pack].data;
+      for (const [index, factor] of factors.entries()) {
+        expect(factor).toHaveAttribute('data-surface-variant', 'standalone');
+        expectAppDesignDataMode(factor, mode, '[data-app-metric="stat-card"]');
+        const heading = factor.querySelector('[data-app-part="metric-heading"]')!;
+        const label = heading.querySelector('[data-app-part="metric-label"]')!;
+        const reading = factor.querySelector('[data-app-part~="metric-reading"]')!;
+        const context = factor.querySelector('[data-app-part="metric-context"]')!;
+        expect(label.textContent).toBe(response.factors[index].factor);
+        expect(context.textContent).toBe(response.factors[index].explanation);
+        expect(matchesAppDesignCss(label, '[data-app-part~="metric-label"]').length).toBeGreaterThan(0);
+        expect(matchesAppDesignCss(reading, '[data-app-part~="metric-reading"]').length).toBeGreaterThan(0);
+        expect(matchesAppDesignCss(context, '[data-app-part~="metric-context"]').length).toBeGreaterThan(0);
+        expect(heading).toHaveClass('flex-wrap', 'gap-3');
+        expect(factor.querySelector('[role="progressbar"], svg, [data-metric-track], [data-app-part="metric-unit"]')).toBeNull();
+      }
+      expect(factors.map(factor => factor.querySelector('[data-app-part~="metric-reading"]')?.textContent))
+        .toEqual(['0.00%', '—', '35.50%']);
+      expect(within(factors[0]).getByText('supported')).toHaveAttribute('data-app-variant', 'info');
+      expect(within(factors[1]).getByText('Unsupported')).toHaveAttribute('data-app-variant', 'warning');
+      expect(within(factors[2]).getByText('new_source_state')).toHaveAttribute('data-app-variant', 'neutral');
+      expect(response).toEqual(original);
+      expect(state.run).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+    }
+    for (const factor of factors) expect(factor).not.toHaveAttribute('data-app-design-owner');
+  });
+
   it('preserves all initial sections and six controls without implying returned evidence', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Limitations' })).toBeVisible());

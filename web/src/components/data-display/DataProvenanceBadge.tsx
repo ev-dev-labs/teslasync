@@ -143,6 +143,7 @@ function ProvenanceBadge({
       title={title}
       aria-label={label}
       data-provenance={provenance}
+      data-app-part="status badge"
       data-data-status={status ?? 'ok'}
     >
       {iconOnly ? null : <Icon className="h-3 w-3" aria-hidden="true" />}

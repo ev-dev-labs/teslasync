@@ -25,7 +25,14 @@
  * are driven with `fireEvent` — matching every other component test here.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { useState } from 'react'
+import { parse, type Rule } from 'postcss'
+import { Button } from './Button'
+import { getAppDesignAttributes } from './app-designs/designs'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -61,6 +68,15 @@ const CATEGORIES = [
   { category: 'Driving', fields: ['VehicleSpeed', 'Gear'] },
   { category: 'Charging', fields: ['ChargeState'] },
 ]
+const controlRules: Rule[] = []
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+  .walkRules(rule => { controlRules.push(rule) })
+
+function consumesControl(node: Element, contract: string, property: string) {
+  return controlRules.some(rule => rule.selector.includes(contract)
+    && rule.nodes.some(declaration => declaration.type === 'decl' && declaration.prop === property)
+    && Array.from(document.querySelectorAll(rule.selector)).includes(node))
+}
 
 type Props = React.ComponentProps<typeof SignalConfigModal>
 
@@ -86,6 +102,53 @@ function intervalSelect(signal: string): HTMLSelectElement {
 }
 
 describe('<SignalConfigModal>', () => {
+  it.each(PACK_IDS)('%s composes opened native configuration groups and retains hidden zero-cadence selection', async pack => {
+    const onSubmit = vi.fn()
+    function Fixture() {
+      const [open, setOpen] = useState(false)
+      return (
+        <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+          <Button onClick={() => setOpen(true)}>Configure signals</Button>
+          <SignalConfigModal open={open} onClose={() => setOpen(false)}
+            categories={CATEGORIES} initialSelected={['VehicleSpeed']} initialInterval={10}
+            initialIntervals={{ VehicleSpeed: 0 }} onSubmit={onSubmit} />
+        </div>
+      )
+    }
+    render(<Fixture />)
+    const trigger = screen.getByRole('button', { name: 'Configure signals' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole('dialog')
+    const master = screen.getByRole('combobox', { name: 'Master sampling interval for all signals' })
+      .closest('[data-app-form-section]')!
+    const heading = screen.getByRole('button', { name: /^Driving/ }).closest('[data-app-form-heading]')!
+    const category = heading.closest('[data-app-form-section]')!
+    const row = intervalSelect('VehicleSpeed').closest('[data-app-field-surface]')!
+    await waitFor(() => expect(row).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)))
+    for (const group of [master, category]) {
+      expect(group).toHaveAttribute('data-app-part', 'card')
+      expect(consumesControl(group, '[data-app-form-section]', 'display')).toBe(true)
+    }
+    expect(consumesControl(heading, '[data-app-form-heading]', 'min-inline-size')).toBe(true)
+    expect(consumesControl(row, '[data-app-field-surface]', 'border-color')).toBe(true)
+    expect(row.querySelector('[data-app-part~="field-label"]')).toHaveTextContent('VehicleSpeed')
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('0')
+    expect(within(row as HTMLElement).getByRole('button', { name: 'Deselect VehicleSpeed' })).toHaveAttribute('aria-pressed', 'true')
+    expect(master.closest('[data-modal-scroll-body]')).not.toBeNull()
+    const submit = screen.getByRole('button', { name: 'Subscribe 1 Signals' })
+    expect(submit.closest('[data-modal-footer]')).not.toBeNull()
+    expect(dialog).toContainElement(document.activeElement)
+    fireEvent.click(screen.getByRole('button', { name: /^Driving/ }))
+    expect(screen.queryByText('VehicleSpeed')).toBeNull()
+    expect(screen.getByText('ChargeState')).toBeVisible()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search signals' }), { target: { value: 'Charge' } })
+    fireEvent.click(submit)
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith([{ name: 'VehicleSpeed', interval: 0 }])
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
   it.each([0, 37, +5, 0.5, -1, NaN, Infinity])('retains a saved cadence of %s without silently substituting an offered option', (interval) => {
     const { onSubmit } = renderModal({
       initialSelected: ['VehicleSpeed'],

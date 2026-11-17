@@ -208,6 +208,13 @@ describe('SignalTrendPage partial-data contract', () => {
     expect(actualRows.map((row) => row.actual)).toEqual([50, 51, 52, 53, 54]);
     expect(actualRows.every((row) => row.bandHigh === null)).toBe(true);
     expect(H.chartRows.every((row) => Object.prototype.hasOwnProperty.call(row, 'bandHigh'))).toBe(true);
+    const reading = screen.getByText('Reading the result').closest('[data-app-part~="panel"]')!;
+    const cards = reading.querySelectorAll('[data-app-part="card"][data-surface-variant="standalone"]');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent('Real');
+    expect(cards[1]).toHaveTextContent('Evidence-limited');
+    expect(cards[1]).toHaveTextContent('withheld from projection');
+    expect(H.chartRows.every(row => row.bandBase === null && row.bandHigh === null)).toBe(true);
   });
   it('retains selected history when the cached signal catalog refresh fails', () => {
     const client = new QueryClient({
@@ -301,6 +308,8 @@ describe('SignalTrendPage shared-frame adoption', () => {
     expect(screen.getByText('Robust baseline & forecast band')).toBeInTheDocument();
     expect(screen.getByText('Reading the result')).toBeInTheDocument();
     expect(H.chartRows).toEqual(retainedRows);
+    expect(screen.getByText('Reading the result').closest('[data-app-part~="panel"]')?.querySelectorAll('[data-app-part="card"]'))
+      .toHaveLength(2);
     expect(H.chartFrame).toMatchObject({ loading: false, empty: false, error: null });
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
     expect(H.history.current.refetch).toHaveBeenCalledTimes(1);

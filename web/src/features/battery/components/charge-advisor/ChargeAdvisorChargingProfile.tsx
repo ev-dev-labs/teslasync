@@ -67,10 +67,11 @@ export function ChargeAdvisorChargingProfile({
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
-          <div key={item.label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <Text variant="caption">{item.label}</Text>
-            <Text className="mt-1 text-xl font-semibold text-theme-accent">{item.value}</Text>
-            <Text variant="caption">{item.detail}</Text>
+          <div key={item.label} data-app-part="metric" data-app-metric="tile"
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <Text data-app-part="metric-label" variant="caption">{item.label}</Text>
+            <Text data-app-part="metric-reading metric-value" className="mt-1 text-xl font-semibold text-theme-accent">{item.value}</Text>
+            <Text data-app-part="metric-context" variant="caption">{item.detail}</Text>
           </div>
         ))}
       </div>

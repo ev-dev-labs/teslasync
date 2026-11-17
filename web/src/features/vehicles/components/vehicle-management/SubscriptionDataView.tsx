@@ -50,16 +50,16 @@ function BillingOption({ option }: { option: SubscriptionBillingData }) {
   }[periodKey ?? '']
 
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
-      <Text variant="label" as="p">
+    <div data-app-part="metric" data-app-metric="tile" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
+      <Text data-app-part="metric-label" variant="label" as="p">
         {option.billingPeriod
           ? humanizeManagementLabel(option.billingPeriod)
           : t('vehicleManagement.subscriptions.billingOption', 'Billing option')}
       </Text>
-      <Text variant="metricValue" as="p" className="mt-1">
-        {formatReportedMoney(option.price, option.currencyCode, precision, locale)}
+      <Text data-app-part="metric-reading" variant="metricValue" as="p" className="mt-1">
+        <span data-app-part="metric-value">{formatReportedMoney(option.price, option.currencyCode, precision, locale)}</span>
         {period && (
-          <Text variant="bodySm">
+          <Text data-app-part="metric-unit" variant="bodySm">
             {t('vehicleManagement.subscriptions.perPeriod', ' / {{period}}', {
               period,
             })}
@@ -67,7 +67,7 @@ function BillingOption({ option }: { option: SubscriptionBillingData }) {
         )}
       </Text>
       {option.total != null && (
-        <Text variant="helper" as="p" className="mt-1">
+        <Text data-app-part="metric-context" variant="helper" as="p" className="mt-1">
           {t('vehicleManagement.subscriptions.total', 'Total {{amount}}', {
             amount: formatReportedMoney(option.total, option.currencyCode, precision, locale),
           })}
@@ -125,6 +125,8 @@ export function SubscriptionDataView({
         {eligibility.offers.map((offer, index) => (
           <div
             key={`${offer.optionCode ?? offer.product ?? index}`}
+            data-app-part="card"
+            data-surface-variant="standalone"
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">

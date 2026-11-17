@@ -210,7 +210,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
       <Subhead className="break-words">
         {t('widget.forecast.horizon', '1 / 3 / 5-year outlook')}
       </Subhead>
-      {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
+      {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul data-app-part="list" className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
         {(data?.horizon_outlook?.points ?? []).map((p) => (
           <li
             key={p.years}
@@ -238,7 +238,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
       <Subhead className="break-words">
         {t('widget.forecast.riskFactors', 'Risk factors')}
       </Subhead>
-      {riskFactors.length > 0 ? <ul className="flex flex-col gap-1">
+      {riskFactors.length > 0 ? <ul data-app-part="list" className="flex flex-col gap-1">
         {riskFactors.slice(0, 5).map((rf, idx) => {
           const score = knownNumber(rf.score);
           const impact = score != null ? scoreToImpact(score) : null;

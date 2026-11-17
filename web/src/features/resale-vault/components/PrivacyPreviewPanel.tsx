@@ -50,7 +50,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
         icon={<ShieldCheck />}
         defaultOpen
       >
-        <ul className="space-y-2 text-xs text-[var(--text-secondary)]">
+        <ul data-app-part="list" className="space-y-2 text-xs text-[var(--text-secondary)]">
           {manifest.hard_excluded.map((entry) => (
             <li key={entry.field}>
               <span className="font-medium text-[var(--text-primary)]">{entry.field}</span>: {entry.reason}
@@ -67,7 +67,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
         {manifest.excluded_by_selection.length === 0 ? (
           <HelperText>{t('resaleVault.preview.noneExcluded', 'Every evidence section is included in this profile.')}</HelperText>
         ) : (
-          <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
+          <ul data-app-part="list" className="space-y-1 text-xs text-[var(--text-secondary)]">
             {manifest.excluded_by_selection.map((entry) => (
               <li key={entry.field}>{entry.field}</li>
             ))}
@@ -80,7 +80,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
         icon={<Clock />}
         defaultOpen
       >
-        <ul className="space-y-2 text-xs text-[var(--text-secondary)]">
+        <ul data-app-part="list" className="space-y-2 text-xs text-[var(--text-secondary)]">
           {manifest.coarsened.map((entry) => (
             <li key={entry.field}>
               <span className="font-medium text-[var(--text-primary)]">{entry.field}</span>: {entry.reason}
@@ -104,7 +104,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
 
       <div>
         <HelperText className="mb-1">{t('resaleVault.preview.limitations', 'Limitations')}</HelperText>
-        <ul className="list-disc ps-5 text-[var(--text-secondary)] space-y-1">
+        <ul data-app-part="list" className="list-disc ps-5 text-[var(--text-secondary)] space-y-1">
           {report.limitations.map((limitation, i) => (
             <li key={i}>{limitation}</li>
           ))}

@@ -124,8 +124,8 @@ export function ImportVerifyPanel() {
       )}
 
       {result && imported && (
-        <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] p-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
+        <div data-app-part="card" data-app-card-kind="record" className="space-y-3 rounded-lg border border-[var(--border-subtle)] p-3 text-xs">
+          <div data-app-part="record-header" className="flex flex-wrap items-center gap-2">
             <Badge variant={result.valid ? 'success' : 'danger'} size="md">
               {result.valid
                 ? t('resaleVault.import.valid', 'All checks passed')
@@ -150,30 +150,32 @@ export function ImportVerifyPanel() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-            {result.valid ? (
-              <ShieldCheck className="h-4 w-4 text-[var(--semantic-success)]" aria-hidden />
-            ) : (
-              <ShieldX className="h-4 w-4 text-[var(--semantic-danger)]" aria-hidden />
+          <div data-app-part="record-body" className="space-y-3">
+            <div data-app-part="record-context" className="flex items-center gap-2 text-[var(--text-secondary)]">
+              {result.valid ? (
+                <ShieldCheck className="h-4 w-4 text-[var(--semantic-success)]" aria-hidden />
+              ) : (
+                <ShieldX className="h-4 w-4 text-[var(--semantic-danger)]" aria-hidden />
+              )}
+              <span className="font-mono break-all">{t('resaleVault.import.keyId', 'Key ID')}: {result.keyId}</span>
+            </div>
+
+            {result.errors.length > 0 && (
+              <ul data-app-part="list" className="list-disc space-y-1 ps-4 text-[var(--text-secondary)]">
+                {result.errors.map((message, index) => (
+                  <li key={index}>{message}</li>
+                ))}
+              </ul>
             )}
-            <span className="font-mono break-all">{t('resaleVault.import.keyId', 'Key ID')}: {result.keyId}</span>
+
+            <div data-app-part="record-title" className="text-[var(--text-muted)]">
+              {t('resaleVault.import.reportId', 'Report ID')}: {imported.report.report_id}
+            </div>
+
+            <InlineCallout variant="info" icon={<ShieldAlert />}>
+              {result.attestationNote}
+            </InlineCallout>
           </div>
-
-          {result.errors.length > 0 && (
-            <ul className="list-disc space-y-1 ps-4 text-[var(--text-secondary)]">
-              {result.errors.map((message, index) => (
-                <li key={index}>{message}</li>
-              ))}
-            </ul>
-          )}
-
-          <div className="text-[var(--text-muted)]">
-            {t('resaleVault.import.reportId', 'Report ID')}: {imported.report.report_id}
-          </div>
-
-          <InlineCallout variant="info" icon={<ShieldAlert />}>
-            {result.attestationNote}
-          </InlineCallout>
         </div>
       )}
 

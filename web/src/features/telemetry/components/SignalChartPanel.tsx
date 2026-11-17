@@ -199,7 +199,7 @@ export function SignalChartPanel({
           errorRecovery={{ onRetry }}
         >
         {loading && !isLive ? (
-          <div style={{ height }} role="status" aria-label={t('signalChart.loading', 'Loading chart…')}>
+          <div data-app-part="status" style={{ height }} role="status" aria-label={t('signalChart.loading', 'Loading chart…')}>
             <Skeleton className="h-full w-full" />
           </div>
         ) : effectiveMode === 'grid' ? (

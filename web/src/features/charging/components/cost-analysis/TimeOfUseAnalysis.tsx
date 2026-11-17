@@ -5,7 +5,7 @@ import { GlassPanel, Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTickSm,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, EmbeddedChart,
 } from '@/components/charts';
 
@@ -123,7 +123,7 @@ export function TimeOfUseAnalysis({
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows}>
-                <CartesianGrid {...chartGrid} />
+                {chartGrid}
                 <XAxis dataKey="label" {...axisTickSm} interval={2} />
                 <YAxis {...axisTickSm} tickFormatter={(v: number) => `${v}`} />
                 <Tooltip content={<ChartTooltip />} />

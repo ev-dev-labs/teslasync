@@ -113,7 +113,7 @@ async function historicalEvidence(page: Page) {
   ] as const) {
     const list = accounting.getByTestId(testId).locator('.space-y-1');
     await expect(list).toHaveCount(1);
-    expect(await list.locator(':scope > div > span:last-child').allTextContents()).toEqual(expected);
+    await expect(list.getByRole('definition')).toHaveText(expected);
   }
 }
 

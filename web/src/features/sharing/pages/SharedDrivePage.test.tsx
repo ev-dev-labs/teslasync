@@ -241,7 +241,6 @@ vi.mock('@/components/charts', async () => ({
     )
   },
   ChartGradient: () => null,
-  chartGrid: {},
   axisTick: {},
   AREA_DEFAULTS: {},
   AreaChart: ({ data, children }: { data: Array<Record<string, number>>; children?: ReactNode }) => {

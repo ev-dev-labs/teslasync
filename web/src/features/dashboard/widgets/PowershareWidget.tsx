@@ -102,7 +102,7 @@ export default function PowershareWidget({ vehicleId, config, size }: WidgetProp
   const evidence = (
     <section className="min-w-0 space-y-2" aria-label={t('dashboardWidgets.energy.powershare.evidence', 'Signal evidence')}>
       <Subhead>{t('dashboardWidgets.energy.powershare.evidence', 'Signal evidence')}</Subhead>
-      <ul className="space-y-2">
+      <ul data-app-part="list" className="space-y-2">
         {rows.map((row) => (
           <li key={row.name} className="min-w-0 border-b border-[var(--border-subtle)] pb-2 last:border-b-0">
             <div className="flex min-w-0 items-start justify-between gap-2">

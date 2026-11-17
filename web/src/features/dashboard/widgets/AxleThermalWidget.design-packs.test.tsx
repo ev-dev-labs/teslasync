@@ -296,7 +296,7 @@ describe('AxleThermalWidget production design packs', () => {
       .toHaveAttribute('data-widget-appearance', appearance));
     expectSections();
     expect(screen.getByRole('status', { name: 'Loading Live axle evidence' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Refresh data/ })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
     await act(async () => { finish?.(live); });
     await settled();

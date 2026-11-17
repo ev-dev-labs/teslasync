@@ -60,16 +60,16 @@ export function MaintenanceSummaryPanel({ maintenance, sources }: MaintenanceSum
           {maintenance.service_records.length > 0 && (
             <div>
               <HelperText className="mb-2">{t('resaleVault.maintenance.records', 'Service records')}</HelperText>
-              <ul className="space-y-2">
+              <ul data-app-part="list" data-app-list="records" className="space-y-2">
                 {maintenance.service_records.map((record) => (
-                  <li key={record.item_id} className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium text-[var(--text-primary)]">{record.date}</span>
-                      <span className="text-[var(--text-muted)]">
+                  <li key={record.item_id} data-app-part="card" data-app-card-kind="record" className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
+                    <div data-app-part="record-header" className="flex flex-wrap items-center justify-between gap-2">
+                      <span data-app-part="record-title" className="font-medium text-[var(--text-primary)]">{record.date}</span>
+                      <span data-app-part="record-context" className="text-[var(--text-muted)]">
                         {record.odometer_m != null ? formatDistance(record.odometer_m) : '—'}
                       </span>
                     </div>
-                    {record.notes && <p className="mt-1 text-[var(--text-secondary)]">{record.notes}</p>}
+                    {record.notes && <p data-app-part="record-body" className="mt-1 text-[var(--text-secondary)]">{record.notes}</p>}
                   </li>
                 ))}
               </ul>

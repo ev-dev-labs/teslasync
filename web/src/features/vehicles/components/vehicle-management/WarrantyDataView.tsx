@@ -73,7 +73,7 @@ function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
         : t('vehicleManagement.warranty.notProvided', 'Not provided')
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+    <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className="rounded-lg bg-[var(--surface-2)] p-2 text-[var(--text-secondary)]">
@@ -92,41 +92,41 @@ function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
         </Badge>
       </div>
 
-      <dl className="mt-3 grid gap-2 sm:grid-cols-3">
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
-          <dt>
+      <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div data-app-part="list-row" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
+          <dt data-app-part="metric-label">
             <Text variant="label">
               {t('vehicleManagement.warranty.coverageTerm', 'Coverage term')}
             </Text>
           </dt>
-          <dd>
-            <Text variant="body" weight="semibold">
+          <dd data-app-part="metric-reading">
+            <Text data-app-part="metric-value" variant="body" weight="semibold">
               {coverageTerm}
             </Text>
           </dd>
         </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
-          <dt>
+        <div data-app-part="list-row" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
+          <dt data-app-part="metric-label">
             <Text variant="label">
               {t('vehicleManagement.warranty.odometerLimit', 'Odometer limit')}
             </Text>
           </dt>
-          <dd>
-            <Text variant="body" weight="semibold" mono>
+          <dd data-app-part="metric-reading">
+            <Text data-app-part="metric-value" variant="body" weight="semibold" mono>
               {coverage.expirationOdometer != null
                 ? fmtInt(coverage.expirationOdometer)
                 : t('vehicleManagement.warranty.notProvided', 'Not provided')}
             </Text>
           </dd>
         </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
-          <dt>
+        <div data-app-part="list-row" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
+          <dt data-app-part="metric-label">
             <Text variant="label">
               {t('vehicleManagement.warranty.expiration', 'Expiration')}
             </Text>
           </dt>
-          <dd>
-            <Text variant="body" weight="semibold">
+          <dd data-app-part="metric-reading">
+            <Text data-app-part="metric-value" variant="body" weight="semibold">
               {coverage.expirationDate
                 ? formatDate(coverage.expirationDate)
                 : t('vehicleManagement.warranty.notProvided', 'Not provided')}

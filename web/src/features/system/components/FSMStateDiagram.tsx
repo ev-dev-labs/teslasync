@@ -62,7 +62,8 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
     next: reachableFromLatest,
   });
 
-  if (!states || !edges) {    return (
+  if (!states || !edges) {
+    return (
       <GlassPanel className="p-5">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           {t('fsm.stateDiagram', 'State diagram')}
@@ -73,17 +74,19 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
   }
 
   return (
-    <GlassPanel className="p-5">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-        {t('fsm.stateDiagram', 'State diagram')}
-      </h2>
+    <GlassPanel className="p-5" data-app-part="panel chart" data-chart-family="state-machine" data-chart-variant="panel">
+      <div data-app-part="chart-header" className="mb-4">
+        <h2 data-card-title className="text-sm font-semibold text-[var(--text-primary)]">
+          {t('fsm.stateDiagram', 'State diagram')}
+        </h2>
+      </div>
       {/* A11Y-10: the diagram encodes the machine's position with colour
           and left-to-right placement, both invisible to assistive tech.
           The summary answers the question the diagram exists to answer —
           which state is the machine in, and where can it go next — before
           the user has to walk the node list. */}
       <VisuallyHidden>{stateSummary}</VisuallyHidden>
-      <div className="flex flex-wrap items-start gap-2 sm:gap-3">
+      <div data-app-part="chart-plot" className="flex flex-wrap items-start gap-2 sm:gap-3">
         {states.map((state, i) => {
           const color = stateCue(fsmType, state);
           const count = stateCounts.get(state) ?? 0;
@@ -95,6 +98,9 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
             <div key={state} className="flex items-center gap-2 sm:gap-3">
               <div
                 data-testid={`fsm-node-${state}`}
+                data-app-part="status metric"
+                data-app-metric="inline"
+                data-chart-readout="state"
                 aria-current={isCurrent ? 'true' : undefined}
                 className={cn(
                   'relative flex flex-col items-center rounded-lg border px-3 py-2 min-w-[70px] sm:min-w-[80px]',
@@ -106,9 +112,9 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                 )}
               >
                 <span aria-hidden="true" className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
-                <span className={cn('text-xs font-medium', color.text)}>{state}</span>
+                <span data-app-part="metric-label" className={cn('text-xs font-medium', color.text)}>{state}</span>
                 {count > 0 && (
-                  <span className="text-2xs text-[var(--text-muted)] mt-0.5">{count}</span>
+                  <span data-app-part="metric-reading metric-value" className="text-2xs text-[var(--text-muted)] mt-0.5">{count}</span>
                 )}
                 {isCurrent && (
                   <>
@@ -116,7 +122,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                       aria-hidden="true"
                       className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--semantic-info)]"
                     />
-                    <Caption>{t('fsm.currentState', 'current state')}</Caption>
+                    <Caption data-app-part="metric-context">{t('fsm.currentState', 'current state')}</Caption>
                   </>
                 )}
               </div>
@@ -149,7 +155,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
 
       {/* Edge summary below */}
       {edgeCounts.size > 0 && (
-        <div data-testid="fsm-edge-summary" className="mt-4 flex flex-wrap gap-2">
+        <div data-testid="fsm-edge-summary" data-app-part="chart-legend" className="mt-4 flex flex-wrap gap-2">
           {Array.from(edgeCounts.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
@@ -158,12 +164,18 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
               return (
                 <span
                   key={edge}
+                  data-app-part="badge metric"
+                  data-app-variant="neutral"
+                  data-app-metric="inline"
+                  data-chart-readout="edge"
                   className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--surface-2)] text-2xs text-[var(--text-secondary)]"
                 >
-                  <span className={stateCue(fsmType, from).text}>{from}</span>
-                  <span className="text-[var(--text-muted)]">→</span>
-                  <span className={stateCue(fsmType, to).text}>{to}</span>
-                  <span className="text-[var(--text-muted)] font-mono">×{count}</span>
+                  <span data-app-part="metric-label" className="inline-flex items-center gap-1">
+                    <span className={stateCue(fsmType, from).text}>{from}</span>
+                    <span className="text-[var(--text-muted)]">→</span>
+                    <span className={stateCue(fsmType, to).text}>{to}</span>
+                  </span>
+                  <span data-app-part="metric-reading metric-value" className="text-[var(--text-muted)] font-mono">×{count}</span>
                 </span>
               );
             })}

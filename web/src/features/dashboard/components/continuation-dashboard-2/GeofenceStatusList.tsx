@@ -20,7 +20,7 @@ interface GeofenceStatusListProps {
 export function GeofenceStatusList({ fences, hasCoords, formatRadius }: GeofenceStatusListProps) {
   const { t } = useTranslation('dashboard');
   return (
-    <ul className="space-y-1.5">
+    <ul data-app-part="list" className="space-y-1.5">
       {fences.map((fence) => (
         <li key={fence.id} className="min-h-11 min-w-0 border-b border-[var(--border-subtle)] last:border-b-0">
           <KVList

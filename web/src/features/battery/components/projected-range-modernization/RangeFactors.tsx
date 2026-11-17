@@ -26,18 +26,21 @@ export function RangeFactors({ source, loading }: RangeSectionProps) {
           {factors.map(factor => {
             const impact = knownNumber(factor.impact_pct);
             return (
-              <div key={factor.name} className="flex min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-                <span className="mt-0.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true">
-                  {icons[(factor.name ?? '').toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Text as="span" size="sm" weight="medium" color="primary">{t(`range.factor.${factor.name}`, factor.name)}</Text>
-                    <Badge variant={impact == null ? 'neutral' : impact >= 0 ? 'success' : 'danger'} size="sm">
-                      {impact == null ? '—' : `${impact >= 0 ? '+' : ''}${fmtNumber(impact)}%`}
-                    </Badge>
+              <div key={factor.name} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+                className="flex min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+                <div data-app-part="record-body" className="flex min-w-0 items-start gap-3">
+                  <span className="mt-0.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true">
+                    {icons[(factor.name ?? '').toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Text data-app-part="record-title" as="span" size="sm" weight="medium" color="primary">{t(`range.factor.${factor.name}`, factor.name)}</Text>
+                      <Badge variant={impact == null ? 'neutral' : impact >= 0 ? 'success' : 'danger'} size="sm">
+                        {impact == null ? '—' : `${impact >= 0 ? '+' : ''}${fmtNumber(impact)}%`}
+                      </Badge>
+                    </div>
+                    <HelperText data-app-part="record-context" className="mt-1 block">{t(`range.factorDesc.${factor.name}`, factor.description)}</HelperText>
                   </div>
-                  <HelperText className="mt-1 block">{t(`range.factorDesc.${factor.name}`, factor.description)}</HelperText>
                 </div>
               </div>
             );

@@ -1,0 +1,7 @@
+# Swiss Grid shared follow-up
+
+The final 2026-11-13 phone dashboard capture failed because preserved Digital Twin content includes an “Open” link measuring 36×36px and a freshness button measuring 10×28px; the twin heading and an em dash also computed to 14px. The pack cannot change this protected subtree. Please address the shared Digital Twin implementation's mobile target and text sizing without altering its vehicle imagery, content, or behavior. The diagnostic additionally reported “Aurora” at 14px and “km” at 12px; their ownership was not independently established.
+
+The final desktop dashboard, drives, and energy Axe scans respectively reported 4, 31, and 17 incomplete contrast nodes, including partially obscured navigation labels and chart axes and legends. These are not reported contrast violations, but need manual review in their actual contexts before a contrast pass can be claimed. The Swiss-specific panel-height reduction visible in that capture was subsequently removed; its effect has not been recaptured.
+
+Both permitted Swiss capture rounds have now been used. First-round evidence and the full runner log are in `shots\swiss\round-1\` and `shots\swiss\round-1.log`; second-round images are in `shots\swiss\phone-390-scale-1\` and `shots\swiss\desktop-scale-1\`, with output in `shots\swiss\round-2.log`. Three final owned CSS adjustments were made after the last screenshots and remain unverified.

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
-  CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, ChartTooltip, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
   useThemeChartPalette,
 } from '@/components/charts';
 import { ChartCard, thinTickIndices, useContainerWidth } from '@/components/layout/layout-reference';
@@ -53,6 +53,7 @@ export function ReferenceDailyChart({ title, empty = false }: { title: string; e
             />
             <YAxis width={40} tickCount={4} tickFormatter={(value: number) => fmtNumber(value)} />
             <Tooltip
+              content={<ChartTooltip />}
               labelFormatter={(value) => formatDate(dailyFixture[Number(value)]?.date, { tz: 'UTC', locale: i18n.language })}
               formatter={(value) => [typeof value === 'number' ? fmtNumber(value) : '—', sampleLabel]}
             />

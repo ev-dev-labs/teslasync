@@ -72,6 +72,7 @@ describe('RouteDisplay component', () => {
     );
     expect(screen.getByTestId('r')).toHaveTextContent(/Home/);
     expect(screen.getByTestId('r')).toHaveTextContent(/round trip/i);
+    expect(screen.getByText(/round trip/i)).not.toHaveClass('opacity-60');
   });
 
   it('renders "↻ round trip" when coords are within threshold', () => {
@@ -113,6 +114,7 @@ describe('RouteDisplay component', () => {
   it('falls back to "No location data" when neither endpoint has data', () => {
     render(<RouteDisplay start={{}} end={{}} testId="r" />);
     expect(screen.getByTestId('r')).toHaveTextContent(/No location data/i);
+    expect(screen.getByText('No location data')).not.toHaveClass('opacity-60');
   });
 
   it('falls back per-endpoint when only one is missing', () => {

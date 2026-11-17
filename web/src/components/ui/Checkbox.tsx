@@ -72,6 +72,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const indicator = (
       <span
         aria-hidden="true"
+        data-app-choice-indicator="checkbox"
         className={cn(
           'checkbox-indicator inline-flex shrink-0 items-center justify-center rounded-shape-sm border transition-colors duration-fast ease-standard motion-reduce:transition-none',
           dims.box,
@@ -90,6 +91,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={inputId}
+        data-app-part="field"
+        data-app-field-kind="choice"
         className={cn(
           'relative inline-flex min-h-11 min-w-11 max-w-full cursor-pointer items-center gap-2 select-none md:min-h-6 md:min-w-6',
           disabled && 'cursor-not-allowed opacity-60',
@@ -98,6 +101,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       >
         <input
           ref={setRefs}
+          data-app-part="field-control"
           id={inputId}
           type="checkbox"
           // `peer` powers the indicator's checked/focus/disabled styles
@@ -114,7 +118,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {...inputProps}
         />
         {indicator}
-        {label != null && <Text variant="bodySm" className="min-w-0 break-words">{label}</Text>}
+        {label != null && <Text data-app-part="field-label" variant="bodySm" className="min-w-0 break-words">{label}</Text>}
       </label>
     );
   },

@@ -1,31 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import type { FirmwareImpact } from '../../lib/firmwareImpact';
 import { FirmwareImpactDetails } from './FirmwareImpactDetails';
 import { firmwareImpactState } from './firmwareImpactState';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
-      fallback.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => String(values?.[key] ?? '')),
-  }),
-}));
-vi.mock('@/components/layout/layout-reference', () => ({
-  LayoutCard: ({ title, children, actions }: { title: string; children: ReactNode; actions: ReactNode }) =>
-    <section aria-label={title}>{actions}{children}</section>,
-}));
-vi.mock('@/components/ui', () => ({
-  Table: ({ children, ...props }: { children: ReactNode; 'aria-label': string }) => <table {...props}>{children}</table>,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  HelpTooltip: () => <span>verdict methodology</span>,
-}));
-vi.mock('@/components/feedback', () => ({
-  Skeleton: () => <span role="status">initial loading</span>,
-  EmptyState: ({ message }: { message: string }) => <span>{message}</span>,
-  QueryError: ({ onRetry }: { onRetry: () => void }) => <button onClick={onRetry}>Retry source</button>,
-}));
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({
     fmtScientificNumber: (value: number, precision: number) => `p:${value}:${precision}`,
@@ -45,10 +27,10 @@ function impact(overrides: Partial<FirmwareImpact> = {}): FirmwareImpact {
   };
 }
 function show(row: FirmwareImpact, sourceState = firmwareImpactState({ data: [] }, { data: [] })) {
-  return render(<FirmwareImpactDetails
+  return render(<MemoryRouter><FirmwareImpactDetails
     summary={{ impacts: [row], skipped: 0, significantCount: 1, analyzedDrives: 17 }}
     state={sourceState} onRetry={vi.fn()}
-  />);
+  /></MemoryRouter>);
 }
 
 describe('firmware version evidence is lossless and missing-aware', () => {
@@ -57,6 +39,11 @@ describe('firmware version evidence is lossless and missing-aware', () => {
     const before = JSON.stringify(row);
     show(row);
     const table = screen.getByRole('table', { name: row.version });
+    const record = table.closest('[data-app-card-kind="record"]')!;
+    expect(record.tagName).toBe('LI');
+    expect(record.parentElement).toHaveAttribute('data-app-list', 'records');
+    expect(table.closest('[data-app-part="record-body"]')?.parentElement).toBe(record);
+    expect(record.querySelector('[data-app-part="record-header"]')).toHaveTextContent(row.version);
     expect(within(table).getAllByRole('rowheader')).toHaveLength(4);
     expect(within(table).getByText('180 Wh/km · n=8')).toBeInTheDocument();
     expect(within(table).getByText('160 Wh/km · n=9')).toBeInTheDocument();
@@ -90,19 +77,47 @@ describe('firmware version evidence is lossless and missing-aware', () => {
   it('renders retained evidence during a background error', () => {
     show(impact(), firmwareImpactState({ data: [], error: new Error('offline') }, { data: [] }));
     expect(screen.getByRole('table', { name: '2026.20' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Retry source' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('connects each actual record header, body and evidence slot to all design data compositions', () => {
+    const row = impact({ version: '2026.20 long retained software version identifier' });
+    const { container } = show(row);
+    const table = screen.getByRole('table', { name: row.version });
+    const record = table.closest('[data-app-card-kind="record"]')!;
+    const original = record.textContent;
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        const mode = APPLICATION_DESIGNS[pack].data;
+        expectAppDesignDataMode(record, mode, '[data-app-card-kind="record"]');
+        for (const part of ['record-header', 'record-body', 'record-title', 'record-context']) {
+          expectAppDesignDataMode(record.querySelector(`[data-app-part="${part}"]`)!, mode, `[data-app-part~="${part}"]`);
+        }
+        const body = record.querySelector('[data-app-part="record-body"]')!;
+        for (const match of matchesAppDesignCss(body)) {
+          expect(match.declarations).not.toHaveProperty('display');
+          expect(match.declarations).not.toHaveProperty('grid-template-columns');
+        }
+        expect(within(table).getAllByRole('rowheader')).toHaveLength(4);
+        expect(record.textContent).toBe(original);
+      } finally { release(); }
+    }
+    expect(within(record as HTMLElement).getByText('More efficient')).toHaveAttribute('data-app-variant', 'success');
   });
 
   it('keeps the shell and offers recovery on initial failure, without rendering fabricated comparisons', () => {
     const retry = vi.fn();
-    render(<FirmwareImpactDetails
+    render(<MemoryRouter><FirmwareImpactDetails
       summary={{ impacts: [impact()], skipped: 0, significantCount: 1, analyzedDrives: 17 }}
       state={firmwareImpactState({ error: new Error('failed') }, { data: [] })}
       onRetry={retry}
-    />);
-    expect(screen.getByRole('region', { name: 'Version by version' })).toBeInTheDocument();
+    /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Version by version' })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledTimes(1);
   });
 });

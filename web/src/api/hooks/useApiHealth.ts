@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getApiBase } from '@/api/client';
+import { assertDocumentActive } from '@/lib/documentCancellation';
 
 /**
  * Polls the backend `/healthz` endpoint every 15 seconds and reports the
@@ -51,6 +52,7 @@ export const POLL_INTERVAL_MS = 15_000;
 const STALE_TIME_MS = 10_000;
 
 export async function probe(externalSignal?: AbortSignal): Promise<ProbeResult> {
+  assertDocumentActive();
   const url = `${getApiBase()}/healthz`;
   const controller = new AbortController();
   // Distinguishes "our 5s deadline fired" (a real outage → offline) from

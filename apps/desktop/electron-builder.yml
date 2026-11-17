@@ -16,18 +16,23 @@ directories:
 win:
   icon: assets/icon.ico
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
+        - arm64
   protocols:
     - name: TeslaSync
       schemes:
         - teslasync
 appx:
+  artifactName: TeslaSync-${version}-${arch}.${ext}
   identityName: 21112CushyApps.TeslaSync
   publisher: CN=7495AF23-917D-411F-BD1B-CC9476AFD700
   publisherDisplayName: Own Apps
   minVersion: 10.0.17763.0
   backgroundColor: '#0b0d12'
 nsis:
+  buildUniversalInstaller: true
   oneClick: false
   allowToChangeInstallationDirectory: true
   shortcutName: TeslaSync

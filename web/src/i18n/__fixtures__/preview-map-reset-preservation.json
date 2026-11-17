@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the exact public native setView animate:false reset option; recover the independently compiled complete Controls predecessor before unchanged preview producer and map frame/popup dependency pins.",
+  "dependencies": [
+    {
+      "file": "web/src/components/maps/index.ts",
+      "sha256": "68bb915ea5f964d5ba6e5c83002b35c5e0b84bc0aa721a3770d5497668c77e43"
+    },
+    {
+      "file": "web/src/components/ui/index.ts",
+      "sha256": "b2fcbd2722d6bd3e802a7aea0ae19b722d76b68c3494ba63a725e80eb552c0c6"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx",
+      "before": "e9f6de0d3b2e4ec118177f4a1d84b2094a641145706bc21bc2559499869b0541",
+      "after": "0226d72b2bd55e63e67afb0fe2ccf83ab8c56211aab8b4aceb01933dac002cde",
+      "independentPredecessorProof": {
+        "map": "full-design-runtime-candidate-dist-v25/assets/Yl194wsd.js.map",
+        "mapSha256": "69c2784b80bfbcb2b35c383e8073c624794ffda73880bd5d098cf1916140582e",
+        "mapSource": "D:/repos/teslasync/web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx",
+        "sha256": "e9f6de0d3b2e4ec118177f4a1d84b2094a641145706bc21bc2559499869b0541"
+      },
+      "originalLineCount": 16,
+      "currentLineCount": 16,
+      "originalCallCount": 3,
+      "originalCallsSha256": "aeb2783fd0497ed33797e9c1856ad99cfed8841a8a0860b0776065b950c0b8f8",
+      "originalProjectionSha256": "b4af23a4aa277e67a2c74bc4ce0485612e8acb8faa9c2cd259aeed080c467c58",
+      "hunks": [
+        {
+          "start": 11,
+          "old": [
+            "      <Button variant=\"secondary\" onClick={() => map.setView([0.01, 0], 13)}>"
+          ],
+          "new": [
+            "      <Button variant=\"secondary\" onClick={() => map.setView([0.01, 0], 13, { animate: false })}>"
+          ]
+        }
+      ]
+    }
+  ]
+}

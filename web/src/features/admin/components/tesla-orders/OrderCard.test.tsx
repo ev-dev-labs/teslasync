@@ -81,6 +81,9 @@ vi.mock('react-i18next', () => ({
 
 import { OrderCard } from './OrderCard';
 import { BADGE_VARIANTS } from '@/components/ui';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 /** Build a well-formed order; every field is overridable per case. */
 function makeOrder(over: Partial<TeslaOrder> = {}): TeslaOrder {
@@ -115,6 +118,36 @@ beforeEach(() => {
 });
 
 describe('OrderCard', () => {
+  it('composes only the actual non-action upgrade notice and preserves every order field', () => {
+    const { container } = renderCard({ is_upgradable: true, model: 'Long real model identity', delivery_date: null });
+    const notice = screen.getByText('Upgrade available').closest('[data-app-feedback-kind="notice"]')!;
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(matchesAppDesignCss(notice, '[data-app-feedback-kind="notice"]')
+          .some(rule => rule.selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+            && 'border' in rule.declarations)).toBe(true);
+        expect(notice).toHaveAttribute('data-app-tone', 'neutral');
+        expect(notice.querySelector('[data-app-part~="feedback-content"]')).toHaveTextContent('Upgrade available');
+        expect(notice.querySelector('button, a')).toBeNull();
+        expect(card()).toHaveTextContent('RN-1001');
+        expect(card()).toHaveTextContent('5YJ3E1EA-TEST');
+        expect(card()).toHaveTextContent('—');
+        expect(card()).toHaveAccessibleName('Long real model identity order, Delivered');
+      } finally {
+        release();
+      }
+    }
+  });
+
+  it.each([false, undefined])('does not fabricate upgrade availability for %s', is_upgradable => {
+    const { container } = renderCard({ is_upgradable });
+    expect(container.querySelector('[data-app-feedback-kind="notice"]')).toBeNull();
+    expect(screen.getByText('RN-1001')).toBeInTheDocument();
+  });
+
   it('localizes the visible status and accessible name while preserving raw order data', () => {
     translatedLabels['admin.teslaOrders.status.readyForDelivery'] = 'Bereit zur Auslieferung';
     const order = makeOrder({ status: 'READY_FOR_DELIVERY' });

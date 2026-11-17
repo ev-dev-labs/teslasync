@@ -98,6 +98,8 @@ export function ComfortConsistencyMethodology({
           {items.map((item) => (
             <article
               key={item.key}
+              data-app-part="card"
+              data-surface-variant="standalone"
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
               <div className="mb-2 flex items-center gap-2 text-[var(--text-muted)]">

@@ -31,6 +31,7 @@ export function WeekdaySelect({
   return (
     <div
       role="group"
+      data-app-part="tabs"
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}
@@ -40,6 +41,7 @@ export function WeekdaySelect({
         return (
           <Button
             key={option.id}
+            data-app-part="button tab"
             type="button"
             size="sm"
             variant={selected ? 'primary' : 'secondary'}

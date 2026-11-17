@@ -94,11 +94,13 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     expect(seen.size).toBe(LAZY_ROUTE_IMPORTS.length)
   })
 
-  it('parses one ../features/* specifier per entry with no duplicates', () => {
+  it('parses one allowed application chunk specifier per entry with no duplicates', () => {
     // The parser must capture exactly as many specifiers as there are
     // runtime entries — proof the parse below is complete, not partial.
     expect(listSpecifiers).toHaveLength(LAZY_ROUTE_IMPORTS.length)
-    for (const spec of listSpecifiers) expect(spec).toMatch(/^\.\.\/features\//)
+    for (const spec of listSpecifiers) {
+      expect(spec).toMatch(/^\.\.\/(?:features\/|components\/ui\/AppDesignBridge$)/)
+    }
 
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -109,7 +111,7 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     expect(duplicates).toEqual([])
   })
 
-  it('references only page modules that exist on disk', () => {
+  it('references only application chunk modules that exist on disk', () => {
     const missing = listSpecifiers.filter((spec) => !resolvesOnDisk(spec))
     expect(missing).toEqual([])
   })
@@ -204,10 +206,10 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     expect(typeof mod.default).toBe('function')
   })
 
-  it('adapts the named onboarding export exactly like App.tsx', async () => {
-    const entry = LAZY_ROUTE_IMPORTS.find(({ name }) => name === 'TaskOnboardingHost')
+  it.each(['TaskOnboardingHost', 'AppDesignBridge'])('adapts the named %s export exactly like App.tsx', async (name) => {
+    const entry = LAZY_ROUTE_IMPORTS.find((route) => route.name === name)
     expect(entry).toBeDefined()
-    if (!entry) throw new Error('TaskOnboardingHost entry is missing from the manifest')
+    if (!entry) throw new Error(`${name} entry is missing from the manifest`)
     const module = await entry.load()
     expect(module).toHaveProperty('default', expect.any(Function))
   })

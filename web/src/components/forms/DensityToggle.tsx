@@ -62,6 +62,7 @@ export function DensityToggle({
   return (
     <div
       role="radiogroup"
+      data-app-part="tabs"
       aria-label={groupLabel}
       data-testid={testId}
       onKeyDown={onKeyDown}
@@ -77,6 +78,7 @@ export function DensityToggle({
         return (
           <button
             key={opt}
+            data-app-part="tab"
             type="button"
             role="radio"
             aria-checked={selected}

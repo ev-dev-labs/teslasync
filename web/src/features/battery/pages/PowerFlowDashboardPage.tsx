@@ -57,6 +57,10 @@ function FlowArrow({ from, to, power, active, direction }: FlowArrowProps) {
     <div
       role="group"
       aria-label={fmtWatts(power)}
+      data-app-part="card metric"
+      data-app-metric="inline"
+      data-surface-variant="standalone"
+      data-app-state={power == null ? 'missing' : 'value'}
       className={cn(
         'flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-[var(--surface-2)] px-3 py-2 transition-colors duration-fast motion-reduce:transition-none',
         typography.size.xs,
@@ -66,17 +70,17 @@ function FlowArrow({ from, to, power, active, direction }: FlowArrowProps) {
           : cn(neonColorMap.neutral.border, typography.color.muted),
       )}
     >
-      <span className="min-w-0 break-words">{from}</span>
+      <span data-app-part="metric-label" className="min-w-0 break-words">{from}</span>
       {power == null ? null : inbound ? (
         <Icon icon={ArrowDown} size="sm" />
       ) : (
         <Icon icon={ArrowUp} size="sm" />
       )}
-      <span className="min-w-0 break-words">{to}</span>
+      <span data-app-part="metric-context" className="min-w-0 break-words">{to}</span>
       {/* The arrow already encodes flow direction (sign), so show the magnitude
           only — a signed "-2.0 kW" next to a direction arrow double-encodes the
           sign and reads as a nonsensical negative flow. */}
-      <span className="ms-auto min-w-0 break-words tabular-nums" aria-hidden="true">
+      <span data-app-part="metric-reading metric-value" className="ms-auto min-w-0 break-words tabular-nums" aria-hidden="true">
         {fmtWatts(power == null ? null : Math.abs(power))}
       </span>
       {direction ? <VisuallyHidden>{direction}</VisuallyHidden> : null}

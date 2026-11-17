@@ -38,7 +38,7 @@ export function QueueWorkerCard({ stat, onOpen }: { stat: QueueStat; onOpen: (wo
       </div>
       <div className="mt-3"><MetricBar value={total} max={total > 0 ? total : 1} color={COLOR[stat.heartbeat_severity]} label={t('queueStatus.queueDepth', 'Queue depth')}
         sublabel={t('queueStatus.queueDepthDetail', '{{pending}} pending · {{inProgress}} in progress', { pending: fmtNumber(stat.pending), inProgress: fmtNumber(stat.in_progress) })} /></div>
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+      <dl data-app-part="list" className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
         <div><Caption>{t('queueStatus.metric.succeeded24h', 'Succeeded 24h')}</Caption><Text variant="bodySm" weight="medium" className="text-emerald-300" data-testid={`queue-succeeded-${stat.worker}`}>{fmtNumber(stat.succeeded_24h)}</Text></div>
         <div><Caption>{t('queueStatus.metric.failed24h', 'Failed 24h')}</Caption><Text variant="bodySm" weight="medium" className={stat.failed_24h > 0 ? 'text-rose-300' : 'text-[var(--text-primary)]'} data-testid={`queue-failed-${stat.worker}`}>{fmtNumber(stat.failed_24h)}</Text></div>
       </dl>

@@ -313,17 +313,17 @@ export function TelemetryPipelineCard({
         <div className={cn('flex flex-wrap items-center gap-1.5', typography.size.xs)}>
           {/* MQTT broker connectivity — neutral when connected, warning when not */}
           {mqttConnected ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-theme-accent/10 px-1.5 py-0.5 text-theme-accent ring-1 ring-theme-accent/20">
+            <span data-app-part="badge" className="inline-flex items-center gap-1 rounded-md bg-theme-accent/10 px-1.5 py-0.5 text-theme-accent ring-1 ring-theme-accent/20">
               <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
               {t('systemStatus.pipeline.streamConnected', 'Fleet Telemetry connected')}
             </span>
           ) : mqttConnected === false ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+            <span data-app-part="badge" className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
               <CloudOff className="h-3 w-3 shrink-0" aria-hidden="true" />
               {t('systemStatus.pipeline.brokerDisconnected', 'MQTT broker disconnected')}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
+            <span data-app-part="badge" className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
               <Radio className="h-3 w-3" aria-hidden="true" />
               {t('systemStatus.telemetrySources.streamUnknown', 'Fleet Telemetry connection unknown')}
             </span>
@@ -331,11 +331,11 @@ export function TelemetryPipelineCard({
           {/* Polling-engine state — informational when MQTT is healthy, warning otherwise */}
           {!pollingEnabled && (
             mqttConnected ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
+              <span data-app-part="badge" className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
                 {t('systemStatus.pipeline.streamingOnly', 'polling engine off (streaming-only)')}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+              <span data-app-part="badge" className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
                 <CloudOff className="h-3 w-3 shrink-0" aria-hidden="true" />
                 {t('systemStatus.pipeline.pollingDisabled', 'polling engine disabled')}
               </span>
@@ -346,19 +346,21 @@ export function TelemetryPipelineCard({
 
       {/* Per-vehicle list */}
       {vehicles == null ? (
-        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
-          {t('systemStatus.pipeline.vehiclesUnavailable', 'Vehicle telemetry is unavailable until the vehicle list loads.')}
+        <Text as="p" variant="bodySm" data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="rounded-lg bg-white/[0.03] p-4">
+          <span data-app-part="feedback-message">{t('systemStatus.pipeline.vehiclesUnavailable', 'Vehicle telemetry is unavailable until the vehicle list loads.')}</span>
         </Text>
       ) : list.length === 0 ? (
-        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
+        <Text as="p" variant="bodySm" data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="rounded-lg bg-white/[0.03] p-4">
+          <span data-app-part="feedback-message">
           {t('systemStatus.pipeline.emptyBeforeLink', 'No vehicles configured yet. Add a vehicle from the')}{' '}
           <Link to="/tesla-account" className="text-theme-accent hover:text-theme-accent">
             {t('systemStatus.pipeline.teslaAccount', 'Tesla account')}
           </Link>{' '}
           {t('systemStatus.pipeline.emptyAfterLink', 'page to see per-vehicle telemetry status.')}
+          </span>
         </Text>
       ) : (
-        <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-white/[0.03]">
+        <ul data-app-part="list" className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-white/[0.03]">
           {list.map((v) => {
             const ps = pollingMap[v.vin]
             const ss = streamMap[v.vin]
@@ -420,7 +422,7 @@ export function TelemetryPipelineCard({
 
                 {/* Liveness chip + last/next poll */}
                 <div className="flex min-w-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
-                  <Text size="xs" className={`inline-flex flex-wrap items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}>
+                  <Text data-app-part="badge" size="xs" className={`inline-flex flex-wrap items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}>
                     {source === 'stream' ? <Radio className="h-3 w-3 shrink-0" aria-hidden /> : <Radio className="h-3 w-3 shrink-0" aria-hidden />}
                     {livenessLabels[level]}
                     {sourceLabel && (
@@ -446,6 +448,8 @@ export function TelemetryPipelineCard({
       {/* Footer links */}
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
+          data-app-part="button"
+          data-app-variant="secondary"
           to="/admin/telemetry/coverage"
           className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md bg-theme-accent/15 px-3 py-1.5 text-theme-accent ring-1 ring-theme-accent/30 hover:bg-theme-accent/20', typography.size.xs, typography.weight.medium)}
         >
@@ -454,6 +458,8 @@ export function TelemetryPipelineCard({
           <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
         </Link>
         <Link
+          data-app-part="button"
+          data-app-variant="ghost"
           to="/mqtt-inspector"
           className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >
@@ -462,6 +468,8 @@ export function TelemetryPipelineCard({
           {t('systemStatus.pipeline.mqttInspector', 'MQTT inspector')}
         </Link>
         <Link
+          data-app-part="button"
+          data-app-variant="ghost"
           to="/vehicles"
           className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >

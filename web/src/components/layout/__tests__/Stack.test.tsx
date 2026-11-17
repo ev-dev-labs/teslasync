@@ -11,6 +11,16 @@ function renderStack(ui: ReactElement): HTMLElement {
 }
 
 describe('Stack', () => {
+  it('adds its composition role without replacing caller roles or polymorphic DOM props', () => {
+    const el = renderStack(<Stack as="section" data-app-part="page-content" className="gap-8" aria-label="Evidence">Retained evidence</Stack>);
+    expect(el.tagName).toBe('SECTION');
+    expect(el).toHaveAttribute('data-app-part', 'stack page-content');
+    expect(el).toHaveClass('gap-8');
+    expect(el).not.toHaveClass('gap-4');
+    expect(el).toHaveAccessibleName('Evidence');
+    expect(el).toHaveTextContent('Retained evidence');
+  });
+
   it('renders a <div> with the flex/col/gap defaults and no align/justify', () => {
     const el = renderStack(<Stack>content</Stack>);
     expect(el.tagName).toBe('DIV');

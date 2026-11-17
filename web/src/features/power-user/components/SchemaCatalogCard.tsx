@@ -62,6 +62,9 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           </Text>
         </div>
         <Text
+          data-app-part="badge"
+          data-app-badge-kind="schema-column-count"
+          data-app-variant="neutral"
           as="span"
           size="2xs"
           weight="medium"
@@ -77,11 +80,11 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
       <CardContent data-card-content>
       {columns.length > 0 ? (
         <Table aria-label={table.name || EM_DASH}>
-          <thead>
-            <tr>
-              <th scope="col">{t('common.name', 'Name')}</th>
-              <th scope="col">{t('common.type', 'Type')}</th>
-              <th scope="col">{t('common.description', 'Description')}</th>
+          <thead data-app-part="table-head">
+            <tr data-app-part="table-row">
+              <th data-app-part="table-cell" scope="col">{t('common.name', 'Name')}</th>
+              <th data-app-part="table-cell" scope="col">{t('common.type', 'Type')}</th>
+              <th data-app-part="table-cell" scope="col">{t('common.description', 'Description')}</th>
             </tr>
           </thead>
           <tbody>
@@ -89,8 +92,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
               const isPrimaryKey =
                 (col.description ?? '').trim().toLowerCase() === PRIMARY_KEY_MARKER;
               return (
-                <tr key={col.name}>
-                  <th scope="row">
+                <tr data-app-part="table-row" key={col.name}>
+                  <th data-app-part="table-cell" scope="row">
                     <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                       {isPrimaryKey && (
                         <KeyRound
@@ -102,8 +105,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
                       <Text mono size="xs" color="primary" className="break-words [overflow-wrap:anywhere]">{col.name || EM_DASH}</Text>
                     </div>
                   </th>
-                  <td><Text size="xs" color="secondary">{col.type || EM_DASH}</Text></td>
-                  <td>
+                  <td data-app-part="table-cell"><Text size="xs" color="secondary">{col.type || EM_DASH}</Text></td>
+                  <td data-app-part="table-cell">
                     {col.description
                       ? <Text size="xs" color="secondary" as="p">{timestampDescriptions[`${table.name}.${col.name}`] ?? col.description}</Text>
                       : EM_DASH}

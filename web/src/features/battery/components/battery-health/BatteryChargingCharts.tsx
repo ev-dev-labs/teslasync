@@ -44,7 +44,7 @@ function HabitStat({
   accent?: string;
 }) {
   return (
-    <div className="min-w-0 text-center">
+    <div data-battery-habit-stat="" className="min-w-0 text-center">
       <Text
         as="p"
         size="lg"
@@ -54,7 +54,7 @@ function HabitStat({
       >
         {value}
       </Text>
-      <Text as="p" size="2xs" color="muted" className="mt-0.5">
+      <Text as="p" size="2xs" color="muted" data-battery-habit-label="" className="mt-0.5">
         {label}
       </Text>
     </div>

@@ -72,11 +72,11 @@ export function TrueCostSourceScopeLedger({
 
             <tbody>
             {rows.map((row) => (
-              <tr
+              <tr data-app-part="table-row"
                 key={row.label}
               >
-                <th scope="row"><Text as="p" variant="metricLabel">{row.label}</Text></th>
-                <td>
+                <th data-app-part="table-cell" scope="row"><Text as="p" variant="metricLabel">{row.label}</Text></th>
+                <td data-app-part="table-cell">
                 <Code className="mt-1 block">{row.value}</Code>
                 <Text as="p" variant="caption" className="mt-1">{row.detail}</Text>
                 </td>

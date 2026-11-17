@@ -101,7 +101,7 @@ export function ImportExportPanel() {
 
         {parseErrors.length > 0 && (
           <AlertBanner variant="danger" title={t('intelPacks.import.errorTitle', 'Import rejected')}>
-            <ul className="list-disc pl-4 space-y-0.5">
+            <ul data-app-part="list" className="list-disc pl-4 space-y-0.5">
               {parseErrors.slice(0, 10).map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
@@ -115,14 +115,16 @@ export function ImportExportPanel() {
           {installedRecords.length === 0 ? (
             <Text as="p" variant="caption">{t('intelPacks.export.empty', 'No installed packs to export yet.')}</Text>
           ) : (
-            <ul className="space-y-2">
+            <ul data-app-part="list" data-app-list="records" className="space-y-2">
               {installedRecords.map((r) => (
-                <li key={r.packId} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-                  <span className="flex items-center gap-2 text-sm text-[var(--text-primary)] min-w-0">
-                    <FileJson className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
-                    <span className="truncate">{r.envelope.manifest.name} · v{r.envelope.manifest.version}</span>
-                  </span>
-                  <IconButton icon={<Download className="h-3.5 w-3.5" />} label={t('intelPacks.export.download', 'Export')} onClick={() => downloadEnvelope(r.envelope)} />
+                <li data-app-part="card" data-app-card-kind="record" key={r.packId} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+                  <div data-app-part="record-header" className="flex min-w-0 w-full items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm text-[var(--text-primary)] min-w-0">
+                      <FileJson className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                      <span data-app-part="record-title" className="min-w-0 break-words [overflow-wrap:anywhere]">{r.envelope.manifest.name} · v{r.envelope.manifest.version}</span>
+                    </span>
+                    <IconButton icon={<Download className="h-3.5 w-3.5" />} label={t('intelPacks.export.download', 'Export')} onClick={() => downloadEnvelope(r.envelope)} />
+                  </div>
                 </li>
               ))}
             </ul>

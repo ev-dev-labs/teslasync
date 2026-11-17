@@ -191,8 +191,9 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
                   {fmtNumber(whPerKmToDisplay(safe(v.efficiency)))} {efficiencyUnit}
                 </Text>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden="true">
+              <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden="true">
                 <div
+                  data-metric-fill
                   data-testid="efficiency-leader-fill"
                   className="h-full rounded-full bg-[var(--theme-primary)] transition-all duration-slow"
                   style={{ width: `${v.pct}%` }}

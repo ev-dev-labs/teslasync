@@ -130,6 +130,8 @@ export function ValidationSummary({
   return (
     <div
       ref={containerRef}
+      data-app-part="status"
+      data-app-field-feedback="summary"
       // `alert` is assertive: a failed submit is exactly the "user must
       // know now" case the role exists for. `tabIndex={-1}` makes the
       // container programmatically focusable without adding it to the

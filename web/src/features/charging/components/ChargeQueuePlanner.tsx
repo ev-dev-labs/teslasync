@@ -88,7 +88,7 @@ export function ChargeQueuePlanner() {
             </Button>
           </DataStateNotice>
         ) : (
-          <div role="status" aria-label={t('common.loading', 'Loading...')}>
+          <div data-app-part="status" role="status" aria-label={t('common.loading', 'Loading...')}>
             <Skeleton height={80} />
           </div>
         )
@@ -157,14 +157,16 @@ export function ChargeQueuePlanner() {
           ) : result ? (
             <div className="space-y-2">
               <Text as="p" variant="bodySm">{result.explanation}</Text>
-              <ol className="space-y-1.5">
+              <ol data-app-part="list" data-app-list="ranked" className="space-y-1.5">
                 {result.slots.map((slot) => (
-                  <li key={slot.vehicle_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
-                    <Badge variant={slot.feasible ? 'neutral' : 'warning'} size="sm">
-                      {slot.position}
-                    </Badge>
-                    <Text variant="bodySm" className="font-medium">{nameFor(slot.vehicle_id)}</Text>
-                    <Caption className="ml-auto tabular-nums">
+                  <li data-app-part="list-row" key={slot.vehicle_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
+                    <div data-app-part="metric-label" className="flex min-w-0 items-center gap-2">
+                      <Badge variant={slot.feasible ? 'neutral' : 'warning'} size="sm">
+                        {slot.position}
+                      </Badge>
+                      <Text variant="bodySm" className="break-words font-medium">{nameFor(slot.vehicle_id)}</Text>
+                    </div>
+                    <Caption data-app-part="metric-value" className="ml-auto tabular-nums">
                       {t('chargeQueue.slot', '{{start}}–{{end}} · {{kwh}} kWh · ready {{ready}}', {
                         start: formatTime(slot.start_time),
                         end: formatTime(slot.end_time),

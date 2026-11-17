@@ -71,47 +71,50 @@ export function StrongestSlots({
             )}
           />
         ) : (
-          <ol className="space-y-2">
+          <ol data-app-part="list" data-app-list="ranked" className="space-y-2">
             {slots.map((slot) => (
               <li
                 key={`${slot.day}-${slot.hour}`}
-                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                data-app-part="list-row"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <Badge variant={slot.rank === 1 ? 'success' : 'neutral'}>
-                  {t('rhythm.slots.rank', '#{{rank}}', {
-                    rank: fmtInt(slot.rank),
-                  })}
-                </Badge>
-                <div className="min-w-0">
-                  <Text as="p" variant="subhead">
-                    {t(
-                      'rhythm.slots.slotLabel',
-                      '{{day}} at {{hour}}:00',
-                      {
-                        day: dayLabel(slot.day),
-                        hour: String(slot.hour).padStart(2, '0'),
-                      },
-                    )}
-                  </Text>
-                  <Text as="p" variant="caption">
-                    {t(
-                      'rhythm.slots.evidence',
-                      '{{share}}% of valid starts · {{distance}} logged across {{measured}} measured drives',
-                      {
-                        share: fmtNumber(slot.share * 100),
-                        distance: formatDistance(
-                          slot.measuredDistanceDrives > 0
-                            ? slot.distanceM
-                            : null,
-                        ),
-                        measured: fmtInt(slot.measuredDistanceDrives),
-                      },
-                    )}
-                  </Text>
+                <div className="flex min-w-0 items-start gap-3">
+                  <Badge variant={slot.rank === 1 ? 'success' : 'neutral'}>
+                    {t('rhythm.slots.rank', '#{{rank}}', {
+                      rank: fmtInt(slot.rank),
+                    })}
+                  </Badge>
+                  <div className="min-w-0">
+                    <Text data-app-part="metric-label" as="p" variant="subhead">
+                      {t(
+                        'rhythm.slots.slotLabel',
+                        '{{day}} at {{hour}}:00',
+                        {
+                          day: dayLabel(slot.day),
+                          hour: String(slot.hour).padStart(2, '0'),
+                        },
+                      )}
+                    </Text>
+                    <Text data-app-part="metric-context" as="p" variant="caption">
+                      {t(
+                        'rhythm.slots.evidence',
+                        '{{share}}% of valid starts · {{distance}} logged across {{measured}} measured drives',
+                        {
+                          share: fmtNumber(slot.share * 100),
+                          distance: formatDistance(
+                            slot.measuredDistanceDrives > 0
+                              ? slot.distanceM
+                              : null,
+                          ),
+                          measured: fmtInt(slot.measuredDistanceDrives),
+                        },
+                      )}
+                    </Text>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <MetricValue>{fmtInt(slot.count)}</MetricValue>
-                  <MetricLabel>
+                  <MetricValue data-app-part="metric-reading metric-value">{fmtInt(slot.count)}</MetricValue>
+                  <MetricLabel data-app-part="metric-context">
                     {slot.qualified
                       ? t('rhythm.slots.supported', 'sample supported')
                       : t(

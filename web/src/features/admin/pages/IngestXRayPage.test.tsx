@@ -21,6 +21,7 @@
  *  6. The refresh control is disabled until a vehicle is picked, then triggers
  *     a manual refetch.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -210,6 +211,8 @@ beforeEach(() => {
     { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
   ];
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('IngestXRayPage', () => {
   it.each(['fetching', 'paused'] as const)(

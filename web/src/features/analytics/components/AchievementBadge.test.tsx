@@ -60,6 +60,24 @@ function makeAchievement(overrides: Partial<AchievementData> = {}): AchievementD
 describe('AchievementBadge', () => {
   beforeEach(() => translations.clear());
 
+  it.each([
+    { unlocked: false, progress: 0.5, caption: '50%' },
+    { unlocked: false, progress: 0.9, caption: '90%' },
+    { unlocked: true, progress: 1, caption: '✓ Unlocked' },
+  ])('owns the actual achievement card independently of its ring: $caption', ({ unlocked, progress, caption }) => {
+    const { container } = render(
+      <AchievementBadge achievement={makeAchievement({ unlocked, progress })} />,
+    );
+    const tile = container.firstElementChild;
+    expect(tile).toHaveAttribute('data-app-part', 'card');
+    expect(tile).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(tile).toContainElement(screen.getByText('Road Warrior'));
+    expect(tile).toContainElement(screen.getByText('Drive 10,000 km'));
+    expect(tile).toContainElement(screen.getByText(caption));
+    expect(tile?.querySelectorAll('[data-app-metric="ring"]')).toHaveLength(unlocked ? 0 : 1);
+    expect(tile).not.toHaveAttribute('data-app-metric');
+  });
+
   describe('achievement identity localization', () => {
     it.each([
       'first-drive', 'century', 'thousand', 'ten-thousand', 'fifty-thousand',

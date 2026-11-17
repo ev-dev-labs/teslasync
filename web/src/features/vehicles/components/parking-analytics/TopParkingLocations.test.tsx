@@ -14,12 +14,15 @@ import { downloadCSV } from '@/lib/csvExport';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const durationPreferences = vi.hoisted(() => ({ duration: 'h' as 'h' | 'min' | 's' }));
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 const chartPreferences = vi.hoisted(() => ({
   palette: 'cb_safe' as 'cb_safe' | 'neon',
-  fixedSize: false,
 }));
 const originalFormatting = getFormatterPreferences();
 
@@ -40,21 +43,6 @@ vi.mock('@/hooks/useChartPalette', async (importActual) => {
   return {
     ...actual,
     useChartPalette: () => actual.resolveChartPalette(chartPreferences.palette),
-  };
-});
-
-vi.mock('@/components/charts', async (importActual) => {
-  const actual = await importActual<typeof import('@/components/charts')>();
-  return {
-    ...actual,
-    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-      <actual.ResponsiveContainer
-        width={chartPreferences.fixedSize ? 800 : '100%'}
-        height={chartPreferences.fixedSize ? 320 : '100%'}
-      >
-        {children}
-      </actual.ResponsiveContainer>
-    ),
   };
 });
 
@@ -132,7 +120,6 @@ beforeEach(() => {
   vi.mocked(downloadCSV).mockClear();
   durationPreferences.duration = 'h';
   chartPreferences.palette = 'cb_safe';
-  chartPreferences.fixedSize = false;
   datePreferences.locale = 'en-US';
   datePreferences.tz = 'UTC';
   setGlobalLocale('en-US');
@@ -149,7 +136,6 @@ describe('DurationDistributionChart saved palette and series identities', () => 
     'uses %s slots 0 and 3 and preserves populated data and legend state on palette changes',
     async paletteId => {
       chartPreferences.palette = paletteId;
-      chartPreferences.fixedSize = true;
       const value = summary();
       value.stints = [{
         sourceDriveId: 1, location: 'Home',
@@ -308,7 +294,7 @@ describe('OvernightParkingContext numeric fidelity', () => {
       expect(csv).toContain(`night,22:00–06:00,0.5,${converted},${duration},${(500 / 1_500) * 100}`);
       expect(value.nightMs).toBe(500);
 
-      setGlobalPrecision(2);
+      act(() => { setGlobalPrecision(2); });
       rerender(<OvernightParkingContext summary={value} state={state} />);
       expect(table).toHaveTextContent('33,33%');
       fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
@@ -360,6 +346,43 @@ describe('OvernightParkingContext numeric fidelity', () => {
 });
 
 describe('TopParkingLocations value filters', () => {
+  it('retains the full location, censoring and dwell details in the phone presentation', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    const address = '123 Long Destination Avenue, Building Seven, Springfield, California 90210';
+    const value = summary();
+    value.locations = [{ location: address, stints: 2, totalMs: 7_200_000, share: 0.75 }];
+    value.stints = [{
+      sourceDriveId: 7, location: address, startMs: 0, endMs: 7_200_000,
+      durationMs: 7_200_000, ongoing: true, rightCensored: true,
+    }];
+    try {
+      render(<TopParkingLocations summary={value} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = document.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(mobile).toHaveTextContent(address);
+      expect(mobile).toHaveTextContent('Right-censored');
+      expect(mobile).toHaveTextContent('Observed minimum');
+      expect(mobile).toHaveTextContent('7200 s');
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Quick view' }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText(address)).not.toHaveClass('truncate');
+      expect(dialog).toHaveTextContent('Right-censored');
+      expect(dialog).toHaveTextContent('Observed minimum');
+      expect(dialog).toHaveTextContent('75.00%');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('filters all loaded location groups before client pagination', () => {
     render(<TopParkingLocations summary={summary()} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Stints filter' }));
@@ -419,7 +442,7 @@ describe('TopParkingLocations value filters', () => {
         expect(mobile).not.toBeNull();
         const quickView = within(mobile).getAllByRole('button', { name: 'Quick view' })[0];
         expect(quickView).toHaveClass('min-h-11', 'min-w-11');
-        quickView.focus();
+        act(() => { quickView.focus(); });
         expect(quickView).toHaveFocus();
         fireEvent.click(quickView);
         const dialog = screen.getByRole('dialog');

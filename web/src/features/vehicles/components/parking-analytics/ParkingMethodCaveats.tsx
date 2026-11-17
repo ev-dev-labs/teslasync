@@ -101,8 +101,9 @@ export function ParkingMethodCaveats({
           )}
         </Text>
       </div>
-      <div className="rounded-xl border border-[var(--border-subtle)] p-3">
-        <Text as="p" variant="caption">
+      <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="neutral" className="rounded-xl border border-[var(--border-subtle)] p-3">
+        <div data-app-part="feedback-content">
+        <Text data-app-part="feedback-message" as="p" variant="caption">
           {coverage.possiblyCapped
             ? t(
                 'parking.coverage.capped',
@@ -118,6 +119,7 @@ export function ParkingMethodCaveats({
                 },
               )}
         </Text>
+        </div>
       </div>
     </div>
   );

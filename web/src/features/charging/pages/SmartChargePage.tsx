@@ -20,6 +20,7 @@ import {
   ErrorText,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { UnitInput, FormSection } from '@/components/forms';
 import { type StatMetric } from '@/components/data-display';
@@ -107,10 +108,10 @@ export function planStatusVariant(
 /** Compact label/value pair for the recommended-schedule facts grid. */
 function ScheduleFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <Caption>{label}</Caption>
-      <Text as="p" variant="body" className="mt-0.5 break-words font-medium">
-        {value}
+    <div data-app-part="metric" data-app-metric="headline" className="min-w-0">
+      <Caption data-app-part="metric-label">{label}</Caption>
+      <Text data-app-part="metric-reading" as="p" variant="body" className="mt-0.5 break-words font-medium">
+        <span data-app-part="metric-value">{value}</span>
       </Text>
     </div>
   );
@@ -401,6 +402,26 @@ export default function SmartChargePage() {
     },
     [t, formatDate, formatTime, formatCurrency],
   );
+  const historyMobilePresentation = useMemo<MobileDataTablePresentation<ChargePlan>>(() => ({
+    roles: {
+      rate_plan: 'title', status: 'badge', estimated_cost: 'primary',
+      created_at: 'meta', window: 'meta', savings: 'meta',
+    },
+    displayValue: (plan, key) => {
+      switch (key) {
+        case 'created_at': return formatDate(plan.created_at);
+        case 'window': return `${formatTime(plan.scheduled_start)} — ${formatTime(plan.scheduled_end)}`;
+        case 'rate_plan': return plan.rate_plan ?? '—';
+        case 'status': return plan.status;
+        case 'estimated_cost':
+        case 'savings': {
+          const value = knownNumber(plan[key]);
+          return value == null ? '—' : formatCurrency(value);
+        }
+        default: return null;
+      }
+    },
+  }), [formatDate, formatTime, formatCurrency]);
 
   return (
     <PageLayout
@@ -653,17 +674,20 @@ export default function SmartChargePage() {
                   message={t('chargePlanner.noAlternatives', 'No alternative windows for this plan.')}
                 />
               ) : (
-                <ul className="space-y-2">
+                <ul data-app-part="list" data-app-list="definitions" className="space-y-2">
                   {safeArray(result.alternative_windows).map((alt, i) => (
                     <li
+                      data-app-part="list-row"
                       key={i}
                       className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2"
                     >
+                      <div data-app-part="metric-label" className="flex min-w-0 flex-wrap items-center gap-2">
                       <Text variant="bodySm" className="tabular-nums">
                         {formatTime(alt.start_time)} — {formatTime(alt.end_time)}
                       </Text>
-                      <Caption className="break-words">{alt.rate_tier}</Caption>
-                      <Text variant="body" className="font-medium tabular-nums">
+                      <Caption data-app-part="metric-context" className="break-words">{alt.rate_tier}</Caption>
+                      </div>
+                      <Text data-app-part="metric-value" variant="body" className="font-medium tabular-nums">
                         {knownNumber(alt.estimated_cost) != null ? formatCurrency(alt.estimated_cost) : '—'}
                       </Text>
                     </li>
@@ -687,6 +711,7 @@ export default function SmartChargePage() {
                 enableValueFilters
                 tableId="charging:smart-charge-history"
                 columns={historyColumns}
+                mobilePresentation={historyMobilePresentation}
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={onSort}

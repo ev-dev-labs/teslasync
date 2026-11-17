@@ -58,15 +58,16 @@ export function ChargeAdvisorMethodology({ state }: ChargeAdvisorComponentProps)
     >
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
-          <article key={item.key} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <div className="mb-2 flex items-center gap-2 text-[var(--text-secondary)]">
+          <article key={item.key} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <div data-app-part="record-header" className="mb-2 flex items-center gap-2 text-[var(--text-secondary)]">
               <BookOpen className="h-4 w-4" aria-hidden="true" />
-              <Heading level="sub">{item.title}</Heading>
+              <Heading data-app-part="record-title" level="sub">{item.title}</Heading>
             </div>
-            <Text as="p" variant="caption" className="mt-4">
+            <Text data-app-part="record-context" as="p" variant="caption" className="mt-4">
               {t('chargeAdvisor.method.timeZone', 'Calendar calculations use your selected time zone.')}
             </Text>
-            <Text as="p" variant="bodySm">{item.body}</Text>
+            <Text data-app-part="record-body" as="p" variant="bodySm">{item.body}</Text>
           </article>
         ))}
       </div>

@@ -98,7 +98,7 @@ export function ImpersonationPolicyPanel() {
           )}
         </Text>
 
-        <ul
+        <ul data-app-part="list"
           className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           aria-label={t('impersonation.policy.listLabel', 'Impersonation guarantees')}
           data-testid="impersonation-policy-list"

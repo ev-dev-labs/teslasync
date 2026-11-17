@@ -117,6 +117,8 @@ describe('SettingsSearch', () => {
 
     const listbox = screen.getByRole('listbox');
     expect(listbox).toBeInTheDocument();
+    expect(listbox).toHaveAttribute('data-app-part', 'list popover');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
     expect(within(listbox).getByText('Theme')).toBeInTheDocument();
   });
 
@@ -167,6 +169,19 @@ describe('SettingsSearch', () => {
 
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(screen.getByTestId('location').textContent).toBe('/settings');
+  });
+
+  it('retains the popup owner and disabled no-match option while keyboard dismissal leaves the draft intact', () => {
+    renderSearch();
+    const input = screen.getByRole('combobox');
+    fireEvent.change(input, { target: { value: 'zzzz-no-setting-zzzz' } });
+    const listbox = screen.getByRole('listbox');
+    expect(listbox).toHaveAttribute('data-app-part', 'list popover');
+    expect(within(listbox).getByRole('option')).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input).toHaveValue('zzzz-no-setting-zzzz');
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings');
   });
 
   it('ArrowDown + Enter selects the next result', () => {

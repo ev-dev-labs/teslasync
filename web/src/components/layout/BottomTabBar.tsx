@@ -16,8 +16,8 @@ export function BottomTabBar({ activeSection = 'Home', onChoose = () => undefine
     { section: null, label: t('nav.mobileMore', 'More'), icon: NAV_UTILITY_ICONS.more },
   ]
   const primary = tabs.some(tab => tab.section === activeSection)
-  return <nav {...motion} aria-label={t('nav.quickNav', 'Quick navigation')} data-role="bottom-tab-bar" className="sidenav-phone-tabs safe-bottom">
-    {tabs.map(({ section, label, icon: Icon }) => <Button data-nav-action key={label} variant="ghost" type="button" aria-label={label}
+  return <nav {...motion} data-app-part="navigation" aria-label={t('nav.quickNav', 'Quick navigation')} data-role="bottom-tab-bar" className="sidenav-phone-tabs safe-bottom">
+    {tabs.map(({ section, label, icon: Icon }) => <Button data-nav-action data-app-part="nav-item" key={label} variant="ghost" type="button" aria-label={label}
       aria-current={(section === activeSection || (section === null && !primary)) ? 'true' : undefined}
       className={cn('sidenav-phone-tab', (section === activeSection || (section === null && !primary)) && 'is-selected')}
       onClick={() => onChoose(section)}><span data-nav-motion className="nav-motion-target nav-phone-icon"><Icon className="h-[22px] w-[22px]" aria-hidden /></span><span className="sidenav-tab-label">{label}</span></Button>)}

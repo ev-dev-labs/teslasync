@@ -14,15 +14,15 @@ interface TripReplayReadoutProps {
 /** An unframed measurement within the replay's section-level surface. */
 export function TripReplayReadout({ label, value, unit, icon, help, className }: TripReplayReadoutProps) {
   return (
-    <div className={cn('min-w-0 px-3 py-3 sm:px-4', className)}>
-      <MetricLabel className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
+    <div data-app-part="metric" data-app-metric="tile" className={cn('min-w-0 px-3 py-3 sm:px-4', className)}>
+      <MetricLabel data-app-part="metric-label" className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
         <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">{icon}</span>
         <span className="min-w-0 break-words [overflow-wrap:anywhere]">{label}</span>
         {help && <HelpTooltip {...help} />}
       </MetricLabel>
-      <MetricValue className="flex flex-wrap items-baseline gap-x-1.5 [overflow-wrap:anywhere]">
+      <MetricValue data-app-part="metric-value" className="flex flex-wrap items-baseline gap-x-1.5 [overflow-wrap:anywhere]">
         {value}
-        {unit && <Text as="span" variant="bodySm">{unit}</Text>}
+        {unit && <Text as="span" data-app-part="metric-unit" variant="bodySm">{unit}</Text>}
       </MetricValue>
     </div>
   );

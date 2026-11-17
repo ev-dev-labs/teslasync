@@ -88,7 +88,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
 
       <EfficiencyTargetSectionBody state={sourceState} className="mt-4 min-h-64">
         <div className="grid min-h-64 gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+          <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <MetricLabel>
@@ -149,7 +149,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             )}
           </div>
 
-          <div className="rounded-xl border border-theme-accent/20 bg-theme-accent/[0.04] p-4">
+          <div data-app-part="card" data-surface-variant="standalone" className="rounded-xl border border-theme-accent/20 bg-theme-accent/[0.04] p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <MetricLabel>

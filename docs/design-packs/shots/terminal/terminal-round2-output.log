@@ -1,0 +1,645 @@
+(node:53948) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:1052) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 0 nodes require manual review
+  ✘  1 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (27.9s)
+(node:36808) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 1 nodes require manual review
+  Manual contrast review: .text-start.whitespace-normal.gap-3 > .text-\[var\(--text-secondary\)\].text-xs:nth-child(7) — Fix any of the following:
+  Element's background color could not be determined because it partially overlaps other elements
+  ✘  2 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (20.5s)
+(node:36748) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 6 nodes require manual review
+  Manual contrast review: .mb-1.justify-between.items-center > .gap-2 > .text-\[var\(--text-secondary\)\].text-sm — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .mb-1.justify-between.items-center > .text-xs.text-\[var\(--text-muted\)\] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.items-center.flex:nth-child(2) > .text-\[var\(--text-secondary\)\].text-sm:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-\[var\(--text-secondary\)\].text-sm:nth-child(2) > span[title="$6.72"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.items-center.flex:nth-child(2) > .text-xs.text-\[var\(--text-muted\)\] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: span[title="$0.16"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  ✘  3 [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (19.4s)
+(node:27468) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Contrast: 0 violated rules, 2 nodes require manual review
+  Manual contrast review: .is-selected > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined due to a pseudo element
+  Manual contrast review: button[aria-label="Advanced intelligence"] > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  ✓  4 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) (19.2s)
+Contrast: 0 violated rules, 7 nodes require manual review
+  Manual contrast review: button[aria-label="Advanced intelligence"] > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  Manual contrast review: button[aria-label="Driving insights"] > .text-start.truncate.flex-1 — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  Manual contrast review: tspan[dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="205"][text-anchor="end"] > tspan[dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="125"] > tspan[dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="12"] > tspan[dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .even\:bg-\[var\(--surface-2\)\].hover\:\!bg-\[var\(--control-bg-hover\)\].focus-visible\:outline-\[var\(--text-secondary\)\]:nth-child(3) > .text-right[data-column-key="speed"] — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  ✓  5 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) (13.2s)
+Contrast: 0 violated rules, 36 nodes require manual review
+  Manual contrast review: button[aria-label="Advanced intelligence"] > .sidenav-short-label — Fix any of the following:
+  Element's background color could not be determined because it's partially obscured by another element
+  Manual contrast review: tspan[x="152.25"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="326.75"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: figure[aria-describedby="chart-fallback-_r_1n_"] > .min-h-0[data-chart-body="true"][data-card-slot="plot"] > .card-layout-plot.\[contain\:layout_size\].h-\[var\(--chart-height-mobile\)\] > .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > svg[height="256"][viewBox="0 0 479 256"][width="479"] > .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(7) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(1) > text[y="172"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: figure[aria-describedby="chart-fallback-_r_1n_"] > .min-h-0[data-chart-body="true"][data-card-slot="plot"] > .card-layout-plot.\[contain\:layout_size\].h-\[var\(--chart-height-mobile\)\] > .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > svg[height="256"][viewBox="0 0 479 256"][width="479"] > .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(8) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(1) > text[y="172"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > .recharts-legend-wrapper > .\[\&_\.recharts-default-legend\]\:grid.\[\&_\.recharts-default-legend\]\:grid-cols-\[repeat\(auto-fit\,minmax\(min\(100\%\,9rem\)\,1fr\)\)\].\[\&_\.recharts-default-legend\]\:gap-1 > ul > .legend-item-0 > .recharts-legend-item-text > button[data-series-key="energy"][data-series-hidden="false"][data-chart-legend-label=""] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="cost"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[dy="0.71em"][x="65"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="414"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: figure[aria-describedby="chart-fallback-_r_1u_"] > .min-h-0[data-chart-body="true"][data-card-slot="plot"] > .card-layout-plot.\[contain\:layout_size\].h-\[var\(--chart-height-mobile\)\] > .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > svg[height="256"][viewBox="0 0 479 256"][width="479"] > .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(7) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(1) > text[y="172"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: figure[aria-describedby="chart-fallback-_r_1u_"] > .min-h-0[data-chart-body="true"][data-card-slot="plot"] > .card-layout-plot.\[contain\:layout_size\].h-\[var\(--chart-height-mobile\)\] > .h-56.sm\:h-64 > .recharts-responsive-container > .recharts-wrapper > svg[height="256"][viewBox="0 0 479 256"][width="479"] > .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(8) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(1) > text[y="172"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="efficiency"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="distance"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="195.875"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: tspan[x="370.375"][dy="0.71em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="156"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="118.25"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="80.5"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="42.75"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(6) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(5) > text[y="12"][orientation="left"][text-anchor="end"] > tspan[x="57"][dy="0.355em"] — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: text[y="156"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="118.25"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="80.5"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: text[y="42.75"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .recharts-yAxis.yAxis.recharts-cartesian-axis:nth-child(7) > .recharts-cartesian-axis-ticks > .recharts-cartesian-axis-tick.recharts-layer:nth-child(5) > text[y="12"][orientation="right"][text-anchor="start"] > tspan[x="422"][dy="0.355em"] — Fix any of the following:
+  Element content is too short to determine if it is actual text content
+  Manual contrast review: .h-44 > .recharts-responsive-container > .recharts-wrapper > .recharts-legend-wrapper > .\[\&_\.recharts-default-legend\]\:grid.\[\&_\.recharts-default-legend\]\:grid-cols-\[repeat\(auto-fit\,minmax\(min\(100\%\,9rem\)\,1fr\)\)\].\[\&_\.recharts-default-legend\]\:gap-1 > ul > .legend-item-0 > .recharts-legend-item-text > button[data-series-key="energy"][data-series-hidden="false"][data-chart-legend-label=""] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: button[data-series-key="count"] > .\[\&\>svg\]\:shrink-0.break-words.gap-2 — Fix any of the following:
+  Element's background color could not be determined because element contains an image node
+  Manual contrast review: .gap-1.text-\[var\(--text-muted\)\].text-xs:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .gap-1.text-\[var\(--text-muted\)\].text-xs:nth-child(2) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .mb-1.justify-between.flex > .gap-2.flex.items-center > .text-\[var\(--text-secondary\)\].text-sm — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .mb-1.justify-between.flex > .text-\[var\(--text-muted\)\].text-xs — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .justify-between.flex.items-center:nth-child(2) > .text-\[var\(--text-secondary\)\].text-sm:nth-child(1) — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .text-\[var\(--text-secondary\)\].text-sm:nth-child(2) > span[title="$6.72"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .space-y-3.w-full.flex-1 > div > .justify-between.flex.items-center:nth-child(2) > .text-\[var\(--text-muted\)\].text-xs — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: span[title="$0.16"] — Fix any of the following:
+  Element's background color could not be determined due to a background gradient
+  Manual contrast review: .mx-1 — Fix any of the following:
+  Element content contains only non-text characters
+  ✓  6 [desktop] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) (13.6s)
+
+
+  1) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ───────────────────
+
+    Error: visible touch targets must be at least 44 by 44 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 24
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent",
+    +     "controlId": null,
+    +     "height": 36,
+    +     "id": "",
+    +     "label": "Open",
+    +     "part": "button",
+    +     "role": null,
+    +     "tag": "a",
+    +     "width": 36,
+    +   },
+    +   Object {
+    +     "className": "inline-flex items-center gap-2 rounded-shape-sm font-medium duration-fast ease-standard motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:pointer-events-none disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100 transition-none bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] text-sm h-9 w-9 shrink-0 justify-center p-0 disabled:border-transparent disabled:bg-transparent aria-disabled:bg-transparent !h-7 !min-h-0 !min-w-0 !p-0 !w-2.5",
+    +     "controlId": null,
+    +     "height": 28,
+    +     "id": "",
+    +     "label": "Refresh data · Up to date · just now",
+    +     "part": "status",
+    +     "role": null,
+    +     "tag": "button",
+    +     "width": 10,
+    +   },
+    + ]
+
+      879 |       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+      880 |         [JSON.stringify(target), target])).values());
+    > 881 |       expect.soft(uniqueTargets, 'visible touch targets must be at least 44 by 44 CSS pixels').toEqual([]);
+          |                                                                                                ^
+      882 |     }
+      883 |     if (textAudit) {
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:881:96
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 98
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "h3",
+    +     "text": "Digital twin",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "p",
+    +     "text": "—",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Aurora",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "metric-context",
+    +     "role": null,
+    +     "size": 14,
+    +     "tag": "span",
+    +     "text": "Today 06:56 PM · 30 min",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "a",
+    +     "text": "All drives",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "metric-unit",
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "span",
+    +     "text": "km",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": null,
+    +     "role": null,
+    +     "size": 12,
+    +     "tag": "a",
+    +     "text": "Open vehicle",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Fleet operations — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site he...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-dashboard--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-dashboard--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-dashboard--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ────────────────
+
+    Error: operational metric words must remain readable
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 47
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "label": "Distance (km)",
+    +     "lines": 2,
+    +     "word": "Distance",
+    +   },
+    +   Object {
+    +     "label": "Energy intensity (Wh/km)",
+    +     "lines": 2,
+    +     "word": "intensity",
+    +   },
+    +   Object {
+    +     "label": "Energy intensity (Wh/km)",
+    +     "lines": 2,
+    +     "word": "km",
+    +   },
+    +   Object {
+    +     "label": "Efficiency movement",
+    +     "lines": 2,
+    +     "word": "Efficiency",
+    +   },
+    +   Object {
+    +     "label": "Efficiency movement",
+    +     "lines": 2,
+    +     "word": "movement",
+    +   },
+    +   Object {
+    +     "label": "Efficiency exceptions",
+    +     "lines": 2,
+    +     "word": "Efficiency",
+    +   },
+    +   Object {
+    +     "label": "Efficiency exceptions",
+    +     "lines": 2,
+    +     "word": "exceptions",
+    +   },
+    +   Object {
+    +     "label": "Efficiency grade",
+    +     "lines": 2,
+    +     "word": "Efficiency",
+    +   },
+    +   Object {
+    +     "label": "Measured energy / cost",
+    +     "lines": 2,
+    +     "word": "Measured",
+    +   },
+    + ]
+
+      874 |       const uniqueSplitWords = Array.from(new Map(splitMetricWords.map(word =>
+      875 |         [JSON.stringify(word), word])).values());
+    > 876 |       expect.soft(uniqueSplitWords, 'operational metric words must remain readable').toEqual([]);
+          |                                                                                      ^
+      877 |     }
+      878 |     if (touchAudit) {
+      879 |       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:876:86
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 42
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Drive history — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site heade...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-drives-drives--phone-390\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-drives-drives--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-drives-drives--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-drives-drives--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) ────────────────
+
+    Error: operational metric words must remain readable
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 57
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "label": "Drive consumption",
+    +     "lines": 2,
+    +     "word": "consumption",
+    +   },
+    +   Object {
+    +     "label": "Efficiency",
+    +     "lines": 2,
+    +     "word": "Efficiency",
+    +   },
+    +   Object {
+    +     "label": "Recorded cost",
+    +     "lines": 2,
+    +     "word": "Recorded",
+    +   },
+    +   Object {
+    +     "label": "Projected 30-day use",
+    +     "lines": 2,
+    +     "word": "Projected",
+    +   },
+    +   Object {
+    +     "label": "Total distance",
+    +     "lines": 2,
+    +     "word": "distance",
+    +   },
+    +   Object {
+    +     "label": "Sessions",
+    +     "lines": 2,
+    +     "word": "Sessions",
+    +   },
+    +   Object {
+    +     "label": "Monthly est.",
+    +     "lines": 2,
+    +     "word": "Monthly",
+    +   },
+    +   Object {
+    +     "label": "Highest observed day",
+    +     "lines": 2,
+    +     "word": "observed",
+    +   },
+    +   Object {
+    +     "label": "Lowest observed day",
+    +     "lines": 2,
+    +     "word": "observed",
+    +   },
+    +   Object {
+    +     "label": "Observed daily spread",
+    +     "lines": 2,
+    +     "word": "Observed",
+    +   },
+    +   Object {
+    +     "label": "Distance on highest day",
+    +     "lines": 2,
+    +     "word": "Distance",
+    +   },
+    + ]
+
+      874 |       const uniqueSplitWords = Array.from(new Map(splitMetricWords.map(word =>
+      875 |         [JSON.stringify(word), word])).values());
+    > 876 |       expect.soft(uniqueSplitWords, 'operational metric words must remain readable').toEqual([]);
+          |                                                                                      ^
+      877 |     }
+      878 |     if (touchAudit) {
+      879 |       const uniqueTargets = Array.from(new Map(smallTouchTargets.map(target =>
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:876:86
+
+    Error: visible body text must be at least 16 CSS pixels
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 42
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Home",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Vehicles",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Driving",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "Charging",
+    +   },
+    +   Object {
+    +     "id": "",
+    +     "part": "nav-item",
+    +     "role": null,
+    +     "size": 11,
+    +     "tag": "button",
+    +     "text": "More",
+    +   },
+    + ]
+
+      884 |       const uniqueText = Array.from(new Map(smallBodyText.map(text =>
+      885 |         [JSON.stringify(text), text])).values());
+    > 886 |       expect.soft(uniqueText, 'visible body text must be at least 16 CSS pixels').toEqual([]);
+          |                                                                                   ^
+      887 |     }
+      888 |     if (process.env.DESIGN_PACK_CHECK_CONTRAST === '1') {
+      889 |       const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        at D:\repos\teslasync\web\e2e\design-packs-capture.spec.ts:886:83
+
+    attachment #2: application-before-teardown (text/plain) ────────────────────────────────────────
+    - status: Energy — TeslaSync
+    - link "Skip to main content":
+      - /url: "#main-content"
+    - status
+    - alert
+    - navigation "Primary":
+      - navigation "Quick navigation":
+        - button "Home"
+        - button "Vehicles"
+        - button "Driving"
+        - button "Charging"
+        - button "More"
+    - banner "Site header":
+      -...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-energy-energy--phone-390\error-context.md
+
+    Error Context: ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-energy-energy--phone-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-energy-energy--phone-390\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\docs\design-packs\shots\terminal\teslasync-design-pack-capture-44415006-9f77-4de1-8ac2-c6032fb2af6b\design-packs-capture-capture-energy-energy--phone-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture dashboard (/) ────────────────────
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture drives (/drives) ─────────────────
+    [phone-390] › e2e\design-packs-capture.spec.ts:72:3 › capture energy (/energy) ─────────────────
+  3 passed (3.8m)

@@ -293,7 +293,7 @@ function ImportPreview({
       {/* Errors */}
       {errors.length > 0 && (
         <AlertBanner variant="danger" icon={<XCircle className="h-4 w-4" />}>
-          <ul className="list-disc pl-4 space-y-1">
+          <ul data-app-part="list" className="list-disc pl-4 space-y-1">
             {errors.map((err, i) => (
               <li key={i} className="text-sm">{err}</li>
             ))}
@@ -304,7 +304,7 @@ function ImportPreview({
       {/* Warnings */}
       {warnings.length > 0 && (
         <AlertBanner variant="warning" icon={<AlertTriangle className="h-4 w-4" />}>
-          <ul className="list-disc pl-4 space-y-1">
+          <ul data-app-part="list" className="list-disc pl-4 space-y-1">
             {warnings.map((warn, i) => (
               <li key={i} className="text-sm">{warn}</li>
             ))}

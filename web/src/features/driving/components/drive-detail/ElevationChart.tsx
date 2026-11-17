@@ -113,7 +113,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
             </ResponsiveContainer>
             </>
           ) : (
-            <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+            <div data-app-part="status" role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
               <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
               <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
             </div>

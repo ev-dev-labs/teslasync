@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -159,7 +159,7 @@ it('keeps Classic and unknown-pack recovery as the original comparison card with
 it('switches every pack on the same controller and keeps the existing refresh control and vehicle scope', async () => {
   const { container, selectPack } = renderWidget('classic');
   const control = screen.getByRole('button', { name: /^Refresh/i });
-  control.focus();
+  act(() => { control.focus(); });
   for (const [packId, appearance] of packs) {
     selectPack(packId);
     await presentation(container, appearance);

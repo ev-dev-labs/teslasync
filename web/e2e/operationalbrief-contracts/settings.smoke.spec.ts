@@ -420,6 +420,8 @@ for (const theme of ['dark', 'light'] as const) {
       authMode: { ...providerPolicy, subject: undefined },
     })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('alert')).toContainText('Could not finish loading your saved appearance.')
+    await page.getByRole('button', { name: 'Continue with default appearance' }).click()
     await waitForHarnessReady(page, api)
     await expectProviderGuidance(page, api)
     await expect(page.getByText('No verified user identity was supplied for this request.', { exact: true })).toBeVisible()
@@ -509,6 +511,8 @@ for (const theme of ['dark', 'light'] as const) {
       authModeState: 'unavailable',
     })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('alert')).toContainText('Could not finish loading your saved appearance.')
+    await page.getByRole('button', { name: 'Continue with default appearance' }).click()
     await waitForHarnessReady(page, api)
     await expectProviderGuidance(page, api)
     await expect(page.getByText('The server authentication policy is not available yet.', { exact: true })).toBeVisible()

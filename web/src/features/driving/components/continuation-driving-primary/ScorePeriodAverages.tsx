@@ -25,7 +25,7 @@ export function ScorePeriodAverages({ stats, sourceFallback }: { stats: PeriodSt
       : delta > 0
         ? t('driveScore.periodIncrease', 'Increased by {{val}}', { val })
         : t('driveScore.periodDecrease', 'Decreased by {{val}}', { val });
-    return <Text as="span" variant="caption" className={typography.color.secondary}>{text}</Text>;
+    return <Text data-app-part="metric-comparison" as="span" variant="caption" className={typography.color.secondary}>{text}</Text>;
   };
   const tiles = [
     {
@@ -61,14 +61,14 @@ export function ScorePeriodAverages({ stats, sourceFallback }: { stats: PeriodSt
     },
   ];
   return <>{tiles.map((tile) => (
-    <GlassPanel key={tile.id} className="flex min-w-0 flex-col gap-2 p-4 sm:p-5">
-      <Label>{tile.label}</Label>
+    <GlassPanel key={tile.id} data-app-part="panel metric" data-app-metric="stat" className="flex min-w-0 flex-col gap-2 p-4 sm:p-5">
+      <Label data-app-part="metric-label">{tile.label}</Label>
       {sourceFallback ?? <>
-        <div className="flex flex-wrap items-end gap-2">
-          <Text as="span" size="2xl" weight="bold" className={cn('tabular-nums', tile.color)}>{tile.value}</Text>
-          {tile.comparison}
+        <div data-app-part="metric-reading" className="flex flex-wrap items-end gap-2">
+          <Text data-app-part="metric-value" as="span" size="2xl" weight="bold" className={cn('tabular-nums', tile.color)}>{tile.value}</Text>
         </div>
-        <Caption>{tile.detail}</Caption>
+        {tile.comparison}
+        <Caption data-app-part="metric-context">{tile.detail}</Caption>
       </>}
     </GlassPanel>
   ))}</>;

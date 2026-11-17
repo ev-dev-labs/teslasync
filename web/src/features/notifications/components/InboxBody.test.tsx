@@ -1006,6 +1006,39 @@ describe('InboxBody — auto-mark-read on open', () => {
 /* ── 8. Mark all read ─────────────────────────────────── */
 
 describe('InboxBody — mark all read', () => {
+  it('keeps the same header action while loading, read, and unread rows settle', async () => {
+    let resolveLogs!: (rows: NotificationLog[]) => void;
+    installRequest({
+      logs: () => new Promise<NotificationLog[]>(resolve => { resolveLogs = resolve; }),
+    });
+    const { client } = renderInbox({ route: '/notifications/inbox?view=flat' });
+    const markAll = screen.getByRole('button', { name: 'Mark all read' });
+    expect(markAll).toBeDisabled();
+    fireEvent.click(markAll);
+    expect(markReadPosts()).toHaveLength(0);
+
+    await act(async () => resolveLogs([makeLog({ id: 1, title: 'Read notification', read_at: NOW_ISO })]));
+    expect(await screen.findByText('Read notification')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark all read' })).toBe(markAll);
+    expect(markAll).toBeDisabled();
+
+    act(() => {
+      client.setQueriesData<NotificationLog[]>({ queryKey: notificationKeys.logsFiltered() }, [
+        makeLog({ id: 1, title: 'Unread notification', read_at: null }),
+      ]);
+    });
+    await waitFor(() => expect(markAll).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Mark all read' })).toBe(markAll);
+
+    act(() => {
+      client.setQueriesData<NotificationLog[]>({ queryKey: notificationKeys.logsFiltered() }, [
+        makeLog({ id: 1, title: 'Read notification', read_at: NOW_ISO }),
+      ]);
+    });
+    await waitFor(() => expect(markAll).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Mark all read' })).toBe(markAll);
+  });
+
   it('fires the { all: true } variant from the header action', async () => {
     installRequest({
       logs: () =>
@@ -1017,6 +1050,7 @@ describe('InboxBody — mark all read', () => {
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
     const markAll = await screen.findByRole('button', { name: 'Mark all read' });
+    await waitFor(() => expect(markAll).toBeEnabled());
     fireEvent.click(markAll);
 
     await waitFor(() => expect(markReadPosts().length).toBeGreaterThanOrEqual(1));

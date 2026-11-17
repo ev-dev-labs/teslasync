@@ -92,6 +92,7 @@ export function WidgetChartSummary({
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       {safeStats.length > 0 && (
         <div
+          data-app-part="metric-grid"
           className={cn(
             'shrink-0',
             dashboardTokens.statRail,
@@ -102,9 +103,9 @@ export function WidgetChartSummary({
           )}
         >
           {safeStats.map((stat, index) => (
-            <div key={`${stat.label}-${index}`} className="flex min-w-0 flex-col">
-              <span className={dashboardTokens.metricLabel}>{stat.label}</span>
-              <span className={cn(dashboardTokens.secondaryMetric, 'break-all')}>
+            <div key={`${stat.label}-${index}`} data-app-part="metric" className="flex min-w-0 flex-col">
+              <span data-app-part="metric-label" className={dashboardTokens.metricLabel}>{stat.label}</span>
+              <span data-app-part="metric-value" className={cn(dashboardTokens.secondaryMetric, 'break-all')}>
                 {stat.value == null || stat.value === '' || (typeof stat.value === 'number' && !Number.isFinite(stat.value)) ? '—' : stat.value}
                 {stat.unit && stat.value != null && stat.value !== '' && (typeof stat.value !== 'number' || Number.isFinite(stat.value)) && (
                   <span className={cn(dashboardTokens.unit, 'ml-1 font-normal')}>
@@ -118,15 +119,15 @@ export function WidgetChartSummary({
       )}
 
       {!compact && (
-        <div className="mt-2 flex min-h-0 flex-1 flex-col">
+        <div data-app-part="chart" className="mt-2 flex min-h-0 flex-1 flex-col">
           {yAxisLabel != null && yAxisLabel !== '' && (
             <p className={cn(typography.role.label, 'mb-1 shrink-0 break-words text-start')}>
               {yAxisLabel}
             </p>
           )}
-          <div className="widget-chart-well min-h-0 flex-1">{chart}</div>
+          <div data-app-part="chart-plot" className="widget-chart-well min-h-0 flex-1">{chart}</div>
           {safeLegend.length > 0 && (
-            <ul className="mt-1.5 flex min-w-0 shrink-0 flex-wrap gap-x-3 gap-y-1">
+            <ul data-app-part="chart-legend list" className="mt-1.5 flex min-w-0 shrink-0 flex-wrap gap-x-3 gap-y-1">
               {safeLegend.map((item, index) => (
                 <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
                   {/* Dot repeats the adjacent word; meaning never relies on color alone. */}

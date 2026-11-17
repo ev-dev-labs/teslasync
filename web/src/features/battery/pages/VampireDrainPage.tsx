@@ -451,7 +451,7 @@ export default function VampireDrainPage() {
             ) },
             { id: 'drain-tips', size: 'quarter', content: (
           <LayoutCard title={t('vampireDrain.tips.title', 'Tips to reduce vampire drain')}>
-            <ul className="space-y-3">
+            <ul data-app-part="list" className="space-y-3">
               {tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-0.5 shrink-0 text-[var(--text-secondary)]">{tip.icon}</span>

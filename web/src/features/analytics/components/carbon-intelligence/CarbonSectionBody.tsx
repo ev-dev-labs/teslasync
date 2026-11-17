@@ -98,7 +98,7 @@ export function CarbonSectionBody({
         emptyMessage={passiveMessage ?? ''}
         emptyContent={passiveMessage ? <PassiveState message={passiveMessage} /> : undefined}
         loadingContent={(
-          <div className="min-h-28" role="status" aria-label={t('carbon.states.loadingLabel', 'Loading carbon evidence')}>
+          <div data-app-part="status" className="min-h-28" role="status" aria-label={t('carbon.states.loadingLabel', 'Loading carbon evidence')}>
             <Skeleton height={skeletonHeight} />
           </div>
         )}

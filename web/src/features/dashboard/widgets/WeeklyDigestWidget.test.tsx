@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -104,6 +105,8 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+setupCanvasTextMeasurement();
 
 describe('WeeklyDigestWidget — After card', () => {
   it('renders one source-backed comparison row per metric with previous-week lines', () => {

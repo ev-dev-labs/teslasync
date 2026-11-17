@@ -30,13 +30,13 @@ export function DepartureForecastHeatmapGrid({
   );
 
   return (
-    <div className="h-full overflow-auto pb-2">
+    <div className="h-full overflow-y-auto overflow-x-hidden pb-2 lg:overflow-x-auto">
       <div
-        className="min-w-[58rem]"
+        className="min-w-0 lg:min-w-[58rem]"
         aria-hidden="true"
         data-testid="departure-heatmap-grid"
       >
-        <div className="grid grid-cols-[5rem_repeat(24,minmax(2rem,1fr))] gap-1">
+        <div className="hidden grid-cols-[5rem_repeat(24,minmax(2rem,1fr))] gap-1 lg:grid">
           <Text as="span" variant="caption">
             {t('departure.heatmap.localHour', 'Local hour')}
           </Text>
@@ -56,11 +56,11 @@ export function DepartureForecastHeatmapGrid({
             <div
               key={profile.weekday}
               className={cn(
-                'grid grid-cols-[5rem_repeat(24,minmax(2rem,1fr))] gap-1',
+                'grid grid-cols-[4rem_repeat(6,minmax(0,1fr))] gap-1 sm:grid-cols-[5rem_repeat(12,minmax(0,1fr))] lg:grid-cols-[5rem_repeat(24,minmax(2rem,1fr))]',
                 !profile.supported && 'opacity-60',
               )}
             >
-              <div className="flex min-w-0 flex-col justify-center">
+              <div className="row-span-4 flex min-w-0 flex-col justify-center sm:row-span-2 lg:row-span-1">
                 <Text as="span" variant="caption" className="truncate">
                   {departureWeekdayShortLabel(t, profile.weekday)}
                 </Text>
@@ -106,7 +106,8 @@ export function DepartureForecastHeatmapGrid({
                     key={cell.hour}
                     label={title}
                     level={cell.supported ? scale(cell.p) : null}
-                    className="flex h-9 items-center justify-center rounded-md"
+                    data-hour={String(cell.hour).padStart(2, '0')}
+                    className="flex h-11 flex-col items-center justify-center rounded-md before:text-xs before:leading-tight before:content-[attr(data-hour)] lg:h-9 lg:before:content-none"
                   >
                     <Text as="span" variant="caption" className="text-inherit">
                       {cell.supported ? fmtInt(cell.departures) : '·'}

@@ -23,6 +23,11 @@ export interface MaybeLinkProps {
   onClick?: () => void
   'data-testid'?: string
   'data-error-help-link'?: string
+  'data-app-part'?: string
+  'data-app-variant'?: string
+  'data-app-size'?: string
+  'data-app-feedback-kind'?: string
+  'data-app-tone'?: string
 }
 
 export const MaybeLink = forwardRef<HTMLAnchorElement, MaybeLinkProps>(

@@ -76,7 +76,7 @@ export function SweetSpotMethodBrief({ summary, start, end, windowLimit, state, 
           : t('sweetSpot.method.window', 'This describes all {{count}} rows returned for the selected window, up to the {{limit}}-row API limit.', {
             count: summary.observed, limit: fmtInt(windowLimit),
           })}</Text>
-        <ul className="mt-4 space-y-3">{methods.map((method) => <li key={method}>
+        <ul data-app-part="list" className="mt-4 space-y-3">{methods.map((method) => <li key={method}>
           <Text as="span" variant="bodySm">{method}</Text>
         </li>)}</ul>
       </SpeedSweetSpotSectionBody>

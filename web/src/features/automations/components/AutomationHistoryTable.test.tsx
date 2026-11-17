@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { cleanup, act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AutomationHistory } from '@/api/types';
@@ -43,6 +43,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute('data-mode');
   setGlobalLocale(initialPreferences.locale);
@@ -114,15 +115,15 @@ describe.each(['light', 'dark'])('AutomationHistoryTable in %s mode', mode => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     const first = screen.getByRole('button', { name: 'Home arrival #12' });
     const second = screen.getByRole('button', { name: 'Home arrival #13' });
-    first.focus();
+    act(() => { first.focus(); });
     await user.keyboard('{Enter}');
     expect(onOpen).toHaveBeenLastCalledWith(12);
-    second.focus();
+    act(() => { second.focus(); });
     await user.keyboard(' ');
     expect(onOpen).toHaveBeenLastCalledWith(13);
     const quickView = screen.getAllByRole('button', { name: 'Quick view' })[0];
     expect(quickView).toHaveClass('min-h-11', 'min-w-11');
-    quickView.focus();
+    act(() => { quickView.focus(); });
     await user.keyboard('{Enter}');
     const detail = screen.getByRole('dialog', { name: 'Home arrival #12' });
     for (const field of ['Triggered', 'Automation', 'Outcome', 'Trigger', 'Actions', 'Duration', 'Error']) {
@@ -144,7 +145,7 @@ describe.each(['light', 'dark'])('AutomationHistoryTable in %s mode', mode => {
     const table = screen.getByRole('table', { name: 'Automation history' });
     expect(within(table).getAllByRole('columnheader')).toHaveLength(7);
     const desktopAction = within(table).getAllByRole('button', { name: 'Home arrival' })[1];
-    desktopAction.focus();
+    act(() => { desktopAction.focus(); });
     await user.keyboard('{Enter}');
     expect(onOpen).toHaveBeenLastCalledWith(13);
     expect(view.container.querySelector('[data-mobile-table]')).toBeNull();

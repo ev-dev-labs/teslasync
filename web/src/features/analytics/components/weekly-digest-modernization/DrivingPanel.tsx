@@ -107,50 +107,56 @@ export function DrivingPanel({
     <div className="flex min-w-0 flex-col gap-3">
       {/* As before, chart loading/error does not gate independent details. */}
       <StatGroup metrics={stats} period={period} />
-      <div className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3">
+      <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3">
         {metrics.topDrive ? (
           <>
-            <Badge variant="success" size="sm">
-              {t('analytics.weeklyDigest.topDrive', 'Top drive')}
-            </Badge>
-            <StatGroup
-              period={period}
-              metrics={[
-                presentedMetric(
-                  'top-date',
-                  t('analytics.weeklyDigest.date', 'Date'),
-                  formatDate(metrics.topDrive.startTs),
-                ),
-                numericPresentedMetric(
-                  'top-distance',
-                  'distance',
-                  t('analytics.weeklyDigest.distance', 'Distance'),
-                  metrics.topDrive.distanceM,
-                  formatDistance,
-                ),
-                numericPresentedMetric(
-                  'top-duration',
-                  'duration',
-                  t('analytics.weeklyDigest.duration', 'Duration'),
-                  metrics.topDrive.durationS,
-                  formatDuration,
-                ),
-                numericPresentedMetric(
-                  'top-efficiency',
-                  'efficiency',
-                  t('analytics.weeklyDigest.efficiency', 'Efficiency'),
-                  topDriveEfficiencyWhPerM,
-                  raw => formatEfficiencyFromSI(raw, unitPrefs),
-                ),
-              ]}
-            />
+            <div data-app-part="record-header">
+              <Badge variant="success" size="sm">
+                {t('analytics.weeklyDigest.topDrive', 'Top drive')}
+              </Badge>
+            </div>
+            <div data-app-part="record-body">
+              <StatGroup
+                period={period}
+                metrics={[
+                  presentedMetric(
+                    'top-date',
+                    t('analytics.weeklyDigest.date', 'Date'),
+                    formatDate(metrics.topDrive.startTs),
+                  ),
+                  numericPresentedMetric(
+                    'top-distance',
+                    'distance',
+                    t('analytics.weeklyDigest.distance', 'Distance'),
+                    metrics.topDrive.distanceM,
+                    formatDistance,
+                  ),
+                  numericPresentedMetric(
+                    'top-duration',
+                    'duration',
+                    t('analytics.weeklyDigest.duration', 'Duration'),
+                    metrics.topDrive.durationS,
+                    formatDuration,
+                  ),
+                  numericPresentedMetric(
+                    'top-efficiency',
+                    'efficiency',
+                    t('analytics.weeklyDigest.efficiency', 'Efficiency'),
+                    topDriveEfficiencyWhPerM,
+                    raw => formatEfficiencyFromSI(raw, unitPrefs),
+                  ),
+                ]}
+              />
+            </div>
           </>
         ) : (
-          <EmptyState
-            message={t('analytics.weeklyDigest.noTopDrive', 'No top drive is available for this week yet.')}
-            actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
-            className="py-6"
-          />
+          <div data-app-part="record-body">
+            <EmptyState
+              message={t('analytics.weeklyDigest.noTopDrive', 'No top drive is available for this week yet.')}
+              actionTo={{ label: t('statistics.viewDrives', 'View drives'), to: '/drives' }}
+              className="py-6"
+            />
+          </div>
         )}
       </div>
     </div>

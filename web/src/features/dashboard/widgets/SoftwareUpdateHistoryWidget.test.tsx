@@ -29,7 +29,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -293,7 +293,7 @@ it('keeps the mounted refresh control, its focus and vehicle scope while switchi
   const node = () => <SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} vehicleId={7} />;
   const view = renderWidget(node());
   const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-  refresh.focus();
+  act(() => { refresh.focus(); });
   for (const packId of PACK_IDS) {
     view.rerender(widgetTree(node(), packId));
     await expectTimeline(view.container, packId);

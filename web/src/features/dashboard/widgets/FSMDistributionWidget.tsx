@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { PieChart, Pie, Cell, Tooltip, ChartTooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { Caption, MetricValue, Subhead, Text } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
@@ -79,20 +79,15 @@ function DonutTooltip({
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 py-2 shadow-lg">
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: stateColor(seg.state) }}
-        />
-        <Text variant="bodySm" className="break-words">
-          {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
-        </Text>
-      </div>
-      <Caption className="mt-1 block break-words">
-        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct)}%
-      </Caption>
-    </div>
+    <ChartTooltip
+      active={active}
+      payload={[{
+        name: t(`widget.fsmDistribution.state.${seg.state}`, seg.state),
+        value: seg.value,
+        color: stateColor(seg.state),
+      }]}
+      valueFormatter={() => `${fmtDuration(seg.value, t)} · ${fmtNumber(seg.pct)}%`}
+    />
   );
 }
 
@@ -291,7 +286,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   );
   const details = (
         <div className="min-w-0">
-            <ol aria-label={t('widget.fsmDistribution.rankedStates', 'State shares')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
+            <ol data-app-part="list" aria-label={t('widget.fsmDistribution.rankedStates', 'State shares')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
               {segments.map((seg) => (
                 <li key={seg.state} className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5">
                   <div className="flex min-w-0 items-center gap-2">
@@ -313,7 +308,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               errorRecovery={{ onRetry: () => { void transitionsQuery.refetch(); } }}
               retainedMessage={t('widget.fsmDistribution.transitionsRetained', 'Previously loaded transitions remain visible while they refresh.')}
             >
-              <ol aria-label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')} className="m-0 mt-1 list-none p-0">
+              <ol data-app-part="list" aria-label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')} className="m-0 mt-1 list-none p-0">
                 {transitionsData.slice(0, 5).map((row: { id?: number|string; from_state?: string; to_state?: string; ts?: string }, index: number) => (
                   <li key={row.id ?? index} className="min-w-0 py-1">
                     <Caption className="block break-words">{row.from_state ?? '—'}</Caption>

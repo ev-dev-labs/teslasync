@@ -309,6 +309,30 @@ describe('DashboardGrid — edit-mode chrome', () => {
 });
 
 describe('DashboardGrid — fullscreen overlay', () => {
+  it.each([
+    [375, 'vehicle-twin'],
+    [375, 'digital-twin-mini'],
+    [1440, 'vehicle-twin'],
+    [1440, 'digital-twin-mini'],
+  ])('preserves %s viewport presentation for %s in the grid and fullscreen', (width, widgetId) => {
+    setViewport(width);
+    const name = getWidgetDef(widgetId)?.name;
+    expect(name).toBeTruthy();
+    const { container } = renderGrid({
+      dashboard: makeDashboard([
+        { id: 'twin', widgetId },
+        { id: 'other', widgetId: W1_ID },
+      ]),
+    });
+
+    expect(container.querySelector('[data-widget-id="twin"]')).toHaveAttribute('data-app-design-preserve');
+    expect(container.querySelector('[data-widget-id="other"]')).not.toHaveAttribute('data-app-design-preserve');
+
+    fireEvent.click(screen.getByRole('button', { name: `Expand ${name}` }));
+    expect(screen.getByRole('dialog', { name }).querySelector('.dashboard-widget-panel'))
+      .toHaveAttribute('data-app-design-preserve');
+  });
+
   it.each([375, 1440])('portals fullscreen outside the grid and restores keyboard focus at %ipx', async width => {
     setViewport(width);
     const { container } = renderGrid({ dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]) });

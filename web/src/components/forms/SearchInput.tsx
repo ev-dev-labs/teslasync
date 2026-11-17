@@ -288,6 +288,7 @@ export function SearchInput({
       />
       {dropdownVisible && (
         <div
+          data-app-part="popover"
           className="absolute inset-x-0 top-full z-30 mt-1 min-w-0 overflow-hidden rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-1)] shadow-e2"
         >
           <Text as="div" variant="caption" className="break-words px-3 py-2">

@@ -31,8 +31,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -56,6 +60,13 @@ const LINKS = [
   { label: 'Efficiency', to: '/efficiency' },
   { label: 'Settings', to: '/settings' },
 ] as const
+const controlSelectors: string[] = []
+postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+  .walkRules(rule => {
+    controlSelectors.push(...rule.selectors.filter(selector =>
+      selector.includes('[data-app-part~="button"]') && selector.includes('[data-app-controls=') &&
+      selector.includes('data-app-design-owner')))
+  })
 
 function renderSection() {
   return render(
@@ -133,6 +144,29 @@ describe('QuickLinksSection — accessibility', () => {
 })
 
 describe('QuickLinksSection — navigation & i18n', () => {
+  it.each(Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>)(
+    'connects the actual six anchors to %s controls without changing order or navigation',
+    (pack) => {
+      const { container } = render(<MemoryRouter>
+        <section data-app-design-preview {...getAppDesignAttributes(pack)}><QuickLinksSection /></section>
+      </MemoryRouter>)
+      const release = observeAppDesignScopes(container)
+      try {
+        const links = within(screen.getByRole('navigation', { name: 'Quick links' })).getAllByRole('link')
+        expect(links.map(link => link.getAttribute('href'))).toEqual(LINKS.map(link => link.to))
+        for (const link of links) {
+          expect(link).toHaveAttribute('data-app-part', 'button nav-item')
+          expect(link).toHaveAttribute('data-app-variant', 'outline')
+          expect(link.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`)
+          expect(link.getAttribute('data-app-design-owner')).toContain(`controls-${APPLICATION_DESIGNS[pack].controls}`)
+          expect(controlSelectors.some(selector => link.matches(selector))).toBe(true)
+          link.focus()
+          expect(link).toHaveFocus()
+        }
+      } finally { release() }
+    },
+  )
+
   it('navigates to the target route when a card is activated', () => {
     render(
       <MemoryRouter initialEntries={['/vehicles/1']}>

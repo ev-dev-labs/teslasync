@@ -74,7 +74,7 @@ export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdo
   }
 
   return (
-    <ul
+    <ul data-app-part="list"
       className="space-y-3"
       aria-label={t('admin.dlq.reasons.listLabel', 'Failure reasons breakdown')}
     >

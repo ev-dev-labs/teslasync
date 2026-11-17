@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 
-import { Button, Input, Modal, Textarea, Toggle } from '@/components/ui'
-import { Caption, HelperText, Text } from '@/components/ui'
-import { CopyButton } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { CopyButton } from '@/components/ui/CopyButton'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
+import { Toggle } from '@/components/ui/Toggle'
+import { Caption, HelperText, Text } from '@/components/ui/Typography'
 import { useSubmitProblemReport, useSupportBundle } from '@/api/hooks/useSupport'
 import {
   ATTACHMENT_POLICY,
@@ -141,7 +145,8 @@ export function ProblemReportModal({ open, onClose }: ProblemReportModalProps) {
           </HelperText>
         )}
 
-        <div className="space-y-3 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] p-3">
+        <div data-app-part="card" data-surface-variant="standalone"
+          className="space-y-3 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] p-3">
           <Caption>{t('problemReport.context.title', 'What is sent with your report')}</Caption>
           <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
             <li data-testid="problem-report-route">
@@ -211,6 +216,9 @@ export function ProblemReportModal({ open, onClose }: ProblemReportModalProps) {
 
           {showPreview && (
             <pre
+              data-app-part="panel"
+              data-app-panel-kind="code"
+              data-surface-variant="standalone"
               data-testid="problem-report-preview"
               className="max-h-64 overflow-auto rounded-md bg-[var(--surface-2)] p-2 text-2xs text-[var(--text-secondary)]"
             >

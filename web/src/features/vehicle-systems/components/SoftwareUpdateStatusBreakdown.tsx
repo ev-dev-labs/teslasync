@@ -51,7 +51,7 @@ export function SoftwareUpdateStatusBreakdown({
   }
 
   return (
-    <ul
+    <ul data-app-part="list"
       className="space-y-3"
       aria-label={t('softwareUpdates.breakdown.title', 'By status')}
     >

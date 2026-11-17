@@ -40,6 +40,7 @@
  * render km / kWh / $ at 2dp.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -309,6 +310,8 @@ beforeEach(() => {
   setGlobalLocale('en-US')
   install()
 })
+
+setupMeasuredChartContainers(800, 320)
 
 describe('CostAnalysisPage', () => {
   it('keeps all loaded sections and calculator inputs across independent background failures', async () => {

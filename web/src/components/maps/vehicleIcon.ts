@@ -40,12 +40,12 @@ export function vehicleIcon(color: string = DEFAULT_VEHICLE_COLOR): L.DivIcon {
     iconAnchor: [14, 14],
     popupAnchor: [0, -14],
     html: `
-      <div style="width:28px;height:28px;position:relative">
-        <div style="
+      <div data-app-part="map-marker" data-map-marker="vehicle" style="width:28px;height:28px;position:relative">
+        <div class="app-map-marker-halo" style="
           position:absolute;inset:0;border-radius:50%;
           background:${safe};opacity:0.25;
         "></div>
-        <div style="
+        <div class="app-map-marker-core" style="
           position:absolute;inset:5px;border-radius:50%;
           background:${safe};border:2px solid var(--surface-1);
         "></div>

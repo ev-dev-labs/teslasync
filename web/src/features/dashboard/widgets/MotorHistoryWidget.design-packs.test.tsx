@@ -278,7 +278,7 @@ describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classi
       const { container } = mountWidget(pack);
       await expectPack(container, pack);
       const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-      expect(refresh).toBeDisabled();
+      expect(refresh).toHaveAttribute('aria-disabled', 'true');
       fireEvent.click(refresh);
       expect(state.refetch).not.toHaveBeenCalled();
       expect(plottedReadings()).toHaveLength(3);

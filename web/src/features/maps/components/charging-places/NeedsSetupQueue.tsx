@@ -43,7 +43,7 @@ export function NeedsSetupQueue({ places, isLoading, error, onRetry, onReview }:
         emptyMessage={t('chargingPlaces.needsSetup.empty', 'All caught up — no auto-discovered places need review.')}
         loadingContent={<Skeleton className="h-24 w-full" />}
         emptyContent={
-        <InlineCallout variant="success">
+        <InlineCallout variant={state.hasData ? 'success' : 'info'}>
           {state.hasData ? t(
             'chargingPlaces.needsSetup.empty',
             'All caught up — no auto-discovered places need review.',
@@ -51,10 +51,12 @@ export function NeedsSetupQueue({ places, isLoading, error, onRetry, onReview }:
         </InlineCallout>
         }
       >
-        <ul className="flex flex-col gap-2" aria-label={t('chargingPlaces.needsSetup.title', 'Needs setup')}>
+        <ul data-app-part="list" className="flex flex-col gap-2" aria-label={t('chargingPlaces.needsSetup.title', 'Needs setup')}>
           {rows.map((place) => (
             <li
               key={place.id}
+              data-app-part="card"
+              data-surface-variant="standalone"
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2"
             >
               <div className="flex min-w-0 flex-col">

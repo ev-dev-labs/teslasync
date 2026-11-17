@@ -261,7 +261,7 @@ describe('UnitContextWidget production design packs', () => {
     expect(screen.getByRole('status', { name: 'Loading Signal unit context' })).toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state="initial"]')).not.toBeNull();
     const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refreshLive).not.toHaveBeenCalled();
     expect(screen.queryByText('Not observed')).not.toBeInTheDocument();

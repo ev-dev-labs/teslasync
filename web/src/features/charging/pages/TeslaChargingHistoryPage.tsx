@@ -337,6 +337,9 @@ export default function TeslaChargingHistoryPage() {
         <Text size="sm">
           {row.has_invoice && row.invoice_content_id ? (
             <a
+              data-app-part="button"
+              data-app-variant="secondary"
+              data-app-size="md"
               href={getTeslaChargingInvoiceURL(row.invoice_content_id)}
               target="_blank"
               rel="noopener noreferrer"

@@ -82,9 +82,11 @@ export function RegexTesterTool() {
         <Textarea label={t('devtools.utils.regexTestString', 'Test string')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', "Test string placeholder")} />
 
         {error ? (
-          <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-            <p className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.regexInvalid', 'Invalid regular expression')}</p>
-            <code className="text-xs font-mono text-rose-300">{error}</code>
+          <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="danger" role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+            <div data-app-part="feedback-content">
+              <p data-app-part="feedback-title" className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.regexInvalid', 'Invalid regular expression')}</p>
+              <code data-app-part="feedback-message" className="text-xs font-mono text-rose-300">{error}</code>
+            </div>
           </div>
         ) : (
           <>
@@ -97,12 +99,12 @@ export function RegexTesterTool() {
               )}
             </div>
             {matches.length > 0 ? (
-              <div className="space-y-1">
+              <div data-app-part="list" data-app-list="ranked" className="space-y-1">
                 {matches.map((m, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
-                    <Badge variant="info" size="sm">{i + 1}</Badge>
-                    <code className="text-xs font-mono text-rose-300">{m.match || t('devtools.utils.regexEmptyMatch', '(empty match)')}</code>
-                    <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At index')} {m.index}</span>
+                  <div data-app-part="list-row" key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
+                    <Badge data-app-part="badge metric-label" variant="info" size="sm">{i + 1}</Badge>
+                    <code data-app-part="metric-value" className="text-xs font-mono text-rose-300">{m.match || t('devtools.utils.regexEmptyMatch', '(empty match)')}</code>
+                    <span data-app-part="metric-context" className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At index')} {m.index}</span>
                   </div>
                 ))}
               </div>

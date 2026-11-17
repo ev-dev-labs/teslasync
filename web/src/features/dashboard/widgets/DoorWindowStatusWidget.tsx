@@ -210,19 +210,19 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
     <div className="min-w-0 space-y-2">
       {!securityData && <Caption as="p">{t('widget.doorWindow.noData', 'No door/window data')}</Caption>}
       <Table variant="embedded" aria-label={t('widget.doorWindow.title', 'Door & window status')}>
-        <thead>
-          <tr>
-            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.position', 'Position')}</Text></th>
-            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.doorColumn', 'Door')}</Text></th>
-            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.windowColumn', 'Window')}</Text></th>
+        <thead data-app-part="table-head">
+          <tr data-app-part="table-row">
+            <th data-app-part="table-cell" scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.position', 'Position')}</Text></th>
+            <th data-app-part="table-cell" scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.doorColumn', 'Door')}</Text></th>
+            <th data-app-part="table-cell" scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.windowColumn', 'Window')}</Text></th>
           </tr>
         </thead>
         <tbody>
           {POSITIONS.map((position) => (
-            <tr key={position}>
-              <th scope="row"><Caption>{positionLabels[position]}</Caption></th>
+            <tr data-app-part="table-row" key={position}>
+              <th data-app-part="table-cell" scope="row"><Caption>{positionLabels[position]}</Caption></th>
               {[doors[position], windows[position]].map((reported, index) => (
-                <td key={index}>
+                <td data-app-part="table-cell" key={index}>
                   <Badge
                     size="sm"
                     variant={reported === 'closed' ? 'success' : reported === 'unknown' ? 'neutral' : 'warning'}

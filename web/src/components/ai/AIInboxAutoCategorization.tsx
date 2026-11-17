@@ -273,25 +273,33 @@ function InnerSection({
               )}
             </Button>
           </div>
-          <div className="min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
-            <Text as="p" variant="bodySm">
+          <div
+            data-app-part="feedback"
+            data-app-feedback-kind="insight"
+            data-app-tone="neutral"
+            className="min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
+          >
+            <Text data-app-part="feedback-title" as="p" variant="bodySm">
               {t(
                 'notifications.inbox.aiCategorize.previewLabel',
                 'Proposed categories (review before applying):',
               )}
             </Text>
-            <ul className="mt-2 flex flex-wrap gap-2">
+            <ul data-app-part="list" data-app-list="definitions" className="mt-2 flex flex-wrap gap-2">
               {proposal.map((bucket) => (
                 <li
                   key={bucket.category}
+                  data-app-part="list-row"
                   className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1"
                   data-testid={`ai-feature-inbox-auto-categorization-bucket-${bucket.category}`}
                 >
-                  <Text variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">{bucket.category}</Text>
-                  <Text variant="caption" aria-hidden="true">
-                    ·
-                  </Text>
-                  <Text variant="bodySm" className="shrink-0 tabular-nums">{bucket.count}</Text>
+                  <Text data-app-part="metric-label" variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">{bucket.category}</Text>
+                  <span data-app-part="metric-reading" className="inline-flex items-baseline gap-1.5">
+                    <Text variant="caption" aria-hidden="true">
+                      ·
+                    </Text>
+                    <Text data-app-part="metric-value" variant="bodySm" className="shrink-0 tabular-nums">{bucket.count}</Text>
+                  </span>
                 </li>
               ))}
             </ul>

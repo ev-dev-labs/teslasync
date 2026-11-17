@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -58,6 +59,8 @@ async function expectPresentation(packId: PackId, container: HTMLElement) {
       .toHaveAttribute('data-line-appearance', PACK_APPEARANCES[packId]);
   });
 }
+
+setupCanvasTextMeasurement();
 
 describe.each(PACK_IDS)('latest-drive telemetry source preservation (%s)', packId => {
   it('keeps the route while telemetry retries independently', async () => {

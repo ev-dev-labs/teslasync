@@ -23,7 +23,7 @@
  *      (snake_case order keys, numeric limit) exactly.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -105,6 +105,10 @@ vi.mock('@/api/hooks/useOperatorConfidence', () => ({
 
 import { useSlowQueries } from '@/api/hooks/useOperatorConfidence';
 import SlowQueriesPage from './SlowQueriesPage';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockUseSlowQueries = useSlowQueries as unknown as ReturnType<typeof vi.fn>;
 
@@ -193,7 +197,7 @@ beforeEach(() => {
   mockUseSlowQueries.mockReset();
   mockUseSlowQueries.mockReturnValue(makeQuery({ data: response() }));
 });
-afterEach(() => setGlobalPrecision(savedPrecision));
+afterEach(() => { cleanup(); setGlobalPrecision(savedPrecision); });
 
 describe('SlowQueriesPage — populated view', () => {
   it('derives honest KPIs from the loaded rows', () => {

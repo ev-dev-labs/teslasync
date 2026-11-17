@@ -141,15 +141,26 @@ describe('Input — feedback association', () => {
 
 describe('Input — primitive contract', () => {
   it('retains implicit identity and focused value across translated labels and feedback', () => {
-    const { rerender } = render(<Input label="Email" hint="Optional address" defaultValue="saved" />);
+    const { rerender, container } = render(<Input label="Email" hint="Optional address" defaultValue="saved" />);
     const input = screen.getByRole('textbox', { name: 'Email' });
     const id = input.id;
+    expect(input).toHaveAttribute('data-app-part', 'field-control');
+    expect(input.closest('[data-app-part="field"]')).not.toBeNull();
+    expect(screen.getByText('Email').closest('label')).toHaveAttribute('data-app-part', 'field-label');
+    expect(document.getElementById(`${id}-hint`)).toHaveAttribute('data-app-field-feedback', 'hint');
+    expect(input).toHaveAccessibleDescription('Optional address');
+    expect(container.querySelector('[data-app-feedback]')).toBeNull();
     input.focus();
     rerender(<Input label="Adresse électronique" error="Adresse invalide" defaultValue="saved" />);
     expect(screen.getByRole('textbox', { name: 'Adresse électronique' })).toBe(input);
     expect(input.id).toBe(id);
     expect(input).toHaveFocus();
     expect(input).toHaveValue('saved');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveAttribute('data-app-part', 'status');
+    expect(screen.getByRole('alert')).toHaveAttribute('data-app-field-feedback', 'error');
+    expect(input).toHaveAccessibleDescription('Adresse invalide');
+    expect(container.querySelector('[data-app-feedback]')).toBeNull();
     expect(input).toHaveAttribute('aria-describedby', `${id}-error`);
     expect(document.getElementById(`${id}-hint`)).toBeNull();
   });

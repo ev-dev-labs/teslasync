@@ -20,9 +20,10 @@
  *   7. formatBytes B / KB / MB boundaries.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils'
 
 // Deterministic i18n: `t(key, default, opts)` returns the default string with
 // `{{token}}` interpolated. Keeps assertions independent of the shipped
@@ -155,6 +156,28 @@ afterEach(() => {
 })
 
 describe('EntriesTable', () => {
+  it('retains sorting, inspection and full entry details on mobile', () => {
+    const bounds = forceMobileDataTables()
+    try {
+      const { container, onInspect } = renderTable({ rows: [e1, e2, e3] })
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement
+      expect(grid).toBeInTheDocument()
+      const rowKeys = () => Array.from(grid.querySelectorAll('[data-row-key]'))
+        .map(row => row.getAttribute('data-row-key'))
+      expect(rowKeys()).toEqual(['2', '3', '1'])
+      fireEvent.click(within(grid).getByRole('button', { name: 'Payload' }))
+      expect(rowKeys()).toEqual(['3', '2', '1'])
+      fireEvent.click(within(grid).getByRole('button', { name: 'Inspect DLQ entry 1' }))
+      expect(onInspect).toHaveBeenCalledWith(e1)
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[2])
+      const dialog = screen.getByRole('dialog')
+      expect(within(dialog).getByText('VIN-A')).toBeInTheDocument()
+      expect(within(dialog).getByText('topic/a')).toBeInTheDocument()
+    } finally {
+      bounds.mockRestore()
+    }
+  })
+
   it('renders every column for each row (reason, vin, topic, payload, redeliveries, replayable)', () => {
     renderTable({ rows: [e1, e2, e3] })
 

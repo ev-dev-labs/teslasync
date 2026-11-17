@@ -47,7 +47,7 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
 
       await page.goto('/tesla-physics/clocks')
       await expect(page.getByRole('heading', { name: 'Tesla physics', exact: true })).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Three Clocks' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Three clocks', exact: true })).toBeVisible()
       if (width === 390) {
         await expect(page.getByRole('combobox', { name: 'Choose investigation' })).toHaveValue('clocks')
       } else {
@@ -56,7 +56,9 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
       }
       await expect(page.getByText('History row cap reached')).toBeVisible()
       await expect(page.getByRole('listitem').filter({ hasText: /^Ingest time\s*0\/2$/ })).toBeVisible()
-      await page.screenshot({ path: testInfo.outputPath(`physics-clocks-${theme}-${width}.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`physics-clocks-${theme}-${width}.png`), fullPage: true })
+      }
 
       await page.getByRole('button', { name: 'Inspect raw evidence: Three clocks (2 rows)' }).click()
       const clocksEvidence = page.getByRole('region', { name: 'Inspect raw evidence: Three clocks (2 rows)', exact: true })
@@ -67,7 +69,9 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
         await expect(clocksEvidence.locator('tbody > tr')).toHaveCount(2)
         await expect(clocksEvidence.getByText('Showing 1–2 of 2', { exact: true })).toBeVisible()
       }
-      await page.screenshot({ path: testInfo.outputPath(`physics-clocks-evidence-${theme}-${width}.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`physics-clocks-evidence-${theme}-${width}.png`), fullPage: true })
+      }
 
       if (width === 390) {
         await page.getByRole('combobox', { name: 'Choose investigation' }).selectOption('charge-port')
@@ -87,7 +91,9 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
       await expect(chargeEvidence.locator('tbody > tr')).toHaveCount(1)
       await expect(chargeEvidence.getByText('Showing 1–1 of 1', { exact: true })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
-      await page.screenshot({ path: testInfo.outputPath(`physics-charge-port-${theme}-${width}.png`), fullPage: true })
+      if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+        await page.screenshot({ path: testInfo.outputPath(`physics-charge-port-${theme}-${width}.png`), fullPage: true })
+      }
       // Dispose the mounted polling shell before removing its API routes.
       await page.goto('about:blank')
       await page.unroute(/\/api\/v1\/physics\/exclusive(?:\?|$)/)

@@ -42,11 +42,11 @@ export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: N
         <PanelTitle>{t('notifications.inbox.columns.message', 'Message')}</PanelTitle>
         <Text variant="body" className="mt-2 whitespace-pre-wrap break-words">{log.message}</Text>
       </div>}
-      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+      <dl data-app-part="list" data-app-list="definitions" className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.filter(({ value }) => value != null && value !== '').map(({ label, value }) => (
-          <div key={label} className="min-w-0">
-            <Caption as="dt" className="break-words">{label}</Caption>
-            <Text as="dd" variant="bodySm" className="mt-1 break-words">{value}</Text>
+          <div key={label} data-app-part="list-row" className="min-w-0">
+            <Caption data-app-part="metric-label" as="dt" className="break-words">{label}</Caption>
+            <Text data-app-part="metric-reading" as="dd" variant="bodySm" className="mt-1 break-words"><span data-app-part="metric-value">{value}</span></Text>
           </div>
         ))}
       </dl>

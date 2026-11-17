@@ -19,23 +19,28 @@ npm start
 ## Ship (Windows)
 
 ```sh
-npm run dist        # → release/TeslaSync-*.exe (NSIS installer)
+npm run dist        # → release/TeslaSync-*.exe (universal x64 + ARM64 NSIS installer)
 ```
 
-Run on Windows to create an NSIS installer; signing and automatic
+Run on Windows to create an NSIS installer containing native x64 and
+ARM64 runtimes. The installer chooses ARM64 on Windows on Arm and x64
+on Intel/AMD; it does not install an emulated x64 runtime on ARM64.
+Signing and automatic
 updates are **not** configured. `npm run dist:dir` produces an unpacked
 folder for smoke-testing. Only Windows distribution is configured;
 macOS and Linux require separate targets and testing.
 
 ## MSIX/AppX package (local validation)
 
-Builds an **unsigned** AppX locally, then repacks it with the Windows
+Builds an **unsigned** AppX for each architecture, then repacks it with the Windows
 SDK's `makeappx.exe` into a real MSIX package (and verifies it can be
 unpacked). Do not rename an `.appx` file to `.msix`. The package
 identity in `electron-builder.yml` matches the TeslaSync MSIX app in
 Partner Center (Store ID `9NKH07ZV3V96`). Submit the unsigned MSIX
-through that product's **Packages** page for Microsoft to sign and
-distribute; the EXE/MSI submission flow cannot accept it.
+as one x64 + ARM64 MSIX bundle for Microsoft to sign and distribute;
+the EXE/MSI submission flow cannot accept it. Package validation checks
+both the manifest architecture and the executable's PE machine type,
+and rejects mixed identities, versions, or missing architectures.
 
 Packages built before this identity change, including the earlier
 prerelease MSIX, have the old placeholder identity and must not be
@@ -71,8 +76,18 @@ while the assigned `publisher` and `identityName` stay unchanged.
 
 ```powershell
 cd apps\desktop
-npm run dist:appx   # → release\TeslaSync-*.appx
-.\package-msix.ps1 -Appx 'release\TeslaSync 2.0.1.appx' -Msix 'release\TeslaSync-Store-2.0.1.msix'
+npm run dist:appx   # → release\TeslaSync-2.0.1-x64.appx and -arm64.appx
+.\package-msix.ps1 -Appx 'release\TeslaSync-2.0.1-x64.appx' -Msix 'release\TeslaSync-2.0.1.msix' -Architecture x64
+.\package-msix.ps1 -Appx 'release\TeslaSync-2.0.1-arm64.appx' -Msix 'release\TeslaSync-2.0.1-arm64.msix' -Architecture arm64
+.\package-msix.ps1 -Packages 'release\TeslaSync-2.0.1.msix','release\TeslaSync-2.0.1-arm64.msix' -Bundle 'release\TeslaSync-2.0.1.msixbundle'
+```
+
+The release helper builds the universal installer, both MSIX packages,
+and the validated Store bundle without changing the source package version:
+
+```powershell
+.\build-windows.ps1 -Version 2.0.1
+# For isolated local builds, pass -WebDist, -OutputDirectory, and -AssetsDirectory.
 ```
 
 For local testing, configure electron-builder with a test PFX via
@@ -82,13 +97,15 @@ your test device. Then enable Windows Developer Mode and install the
 signed package with `Add-AppxPackage`. Do not commit a test certificate
 or its password, and do not upload a test-signed package to the Store.
 
-The release workflow attaches the unsigned `.msix` and unsigned NSIS
-`.exe` installer to each GitHub Release. The MSIX is **not installable
+The release workflow attaches both unsigned `.msix` packages, the
+`.msixbundle`, and one unsigned universal NSIS `.exe` installer to each
+GitHub Release. The original x64 MSIX and installer filenames remain
+unchanged. MSIX artifacts are **not installable
 without signing**; the installer may trigger a Windows reputation
-warning. Store submissions remain manual: download the `.msix` from
-the GitHub Release and upload it to the TeslaSync product in Partner
-Center. No Microsoft Entra tenant or billing setup is required for
-this workflow.
+warning. The Microsoft Store Submission workflow submits the single
+multi-architecture bundle after a successful Release run from `main`;
+non-main releases do not submit to the Store. The existing
+`store-production` environment and credentials remain unchanged.
 
 ## What's inside
 

@@ -75,6 +75,7 @@ export function Grid({
     <div
       ref={setGrid}
       data-card-layout="grid"
+      data-app-part="grid"
       style={{ '--card-layout-gutter': `${(GAP_CLASSES[gap] ? gap : 4) * 0.25}rem` } as CSSProperties}
       data-layout={minItemWidth ? 'auto-fit' : 'responsive-columns'}
       className={cn(

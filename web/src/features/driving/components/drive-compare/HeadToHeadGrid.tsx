@@ -57,22 +57,24 @@ export function HeadToHeadGrid({ rows, startA, startB, state }: HeadToHeadGridPr
           <div className="overflow-x-auto">
             <div
               role="table"
+              data-app-part="table"
               aria-label={t('driveCompare.gridAria', 'Drive A and Drive B metric comparison')}
               className="min-w-[640px]"
             >
-              <div role="rowgroup">
+              <div role="rowgroup" data-app-part="table-head">
                 <div
                   role="row"
+                  data-app-part="table-row"
                   className="grid grid-cols-[minmax(10rem,1.25fr)_minmax(12rem,1fr)_minmax(12rem,1fr)] border-b border-[var(--border-subtle)]"
                 >
-                  <div role="columnheader" className="px-4 py-3">
+                  <div role="columnheader" data-app-part="table-cell" className="px-4 py-3">
                     <Text variant="label">{t('driveCompare.metric', 'Metric')}</Text>
                   </div>
                   {([
                     ['a', t('driveCompare.driveA', 'Drive A'), startA],
                     ['b', t('driveCompare.driveB', 'Drive B'), startB],
                   ] as const).map(([side, label, start]) => (
-                    <div key={side} role="columnheader" className="px-4 py-3 text-end">
+                    <div key={side} role="columnheader" data-app-part="table-cell" className="px-4 py-3 text-end">
                       <Text variant="label">{label}</Text>
                       <Text as="div" variant="caption">
                         {start ? formatDateShort(start) : '—'}
@@ -86,15 +88,16 @@ export function HeadToHeadGrid({ rows, startA, startB, state }: HeadToHeadGridPr
                   <div
                     key={row.key}
                     role="row"
+                    data-app-part="table-row"
                     className="grid grid-cols-[minmax(10rem,1.25fr)_minmax(12rem,1fr)_minmax(12rem,1fr)] border-b border-[var(--border-subtle)]/60 last:border-b-0"
                   >
-                    <div role="rowheader" className="flex items-center px-4 py-3">
+                    <div role="rowheader" data-app-part="table-cell" className="flex items-center px-4 py-3">
                       <Text variant="bodySm">
                         {t(METRIC_I18N[row.key].key, METRIC_I18N[row.key].fallback)}
                       </Text>
                     </div>
                     {(['a', 'b'] as const).map((side) => (
-                      <div key={side} role="cell" className="px-4 py-3 text-end">
+                      <div key={side} role="cell" data-app-part="table-cell" className="px-4 py-3 text-end">
                         <span className="inline-flex items-center justify-end gap-2">
                           {row.winner === side ? (
                             <Badge variant="success">{t('driveCompare.winner', 'Winner')}</Badge>

@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -87,6 +88,8 @@ beforeEach(() => {
   mocks.idle.mockReturnValue(query({ avg_drain_pct_per_day: 0.3 }));
 });
 afterEach(cleanup);
+
+setupMeasuredChartContainers(800, 320);
 
 describe('live battery pages: independent sources and preserved orchestration', () => {
   it('keeps Energy outline, charging table and lifetime values during initial drive loading', async () => {

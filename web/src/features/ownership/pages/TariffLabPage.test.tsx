@@ -14,11 +14,18 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Children, cloneElement, isValidElement, type ComponentProps, type ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
+import { setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const chartProbe = vi.hoisted(() => ({
   axis: vi.fn(),
   tooltip: vi.fn(),
   bars: vi.fn(),
+  grid: vi.fn(),
 }));
 
 vi.mock('@/components/charts', async () => {
@@ -29,6 +36,7 @@ vi.mock('@/components/charts', async () => {
       if (child.type === actual.YAxis) chartProbe.axis(child.props);
       if (child.type === actual.Tooltip) chartProbe.tooltip(child.props);
       if (child.type === actual.BarChart) chartProbe.bars(child.props);
+      if (child.type === actual.CartesianGrid) chartProbe.grid(child.props);
       inspect(child.props.children);
     });
   }
@@ -101,7 +109,11 @@ import {
 import TariffLabPage from './TariffLabPage';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { Tariff, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
+import type { Tariff, TariffRate, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
+import { formatPct } from '../formatters';
+import { getBootstrapSettings } from '@/api/settingsBootstrap';
+import { chartGrid } from '@/components/charts';
+import { measureChartContainers } from '@/test/setup';
 
 // These fixtures return partial hook results; preserve the real callable contracts.
 const mockSelected = vi.mocked(useSelectedVehicle, { partial: true, deep: true });
@@ -187,7 +199,7 @@ function card(title: string): HTMLElement {
   return element;
 }
 
-function renderPage() {
+async function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -196,7 +208,9 @@ function renderPage() {
       <ThemeProvider>{children}</ThemeProvider>
     </QueryClientProvider></MemoryRouter>;
   }
-  return render(<TariffLabPage />, { wrapper });
+  const view = render(<TariffLabPage />, { wrapper });
+  await act(async () => { await getBootstrapSettings(); });
+  return view;
 }
 
 /** The Remove button in the table row showing the given plan name. */
@@ -243,7 +257,7 @@ describe('TariffLabPage — publication retention', () => {
   describe('real mutation transitions', () => {
     it.each(['success', 'error'] as const)('retains SI economics, source bounds and submitted assumptions through pending and %s', async outcome => {
       const replay = realReplay();
-      renderPage();
+      await renderPage();
       const run = screen.getByRole('button', { name: 'Replay load against plans' });
       assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Not computed', { contains: true });
       const selectedRow = screen.getByText('Flat Saver').closest('tr');
@@ -333,7 +347,7 @@ describe('TariffLabPage — publication retention', () => {
 
     it.each(['success', 'error'] as const)('clears prior vehicle values and ignores late %s after returning to that vehicle', async outcome => {
       const replay = realReplay();
-      const view = renderPage();
+      const view = await renderPage();
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].resolve(makeSimulation()));
@@ -373,7 +387,7 @@ describe('TariffLabPage — publication retention', () => {
 
     it('does not relabel retained source currency with an edited tariff draft', async () => {
       const replay = realReplay();
-      renderPage();
+      await renderPage();
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].resolve(makeSimulation({ max_saving_minor: 0, results: null })));
@@ -389,7 +403,7 @@ describe('TariffLabPage — publication retention', () => {
 
     it('shows an initial replay failure without claiming a retained result or hiding the controls', async () => {
       const replay = realReplay();
-      renderPage();
+      await renderPage();
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].reject(new Error('initial replay unavailable')));
@@ -412,8 +426,9 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  measureChartContainers(800, 300);
   // Keep real theme/chart providers; isolate their settings read from the network.
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('{}', {
     headers: { 'Content-Type': 'application/json' },
   }));
   mockSelected.mockReturnValue({
@@ -431,11 +446,11 @@ beforeEach(() => {
 });
 
 describe('TariffLabPage — confirm-gated delete', () => {
-  it('keeps the independent plan library and pre-replay prompts available without a vehicle', () => {
+  it('keeps the independent plan library and pre-replay prompts available without a vehicle', async () => {
     mockSelected.mockReturnValue({
       vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn(),
     });
-    renderPage();
+    await renderPage();
     assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Selection required', { contains: true });
     expect(card('Arbitrage summary')).toHaveTextContent('Run a replay to see how much your plan choice is worth.');
     expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeDisabled();
@@ -445,7 +460,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])('uses the real initial replay state (paused: %s) without inferring empty results', paused => {
+  it.each([false, true])('uses the real initial replay state (paused: %s) without inferring empty results', async paused => {
     mockSimulate.mockReturnValue({
       ...makeMutation(), data: undefined, isPending: true, isPaused: paused,
       variables: {
@@ -453,7 +468,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
         switch_fee_minor: 0, confirmed: true,
       },
     });
-    renderPage();
+    await renderPage();
     for (const title of ['Arbitrage summary', 'Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed', 'Evidence, quality, and limitations']) {
       const status = within(card(title)).getByRole('status');
       if (paused) {
@@ -471,7 +486,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(screen.getByRole('button', { name: 'Add plan' })).toBeEnabled();
   });
 
-  it('renders authoritative empty replay results and measured zeros after success', () => {
+  it('renders authoritative empty replay results and measured zeros after success', async () => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({
@@ -479,7 +494,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
         evidence: [],
       }),
     });
-    renderPage();
+    await renderPage();
     assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
     for (const id of ['observed', 'plans', 'shift']) {
       expect(summaryMetric('Arbitrage summary', id)).toHaveAttribute('data-value-state', 'value');
@@ -496,9 +511,9 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
   });
 
-  it('uses the real replay brief without promoting an unknown saving to zero or running another replay', () => {
+  it('uses the real replay brief without promoting an unknown saving to zero or running another replay', async () => {
     mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation() });
-    renderPage();
+    await renderPage();
     expectOperationalBand('Arbitrage summary', ['observed', 'plans', 'shift']);
     assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
     expect(summaryMetric('Arbitrage summary', 'plans')).toHaveAttribute('data-value-state', 'value');
@@ -517,10 +532,10 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
-  it('retains complete replay economics and band evidence when the independent plan library fails', () => {
+  it('retains complete replay economics and band evidence when the independent plan library fails', async () => {
     mockTariffs.mockReturnValue({ ...makeQuery(undefined), error: new Error('library failed') });
     mockSimulate.mockReturnValue({ ...makeMutation({ error: new Error('replay refresh failed') }), data: makeSimulation() });
-    renderPage();
+    await renderPage();
 
     const economics = card('Ranked plan economics');
     const row = within(economics).getByText('Replay Nights').closest('tr');
@@ -535,7 +550,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
-  it('does not turn an unknown saving or absent current-plan comparison into zero', () => {
+  it('does not turn an unknown saving or absent current-plan comparison into zero', async () => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({
@@ -543,7 +558,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
         results: [makeResult({ is_current: false })],
       }),
     });
-    renderPage();
+    await renderPage();
 
     assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
     const row = within(card('Ranked plan economics')).getByText('Replay Nights').closest('tr');
@@ -551,7 +566,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(screen.queryByText('No plan produced a priced result — check that your plans have at least one price band.')).not.toBeInTheDocument();
   });
 
-  it('renders supplied zero saving and current-plan delta rather than unknown placeholders', () => {
+  it('renders supplied zero saving and current-plan delta rather than unknown placeholders', async () => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({
@@ -559,7 +574,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
         results: [makeResult({ delta_vs_current_minor: 0, break_even_days: 0 })],
       }),
     });
-    renderPage();
+    await renderPage();
 
     expect(within(card('Arbitrage summary')).getByText('Best-case annual saving').parentElement).toHaveTextContent('$0.00');
     const row = within(card('Ranked plan economics')).getByText('Replay Nights').closest('tr');
@@ -567,8 +582,8 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(row).toHaveTextContent('0 d');
   });
 
-  it('keeps plan records and editor reachable with no replay instead of displaying the draft rate as observed', () => {
-    renderPage();
+  it('keeps plan records and editor reachable with no replay instead of displaying the draft rate as observed', async () => {
+    await renderPage();
     expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeInTheDocument();
     expect(within(card('Arbitrage summary')).getByText('Run a replay to see how much your plan choice is worth.')).toBeInTheDocument();
     expect(within(card('Ranked plan economics')).queryByText('$0.00')).not.toBeInTheDocument();
@@ -578,10 +593,10 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
-  it('keeps explicitly selected member IDs and replay parameters at the mocked mutation boundary', () => {
+  it('keeps explicitly selected member IDs and replay parameters at the mocked mutation boundary', async () => {
     const mutate = vi.fn();
     mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
-    renderPage();
+    await renderPage();
     const row = screen.getByText('Flat Saver').closest('tr');
     expect(row).not.toBeNull();
     fireEvent.click(within(row!).getByRole('switch'));
@@ -595,10 +610,10 @@ describe('TariffLabPage — confirm-gated delete', () => {
     });
   });
 
-  it('opens a danger confirm naming the plan instead of deleting on click', () => {
+  it('opens a danger confirm naming the plan instead of deleting on click', async () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
 
     fireEvent.click(removeButton('EV Nights'));
 
@@ -611,7 +626,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
   it('deletes only after the dialog is confirmed', async () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
 
     fireEvent.click(removeButton('Flat Saver'));
     fireEvent.click(
@@ -624,10 +639,10 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('does not delete when the dialog is cancelled', () => {
+  it('does not delete when the dialog is cancelled', async () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
 
     fireEvent.click(removeButton('EV Nights'));
     fireEvent.click(
@@ -638,9 +653,9 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('marks only the deleting row pending while the mutation is in flight', () => {
+  it('marks only the deleting row pending while the mutation is in flight', async () => {
     mockRemove.mockReturnValue(makeMutation({ isPending: true, variables: 2 }));
-    renderPage();
+    await renderPage();
 
     expect(removeButton('Flat Saver')).toBeDisabled();
     expect(removeButton('EV Nights')).not.toBeDisabled();
@@ -658,7 +673,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
       vi.mocked(useDeleteTariff).mockImplementation(useDeleteMutation);
       const mutate = vi.fn();
       mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
-      renderPage();
+      await renderPage();
       for (const name of ['EV Nights', 'Flat Saver']) {
         const row = screen.getByText(name).closest('tr');
         if (!row) throw new Error(`Missing selectable row: ${name}`);
@@ -683,10 +698,10 @@ describe('TariffLabPage — confirm-gated delete', () => {
     },
   );
 
-  it('retains selections across unloaded and partial library pages until explicitly cleared', () => {
+  it('retains selections across unloaded and partial library pages until explicitly cleared', async () => {
     const mutate = vi.fn();
     mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
-    const view = renderPage();
+    const view = await renderPage();
     const row = screen.getByText('Flat Saver').closest('tr');
     if (!row) throw new Error('Missing selectable row');
     fireEvent.click(within(row).getByRole('switch'));
@@ -711,7 +726,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
 
 
 describe('TariffLabPage — server-paged plan library', () => {
-  it('requests server pages without slicing loaded rows and retains cross-page replay selection', () => {
+  it('requests server pages without slicing loaded rows and retains cross-page replay selection', async () => {
     const first = makeTariff();
     const second = makeTariff({ id: 101, name: 'Later plan', is_current: false });
     mockTariffs.mockImplementation((limit = 50, offset = 0) => makeQuery({
@@ -719,7 +734,7 @@ describe('TariffLabPage — server-paged plan library', () => {
     }));
     const mutate = vi.fn();
     mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
-    renderPage();
+    await renderPage();
 
     const library = card('Your rate plan library');
     expect(mockTariffs).toHaveBeenLastCalledWith(100, 0);
@@ -748,13 +763,13 @@ describe('TariffLabPage — server-paged plan library', () => {
     expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({ tariff_ids: [] }));
   });
 
-  it('does not invent a server total or next page from a full loaded page', () => {
+  it('does not invent a server total or next page from a full loaded page', async () => {
     mockTariffs.mockReturnValue(makeQuery({
       items: Array.from({ length: 100 }, (_, index) => makeTariff({
         id: index + 1, name: `Loaded plan ${index + 1}`,
       })),
     }));
-    renderPage();
+    await renderPage();
 
     const library = card('Your rate plan library');
     expect(within(library).getByText('Loaded plan 100')).toBeVisible();
@@ -770,7 +785,7 @@ describe('TariffLabPage — server-paged plan library', () => {
         ? [makeTariff({ id: 101, name: 'Last plan' })] : [],
       total, limit, offset,
     }));
-    const view = renderPage();
+    const view = await renderPage();
     fireEvent.click(within(card('Your rate plan library')).getByRole('button', { name: 'Next page' }));
     fireEvent.click(screen.getByRole('switch', { name: 'Compare Last plan' }));
     total = 100;
@@ -800,7 +815,7 @@ describe('TariffLabPage — supplied monetary values', () => {
     { currency: 'JPY', value: 0, expected: '¥0' },
     { currency: 'USD', value: -123, expected: '-$1.23' },
     { currency: '', value: 123, expected: '—' },
-  ])('keeps $currency chart values in raw minor units and labels their denomination', ({ currency, value, expected }) => {
+  ])('keeps $currency chart values in raw minor units and labels their denomination', async ({ currency, value, expected }) => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({ results: [
@@ -808,16 +823,17 @@ describe('TariffLabPage — supplied monetary values', () => {
         makeResult({ tariff_id: 2, name: 'Denomination regression', currency, annual_cost_minor: value, rank: 2 }),
       ] }),
     });
-    renderPage();
+    await renderPage();
 
     const bars = chartProbe.bars.mock.lastCall?.[0];
+    expect(chartProbe.grid).toHaveBeenCalledWith(chartGrid.props);
     expect(bars.data[1]).toMatchObject({ annual: value, currency });
     const axis = chartProbe.axis.mock.lastCall?.[0];
     expect(axis.label.value).toContain('Cost (minor units)');
     expect(axis.label.value).toContain('USD');
     if (currency) expect(axis.label.value).toContain(currency);
     const chart = card('Annualised cost by plan');
-    const row = within(chart).getByText('Denomination regression').closest('tr');
+    const row = within(chart).getByRole('cell', { name: 'Denomination regression', exact: true }).closest('tr');
     expect(row).toHaveTextContent(expected);
     expect(row).toHaveTextContent(currency || '—');
     expect(within(chart).getByRole('columnheader', { name: 'ISO currency code' })).toBeInTheDocument();
@@ -851,7 +867,7 @@ describe('TariffLabPage — supplied monetary values', () => {
     { value: -123.5, currency: 'USD', expected: '-$1.24' },
     { value: 0, currency: 'JPY', expected: '¥0' },
     { value: 1234.5, currency: 'KWD', expected: 'KWD 1.235' },
-  ])('renders $value minor units in $currency without discarding sign or zero', ({ value, currency, expected }) => {
+  ])('renders $value minor units in $currency without discarding sign or zero', async ({ value, currency, expected }) => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({
@@ -864,7 +880,7 @@ describe('TariffLabPage — supplied monetary values', () => {
         })],
       }),
     });
-    renderPage();
+    await renderPage();
 
     for (const column of ['Annualised cost', 'vs current', 'Load-shift upside']) {
       expect(resultCell('Replay Nights', column)).toHaveTextContent(expected);
@@ -877,7 +893,7 @@ describe('TariffLabPage — supplied monetary values', () => {
 
   it.each(['missing', 'null', 'nan', 'infinite', 'negative-infinite'] as const)(
     'keeps %s monetary inputs unknown rather than measured zero',
-    input => {
+    async input => {
       const result = makeResult({ load_shift_saving_minor: 0, delta_vs_current_minor: null });
       const simulation = makeSimulation({ max_saving_minor: null, results: [result] });
       const tariff = makeTariff({ demand_charge_minor_per_w: 0 });
@@ -894,7 +910,7 @@ describe('TariffLabPage — supplied monetary values', () => {
       }
       mockTariffs.mockReturnValue(makeQuery({ items: [tariff] }));
       mockSimulate.mockReturnValue({ ...makeMutation(), data: simulation });
-      renderPage();
+      await renderPage();
 
       expect(resultCell('Replay Nights', 'Load-shift upside')).toHaveTextContent(/^—$/);
       expect(resultCell('Replay Nights', 'vs current')).toHaveTextContent(/^—$/);
@@ -908,14 +924,14 @@ describe('TariffLabPage — supplied monetary values', () => {
     { value: 0, expected: '$0.00/kW' },
     { value: -0.012345, expected: '-$0.12/kW' },
     { value: 0.012345, expected: '$0.12/kW' },
-  ])('renders a finite demand charge of $value without a positivity gate', ({ value, expected }) => {
+  ])('renders a finite demand charge of $value without a positivity gate', async ({ value, expected }) => {
     mockTariffs.mockReturnValue(makeQuery({ items: [makeTariff({ demand_charge_minor_per_w: value })] }));
-    renderPage();
+    await renderPage();
     const row = within(card('Your rate plan library')).getByText('EV Nights').closest('tr');
     expect(row).toHaveTextContent(expected);
   });
 
-  it('uses each returned plan denomination instead of the first result or editor currency', () => {
+  it('uses each returned plan denomination instead of the first result or editor currency', async () => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({
@@ -930,7 +946,7 @@ describe('TariffLabPage — supplied monetary values', () => {
         ],
       }),
     });
-    renderPage();
+    await renderPage();
     expect(resultCell('Yen plan', 'Annualised cost')).toHaveTextContent('¥123');
     expect(resultCell('Yen plan', 'vs current')).toHaveTextContent('-¥123');
     expect(resultCell('Yen plan', 'Load-shift upside')).toHaveTextContent('¥0');
@@ -939,10 +955,10 @@ describe('TariffLabPage — supplied monetary values', () => {
 });
 
 describe('TariffLabPage — restrained page adoption', () => {
-  it('names each comparison switch with its plan without changing selected IDs', () => {
+  it('names each comparison switch with its plan without changing selected IDs', async () => {
     const mutate = vi.fn();
     mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
-    renderPage();
+    await renderPage();
     expect(screen.getByRole('switch', { name: 'Compare EV Nights' })).not.toBeChecked();
     fireEvent.click(screen.getByRole('switch', { name: 'Compare Flat Saver' }));
     expect(screen.getByRole('switch', { name: 'Compare Flat Saver' })).toBeChecked();
@@ -981,7 +997,7 @@ describe('TariffLabPage — restrained page adoption', () => {
         const replay = vi.fn();
         mockRemove.mockReturnValue(makeMutation({ mutate }));
         mockSimulate.mockReturnValue({ ...makeMutation({ mutate: replay }), data: undefined });
-        renderPage();
+        await renderPage();
         resize(375);
         const library = card('Your rate plan library');
         expect(library.querySelector('[data-mobile-table]')).not.toBeNull();
@@ -990,7 +1006,7 @@ describe('TariffLabPage — restrained page adoption', () => {
         fireEvent.click(within(library).getByRole('switch', { name: 'Compare Flat Saver' }));
         fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
         expect(replay).toHaveBeenCalledWith(expect.objectContaining({ tariff_ids: [2] }));
-        plan.focus();
+        act(() => { plan.focus(); });
         fireEvent.keyDown(plan, { key: 'Enter' });
         const detail = screen.getByRole('dialog', { name: 'Flat Saver' });
         for (const label of ['Compare', 'Plan', 'Structure', 'Price bands', 'Standing charge', 'Demand charge', 'Current', 'Actions']) {
@@ -1014,9 +1030,9 @@ describe('TariffLabPage — restrained page adoption', () => {
         expect(within(library).getAllByRole('columnheader')).toHaveLength(8);
       });
 
-      it('opens every replay economics column from a keyboard-operated mobile summary', () => {
+      it('opens every replay economics column from a keyboard-operated mobile summary', async () => {
         mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation() });
-        renderPage();
+        await renderPage();
         resize(375);
         const economics = card('Ranked plan economics');
         const summary = within(economics).getByRole('button', { name: 'Replay Nights' });
@@ -1035,9 +1051,9 @@ describe('TariffLabPage — restrained page adoption', () => {
       });
     });
 
-  it('keeps all independent sections visible with an authoritatively empty library and no replay', () => {
+  it('keeps all independent sections visible with an authoritatively empty library and no replay', async () => {
     mockTariffs.mockReturnValue(makeQuery({ items: [] }));
-    renderPage();
+    await renderPage();
     for (const title of [
       'Comparison parameters', 'Arbitrage summary', 'Annualised cost by plan',
       'Ranked plan economics', 'Where your energy actually landed',
@@ -1048,12 +1064,12 @@ describe('TariffLabPage — restrained page adoption', () => {
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
-  it('retains signed replay economics and exposes measured band share without relying on hue', () => {
+  it('retains signed replay economics and exposes measured band share without relying on hue', async () => {
     mockSimulate.mockReturnValue({
       ...makeMutation(),
       data: makeSimulation({ results: [makeResult({ delta_vs_current_minor: -123 })] }),
     });
-    renderPage();
+    await renderPage();
     const row = within(card('Ranked plan economics')).getByText('Replay Nights').closest('tr');
     expect(row).toHaveTextContent('-$1.23');
     const meter = within(card('Where your energy actually landed')).getByRole('meter', { name: 'Observed overnight band' });
@@ -1065,10 +1081,10 @@ describe('TariffLabPage — restrained page adoption', () => {
     expect(card('Where your energy actually landed')).toHaveTextContent('$123.45');
   });
 
-  it('round-trips end-of-day and ordinary business clock intervals without timezone conversion', () => {
+  it('round-trips end-of-day and ordinary business clock intervals without timezone conversion', async () => {
     const mutate = vi.fn();
     mockCreate.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Clock plan' } });
     const start = screen.getByLabelText('Starts');
@@ -1102,10 +1118,10 @@ describe('TariffLabPage — restrained page adoption', () => {
     expect(mutate).toHaveBeenCalledTimes(2);
   });
 
-  it('retains raw tariff rate precision and success-only editor completion', () => {
+  it('retains raw tariff rate precision and success-only editor completion', async () => {
     const mutate = vi.fn();
     mockCreate.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Precise plan' } });
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Price (minor per Wh)' }), { target: { value: '0.012345' } });
@@ -1129,8 +1145,8 @@ describe('TariffLabPage — restrained page adoption', () => {
 });
 
 describe('TariffLabPage — localized structure labels', () => {
-  it('shows localized structure badges while preserving user-authored names', () => {
-    renderPage();
+  it('shows localized structure badges while preserving user-authored names', async () => {
+    await renderPage();
     const library = card('Your rate plan library');
     // Both fixtures are 'tou' plans: badges must show the localized label,
     // never the raw enum.
@@ -1141,10 +1157,10 @@ describe('TariffLabPage — localized structure labels', () => {
     expect(within(library).getByText('Flat Saver')).toBeInTheDocument();
   });
 
-  it('offers localized structure options that submit the raw enum value', () => {
+  it('offers localized structure options that submit the raw enum value', async () => {
     const mutate = vi.fn();
     mockCreate.mockReturnValue(makeMutation({ mutate }));
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
     const select = screen.getByLabelText('Rate structure');
     expect(within(select).getByText('Time of use')).toBeInTheDocument();
@@ -1158,10 +1174,219 @@ describe('TariffLabPage — localized structure labels', () => {
     }), expect.any(Object));
   });
 
-  it('labels fresh bands with the localized default name', () => {
-    renderPage();
+  it('labels fresh bands with the localized default name', async () => {
+    await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
     // The first band of a fresh draft carries the catalog default label.
     expect(screen.getByRole('textbox', { name: 'Label' })).toHaveValue('Standard');
+  });
+});
+
+describe('TariffLabPage — native replay and draft record ownership', () => {
+  const feedbackRules: Rule[] = [];
+  postcss.parse(readFileSync(resolve(
+    process.cwd(), 'src', 'components', 'ui', 'app-designs', 'feedback.css',
+  ), 'utf8')).walkRules(rule => {
+    if (rule.selector.includes('[data-app-card-kind="record"]') || rule.selector.includes('[data-metric-track]')) {
+      feedbackRules.push(rule);
+    }
+  });
+  const matchingRules = (node: Element, contract: string) => feedbackRules.filter(rule =>
+    rule.selectors.some(selector => selector.includes(contract) && node.matches(selector)));
+  const expectDataMode = (node: Element, mode: string, contract = '') => {
+    const selectors = feedbackRules.flatMap(rule => rule.selectors.filter(selector =>
+      selector.includes(contract) && selector.includes(`[data-app-data="${mode}"]`) && node.matches(selector)));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      expect(selector).toContain(`[data-app-data="${mode}"]`);
+      expect(selector).toContain(`[data-app-design-owner~="data-${mode}"]`);
+    }
+  };
+
+  it('binds real band records and open rate editors to all 27 profiles without changing replay denomination or geometry', async () => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({ results: [
+        makeResult(),
+        makeResult({
+          tariff_id: 2, name: 'Returned yen plan', currency: 'JPY', rank: 2, bands: [],
+        }),
+      ] }),
+    });
+    const root = document.documentElement;
+    const original = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    for (const [name] of original) root.removeAttribute(name);
+    const view = await renderPage();
+    const release = observeAppDesignScopes(root);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'ISO currency code required' }), { target: { value: 'KWD' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add band' }));
+      const form = screen.getByRole('button', { name: 'Save rate plan' }).closest('form')!;
+      const bands = card('Where your energy actually landed');
+      const articles = [...bands.querySelectorAll('article')];
+      const rates = [...form.querySelectorAll('[data-app-card-kind="record"]')];
+      expect(articles).toHaveLength(2);
+      expect(rates).toHaveLength(2);
+      const records = [...articles, ...rates];
+      for (const record of records) expect(record).not.toHaveAttribute('data-app-design-owner');
+      const meter = within(bands).getByRole('meter', { name: 'Observed overnight band' });
+      expect(matchingRules(meter, '[data-metric-track]')).toHaveLength(0);
+      const before = bands.textContent;
+
+      for (const pack of PACK_IDS) {
+        setAppDesignTestProfile(root, pack);
+        await waitFor(() => expect(records[0]).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+        const mode = APPLICATION_DESIGNS[pack].data;
+        const surfaceRules: string[] = [];
+        postcss.parse(readFileSync(resolve(
+          process.cwd(), 'src', 'components', 'ui', 'app-designs', 'packs', APP_DESIGN_PACK_FILES[pack],
+        ), 'utf8')).walkRules(rule => {
+          if (rule.nodes.some(node => node.type === 'decl' && ['background-color', 'border', 'border-radius'].includes(node.prop))) {
+            surfaceRules.push(...rule.selectors.filter(selector =>
+              selector.includes('[data-app-part~="card"]') && selector.includes(`[data-app-design-owner~="pack-${pack}"]`)));
+          }
+        });
+        for (const record of records) {
+          expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+          expect(surfaceRules.some(selector => record.matches(selector))).toBe(true);
+          expectDataMode(record, mode, '[data-app-card-kind="record"]');
+          const body = record.querySelector(':scope > [data-app-part="record-body"]')!;
+          expectDataMode(body, mode, '[data-app-card-kind="record"]');
+          for (const rule of matchingRules(body, '[data-app-part~="record-body"]')) {
+            rule.walkDecls(declaration => {
+              expect(['display', 'grid-template-columns']).not.toContain(declaration.prop);
+            });
+          }
+        }
+        for (const article of articles) {
+          expectDataMode(article.querySelector('[data-app-part="record-header"]')!, mode, '[data-app-part~="record-header"]');
+          expect(article.querySelector('[data-app-part="record-title"]')).toHaveTextContent(
+            article === articles[0] ? 'Replay Nights' : 'Returned yen plan',
+          );
+        }
+        for (const rate of rates) {
+          expect(rate.querySelector('[data-app-part="record-body"]')).toHaveClass('grid', 'md:grid-cols-2', 'xl:grid-cols-5');
+          expect(within(rate as HTMLElement).getByRole('textbox', { name: 'Ends required' })).toHaveValue('24:00');
+          expect(within(rate as HTMLElement).getByRole('button', { name: 'Remove' })).toBeEnabled();
+        }
+        expect(bands.textContent).toBe(before);
+        expect(articles[0]).toHaveTextContent('$123.45');
+        expect(articles[1]).toHaveTextContent('This plan has a single undifferentiated rate.');
+        expect(meter).toHaveAttribute('aria-valuenow', '100');
+        expect(meter.firstElementChild).toHaveStyle({ width: '100%' });
+        expect(meter.firstElementChild).toHaveClass('bg-[var(--text-secondary)]');
+        expectDataMode(meter, mode, '[data-metric-track]');
+        expect(meter).toHaveAttribute('data-app-metric', 'bar');
+        for (const rule of matchingRules(meter, '[data-metric-track]')) {
+          rule.walkDecls(declaration => {
+            expect(['outline', 'outline-offset']).toContain(declaration.prop);
+          });
+        }
+        const fill = meter.querySelector('[data-metric-fill]')!;
+        expect(matchingRules(fill, '[data-metric-fill]')).not.toHaveLength(0);
+        for (const rule of matchingRules(fill, '[data-metric-fill]')) {
+          rule.walkDecls(declaration => {
+            expect(['box-sizing', 'min-inline-size']).toContain(declaration.prop);
+          });
+        }
+      }
+
+      view.container.setAttribute('data-app-design-preview', '');
+      view.container.setAttribute('data-app-design-pack', 'v1');
+      await waitFor(() => expect(records[0]).not.toHaveAttribute('data-app-design-owner'));
+      expect(matchingRules(meter, '[data-metric-track]')).toHaveLength(0);
+      expect(matchingRules(meter.querySelector('[data-metric-fill]')!, '[data-metric-fill]')).toHaveLength(0);
+      for (const record of records) {
+        expect(matchingRules(record, '[data-app-card-kind="record"]')).toHaveLength(0);
+        expect(matchingRules(record.querySelector('[data-app-part="record-body"]')!, '[data-app-part~="record-body"]')).toHaveLength(0);
+      }
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    } finally {
+      release();
+      view.unmount();
+      for (const [name, value] of original) {
+        if (value === null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  it('keeps native band order, raw share text and bounded visual extents rather than substituting a progress component', async () => {
+    const readings = [
+      { share: -5, extent: 0 },
+      { share: 0, extent: 0 },
+      { share: 35, extent: 35 },
+      { share: 125, extent: 100 },
+      { share: Number.NaN, extent: null },
+      { share: Number.POSITIVE_INFINITY, extent: 100 },
+    ];
+    const shares = readings.map(reading => reading.share);
+    const result = makeResult({
+      bands: shares.map((share, index) => ({
+        label: `Measured band ${index}`, energy_wh: index === 1 ? 0 : 12345,
+        share_pct: share, price_minor_per_wh: 0.015, cost_minor: index === 1 ? 0 : -123,
+      })),
+    });
+    mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation({ results: [result] }) });
+    await renderPage();
+    const bands = card('Where your energy actually landed');
+    const meters = within(bands).getAllByRole('meter');
+    expect(meters.map(meter => meter.getAttribute('aria-label'))).toEqual(shares.map((_, index) => `Measured band ${index}`));
+    meters.forEach((meter, index) => {
+      const source = shares[index];
+      expect(meter).toHaveAttribute('data-app-part', 'metric');
+      expect(meter).toHaveAttribute('data-app-metric', 'bar');
+      expect(meter).toHaveAttribute('data-metric-track');
+      expect(meter).toHaveAttribute('aria-valuemin', '0');
+      expect(meter).toHaveAttribute('aria-valuemax', '100');
+      expect(meter).toHaveAttribute('aria-valuetext', formatPct(source));
+      const fill = meter.querySelector('[data-metric-fill]')!;
+      expect(fill).toBe(meter.firstElementChild);
+      expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--text-secondary)]');
+      expect(meter).toHaveClass('h-1.5', 'rounded-full', 'bg-[var(--surface-2)]');
+      if (Number.isNaN(source)) {
+        expect(meter).toHaveAttribute('aria-valuenow', 'NaN');
+        expect((fill as HTMLElement).style.width).toBe('');
+      } else {
+        const extent = readings[index].extent;
+        expect(meter).toHaveAttribute('aria-valuenow', String(extent));
+        expect(fill).toHaveStyle({ width: `${extent}%` });
+      }
+    });
+    expect(bands).toHaveTextContent('$0.00');
+    expect(bands).toHaveTextContent('-$1.23');
+    expect(result.bands?.map(band => band.share_pct)).toEqual(shares);
+    expect(within(bands).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('keeps rate field validation, confirmation and submitted order inside the owned editor bodies', async () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    await renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Two-band draft' } });
+    const form = screen.getByRole('button', { name: 'Save rate plan' }).closest('form')!;
+    expect(within(form).getByRole('button', { name: 'Remove' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add band' }));
+    const rates = form.querySelectorAll<HTMLElement>('[data-app-card-kind="record"]');
+    const labels = ['Original night rate with complete user-authored context', 'Second rate'];
+    rates.forEach((rate, index) => {
+      fireEvent.change(within(rate).getByRole('textbox', { name: 'Label' }), { target: { value: labels[index] } });
+    });
+    fireEvent.change(within(rates[1]).getByRole('textbox', { name: 'Ends required' }), { target: { value: '24:01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.change(within(rates[1]).getByRole('textbox', { name: 'Ends required' }), { target: { value: '24:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate.mock.calls[0][0].rates.map((rate: TariffRate) => rate.label)).toEqual(labels);
+    fireEvent.click(within(rates[0]).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(form.querySelectorAll('[data-app-card-kind="record"]')).toHaveLength(2);
+    fireEvent.click(within(rates[0]).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(within(form).getByRole('textbox', { name: 'Label' })).toHaveValue('Second rate'));
+    expect(within(form).getByRole('button', { name: 'Remove' })).toBeDisabled();
   });
 });

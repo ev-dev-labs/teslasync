@@ -188,7 +188,7 @@ export default function ChargeDepartureAlignmentPage() {
           summary={available ? summary : undefined}
           loading={isLoading} retained={retained} missingReason={missingReason}
           historyContext={
-            <dl className="grid min-w-0 gap-3 @xl:grid-cols-2">
+            <dl data-app-part="list" className="grid min-w-0 gap-3 @xl:grid-cols-2">
               {sourceEntries.map(({ id, label, count, bounds, boundsLabel }) => (
                 <div key={id} className="min-w-0 space-y-1 break-words" data-alignment-bounds={id}>
                   <Label as="dt">{label}</Label>

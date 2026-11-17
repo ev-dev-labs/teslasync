@@ -111,6 +111,8 @@ export function ArrivalReliabilityWindowComparisons({
             {displayed.map((window, index) => (
               <article
                 key={`${window.routeKey}-${window.bucketStartHour}`}
+                data-app-part="card"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
               >
                 <Text as="p" variant="label">

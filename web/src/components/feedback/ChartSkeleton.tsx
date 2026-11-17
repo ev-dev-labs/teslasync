@@ -36,6 +36,7 @@ export function ChartSkeleton({ className = '', bars = 7, label = 'Loading chart
   const barCount = Number.isFinite(bars) ? Math.max(0, Math.floor(bars)) : 7
   return (
     <div
+      data-app-part="loading"
       className={cn('rounded-xl bg-white/[0.02] p-4 flex items-end gap-2', className)}
       role="status"
       aria-busy="true"
@@ -44,6 +45,7 @@ export function ChartSkeleton({ className = '', bars = 7, label = 'Loading chart
     >
       {Array.from({ length: barCount }).map((_, i) => (
         <div
+          data-app-part="skeleton"
           key={i}
           aria-hidden="true"
           className="flex-1 rounded-t bg-white/[0.04] animate-skeleton-wave"

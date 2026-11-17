@@ -240,14 +240,14 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                   size={110}
                 />
               </div>
-              <div role="group" aria-label={rangeLabel} aria-description={rangeDisplay == null ? unknownReading : undefined} className="mb-0 shrink-0 text-right">
-                <Text as="p" size="sm" color="secondary">
+              <div data-app-part="metric" data-app-metric="headline" role="group" aria-label={rangeLabel} aria-description={rangeDisplay == null ? unknownReading : undefined} className="mb-0 shrink-0 text-right">
+                <Text data-app-part="metric-label" as="p" size="sm" color="secondary">
                   {rangeLabel}
                 </Text>
-                <Text as="p" size="2xl" weight="bold" color="primary" mono className="tabular-nums">
-                  {rangeDisplay ?? '—'}
+                <Text data-app-part="metric-reading" as="p" size="2xl" weight="bold" color="primary" mono className="tabular-nums">
+                  <span data-app-part="metric-value">{rangeDisplay ?? '—'}</span>
                   {rangeDisplay != null && (
-                    <Text as="span" size="sm" color="muted" className="ml-1">{distanceLabel}</Text>
+                    <Text data-app-part="metric-unit" as="span" size="sm" color="muted" className="ml-1">{distanceLabel}</Text>
                   )}
                 </Text>
               </div>
@@ -255,30 +255,33 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
 
             <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
               {vs.is_locked == null ? (
-                <span className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] px-3 text-sm text-[var(--text-secondary)]">
+                <span data-app-part="status badge" data-app-variant="neutral" className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] px-3 text-sm text-[var(--text-secondary)]">
                   {t('vehicleHero.stat.status', 'Status')} <span aria-hidden="true">—</span>
                 </span>
               ) : (
-                <span className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                <span data-app-part="status badge" data-app-variant="neutral" className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
                   {vs.is_locked ? <Lock className="h-4 w-4" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
                   {vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
                 </span>
               )}
               {vs.sentry_mode != null && (
-                <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] px-3 text-sm text-[var(--semantic-info)]">
+                <span data-app-part="status badge" data-app-variant="info" className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] px-3 text-sm text-[var(--semantic-info)]">
                   {t('vehicleHero.stat.sentry', 'Sentry')} {vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
                 </span>
               )}
               {powerDisplay != null && (
-                <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
-                  {t('vehicleHero.stat.power', 'Power')} {fmtNumber(powerDisplay, 2)} kW
+                <span data-app-part="metric badge" data-app-metric="inline" data-app-variant="neutral" className="inline-flex min-h-9 items-center gap-1 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                  <span data-app-part="metric-label">{t('vehicleHero.stat.power', 'Power')}</span>{' '}
+                  <span data-app-part="metric-reading"><span data-app-part="metric-value">{fmtNumber(powerDisplay, 2)}</span>{' '}<span data-app-part="metric-unit">kW</span></span>
                 </span>
               )}
-              <span role="group" aria-label={insideLabel} aria-description={insideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
-                {insideLabel} {insideTempDisplay != null ? `${fmtNumber(insideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              <span data-app-part="metric badge" data-app-metric="inline" data-app-variant="neutral" role="group" aria-label={insideLabel} aria-description={insideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center gap-1 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                <span data-app-part="metric-label">{insideLabel}</span>{' '}
+                <span data-app-part="metric-reading"><span data-app-part="metric-value">{insideTempDisplay != null ? fmtNumber(insideTempDisplay, 0) : '—'}</span>{insideTempDisplay != null && <span data-app-part="metric-unit">{temperatureLabel}</span>}</span>
               </span>
-              <span role="group" aria-label={outsideLabel} aria-description={outsideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
-                {outsideLabel} {outsideTempDisplay != null ? `${fmtNumber(outsideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              <span data-app-part="metric badge" data-app-metric="inline" data-app-variant="neutral" role="group" aria-label={outsideLabel} aria-description={outsideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center gap-1 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                <span data-app-part="metric-label">{outsideLabel}</span>{' '}
+                <span data-app-part="metric-reading"><span data-app-part="metric-value">{outsideTempDisplay != null ? fmtNumber(outsideTempDisplay, 0) : '—'}</span>{outsideTempDisplay != null && <span data-app-part="metric-unit">{temperatureLabel}</span>}</span>
               </span>
             </div>
           </>
@@ -299,6 +302,9 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </Text>
           <Link
             to={`/vehicles/${vehicle.id}`}
+            data-app-part="button"
+            data-app-variant="ghost"
+            data-app-size="sm"
             className={cn(
               NAV_LINK_CLASS,
               'shrink-0 border-0 bg-transparent px-0 text-[var(--text-primary)] hover:bg-transparent',

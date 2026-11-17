@@ -65,20 +65,20 @@ afterEach(() => {
 });
 
 describe('persistent About modal ownership', () => {
-  it('keeps modal actions mounted after the Help popover closes', () => {
+  it('keeps modal actions mounted after the Help popover closes', async () => {
     const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
     render(<PersistentAboutHarness />);
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Open help and about' }),
     );
-    fireEvent.click(screen.getByTestId('status-bar-about-trigger'));
+    fireEvent.click(await screen.findByTestId('status-bar-about-trigger'));
 
     expect(
       screen.queryByRole('dialog', { name: 'Help & support' }),
     ).toBeNull();
     const about = screen.getByRole('dialog', { name: 'About this build' });
-    const releaseNotes = screen.getByRole('button', {
+    const releaseNotes = await screen.findByRole('button', {
       name: 'Release notes',
     });
 

@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   compareWorktreeState,
+  git as freshnessGit,
   listRecursive,
   pathMarker,
   registeredPaths,
@@ -190,6 +191,34 @@ describe('generated-artifact freshness: dirty-worktree mutation detection', () =
 
   afterEach(() => {
     rmSync(fixtureRoot, { recursive: true, force: true })
+  })
+
+  it('reads large tracked-file and worktree listings without truncation', () => {
+    const run = (args: string[], input?: string) => spawnSync('git', args, {
+      cwd: fixtureRoot,
+      encoding: 'utf8',
+      input,
+    })
+    const init = run(['init', '-q'])
+    expect(init.status, init.stderr).toBe(0)
+    const blob = run(['hash-object', '-w', '--stdin'], 'fixture')
+    expect(blob.status, blob.stderr).toBe(0)
+    const names = Array.from({ length: 10_000 }, (_, i) =>
+      `captures/${String(i).padStart(5, '0')}-${'x'.repeat(110)}.png`)
+    const entries = names.map(name => `100644 ${blob.stdout.trim()}\t${name}\n`).join('')
+    const index = run(['update-index', '--index-info'], entries)
+    expect(index.status, index.stderr).toBe(0)
+
+    const files = freshnessGit(['ls-files', '-z'], fixtureRoot)
+    expect(Buffer.byteLength(files)).toBeGreaterThan(1024 * 1024)
+    expect(files.split('\0').filter(Boolean)).toEqual(names)
+    const status = freshnessGit(['status', '--porcelain', '-uall'], fixtureRoot)
+    expect(Buffer.byteLength(status)).toBeGreaterThan(1024 * 1024)
+    expect(status).toContain(names[names.length - 1])
+  }, 60_000)
+
+  it('reports the underlying error when Git cannot start', () => {
+    expect(() => freshnessGit(['status'], join(fixtureRoot, 'missing'))).toThrow(/ENOENT/)
   })
 
   it('detects a byte mutation of an ALREADY-DIRTY file whose git status never changes', () => {

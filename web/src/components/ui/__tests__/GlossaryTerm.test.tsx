@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import '@/i18n'
 
 import { GlossaryTerm } from '../GlossaryTerm'
@@ -62,7 +62,7 @@ describe('GlossaryTerm', () => {
     // Only the affordance disappears — the definition remains reachable from
     // the always-available glossary panel on /help.
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    resetProductPreferences()
+    act(() => { resetProductPreferences() })
   })
 
   it('degrades to plain text for an unknown term rather than throwing', () => {

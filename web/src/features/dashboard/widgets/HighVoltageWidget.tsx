@@ -112,7 +112,7 @@ export default function HighVoltageWidget({ vehicleId, config, size }: WidgetPro
   const readings = (
     <section className="min-w-0 space-y-2" aria-label={readingsLabel}>
       <Subhead>{readingsLabel}</Subhead>
-      <ul className={cn('grid min-w-0 gap-x-4 gap-y-3', !compact && 'grid-cols-1 @md:grid-cols-2')}>
+      <ul data-app-part="list" className={cn('grid min-w-0 gap-x-4 gap-y-3', !compact && 'grid-cols-1 @md:grid-cols-2')}>
         {rows.map((row, index) => (
           <li key={row.name} className="min-w-0 space-y-1 border-b border-[var(--border-subtle)] pb-2">
             <Caption as="p">{labels[index]}</Caption>

@@ -20,7 +20,7 @@ export function BridgeStatus({
       <Label id={titleId} className="mb-1.5 block">
         {t('feedback.queue.bridge.title', 'GitHub bridge')}
       </Label>
-      <div role="status" aria-labelledby={titleId} aria-busy={loading}>
+      <div data-app-part="status" role="status" aria-labelledby={titleId} aria-busy={loading}>
         {loading ? (
           <Skeleton height={16} width="60%" />
         ) : unknown ? (

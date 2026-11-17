@@ -169,7 +169,7 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
           )}
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--border-subtle)]" data-testid="vehicle-settings-rows">
+        <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)]" data-testid="vehicle-settings-rows">
           {VEHICLE_SETTING_DESCRIPTORS.map((desc) => {
             const effective = findEffectiveSetting(data, desc.key)
             return (
@@ -277,7 +277,7 @@ function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }:
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start">
         <div className="min-w-0 lg:col-span-4 space-y-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <label htmlFor={`vehicle-setting-${vehicleId}-${descriptor.key}`} className="min-w-0 break-words">
+            <label data-app-part="field-label" htmlFor={`vehicle-setting-${vehicleId}-${descriptor.key}`} className="min-w-0 break-words">
               <Text size="xs" weight="medium" color="primary">
                 {t(`vehicleSettings.keys.${descriptor.key}.label`, descriptor.key)}
               </Text>

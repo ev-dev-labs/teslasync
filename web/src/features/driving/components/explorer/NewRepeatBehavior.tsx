@@ -128,17 +128,21 @@ export function NewRepeatBehavior({
                 />
               </div>
 
-              <div className="flex items-start gap-2 rounded-xl border border-[var(--border-subtle)] p-3">
-                <Sparkles
-                  className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
-                  aria-hidden="true"
-                />
-                <Text as="p" variant="caption">
-                  {t(
-                    'explorer.behavior.definition',
-                    'The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat.',
-                  )}
-                </Text>
+              <div data-app-part="feedback" data-app-feedback-kind="notice" className="flex items-start gap-2 rounded-xl border border-[var(--border-subtle)] p-3">
+                <span data-app-part="feedback-icon" className="shrink-0">
+                  <Sparkles
+                    className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
+                    aria-hidden="true"
+                  />
+                </span>
+                <div data-app-part="feedback-content">
+                  <Text data-app-part="feedback-message" as="p" variant="caption">
+                    {t(
+                      'explorer.behavior.definition',
+                      'The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat.',
+                    )}
+                  </Text>
+                </div>
               </div>
             </div>
           )}

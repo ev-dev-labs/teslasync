@@ -1,7 +1,8 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './app-design-test';
 import type { DashboardLayoutsPayload } from '../src/api/hooks/useSettings';
 import { prepareCatalogueState } from './dashboardCatalogueStateHarness';
-import { fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { assertMockApiAfterNavigation, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 import { positionCataloguePanel } from './dashboardCatalogueCapture';
 import { expectFlatWidgetSurfaces } from './dashboardWidgetSurfaces';
 import { installCataloguePhotoSource } from './dashboardCatalogueGeometry';
@@ -98,7 +99,10 @@ for (const theme of ['dark', 'light'] as const) {
         counts: { resolved: 1, missing: 0, failed: 0 },
         vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...evidence }],
       } }));
+      const origin = new URL(page.url()).origin;
+      await prepareMockApiNavigation(page);
       await page.reload();
+      await assertMockApiAfterNavigation(page, origin);
       await waitForHarnessReady(page, mocks);
       const hero = page.locator('[data-widget-id="state-vehicle-hero"] > .widget-panel');
       await positionCataloguePanel(hero);
@@ -164,7 +168,10 @@ for (const theme of ['dark', 'light'] as const) {
       } }));
 
       const load = async () => {
+        const previousOrigin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null;
+        await prepareMockApiNavigation(page);
         await page.goto('/');
+        if (previousOrigin) await assertMockApiAfterNavigation(page, previousOrigin);
         await waitForHarnessReady(page, mocks);
       };
       await load();

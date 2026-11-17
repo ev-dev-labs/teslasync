@@ -5,7 +5,7 @@ import { Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import {
-  ChartTooltip, chartGrid, axisTickSm, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ChartTooltip, chartGrid, axisTickSm, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, EmbeddedChart,
 } from '@/components/charts';
 import type { StatPeriod } from '@/lib/metric-reference';
@@ -58,7 +58,7 @@ export function TimeOfUseAnalysis({
               fluid={false} mobileHeight={224} height={256}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={rows}>
-                  <CartesianGrid {...chartGrid} />
+                  {chartGrid}
                   <XAxis dataKey="label" {...axisTickSm} interval={2} />
                   <YAxis {...axisTickSm} tickFormatter={(v: number) => `${v}`} />
                   <Tooltip content={<ChartTooltip />} />

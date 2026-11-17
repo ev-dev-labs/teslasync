@@ -1,4 +1,5 @@
 /** Authored for the parent's integrated runtime window. NOTRUN by this writer. */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -104,6 +105,8 @@ beforeEach(() => {
   });
 });
 afterEach(() => { vi.unstubAllGlobals(); });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Battery cells live modernization preservation', () => {
   it('reviews actual electrical precision, extrema identity and synthesis limitations in the real drawer', () => {

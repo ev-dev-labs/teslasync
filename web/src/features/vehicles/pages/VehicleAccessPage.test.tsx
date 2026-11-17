@@ -44,6 +44,7 @@ import type { ReactNode } from 'react';
 
 import type { VehicleDriver, VehicleInvitation } from '@/api/types';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -572,6 +573,54 @@ describe('VehicleAccessPage — header actions', () => {
 
 
 describe('VehicleAccessPage — preserved mobile capabilities', () => {
+  it('retains driver and invitation details and their actions in the phone grid', async () => {
+    const bounds = forceMobileDataTables();
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    try {
+      mockDrivers.mockReturnValue(makeQuery({ data: [makeDriver({ share_user_id: 0 })] }));
+      mockInvitations.mockReturnValue(makeQuery({ data: [
+        makeInvite({ invitation_id: 'inv-42', invite_url: 'https://tesla.test/invite/abc', expires_at: isoIn(3) }),
+        makeInvite({ id: 2, status: 'accepted', invite_url: null }),
+      ] }));
+      renderPage();
+
+      const drivers = screen.getByRole('group', { name: 'vehicles:access-drivers' });
+      expect(within(drivers).getByText('Ada Lovelace')).toBeInTheDocument();
+      expect(within(drivers).getByText('ada@example.com')).toBeInTheDocument();
+      expect(within(drivers).getByRole('button', { name: 'Remove driver' })).toBeInTheDocument();
+      fireEvent.click(within(drivers).getByRole('button', { name: 'Quick view' }));
+      const driverDetail = screen.getByRole('dialog', { name: 'vehicles:access-drivers' });
+      for (const label of ['Name', 'Email', 'Role']) expect(within(driverDetail).getByText(label)).toBeInTheDocument();
+      fireEvent.click(within(driverDetail).getByRole('button', { name: 'Remove driver' }));
+      const removeDialog = screen.getByRole('dialog', { name: 'Remove driver' });
+      fireEvent.click(within(removeDialog).getByRole('button', { name: 'Remove' }));
+      expect(removeDriverM.mutate.mock.calls[0][0]).toEqual({ vehicleId: '7', shareUserId: 0 });
+      act(() => removeDriverM.mutate.mock.calls[0][1].onSuccess());
+      fireEvent.click(within(driverDetail).getAllByRole('button', { name: 'Close' })[0]);
+
+      const invitations = screen.getByRole('group', { name: 'vehicles:access-invitations' });
+      expect(within(invitations).getAllByRole('button', { name: 'Copy invite link' })).toHaveLength(1);
+      expect(within(invitations).getAllByRole('button', { name: 'Revoke invitation' })).toHaveLength(1);
+      fireEvent.click(within(invitations).getAllByRole('button', { name: 'Quick view' })[0]);
+      const inviteDetail = screen.getByRole('dialog', { name: 'vehicles:access-invitations' });
+      for (const label of ['Status', 'Created by', 'Expires', 'Link']) {
+        expect(within(inviteDetail).getByText(label)).toBeInTheDocument();
+      }
+      fireEvent.click(within(inviteDetail).getByRole('button', { name: 'Copy invite link' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://tesla.test/invite/abc'));
+      fireEvent.click(within(inviteDetail).getByRole('button', { name: 'Revoke invitation' }));
+      const revokeDialog = screen.getByRole('dialog', { name: 'Revoke invitation' });
+      fireEvent.click(within(revokeDialog).getByRole('button', { name: 'Revoke' }));
+      expect(revokeInvitationM.mutate.mock.calls[0][0]).toEqual({ vehicleId: '7', invitationId: 'inv-42' });
+    } finally {
+      bounds.mockRestore();
+      if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('keeps email, invitation creator and Copy in the mobile table markup', () => {
     renderPopulated();
     expect(screen.getByText('ada@example.com').closest('td')).not.toHaveClass('hidden');

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the exact Settings preview invoker ref, event.currentTarget capture before the original openPreview call and existing public Modal return-focus callback; recover the complete independently compiled Candidate29 predecessor without inventing or refreshing an older Settings source approval.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-candidate-dist-v29/assets/BQwcO2Lx.js.map",
+    "mapSha256": "aa4a06ded9d07df793a9e4411a1a8b010b9a4b567e7520b836611469cfac1010",
+    "mapSource": "D:/repos/teslasync/web/src/features/settings/components/WidgetDesignPackSettings.tsx",
+    "sha256": "7d20529a11b204eeed03bbc9b069ec02cb7c3785712e37cbe5929e964e3d3538"
+  },
+  "dependencies": [
+    {
+      "file": "web/src/components/ui/Modal.tsx",
+      "sha256": "bf9a4f2d3c8716c9b7452cc75081b5776506c561296eae049ab3dcc9f1d90f6c"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "sha256": "541094100b79cd6db75262c959733e00ae0917a6f758b547eec741bfe7daea08"
+    },
+    {
+      "file": "web/src/components/ui/AppDesignPortal.tsx",
+      "sha256": "a2898954070103b83c790399100f2955a350325f83d7acdca9cdd61f6bcab719"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"
+    },
+    {
+      "file": "web/src/hooks/useWidgetDesignPack.ts",
+      "sha256": "56f353cc803ac6c8fe96a4ed4beb66fab964a22eee839923d7cb96f697a1ac53"
+    },
+    {
+      "file": "web/src/features/settings/components/WidgetDesignPackPreview.tsx",
+      "sha256": "6b6ab11b133e05768e6a781aab8d304dc145f3ebb6212251a21c4267cf63a8a9"
+    },
+    {
+      "file": "web/src/features/settings/components/WidgetDesignPackThumbnail.tsx",
+      "sha256": "7e424ae0b6f2322800610b7c5ceba51bef710bd2afc8a5464dadba44e268725e"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/designPacks/PackBoundary.tsx",
+      "sha256": "f62b1f714dae2b1837f8c9e524a4738acc09991dc66e55154ec07414e31c3285"
+    }
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/WidgetDesignPackSettings.tsx",
+      "before": "7d20529a11b204eeed03bbc9b069ec02cb7c3785712e37cbe5929e964e3d3538",
+      "after": "9d3af21b5f7ea494aa7bf142da4b65b37aa901294f0fcbb8f8d29c49fb7074ad",
+      "originalLineCount": 152,
+      "currentLineCount": 157,
+      "originalCallCount": 38,
+      "originalCallsSha256": "55ee570fd23e71b6bc7f2b73b495520a1929253531f1b9a68eb2b79900827483",
+      "originalProjectionSha256": "924051792c60cff4c403bc40460cfa8a95b536fb34a60eb8e3399574314f706a",
+      "hunks": [
+        {
+          "start": 21,
+          "old": [],
+          "new": [
+            "  const previewTrigger = useRef<HTMLButtonElement | null>(null);"
+          ]
+        },
+        {
+          "start": 118,
+          "old": [
+            "            <Button size=\"sm\" className=\"min-h-11\" variant=\"secondary\" onClick={() => openPreview(entry.id)}"
+          ],
+          "new": [
+            "            <Button size=\"sm\" className=\"min-h-11\" variant=\"secondary\" onClick={event => {",
+            "              previewTrigger.current = event.currentTarget;",
+            "              openPreview(entry.id);",
+            "            }}"
+          ]
+        },
+        {
+          "start": 138,
+          "old": [],
+          "new": [
+            "      getReturnFocusTarget={() => previewTrigger.current}"
+          ]
+        }
+      ]
+    }
+  ]
+}

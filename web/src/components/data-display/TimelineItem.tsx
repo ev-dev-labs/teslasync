@@ -53,9 +53,10 @@ export function TimelineItem({
 
   const body = (
     <>
-      <div className="flex flex-col items-center">
+      <div data-app-part="timeline-rail" className="flex flex-col items-center">
         <div
           aria-hidden="true"
+          data-app-part="timeline-marker"
           className={cn(
             'flex h-8 w-8 items-center justify-center rounded-lg shrink-0',
             !hasColor && 'bg-[var(--surface-2)] text-[var(--text-muted)]',
@@ -64,9 +65,9 @@ export function TimelineItem({
         >
           {icon}
         </div>
-        {!isLast && <div aria-hidden="true" className="w-px flex-1 bg-[var(--surface-2)] mt-1" />}
+        {!isLast && <div data-app-part="timeline-connector" aria-hidden="true" className="w-px flex-1 bg-[var(--surface-2)] mt-1" />}
       </div>
-      <div className="pb-4 min-w-0 flex-1">
+      <div data-app-part="timeline-content" className="pb-4 min-w-0 flex-1">
         {href && hasRichSlots ? (
           <Link to={href} className={cn('block min-w-0', linkClassName)}>{titleContent}</Link>
         ) : titleContent}
@@ -83,6 +84,7 @@ export function TimelineItem({
   if (href && !hasRichSlots) {
     return (
       <Link
+        data-app-part="timeline-row"
         to={href}
         className={cn('flex gap-3 -mx-1 px-1', linkClassName)}
       >
@@ -90,5 +92,5 @@ export function TimelineItem({
       </Link>
     )
   }
-  return <div className="flex gap-3">{body}</div>
+  return <div data-app-part="timeline-row" className="flex gap-3">{body}</div>
 }

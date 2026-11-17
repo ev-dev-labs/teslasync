@@ -55,47 +55,51 @@ export function DepartureForecastRankedWindows({
             </div>
           ) : (
             <>
-              <ol className="space-y-2">
+              <ol data-app-part="list" data-app-list="ranked" className="space-y-2">
                 {windows.map((slot, index) => (
                   <li
                     key={slot.startMs}
+                    data-app-part="list-row"
                     className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                   >
-                    <Badge variant="neutral">
-                      {t('departure.ranked.rank', '#{{rank}}', {
-                        rank: index + 1,
-                      })}
-                    </Badge>
-                    <div className="min-w-0 flex-1">
-                      <Text
-                        as="p"
-                        variant="bodySm"
-                        className="font-medium"
-                      >
-                        {departureDateTime(
-                          slot.startMs,
-                          locale,
-                          timeZone,
-                        )}
-                      </Text>
-                      <Text as="p" variant="caption">
-                        {t(
-                          'departure.ranked.calendarEvidence',
-                          '{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities',
-                          {
-                            relative: relativeDepartureLabel(
-                              t,
-                              slot.minutesFromNow,
-                            ),
-                            departures: fmtInt(
-                              slot.historicalDepartures, locale,
-                            ),
-                            occurrences: fmtInt(slot.cellOccurrences, locale),
-                          },
-                        )}
-                      </Text>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Badge variant="neutral">
+                        {t('departure.ranked.rank', '#{{rank}}', {
+                          rank: index + 1,
+                        })}
+                      </Badge>
+                      <div className="min-w-0 flex-1">
+                        <Text
+                          as="p"
+                          data-app-part="metric-label"
+                          variant="bodySm"
+                          className="font-medium"
+                        >
+                          {departureDateTime(
+                            slot.startMs,
+                            locale,
+                            timeZone,
+                          )}
+                        </Text>
+                        <Text data-app-part="metric-context" as="p" variant="caption">
+                          {t(
+                            'departure.ranked.calendarEvidence',
+                            '{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities',
+                            {
+                              relative: relativeDepartureLabel(
+                                t,
+                                slot.minutesFromNow,
+                              ),
+                              departures: fmtInt(
+                                slot.historicalDepartures, locale,
+                              ),
+                              occurrences: fmtInt(slot.cellOccurrences, locale),
+                            },
+                          )}
+                        </Text>
+                      </div>
                     </div>
-                    <Badge variant="neutral">
+                    <Badge data-app-part="badge metric-value" variant="neutral">
                       {t(
                         'departure.ranked.likelihood',
                         '{{value}}% modeled',

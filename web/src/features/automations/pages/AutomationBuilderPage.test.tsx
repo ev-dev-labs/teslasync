@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { cleanup, act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import '../../../i18n';
@@ -1144,6 +1144,7 @@ describe('AutomationBuilderPage — new-automation draft autosave', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
@@ -1154,7 +1155,7 @@ describe('AutomationBuilderPage — new-automation draft autosave', () => {
     renderPage('/automations/new');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Draft Me' } });
-    await vi.advanceTimersByTimeAsync(2000);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
 
     const raw = window.localStorage.getItem('teslasync:draft:v1:automation:new');
     expect(raw).not.toBeNull();

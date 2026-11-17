@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './app-design-test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { installCardLayoutFixtures } from './cardLayoutFixtures';
 import { auditCardGeometry, measureCardGeometry } from './cardLayoutGeometry';

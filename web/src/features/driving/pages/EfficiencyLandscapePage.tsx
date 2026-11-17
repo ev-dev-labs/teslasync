@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Mountain } from 'lucide-react';
 
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
+import { EmbeddedChart } from '@/components/charts';
 import { Text, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import type { StatMetric } from '@/components/data-display/stat-reference';
@@ -182,9 +183,46 @@ export default function EfficiencyLandscapePage() {
               actionTo={{ label: t('landscape.browseDrives', 'Browse drives'), to: '/drives' }}
             />}
           >
-            <div className="overflow-x-auto">
+            <EmbeddedChart
+              title={t('landscape.field.title', 'Consumption Field')}
+              embeddedTitleHeading={false}
+              ariaLabel={t('landscape.field.aria', 'Grid of consumption by speed band and temperature band; best {{best}}, worst {{worst}}', {
+                best: landscape.best != null ? cellDescription(landscape.best) : '—',
+                worst: landscape.worst != null ? cellDescription(landscape.worst) : '—',
+              })}
+              viewportClassName="h-auto min-h-0 max-h-none sm:min-h-0 [contain:layout]"
+              data={[...landscape.cells].reverse().flatMap(row => row.map(cell => ({
+                temperature: tempLabel(cell.tempBand),
+                speed: `${speedLabel(cell.speedBand)} ${speedUnit}`,
+                consumption: cell.whPerKm == null ? null : toEff(cell.whPerKm),
+                drives: cell.drives,
+              })))}
+              dataColumns={[
+                { key: 'temperature', label: t('tempImpact.temperature', 'Temperature') },
+                { key: 'speed', label: t('common.speed', 'Speed') },
+                { key: 'consumption', label: effUnit },
+                { key: 'drives', label: t('landscape.analyzed', 'Drives Mapped'), kind: 'count' },
+              ]}
+              caption={hasScale ? (
+                <div data-app-part="chart-legend" data-chart-scale className="mt-3 flex flex-wrap items-center gap-2">
+                  <Text variant="caption" className="font-mono tabular-nums">
+                    {toEff(landscape.minWhPerKm!)} {effUnit}
+                  </Text>
+                  <span
+                    className="h-2 w-40 rounded-full"
+                    style={{ background: `linear-gradient(90deg, ${SCALE_FROM}, ${SCALE_TO})` }}
+                    aria-hidden="true"
+                  />
+                  <Text variant="caption" className="font-mono tabular-nums">
+                    {toEff(landscape.maxWhPerKm!)} {effUnit}
+                  </Text>
+                </div>
+              ) : undefined}
+            >
+            <div data-app-part="chart" className="overflow-x-auto">
               <div
                 role="img"
+                data-app-part="chart-plot"
                 aria-label={t('landscape.field.aria', 'Grid of consumption by speed band and temperature band; best {{best}}, worst {{worst}}', {
                   best: landscape.best != null ? cellDescription(landscape.best) : '—',
                   worst: landscape.worst != null ? cellDescription(landscape.worst) : '—',
@@ -212,6 +250,8 @@ export default function EfficiencyLandscapePage() {
                         return (
                           <div
                             key={cell.speedBand}
+                            data-chart-family="heatmap"
+                            data-heatmap-state={cell.whPerKm == null ? 'unavailable' : 'active'}
                             title={cellDescription(cell)}
                             className="flex h-14 flex-col items-center justify-center rounded-lg border border-[var(--border-subtle)]"
                             style={{ background: bg, opacity: trusted ? 0.9 : 1 }}
@@ -242,22 +282,8 @@ export default function EfficiencyLandscapePage() {
                 })}
               </div>
 
-              {hasScale && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Text variant="caption" className="font-mono tabular-nums">
-                    {toEff(landscape.minWhPerKm!)} {effUnit}
-                  </Text>
-                  <span
-                    className="h-2 w-40 rounded-full"
-                    style={{ background: `linear-gradient(90deg, ${SCALE_FROM}, ${SCALE_TO})` }}
-                    aria-hidden="true"
-                  />
-                  <Text variant="caption" className="font-mono tabular-nums">
-                    {toEff(landscape.maxWhPerKm!)} {effUnit}
-                  </Text>
-                </div>
-              )}
             </div>
+            </EmbeddedChart>
           </SourceContent>
         </LayoutCard>
       </FadeIn>

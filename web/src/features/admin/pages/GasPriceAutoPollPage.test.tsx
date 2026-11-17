@@ -139,6 +139,10 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import GasPriceAutoPollPage from './GasPriceAutoPollPage'
 import type { GasPriceStatus, GasPriceHistory } from '@/api/types'
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -377,15 +381,15 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
 })
 
 describe('GasPriceAutoPollPage — loading, error, empty', () => {
-  it('shows skeleton placeholders while the queries are pending (never blank)', () => {
+  it('shows skeleton placeholders while the queries are pending (never blank)', async () => {
     install({ pending: true })
-    const { container } = renderPage()
+    await act(async () => { renderPage() })
 
     // The page shell + action stay mounted; sections show skeletons.
     expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
     // Each source owns its loading geometry: metric values, panel boxes or chart bars.
     // Match only those placeholders inside their source's loading announcement.
-    const loadingPlaceholders = container.querySelectorAll([
+    const loadingPlaceholders = document.body.querySelectorAll([
       '[data-testid="gas-price-summary"][data-operational-brief][aria-busy="true"] [data-operational-metric] span[aria-hidden="true"][class~="bg-[var(--surface-3)]"]',
       '[role="status"][aria-label="Loading Configuration"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
       '[role="status"][aria-label="Loading Price history"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',

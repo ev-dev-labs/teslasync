@@ -61,7 +61,7 @@ export function ChannelStatsBand({ stats, isLoading, error, onRetry, retained = 
       resourceName={t('notifications.stats.resource', 'notification statistics')} />;
   }
   if (isLoading && !stats) {
-    return <div role="status" aria-busy="true"
+    return <div data-app-part="status" role="status" aria-busy="true"
       aria-label={t('notifications.stats.loading', 'Loading notification statistics')}
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-[76px]" />)}

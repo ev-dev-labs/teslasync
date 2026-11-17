@@ -188,14 +188,14 @@ export function UsageCard(props: UsageCardProps) {
 
   if (!hasAnything) {
     return (
-      <p className={typography.role.bodySm}>
+      <p data-app-part="feedback empty" className={typography.role.bodySm}>
         {emptyMessage ?? 'No data to display yet.'}
       </p>
     )
   }
 
   return (
-    <div className={'min-w-0 space-y-4 break-words ' + (className ?? '')}>
+    <div data-app-part="section" className={'min-w-0 space-y-4 break-words ' + (className ?? '')}>
       {budget ? <BudgetSection budget={budget} /> : null}
 
       {bands && bands.length > 0 ? <BandsSection bands={bands} /> : null}
@@ -264,20 +264,20 @@ function BudgetSection({ budget }: { budget: UsageCardBudget }) {
 
 function BandsSection({ bands }: { bands: UsageCardBand[] }) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div data-app-part="metric-grid" className="grid grid-cols-1 gap-3 md:grid-cols-3">
       {bands.map((b, i) => {
         const intent = b.intent ?? 'normal'
         return (
-          <div key={i} className={'min-w-0 rounded-shape-lg p-3 ' + intentBandRing[intent]}>
-            <div className={'flex items-center gap-2 ' + typography.role.label}>
+          <div data-app-part="metric" data-app-metric="tile" data-app-tone={intent === 'normal' ? undefined : intent === 'warn' ? 'warning' : 'danger'} key={i} className={'min-w-0 rounded-shape-lg p-3 ' + intentBandRing[intent]}>
+            <div data-app-part="metric-label" className={'flex items-center gap-2 ' + typography.role.label}>
               {b.icon ? <span className="inline-flex h-3.5 w-3.5 shrink-0">{b.icon}</span> : null}
               {b.label}
             </div>
-            <div className={'mt-1 tabular-nums ' + typography.role.body + ' ' + typography.weight.semibold}>
+            <div data-app-part="metric-value" className={'mt-1 tabular-nums ' + typography.role.body + ' ' + typography.weight.semibold}>
               {b.value}
             </div>
             {b.sub != null ? (
-              <div className={typography.role.caption + ' tabular-nums'}>{b.sub}</div>
+              <div data-app-part="metric-context" className={typography.role.caption + ' tabular-nums'}>{b.sub}</div>
             ) : null}
           </div>
         )
@@ -288,13 +288,13 @@ function BandsSection({ bands }: { bands: UsageCardBand[] }) {
 
 function DetailsSection({ details }: { details: UsageCardDetail[] }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+    <div data-app-part="metric-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
       {details.map((d, i) => {
         const intent = d.intent ?? 'normal'
         return (
-          <div key={i} className="min-w-0">
-            <div className={typography.role.caption}>{d.label}</div>
-            <div className={typography.size.sm + ' tabular-nums ' + intentValueText[intent]}>{d.value}</div>
+          <div data-app-part="metric" data-app-metric="tile" key={i} className="min-w-0">
+            <div data-app-part="metric-label" className={typography.role.caption}>{d.label}</div>
+            <div data-app-part="metric-value" className={typography.size.sm + ' tabular-nums ' + intentValueText[intent]}>{d.value}</div>
           </div>
         )
       })}
@@ -308,18 +308,18 @@ function TopListsSection({ topLists }: { topLists: UsageCardTopList[] }) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {topLists.map((tl) => (
-        <div key={tl.key} className="min-w-0 rounded-shape-lg bg-[var(--surface-2)] p-3">
-          <div className={'flex items-center gap-2 ' + typography.role.label}>
+        <div data-app-part="card" data-surface-variant="standalone" key={tl.key} className="min-w-0 rounded-shape-lg bg-[var(--surface-2)] p-3">
+          <div data-app-part="list-heading" className={'flex items-center gap-2 ' + typography.role.label}>
             {tl.icon ? <span className="inline-flex h-3.5 w-3.5 shrink-0">{tl.icon}</span> : null}
             {tl.title}
           </div>
-          <ul className="mt-2 space-y-2">
+          <ul data-app-part="list" data-app-list="ranked" className="mt-2 space-y-2">
             {tl.items.map((item) => (
-              <li key={item.key} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
-                <span className={'min-w-0 break-all ' + typography.role.code}>
+              <li data-app-part="list-row" key={item.key} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                <span data-app-part="metric-label" className={'min-w-0 break-all ' + typography.role.code}>
                   {item.label}
                 </span>
-                <span className={typography.role.body + ' tabular-nums'}>{item.value}</span>
+                <span data-app-part="metric-value" className={typography.role.body + ' tabular-nums'}>{item.value}</span>
               </li>
             ))}
           </ul>
@@ -334,6 +334,8 @@ function BannerSection({ banner }: { banner: UsageCardBanner }) {
   const Icon = banner.icon ?? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
   return (
     <div
+      data-app-part="feedback"
+      data-app-tone={intent === 'normal' ? 'info' : intent === 'warn' ? 'warning' : 'danger'}
       className={'flex min-w-0 items-start gap-2 rounded-shape-lg p-3 ' + intentBannerBg[intent]}
       role="status"
       aria-live="polite"
@@ -357,6 +359,9 @@ function FooterSection({ links }: { links: UsageCardFooterLink[] }) {
           return (
             <a
               key={link.key}
+              data-app-part="button"
+              data-app-variant={link.primary ? 'primary' : 'ghost'}
+              data-app-size="sm"
               href={link.to}
               target="_blank"
               rel="noopener noreferrer"
@@ -368,7 +373,7 @@ function FooterSection({ links }: { links: UsageCardFooterLink[] }) {
           )
         }
         return (
-          <Link key={link.key} to={link.to} className={baseClass}>
+          <Link data-app-part="button" data-app-variant={link.primary ? 'primary' : 'ghost'} data-app-size="sm" key={link.key} to={link.to} className={baseClass}>
             <span className="min-w-0 break-words text-start">{link.label}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </Link>

@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -270,6 +271,8 @@ beforeEach(() => {
   vehiclesRefetch.mockReset();
   operationalMode.writeBlockReason = null;
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('FleetOperationsPage', () => {
   function renderPage() {
@@ -569,10 +572,10 @@ describe('FleetOperationsPage', () => {
     expect(forecastMetric).toHaveAttribute('data-value-state', 'value');
     expect(forecastMetric?.querySelector('[data-operational-value]')).toHaveTextContent('20');
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
-    for (const action of ['Save as PNG', 'Copy image to clipboard']) {
+    for (const action of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
       expect(screen.getByRole('menuitem', { name: action })).toBeEnabled();
     }
-    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).not.toBeInTheDocument();
+    expect(document.querySelector('.recharts-surface')).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
     expect(mutate).not.toHaveBeenCalled();
@@ -603,6 +606,12 @@ describe('FleetOperationsPage', () => {
     expect(screen.getByRole('heading', { name: 'Charging policy matrix' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Maintenance work-order board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
+    const workOrder = screen.getByText('Rotate tires').closest('article');
+    expect(workOrder).toHaveAttribute('data-app-part', 'card');
+    expect(workOrder?.parentElement).toHaveAttribute('data-app-part', 'list');
+    const workOrderColumn = workOrder?.closest('section');
+    expect(workOrderColumn).toHaveAttribute('data-app-part', 'section');
+    expect(workOrderColumn?.parentElement).toHaveAttribute('data-app-part', 'grid');
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
     const reservation = screen.getByRole('button', { name: 'New reservation' });
     expect(reservation.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');

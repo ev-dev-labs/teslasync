@@ -46,6 +46,7 @@
  * The widget is rendered inside a MemoryRouter because the shared feedback
  * components it composes (QueryError / EmptyState) may reach for router context.
  */
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -311,6 +312,8 @@ beforeEach(() => {
 });
 
 // ── Pure helper: shortTime ───────────────────────────────────────────────────
+
+setupCanvasTextMeasurement();
 
 describe('shortTime', () => {
   it('formats a valid ISO timestamp to zero-padded local HH:MM', () => {

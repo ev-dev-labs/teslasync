@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import type { NotificationLog } from '@/api/types';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { NotificationInboxDetails } from './NotificationInboxDetails';
 
 const original = getFormatterPreferences();
 afterEach(() => {
+  cleanup();
   setGlobalLocale(original.locale);
   setGlobalPrecision(original.precision);
 });

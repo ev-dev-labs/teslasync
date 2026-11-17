@@ -26,9 +26,9 @@ interface PreconditioningDepartureCardProps {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="bodySm" mono className="mt-0.5">
+    <div data-app-part="metric" data-app-metric="stat">
+      <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+      <Text data-app-part="metric-reading metric-value" as="p" variant="bodySm" mono className="mt-0.5">
         {value}
       </Text>
     </div>
@@ -45,15 +45,16 @@ export function PreconditioningDepartureCard({
   const { t } = useTranslation();
 
   return (
-    <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <li data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+      <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Text as="h4" variant="label">
+          <Text data-app-part="record-title" as="h4" variant="label">
             {t('preconditioningEffectiveness.directory.drive', 'Drive {{id}}', {
               id: fmtInt(item.driveId),
             })}
           </Text>
-          <Text as="p" variant="caption" className="mt-1">
+          <Text data-app-part="record-context" as="p" variant="caption" className="mt-1">
             {formatDateTime(new Date(item.departureMs))}
           </Text>
         </div>
@@ -68,7 +69,7 @@ export function PreconditioningDepartureCard({
           ) : null}
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+      <div data-app-part="record-body metric-grid" className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
         <Detail
           label={t('preconditioningEffectiveness.directory.windowRows', 'Window rows')}
           value={fmtInt(item.windowRowCount)}

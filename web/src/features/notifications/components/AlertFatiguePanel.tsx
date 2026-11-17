@@ -21,6 +21,7 @@ import { isFiniteNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { analyzeAlertFatigue, type FatigueVerdict } from '../lib/alertFatigue';
+import { useNotificationPhoneChartAxes } from '../lib/useNotificationPhoneChartAxes';
 
 const VERDICT_BADGE: Record<FatigueVerdict, 'success' | 'warning' | 'danger' | 'neutral'> = {
   healthy: 'success',
@@ -46,6 +47,7 @@ export function AlertFatiguePanel() {
   const percentLabel = (value: unknown) => isFiniteNumber(value) && Number.isFinite(value * 100)
     ? `${fmtNumber(value * 100)}%` : '—';
   const detailTitleId = useId();
+  const phoneAxes = useNotificationPhoneChartAxes();
 
   const logsQuery = useNotificationAnalysisLogs();
   const source = useDataState(logsQuery, { provenance: 'historical' });
@@ -90,6 +92,12 @@ export function AlertFatiguePanel() {
       count,
     }));
   }, [summary.groups, formatTime]);
+  const ruleAxis = phoneAxes?.categoryAxis(chartData.map(({ rule }) => rule));
+  const hourCountWidth = phoneAxes?.numericWidth(
+    hourData.reduce((max, { count }) => Math.max(max, count), 0), countLabel,
+  );
+  const scoreMargin = phoneAxes?.marginFor([numberLabel(100)]);
+  const hourMargin = phoneAxes?.marginFor(hourData.map(({ hour }) => hour));
 
   const sourceDescriptor = { id: 'alert-fatigue', label: t('alertFatigue.title', 'Alert fatigue'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
@@ -213,6 +221,7 @@ export function AlertFatiguePanel() {
         ) : (
           <ChartContainer
             title={t('alertFatigue.chart', 'Noise score by rule')}
+            className={phoneAxes?.className}
             subtitle={t(
               'alertFatigue.chartHint',
               'Anything past the line is firing more than it is earning',
@@ -240,15 +249,19 @@ export function AlertFatiguePanel() {
               <BarChart
                 data={chartData}
                 layout="vertical"
-                margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+                margin={scoreMargin ?? { top: 8, right: 16, bottom: 8, left: 8 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis type="number" tickFormatter={numberLabel} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]} />
+                <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} type="number" tickFormatter={numberLabel}
+                  tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]}
+                  {...(phoneAxes ? { height: phoneAxes.xHeight, minTickGap: phoneAxes.minTickGap, tickMargin: phoneAxes.tickMargin } : {})} />
                 <YAxis
+                  key={phoneAxes ? `y-${phoneAxes.key}` : 'desktop-y'}
                   type="category"
                   dataKey="rule"
-                  width={110}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  width={ruleAxis?.width ?? 110}
+                  tickFormatter={ruleAxis?.format}
+                  tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}
                 />
                 <Tooltip content={<ChartTooltip valueFormatter={numberLabel} />} />
                 <ReferenceLine x={70} stroke={chartTokens.series[5]} strokeDasharray="4 4" />
@@ -288,6 +301,7 @@ export function AlertFatiguePanel() {
         ) : (
         <ChartContainer
           title={t('alertFatigue.hours', 'When notifications arrive')}
+          className={phoneAxes?.className}
           subtitle={t(
             'alertFatigue.hoursHint',
             'Firings by hour of day across every rule — the small hours are what really cost goodwill',
@@ -308,10 +322,15 @@ export function AlertFatiguePanel() {
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={hourData}>
+            <BarChart data={hourData} margin={hourMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="hour" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <YAxis tickFormatter={countLabel} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+              <XAxis key={phoneAxes ? `x-${phoneAxes.key}` : 'desktop-x'} dataKey="hour"
+                tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 10 }}
+                {...(phoneAxes ? { height: phoneAxes.xHeight, minTickGap: phoneAxes.minTickGap, tickMargin: phoneAxes.tickMargin } : {})} />
+              <YAxis key={phoneAxes ? `y-${phoneAxes.key}` : 'desktop-y'} tickFormatter={countLabel}
+                tick={phoneAxes?.tick ?? { fill: 'var(--text-muted)', fontSize: 11 }}
+                {...(phoneAxes ? { width: hourCountWidth, minTickGap: phoneAxes.minTickGap } : {})}
+                allowDecimals={false} />
               <Tooltip content={<ChartTooltip valueFormatter={countLabel} />} />
               <Bar
                 dataKey="count"
@@ -356,14 +375,17 @@ export function AlertFatiguePanel() {
               message={t('alertFatigue.noRules', 'No notification rules have fired yet.')}
             />
           ) : (
-            <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
+            <ul data-app-part="list" className="grid min-w-0 gap-3 lg:grid-cols-2">
               {summary.groups.map((g) => (
                 <li
                   key={g.key}
+                  data-app-part="card"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium">{g.title}</Text>
+                  <div data-app-part="record-header" className="mb-2 flex flex-wrap items-center gap-2">
+                    <Text data-app-part="record-title" variant="body" className="min-w-0 break-words font-medium">{g.title}</Text>
                     <Badge variant={VERDICT_BADGE[g.verdict]}>
                       {t(`alertFatigue.verdict.${g.verdict}`, VERDICT_DEFAULT[g.verdict])}
                     </Badge>
@@ -373,11 +395,12 @@ export function AlertFatiguePanel() {
                       </Badge>
                     ) : null}
                   </div>
+                  <div data-app-part="record-body">
                   <Table aria-label={g.title}>
                     <tbody>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.firings', 'Firings')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.firings', 'Firings')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.firingsValue', '{{n}} · {{perDay}}/day', {
                               n: countLabel(g.total),
@@ -386,9 +409,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.burstRate', 'In bursts')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.burstRate', 'In bursts')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.burstValue', '{{pct}}% · max {{max}}', {
                               pct: isFiniteNumber(g.burstRate) ? numberLabel(g.burstRate * 100) : '—',
@@ -397,9 +420,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.ignoredRate', 'Never read')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.ignoredRate', 'Never read')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {g.ignoredRate != null
                               ? percentLabel(g.ignoredRate)
@@ -407,9 +430,9 @@ export function AlertFatiguePanel() {
                           </Text>
                         </td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('alertFatigue.delivery', 'Delivery')}</Text></th>
-                        <td className="text-right tabular-nums">
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('alertFatigue.delivery', 'Delivery')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right tabular-nums">
                           <Text variant="bodySm">
                             {t('alertFatigue.deliveryValue', '{{ok}} sent · {{bad}} failed', {
                               ok: countLabel(g.delivered),
@@ -420,6 +443,7 @@ export function AlertFatiguePanel() {
                       </tr>
                     </tbody>
                   </Table>
+                  </div>
                 </li>
               ))}
             </ul>

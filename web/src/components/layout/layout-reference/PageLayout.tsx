@@ -9,7 +9,7 @@ export type PageLayoutProps = ComponentProps<typeof PageContainer>;
 export function PageLayout({ className, children, ...props }: PageLayoutProps) {
   return (
     <PageContainer {...props} className={cn('min-w-0', className)}>
-      <div data-layout-reference className="@container flex w-full min-w-0 flex-col gap-6">
+      <div data-layout-reference data-app-part="page-content stack" className="@container flex w-full min-w-0 flex-col gap-6">
         {children}
       </div>
     </PageContainer>

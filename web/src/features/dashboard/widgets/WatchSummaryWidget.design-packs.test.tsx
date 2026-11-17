@@ -350,7 +350,7 @@ describe.each(packs)('Watch summary %s (%s)', (packId, appearance) => {
     expect(screen.getByText('0.00 km')).toBeInTheDocument();
     expect(screen.getByText('32.00°F')).toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(summary.refetch).not.toHaveBeenCalled();
     expect(complication.refetch).not.toHaveBeenCalled();

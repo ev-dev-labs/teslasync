@@ -23,6 +23,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -320,6 +321,8 @@ beforeEach(() => {
 });
 
 /* ── Pure helpers ─────────────────────────────────────────────────── */
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ProjectedRangePage · pure helpers', () => {
   it('effColor maps Wh/km efficiency onto the four heat bands (inclusive edges)', () => {

@@ -74,7 +74,7 @@ export function RepairSuggestionSection({
           message={emptyMessage}
         />
       ) : (
-        <ul className="space-y-4">
+        <ul data-app-part="list" className="space-y-4">
           {items.map((suggestion) => {
             const key = suggestionKey(suggestion);
             return (

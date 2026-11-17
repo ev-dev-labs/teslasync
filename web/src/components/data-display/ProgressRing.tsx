@@ -65,7 +65,9 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
     const offset = circumference * (1 - fraction);
     const percent = fmtNumber(fraction * 100);
     const hasCenter = centerLabel != null || centerSubLabel != null;
-    const mainSize = Math.max(10, Math.round(size * 0.32));
+    const labelLength = typeof centerLabel === 'string' || typeof centerLabel === 'number'
+      ? String(centerLabel).length : 0;
+    const mainSize = Math.max(10, Math.round(size * Math.min(0.32, labelLength ? 1.5 / labelLength : 0.32)));
     const subSize = Math.max(8, Math.round(size * 0.18));
     const resolvedAriaLabel =
       ariaLabel ?? nativeAriaLabel ?? (Number.isFinite(value)
@@ -73,7 +75,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
         : t('common.unknown', 'Unknown'));
 
     return (
-      <div {...props} ref={ref} className={cn('inline-flex min-w-0 flex-col items-center gap-1', className)}>
+      <div data-app-part="metric" data-app-metric="ring" {...props} ref={ref} className={cn('inline-flex min-w-0 flex-col items-center gap-1', className)}>
         <div
           className="relative"
           style={{ width: size, height: size }}

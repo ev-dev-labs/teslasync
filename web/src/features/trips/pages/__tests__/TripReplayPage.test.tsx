@@ -37,7 +37,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>/<Stagger*>) + the <Spinner>'s
 // useMotionPreference read it at module load for the reduced-motion preference.
@@ -323,6 +323,7 @@ function makeDriveQuery(over: { data?: DriveDetail; isLoading?: boolean; error?:
 }
 
 function renderPage(settings?: Pick<AppSettings, 'locale' | 'tz_display_default' | 'timezone_user'>) {
+  window.history.replaceState(null, '', '/drives/7/replay');
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (settings) {
     client.setQueryDefaults(['settings'], { enabled: false });
@@ -330,11 +331,11 @@ function renderPage(settings?: Pick<AppSettings, 'locale' | 'tz_display_default'
   }
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/drives/7/replay']}>
+      <BrowserRouter>
         <Routes>
           <Route path="/drives/:id/replay" element={<TripReplayPage />} />
         </Routes>
-      </MemoryRouter>
+      </BrowserRouter>
     </QueryClientProvider>,
   );
 }
@@ -348,6 +349,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, '', '/');
 });
 
 /* ── Specs: pure helpers ──────────────────────────────────────────── */

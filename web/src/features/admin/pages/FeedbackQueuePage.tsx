@@ -14,6 +14,7 @@ import {
   Select,
   Text,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui'
 import { PageLayout } from '@/components/layout'
 import { DataStateNotice, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
@@ -258,6 +259,19 @@ export default function FeedbackQueuePage() {
     ],
     [t, formatDateTime],
   )
+  const mobilePresentation = useMemo<MobileDataTablePresentation<FeedbackEntry>>(() => ({
+    roles: { title: 'title', status: 'primary', category: 'badge', created_at: 'meta', page_route: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'title': return row.title || '—'
+        case 'status': return statusOptions.find(option => option.value === row.status)?.label ?? row.status
+        case 'category': return categoryOptions.find(option => option.value === row.category)?.label ?? row.category
+        case 'created_at': return formatDateTime(row.created_at)
+        case 'page_route': return row.page_route ?? '—'
+        default: return null
+      }
+    },
+  }), [statusOptions, categoryOptions, formatDateTime])
 
   const handleUpdate = useCallback<ReturnType<typeof useUpdateFeedback>['mutate']>(
     (...args) => {
@@ -479,6 +493,7 @@ export default function FeedbackQueuePage() {
                 tableId="admin:feedback"
                 enableValueFilters={false}
                 columns={columns}
+                mobilePresentation={mobilePresentation}
                 data={items}
                 keyExtractor={(r) => r.id}
                 selectable="multi"

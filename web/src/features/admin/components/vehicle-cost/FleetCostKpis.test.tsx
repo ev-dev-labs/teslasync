@@ -23,7 +23,7 @@
  */
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { FleetCostKpis } from './FleetCostKpis';
@@ -88,7 +88,7 @@ beforeEach(() => {
   setGlobalPrecision(3);
 });
 afterEach(() => {
-  setGlobalPrecision(savedPrecision);
+  act(() => { setGlobalPrecision(savedPrecision); });
 });
 
 describe('FleetCostKpis', () => {

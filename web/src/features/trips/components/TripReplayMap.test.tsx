@@ -34,7 +34,7 @@
  * map/page tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { DrivePosition } from '@/types/driving';
 
 /* Prop-capturing shared state for the mocked maps barrel. Hoisted so the
@@ -246,6 +246,9 @@ describe('TripReplayMap — empty state', () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId('map-container')).toBeNull();
     expect(screen.queryByTestId('polyline')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-app-part', 'panel map');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-map-state', 'empty');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-provenance', 'unknown');
   });
 
   it('exposes the panel as a labelled region for screen readers', () => {
@@ -376,6 +379,10 @@ describe('TripReplayMap — speed-coloured segments', () => {
       UNKNOWN,
     ]);
     expect(screen.getByText('Speed: Unknown (- -)')).toBeInTheDocument();
+    const legend = screen.getByText('Speed: Unknown (- -)').closest('[data-app-part~="map-legend"]');
+    expect(legend).toHaveAttribute('data-map-legend', 'unknown-speed');
+    expect(legend).toHaveAttribute('data-map-state', 'unavailable');
+    expect(screen.getByRole('region', { name: 'Trip route map' })).toHaveAttribute('data-provenance', 'historical');
   });
 
   it('keeps missing and non-finite speed segments neutral and seekable while measured zero stays valid', () => {
@@ -440,7 +447,7 @@ describe('TripReplayMap — viewport lifecycle', () => {
     expect(onSeekToIndex).not.toHaveBeenCalled();
   });
 
-  it('preserves the viewport during playback, layer changes, and unrelated rerenders', () => {
+  it('preserves the viewport during playback, layer changes, and unrelated rerenders', async () => {
     const onSeekToIndex = vi.fn();
     const { rerender } = renderMap({ onSeekToIndex });
 
@@ -453,7 +460,7 @@ describe('TripReplayMap — viewport lifecycle', () => {
         reduceMotion
       />,
     );
-    fireEvent.click(screen.getByTestId('layer-switch'));
+    await act(async () => { fireEvent.click(screen.getByTestId('layer-switch')); });
 
     expect(maps.map.fitBounds).toHaveBeenCalledTimes(1);
     expect(maps.map.setView).not.toHaveBeenCalled();

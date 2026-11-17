@@ -7,7 +7,7 @@ const resolve = (path: string) => resolveCardLayoutContractSource(new URL(`http:
 describe('strict card-layout synthetic source contracts', () => {
   it.each(cardLayoutContractPaths)('supplies the reviewed exact endpoint %s', path => {
     const url = new URL(`http://127.0.0.1/api/v1${path}`);
-    url.searchParams.set('vehicle_id', '7');
+    if (path !== '/trips/603') url.searchParams.set('vehicle_id', '7');
     if (path === '/exports/columns') url.searchParams.set('type', 'drives');
     if (path === '/mileage/daily') {
       url.searchParams.set('days', '90');
@@ -26,7 +26,7 @@ describe('strict card-layout synthetic source contracts', () => {
   describe('reviewed supplemental route contracts', () => {
     it.each(cardLayoutSupplementalPaths)('supplies the exact reviewed endpoint %s', path => {
       const url = new URL(`http://127.0.0.1/api/v1${path}`);
-      url.searchParams.set('vehicle_id', '7');
+      if (path !== '/trips/603') url.searchParams.set('vehicle_id', '7');
       if (path === '/chatbot/history') url.searchParams.set('session_id', '00000000-0000-4000-8000-000000000701');
       if (path === '/vehicles/7/time-machine') url.searchParams.set('at', '2026-08-26T16:00:00.000Z');
       expect(resolveCardLayoutSupplementalSource(url)).toBeDefined();
@@ -36,6 +36,15 @@ describe('strict card-layout synthetic source contracts', () => {
       expect(resolveCardLayoutSupplementalSource(new URL('http://127.0.0.1/api/v1/chatbot/history?session_id=unknown'))).toBeUndefined();
       expect(resolveCardLayoutSupplementalSource(new URL('http://127.0.0.1/api/v1/vehicles/7/time-machine?at=2026-08-24T00:00:00Z'))).toBeUndefined();
       expect(resolveCardLayoutSupplementalSource(new URL('http://127.0.0.1/api/v1/not-reviewed'))).toBeUndefined();
+    });
+
+    it('serves the reviewed trip detail without accepting unexpected query parameters', () => {
+      expect(resolve('/trips/603')).toEqual(expect.objectContaining({
+        id: 603, drive_count: 1,
+        drives: [expect.objectContaining({ distance_m: 10_000, energy_used_wh: 2_000, duration_s: 600 })],
+      }));
+      expect(resolve('/trips/603?vehicle_id=7')).toBeUndefined();
+      expect(resolve('/trips/603?extra=1')).toBeUndefined();
     });
   });
 

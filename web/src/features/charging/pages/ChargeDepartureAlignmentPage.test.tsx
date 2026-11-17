@@ -2,7 +2,7 @@ import type { ComponentProps, PropsWithChildren, ReactElement } from 'react';
 import { createInstance, type i18n } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
 import type { ChartContainer, ChartTooltip, XAxis, YAxis } from '@/components/charts';
@@ -251,8 +251,10 @@ describe('Charge departure page contract adoption', () => {
     ];
     const page = mountPage();
     const rawCSV = objectsToCSV(source.chart?.exportData ?? []);
-    setGlobalLocale('de-DE');
-    setGlobalPrecision(3);
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+    });
     page.rerender(
       <I18nextProvider i18n={translations}>
         <MemoryRouter initialEntries={['/charge-departure-alignment']}>

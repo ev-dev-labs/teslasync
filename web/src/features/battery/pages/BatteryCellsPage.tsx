@@ -123,9 +123,34 @@ function CellHeatmap({ cells, label, statusLabel }: {
   const { t } = useTranslation();
 
   return (
-    <div className="@container">
+    <EmbeddedChart
+      title={t('battery.cells.heatmap.title', 'Cell voltage heatmap')}
+      embeddedTitleHeading={false}
+      ariaLabel={label}
+      viewportClassName="h-auto min-h-0 max-h-none sm:min-h-0 [contain:layout]"
+      data={cells.map(cell => ({
+        cell_number: cell.cell_number,
+        voltage: knownNumber(cell.voltage),
+        delta_from_avg: knownNumber(cell.delta_from_avg),
+        status: knownNumber(cell.voltage) == null ? t('battery.cells.status.unknown', 'Unknown') : statusLabel(cell.status),
+      }))}
+      dataColumns={[
+        { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #'), kind: 'count' },
+        { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)'), format: value => value == null ? '—' : fmtScientificNumber(Number(value), 3) },
+        { key: 'delta_from_avg', label: t('battery.cells.table.delta', 'Delta (mV)'), format: value => value == null ? '—' : `${Number(value) >= 0 ? '+' : ''}${fmtNumber(Number(value))}` },
+        { key: 'status', label: t('battery.cells.table.status', 'Status') },
+      ]}
+      caption={
+        <div data-app-part="chart-legend" data-chart-scale className="mt-3 flex flex-wrap items-center justify-center gap-4">
+          <HeatLegend className={neonColorMap.green.dot} label={t('battery.cells.legend.nominal', 'Nominal')} />
+          <HeatLegend className={neonColorMap.amber.dot} label={t('battery.cells.legend.slight', 'Slight deviation')} />
+          <HeatLegend className={neonColorMap.red.dot} label={t('battery.cells.legend.significant', 'Significant deviation')} />
+        </div>
+      }
+    >
+    <div data-app-part="chart" className="@container">
       <Caption className="mb-3 block">{label}</Caption>
-      <div className="grid grid-cols-3 gap-1 @xs:grid-cols-4 @md:grid-cols-6 @lg:grid-cols-8">
+      <div data-app-part="chart-plot" className="grid grid-cols-3 gap-1 @xs:grid-cols-4 @md:grid-cols-6 @lg:grid-cols-8">
         {cells.map((cell) => {
           const voltage = knownNumber(cell.voltage);
           const tone = voltage == null ? neonColorMap.neutral : CELL_TONE[cell.status] ?? neonColorMap.neutral;
@@ -134,6 +159,8 @@ function CellHeatmap({ cells, label, statusLabel }: {
           return (
             <div
               key={cell.cell_number}
+              data-chart-family="battery-cells"
+              data-heatmap-state={voltage == null ? 'unavailable' : 'active'}
               className={cn(
                 'flex min-w-0 flex-col items-center justify-center rounded-md border p-1',
                 typography.size.xs,
@@ -155,12 +182,8 @@ function CellHeatmap({ cells, label, statusLabel }: {
           );
         })}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
-        <HeatLegend className={neonColorMap.green.dot} label={t('battery.cells.legend.nominal', 'Nominal')} />
-        <HeatLegend className={neonColorMap.amber.dot} label={t('battery.cells.legend.slight', 'Slight deviation')} />
-        <HeatLegend className={neonColorMap.red.dot} label={t('battery.cells.legend.significant', 'Significant deviation')} />
-      </div>
     </div>
+    </EmbeddedChart>
   );
 }
 

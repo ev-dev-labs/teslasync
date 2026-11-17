@@ -78,6 +78,7 @@ export function DatePresetChips({
 
   return (
     <div
+      data-app-part="tabs"
       className={cn('flex flex-wrap items-center gap-1', className)}
       role="group"
       aria-label={ariaLabel ?? t('date.preset.label', 'Quick date range')}
@@ -87,6 +88,7 @@ export function DatePresetChips({
         return (
           <Button
             key={p.id}
+            data-app-part="button tab"
             type="button"
             size={size}
             variant={active ? 'primary' : 'ghost'}

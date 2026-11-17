@@ -1,6 +1,6 @@
 import { act, fireEvent, render, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   useUrlArray,
@@ -19,6 +19,37 @@ function wrapperWith(initial: string) {
 }
 
 describe('useUrlState', () => {
+  it.each(['single', 'batch'])('preserves the current fragment across %s query writes and history navigation', (writer) => {
+    const { result } = renderHook(() => {
+      const location = useLocation();
+      const navigate = useNavigate();
+      const [, setValue] = useUrlString('q');
+      const setBatch = useUrlBatch();
+      return {
+        location,
+        setQuery: (value: string, push = false) => writer === 'single'
+          ? setValue(value, { push }) : setBatch({ q: value }, { push }),
+        back: () => navigate(-1),
+      };
+    }, { wrapper: wrapperWith('/settings?vehicle_id=42&hidden_user-chart=reference#appearance') });
+    const expectScope = () => {
+      expect(result.current.location.pathname).toBe('/settings');
+      expect(result.current.location.hash).toBe('#appearance');
+      const params = new URLSearchParams(result.current.location.search);
+      expect(params.get('vehicle_id')).toBe('42');
+      expect(params.get('hidden_user-chart')).toBe('reference');
+      return params;
+    };
+    act(() => result.current.setQuery('first'));
+    expect(expectScope().get('q')).toBe('first');
+    act(() => result.current.setQuery('second', true));
+    expect(expectScope().get('q')).toBe('second');
+    act(() => result.current.back());
+    expect(expectScope().get('q')).toBe('first');
+    act(() => result.current.setQuery(''));
+    expect(expectScope().has('q')).toBe(false);
+  });
+
   it('returns the default when the param is absent', () => {
     const { result } = renderHook(
       () => useUrlState({ key: 'q', defaultValue: 'hello', parse: (s) => s, serialize: (v) => v }),

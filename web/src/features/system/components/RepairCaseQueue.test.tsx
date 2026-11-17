@@ -5,6 +5,7 @@ import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import type { RepairCase } from '@/api/hooks/useDataRepair';
 import english from '@/i18n/en.json';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 import { RepairCaseQueue } from './RepairCaseQueue';
 
 const tableProps = vi.hoisted(() => ({ enableValueFilters: undefined as boolean | undefined }));
@@ -58,7 +59,7 @@ function renderQueue(options: ComponentProps<typeof RepairCaseQueue>, localizedL
     },
     interpolation: { escapeValue: false },
   });
-  return render(<I18nextProvider i18n={i18n}><RepairCaseQueue {...options} /></I18nextProvider>);
+  return { ...render(<I18nextProvider i18n={i18n}><RepairCaseQueue {...options} /></I18nextProvider>), i18n };
 }
 
 function caseWith(confidence: RepairCase['confidence']): RepairCase {
@@ -84,6 +85,28 @@ beforeEach(() => {
 });
 
 describe('RepairCaseQueue table ownership', () => {
+  it('preserves review and selected-row bulk actions on mobile', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const options = { ...props(), cases: [caseWith('high')] };
+      const view = renderQueue(options);
+      const grid = view.container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toBeInTheDocument();
+      fireEvent.click(within(grid).getByRole('button', { name: 'Review case 7' }));
+      expect(options.onOpenCase).toHaveBeenCalledWith(7);
+      fireEvent.click(within(grid).getByRole('button', { name: 'Select' }));
+      fireEvent.click(within(grid).getByRole('checkbox', { name: /Select Case #7/ }));
+      expect(options.onSelectionChange).toHaveBeenCalledWith([7]);
+      view.rerender(<I18nextProvider i18n={view.i18n}>
+        <RepairCaseQueue {...options} selectedCaseIds={[7]} />
+      </I18nextProvider>);
+      fireEvent.click(screen.getByRole('button', { name: 'Begin review' }));
+      expect(options.onBeginReview).toHaveBeenCalledWith([7]);
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('explicitly retains server filtering and cursor navigation rather than filtering a partial page', () => {
     const options = props();
     renderQueue(options);

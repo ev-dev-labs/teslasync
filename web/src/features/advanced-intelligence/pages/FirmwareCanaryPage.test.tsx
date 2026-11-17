@@ -9,6 +9,9 @@ import { createEnglishI18n as createSharedEnglishI18n } from '@/test/createEngli
 import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, FirmwareCanary } from '@/types/advancedIntelligence';
 import { ToastProvider } from '@/components/feedback';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { typography } from '@/lib/tokens';
 import { formatDateTime } from '@/lib/dateFormat';
 import { firmware, observation } from './advancedIntelligenceClosure.fixtures';
@@ -119,6 +122,39 @@ beforeEach(() => {
 });
 
 describe('FirmwareCanaryPage restrained decision presentation', () => {
+  it.each(PACK_IDS)('%s owns the actual rationale without reclassifying the decision or adding controls', pack => {
+    populate();
+    const view = renderPage();
+    const rationale = within(decision()).getByText('Decision rationale').parentElement!;
+    const before = rationale.textContent;
+    expect(rationale).not.toHaveAttribute('data-app-design-owner');
+    expect(matchesAppDesignCss(rationale)).toHaveLength(0);
+    view.container.setAttribute('data-app-design-preview', '');
+    setAppDesignTestProfile(view.container, pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const mode = APPLICATION_DESIGNS[pack].feedback;
+      const compositions = matchesAppDesignCss(rationale, '[data-app-feedback-kind="insight"]')
+        .filter(match => match.selector.includes('[data-app-feedback='));
+      expect(compositions).toHaveLength(1);
+      expect(compositions[0].selector).toContain(`[data-app-feedback="${mode}"]`);
+      expect(compositions[0].selector).toContain(`[data-app-design-owner~="feedback-${mode}"]`);
+      for (const part of ['feedback-title', 'feedback-message']) {
+        const copy = rationale.querySelector(`[data-app-part="${part}"]`)!;
+        expect(matchesAppDesignCss(copy, `[data-app-part~="${part}"]`).length).toBeGreaterThan(0);
+      }
+      expect(rationale.textContent).toBe(before);
+      expect(rationale).toHaveClass('p-3', 'forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]');
+      expect(rationale).not.toHaveAttribute('data-app-tone');
+      expect(rationale.querySelector('button, a, [role="alert"], [role="status"]')).toBeNull();
+      expect(within(decision()).getByText('Insufficient evidence')).toBeInTheDocument();
+    } finally {
+      release();
+    }
+    expect(rationale).not.toHaveAttribute('data-app-design-owner');
+    expect(matchesAppDesignCss(rationale)).toHaveLength(0);
+  });
+
   it.each([
     { code: 'rollout', label: 'Rollout', variant: 'success' },
     { code: 'hold', label: 'Hold', variant: 'danger' },
@@ -347,6 +383,9 @@ describe('FirmwareCanaryPage investigate rationale', () => {
   function rationale() {
     const panel = within(decision()).getByText('Decision rationale').parentElement;
     if (!panel) throw new Error('Missing decision rationale');
+    expect(panel).toHaveAttribute('data-app-feedback-kind', 'insight');
+    expect(panel.querySelector('[data-app-part="feedback-title"]')).toHaveTextContent('Decision rationale');
+    expect(panel.querySelector('[data-app-part="feedback-message"]')).not.toBeEmptyDOMElement();
     return panel;
   }
 

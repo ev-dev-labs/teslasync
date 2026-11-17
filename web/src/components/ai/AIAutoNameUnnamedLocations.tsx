@@ -181,20 +181,23 @@ function InnerSection({
       )}
       {draft && (
         <div
+          data-app-part="feedback"
+          data-app-feedback-kind="insight"
+          data-app-tone="neutral"
           className="rounded-md border border-theme-accent/30 bg-theme-accent/5 p-3 text-sm"
           data-testid="ai-feature-auto-name-unnamed-locations-draft"
           aria-live="polite"
         >
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1 break-words">
-              <div className="text-xs tracking-wide text-theme-accent">
+            <div data-app-part="feedback-content" className="min-w-0 flex-1 space-y-1 break-words">
+              <div data-app-part="feedback-title" className="text-xs tracking-wide text-theme-accent">
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
-              <div className="font-medium text-[var(--text-primary)]">
+              <div data-app-part="feedback-message" className="font-medium text-[var(--text-primary)]">
                 {draft.proposed_name.trim() || '—'}
               </div>
               {draft.reason && (
-                <div className="text-xs text-[var(--text-secondary)]">{draft.reason}</div>
+                <div data-app-part="feedback-detail" className="text-xs text-[var(--text-secondary)]">{draft.reason}</div>
               )}
               {draft.status !== 'ok' && (
                 <div className="text-xs text-rose-300">
@@ -205,7 +208,7 @@ function InnerSection({
                 </div>
               )}
             </div>
-            <div className="flex min-w-0 max-w-full flex-shrink-0 flex-col gap-1.5">
+            <div data-app-part="feedback-actions" className="flex min-w-0 max-w-full flex-shrink-0 flex-col gap-1.5">
               <Button
                 variant="outline"
                 size="sm"

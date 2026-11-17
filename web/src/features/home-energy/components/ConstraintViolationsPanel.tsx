@@ -76,7 +76,7 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
           {t('homeEnergy.violations.clean', 'This plan satisfies every hard constraint modeled.')}
         </Text>
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {[...errors, ...warnings].map((v, i) => (
             <li
               key={`${v.code}-${v.vehicleId ?? ''}-${v.slotIndex ?? ''}-${i}`}

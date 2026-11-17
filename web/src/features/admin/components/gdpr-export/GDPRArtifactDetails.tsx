@@ -32,7 +32,7 @@ export function GDPRArtifactDetails({ artifact, loading, className }: GDPRArtifa
           ))}
         </div>
       ) : artifact ? (
-        <dl className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <dl data-app-part="list" className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           <MetaRow
             label={t('admin.gdprExport.metaId', 'ID')}
             className="md:col-span-2 2xl:col-span-3"

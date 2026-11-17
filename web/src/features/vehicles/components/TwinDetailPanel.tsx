@@ -67,7 +67,7 @@ export function TwinDetailPanel({
       <div className={className} aria-busy={isLoading ? true : undefined}>
         {icon && <div aria-hidden="true">{icon}</div>}
         {isLoading ? (
-          <div
+          <div data-app-part="status"
             role="status"
             aria-label={t('digitalTwin.loadingSection', 'Loading {{section}}', { section: title })}
           >

@@ -64,6 +64,9 @@ export function MetricBar({
     : `color-mix(in srgb, ${color} 60%, transparent)`
   return (
     <div
+      data-app-part="metric"
+      data-app-metric="bar"
+      data-app-state={hasReading ? 'value' : 'missing'}
       className="min-w-0"
       role={unscaledReading ? 'group' : 'progressbar'}
       aria-label={ariaLabel ?? label}
@@ -76,9 +79,9 @@ export function MetricBar({
       {unscaledReading && <VisuallyHidden id={readingId}>{fmtNumber(safeValue)}</VisuallyHidden>}
       {showHeader && (label != null || showValue) && (
         <div className="mb-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-          {label != null && <Text size="sm" weight="medium" color="secondary" className="min-w-0 flex-1 break-words">{label}</Text>}
+          {label != null && <Text data-app-part="metric-label" size="sm" weight="medium" color="secondary" className="min-w-0 flex-1 break-words">{label}</Text>}
           {showValue && (
-            <Text mono size="sm" color="primary" className="min-w-0 max-w-full break-words text-end">
+            <Text data-app-part="metric-value" mono size="sm" color="primary" className="min-w-0 max-w-full break-words text-end">
               {sublabel ?? (hasReading ? fmtNumber(safeValue) : '—')}
             </Text>
           )}

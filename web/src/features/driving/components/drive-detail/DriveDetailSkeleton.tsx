@@ -22,7 +22,7 @@ export function DriveDetailSkeleton() {
   const { t } = useTranslation();
 
   return (
-    <div
+    <div data-app-part="status"
       className="space-y-6 p-4"
       role="status"
       aria-busy="true"

@@ -252,7 +252,7 @@ describe.each(productionPacks)('Weather at Car %s production appearance', packId
     await expectPack(container, packId);
     expect(screen.getByText('18°C')).toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).not.toHaveBeenCalled();
     expect(container.querySelector(`[data-widget-pack="${packId}"]`)).toHaveAttribute('aria-busy', 'true');

@@ -82,7 +82,7 @@ while read -r url; do
   # `{PARAM}` segments as one-segment wildcards and require at least one
   # concrete registered route to match the complete shape.
   ROUTE_PATTERN=$(echo "$BASE" | sed 's/{PARAM}/[^\/]+/g')
-  if printf '%s\n' "$ROUTES" | grep -Eq "^${ROUTE_PATTERN}$" 2>/dev/null; then
+  if grep -Eq "^${ROUTE_PATTERN}$" <<< "$ROUTES" 2>/dev/null; then
     echo "  ✅ $url"
   else
     echo "  ❌ $url (NO MATCHING BACKEND ROUTE)"

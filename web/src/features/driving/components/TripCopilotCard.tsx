@@ -121,7 +121,7 @@ export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardPr
 
       <div className="mt-3">
         {checking && (
-          <div role="status" aria-live="polite">
+          <div data-app-part="status" role="status" aria-live="polite">
             <Caption as="p">
               {t('tripPlanner.copilot.title', 'Trip Copilot')}: {result
                 ? t('dataSources.status.refreshing', 'Refreshing')

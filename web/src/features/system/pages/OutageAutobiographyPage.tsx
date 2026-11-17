@@ -115,7 +115,7 @@ export default function OutageAutobiographyPage() {
             </div>
           ) : null}
           {notes.length > 0 ? (
-            <ul className="list-disc space-y-1 break-words ps-5">
+            <ul data-app-part="list" className="list-disc space-y-1 break-words ps-5">
               {notes.map((note) => (
                 <li key={note}><Text as="span" variant="caption">{note}</Text></li>
               ))}

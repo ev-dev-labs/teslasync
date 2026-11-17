@@ -25,13 +25,13 @@ export interface ScoreGradeInfo {
 
 /** Shared palette. Keep in lock-step with `lib/drivesAggregation` GRADE_PALETTE. */
 const GRADE_PALETTE: Record<ScoreGrade, { color: string; numeric: number | null }> = {
-  'A+': { color: '#10b981', numeric: 4.5 },
-  A:    { color: '#10b981', numeric: 4.0 },
+  'A+': { color: 'var(--semantic-success)', numeric: 4.5 },
+  A:    { color: 'var(--semantic-success)', numeric: 4.0 },
   B:    { color: 'var(--semantic-info)', numeric: 3.0 },
-  C:    { color: '#f59e0b', numeric: 2.0 },
-  D:    { color: '#ef4444', numeric: 1.0 },
-  F:    { color: '#b91c1c', numeric: 0.5 },
-  '—':  { color: '#6b7280', numeric: null },
+  C:    { color: 'var(--semantic-warning)', numeric: 2.0 },
+  D:    { color: 'var(--semantic-danger)', numeric: 1.0 },
+  F:    { color: 'var(--semantic-danger)', numeric: 0.5 },
+  '—':  { color: 'var(--text-muted)', numeric: null },
 };
 
 /** Default 0–100 thresholds. Lower bound inclusive. */

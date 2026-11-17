@@ -22,6 +22,7 @@
  * `t(key, fallback)` / `t(key, { defaultValue, ...vars })` render the English
  * fallback deterministically (including {{var}} interpolation).
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -153,6 +154,8 @@ function swatchColorFor(name: string): string {
   if (!(swatch instanceof HTMLElement)) throw new Error(`no colour swatch for "${name}"`);
   return swatch.style.backgroundColor;
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('YearChargingBreakdown — populated', () => {
   it('renders the title, interpolated summary subtitle, and one legend row per connector', () => {

@@ -94,7 +94,7 @@ export function RecoveryContext({ kind, model, state }: RecoveryContextProps) {
         <RegenSectionBody state={state} hasData={state.isResolved && contextRows > 0} emptyMessage={emptyMessage}>
           <div className="space-y-3">
             {rows.map(bucket => (
-              <div key={bucket.key} className="min-w-0 rounded-xl border border-[var(--border-default)] p-3">
+              <div data-app-part="card" data-surface-variant="standalone" key={bucket.key} className="min-w-0 rounded-xl border border-[var(--border-default)] p-3">
                 {isKnownNumber(bucket.energyWeightedRatioPct) ? <MetricBar
                   label={bucket.label}
                   value={bucket.energyWeightedRatioPct}
@@ -102,10 +102,14 @@ export function RecoveryContext({ kind, model, state }: RecoveryContextProps) {
                   color={bucket.color}
                   sublabel={fmtPercent(bucket.energyWeightedRatioPct)}
                 /> : (
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <MetricLabel>{bucket.label}</MetricLabel>
-                    <Text mono aria-label={t('regen.modernization.ratioUnavailable', 'Recovery share is unavailable; no zero value is inferred.')}>—</Text>
-                  </div>
+                  <dl data-app-part="list" data-app-list="definitions">
+                    <div data-app-part="list-row" className="flex flex-wrap items-baseline justify-between gap-2">
+                      <MetricLabel data-app-part="metric-label" as="dt">{bucket.label}</MetricLabel>
+                      <dd data-app-part="metric-reading">
+                        <Text data-app-part="metric-value" mono aria-label={t('regen.modernization.ratioUnavailable', 'Recovery share is unavailable; no zero value is inferred.')}>—</Text>
+                      </dd>
+                    </div>
+                  </dl>
                 )}
                 <Text as="p" variant="caption" className="mt-2">
                   {t('regen.context.accounting', '{{eligible}} eligible of {{returned}} returned drives', {

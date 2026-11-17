@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactElement } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { VisuallyHidden } from '@/components/a11y';
@@ -50,6 +50,8 @@ import {
   type ComparisonRow,
 } from '../components/fleet-compare-modernization';
 import { FleetComparisonBrief as FleetHighlights } from '../components/operationalbrief-a-m/FleetComparisonBrief';
+
+type TrendTooltipRenderer = Exclude<NonNullable<ComponentProps<typeof Tooltip>['content']>, ReactElement>;
 
 /* ── Helpers ───────────────────────────────────────────── */
 
@@ -220,6 +222,9 @@ function VehicleStatusCard({
         </StatusRow>
         {batteryLevel != null && Number.isFinite(batteryLevel) && (
           <div
+            data-app-part="metric"
+            data-app-metric="bar"
+            data-metric-track
             className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
             role="progressbar"
             aria-valuenow={Math.round(Math.min(Math.max(batteryLevel, 0), 100))}
@@ -228,6 +233,7 @@ function VehicleStatusCard({
             aria-label={t('comparison.batteryLevel', 'Battery level')}
           >
             <div
+              data-metric-fill
               className={cn(
                 'h-full rounded-full transition-all motion-reduce:transition-none',
                 batteryLevel > 50 ? severityTokens.success.dot : batteryLevel > 20 ? severityTokens.warn.dot : severityTokens.critical.dot,
@@ -336,6 +342,29 @@ export default function FleetComparePage() {
 
   // reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
+
+  // Recharts uses content functions as component types; keep formatting-query refreshes from remounting them.
+  const distanceTooltip = useCallback<TrendTooltipRenderer>(({ active, payload, label }) => (
+    <ChartTooltip
+      active={active}
+      payload={payload?.map(entry => ({
+        name: entry.name, value: entry.value, color: entry.color, fill: entry.fill,
+        unit: typeof entry.unit === 'string' ? entry.unit : undefined, dataKey: entry.dataKey,
+      }))}
+      label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
+    />
+  ), []);
+  const drivesTooltip = useCallback<TrendTooltipRenderer>(({ active, payload, label }) => (
+    <ChartTooltip
+      active={active}
+      payload={payload?.map(entry => ({
+        name: entry.name, value: entry.value, color: entry.color, fill: entry.fill,
+        unit: typeof entry.unit === 'string' ? entry.unit : undefined, dataKey: entry.dataKey,
+      }))}
+      label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
+      valueFormatter={(value) => formatKnown(typeof value === 'number' ? value : null, fmtInt)}
+    />
+  ), [fmtInt]);
 
   // accept "leftId" / "rightId" router query params so other
   // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
@@ -860,22 +889,7 @@ export default function FleetComparePage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                         <XAxis dataKey="month" tick={axisTick} />
                         <YAxis tick={axisTick} unit={` ${distanceUnit}`} />
-                        <Tooltip
-                          content={({ active, payload, label }) => (
-                            <ChartTooltip
-                              active={active}
-                              payload={payload?.map(entry => ({
-                                name: entry.name,
-                                value: entry.value,
-                                color: entry.color,
-                                fill: entry.fill,
-                                unit: typeof entry.unit === 'string' ? entry.unit : undefined,
-                                dataKey: entry.dataKey,
-                              }))}
-                              label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
-                            />
-                          )}
-                        />
+                        <Tooltip content={distanceTooltip} />
                         <ChartLegend />
                         <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} unit={` ${distanceUnit}`} stroke={palette[0]} connectNulls={false} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
                         <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} unit={` ${distanceUnit}`} stroke={palette[1]} connectNulls={false} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
@@ -907,23 +921,7 @@ export default function FleetComparePage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                         <XAxis dataKey="month" tick={axisTick} />
                         <YAxis tick={axisTick} allowDecimals={false} />
-                        <Tooltip
-                          content={({ active, payload, label }) => (
-                            <ChartTooltip
-                              active={active}
-                              payload={payload?.map(entry => ({
-                                name: entry.name,
-                                value: entry.value,
-                                color: entry.color,
-                                fill: entry.fill,
-                                unit: typeof entry.unit === 'string' ? entry.unit : undefined,
-                                dataKey: entry.dataKey,
-                              }))}
-                              label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
-                              valueFormatter={(value) => formatKnown(typeof value === 'number' ? value : null, fmtInt)}
-                            />
-                          )}
-                        />
+                        <Tooltip content={drivesTooltip} />
                         <ChartLegend />
                         <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drivesA')} {...chartAnimation} />
                         <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drivesB')} {...chartAnimation} />

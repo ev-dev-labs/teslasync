@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { __resetDocumentCancellationForTests } from '../lib/documentCancellation'
 import { documentLifecycleDriver } from '../test/documentLifecycle'
+import { _resetRateLimitCache } from '../lib/resilience'
 
 
 const resilientFetchMock = vi.fn()
@@ -49,6 +50,7 @@ function urlOf(callIndex: number): string {
 beforeEach(() => {
   __resetDocumentCancellationForTests()
   __resetActionConfirmationForTests()
+  _resetRateLimitCache()
   resilientFetchMock.mockReset()
   fetchMock = vi.spyOn(globalThis, 'fetch')
   window.history.replaceState(null, '', '/')
@@ -279,7 +281,7 @@ describe('request() — error handling', () => {
 describe('request() — wire error normalization', () => {
   const transports = [
     { transport: 'direct', skipAuthRefresh: true },
-    { transport: 'resilient', skipAuthRefresh: false },
+    { transport: 'default', skipAuthRefresh: false },
   ]
 
   beforeEach(async () => {
@@ -301,7 +303,7 @@ describe('request() — wire error normalization', () => {
       code: 'SUBSYSTEM_NOT_CONFIGURED',
       message: 'schema_drift subsystem not configured on this deployment',
     })
-    expect(fetchMock).toHaveBeenCalledTimes(skipAuthRefresh ? 1 : 2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it.each(transports)('preserves nested failure details via $transport', async ({ skipAuthRefresh }) => {
@@ -317,20 +319,16 @@ describe('request() — wire error normalization', () => {
     })
   })
 
-  it('preserves a nested error first received by the resilient fallback', async () => {
+  it('does not layer a second transport attempt on top of a failed read', async () => {
     fetchMock
       .mockRejectedValueOnce(new Error('direct transport unavailable'))
       .mockResolvedValueOnce(jsonResponse({
         error: { code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'resilient subsystem unavailable' },
       }, 503))
 
-    await expect(request('/admin/observability/schema-drift')).rejects.toMatchObject({
-      name: 'ApiError',
-      status: 503,
-      code: 'SUBSYSTEM_NOT_CONFIGURED',
-      message: 'resilient subsystem unavailable',
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await expect(request('/admin/observability/schema-drift')).rejects.toThrow('direct transport unavailable')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
   })
 
   it.each(transports)('preserves flat error string code and status via $transport', async ({ skipAuthRefresh }) => {
@@ -425,7 +423,7 @@ describe('request() — wire error normalization', () => {
     })
   }
 
-  it('propagates a decode AbortError first received by the resilient fallback', async () => {
+  it('does not consume another response after a transport failure', async () => {
     const aborted = new DOMException('fallback decode cancelled', 'AbortError')
     const response = jsonResponse({ error: 'unused' }, 503)
     vi.spyOn(response, 'json').mockRejectedValueOnce(aborted)
@@ -434,13 +432,13 @@ describe('request() — wire error normalization', () => {
       .mockResolvedValueOnce(response)
     const eventSpy = vi.spyOn(document, 'dispatchEvent')
 
-    await expect(request('/admin/observability/schema-drift')).rejects.toBe(aborted)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(resilientFetchMock).toHaveBeenCalledTimes(1)
+    await expect(request('/admin/observability/schema-drift')).rejects.toThrow('direct transport unavailable')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
     expect(eventSpy).not.toHaveBeenCalled()
   })
 
-  it('keeps caller headers and cancellation options through a nested-error fallback', async () => {
+  it('keeps caller headers and exact cancellation options on a failed read', async () => {
     const controller = new AbortController()
     const headers = new Headers({ 'X-Test-Scope': 'original' })
     fetchMock.mockImplementation(async () => jsonResponse({
@@ -452,19 +450,18 @@ describe('request() — wire error normalization', () => {
     })).rejects.toMatchObject({
       name: 'ApiError', status: 500, code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed',
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(resilientFetchMock.mock.calls[0][1]).toMatchObject({ signal: controller.signal })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
     expect(headers.get('X-Sudo-Token')).toBeNull()
-    for (const index of [0, 1]) {
+    for (const index of [0]) {
       expect(headersOf(index).get('X-Test-Scope')).toBe('original')
       expect(headersOf(index).get('X-Sudo-Token')).toBeNull()
     }
     expect(fetchMock.mock.calls[0][1]).toHaveProperty('signal', controller.signal)
-    expect(fetchMock.mock.calls[1][1]?.signal).toBeInstanceOf(AbortSignal)
   })
 })
 
-describe('request() — resilient fall-through', () => {
+describe('request() — single transport attempt', () => {
   it.each([
     { status: 404, code: 'NOT_FOUND', message: 'web push is not configured' },
     { status: 501, code: 'AUTH_MODE_OPEN', message: 'requires forward-auth mode' },
@@ -478,15 +475,14 @@ describe('request() — resilient fall-through', () => {
     expect(resilientFetchMock).not.toHaveBeenCalled()
   })
 
-  it('forwards accepted domain statuses to the resilient fallback', async () => {
+  it('does not retry a transport failure even with accepted domain statuses', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('network transition'))
     resilientFetchMock.mockResolvedValueOnce({ status: 'degraded' })
 
-    await request('/system/health', { acceptedStatuses: [503] })
+    await expect(request('/system/health', { acceptedStatuses: [503] })).rejects.toThrow('network transition')
 
-    expect(resilientFetchMock.mock.calls[0][1]).toMatchObject({
-      acceptedStatuses: [503],
-    })
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('does NOT fall through when skipAuthRefresh is set', async () => {

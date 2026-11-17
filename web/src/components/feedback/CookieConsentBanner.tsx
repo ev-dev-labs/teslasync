@@ -33,7 +33,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldCheck } from 'lucide-react'
-import { Button } from '@/components/ui/runtime'
+import { Button } from '@/components/ui/Button'
 import { useVersionInfo } from '@/api/hooks/useSettings'
 import {
   type ConsentState,
@@ -117,20 +117,22 @@ export function CookieConsentBanner({
       aria-describedby="cookie-consent-body"
       className="fixed inset-x-0 bottom-0 z-[70] px-4 pb-4 sm:px-6 sm:pb-6 pointer-events-none"
     >
-      <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-md shadow-2xl pointer-events-auto">
-        <div className="flex items-start gap-3 p-4 sm:p-5">
+      <div data-app-part="feedback" data-app-feedback-kind="toast" data-app-tone="info" className="mx-auto max-w-3xl rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-md shadow-2xl pointer-events-auto">
+        <div data-app-part="feedback-layout" className="flex items-start gap-3 p-4 sm:p-5">
           <div className="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-theme-accent/10 text-theme-accent ring-1 ring-theme-accent/20">
             <ShieldCheck className="h-4 w-4" aria-hidden />
           </div>
-          <div className="flex-1 min-w-0">
+          <div data-app-part="feedback-content" className="flex-1 min-w-0">
             <p
               id="cookie-consent-title"
+              data-app-part="feedback-title"
               className="text-sm font-semibold text-[var(--text-primary)]"
             >
               {t('consent.banner.title', 'Cookies & analytics')}
             </p>
             <p
               id="cookie-consent-body"
+              data-app-part="feedback-message"
               className="text-xs text-[var(--text-secondary)] mt-1"
             >
               {t(
@@ -140,10 +142,12 @@ export function CookieConsentBanner({
             </p>
 
             <div className="mt-2">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 onClick={() => setShowDetails((v) => !v)}
-                className="text-2xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] underline underline-offset-2"
+                className="h-auto rounded-none p-0 text-2xs font-normal text-[var(--text-muted)] hover:bg-transparent hover:text-[var(--text-secondary)] underline underline-offset-2"
                 data-testid="cookie-consent-toggle-details"
                 aria-expanded={showDetails}
                 aria-controls="cookie-consent-details"
@@ -151,7 +155,7 @@ export function CookieConsentBanner({
                 {showDetails
                   ? t('consent.banner.hideDetails', 'Hide details')
                   : t('consent.banner.manage', 'Manage preferences')}
-              </button>
+              </Button>
             </div>
 
             {showDetails && (
@@ -188,7 +192,7 @@ export function CookieConsentBanner({
               </ul>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div data-app-part="feedback-actions" className="mt-4 flex flex-wrap items-center gap-2">
               <Button
                 variant="primary"
                 onClick={handleAccept}

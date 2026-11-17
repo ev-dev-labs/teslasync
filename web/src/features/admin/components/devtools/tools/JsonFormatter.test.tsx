@@ -50,6 +50,8 @@ vi.mock('react-i18next', async () => {
 })
 
 import { JsonFormatterTool } from './JsonFormatter'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils'
 
 const INPUT_LABEL = 'JSON input'
 const EMPTY_MSG = 'Paste JSON above to validate and pretty-print it.'
@@ -76,6 +78,26 @@ beforeEach(() => {
 })
 
 describe('JsonFormatterTool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s frames real JSON without changing source property order, zero, false or null', pack => {
+    const raw = '{"z":0,"a":false,"missing":null}'
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><JsonFormatterTool /></div>)
+    type(raw)
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      const body = preEl(view.container)!
+      expectAppDesignDataMode(body, APPLICATION_DESIGNS[pack].data, '[data-app-code-slot="body"]')
+      expect(body.textContent).toBe(pretty(raw))
+      expect(body).toHaveClass('max-h-64', 'overflow-auto', 'text-emerald-300')
+      type('null')
+      expect(body.textContent).toBe('null')
+      expect(screen.queryByRole('status')).toBeNull()
+      type('not-json')
+      expect(screen.getByRole('alert')).toHaveTextContent(INVALID_MSG)
+      expect(preEl(view.container)).toBeNull()
+      expect(copyBtn()).toBeNull()
+    } finally { release() }
+  })
+
   it('renders its title, description, and a labelled JSON input', () => {
     render(<JsonFormatterTool />)
 
@@ -114,6 +136,9 @@ describe('JsonFormatterTool', () => {
     // The reformat actually happened — it is multi-line + indented, not the
     // compact source string.
     expect(pre!.textContent).toContain('\n  "b": 2')
+    expect(pre).toHaveAttribute('data-app-code-slot', 'body')
+    expect(pre?.closest('[data-app-panel-kind="code"]')).toHaveAttribute('data-app-part', 'panel')
+    expect(pre).toHaveClass('max-h-64', 'overflow-auto', 'text-emerald-300')
     // The empty state is replaced and a copy affordance is offered.
     expect(screen.queryByRole('status')).toBeNull()
     expect(copyBtn()).toBeInTheDocument()

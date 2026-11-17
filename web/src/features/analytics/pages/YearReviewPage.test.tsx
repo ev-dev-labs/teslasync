@@ -27,6 +27,7 @@
  * orchestration operands but render the REAL current panels, charts, stats
  * and error surfaces. No fixture renderer supplies expected measurements.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -330,6 +331,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('YearReviewPage — happy path', () => {
   it('reviews the real numeric year evidence and calendar scope without changing navigation or sources', async () => {

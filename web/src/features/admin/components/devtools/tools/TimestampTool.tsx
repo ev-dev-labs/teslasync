@@ -102,17 +102,21 @@ export function TimestampTool() {
     >
       <div className="space-y-3">
         <div
+          data-app-part="panel"
+          data-app-panel-kind="code"
+          data-surface-variant="standalone"
           className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2"
           role="group"
           aria-label={t('devtools.utils.timestampCurrent', 'Current time')}
         >
           <Clock className="h-4 w-4 text-neon-green" aria-hidden="true" />
-          <div className="text-sm">
+          <div data-app-code-slot="body" className="text-sm">
             <span className="font-mono text-[var(--text-primary)]">{fmtInt(nowUnix)}</span>
             <span className="mx-2 text-[var(--text-muted)]" aria-hidden="true">|</span>
             <span className="font-mono text-[var(--text-secondary)]">{nowIso}</span>
           </div>
           <Button
+            data-app-code-slot="actions"
             type="button"
             variant="ghost"
             size="sm"
@@ -140,7 +144,7 @@ export function TimestampTool() {
               </div>
             )}
             {fromUnix.invalid && (
-              <p role="alert" className="mt-1 text-xs text-rose-300">
+              <p data-app-part="feedback" role="alert" className="mt-1 text-xs text-rose-300">
                 {t('devtools.utils.timestampInvalidUnix', 'Enter a valid Unix timestamp')}
               </p>
             )}
@@ -161,7 +165,7 @@ export function TimestampTool() {
               </div>
             )}
             {fromIso.invalid && (
-              <p role="alert" className="mt-1 text-xs text-rose-300">
+              <p data-app-part="feedback" role="alert" className="mt-1 text-xs text-rose-300">
                 {t('devtools.utils.timestampInvalidIso', 'Enter a valid ISO 8601 timestamp')}
               </p>
             )}

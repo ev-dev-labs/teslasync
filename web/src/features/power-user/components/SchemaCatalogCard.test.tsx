@@ -38,6 +38,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const translations = vi.hoisted(() => ({ values: {} as Record<string, string> }));
 
@@ -109,6 +113,32 @@ function renderCard(table: CuratedTable) {
 // ── Header & layout ─────────────────────────────────────────────────────────────
 
 describe('SchemaCatalogCard — header & layout', () => {
+  it('activates the actual static count badge without promoting it to a metric or changing the column table', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = renderCard(makeTable());
+    const count = screen.getByText('3 cols');
+    expect(count).toHaveAttribute('data-app-part', 'badge');
+    expect(count).toHaveAttribute('data-app-badge-kind', 'schema-column-count');
+    expect(count).toHaveAttribute('data-app-variant', 'neutral');
+    expect(count).not.toHaveAttribute('data-app-design-owner');
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const matches: string[] = [];
+      postcss.parse(feedbackCss).walkRules(rule => {
+        if (rule.selector.includes('badge') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'vertical-align')) {
+          matches.push(...rule.selectors.filter(selector => count.matches(selector)));
+        }
+      });
+      expect(matches.length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('rowheader')).toHaveLength(3);
+      expect(container.querySelector('[data-app-metric]')).toBeNull();
+      count.removeAttribute('data-app-design-owner');
+      expect(matches.every(selector => !count.matches(selector))).toBe(true);
+    } finally { release(); }
+  });
+
   it('translates all six timestamp descriptions without changing protocol names or types', () => {
     translations.values = {
       'powerSql.timestampColumns.driveStart': 'Inicio del viaje.',

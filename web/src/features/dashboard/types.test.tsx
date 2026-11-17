@@ -28,6 +28,7 @@
  * globally in src/test-setup.ts). Router-rendering consumers are wrapped in
  * <MemoryRouter>. No network is touched.
  */
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -142,6 +143,8 @@ function renderHero(state: VehicleState | null) {
   );
   return { ...utils, toDistanceDisplay, toSpeedDisplay };
 }
+
+setupCanvasTextMeasurement();
 
 describe('Vehicle + VehicleState (via <VehicleHero>)', () => {
   it('renders the identity header and feeds the live driving state through the converters', () => {

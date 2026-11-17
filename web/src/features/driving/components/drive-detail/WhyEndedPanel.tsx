@@ -21,6 +21,7 @@ import {
   GlassPanel,
   Select,
   type Column,
+  type MobileDataTablePresentation,
   type SelectOption,
   PanelTitle,
 } from '@/components/ui';
@@ -121,6 +122,17 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
     () => signals.map((s, idx) => ({ ...s, __idx: idx })),
     [signals],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<KeyedSignal>>(() => ({
+    roles: { field: 'title', value: 'primary', ts: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'field': return row.field;
+        case 'value': return row.value;
+        case 'ts': return formatDateTime(row.ts, opts);
+        default: return null;
+      }
+    },
+  }), [opts]);
 
   const timelineItems = useMemo(
     () =>
@@ -280,6 +292,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
                     pageSizeOptions: [25, 50, 100],
                   }}
                   mobileColumns={['ts', 'field', 'value']}
+                  mobilePresentation={mobilePresentation}
                 />
               </div>
             </>

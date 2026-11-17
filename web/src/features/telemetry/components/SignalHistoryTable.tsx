@@ -190,7 +190,7 @@ export function SignalHistoryTable({
           errorRecovery={{ onRetry }}
         >
         {loading ? (
-          <div role="status" aria-label={t('signalHistory.loading', 'Loading signal data')} className="space-y-2">
+          <div data-app-part="status" role="status" aria-label={t('signalHistory.loading', 'Loading signal data')} className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-8" />)}
           </div>
         ) : safeRows.length > 0 ? (

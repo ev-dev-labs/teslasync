@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -116,6 +116,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   setGlobalLocale(savedPreferences.locale);
   setGlobalPrecision(savedPreferences.precision);
 });
@@ -216,7 +217,12 @@ describe('Federated learning studio scoped adoption', () => {
     const unknownTable = screen.getByRole('table', { name: unknown.model_name });
     expect(within(unknownTable).getAllByRole('cell', { name: '—' })).toHaveLength(2);
     const article = unknownTable.closest('article');
-    expect(article).toHaveClass('min-w-0', 'break-words', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    expect(article).toHaveClass('min-w-0', 'break-words');
+    const frame = article?.firstElementChild;
+    expect(frame).toHaveAttribute('data-app-part', 'card');
+    expect(frame).toHaveAttribute('data-surface-variant', 'standalone');
+    expect(frame).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    expect(unknownTable.closest('[data-app-part="card"]')).toBe(frame);
     expect(screen.getByRole('button', { name: `Use for next local round ${unknown.model_name}` }))
       .toHaveClass('min-h-11', 'md:min-h-9');
     expect(screen.getByText('No round')).toHaveClass('text-[var(--text-secondary)]');

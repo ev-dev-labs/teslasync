@@ -25,12 +25,13 @@ export async function catalogueRenderedColumns(panel: Locator): Promise<number> 
   return Math.round(span);
 }
 
-export async function installCataloguePhotoSource(page: Page, svgFallback: boolean) {
+export async function installCataloguePhotoSource(page: Page, svgFallback: boolean, unmatched: 'reject' | 'fallback' = 'reject') {
   const path = process.env.E2E_CATALOGUE_PHOTO
     ?? resolve(process.cwd(), 'e2e', 'fixtures', 'dashboard-catalogue-model-y-white.png');
   await page.route('https://static-assets.tesla.com/configurator/compositor*', async route => {
     const url = new URL(route.request().url());
     if (url.searchParams.get('model') !== 'my' || !url.searchParams.get('options')?.includes('$PPSW')) {
+      if (unmatched === 'fallback') return route.fallback();
       await route.abort();
       throw new Error(`Unmatched compositor source: ${url.search}`);
     }

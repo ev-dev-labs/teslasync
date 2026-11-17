@@ -31,6 +31,7 @@
  *   - AI vehicle id boundary: numeric id forwarded, `0` preserved, empty →
  *     undefined, and a non-numeric id is dropped instead of forwarding NaN.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -275,6 +276,8 @@ beforeEach(() => {
   selectedVehicleContext.setVehicleId.mockReset();
   for (const id of Object.keys(sectionCaptures)) delete sectionCaptures[id];
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('WeeklyDigestPage — scaffolding + a11y', () => {
   it('binds narration to the selected calendar week and vehicle across navigation', () => {

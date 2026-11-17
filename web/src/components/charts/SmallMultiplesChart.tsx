@@ -41,6 +41,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { ChartTooltip } from './ChartTooltip';
+import { axisTickXs } from './chartUtils';
 import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
@@ -207,6 +208,8 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
 
   return (
     <div
+      data-app-part="chart"
+      data-chart-family="small-multiples"
       className={cn('grid gap-3', className)}
       style={gridStyle}
       data-testid="small-multiples-grid"
@@ -281,6 +284,8 @@ function SmallMultiplesCell({
   return (
     <div
       ref={ref}
+      data-app-part="chart"
+      data-chart-family="small-multiple"
       className={cn(
         'rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle,transparent)] p-2',
         cellInteractive && 'cursor-pointer hover:border-[var(--theme-primary)]',
@@ -301,7 +306,7 @@ function SmallMultiplesCell({
       aria-label={label}
       data-testid={`small-multiples-cell-${sig}`}
     >
-      <div className="mb-1 flex items-center gap-1.5 px-1">
+      <div data-app-part="chart-header" className="mb-1 flex items-center gap-1.5 px-1">
         <span
           aria-hidden="true"
           className="inline-block h-2 w-2 shrink-0 rounded-full"
@@ -315,21 +320,22 @@ function SmallMultiplesCell({
           {label}
         </span>
       </div>
+      <div data-app-part="chart-plot" style={{ height: cellHeight }}>
       {!hasData ? (
         <div
-          className="flex items-center justify-center text-2xs text-[var(--text-muted)]"
-          style={{ height: cellHeight }}
+          data-chart-state="empty"
+          className="flex h-full items-center justify-center text-2xs text-[var(--text-muted)]"
         >
           {noData}
         </div>
       ) : !inView ? (
         <div
-          className="rounded bg-[var(--glass-bg-subtle,transparent)]"
-          style={{ height: cellHeight }}
+          data-chart-state="loading"
+          className="h-full rounded bg-[var(--glass-bg-subtle,transparent)]"
           aria-hidden="true"
         />
       ) : (
-        <ResponsiveContainer width="100%" height={cellHeight}>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={rows}
             syncId={syncId}
@@ -343,7 +349,7 @@ function SmallMultiplesCell({
             />
             <XAxis
               dataKey={xKey}
-              tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
+              tick={axisTickXs}
               tickFormatter={(v: string) => formatTime(v)}
               minTickGap={24}
               tickLine={false}
@@ -351,7 +357,7 @@ function SmallMultiplesCell({
             <YAxis
               tickFormatter={kind === 'count' ? (value: number) => fmtInt(value)
                 : kind === 'measurement' ? (value: number) => fmtNumber(value) : undefined}
-              tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
+              tick={axisTickXs}
               width={32}
               tickLine={false}
               domain={['auto', 'auto']}
@@ -372,6 +378,7 @@ function SmallMultiplesCell({
           </LineChart>
         </ResponsiveContainer>
       )}
+      </div>
     </div>
   );
 }

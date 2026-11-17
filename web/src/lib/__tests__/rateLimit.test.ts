@@ -101,12 +101,12 @@ describe('RateLimitError', () => {
 
     expect(handler).toHaveBeenCalledTimes(1)
     const evt = handler.mock.calls[0][0] as CustomEvent<{ scope: string; retryAfterSec: number }>
-    expect(evt.detail.scope).toBe('/charging')
+    expect(evt.detail.scope).toBe('/charging/9/telemetry')
     expect(evt.detail.retryAfterSec).toBe(15)
     document.removeEventListener('teslasync:rate-limited', handler)
   })
 
-  it('short-circuits subsequent calls to the same scope without hitting the network', async () => {
+  it('short-circuits the same resource without guessing a broader quota', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(429, { error: 'rl' }, { 'retry-after': '30' }),
     )
@@ -115,7 +115,7 @@ describe('RateLimitError', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     // Second call to the same scope MUST be cached — no extra fetch call.
-    const err = await resilientFetch('/vehicles/42/state', { retries: 0 }).catch((e) => e)
+    const err = await resilientFetch('/vehicles?limit=10', { retries: 0 }).catch((e) => e)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(isRateLimitError(err)).toBe(true)
     expect((err as RateLimitError).message).toMatch(/cached/i)

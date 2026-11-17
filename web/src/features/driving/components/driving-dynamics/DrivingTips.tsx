@@ -95,7 +95,7 @@ export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProp
           message={t('dynamics.guidance.empty', 'No measured motor evidence available for trip-specific guidance.')}
         />
       ) : (
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <ul data-app-part="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {tips.map((tip) => {
           const Icon = TONE_ICON[tip.tone];
           return (

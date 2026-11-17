@@ -153,8 +153,8 @@ export function ColdWarmComparison({
               </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-              <Text as="p" variant="bodySm">
+            <div data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+              <Text data-app-part="feedback-message" as="p" variant="bodySm">
                 {!summary.sampleSufficient
                   ? t(
                       'coldStart.noData',

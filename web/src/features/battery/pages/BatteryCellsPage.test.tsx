@@ -33,6 +33,7 @@
  * is the English fallback with {{placeholder}} interpolation applied.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -50,7 +51,9 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return {
     ...actual,
     ...chartTestDoubles,
-    EmbeddedChart: h.embeddedChart.mockImplementation(chartTestDoubles.EmbeddedChart),
+    EmbeddedChart: h.embeddedChart.mockImplementation(props => (
+      <><chartTestDoubles.EmbeddedChart {...props} />{props.caption}</>
+    )),
     renderAnnotationLines: h.annotationLines.mockImplementation(actual.renderAnnotationLines),
   };
 });
@@ -302,6 +305,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('BatteryCellsPage', () => {
   it('does not show active loading for a paused initial request', () => {
     h.query = makeQuery({ fetchStatus: 'paused', isLoading: false });
@@ -486,14 +491,14 @@ describe('BatteryCellsPage', () => {
     renderPage();
 
     // Heatmap is the default view — its legend is present.
-    expect(screen.getByText('Nominal')).toBeInTheDocument();
+    expect(screen.getByText('Nominal', { selector: '[data-chart-scale] span' })).toBeInTheDocument();
     const toggle = screen.getByRole('button', { name: 'Switch to bar view' });
 
     fireEvent.click(toggle);
 
     // View swapped to the bar chart: label flips, heatmap legend is gone.
     expect(screen.getByRole('button', { name: 'Switch to grid view' })).toBeInTheDocument();
-    expect(screen.queryByText('Nominal')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nominal', { selector: '[data-chart-scale] span' })).not.toBeInTheDocument();
   });
 
   it('re-sorts the cell table and updates aria-sort when a column header is clicked', () => {
@@ -530,6 +535,16 @@ describe('BatteryCellsPage', () => {
     expect(significant.querySelector('svg')).toHaveClass('lucide-triangle-alert');
     expect(normal).not.toHaveAttribute('style');
     expect(normal).not.toHaveClass('hover:scale-110');
+    expect(normal).toHaveAttribute('data-chart-family', 'battery-cells');
+    expect(normal).toHaveAttribute('data-heatmap-state', 'active');
+    expect(h.embeddedChart).toHaveBeenCalledWith(expect.objectContaining({
+      ariaLabel: 'Cells colored by deviation from average',
+      data: expect.arrayContaining([expect.objectContaining({
+        cell_number: 1, voltage: 3.9, delta_from_avg: 5, status: 'Normal',
+      })]),
+      viewportClassName: expect.stringContaining('[contain:layout]'),
+      caption: expect.anything(),
+    }), undefined);
   });
 
   it('exposes every hourly spread sample and aligns annotations to the timestamp domain', () => {

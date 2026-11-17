@@ -22,6 +22,47 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/notifications/audit');
       await waitForHarnessReady(page, mocks);
+      const mobile = page.getByRole('group', { name: 'Recent activity', exact: true });
+      if (await mobile.count()) {
+        await expect(mobile).toBeVisible();
+        const frame = mobile.locator('xpath=ancestor::*[@data-grid-frame][1]');
+        const rows = mobile.locator('[data-row-key]');
+        const footer = mobile.locator('[data-app-part="pagination"]');
+        await expect(rows).toHaveCount(25);
+        await expect(footer).toContainText('Showing 25 of 251');
+        expect(await footer.evaluate(node => node.closest('.mgr-group') === null)).toBe(true);
+        await expect(frame.locator('[data-grid-viewport], [data-grid-footer]')).toHaveCount(0);
+        const loadMore = footer.getByRole('button', { name: 'Load 25 more', exact: true });
+        const bounds = await loadMore.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.width).toBeGreaterThanOrEqual(44);
+        expect(bounds!.height).toBeGreaterThanOrEqual(44);
+        await loadMore.click();
+        await expect(rows).toHaveCount(50);
+        await expect(footer).toContainText('Showing 50 of 251');
+        await mobile.getByRole('button', { name: 'configuration.updated', exact: true }).first().click();
+        const details = page.getByRole('dialog', { name: 'Recent activity', exact: true });
+        await expect(details).toContainText(`resource-1-${'identifier'.repeat(30)}`);
+        await expect(details).toContainText('Synthetic shared-grid footer evidence.');
+        expect(await details.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+        await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+        const geometry = await footer.evaluate(node => {
+          const bounds = node.getBoundingClientRect();
+          return {
+            left: bounds.left, right: bounds.right, width: window.innerWidth,
+            overflow: node.scrollWidth - node.clientWidth,
+          };
+        });
+        expect(geometry.left).toBeGreaterThanOrEqual(0);
+        expect(geometry.right).toBeLessThanOrEqual(geometry.width);
+        expect(geometry.overflow).toBeLessThanOrEqual(1);
+        await expectNoHorizontalOverflow(page);
+        if (width === 320 && process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
+          await page.screenshot({ path: test.info().outputPath(`shared-grid-footer-${width}-${theme}.png`), fullPage: true });
+        }
+        await assertMockApiComplete(page, mocks);
+        return;
+      }
       // Table accessible name is the caption per the caption contract.
       const table = page.getByRole('table', { name: 'Recent activity', exact: true });
       await expect(table).toBeVisible();
@@ -60,20 +101,6 @@ for (const theme of ['light', 'dark'] as const) {
       expect(geometry.outside).toBe(true);
       expect(geometry.scrollTop).toBeGreaterThan(0);
       expect(geometry.footerBelowViewport).toBe(true);
-      if (width < 640) {
-        // Container-responsive numeric/edge alternatives are deliberately hidden.
-        // Measure real tap targets, while independently requiring core navigation.
-        await expect(pagination.getByRole('button', { name: 'Previous page', exact: true })).toBeVisible();
-        await expect(pagination.getByRole('button', { name: 'Next page', exact: true })).toBeVisible();
-        const controls = footer.locator('button, input, select').filter({ visible: true });
-        expect(await controls.count()).toBeGreaterThan(0);
-        for (const control of await controls.all()) {
-          const bounds = await control.boundingBox();
-          expect(bounds).not.toBeNull();
-          expect(bounds!.height).toBeGreaterThanOrEqual(44);
-          expect(bounds!.width).toBeGreaterThanOrEqual(44);
-        }
-      }
       const destination = footer.getByRole('textbox', { name: 'Go to page' });
       await expect(destination).toHaveValue('1');
       await destination.fill('6');
@@ -92,7 +119,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(destination).toHaveAttribute('aria-invalid', 'true');
       await expect(footer.getByRole('alert')).toHaveText('Enter a page from 1 to 11.');
       await expectNoHorizontalOverflow(page);
-      if (width === 320 || width === 1440) {
+      if ((width === 320 || width === 1440) && process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
         await page.screenshot({ path: test.info().outputPath(`shared-grid-footer-${width}-${theme}.png`), fullPage: true });
       }
       await assertMockApiComplete(page, mocks);

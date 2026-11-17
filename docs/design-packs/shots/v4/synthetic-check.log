@@ -1,0 +1,15 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'rgb(0, 0, 0)'
+- 'rgb(100, 160, 230)'
+       ^
+
+    at [stdin]:47:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'rgb(0, 0, 0)',
+  expected: 'rgb(100, 160, 230)',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

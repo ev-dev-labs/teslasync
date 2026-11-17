@@ -12,6 +12,12 @@ import { act, render, screen, within, fireEvent, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 
 const feedback = vi.hoisted(() => ({
   success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn(),
@@ -110,7 +116,7 @@ function makeMutation(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, variables: undefined, ...overrides };
 }
 
-function renderPanel(props: QuietHoursPanelProps = {}) {
+function renderPanel(props: QuietHoursPanelProps = {}, pack?: PackId) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MemoryRouter>
@@ -119,7 +125,17 @@ function renderPanel(props: QuietHoursPanelProps = {}) {
       </QueryClientProvider>
     </MemoryRouter>
   );
-  return render(<QuietHoursPanel {...props} />, { wrapper });
+  return render(pack ? <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+    <QuietHoursPanel {...props} />
+  </div> : <QuietHoursPanel {...props} />, { wrapper });
+}
+
+const formRules: Rule[] = [];
+postcss.parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+  .walkRules(rule => { if (rule.selector.includes('[data-app-form-')) formRules.push(rule); });
+function matchedFormRules(node: Element, contract: string) {
+  return formRules.flatMap(rule => rule.selectors.filter(selector => selector.includes(contract)
+    && [...node.ownerDocument.querySelectorAll(selector)].includes(node)));
 }
 
 beforeEach(() => {
@@ -129,6 +145,86 @@ beforeEach(() => {
   mockWindows.mockReturnValue(makeQuery([makeWindow()]));
   mockSave.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
+});
+
+describe('QuietHoursPanel — native design ownership', () => {
+  it.each(PACK_IDS)('%s composes saved schedules and the real validated editor without changing schedule data', async (pack) => {
+    mockWindows.mockReturnValue(makeQuery([
+      makeWindow({ weekdays: 2, bypass_severities: ['critical', 'vendor-code'] }),
+      makeWindow({ id: 2, enabled: false, start_local: '13:00', end_local: '14:00', timezone: 'UTC', bypass_severities: [] }),
+    ]));
+    const view = renderPanel({}, pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const rows = [screen.getByTestId('quiet-hours-row-1'), screen.getByTestId('quiet-hours-row-2')];
+      expect(within(rows[0]).getByText('22:00 → 07:00 (America/New_York)')).toBeInTheDocument();
+      expect(within(rows[0]).getByText('Enabled', { exact: true })).toBeInTheDocument();
+      expect(within(rows[0]).getByText('Mon: Enabled')).toBeInTheDocument();
+      expect(within(rows[0]).getByText('Sun: Disabled')).toBeInTheDocument();
+      expect(within(rows[0]).getByText('vendor-code')).toBeInTheDocument();
+      expect(within(rows[1]).getByText('Disabled', { exact: true })).toBeInTheDocument();
+      expect(within(rows[1]).getByText('13:00 → 14:00 (UTC)')).toBeInTheDocument();
+      expect(within(rows[1]).queryByText('Always allow:')).toBeNull();
+      expect([...screen.getByTestId('quiet-hours-list').children]).toEqual(rows);
+
+      fireEvent.click(within(rows[1]).getByRole('button', { name: 'Edit' }));
+      const form = await screen.findByTestId('quiet-hours-form');
+      expect(screen.getByLabelText('Start')).toHaveValue('13:00');
+      expect(screen.getByLabelText('End')).toHaveValue('14:00');
+      expect(screen.getByRole('combobox', { name: 'Timezone (IANA)' })).toHaveTextContent('UTC');
+      expect(within(form).getByRole('switch', { name: 'Enabled' })).not.toBeChecked();
+      fireEvent.change(screen.getByLabelText('End'), { target: { value: '13:00' } });
+      fireEvent.submit(form);
+      expect(screen.getByLabelText('End')).toBeInvalid();
+      expect(screen.getByTestId('quiet-hours-error')).toHaveTextContent('End must differ from start.');
+      expect(form).toContainElement(screen.getByTestId('quiet-hours-error'));
+      await waitFor(() => expect(form.getAttribute('data-app-design-owner')).toContain(`pack-${pack}`));
+      for (const row of rows) {
+        expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+        expectAppDesignDataMode(row.querySelector('[data-app-record-slot="label"]')!,
+          APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+        expectAppDesignDataMode(row.querySelector('[data-app-part="record-body"]')!,
+          APPLICATION_DESIGNS[pack].data, '[data-app-card-kind="record"]');
+      }
+      expect(matchedFormRules(form, '[data-app-form-section]').length).toBeGreaterThan(0);
+      const heading = form.querySelector('[data-app-form-heading]')!;
+      expect(matchedFormRules(heading, '[data-app-form-heading]')).toEqual(expect.arrayContaining([
+        expect.stringContaining(`[data-app-design-owner~="controls-${APPLICATION_DESIGNS[pack].controls}"]`),
+      ]));
+      const body = form.querySelector('[data-app-form-body]')!;
+      expect(body).toContainElement(screen.getByLabelText('Start'));
+      expect(body).toContainElement(screen.getByRole('group', { name: 'Weekdays' }));
+      expect(body).toContainElement(screen.getByTestId('quiet-hours-error'));
+      expect(within(form).getByRole('button', { name: 'Update' })).toBeEnabled();
+      expect(mockSave.mock.results[0].value.mutate).not.toHaveBeenCalled();
+      expect(mockRemove.mock.results[0].value.mutate).not.toHaveBeenCalled();
+    } finally { release(); }
+  });
+
+  it('leaves default saved cards and a failed draft unowned while retaining editable recovery', () => {
+    const mutate = vi.fn();
+    mockSave.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } });
+    fireEvent.submit(screen.getByTestId('quiet-hours-form'));
+    const callbacks = mutate.mock.calls[0][1] as { onError: () => void };
+    act(() => callbacks.onError());
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const row = screen.getByTestId('quiet-hours-row-1');
+      const form = screen.getByTestId('quiet-hours-form');
+      for (const source of [row, form]) {
+        expect(source).not.toHaveAttribute('data-app-design-owner');
+        expect(matchesAppDesignCss(source, '[data-app-card-kind="record"]')).toEqual([]);
+      }
+      expect(matchedFormRules(form, '[data-app-form-section]')).toEqual([]);
+      expect(screen.getByLabelText('End')).toHaveValue('08:00');
+      expect(screen.getByTestId('quiet-hours-error')).toHaveTextContent('Failed to save quiet hours window');
+      expect(within(form).getByRole('button', { name: 'Update' })).toBeEnabled();
+      expect(mutate).toHaveBeenCalledTimes(1);
+    } finally { release(); }
+  });
 });
 
 describe('QuietHoursPanel — confirm-gated delete', () => {

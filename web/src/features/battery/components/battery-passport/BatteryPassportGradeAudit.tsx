@@ -41,8 +41,8 @@ export function BatteryPassportGradeAudit({
             'Transparent frontend reconstruction of the documented server rule; not an independent calibration or hash-bound fact.',
           )} actions={<Award className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
-          <div className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <Text as="code" mono variant="bodySm" className="break-words">
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone" className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+            <Text as="code" mono variant="bodySm" data-app-part="record-body" className="break-words">
               {t(
                 'batteryPassport.gradeAudit.formula',
                 'score = clamp(soh_pct - 8 × fast_charge_ratio - 12 × clamp(equivalent_full_cycles / 1500, 0, 1), 0, 100)',

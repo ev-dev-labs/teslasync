@@ -17,6 +17,7 @@ import {
   Text,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
   type PaginationConfig,
   IconButton,
 } from '@/components/ui';
@@ -150,6 +151,13 @@ export function FlagsTable({
     [t, onEdit, onAskDelete],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<FeatureFlagEntry>>(() => ({
+    roles: { key: 'title', value: 'primary' },
+    displayValue: (row, key) => key === 'key' ? row.key : key === 'value' ? previewValue(row.value) : null,
+    canShowField: (key) => key !== 'actions',
+    inlineActions: (row) => columns.find(column => column.key === 'actions')?.render(row),
+  }), [columns]);
+
   if (loading && sorted.length === 0) {
     return (
       <div role="region" aria-busy="true" aria-label={t('admin.flags.table.loading', 'Loading flags…')}>
@@ -169,6 +177,7 @@ export function FlagsTable({
       tableId="admin:feature-flags"
       name="feature-flags"
       columns={columns}
+      mobilePresentation={mobilePresentation}
       data={sorted}
       enableValueFilters
       filterData={rows ?? []}

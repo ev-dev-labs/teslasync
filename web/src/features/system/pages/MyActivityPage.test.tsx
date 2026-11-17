@@ -31,6 +31,7 @@
  * to the English default.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -209,6 +210,8 @@ afterEach(() => {
   onlineManager.setOnline(true);
   vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MyActivityPage — Project Apex elevation', () => {
   it.each(['paused', 'idle'] as const)('keeps initial %s activity unknown with every shell and recovers', async (fetchStatus) => {

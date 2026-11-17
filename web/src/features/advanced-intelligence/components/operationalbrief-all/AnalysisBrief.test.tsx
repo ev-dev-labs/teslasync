@@ -1,6 +1,6 @@
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
-import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { createInstance } from 'i18next';
@@ -30,6 +30,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  cleanup();
   setGlobalLocale(savedLocale);
 });
 

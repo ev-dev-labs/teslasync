@@ -10,12 +10,14 @@ import { Icons } from '@/lib/icons';
 import {
   Badge,
   Button,
+  BUTTON_BASE,
   DataTable,
   PanelTitle,
   Caption,
   Text,
   Icon,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 
 import { TimeStamp, FreshnessDotAuto } from '@/components/data-display';
@@ -456,6 +458,24 @@ export default function SafetySettingsPage() {
   const chartData = useMemo(() => toChartData(history), [history]);
 
   const historyColumns = useMemo(() => buildHistoryColumns(t), [t]);
+  const historyMobilePresentation = useMemo<MobileDataTablePresentation<SafetySnapshot>>(() => ({
+    roles: {
+      aeb: 'title', aeb_operating_state: 'primary',
+      bsc: 'meta', bscw: 'meta', elda: 'meta',
+    },
+    displayValue: (row, key) => {
+      const column = historyColumns.find((candidate) => candidate.key === key);
+      const raw = column?.filterValue?.(row) ?? null;
+      const value = column?.filterValueLabel?.(raw, row)
+        ?? (typeof raw === 'string' || typeof raw === 'number' ? raw : null);
+      return key === 'aeb' ? `${t('safety.hdrAeb', 'AEB')}: ${value ?? '—'}` : value;
+    },
+    inlineActions: (row) => (
+      <Text as="span" variant="bodySm">
+        {t('safety.hdrTime', 'Time')}: <TimeStamp value={row.created_at} />
+      </Text>
+    ),
+  }), [historyColumns, t]);
 
   const sortedHistory = useMemo(
     () =>
@@ -821,7 +841,9 @@ export default function SafetySettingsPage() {
                     per-day trend with explicit data-confidence metadata. */}
                 <PrefetchLink
                   to="/fsd"
-                  className="flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  data-app-part="button"
+                  data-app-variant="secondary"
+                  className={cn(BUTTON_BASE, 'flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 hover:bg-[var(--control-bg-hover)]')}
                 >
                   <Text as="span" size="sm" weight="medium">
                     {t('safety.openFsdInsights', 'Open FSD insights')}
@@ -957,7 +979,7 @@ export default function SafetySettingsPage() {
               tableId="vehicle-systems:safety-history"
               enableValueFilters
               columns={historyColumns}
-              /* Keep every recorded field reachable through the shared contained scroll on mobile. */
+              mobilePresentation={historyMobilePresentation}
               data={sortedHistory}
               keyExtractor={(row) => row.id ?? 0}
               compact

@@ -166,15 +166,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.inline) {
         return (
-          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
-            <AlertTriangle className="h-5 w-5 text-[var(--semantic-danger)] shrink-0" aria-hidden="true" />
-            <div className="flex-1 min-w-0">
-              <Text as="p" variant="bodySm">
+          <div data-app-part="feedback error" data-app-feedback-kind="notice" data-app-tone="danger" role="alert" className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
+            <AlertTriangle data-app-part="feedback-icon" className="h-5 w-5 text-[var(--semantic-danger)] shrink-0" aria-hidden="true" />
+            <div data-app-part="feedback-content" className="flex-1 min-w-0">
+              <Text data-app-part="feedback-title" as="p" variant="bodySm">
                 {label('errorBoundary.inlineTitle', 'Component failed to load')}
               </Text>
-              <Text as="p" variant="caption" className="whitespace-pre-wrap break-words">{this.state.error?.message}</Text>
+              <Text data-app-part="feedback-message" as="p" variant="caption" className="whitespace-pre-wrap break-words">{this.state.error?.message}</Text>
             </div>
-            <Button variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="shrink-0 max-md:min-h-11">
+            <Button data-app-part="feedback-retry" variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="shrink-0 max-md:min-h-11">
               <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {label('errorBoundary.retry', 'Retry')}
             </Button>
           </div>
@@ -183,22 +183,22 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex items-center justify-center min-h-error-fallback p-8">
-          <div className="text-center max-w-md min-w-0">
-            <div className="mx-auto mb-6 rounded-shape-md bg-[var(--semantic-danger-bg)] p-5 border border-[var(--semantic-danger-border)] w-fit">
+          <div data-app-part="feedback error" data-app-feedback-kind="empty" data-app-tone="danger" className="text-center max-w-md min-w-0">
+            <div data-app-part="feedback-icon" className="mx-auto mb-6 rounded-shape-md bg-[var(--semantic-danger-bg)] p-5 border border-[var(--semantic-danger-border)] w-fit">
               {isNetworkError ? (
                 <CloudOff className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               ) : (
                 <AlertTriangle className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               )}
             </div>
-            <Heading level="section" className="mb-2 break-words">
+            <Heading data-app-part="feedback-title" level="section" className="mb-2 break-words">
               {isChunkError
                 ? label('errorBoundary.chunkTitle', 'New Version Deployed')
                 : isNetworkError
                 ? label('errorBoundary.connectionTitle', 'Connection Lost')
                 : label('errorBoundary.title', 'Something went wrong')}
             </Heading>
-            <Text as="p" variant="bodySm" className="mb-2 whitespace-pre-wrap break-words">
+            <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mb-2 whitespace-pre-wrap break-words">
               {isChunkError
                 ? label('errorBoundary.chunkBody', 'A new version was deployed. Click Reload to load the latest assets.')
                 : isNetworkError
@@ -210,7 +210,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {label('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
               </Text>
             )}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <div data-app-part="feedback-actions" className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <Button
                 onClick={this.handleRetry}
                 variant="primary"

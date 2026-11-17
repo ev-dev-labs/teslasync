@@ -26,9 +26,11 @@ interface ComfortConsistencyWindowDirectoryProps {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <MetricLabel>{label}</MetricLabel>
-      <Text as="p" variant="bodySm" mono className="mt-0.5">{value}</Text>
+    <div data-app-part="list-row">
+      <MetricLabel data-app-part="metric-label" as="dt">{label}</MetricLabel>
+      <dd data-app-part="metric-reading" className="mt-0.5">
+        <Text data-app-part="metric-value" as="p" variant="bodySm" mono>{value}</Text>
+      </dd>
     </div>
   );
 }
@@ -86,20 +88,23 @@ export function ComfortConsistencyWindowDirectory({
           state={state}
           requirement="windows"
         >
-          <ol className="max-h-[42rem] space-y-2 overflow-y-auto pr-1">
+          <ol data-app-part="list" data-app-list="records" className="max-h-[42rem] space-y-2 overflow-y-auto pr-1">
             {directory.items.map((window) => (
               <li
                 key={window.id}
+                data-app-part="card list-row"
+                data-app-card-kind="record"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
+                <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <Text as="p" variant="label">
+                    <Text data-app-part="record-title" as="p" variant="label">
                       {t('comfortConsistency.directory.window', 'Chronological window {{index}}', {
                         index: fmtInt(window.index),
                       })}
                     </Text>
-                    <Text as="p" variant="caption">
+                    <Text data-app-part="record-context" as="p" variant="caption">
                       {formatDateTime(new Date(window.startMs), { locale })}
                     </Text>
                   </div>
@@ -121,7 +126,7 @@ export function ComfortConsistencyWindowDirectory({
                     </Badge>
                   </div>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+                <dl data-app-part="list record-body" data-app-list="definitions" className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
                   <Detail
                     label={t('comfortConsistency.directory.end', 'Last sample')}
                     value={formatDateTime(new Date(window.endMs), { locale })}
@@ -154,7 +159,7 @@ export function ComfortConsistencyWindowDirectory({
                     label={t('comfortConsistency.directory.right', 'Right boundary')}
                     value={boundaryLabel(window.rightBoundary)}
                   />
-                </div>
+                </dl>
               </li>
             ))}
           </ol>

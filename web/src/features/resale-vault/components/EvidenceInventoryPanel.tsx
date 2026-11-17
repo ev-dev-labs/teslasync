@@ -56,9 +56,9 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
             : isLoading;
           const failed = sources?.some((source) => source.section === section && source.state.fatalError != null) ?? false;
           return (
-            <tr key={section}>
-              <th scope="row"><span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span></th>
-              <td>
+            <tr data-app-part="table-row" key={section}>
+              <th data-app-part="table-cell" scope="row"><span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span></th>
+              <td data-app-part="table-cell">
                 <Badge variant={hasData ? 'success' : 'neutral'}>
                   {pending && !hasData
                     ? t('resaleVault.inventory.loading', 'Loading…')
@@ -69,7 +69,7 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
                         : t('resaleVault.inventory.noData', 'No data')}
                 </Badge>
               </td>
-              <td>
+              <td data-app-part="table-cell">
                 <Badge variant={isSelected ? 'info' : 'neutral'}>
                   {isSelected
                     ? t('resaleVault.inventory.included', 'Included')

@@ -40,7 +40,7 @@
  */
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PackBoundary } from './designPacks/PackBoundary';
 import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
@@ -834,7 +834,7 @@ it('preserves retained controller data, source trust and focused refresh while s
   const { container, rerender } = render(tree('classic'));
   assertOperationalBriefDisclosure(screen.getByTestId('dashboard-charging-schedule-context-brief'), 'Source available');
   const refresh = screen.getByRole('button', { name: /^Refresh data · error/ });
-  refresh.focus();
+  act(() => { refresh.focus(); });
   for (const pack of PACK_IDS) {
     rerender(tree(pack));
     if (pack !== 'classic') {

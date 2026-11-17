@@ -119,12 +119,12 @@ function PartnerRegistrationTool() {
         <div className="space-y-2">
           <Caption>{t('devtools.fleet.opensslCommands', 'OpenSSL commands')}</Caption>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
-              <Code className="min-w-0 flex-1 break-all">{opensslGen}</Code>
+            <div data-app-part="panel" data-app-panel-kind="code" className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+              <Code data-app-code-slot="body" className="min-w-0 flex-1 break-all">{opensslGen}</Code>
               <CopyButton text={opensslGen} />
             </div>
-            <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
-              <Code className="min-w-0 flex-1 break-all">{opensslPub}</Code>
+            <div data-app-part="panel" data-app-panel-kind="code" className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+              <Code data-app-code-slot="body" className="min-w-0 flex-1 break-all">{opensslPub}</Code>
               <CopyButton text={opensslPub} />
             </div>
           </div>
@@ -221,11 +221,11 @@ function PartnerPublicKeyTool() {
             {publicKey && (
               <div className="space-y-1">
                 <Caption>{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</Caption>
-                <div className="rounded bg-[var(--surface-2)] p-3">
-                  <Text as="pre" variant="code" className="max-h-48 overflow-auto whitespace-pre-wrap break-all">
+                <div data-app-part="panel" data-app-panel-kind="code" className="rounded bg-[var(--surface-2)] p-3">
+                  <Text data-app-code-slot="body" as="pre" variant="code" className="max-h-48 overflow-auto whitespace-pre-wrap break-all">
                     {publicKey}
                   </Text>
-                  <div className="mt-2 flex justify-end">
+                  <div data-app-code-slot="actions" className="mt-2 flex justify-end">
                     <CopyButton text={publicKey} />
                   </div>
                 </div>
@@ -306,17 +306,17 @@ function PublicKeySetupTool() {
         </div>
 
         {fingerprint && (
-          <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+          <div data-app-part="panel" data-app-panel-kind="code" className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
             <Icons.fingerprint className="h-4 w-4 text-[var(--text-secondary)]" />
-            <Code className="break-all">{fingerprint}</Code>
+            <Code data-app-code-slot="body" className="break-all">{fingerprint}</Code>
             <CopyButton text={fingerprint} />
           </div>
         )}
 
         {wellKnownPath && (
-          <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+          <div data-app-part="panel" data-app-panel-kind="code" className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
             <Icons.link className="h-4 w-4 text-[var(--text-secondary)]" />
-            <Code className="flex-1 break-all">{wellKnownPath}</Code>
+            <Code data-app-code-slot="body" className="flex-1 break-all">{wellKnownPath}</Code>
             <CopyButton text={wellKnownPath} />
           </div>
         )}
@@ -389,9 +389,9 @@ function VehicleKeyPairingTool() {
       <div className="space-y-3">
         <HelperText>{isPending ? t('common.loading', 'Loading...') : t('devtools.fleet.pairingHostUnknown', 'Pairing link unavailable: the configured application hostname is not provided by Fleet API info.')}</HelperText>
         {error && <AlertBanner variant="danger">{getErrorMessage(error)}</AlertBanner>}
-        <div className="rounded-lg bg-[var(--surface-2)] p-3">
+        <div data-app-part="panel" data-surface-variant="standalone" className="rounded-lg bg-[var(--surface-2)] p-3">
           <HelperText>{t('devtools.fleet.pairingInstructions', 'Pairing instructions')}</HelperText>
-          <ul className={cn('mt-2 space-y-1', typography.role.helper)}>
+          <ul data-app-part="list" className={cn('mt-2 space-y-1', typography.role.helper)}>
             <li className="flex items-start gap-2">
               <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
               <span>{t('devtools.fleet.pairingStep1', "Pairing Step1")}</span>
@@ -834,8 +834,9 @@ function OnboardingWorkflow() {
           <Caption>{t('devtools.fleet.progress', 'Progress')}</Caption>
           <Caption>{fmtInt(completedCount)} / {fmtInt(ONBOARDING_STEPS.length)} ({fmtInt(progressPct)}%)</Caption>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-glass-border">
+        <div data-app-part="metric" data-app-metric="bar" data-metric-track className="h-2 overflow-hidden rounded-full bg-glass-border">
           <div
+            data-metric-fill
             className="h-full rounded-full bg-[var(--semantic-info)] transition-all duration-slow motion-reduce:transition-none"
             style={{ width: `${progressPct}%` }}
           />

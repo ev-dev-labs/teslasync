@@ -108,7 +108,7 @@ export default function WatchFacePage() {
   let watchContent: React.ReactNode;
   if (isLoading && !source.hasData && !source.isRefreshBlocked) {
     watchContent = (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('watch.loading', 'Loading watch summary…')}

@@ -35,7 +35,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
@@ -131,6 +131,7 @@ beforeEach(() => {
   fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 320 }));
 });
 afterEach(() => {
+  cleanup();
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
 });

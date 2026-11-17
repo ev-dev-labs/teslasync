@@ -50,7 +50,7 @@ export default function PhysicsCockpitPage() {
     !hasVehicle ? <EmptyState message={prerequisite}
       actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }} />
       : state.status === 'initial' && (query.isPending || !query.isSuccess)
-        ? <div role="status">
+        ? <div data-app-part="status" role="status">
             <Text as="p" variant="bodySm">{unresolved}</Text>
             {state.isRefreshBlocked && <Text as="p" variant="bodySm">
               {deferred}

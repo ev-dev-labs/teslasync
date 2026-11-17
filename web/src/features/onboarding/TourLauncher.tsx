@@ -104,7 +104,7 @@ export function TourLauncher({ initialOpen = false }: { initialOpen?: boolean })
             message={t('tour.launcher.empty', 'No tours are available yet.')}
           />
         ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {tours.map((def) => {
             const completed = isTourCompleted(def.id, def.version)
             const recommended = isRecommendedForRoute(def, location.pathname)

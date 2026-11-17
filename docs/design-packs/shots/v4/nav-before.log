@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "top": 747,
+    "bottom": 844,
+    "height": 97,
+    "gap": "12px",
+    "paddingTop": "12px",
+    "paddingBottom": "12px"
+  },
+  "tabs": [
+    {
+      "label": "Home",
+      "top": 760,
+      "bottom": 804,
+      "height": 44
+    },
+    {
+      "label": "Vehicles",
+      "top": 760,
+      "bottom": 804,
+      "height": 44
+    },
+    {
+      "label": "Driving",
+      "top": 760,
+      "bottom": 804,
+      "height": 44
+    },
+    {
+      "label": "Charging",
+      "top": 802,
+      "bottom": 846,
+      "height": 44
+    },
+    {
+      "label": "More",
+      "top": 802,
+      "bottom": 846,
+      "height": 44
+    }
+  ],
+  "lastTabBeyondViewport": 2
+}
+FAIL phone tab geometry exceeds viewport

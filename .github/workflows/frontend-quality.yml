@@ -15,6 +15,9 @@ on:
       - 'cmd/routetemplategen/**'
       - 'internal/api/webvitals/routetemplates_gen.go'
       - '.github/workflows/frontend-quality.yml'
+      - '.github/scripts/ci_workflows.test.mjs'
+      - '.github/scripts/playwright-duration-shards.mjs'
+      - '.github/scripts/playwright-test-durations.json'
   push:
     branches: [main, revamped-ui]
     paths:
@@ -23,6 +26,9 @@ on:
       - 'cmd/routetemplategen/**'
       - 'internal/api/webvitals/routetemplates_gen.go'
       - '.github/workflows/frontend-quality.yml'
+      - '.github/scripts/ci_workflows.test.mjs'
+      - '.github/scripts/playwright-duration-shards.mjs'
+      - '.github/scripts/playwright-test-durations.json'
 
 concurrency:
   group: frontend-quality-${{ github.workflow }}-${{ github.ref }}
@@ -39,47 +45,72 @@ jobs:
   contract:
     name: Route registry and test discovery
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - &node
+        uses: actions/setup-node@v5
+        id: node
         with:
           node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+      - &host-dependencies
+        uses: actions/cache@v5
+        id: dependencies
+        with:
+          path: web/node_modules
+          key: modules-v1-${{ runner.os }}-${{ runner.arch }}-host-node-${{ steps.node.outputs.node-version }}-${{ hashFiles('web/package-lock.json') }}
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - run: npm ci --legacy-peer-deps
-      # ── Route-template freshness chain ────────────────────────────────────
-      # App.tsx -> routeRegistry.ts -> internal/api/webvitals (generated Go).
-      # routeRegistry.ts is the source of truth for privacy-safe route
-      # templating on BOTH sides. A `:param` route added to App.tsx but never
-      # regenerated means its opaque value (share token, customer slug) is
-      # never templated and lands verbatim in a Prometheus label and in
-      # buffered browser-error payloads. Both links are checked here so the
-      # gate covers main AND revamped-ui.
+      - &npm-install
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        run: npm ci --legacy-peer-deps
+      - &playwright-version
+        name: Resolve exact Playwright version
+        id: playwright
+        shell: bash
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        id: browsers
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: browsers-v1-${{ runner.os }}-${{ runner.arch }}-host-chromium-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium system dependencies
+        run: npx playwright install-deps chromium
+      - name: Install Chromium for browser contracts
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
       - name: Route registry is fresh (App.tsx -> routeRegistry.ts)
         run: node scripts/generate-route-registry.mjs --check
       - name: Backend route table is fresh (routeRegistry.ts -> Go artifact)
         working-directory: .
         run: go run ./cmd/routetemplategen --check
       - run: npm run e2e:routes
-      - run: npm run e2e:contract
+      - run: npm run e2e:contract -- --reporter=line,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ci-contract/results.json
+      - name: Upload contract JSON
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pw-contract
+          path: web/ci-contract/results.json
+          if-no-files-found: error
+          retention-days: 14
       - run: npm run e2e:scenario-contract
-      - run: npm run e2e:list
+      - run: npm run e2e:list -- --reporter=line
+      - run: node --test ../.github/scripts/ci_workflows.test.mjs
 
   browser-build:
     name: Shared hermetic browser build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - *node
+      - *host-dependencies
+      - *npm-install
       - run: npm run e2e:build
         env:
           E2E_MOCKS: '1'
@@ -101,64 +132,37 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Keep every partition required; the aggregate checks the entire matrix.
-          - {name: responsive-1, suite: quality, shard: '1/32'}
-          - {name: responsive-2, suite: quality, shard: '2/32'}
-          - {name: responsive-3, suite: quality, shard: '3/32'}
-          - {name: responsive-4, suite: quality, shard: '4/32'}
-          - {name: responsive-5, suite: quality, shard: '5/32'}
-          - {name: responsive-6, suite: quality, shard: '6/32'}
-          - {name: responsive-7, suite: quality, shard: '7/32'}
-          - {name: responsive-8, suite: quality, shard: '8/32'}
-          - {name: responsive-9, suite: quality, shard: '9/32'}
-          - {name: responsive-10, suite: quality, shard: '10/32'}
-          - {name: responsive-11, suite: quality, shard: '11/32'}
-          - {name: responsive-12, suite: quality, shard: '12/32'}
-          - {name: responsive-13, suite: quality, shard: '13/32'}
-          - {name: responsive-14, suite: quality, shard: '14/32'}
-          - {name: responsive-15, suite: quality, shard: '15/32'}
-          - {name: responsive-16, suite: quality, shard: '16/32'}
-          - {name: responsive-17, suite: quality, shard: '17/32'}
-          - {name: responsive-18, suite: quality, shard: '18/32'}
-          - {name: responsive-19, suite: quality, shard: '19/32'}
-          - {name: responsive-20, suite: quality, shard: '20/32'}
-          - {name: responsive-21, suite: quality, shard: '21/32'}
-          - {name: responsive-22, suite: quality, shard: '22/32'}
-          - {name: responsive-23, suite: quality, shard: '23/32'}
-          - {name: responsive-24, suite: quality, shard: '24/32'}
-          - {name: responsive-25, suite: quality, shard: '25/32'}
-          - {name: responsive-26, suite: quality, shard: '26/32'}
-          - {name: responsive-27, suite: quality, shard: '27/32'}
-          - {name: responsive-28, suite: quality, shard: '28/32'}
-          - {name: responsive-29, suite: quality, shard: '29/32'}
-          - {name: responsive-30, suite: quality, shard: '30/32'}
-          - {name: responsive-31, suite: quality, shard: '31/32'}
-          - {name: responsive-32, suite: quality, shard: '32/32'}
-          # Thirteen independent audits; don't create 51 empty runners.
-          - {name: accessibility, suite: a11y, shard: '1/13'}
-          - {name: accessibility-2, suite: a11y, shard: '2/13'}
-          - {name: accessibility-3, suite: a11y, shard: '3/13'}
-          - {name: accessibility-4, suite: a11y, shard: '4/13'}
-          - {name: accessibility-5, suite: a11y, shard: '5/13'}
-          - {name: accessibility-6, suite: a11y, shard: '6/13'}
-          - {name: accessibility-7, suite: a11y, shard: '7/13'}
-          - {name: accessibility-8, suite: a11y, shard: '8/13'}
-          - {name: accessibility-9, suite: a11y, shard: '9/13'}
-          - {name: accessibility-10, suite: a11y, shard: '10/13'}
-          - {name: accessibility-11, suite: a11y, shard: '11/13'}
-          - {name: accessibility-12, suite: a11y, shard: '12/13'}
-          - {name: accessibility-13, suite: a11y, shard: '13/13'}
-          # One explicit serial group: retain its performance measurement isolation.
+          # Consolidate cheap jobs; balance heavy cases, not files. See CI-PERF.
+          - {name: responsive-1, suite: ordinary, shard: '1/4'}
+          - {name: responsive-2, suite: ordinary, shard: '2/4'}
+          - {name: responsive-3, suite: ordinary, shard: '3/4'}
+          - {name: responsive-4, suite: ordinary, shard: '4/4'}
+          - {name: responsive-5, suite: design, shard: '1/12'}
+          - {name: responsive-6, suite: design, shard: '2/12'}
+          - {name: responsive-7, suite: design, shard: '3/12'}
+          - {name: responsive-8, suite: design, shard: '4/12'}
+          - {name: responsive-9, suite: design, shard: '5/12'}
+          - {name: responsive-10, suite: design, shard: '6/12'}
+          - {name: responsive-11, suite: design, shard: '7/12'}
+          - {name: responsive-12, suite: design, shard: '8/12'}
+          - {name: responsive-13, suite: design, shard: '9/12'}
+          - {name: responsive-14, suite: design, shard: '10/12'}
+          - {name: responsive-15, suite: design, shard: '11/12'}
+          - {name: responsive-16, suite: design, shard: '12/12'}
+          - {name: accessibility, suite: a11y, shard: '1/1'}
           - {name: performance, suite: performance, shard: '1/1'}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - *node
+      - &container-dependencies
+        uses: actions/cache@v5
+        id: dependencies
         with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
-      - uses: actions/download-artifact@v8
+          path: web/node_modules
+          key: modules-v1-${{ runner.os }}-${{ runner.arch }}-pw163-noble-node-${{ steps.node.outputs.node-version }}-${{ hashFiles('web/package-lock.json') }}
+      - *npm-install
+      - &shared-build
+        uses: actions/download-artifact@v8
         with:
           name: e2e-app
           path: web/e2e/.app-dist
@@ -167,36 +171,92 @@ jobs:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
           GUARD_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
-        run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
-      - name: Upload Chromium failure evidence
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}
+      - name: Record application design build receipt
+        if: always() && (matrix.suite == 'ordinary' || matrix.suite == 'design')
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          for (const key of ['GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']) {
+            if (!process.env[key]) throw new Error(`Missing actual ${key}`);
+          }
+          const common = {
+            checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: 'e2e-app',
+            indexSHA256: hash('e2e/.app-dist/index.html'),
+            acceptanceSourceSHA256: hash('e2e/widget-design-packs.app.spec.ts'),
+          };
+          mkdirSync('ci-evidence', { recursive: true });
+          writeFileSync('ci-evidence/app-design-receipts.json', JSON.stringify([390, 1440].flatMap(profileWidth =>
+            ['dark', 'light', 'custom'].map(theme => ({ ...common, project: 'chromium-smoke', profileWidth, theme })))));
+          NODE
+      - name: Upload Chromium JSON and blob
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: chromium-${{ matrix.name }}-report
-          if-no-files-found: ignore
+          name: pw-chromium-${{ matrix.name }}
+          path: web/ci-evidence/
+          if-no-files-found: error
           retention-days: 14
+      - &failure-evidence
+        name: Upload heavy failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: failure-${{ github.job }}-${{ strategy.job-index }}
           path: |
             web/test-results/
             web/test-results-guard/
-            web/playwright-report/
+          if-no-files-found: error
+          retention-days: 14
 
   chromium-quality:
     name: Chromium responsive, a11y, keyboard, and performance
     if: always()
     needs: [contract, browser-build, chromium-tests]
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
     steps:
+      - uses: actions/checkout@v7
+      - *node
+      - *host-dependencies
+      - *npm-install
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: pw-chromium-*
+          path: browser-evidence
+      - name: Merge every Chromium suite
+        env: &report-failure
+          REPORT_FAILURE: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: node ../.github/scripts/playwright-duration-shards.mjs merge --family=chromium --input=../browser-evidence
+      - &merged-json
+        name: Upload merged suite JSON
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: combined-${{ github.job }}-${{ strategy.job-index }}
+          path: web/ci-merged/**/results.json
+          if-no-files-found: error
+          retention-days: 14
+      - &merged-html
+        name: Upload combined failure HTML
+        if: failure() || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: combined-failure-${{ github.job }}-${{ strategy.job-index }}
+          path: web/ci-merged/**/html/
+          if-no-files-found: error
+          retention-days: 14
       - name: Require every Chromium gate
+        if: always()
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: |
           python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required browser job failed, was cancelled, or was skipped"'
 
   cross-browser-tests:
-    name: ${{ matrix.browser }} critical smoke (${{ matrix.shard }}/3)
+    name: ${{ matrix.browser }} critical smoke (1/1)
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -205,110 +265,213 @@ jobs:
       fail-fast: false
       matrix:
         browser: [firefox, webkit, edge]
-        shard: [1, 2, 3]
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
-      - name: Install Microsoft Edge
+      - *node
+      - *container-dependencies
+      - *npm-install
+      - *playwright-version
+      - name: Cache the effective Edge system installation
         if: matrix.browser == 'edge'
-        run: npx playwright install msedge
-      - uses: actions/download-artifact@v8
+        uses: actions/cache@v5
+        id: edge
         with:
-          name: e2e-app
-          path: web/e2e/.app-dist
+          path: /opt/microsoft/msedge
+          key: browsers-v1-${{ runner.os }}-${{ runner.arch }}-pw163-noble-msedge-${{ steps.playwright.outputs.version }}
+      - name: Install Microsoft Edge
+        if: matrix.browser == 'edge' && steps.edge.outputs.cache-hit != 'true'
+        run: npx playwright install msedge
+      - name: Verify cached or installed Edge executable
+        if: matrix.browser == 'edge'
+        run: |
+          test -x /opt/microsoft/msedge/msedge
+          ln -sf /opt/microsoft/msedge/msedge /usr/bin/microsoft-edge
+      - *shared-build
       - name: Run lightweight engine smoke
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
-          # GitHub's container HOME belongs to pwuser, but the job runs as root.
-          HOME: /root
-        run: npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3
-      - name: Upload engine failure evidence
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=engine --browser=${{ matrix.browser }} --shard=1/1
+      - name: Upload engine JSON and blob
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: ${{ matrix.browser }}-smoke-report-${{ matrix.shard }}
-          if-no-files-found: ignore
+          name: pw-engine-${{ matrix.browser }}
+          path: web/ci-evidence/
+          if-no-files-found: error
           retention-days: 14
-          path: |
-            web/test-results/
-            web/playwright-report/
+      - *failure-evidence
+
+  app-design-tests:
+    name: ${{ matrix.browser }} application designs (${{ matrix.width }}px/${{ matrix.theme }}, ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    needs: browser-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {browser: firefox, width: 1440, theme: dark, shard: '1/1'}
+          - {browser: firefox, width: 1440, theme: light, shard: '1/1'}
+          - {browser: firefox, width: 1440, theme: custom, shard: '1/1'}
+          - {browser: firefox, width: 390, theme: dark, shard: '1/1'}
+          - {browser: firefox, width: 390, theme: light, shard: '1/1'}
+          - {browser: firefox, width: 390, theme: custom, shard: '1/1'}
+          - {browser: webkit, width: 1440, theme: dark, shard: '1/4'}
+          - {browser: webkit, width: 1440, theme: dark, shard: '2/4'}
+          - {browser: webkit, width: 1440, theme: dark, shard: '3/4'}
+          - {browser: webkit, width: 1440, theme: dark, shard: '4/4'}
+          - {browser: webkit, width: 1440, theme: light, shard: '1/4'}
+          - {browser: webkit, width: 1440, theme: light, shard: '2/4'}
+          - {browser: webkit, width: 1440, theme: light, shard: '3/4'}
+          - {browser: webkit, width: 1440, theme: light, shard: '4/4'}
+          - {browser: webkit, width: 1440, theme: custom, shard: '1/4'}
+          - {browser: webkit, width: 1440, theme: custom, shard: '2/4'}
+          - {browser: webkit, width: 1440, theme: custom, shard: '3/4'}
+          - {browser: webkit, width: 1440, theme: custom, shard: '4/4'}
+          - {browser: webkit, width: 390, theme: dark, shard: '1/2'}
+          - {browser: webkit, width: 390, theme: dark, shard: '2/2'}
+          - {browser: webkit, width: 390, theme: light, shard: '1/2'}
+          - {browser: webkit, width: 390, theme: light, shard: '2/2'}
+          - {browser: webkit, width: 390, theme: custom, shard: '1/2'}
+          - {browser: webkit, width: 390, theme: custom, shard: '2/2'}
+    env:
+      E2E_MOCKS: '1'
+      E2E_REUSE_BUILD: '1'
+      E2E_APP_DESIGN_CROSS_BROWSER: '1'
+      APP_DESIGN_WORKERS: ${{ matrix.browser == 'webkit' && (matrix.width == 1440 && '1' || '2') || '4' }}
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+      - *node
+      - *container-dependencies
+      - *npm-install
+      - *shared-build
+      - name: Bind application design evidence to its source and build
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+          import { availableParallelism } from 'node:os';
+          const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          mkdirSync('ci-evidence', { recursive: true });
+          writeFileSync('ci-evidence/app-design-run-envelope.json', JSON.stringify({
+            checkoutSHA: process.env.GITHUB_SHA, workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT, sharedBuildArtifact: 'e2e-app',
+            runtime: { node: process.version, architecture: process.arch, availableCPUs: availableParallelism(),
+              requestedWorkers: Number(process.env.APP_DESIGN_WORKERS) },
+            indexSHA256: hash('e2e/.app-dist/index.html'),
+            acceptanceSourceSHA256: hash('e2e/widget-design-packs.app.spec.ts'),
+          }));
+          NODE
+      - name: Require complete profile registration and run its exact partition
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=profile --browser=${{ matrix.browser }} --width=${{ matrix.width }} --theme=${{ matrix.theme }} --shard=${{ matrix.shard }}
+      - name: Preserve engine replay contract
+        if: always() && matrix.width == 1440 && matrix.theme == 'dark' && (matrix.shard == '1/1' || matrix.shard == '1/4')
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=replay --browser=${{ matrix.browser }} --shard=1/1 --out=ci-evidence/replay
+      - name: Upload application design JSON and blobs
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pw-app-${{ matrix.browser }}-${{ matrix.width }}-${{ matrix.theme }}-${{ strategy.job-index }}
+          path: web/ci-evidence/
+          if-no-files-found: error
+          retention-days: 14
+      - *failure-evidence
 
   cross-browser:
-    # Preserve existing engine check names; none can pass with a missing shard.
     name: ${{ matrix.browser }} critical smoke
     if: always()
-    needs: [contract, browser-build, cross-browser-tests]
+    needs: [contract, browser-build, cross-browser-tests, app-design-tests]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         browser: [firefox, webkit, edge]
-    defaults:
-      run:
-        working-directory: .
     steps:
+      - uses: actions/checkout@v7
+      - *node
+      - *host-dependencies
+      - *npm-install
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: pw-*-${{ matrix.browser }}*
+          path: browser-evidence
+      - name: Merge engine, complete profiles and replay
+        env: *report-failure
+        run: node ../.github/scripts/playwright-duration-shards.mjs merge --family=${{ matrix.browser }} --input=../browser-evidence
+      - *merged-json
+      - *merged-html
       - name: Require every engine smoke shard
+        if: always()
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: |
           python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required engine job failed, was cancelled, or was skipped"'
 
   visual-tests:
-    name: Windows visual snapshots (${{ matrix.shard }}/32)
+    name: Windows visual snapshots (${{ matrix.shard }}/4)
     runs-on: windows-latest
     needs: browser-build
     strategy:
       fail-fast: false
       matrix:
-        shard: [
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-          17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
-        ]
+        shard: [1, 2, 3, 4]
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - *node
+      - *host-dependencies
+      - *npm-install
+      - *playwright-version
+      - uses: actions/cache@v5
+        id: browsers
         with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
-      - run: npx playwright install chromium
-      - uses: actions/download-artifact@v8
-        with:
-          name: e2e-app
-          path: web/e2e/.app-dist
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: browsers-v1-${{ runner.os }}-${{ runner.arch }}-host-chromium-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+      - *shared-build
       - name: Compare committed Windows snapshots
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
-        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/32 --workers=2
-      - name: Upload visual diffs
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=visual --shard=${{ matrix.shard }}/4
+      - name: Upload visual JSON and blob
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: visual-regression-report-${{ matrix.shard }}
-          if-no-files-found: ignore
+          name: pw-visual-${{ matrix.shard }}
+          path: web/ci-evidence/
+          if-no-files-found: error
           retention-days: 14
-          path: |
-            web/test-results/
-            web/playwright-report/
+      - *failure-evidence
 
   visual:
     name: Deliberate visual snapshot gate (Windows baseline)
     if: always()
     needs: [contract, browser-build, visual-tests]
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
     steps:
+      - uses: actions/checkout@v7
+      - *node
+      - *host-dependencies
+      - *npm-install
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: pw-visual-*
+          path: browser-evidence
+      - name: Merge complete Windows baseline
+        env: *report-failure
+        run: node ../.github/scripts/playwright-duration-shards.mjs merge --family=visual --input=../browser-evidence
+      - *merged-json
+      - *merged-html
       - name: Require every Windows snapshot shard
+        if: always()
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: |
@@ -323,12 +486,9 @@ jobs:
     needs: contract
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - *node
+      - *container-dependencies
+      - *npm-install
       - name: Materialize ephemeral storage state
         env:
           STORAGE_STATE_B64: ${{ secrets.E2E_STORAGE_STATE_B64 }}

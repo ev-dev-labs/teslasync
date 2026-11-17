@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Grid, LayoutCard } from '@/components/layout';
 
 import type {
   BatteryPassportAnalysis,
@@ -332,18 +332,22 @@ export function BatteryPassportTrendDiagnostics({
               'The evidence-breadth indicator uses valid core fields, trend volume and span, thermal evidence, and digest presence. It is not confidence or accuracy.',
             )}
           </Text>
-          <div className="mt-4 grid gap-2 sm:grid-cols-5">
+          <Grid minItemWidth="wide" gap={2} className="mt-4">
+          <dl data-app-part="list" data-app-list="definitions" className="contents">
             {categories.map((category) => (
               <div
                 key={category.key}
+                data-app-part="card list-row"
+                data-surface-variant="standalone"
                 className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <Text as="p" variant="caption">
+                <Text as="dt" variant="caption" data-app-part="metric-label">
                   {category.label}
                 </Text>
                 <Text
-                  as="p"
+                  as="dd"
                   variant="bodySm"
+                  data-app-part="metric-reading metric-value"
                   className="font-mono tabular-nums"
                 >
                   {fmtInt(
@@ -352,7 +356,8 @@ export function BatteryPassportTrendDiagnostics({
                 </Text>
               </div>
             ))}
-          </div>
+          </dl>
+          </Grid>
           {analysis.trend.cap.backendCapReached ? (
             <AlertBanner
               className="mt-4"

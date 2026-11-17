@@ -860,8 +860,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { name: 'Thermal phases', exact: true })).toBeVisible();
       await review(page, section, thermalProvenance, ['4 empty fields are hidden.']);
       const failedAttempts = ledger.filter(request => request.path.endsWith('/telemetry'));
-      // HTTP ApiErrors stop resilient retries: direct + fallback, then one QueryClient retry.
-      expect(failedAttempts.map(request => request.status)).toEqual([503, 503, 503, 503]);
+      // The client uses one transport; QueryClient owns the single read retry.
+      expect(failedAttempts.map(request => request.status)).toEqual([503, 503]);
       unavailable = false;
       await retry.focus();
       await page.keyboard.press('Enter');
@@ -871,7 +871,7 @@ for (const theme of ['light', 'dark'] as const) {
       await review(page, section, thermalProvenance, ['0.03 kWh', '2.50%', '2m', '1.00 kW', 'Estimated from sampled heater power']);
       await finishExpectedTelemetryFailure(page, run, ledger);
       expect(ledger.filter(request => request.path.endsWith('/telemetry')).map(request => request.status))
-        .toEqual([503, 503, 503, 503, 200]);
+        .toEqual([503, 503, 200]);
       expect(ledger.filter(request => request.path === '/api/v1/charging')).toHaveLength(1);
     });
 
@@ -917,7 +917,7 @@ for (const theme of ['light', 'dark'] as const) {
       expect(ledger.filter(request => request.path === '/api/v1/charging').map(request => request.status))
         .toEqual([200, 200]);
       expect(ledger.filter(request => request.path.endsWith('/telemetry')).map(request => request.status))
-        .toEqual([200, 503, 503, 503, 503]);
+        .toEqual([200, 503, 503]);
     });
 
     for (const scenario of [

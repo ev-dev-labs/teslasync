@@ -21,14 +21,15 @@ export function ReconstructionSeriesList({ series }: ReconstructionSeriesListPro
   if (series.length === 0) return null;
 
   return (
-    <ul className="space-y-2">
+    <ul data-app-part="list" className="space-y-2">
       {series.map((s) => {
         const first = s.points[0];
         const last = s.points[s.points.length - 1];
         return (
-          <li key={s.signal} className="rounded-lg border border-[var(--border-subtle)] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Text variant="label" className="break-words">{s.signal}</Text>
+          <li key={s.signal} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+            className="rounded-lg border border-[var(--border-subtle)] p-3">
+            <div data-app-part="record-header" className="flex flex-wrap items-center justify-between gap-2">
+              <Text data-app-part="record-title" variant="label" className="break-words">{s.signal}</Text>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge size="sm" variant={COVERAGE_BADGE_VARIANT[s.coverage]}>
                   {t(`dashcam.reconstruction.coverage.${s.coverage}`, COVERAGE_LABELS[s.coverage])}
@@ -39,7 +40,7 @@ export function ReconstructionSeriesList({ series }: ReconstructionSeriesListPro
               </div>
             </div>
             {first && last && (
-              <Text as="p" variant="caption" className="mt-1 break-words">
+              <Text data-app-part="record-body" as="p" variant="caption" className="mt-1 break-words">
                 {t('dashcam.reconstruction.firstLast', 'First: {{first}} at t={{firstAt}}s · last: {{last}} at t={{lastAt}}s', {
                   first: String(first.value ?? '—'),
                   firstAt: fmtNumber(first.atSeconds),

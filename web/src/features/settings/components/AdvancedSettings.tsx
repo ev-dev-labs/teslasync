@@ -100,7 +100,7 @@ export function AdvancedSettings() {
             )}
           />
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+          <ul data-app-part="list" className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
             {silenced.map((key) => {
               const name = labelFor(key);
               return (

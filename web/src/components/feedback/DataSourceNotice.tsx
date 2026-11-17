@@ -249,11 +249,13 @@ export function DataSourceNotice({
     >
       <div className="space-y-3">
         <Text as="p" variant="bodySm">{message ?? defaultMessage}</Text>
-        <ul className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 14rem), 1fr))' }}>
+        <ul data-app-part="list" data-app-list="sources" className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 14rem), 1fr))' }}>
           {resolved.map((source) => {
             const config = statusConfig[source.status];
             return (
               <li
+                data-app-part="list-row"
+                data-app-source-state={source.status}
                 key={source.id}
                 className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
               >
@@ -265,6 +267,7 @@ export function DataSourceNotice({
                 </Badge>
                 {RETRYABLE_STATUSES.has(source.status) && source.query.refetch != null ? (
                   <Button
+                    data-app-part="feedback-retry"
                     type="button"
                     variant="ghost"
                     size="sm"
@@ -282,6 +285,7 @@ export function DataSourceNotice({
         </ul>
         {retryable.length > 0 ? (
           <Button
+            data-app-part="feedback-retry"
             type="button"
             variant="ghost"
             size="sm"

@@ -25,15 +25,18 @@ export function TrueCostQueryStatus({
   }
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="feedback loading"
+        data-app-feedback-kind="notice"
         className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
         role="status"
         aria-label={t('tco.query.loadingAria', 'Loading true cost evidence')}
       >
-        <RefreshCw className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-hidden="true" />
-        <Text variant="bodySm">
-          {t('tco.query.loading', 'Loading recorded-cost charging and positive-drive evidence...')}
-        </Text>
+        <RefreshCw data-app-part="feedback-icon" className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-hidden="true" />
+        <div data-app-part="feedback-content">
+          <Text data-app-part="feedback-message" variant="bodySm">
+            {t('tco.query.loading', 'Loading recorded-cost charging and positive-drive evidence...')}
+          </Text>
+        </div>
       </div>
     );
   }

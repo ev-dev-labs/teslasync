@@ -120,9 +120,10 @@ export function WidgetRankedList({
 
   return (
     <div className="overflow-y-auto">
-      <ul className="flex flex-col">
+      <ul data-app-part="list" data-app-list="ranked" className="flex flex-col">
         {visible.map((item, index) => (
           <li
+            data-app-part="list-row"
             key={item.id}
             className={cn(
               'flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0',
@@ -131,48 +132,50 @@ export function WidgetRankedList({
               dashboardTokens.density.rowPadding,
             )}
           >
-            {/* Rank number */}
-            <span className="widget-rank-number flex size-6 shrink-0 items-center justify-center text-xs font-medium tabular-nums">
-              {index + 1}
-            </span>
+            <div className={cn('flex min-w-0 flex-1 items-center', dashboardTokens.density.rowGap)}>
+              {/* Rank number */}
+              <span className="widget-rank-number flex size-6 shrink-0 items-center justify-center text-xs font-medium tabular-nums">
+                {index + 1}
+              </span>
 
-            {/* Leading status dot (decorative — the adjacent text names the state). */}
-            {item.status && (
-              <span
-                aria-hidden="true"
-                className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass[item.status])}
-              />
-            )}
+              {/* Leading status dot (decorative — the adjacent text names the state). */}
+              {item.status && (
+                <span
+                  aria-hidden="true"
+                  className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass[item.status])}
+                />
+              )}
 
-            {/* Label column */}
-            <div className="min-w-0 flex-1">
-              <div className={cn(
-                'text-sm font-medium text-[var(--text-primary)]',
-                wrapContent ? 'whitespace-normal break-words' : 'truncate',
-              )}>
-                {item.labelContent ?? item.label ?? '—'}
-              </div>
-              {item.sublabel && (
-                <div className={cn(
-                  'text-xs text-[var(--text-muted)]',
+              {/* Label column */}
+              <div className="min-w-0 flex-1">
+                <div data-app-part="metric-label" className={cn(
+                  'text-sm font-medium text-[var(--text-primary)]',
                   wrapContent ? 'whitespace-normal break-words' : 'truncate',
                 )}>
-                  {item.sublabel}
+                  {item.labelContent ?? item.label ?? '—'}
                 </div>
-              )}
+                {item.sublabel && (
+                  <div data-app-part="metric-context" className={cn(
+                    'text-xs text-[var(--text-muted)]',
+                    wrapContent ? 'whitespace-normal break-words' : 'truncate',
+                  )}>
+                    {item.sublabel}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Value column */}
             <div className="flex shrink-0 items-center gap-2">
               <div className="text-end">
-                <div className={cn(
+                <div data-app-part="metric-value" className={cn(
                   'text-sm font-semibold tabular-nums text-[var(--text-primary)]',
                   wrapContent && 'whitespace-normal break-words',
                 )}>
                   {item.formattedValue ?? '—'}
                 </div>
                 {item.hint && (
-                  <div className="whitespace-normal text-xs text-[var(--text-muted)]">
+                  <div data-app-part="metric-context" className="whitespace-normal text-xs text-[var(--text-muted)]">
                     {item.hint}
                   </div>
                 )}

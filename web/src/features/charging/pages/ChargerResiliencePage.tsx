@@ -171,26 +171,27 @@ export default function ChargerResiliencePage() {
                       : t('chargerResilience.noRemainingEnergy', 'Sites remain, but no positive recorded energy remains.')}
                     {' '}{t('chargerResilience.sessionFallback', 'Session-based fallback, not energy-weighted; diversification uses the observed site count.')}
                   </Text> : null}
-              <dl className="grid min-w-0 grid-cols-1 gap-4 break-words @sm:grid-cols-2">
-                <div className="min-w-0 space-y-1">
-                  <Text as="dt" variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
-                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.energyAtRiskAvailable
+              <dl data-app-part="list" data-app-list="definitions" className="grid min-w-0 grid-cols-1 gap-4 break-words @sm:grid-cols-2">
+                <div data-app-part="list-row" className="min-w-0 space-y-1">
+                  <Text data-app-part="metric-label" as="dt" variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
+                  <Text data-app-part="metric-value" as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.energyAtRiskAvailable
                     ? formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)
                     : t('chargerResilience.energyMissing', 'Energy denominator unavailable: some sessions have missing or invalid energy measurements.')}</Text>
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <Text as="dt" variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
-                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel
+                <div data-app-part="list-row" className="min-w-0 space-y-1">
+                  <Text data-app-part="metric-label" as="dt" variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
+                  <Text data-app-part="metric-value" as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel
                     ?? (summary.whatIfTopSiteLoss.remainingSiteCount > 0
                       ? unknownLocation : t('chargerResilience.none', 'None yet'))}</Text>
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <Text as="dt" variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
-                  <Text as="dd" variant="bodySm">{fmtNumber(summary.whatIfTopSiteLoss.resilienceScoreBefore)}</Text>
+                <div data-app-part="list-row" className="min-w-0 space-y-1">
+                  <Text data-app-part="metric-label" as="dt" variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
+                  <Text data-app-part="metric-value" as="dd" variant="bodySm">{fmtNumber(summary.whatIfTopSiteLoss.resilienceScoreBefore)}</Text>
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <Text as="dt" variant="caption">{t('chargerResilience.scoreAfter', 'Score after loss')}</Text>
+                <div data-app-part="list-row" className="min-w-0 space-y-1">
+                  <Text data-app-part="metric-label" as="dt" variant="caption">{t('chargerResilience.scoreAfter', 'Score after loss')}</Text>
                   <Text
+                    data-app-part="metric-value"
                     as="dd"
                     variant="bodySm"
                     className={summary.whatIfTopSiteLoss.resilienceScoreDelta < 0 ? neonColorMap.red.text : neonColorMap.green.text}
@@ -211,23 +212,23 @@ export default function ChargerResiliencePage() {
               label={sourceLabel}
               emptyMessage={!sessionsState.hasData ? unavailableMessage : t('chargerResilience.noSites', 'No charging locations recorded yet.')}
               errorMessage={unavailableMessage} error={fatalError} errorRecovery={recovery}>
-              <ul className="grid gap-2">
+              <ul data-app-part="list" data-app-list="definitions" className="grid gap-2">
                 {summary.sites.map((s) => (
-                  <li key={s.key} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2.5">
-                    <div className="min-w-0">
+                  <li data-app-part="list-row" key={s.key} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2.5">
+                    <div data-app-part="metric-label" className="min-w-0">
                       <Text variant="bodySm" className="break-words font-medium">{s.label ?? unknownLocation}</Text>
-                      <Text variant="caption">
+                      <Text data-app-part="metric-context" variant="caption">
                         {t(`chargerResilience.groupedBy.${s.groupedBy}`, GROUPED_BY_DEFAULTS[s.groupedBy])}
                       </Text>
                       {s.key === summary.topSite?.key && (
-                        <Text variant="caption">{t('chargerResilience.topDependency', "Top-site dependency")}</Text>
+                        <Text data-app-part="metric-context" variant="caption">{t('chargerResilience.topDependency', "Top-site dependency")}</Text>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Badge variant="neutral" size="sm">
+                    <div data-app-part="metric-reading" className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Badge data-app-part="badge metric-value" variant="neutral" size="sm">
                         {t('chargerResilience.sessionsCount', '{{n}} sessions', { n: s.sessions })}
                       </Badge>
-                      <Badge variant={energyAvailable && s.energyShare >= 0.5 ? 'warning' : 'neutral'}>
+                      <Badge data-app-part="badge metric-value" variant={energyAvailable && s.energyShare >= 0.5 ? 'warning' : 'neutral'}>
                         {energyAvailable ? fmtPercent(Math.round(s.energyShare * 1000) / 10)
                           : t('chargerResilience.energyShareUnavailable', 'Energy share unavailable')}
                       </Badge>

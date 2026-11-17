@@ -39,6 +39,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -49,6 +52,9 @@ import { OverviewVehicleComparison } from './OverviewVehicleComparison';
 import { FleetOverviewBrief } from '../operationalbrief-a-m/FleetOverviewBrief';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import type { FleetAnalyticsQuery } from './constants';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { retainFleetContent } from '../overview-modernization/retainFleetContent';
 
 vi.mock('@/components/data-display', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/data-display')>();
@@ -622,5 +628,65 @@ describe('OverviewVehicleComparison — null-safety', () => {
     expect(widths.some((w) => w.includes('NaN'))).toBe(false);
     // Alpha (the only positive efficiency) still fills to 100 %.
     expect(widths).toContain('100%');
+  });
+});
+
+describe('OverviewVehicleComparison — native quantitative ownership', () => {
+  it('activates existing track/fill consumers for every complete profile without changing inverse efficiency', () => {
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { if (rule.selector.includes('[data-app-metric="bar"][data-metric-track]')) rules.push(rule); });
+    const { container } = renderCmp(makeQuery({ data: analytics(TWO) }));
+    container.setAttribute('data-app-design-preview', '');
+    const fills = screen.getAllByTestId('efficiency-leader-fill');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(leaderboardWidths(container)).toEqual(['100%', '50%']);
+        fills.forEach(fill => {
+          const track = fill.parentElement!;
+          expect(track).toHaveAttribute('data-app-part', 'metric');
+          expect(track).toHaveAttribute('data-app-metric', 'bar');
+          expect(track).toHaveAttribute('data-metric-track');
+          expect(track).toHaveAttribute('aria-hidden', 'true');
+          expect(track).toHaveClass('h-2', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-2)]');
+          expect(fill).toHaveAttribute('data-metric-fill');
+          expect(fill).toHaveClass('h-full', 'rounded-full', 'bg-[var(--theme-primary)]', 'transition-all', 'duration-slow');
+          expect(rules.some(rule => track.matches(rule.selector)
+            && rule.nodes.some(node => node.type === 'decl' && node.prop === 'outline'))).toBe(true);
+          expect(rules.some(rule => fill.matches(rule.selector)
+            && rule.nodes.some(node => node.type === 'decl' && node.prop === 'min-inline-size' && node.value === '0'))).toBe(true);
+        });
+        expect(screen.queryByRole('meter')).toBeNull();
+        expect(screen.queryByRole('progressbar')).toBeNull();
+      } finally { release(); }
+    }
+    expect(screen.getByText('#1 Alpha')).toBeInTheDocument();
+    expect(screen.getByText('300.00 Wh/km')).toBeInTheDocument();
+  });
+
+  it('retains zero-width fallbacks for missing, nonfinite and nonpositive efficiencies, even without a positive leader', () => {
+    const values: unknown[] = [null, undefined, NaN, Infinity, -Infinity, '150', 0, -1];
+    const { container, rerenderQuery } = renderCmp(makeQuery({ data: analytics(
+      values.map((efficiency, id) => veh({ id, name: `Fallback ${id}`, efficiency })),
+    ) }));
+    expect(leaderboardWidths(container)).toEqual(values.map(() => '0%'));
+    expect(container.querySelectorAll('[data-metric-track] > [data-metric-fill]')).toHaveLength(values.length);
+    rerenderQuery(makeQuery({ data: analytics([
+      ...values.map((efficiency, id) => veh({ id, name: `Fallback ${id}`, efficiency })),
+      veh({ id: 20, name: 'Measured leader', efficiency: 150 }),
+      veh({ id: 21, name: 'Measured follower', efficiency: 300 }),
+    ]) }));
+    expect(leaderboardWidths(container)).toEqual([...values.map(() => '0%'), '100%', '50%']);
+  });
+
+  it('keeps the original tracks when the existing upstream retained-content adapter handles a refresh failure', () => {
+    const source = makeQuery({ data: analytics(TWO), isError: true, error: new Error('Refresh failed') });
+    const { container } = renderCmp(retainFleetContent(source));
+    expect(container.querySelectorAll('[data-metric-track] > [data-metric-fill]')).toHaveLength(2);
+    expect(leaderboardWidths(container)).toEqual(['100%', '50%']);
+    expect(source.isError).toBe(true);
+    expect(screen.getByText('#1 Alpha')).toBeInTheDocument();
   });
 });

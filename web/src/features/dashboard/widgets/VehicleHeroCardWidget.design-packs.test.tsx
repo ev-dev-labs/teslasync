@@ -329,7 +329,7 @@ describe.each(packs)('Vehicle hero %s edge and lifecycle states', pack => {
     await expectPack(container, pack);
     expect(screen.getByText('72.00%')).toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: /^Refresh/ });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(source.refetch).not.toHaveBeenCalled();
   });

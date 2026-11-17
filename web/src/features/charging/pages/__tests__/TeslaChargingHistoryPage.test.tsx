@@ -22,7 +22,7 @@
  * for their branch/edge behaviour.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { cleanup, act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { AppSettings } from '@/api/types';
@@ -112,6 +112,10 @@ import type { TeslaChargingHistoryEntry } from '@/api/hooks/useCharging';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
 import { OperationalModeProvider } from '@/hooks/useOperationalMode';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 const VEHICLES = [
@@ -260,6 +264,7 @@ beforeEach(() => {
   setGlobalLocale('en-US');
 });
 afterEach(() => {
+  cleanup();
   vi.clearAllMocks();
   vi.restoreAllMocks();
   window.dispatchEvent(new Event('online'));

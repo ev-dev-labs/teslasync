@@ -81,7 +81,7 @@ export function OnboardingResources({ className }: { className?: string }) {
       </PanelTitle>
 
       <nav aria-label={t('onboarding.resources.title', 'Resources & help')}>
-        <ul className="space-y-2.5">
+        <ul data-app-part="list" className="space-y-2.5">
           {links.map((link) => {
             const body = (
               <>

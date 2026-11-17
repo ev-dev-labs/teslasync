@@ -27,6 +27,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -92,6 +95,86 @@ beforeEach(() => {
 /* ─── ResponseViewer ──────────────────────────────────────────────────── */
 
 describe('ResponseViewer', () => {
+  it('binds real outcomes, opened code enclosures and replay chips to deliberate consumers across all designs', async () => {
+    const entry = makeHistory({ method: 'DELETE', status: 503, path: '/saved/raw?x=1' });
+    const onReplay = vi.fn();
+    const raw = 'raw <response>\n  unchanged\tend';
+    const { container } = render(<>
+      <ResponseViewer response={makeResponse({
+        status: 503, statusText: 'Unavailable', contentType: 'text/plain', bodyText: raw,
+        headers: { 'x-long-header': 'source value; unchanged' },
+      })} loading={false} history={[entry]} onReplay={onReplay} />
+      <SnippetPanel method="POST" url={alertsUrl} body='{"source":" a "}' />
+    </>);
+    fireEvent.click(screen.getByRole('button', { name: /Response headers/ }));
+    fireEvent.click(screen.getByRole('button', SNIPPET_TOGGLE));
+    const responseBody = screen.getByRole('region', RESPONSE_BODY);
+    const outcome = screen.getByText('503 Unavailable').closest('[data-app-feedback-kind="insight"]')!;
+    expect(outcome).toHaveAttribute('data-app-tone', 'danger');
+    expect(responseBody.textContent).toBe(raw);
+    expect(onReplay).not.toHaveBeenCalled();
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        const feedbackMode = APPLICATION_DESIGNS[pack].feedback;
+        expect(matchesAppDesignCss(outcome, '[data-app-feedback-kind="insight"]')
+          .some(rule => rule.selector.includes(`[data-app-feedback="${feedbackMode}"]`)
+            && 'border' in rule.declarations)).toBe(true);
+        const codePanels = container.querySelectorAll('[data-app-part~="panel"][data-app-panel-kind="code"]');
+        expect(codePanels).toHaveLength(3);
+        for (const panel of codePanels) {
+          expect(matchesAppDesignCss(panel, '[data-app-panel-kind="code"]')
+            .some(rule => 'outline' in rule.declarations)).toBe(true);
+        }
+        expect(matchesAppDesignCss(screen.getByText('DELETE'), '[data-app-part~="badge"]')
+          .some(rule => rule.declarations['white-space'] === 'normal')).toBe(true);
+        expect(responseBody.textContent).toBe(raw);
+        expect(responseBody).toHaveClass('max-h-[500px]', 'overflow-auto');
+        expect(screen.getByText('503 Unavailable')).toHaveClass('text-red-400');
+        expect(screen.getByText('x-long-header:').parentElement).toHaveTextContent('source value; unchanged');
+      } finally {
+        release();
+      }
+    }
+    for (const language of ['cURL', 'JavaScript', 'Python', 'Go']) {
+      fireEvent.click(screen.getByRole('button', { name: language }));
+      const displayed = screen.getByLabelText(SNIPPET_LABEL).textContent;
+      writeText.mockClear();
+      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(displayed));
+    }
+    fireEvent.click(screen.getByText('/saved/raw?x=1'));
+    expect(onReplay).toHaveBeenCalledExactlyOnceWith(entry);
+    fireEvent.click(screen.getByRole('button', SNIPPET_TOGGLE));
+    fireEvent.click(screen.getByRole('button', { name: /Response headers/ }));
+    expect(screen.queryByLabelText(SNIPPET_LABEL)).toBeNull();
+    expect(container.querySelectorAll('[data-app-panel-kind="code"]')).toHaveLength(1);
+  });
+
+  it.each([NaN, -1, Infinity])('keeps invalid latency %s unknown without changing the real HTTP result', duration => {
+    render(<ResponseViewer response={makeResponse({ status: 404, statusText: 'Not Found', duration, size: 0 })}
+      loading={false} history={[]} onReplay={noop} />);
+    expect(screen.getByText('404 Not Found')).toHaveClass('text-red-400');
+    expect(screen.getByText('— · 0 B')).toBeInTheDocument();
+  });
+
+  it('keeps unselected and incomplete-preview code/outcomes outside app ownership', () => {
+    const { container } = render(<ResponseViewer response={makeResponse()} loading={false} history={[]} onReplay={noop} />);
+    container.setAttribute('data-app-design-preview', '');
+    container.setAttribute('data-app-design-pack', 'v1');
+    const release = observeAppDesignScopes(container);
+    try {
+      const code = screen.getByRole('region', RESPONSE_BODY);
+      expect(code).not.toHaveAttribute('data-app-design-owner');
+      expect(matchesAppDesignCss(code, '[data-app-panel-kind="code"]')).toEqual([]);
+      expect(screen.getByText('200 OK').closest('[data-app-part~="feedback"]')).not.toHaveAttribute('data-app-design-owner');
+    } finally {
+      release();
+    }
+  });
+
   it('updates timing and size preferences without rewriting the raw response body', () => {
     const response = makeResponse({
       duration: 42.125,

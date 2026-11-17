@@ -25,15 +25,19 @@ export default function PhysicsModesSection({ physics }: { physics: PhysicsPage 
           { metricId: 'count', occurrenceId: 'drops', label: t('teslaOnly.modesDropsLabel', 'Returned counter drops for comparison'), rawValue: meterDrops?.length, context: t('teslaOnly.modesDrops', 'Returned counter drops for comparison: {{count}}', { count: meterDrops?.length ?? unknown(t) }) },
         ]} />
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
-          <Text as="p" variant="bodySm">{t('teslaOnly.allowed', 'Allowed')}</Text>
+        <div data-app-part="card" data-app-record-kind="physics-interpretation" className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
+          <Text data-app-record-slot="label" as="p" variant="bodySm">{t('teslaOnly.allowed', 'Allowed')}</Text>
+          <div data-app-record-slot="body" className="space-y-2">
           {(modes?.allowed ?? []).length ? (modes?.allowed ?? []).map((rule, index) => <Text key={`${index}-${rule}`} as="p" variant="caption">{rule}</Text>) :
             <Text as="p" variant="caption">{t('teslaOnly.modesNoAllowed', 'No allowed interpretations returned.')}</Text>}
+          </div>
         </div>
-        <div className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
-          <Text as="p" variant="bodySm">{t('teslaOnly.forbidden', 'Forbidden')}</Text>
+        <div data-app-part="card" data-app-record-kind="physics-interpretation" className="space-y-2 rounded-lg border border-[var(--glass-border)] p-3">
+          <Text data-app-record-slot="label" as="p" variant="bodySm">{t('teslaOnly.forbidden', 'Forbidden')}</Text>
+          <div data-app-record-slot="body" className="space-y-2">
           {(modes?.forbidden ?? []).length ? (modes?.forbidden ?? []).map((rule, index) => <Text key={`${index}-${rule}`} as="p" variant="caption">{rule}</Text>) :
             <Text as="p" variant="caption">{t('teslaOnly.modesNoForbidden', 'No forbidden interpretations returned.')}</Text>}
+          </div>
         </div>
       </div>
     </Evidence>
@@ -51,8 +55,8 @@ export default function PhysicsModesSection({ physics }: { physics: PhysicsPage 
         })}</Text>) : <Text as="p" variant="bodySm">{t('teslaOnly.modesNoDrops', 'No meter drops in returned evidence; no historical mode conclusion follows.')}</Text>
         : <Text as="p" variant="bodySm">{t('teslaOnly.modesMeterMissing', 'Meter evidence was not returned; mode context cannot be cross-checked against counter drops.')}</Text>}
       <div className="flex flex-wrap gap-4">
-        <Link to="/tesla-physics/meters" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenMeters', 'Inspect before/after meter evidence')} →</Link>
-        <Link to="/tesla-physics/firmware-epochs" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenEpochs', 'Inspect observed firmware epochs')} →</Link>
+        <Link to="/tesla-physics/meters" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.modesOpenMeters', 'Inspect before/after meter evidence')} →</Link>
+        <Link to="/tesla-physics/firmware-epochs" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.modesOpenEpochs', 'Inspect observed firmware epochs')} →</Link>
       </div>
     </Evidence>
   </>;

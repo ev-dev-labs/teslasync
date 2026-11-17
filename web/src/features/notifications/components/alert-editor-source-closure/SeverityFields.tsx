@@ -8,7 +8,7 @@ export function SeverityFields({ controller }: { controller: AlertRuleEditorCont
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <label className={fieldLabelRowCls} htmlFor="alert-severity">
+        <label data-app-part="field-label" className={fieldLabelRowCls} htmlFor="alert-severity">
           {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
           <HelpIcon i18nKey="help.fields.alertStudio.severity" content="Determines how the alert is presented and prioritised: Info is informational, Warning is actionable, Critical is urgent." for="alert-severity" />
         </label>

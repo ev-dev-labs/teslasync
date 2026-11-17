@@ -487,7 +487,7 @@ export default function TimelinePage() {
               <Text variant="bodySm">
                 {t('timeline.invalidComposition', 'Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.')}
               </Text>
-              <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
+              <ul data-app-part="list" className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
                 {summaryRows.map((row, index) => (
                   <li key={`${row.state}:${index}`} className="min-w-0 break-words">
                     <Text variant="bodySm" className="block">{row.state}</Text>

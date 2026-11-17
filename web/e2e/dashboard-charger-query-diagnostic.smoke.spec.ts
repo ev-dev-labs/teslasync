@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './app-design-test';
 import { writeFile } from 'node:fs/promises';
 import { prepareCatalogueState } from './dashboardCatalogueStateHarness';
 import { assertMockApiComplete, waitForHarnessReady } from './mockApi';

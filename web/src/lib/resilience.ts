@@ -8,13 +8,18 @@
  */
 
 import { broadcast } from './broadcast'
-import { authHeaders, clearAccessToken, getServerBaseUrl, isRemoteMode } from './serverConnection'
+import { authHeaders, clearAccessToken, getAccessToken, getServerBaseUrl, isRemoteMode } from './serverConnection'
 import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
 // it is a leaf that reads `import.meta.env` and validates it.
 import { demoCredentialsMode, getDemoApiBase } from './demoMode'
 import { getErrorMessage } from './errorMessage'
 import { assertDocumentActive } from './documentCancellation'
+import {
+  isRateLimitContextCurrent, isSafeRead, observeRateLimit, rateLimitContext,
+  rateLimitFor, reserveRateLimitRead, resetRateLimits, type RateLimitNotice,
+} from './rateLimit'
+import { retryAfterSeconds } from './retryAfter'
 
 type RequestStatus = 'online' | 'offline'
 
@@ -95,7 +100,7 @@ export function onStatusChange(fn: (s: RequestStatus) => void): () => void {
 
 const inflight = new Map<string, Promise<unknown>>()
 
-function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
+export function deduplicateRead<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const existing = inflight.get(key)
   if (existing) return existing as Promise<T>
   const p = fn().finally(() => inflight.delete(key))
@@ -380,8 +385,6 @@ export class TeslaAuthExpiredError extends ApiError {
 // expires. The error types and module-level cache below power that
 // behaviour; the banner UI lives in components/feedback/RateLimitBanner.
 
-const DEFAULT_RETRY_AFTER_SEC = 60
-
 /**
  * Thrown when an HTTP 429 is received. The SPA recognises this error
  * type to (a) show the <RateLimitBanner> countdown instead of a generic
@@ -391,12 +394,26 @@ const DEFAULT_RETRY_AFTER_SEC = 60
 export class RateLimitError extends ApiError {
   retryAfterSec: number
   scope: string
+  bucket: string
+  methods: string
+  source: RateLimitNotice['source']
+  enforcement: RateLimitNotice['enforcement']
+  expiresAt: number
+  requestMethod: string
+  generation?: number
 
-  constructor(message: string, retryAfterSec: number, scope: string) {
+  constructor(message: string, retryAfterSec: number, scope: string, notice?: RateLimitNotice) {
     super(message, 429, 'RATE_LIMITED')
     this.name = 'RateLimitError'
     this.retryAfterSec = retryAfterSec
     this.scope = scope
+    this.bucket = notice?.bucket ?? scope
+    this.methods = notice?.methods ?? 'GET'
+    this.source = notice?.source ?? 'unknown'
+    this.enforcement = notice?.enforcement ?? 'unknown'
+    this.expiresAt = notice?.expiresAt ?? Date.now() + retryAfterSec * 1000
+    this.requestMethod = notice?.requestMethod ?? 'GET'
+    this.generation = notice?.generation
   }
 }
 
@@ -413,12 +430,18 @@ export class RateLimitError extends ApiError {
 export class UpstreamUnavailableError extends ApiError {
   retryAfterSec: number
   upstream: string
+  scope: string
+  requestMethod: string
+  expiresAt: number
 
-  constructor(message: string, retryAfterSec: number, upstream: string) {
+  constructor(message: string, retryAfterSec: number, upstream: string, scope = '', requestMethod = 'GET') {
     super(message, 503, 'UPSTREAM_BREAKER_OPEN')
     this.name = 'UpstreamUnavailableError'
     this.retryAfterSec = retryAfterSec
     this.upstream = upstream
+    this.scope = scope
+    this.requestMethod = requestMethod
+    this.expiresAt = Date.now() + retryAfterSec * 1000
   }
 }
 
@@ -438,52 +461,77 @@ export function pathScope(path: string): string {
   return '/' + (q === -1 ? head : head.slice(0, q))
 }
 
-const _rateLimited = new Map<string, number>()
-
-function markRateLimited(scope: string, retryAfterSec: number): void {
-  const safe = retryAfterSec > 0 ? retryAfterSec : DEFAULT_RETRY_AFTER_SEC
-  _rateLimited.set(scope, Date.now() + safe * 1000)
-}
-
-function isRateLimited(path: string): { yes: boolean; retryAfterSec: number; scope: string } {
-  const scope = pathScope(path)
-  const exp = _rateLimited.get(scope)
-  if (!exp) return { yes: false, retryAfterSec: 0, scope }
-  if (Date.now() >= exp) {
-    _rateLimited.delete(scope)
-    return { yes: false, retryAfterSec: 0, scope }
-  }
-  return { yes: true, retryAfterSec: Math.ceil((exp - Date.now()) / 1000), scope }
-}
-
 /**
  * Test/dev hook — clear the in-process rate-limit short-circuit cache.
  * Exported with an underscore to signal it is NOT part of the public
  * API; tests reset state between runs by calling this.
  */
 export function _resetRateLimitCache(): void {
-  _rateLimited.clear()
+  resetRateLimits()
 }
 
-function dispatchRateLimitedEvent(scope: string, retryAfterSec: number): void {
+function dispatchUpstreamDownEvent(upstream: string, retryAfterSec: number, scope: string, requestMethod: string): void {
   if (typeof document === 'undefined') return
   document.dispatchEvent(
-    new CustomEvent('teslasync:rate-limited', { detail: { scope, retryAfterSec } }),
+    new CustomEvent('teslasync:upstream-down', {
+      detail: { upstream, retryAfterSec, scope, requestMethod, expiresAt: Date.now() + retryAfterSec * 1000 },
+    }),
   )
 }
 
-function dispatchUpstreamDownEvent(upstream: string, retryAfterSec: number): void {
-  if (typeof document === 'undefined') return
-  document.dispatchEvent(
-    new CustomEvent('teslasync:upstream-down', { detail: { upstream, retryAfterSec } }),
-  )
+const responseLimits = new WeakMap<Response, RateLimitNotice>()
+
+function cachedRateLimit(notice: RateLimitNotice): RateLimitError {
+  return new RateLimitError('Rate limited (cached)', notice.retryAfterSec, notice.scope, notice)
 }
 
-function parseRetryAfterHeader(value: string | null): number {
-  if (!value) return DEFAULT_RETRY_AFTER_SEC
-  const n = parseInt(value, 10)
-  if (Number.isNaN(n) || n <= 0) return DEFAULT_RETRY_AFTER_SEC
-  return n
+/** Every transport, including the first request and text downloads, shares admission. */
+export async function fetchWithRateLimit(url: string, path: string, options: RequestInit): Promise<Response> {
+  assertDocumentActive()
+  options.signal?.throwIfAborted()
+  const method = (options.method ?? 'GET').toUpperCase()
+  const context = rateLimitContext(url, options.headers)
+  const limited = rateLimitFor(path, method)
+  if (limited) throw cachedRateLimit(limited)
+  const slot = reserveRateLimitRead(path, method, options.priority)
+  if (slot.deferred) throw cachedRateLimit(slot.deferred)
+  const connection = `${getApiBase()}\x00${getAccessToken() ?? ''}`
+  try {
+    if (slot.waitMs > 0) await abortableSleep(slot.waitMs, options.signal ?? undefined)
+    options.signal?.throwIfAborted()
+    assertDocumentActive()
+    if (!isRateLimitContextCurrent(context) ||
+        connection !== `${getApiBase()}\x00${getAccessToken() ?? ''}`) {
+      throw new DOMException('The app connection changed', 'AbortError')
+    }
+    const updated = rateLimitFor(path, method)
+    if (updated) throw cachedRateLimit(updated)
+  } finally {
+    slot.release()
+  }
+  const response = await fetch(url, options)
+  options.signal?.throwIfAborted()
+  assertDocumentActive()
+  if (!isRateLimitContextCurrent(context)) throw new DOMException('The app connection changed', 'AbortError')
+  const notice = observeRateLimit(response, path, method, context)
+  if (notice) responseLimits.set(response, notice)
+  return response
+}
+
+/** Normalize 429/503 once; a rejected command must never be resent to discover its error. */
+export async function apiResponseError(res: Response, path: string, method = 'GET'): Promise<ApiError> {
+  const { message, code, upstream } = await parseError(res)
+  if (res.status === 429) {
+    const seconds = retryAfterSeconds(res.headers.get('Retry-After'), res.headers.get('Date'))
+    const notice = responseLimits.get(res)
+    return new RateLimitError(message, notice?.retryAfterSec ?? seconds, notice?.scope ?? path, notice)
+  }
+  if (res.status === 503 && code === 'UPSTREAM_BREAKER_OPEN') {
+    const seconds = retryAfterSeconds(res.headers.get('Retry-After'), res.headers.get('Date'))
+    dispatchUpstreamDownEvent(upstream ?? 'tesla', seconds, path, method.toUpperCase())
+    return new UpstreamUnavailableError(message, seconds, upstream ?? 'tesla', path, method.toUpperCase())
+  }
+  return new ApiError(message, res.status, code)
 }
 
 /**
@@ -595,16 +643,17 @@ export async function resilientFetch<T>(
   // observed by every other (still-mounted) caller.
   const canDedup = !fetchOpts.signal
   const key = canDedup
-    ? (dedupKey || ((!fetchOpts.method || fetchOpts.method === 'GET') ? path : ''))
+    ? (dedupKey || ((!fetchOpts.method || fetchOpts.method === 'GET')
+      ? JSON.stringify([getApiBase(), path, [...authHeaders(fetchOpts.headers)]]) : ''))
     : ''
   if (key) {
-    return dedup(
+    return deduplicateRead(
       key,
       () =>
         _doFetch<T>(
           path,
           fetchOpts,
-          retries,
+          isSafeRead(fetchOpts.method ?? 'GET') ? retries : 0,
           retryDelay,
           timeout,
           acceptedStatuses,
@@ -615,7 +664,7 @@ export async function resilientFetch<T>(
   return _doFetch<T>(
     path,
     fetchOpts,
-    retries,
+    isSafeRead(fetchOpts.method ?? 'GET') ? retries : 0,
     retryDelay,
     timeout,
     acceptedStatuses,
@@ -734,17 +783,6 @@ async function _doFetch<T>(
   const { signal: rawSignal, ...restOpts } = fetchOpts
   const userSignal: AbortSignal | undefined = rawSignal ?? undefined
 
-  // Short-circuit any path whose scope is still
-  // inside an active Retry-After window. Without this guard, 60 in-flight
-  // queries to /vehicles would each independently hit the network during
-  // the cooldown and each surface their own "request failed" toast. We
-  // throw the cached RateLimitError so callers (banner, QueryError) see
-  // the same shape they'd see from a fresh 429.
-  const limited = isRateLimited(path)
-  if (limited.yes) {
-    throw new RateLimitError('Rate limited (cached)', limited.retryAfterSec, limited.scope)
-  }
-
   for (let attempt = 0; attempt <= retries; attempt++) {
     assertDocumentActive()
     // If the caller cancelled before this
@@ -780,7 +818,7 @@ async function _doFetch<T>(
       // with) the Content-Type default. authHeaders only overlays the
       // stored access token and is a no-op without one.
       const { headers: optHeaders, ...restFetch } = restOpts
-      const res = await fetch(url, {
+      const res = await fetchWithRateLimit(url, path, {
         headers: authHeaders(optHeaders ?? { 'Content-Type': 'application/json' }),
         ...restFetch,
         ...(isRemoteMode() ? { credentials: 'omit' as const } : demoCredentialsMode() ? { credentials: demoCredentialsMode() } : {}),
@@ -809,8 +847,8 @@ async function _doFetch<T>(
       }
 
       if (!res.ok && !acceptedStatuses.includes(res.status)) {
-        const { message, code: errCode, upstream: errorUpstream } = await parseError(res)
-        const apiErr = new ApiError(message, res.status, errCode)
+        const apiErr = await apiResponseError(res, path, fetchOpts.method)
+        const errCode = apiErr.code
 
         // Tesla third-party token expiry.
         // The backend signals this via { code: 'TESLA_TOKEN_EXPIRED' } in
@@ -834,40 +872,6 @@ async function _doFetch<T>(
         // recovery. Never refresh Tesla authorization for a browser login.
         if (res.status === 401) {
           maybeDispatchSessionExpired(path)
-        }
-
-        // 429 Rate Limited.
-        // Read Retry-After (defaults to 60s when missing/invalid), mark
-        // the path's scope as cooling down, dispatch the banner event,
-        // and throw a typed RateLimitError. The previous behaviour
-        // (silent 2s backoff retry then generic ApiError) hammered the
-        // upstream and gave the user no visibility — both fixed here.
-        if (res.status === 429) {
-          const retryAfterSec = parseRetryAfterHeader(res.headers.get('Retry-After'))
-          const scope = pathScope(path)
-          markRateLimited(scope, retryAfterSec)
-          dispatchRateLimitedEvent(scope, retryAfterSec)
-          throw new RateLimitError(
-            apiErr.message || 'Rate limited',
-            retryAfterSec,
-            scope,
-          )
-        }
-
-        // 503 with UPSTREAM_BREAKER_OPEN.
-        // The Tesla upstream breaker has tripped; further calls would
-        // be fast-failed. Dispatch the upstream-down banner event and
-        // throw a typed UpstreamUnavailableError so the calm waiting
-        // placeholder is rendered instead of a generic server-error.
-        if (res.status === 503 && errCode === 'UPSTREAM_BREAKER_OPEN') {
-          const retryAfterSec = parseRetryAfterHeader(res.headers.get('Retry-After'))
-          const upstream = errorUpstream ?? 'tesla'
-          dispatchUpstreamDownEvent(upstream, retryAfterSec)
-          throw new UpstreamUnavailableError(
-            apiErr.message || 'Upstream temporarily unavailable',
-            retryAfterSec,
-            upstream,
-          )
         }
 
         throw apiErr
@@ -899,12 +903,14 @@ async function _doFetch<T>(
       // Skip the probe entirely if the caller has cancelled — the probe
       // would be wasted work and could trigger the auth-expired flow on a
       // page the user has already left.
-      if (err instanceof TypeError && !userSignal?.aborted && navigator.onLine && !isRemoteMode()) {
+      if (isSafeRead(fetchOpts.method ?? 'GET') && err instanceof TypeError &&
+          !userSignal?.aborted && navigator.onLine && !isRemoteMode()) {
         let probeUnreachable = false
         try {
-          const probe = await fetch(`${getApiBase()}/api/v1/system/version`, {
+          const probe = await fetchWithRateLimit(`${getApiBase()}/api/v1/system/version`, '/system/version', {
             method: 'GET',
             redirect: 'manual',
+            signal: merged.signal,
           })
           if (probe.status === 401 || probe.status === 403 || probe.type === 'opaqueredirect'
             || (probe.headers.get('content-type') ?? '').includes('text/html')) {

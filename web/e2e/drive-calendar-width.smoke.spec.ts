@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { test } from './app-design-test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 test('selected period fills the calendar content width on desktop', async ({ page }) => {

@@ -30,6 +30,7 @@ import { act, render, screen, fireEvent, waitFor, within } from '@testing-librar
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 // ── i18n stub: return the English fallback, interpolating {{vars}} from the
 //    3rd positional arg OR from a `{ defaultValue, ...vars }` object. ────────
@@ -156,6 +157,19 @@ beforeEach(() => {
 });
 
 describe('AuditLogPage — data states', () => {
+  it('keeps audit resource and details available in the phone grid', async () => {
+    const bounds = forceMobileDataTables();
+    try {
+      mockedRequest.mockResolvedValue(AUDIT);
+      const { container } = renderPage();
+      await screen.findByText('settings.update');
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent(AUDIT[0].resource);
+      fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+      expect(screen.getByRole('dialog')).toHaveTextContent(AUDIT[0].details);
+    } finally { bounds.mockRestore(); }
+  });
+
   it('recovers a fatal source failure only after the explicit retry action', async () => {
     mockedRequest.mockRejectedValue(new ApiError('audit unavailable', 500));
     renderPage();

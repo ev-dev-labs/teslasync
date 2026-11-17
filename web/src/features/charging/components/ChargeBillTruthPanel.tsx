@@ -110,7 +110,7 @@ export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) 
           message={t('charging.billTruth.empty', 'Invoice and pack already agree.')}
         />
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" className="space-y-2">
           {truth.reasons.map((reason) => (
             <li key={reason}>
               <Text as="p" variant="bodySm">

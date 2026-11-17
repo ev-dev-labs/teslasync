@@ -198,7 +198,7 @@ export default function HelpPage() {
 
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle>{t('help.channelsTitle', 'Ways to get help')}</PanelTitle>
-              <ul className="mt-3 space-y-3">
+              <ul data-app-part="list" className="mt-3 space-y-3">
                 {HELP_CHANNELS.map((ch) => (
                   <li key={ch.id} className="flex items-start gap-3">
                     <IconBox color={ch.accent} size="sm">

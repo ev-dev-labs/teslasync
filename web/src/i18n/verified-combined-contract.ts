@@ -7,7 +7,7 @@ import fleetApiCopyChanges from './verified-fleet-api-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
-import { catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
+import { catalogBeforeAppDesign, catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
 import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -77,6 +77,8 @@ const dashboardPolishAdditions = [
   ['widget.fleetStatsBar.distanceViewRange', 'Distance (view range)'],
   ['widget.fleetStatsBar.energyViewRange', 'Energy (view range)'],
   ['widget.recentDrivesSummary', '{{count}} recent drives \u00b7 {{total}}'],
+  ['dashboardWidgets.driving.speedHeatmap.sampleLegend', 'Outline = sampled period'],
+  ['dashboardWidgets.driving.speedHeatmap.colorStrengthLegend', 'Stronger color = higher speed'],
   ['dbHealth.estimatedRows', 'Estimated rows'],
   ['dbHealth.estimatedTotalRows', 'Estimated total rows'],
   ['dbHealth.rowEstimatesNote', 'Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.'],
@@ -84,6 +86,13 @@ const dashboardPolishAdditions = [
 
 const themePolishAdditions = [
   ['theme.saveFailed', 'Could not save your theme to the server. Your current selection is still applied.'],
+] as const
+
+export const designProfileCopy = [
+  ['designProfileLoading', 'Loading your saved appearance...'],
+  ['designProfileUnavailable', 'Could not finish loading your saved appearance. Retry or continue without waiting.'],
+  ['designProfileContinue', 'Continue with default appearance'],
+  ['designProfileContinueLoading', 'Continue without waiting'],
 ] as const
 
 const themePresetAdditions = {
@@ -111,7 +120,27 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const beforeExternalAuth = structuredClone(catalog)
+  const beforeExternalAuth = catalogBeforeAppDesign(catalog)
+  expect(beforeExternalAuth.ratelimit, 'ratelimit').toEqual({
+    appTitle: 'TeslaSync request limit reached',
+    teslaTitle: 'Tesla request limit reached',
+    unknownTitle: 'Request limit reached',
+    actionsPaused: 'Retry the action yourself after the countdown; actions never replay automatically.',
+    readsPaused: 'Cached data stays visible. Retry affected reads after the countdown; actions never replay automatically.',
+    countdown: 'Try again in {{n}}s',
+    ready: 'The cooldown has ended.',
+    retryReads: 'Retry affected reads',
+  })
+  expect(beforeExternalAuth.upstream, 'upstream').toEqual({ title: 'Tesla upstream unavailable' })
+  Object.assign(beforeExternalAuth, {
+    ratelimit: { banner: 'Too many requests — pausing for {{n}}s', retry: 'Retry now' },
+    upstream: { banner: 'Tesla upstream unavailable — retry in {{n}}s' },
+  })
+  const common = beforeExternalAuth.common as Record<string, unknown>
+  for (const [key, expected] of designProfileCopy) {
+    expect(common[key], 'common.' + key).toBe(expected)
+    delete common[key]
+  }
   for (const [namespace, expected] of Object.entries(externalAuthCopy.added)) {
     expect(beforeExternalAuth[namespace], namespace).toEqual(expected)
     delete beforeExternalAuth[namespace]

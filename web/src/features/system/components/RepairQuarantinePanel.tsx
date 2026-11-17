@@ -20,7 +20,9 @@ import {
   Text,
   Textarea,
   useTableExpansion,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useRepairQuarantineColumns } from './useRepairQuarantineColumns';
 
 interface RepairQuarantinePanelProps {
@@ -89,6 +91,27 @@ export function RepairQuarantinePanel({
     setRestoreTarget({ quarantine, ...scope.current });
     setRestoreReason('');
   });
+  const mobilePresentation = useMemo<MobileDataTablePresentation<RepairQuarantine>>(() => ({
+    roles: {
+      session: 'title', quarantined_at: 'primary', status: 'badge', reason: 'meta', actor: 'meta',
+    },
+    displayValue: (item, key) => {
+      switch (key) {
+        case 'session': return t('dataRepair.cases.sessionReference', '{{kind}} #{{id}}', {
+          kind: item.kind === 'drive' ? t('dataRepair.kind.drive', 'Drive') : t('dataRepair.kind.charging', 'Charging'),
+          id: item.session_id,
+        });
+        case 'quarantined_at': return formatDateTime(item.quarantined_at);
+        case 'status': return item.restored_at
+          ? t('dataRepair.quarantine.restored', 'Restored')
+          : t('dataRepair.quarantine.held', 'Held safely');
+        case 'reason': return item.reason ?? '—';
+        case 'actor': return item.quarantined_by ?? '—';
+        default: return null;
+      }
+    },
+    inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+  }), [columns, t]);
 
   const moveNext = () => {
     if (!responseIsCurrent || query.isFetching) return;
@@ -170,7 +193,7 @@ export function RepairQuarantinePanel({
             onRetry={() => query.refetch()}
           />
         ) : !hasData ? (
-          <div role="status">
+          <div data-app-part="status" role="status">
             <Text as="p" variant="bodySm" className="mb-3">
               {state.isRefreshBlocked
                 ? t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
@@ -201,15 +224,16 @@ export function RepairQuarantinePanel({
               data={records}
               keyExtractor={(item) => item.id}
               mobileColumns={['session', 'actions']}
+              mobilePresentation={mobilePresentation}
               expandable
               expandedKeys={expandedKeys}
               onExpandedChange={setExpandedKeys}
               renderExpanded={(item) => (
-                <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                <dl data-app-part="list" data-app-list="definitions" className="grid min-w-0 gap-3 sm:grid-cols-2">
                   {columns.filter((column) => !['session', 'actions'].includes(column.key)).map((column) => (
-                    <div key={column.key} className="min-w-0 break-words">
-                      <Text as="dt" variant="caption">{column.header}</Text>
-                      <dd className="mt-1">{column.render(item)}</dd>
+                    <div key={column.key} data-app-part="list-row" className="min-w-0 break-words">
+                      <Text as="dt" data-app-part="metric-label" variant="caption">{column.header}</Text>
+                      <dd data-app-part="metric-value" className="mt-1">{column.render(item)}</dd>
                     </div>
                   ))}
                 </dl>

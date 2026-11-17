@@ -1,6 +1,7 @@
 /**
  * CostBreakdownWidget — After-card behavior, data trust, and shared shell tests.
  */
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -126,6 +127,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+
+setupCanvasTextMeasurement();
 
 describe('CostBreakdownWidget — After card', () => {
   it('renders one lifetime headline and the measured savings delta', () => {

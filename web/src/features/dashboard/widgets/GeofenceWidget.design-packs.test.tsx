@@ -431,7 +431,7 @@ describe.each(packs)('geofence-status states %s / %s', (packId, name) => {
     const { container } = renderWidget(packId);
     await appearance(container, name);
     const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.stateRefetch).not.toHaveBeenCalled();
     expect(mocks.fenceRefetch).not.toHaveBeenCalled();

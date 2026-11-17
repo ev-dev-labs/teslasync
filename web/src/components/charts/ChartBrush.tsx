@@ -10,29 +10,34 @@ export interface ChartBrushProps {
   endIndex?: number
   /** Brush height in px. Defaults to the token value (28px). */
   height?: number
+  /** Traveller width in px. Defaults to the token value. */
+  travellerWidth?: number
+  /** Accessible name for the range control. */
+  ariaLabel?: string
   /** Optional change callback — recharts passes `{startIndex, endIndex}`. */
   onChange?: (range: { startIndex?: number; endIndex?: number }) => void
 }
 
 /**
- * Themed wrapper around recharts' `<Brush>` for consistent zoom-controls
- * across the app. Pass it as a child of an `<AreaChart>` / `<LineChart>` /
- * `<ComposedChart>` — recharts will render it below the X-axis.
+ * Themed native-element factory for consistent zoom controls. Compose it as
+ * `{ChartBrush({ dataKey: 'time' })}` directly inside the chart. Recharts parses
+ * its children before React renders wrappers: `<ChartBrush />` is not a native
+ * Brush child and cannot supply its geometry or range to that parser.
  *
  * When the parent chart is inside a `<ChartTimeRangeProvider>` AND shares the
  * same dataset+`syncId` as siblings, dragging the brush automatically zooms
  * every synced chart (recharts handles this natively — no extra wiring).
  *
- * Note: this component is intentionally a thin presentational wrapper. The
- * `<Brush>` element MUST be rendered inside a recharts chart container for
- * recharts to wire it up; mounting it standalone is a no-op and a unit-test
- * antipattern.
+ * The returned `<Brush>` must be a direct child of the Recharts chart. Keep
+ * this factory hook-free; adding another React wrapper would lose that identity.
  */
 export function ChartBrush({
   dataKey = 'time',
   startIndex,
   endIndex,
   height = chartTokens.brush.height,
+  travellerWidth = chartTokens.brush.travellerWidth,
+  ariaLabel,
   onChange,
 }: ChartBrushProps) {
   return (
@@ -41,7 +46,8 @@ export function ChartBrush({
       height={height}
       stroke={chartTokens.brush.stroke}
       fill={chartTokens.brush.fill}
-      travellerWidth={chartTokens.brush.travellerWidth}
+      travellerWidth={travellerWidth}
+      ariaLabel={ariaLabel}
       startIndex={startIndex}
       endIndex={endIndex}
       onChange={onChange}

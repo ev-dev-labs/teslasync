@@ -102,7 +102,7 @@ export function FlagCompositionPanel({
   }
 
   return (
-    <div
+    <div data-app-part="list"
       className="space-y-3"
       role="list"
       aria-label={t('admin.flags.composition.ariaLabel', 'Returned flag value presentation; stored values are text')}

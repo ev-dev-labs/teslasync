@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
-  assertMockApiComplete,
+  closeMockedPage,
   installApiMocks,
   seedBrowserState,
   waitForHarnessReady,
@@ -47,7 +47,8 @@ test('browser Date semantics remain native after deterministic state seeding', a
 
   let completionError: unknown;
   try {
-    await assertMockApiComplete(page, mockApi);
+    await closeMockedPage(page, mockApi);
+    expect(page.isClosed()).toBe(true);
   } catch (error) {
     completionError = error;
   }

@@ -51,10 +51,11 @@ for (const theme of ['light', 'dark'] as const) {
     await seedBrowserState(page, theme, path);
     const mocks = await installApiMocks(page, 'populated', theme);
     await installDriveDetailMocks(page, theme, mocks);
-    let unavailable = true;
     let lastFailureAt = 0;
-    await page.route('**/api/v1/settings', (route) => {
-      if (unavailable) {
+    await page.route('**/api/v1/settings', async (route) => {
+      const recoveryAllowed = await page.evaluate(() =>
+        sessionStorage.getItem('e2e-drive-pricing-recovery') === '1');
+      if (!recoveryAllowed) {
         lastFailureAt = Date.now();
         return fulfillApiFixture(route, mocks, {
           status: 429,
@@ -79,8 +80,17 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(retry).toBeVisible();
     await expect(overview.getByText('Odometer (from → to)', { exact: true })).toBeVisible();
 
-    unavailable = false;
     await expect.poll(() => Date.now() - lastFailureAt).toBeGreaterThanOrEqual(1100);
+    await overview.evaluate(section => {
+      // A settings refetch can replace the Retry button before native input.
+      const allowRecovery = (event: Event) => {
+        const button = event.target instanceof Element ? event.target.closest('button') : null;
+        if (button?.textContent?.trim() !== 'Retry') return;
+        sessionStorage.setItem('e2e-drive-pricing-recovery', '1');
+        section.removeEventListener('click', allowRecovery, true);
+      };
+      section.addEventListener('click', allowRecovery, true);
+    });
     await retry.click();
     const expectedCost = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2, maximumFractionDigits: 2,

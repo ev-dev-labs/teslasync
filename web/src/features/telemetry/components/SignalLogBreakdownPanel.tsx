@@ -114,7 +114,7 @@ export function SignalLogBreakdownPanel({
               ))}
             </div>
 
-            <dl className="space-y-2 border-t border-[var(--glass-border)] pt-3">
+            <dl data-app-part="list" className="space-y-2 border-t border-[var(--glass-border)] pt-3">
               <div className="flex items-center justify-between gap-3">
                 <Text as="dt" size="xs" color="muted" className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" aria-hidden="true" />

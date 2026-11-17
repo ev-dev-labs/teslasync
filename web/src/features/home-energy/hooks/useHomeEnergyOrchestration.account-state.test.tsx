@@ -57,7 +57,7 @@ vi.mock('@/components/forms', () => ({
 vi.mock('@/components/ui', () => {
   const Content = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
-    Text: Content, Badge: Content,
+    Text: Content, Badge: Content, Card: Content,
     Accordion: ({ children, title }: { children: ReactNode; title: string }) =>
       <section><h3>{title}</h3>{children}</section>,
     Slider: Content, Toggle: Content, Select: Content,

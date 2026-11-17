@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
-import { Badge, Button, IconBox, Pagination, Text, Caption } from '@/components/ui';
+import { Badge, Button, BUTTON_BASE, IconBox, Pagination, Text, Caption } from '@/components/ui';
 import { type StatMetric } from '@/components/data-display';
 import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -29,6 +29,7 @@ import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
 import {ymdInTz} from '@/lib/dateConvert'
 import {formatMonthYear} from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { cn } from '@/lib/cn';
 
 import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
 
@@ -300,7 +301,7 @@ export default function SoftwareUpdatesPage() {
             />
           ) : (
             <>
-              <div role="list" aria-label={t('softwareUpdates.timeline.title', 'Update timeline')}>
+              <div data-app-part="list" role="list" aria-label={t('softwareUpdates.timeline.title', 'Update timeline')}>
               <CardGrid label={t('softwareUpdates.timeline.title', 'Update timeline')} items={updates.map((u) => {
                   const meta = getUpdateStatus(u.status);
                   const Icon = meta.icon;
@@ -321,11 +322,13 @@ export default function SoftwareUpdatesPage() {
                             </div>
                           </div>
                           <a
+                            data-app-part="button"
+                            data-app-variant="ghost"
                             href={`https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(u.version)}/release-notes`}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={t('softwareUpdates.timeline.releaseNotes', 'Release notes for {{version}}', { version: u.version })}
-                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                            className={cn(BUTTON_BASE, '-mr-1 -mt-1 h-11 w-11 shrink-0 rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]')}
                           >
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </a>

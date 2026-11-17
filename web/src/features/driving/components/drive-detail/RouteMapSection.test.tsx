@@ -273,6 +273,10 @@ describe('RouteMapSection — start/end pins when the route path is not recorded
     const line = screen.getByTestId('polyline');
     expect(line).toHaveAttribute('data-count', '2');
     expect(screen.getByTestId('route-not-recorded')).toHaveTextContent('Route path not recorded');
+    expect(screen.getByTestId('route-not-recorded')).toHaveAttribute('data-app-part', 'feedback map-legend');
+    expect(screen.getByTestId('route-not-recorded')).toHaveAttribute('data-map-state', 'unavailable');
+    expect(screen.getByTestId('route-not-recorded').querySelector('path')).toHaveAttribute('stroke-dasharray', '4 3');
+    expect(screen.queryByRole('list', { name: 'Speed' })).toBeNull();
     expect(screen.queryByText('No route data available for this drive')).toBeNull();
   });
 
@@ -301,16 +305,28 @@ describe('RouteMapSection — start/end pins when the route path is not recorded
 describe('RouteMapSection — empty + null-safety', () => {
   const noCoordinates = { positions: [], startLat: null, startLon: null, endLat: null, endLon: null };
 
-  it('renders the no-route placeholder only when there are no coordinates at all', () => {
-    renderSection({ drive: makeDrive(noCoordinates), trail: [], speedSegments: [] });
+  it.each([false, true])('preserves the no-coordinate state without inventing recovery controls (embedded=%s)', (embedded) => {
+    renderSection({ drive: makeDrive(noCoordinates), trail: [], speedSegments: [], embedded });
 
     expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
     // No leaflet container and no viewport side effects when there is nothing to plot.
     expect(screen.queryByTestId('map-container')).toBeNull();
     expect(mapCtl.fitBounds).not.toHaveBeenCalled();
     expect(mapCtl.setView).not.toHaveBeenCalled();
-    // The panel heading still anchors the section.
-    expect(screen.getByRole('heading', { name: 'Route' })).toBeInTheDocument();
+    if (embedded) {
+      expect(screen.getByTestId('drive-route-map')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Route' })).toBeNull();
+    } else {
+      expect(screen.getByRole('heading', { name: 'Route' })).toBeInTheDocument();
+    }
+    const region = screen.getByRole('region', { name: 'Route map' });
+    expect(region).toHaveAttribute('data-app-part', 'map');
+    expect(region).toHaveAttribute('data-map-state', 'empty');
+    const status = within(region).getByRole('status');
+    expect(status).toHaveTextContent('No route data available for this drive');
+    expect(status).toHaveAttribute('data-variant', 'default');
+    expect(within(region).queryByRole('button')).toBeNull();
+    expect(within(region).queryByRole('link')).toBeNull();
   });
 
   it('tolerates an undefined trail and speedSegments without throwing (?? [] hardening)', () => {
@@ -367,6 +383,10 @@ describe('RouteMapSection — meaningful route (km)', () => {
     renderMeaningfulRoute();
 
     expect(screen.getByText('km/h')).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Speed' });
+    expect(within(legend).getAllByRole('listitem')).toHaveLength(4);
+    expect(legend.parentElement).toHaveAttribute('data-app-part', 'map-legend');
+    expect(legend.parentElement).toHaveAttribute('data-map-legend', 'speed');
     const low = fmtNumber(convertSpeedFromSI(SPEED_SEGMENT_LOW_MPS, 'km/h'));
     const high = fmtNumber(convertSpeedFromSI(SPEED_SEGMENT_HIGH_MPS, 'km/h'));
     // Thresholds come straight from the real SI converter (30 mph ≈ 48.28 km/h).
@@ -405,6 +425,10 @@ describe('RouteMapSection — meaningful route (km)', () => {
     expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', chartTokens.series[4]);
     expect(screen.getByText(/Approximate area where the FSD counter increased/)).toBeInTheDocument();
     expect(screen.getByText(/not an exact FSD-active segment/)).toBeInTheDocument();
+    const evidence = screen.getByText(/Approximate area where the FSD counter increased/).parentElement;
+    expect(evidence).toHaveAttribute('data-app-part', 'map-legend');
+    expect(evidence).toHaveAttribute('data-map-legend', 'fsd-evidence');
+    expect(evidence?.querySelector('path')).toHaveAttribute('stroke-dasharray', '4 2');
   });
 
   it('does not extend approximate evidence into route segments that only touch a boundary', () => {

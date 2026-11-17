@@ -48,7 +48,7 @@ describe('AuditTrailPanel', () => {
     expect(await screen.findByText(/no activity yet/i)).toBeInTheDocument();
 
     await recordAuditEvent('key_rotated', 'Rotated signing key.');
-    screen.getByRole('button', { name: /refresh/i }).click();
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
 
     expect(await screen.findByText(/rotated signing key/i)).toBeInTheDocument();
   });

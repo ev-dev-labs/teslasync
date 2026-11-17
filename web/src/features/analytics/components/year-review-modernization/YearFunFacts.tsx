@@ -15,7 +15,7 @@ export function YearFunFacts({ comparisons }: { comparisons: YearReviewCompariso
     </LayoutCard>
   );
   return (
-    <div role="list" aria-label={title}>
+    <div data-app-part="list" role="list" aria-label={title}>
       <CardGrid label={title} items={items.map((item, index) => ({
         id: `${item.label ?? 'fact'}-${index}`, size: 'quarter',
         content: (

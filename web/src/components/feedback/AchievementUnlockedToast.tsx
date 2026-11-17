@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { X, Trophy } from 'lucide-react'
 
+import { Button } from '@/components/ui/Button'
 import { AchievementBadge } from '@/features/analytics/components/AchievementBadge'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { AchievementUnlockedEvent } from '@/api/hooks/useAchievementUnlocks'
@@ -26,9 +27,9 @@ import { cn } from '@/lib/cn'
  * Accessibility:
  *   - role="status" + aria-live="polite" so screen-readers announce the
  *     unlock without interrupting the user (it's celebratory, not critical).
- *   - The "View" affordance is a real `<button>` so keyboard navigation works
+ *   - The "View" affordance uses the shared `<Button>` so keyboard navigation works
  *     and clicks bubble through to the React Router programmatic navigate.
- *   - The dismiss `<button>` carries an `aria-label` and reuses the same
+ *   - The dismiss `<Button>` carries an `aria-label` and reuses the same
  *     focus-ring treatment as the standard `<Toast>` × button.
  */
 export interface AchievementUnlockedToastProps {
@@ -99,6 +100,9 @@ export function AchievementUnlockedToast({
       aria-live="polite"
       aria-atomic="true"
       data-testid="achievement-unlocked-toast"
+      data-app-part="feedback"
+      data-app-feedback-kind="toast"
+      data-app-tone="success"
       layout
       initial={reduce ? false : { opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -135,43 +139,49 @@ export function AchievementUnlockedToast({
         </div>
       )}
 
-      <div className="flex items-start gap-3">
+      <div data-app-part="feedback-layout" className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <AchievementBadge achievement={event.achievement} size="md" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div data-app-part="feedback-content" className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <Trophy className="h-3.5 w-3.5 text-yellow-300" aria-hidden="true" />
             <p className="text-2xs font-semibold tracking-wider text-yellow-300/90">
               {t('achievements.toastEyebrow', 'Achievement unlocked')}
             </p>
           </div>
-          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)] leading-tight">
+          <p data-app-part="feedback-title" className="mt-1 text-sm font-semibold text-[var(--text-primary)] leading-tight">
             {event.achievement.name}
           </p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
+          <p data-app-part="feedback-message" className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
             {event.achievement.description}
           </p>
-          <button
+          <Button
+            data-app-part="button feedback-actions"
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={handleView}
             className={cn(
-              'mt-2 inline-flex items-center gap-1 text-xs font-medium text-yellow-300',
-              'underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2',
+              'mt-2 inline-flex h-auto items-center gap-1 p-0 text-xs font-medium text-yellow-300',
+              'underline-offset-2 hover:bg-transparent hover:underline focus-visible:outline-none focus-visible:ring-2',
               'focus-visible:ring-yellow-500/50 rounded',
             )}
           >
             {t('achievements.view', 'View')} →
-          </button>
+          </Button>
         </div>
-        <button
+        <Button
+          data-app-part="button feedback-dismiss"
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={onDismiss}
           aria-label={t('achievements.dismiss', 'Dismiss achievement notification')}
-          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+          className="h-auto flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
+        </Button>
       </div>
     </motion.div>
   )

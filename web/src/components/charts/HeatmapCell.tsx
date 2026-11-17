@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import { chartTokens } from '@/lib/tokens';
 import { heatmapColor, heatmapTextColor, type HeatmapLevel } from '@/lib/heatmap';
 
 interface HeatmapCellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'title'> {
@@ -11,13 +12,15 @@ export function HeatmapCell({ level, label, className, ...props }: HeatmapCellPr
   return (
     <div
       {...props}
+      data-app-part="chart-plot"
+      data-chart-family="heatmap"
       role="img"
       aria-label={label}
       title={label}
       data-heatmap-level={level ?? undefined}
       data-heatmap-state={level == null ? 'unavailable' : level === 0 ? 'idle' : 'active'}
       className={cn(
-        'rounded-[3px] border border-[var(--border-subtle)]',
+        chartTokens.heatmap.cell,
         level == null && 'border-dashed',
         className,
       )}

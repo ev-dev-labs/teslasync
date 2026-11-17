@@ -161,10 +161,14 @@ describe('LiveMonitorKpiBand — layout & accessibility', () => {
 
   it('uses the shared allocation-safe grid without dropping any buffered metric', () => {
     const { container } = renderBand({ connected: false, bufferCount: 123, uniqueSignals: 21 });
-    const grid = container.querySelector('[data-operational-brief] [role="list"]');
-    expect(grid).not.toBeNull();
-    expect(grid).toHaveClass('flex', 'flex-wrap');
-    expect(grid).toHaveAttribute('data-columns', '3');
+    const banks = container.querySelectorAll('[data-operational-brief] [data-operational-metric-bank]');
+    expect(banks).toHaveLength(2);
+    for (const bank of banks) {
+      expect(bank).toHaveAttribute('role', 'list');
+      expect(bank).toHaveClass('flex', 'flex-wrap');
+      expect(bank).toHaveAttribute('data-columns', '3');
+    }
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expectAllSixLabels();
     expect(screen.getByText('123')).toBeInTheDocument();
     expect(screen.getByText('21')).toBeInTheDocument();

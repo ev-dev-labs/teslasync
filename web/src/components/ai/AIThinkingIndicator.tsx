@@ -5,6 +5,7 @@ import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
+import { Skeleton } from '@/components/feedback/Skeleton'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { cn } from '@/lib/cn'
 
@@ -39,6 +40,7 @@ export function AIThinkingIndicator({
   return (
     <div
       className={cn('flex flex-col gap-3', reduce && 'animate-none')}
+      data-app-part="loading"
       data-testid="ai-thinking-indicator"
       role="status"
       aria-live="polite"
@@ -56,13 +58,13 @@ export function AIThinkingIndicator({
         </span>
       </div>
       <div className="flex flex-col gap-2" aria-hidden="true">
-        <div
+        <Skeleton
           className="h-3 w-full rounded-md bg-[var(--skeleton-bg)]"
         />
-        <div
+        <Skeleton
           className="h-3 w-11/12 rounded-md bg-[var(--skeleton-bg)]"
         />
-        <div
+        <Skeleton
           className="h-3 w-9/12 rounded-md bg-[var(--skeleton-bg)]"
         />
       </div>

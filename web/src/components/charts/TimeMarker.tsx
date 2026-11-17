@@ -1,6 +1,7 @@
-import { ReferenceLine } from '@/components/charts';
+import { ReferenceLine } from 'recharts';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
+import { axisTickSm } from './chartUtils';
 
 export { severityTokens } from '@/lib/tokens';
 
@@ -17,10 +18,10 @@ export { severityTokens } from '@/lib/tokens';
  * caller is responsible for converting the alert timestamp to whatever
  * x-coordinate value the chart uses. Pass the resulting value as `x`.
  *
- * Important: recharts requires `ReferenceLine` to be a direct child of the
- * chart component (LineChart/AreaChart/ComposedChart/...) — passing other
- * components in between breaks chart layout. This wrapper just spreads the
- * underlying ReferenceLine props with sensible defaults.
+ * Recharts requires a native ReferenceLine child during prop parsing. Compose
+ * this hook-free factory as `{TimeMarker({ x, severity, label })}`, not
+ * `<TimeMarker />`; rendering a React wrapper happens too late for its domain,
+ * annotation and axis props to be discovered by the parent chart.
  */
 export interface TimeMarkerProps {
   /** Value matching the chart's x-axis dataKey for the alert moment.
@@ -80,7 +81,7 @@ export function TimeMarker({
         value: label,
         position: 'top',
         fill: stroke,
-        fontSize: 10,
+        fontSize: axisTickSm.fontSize,
       }}
     />
   );

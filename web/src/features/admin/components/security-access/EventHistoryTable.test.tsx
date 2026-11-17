@@ -27,10 +27,11 @@
  * settings/timezone query stack it depends on.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecurityEvent } from '@/types/admin';
 import { deriveDataState, type DataState } from '@/api/dataState';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 /* ── i18n: return the English fallback, interpolating {{vars}}. ────── */
 vi.mock('react-i18next', () => ({
@@ -234,6 +235,31 @@ describe('EventHistoryTable — door + window branches', () => {
   });
 
   describe('EventHistoryTable — evidence and mobile preservation', () => {
+    it('keeps unknown and false states distinct and all fields available on phones', () => {
+      const bounds = forceMobileDataTables();
+      try {
+        const { container } = renderTable({ history: [
+          makeEvent({ id: 'unknown', locked: null, sentryMode: null, doorState: null,
+            fdWindow: null, fpWindow: null, rdWindow: null, rpWindow: null }),
+          makeEvent({ id: 'off', locked: false, sentryMode: 'SentryModeStateOff', doorState: false }),
+        ] });
+        const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+        const unknown = grid.querySelector('[data-row-key="unknown"]');
+        const off = grid.querySelector('[data-row-key="off"]');
+        expect(unknown).toHaveTextContent('Lock: Unknown');
+        expect(unknown).toHaveTextContent('Sentry: Unknown');
+        expect(off).toHaveTextContent('Lock: Unlocked');
+        expect(off).toHaveTextContent('Sentry: Off');
+        expect(grid.querySelectorAll('[data-testid="ts"]')).toHaveLength(2);
+        fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0]);
+        const detail = screen.getByRole('dialog');
+        for (const label of ['Time', 'Lock', 'Sentry', 'Doors', 'Windows']) {
+          expect(within(detail).getByText(label, { exact: true })).toBeInTheDocument();
+        }
+        expect(within(detail).getAllByText('Unknown')).toHaveLength(4);
+      } finally { bounds.mockRestore(); }
+    });
+
     it('keeps unknown lock, Sentry, doors and windows separate from measured false', () => {
       renderTable({ history: [makeEvent({
         locked: null, sentryMode: null, doorState: null,

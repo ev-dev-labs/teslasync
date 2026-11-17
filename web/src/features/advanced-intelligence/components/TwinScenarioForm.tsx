@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { FlaskConical, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Text } from '@/components/ui';
+import { Button, GlassPanel, Input, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { SI } from '@/lib/unitConversion';
 import type { TwinScenarioInput } from '@/types/advancedIntelligence';
@@ -70,7 +70,7 @@ export function TwinScenarioForm({
       onSubmit(event);
     }}>
       {scenarios.map((scenario, index) => (
-        <div key={index} className="glass-panel p-4">
+        <GlassPanel key={index} className="glass-panel p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <Text as="h3" variant="label">
               {t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', {
@@ -156,7 +156,7 @@ export function TwinScenarioForm({
               required
             />
           </div>
-        </div>
+        </GlassPanel>
       ))}
       <div className="flex flex-wrap justify-between gap-3">
         <Button

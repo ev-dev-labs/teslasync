@@ -148,9 +148,9 @@ export function MobileDataTableAdapter<T>({
     return result
   }, new Map<string, T[]>())]
   return (
-    <div className="mgr-mobile min-w-0 [&_button]:min-h-11 [&_button]:min-w-11" data-mobile-table="" role="group" aria-label={label}>
-      {controls && <div className="flex flex-wrap items-center gap-2 py-2">{controls}</div>}
-      {selectable && <div className="flex flex-wrap items-center gap-2 pb-3">
+    <div data-app-part="table" className="mgr-mobile min-w-0 [&_button]:min-h-11 [&_button]:min-w-11" data-mobile-table="" role="group" aria-label={label}>
+      {controls && <div data-app-part="table-toolbar" className="flex flex-wrap items-center gap-2 py-2">{controls}</div>}
+      {selectable && <div data-app-part="table-toolbar" className="flex flex-wrap items-center gap-2 pb-3">
         <Button size="sm" variant="secondary" className="min-h-11" wrapLabel
           aria-pressed={selectionMode} onClick={() => setSelectionMode(previous => !previous)}>
           {selectionMode ? t('common.cancel', 'Cancel') : t('developerReference.mobileGrid.selection.enter', 'Select')}
@@ -197,7 +197,7 @@ export function MobileDataTableAdapter<T>({
           </div>
         )) : rows.map(renderRow))}
       </div>
-      {(count || (onLoadMore && showRows)) && <div className="min-w-0 space-y-2 break-words py-3">
+      {(count || (onLoadMore && showRows)) && <div data-app-part="pagination" className="min-w-0 space-y-2 break-words py-3">
         {count}
         {onLoadMore && showRows && <Button className="min-h-11 w-full" variant="secondary" wrapLabel
           onClick={onLoadMore}>{t('developerReference.mobileGrid.footer.loadMore', 'Load {{count}} more', { count: nextCount })}</Button>}
@@ -207,14 +207,14 @@ export function MobileDataTableAdapter<T>({
         footer={<Button className="min-h-11 min-w-11" wrapLabel onClick={close}>{t('common.close', 'Close')}</Button>}>
         {detailRow != null && <dl className="min-w-0 space-y-3">
           {allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => (
-            <div key={column.key} className="min-w-0 space-y-1 break-words">
+            <div data-app-part="table-cell" key={column.key} className="min-w-0 space-y-1 break-words">
               <Text as="dt" variant="caption">{column.header}</Text>
               <Text as="dd" variant="body" className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow) ?? '—'}</Text>
             </div>
           ))}
           {presentation.allDetails?.(detailRow).filter(field =>
             presentation.canShowField?.(field.key, detailRow) !== false).map(field => (
-            <div key={field.key} className="min-w-0 space-y-1 break-words">
+            <div data-app-part="table-cell" key={field.key} className="min-w-0 space-y-1 break-words">
               <Text as="dt" variant="caption">{field.label}</Text>
               <Text as="dd" variant="body">{field.value ?? '—'}</Text>
             </div>

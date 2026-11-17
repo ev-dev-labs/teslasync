@@ -8,7 +8,7 @@
  * location capture.
  */
 
-import { useState, useMemo, useCallback, useId } from 'react';
+import { useState, useMemo, useCallback, useId, useRef, type MouseEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -130,6 +130,7 @@ export default function GeofencesPage() {
   // ─── State ───────────────────────────────────────────────────────────────
 
   const [modalOpen, setModalOpen] = useState(false);
+  const modalTrigger = useRef<HTMLElement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GeofenceFormData>(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState<GeofenceFormData>(EMPTY_FORM);
@@ -343,7 +344,13 @@ export default function GeofencesPage() {
     closeModal,
   ]);
 
-  const openCreate = useCallback(() => {
+  const openModal = useCallback((trigger?: HTMLElement) => {
+    modalTrigger.current = trigger
+      ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    setModalOpen(true);
+  }, []);
+
+  const openCreate = useCallback((event?: MouseEvent<HTMLButtonElement>) => {
     setEditingId(null);
     setReviewCandidate(null);
     setChargingPlace(false);
@@ -353,8 +360,8 @@ export default function GeofencesPage() {
     setFieldErrors({});
     setFormError(null);
     setLocationLoading(false);
-    setModalOpen(true);
-  }, []);
+    openModal(event?.currentTarget);
+  }, [openModal]);
 
   const openCandidate = useCallback((candidate: VisitedPlaceCandidate) => {
     const next: GeofenceFormData = {
@@ -372,8 +379,8 @@ export default function GeofencesPage() {
     setInitialForm(next);
     setFieldErrors({});
     setFormError(null);
-    setModalOpen(true);
-  }, []);
+    openModal();
+  }, [openModal]);
 
   // Apply-from-AI opens the canonical Add Geofence modal pre-filled
   // with the typed envelope fields the LLM proposed (name +
@@ -398,9 +405,9 @@ export default function GeofencesPage() {
       setFieldErrors({});
       setFormError(null);
       setLocationLoading(false);
-      setModalOpen(true);
+      openModal();
     },
-    [],
+    [openModal],
   );
 
   const openEdit = useCallback((g: ApiGeofence) => {
@@ -419,8 +426,8 @@ export default function GeofencesPage() {
     setInitialForm(next);
     setFieldErrors({});
     setFormError(null);
-    setModalOpen(true);
-  }, []);
+    openModal();
+  }, [openModal]);
 
   const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     const savedName = await resolveSavedPlaceName(lat, lon);
@@ -642,6 +649,7 @@ export default function GeofencesPage() {
       <Modal
         open={modalOpen}
         onClose={handleRequestClose}
+        getReturnFocusTarget={() => modalTrigger.current}
         title={editingId ? t('geofences.editTitle', 'Edit geofence') : t('geofences.createTitle', 'Create geofence')}
         size="md"
         footer={

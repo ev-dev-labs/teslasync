@@ -73,14 +73,14 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
               {arrival.dest_name}
             </Text>
           ) : null}
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <Text as="p" variant="label">
+          <div data-app-part="metric" data-app-metric="inline" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <Text as="p" data-app-part="metric-label" variant="label">
               {t('journey.arrival.eta', 'ETA')}
             </Text>
-            <MetricValue>
+            <MetricValue data-app-part="metric-reading metric-value">
               {arrival.eta_at != null ? formatTime(arrival.eta_at) : '—'}
             </MetricValue>
-            <Text as="p" variant="caption" className="tabular-nums">
+            <Text as="p" data-app-part="metric-context" variant="caption" className="tabular-nums">
               {arrival.moving
                 ? t('journey.arrival.moving', 'moving')
                 : t('journey.arrival.parked', 'parked')}

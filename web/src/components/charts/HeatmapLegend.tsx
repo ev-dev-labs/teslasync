@@ -1,5 +1,7 @@
 import { Caption } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
+import { chartTokens } from '@/lib/tokens';
 import { HeatmapCell } from './HeatmapCell';
 
 interface HeatmapLegendProps {
@@ -11,7 +13,7 @@ interface HeatmapLegendProps {
 
 export function HeatmapLegend({ label, less, more, unavailable }: HeatmapLegendProps) {
   return (
-    <div role="group" aria-label={label} className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+    <div data-app-part="chart-legend" data-chart-family="heatmap" role="group" aria-label={label} className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
       {unavailable && (
         <span className="mr-3 flex items-center gap-1.5">
           <HeatmapCell level={null} label={unavailable} className="h-3.5 w-3.5 shrink-0" />
@@ -22,7 +24,7 @@ export function HeatmapLegend({ label, less, more, unavailable }: HeatmapLegendP
         <Caption>{less}</Caption>
         <span className="flex items-center gap-1.5" aria-hidden="true">
           {HEATMAP_LEVELS.map(level => (
-            <span key={level} data-heatmap-level={level} className="h-3.5 w-3.5 rounded-[3px] border border-[var(--border-subtle)]"
+            <span key={level} data-heatmap-level={level} className={cn('h-3.5 w-3.5', chartTokens.heatmap.cell)}
               style={{ backgroundColor: heatmapColor(level) }} />
           ))}
         </span>

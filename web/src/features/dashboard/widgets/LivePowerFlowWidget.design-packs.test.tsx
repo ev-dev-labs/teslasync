@@ -276,7 +276,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('Live power flow — %s / %s', (
     expect(view.container.querySelector('.widget-flow-frame')).toHaveAttribute('data-motion-suppressed', 'true');
     expect(diagram().querySelectorAll('[data-flow-edge]')).toHaveLength(4);
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refreshSites).not.toHaveBeenCalled();
     expect(mocks.refreshLive).not.toHaveBeenCalled();
@@ -285,7 +285,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('Live power flow — %s / %s', (
       isError: true, error: new Error('Refresh failed'),
     }));
     view.selectPack(packId);
-    expect(screen.getByRole('button', { name: /^Refresh/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).not.toHaveAttribute('aria-disabled');
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(mocks.refreshSites).toHaveBeenCalledOnce();
     expect(mocks.refreshLive).toHaveBeenCalledOnce();

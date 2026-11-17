@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   ChartTooltip, ChartGradient, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AREA_DEFAULTS,
+  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ChartLegend, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
@@ -45,7 +45,7 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
           <XAxis dataKey="date" tick={chartText} />
           <YAxis tickFormatter={value => formatTemperature(Number(value))} tick={chartText} />
           <Tooltip content={<ChartTooltip valueFormatter={value => formatTemperature(typeof value === 'number' ? value : null)} />} />
-          <Legend />
+          <ChartLegend />
           <Line
             {...AREA_DEFAULTS}
             dataKey="outsideTemp"

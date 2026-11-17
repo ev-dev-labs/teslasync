@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import '@/i18n';
 import { BulkActionToolbar } from '../BulkActionToolbar';
 
@@ -38,7 +38,7 @@ describe('BulkActionToolbar (alias)', () => {
     expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
   });
 
-  it('invokes the action onClick with the current selection', () => {
+  it('invokes the action onClick with the current selection', async () => {
     const handle = vi.fn().mockResolvedValue(undefined);
     render(
       <BulkActionToolbar
@@ -54,7 +54,9 @@ describe('BulkActionToolbar (alias)', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /mark read/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /mark read/i }));
+    });
     expect(handle).toHaveBeenCalledTimes(1);
     expect(handle).toHaveBeenCalledWith([7, 9]);
   });

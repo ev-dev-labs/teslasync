@@ -23,6 +23,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -140,6 +141,9 @@ vi.mock('recharts', async () => {
    
   const ReferenceLine = (props: any) =>
     React.createElement('g', { 'data-testid': 'reference-line', 'data-x': String(props.x) });
+  const CartesianGrid = ({ stroke, strokeDasharray, strokeOpacity }: {
+    stroke?: string; strokeDasharray?: string | number; strokeOpacity?: string | number;
+  }) => React.createElement('g', { 'data-testid': 'chart-grid', stroke, strokeDasharray, strokeOpacity });
   const Noop = () => null;
   const XAxis = ({ tickFormatter }: { tickFormatter: (value: number, index: number) => string }) =>
     React.createElement('text', { 'data-testid': 'x-tick' }, tickFormatter(1.23456, 7));
@@ -160,7 +164,7 @@ vi.mock('recharts', async () => {
     Area: Noop,
     XAxis,
     YAxis,
-    CartesianGrid: Noop,
+    CartesianGrid,
     Tooltip,
   };
 });
@@ -252,6 +256,13 @@ describe('ElevationProfile — empty / null-safety branch', () => {
 });
 
 describe('ElevationProfile — populated chrome', () => {
+  it('paints the shared grid with its theme stroke and unobtrusive dash/opacity', () => {
+    renderProfile();
+    expect(screen.getByTestId('chart-grid')).toHaveAttribute('stroke', chartTokens.gridStroke);
+    expect(screen.getByTestId('chart-grid')).toHaveAttribute('stroke-dasharray', '3 3');
+    expect(screen.getByTestId('chart-grid')).toHaveAttribute('stroke-opacity', '0.4');
+  });
+
   it('mounts the accessible chart frame with one interactive sample per data point', () => {
     renderProfile({
       data: [

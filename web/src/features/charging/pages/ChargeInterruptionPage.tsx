@@ -217,7 +217,7 @@ export default function ChargeInterruptionPage() {
               message={initialPaused ? pausedMessage : t('chargeInterruption.noSites', 'No charging locations recorded yet.')}
             />
           ) : (
-            <ul className="grid min-w-0 grid-cols-1 gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3">
+            <ul data-app-part="list" className="grid min-w-0 grid-cols-1 gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3">
               {summary.sites.map((s) => (
                 <li key={s.key} className="min-w-0">
                   <Card variant="embedded" padding="sm" className="h-full">

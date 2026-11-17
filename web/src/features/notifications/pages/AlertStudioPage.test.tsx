@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import '../../../i18n';
@@ -22,20 +22,6 @@ import type { AlertRule, AlertRuleInput } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { NavigationGuardProvider, GuardedLink } from '@/components/feedback';
-vi.mock('framer-motion', () => ({
-  m: new Proxy(
-    {},
-    {
-      get: () => (props: Record<string, unknown>) => {
-        const { children, ...rest } = props as { children?: React.ReactNode };
-        return <div {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>;
-      },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  useReducedMotion: () => false,
-}));
-
 const VEHICLES: Vehicle[] = [
   {
     id: 1, vehicle_id: 1, vin: 'VIN111111111111', display_name: 'Roadster', model: 'Model 3',
@@ -297,7 +283,7 @@ describe('AlertStudioPage navigation protection', () => {
         metric_id: 'charging_cost', metric_window: 'day', metric_op: '>',
         metric_threshold: 12, channel_ids: null, created_at: '', updated_at: '',
       } as AlertRule;
-      renderPage('/notifications/rules', rule);
+      await act(async () => { renderPage('/notifications/rules', rule); });
       expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Charging cost');
       expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
       expect(screen.getByRole('button', { name: 'Update rule' })).toBeInTheDocument();
@@ -448,7 +434,7 @@ describe('AlertStudioPage navigation protection', () => {
     });
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
     const event = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(event);
+    act(() => { window.dispatchEvent(event); });
     expect(event.defaultPrevented).toBe(false);
   });
 
@@ -460,7 +446,7 @@ describe('AlertStudioPage navigation protection', () => {
     expect(await screen.findByText('Unsaved changes')).toBeInTheDocument();
     expect(screen.getByTestId('current-location')).toHaveTextContent('/notifications/studio');
     const event = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(event);
+    act(() => { window.dispatchEvent(event); });
     expect(event.defaultPrevented).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     fireEvent.change(name, { target: { value: '' } });

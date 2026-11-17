@@ -63,6 +63,15 @@ describe('MiniChart — geometry', () => {
     expect(el?.getAttribute('height')).toBe('20');
     expect(polyline(container)?.getAttribute('points')).toBe('2,18 48,2');
   });
+
+  it('can shrink into a narrow allocation without changing the source coordinates or aspect ratio', () => {
+    const { container } = render(<MiniChart data={[-10, 0, 10]} width={500} height={40} label="Recorded trend" />);
+    expect(container.firstChild).toHaveClass('max-w-full');
+    expect(svg(container)).toHaveAttribute('viewBox', '0 0 500 40');
+    expect(svg(container)).toHaveClass('h-auto', 'max-w-full');
+    expect(polyline(container)).toHaveAttribute('points', '2,38 250,20 498,2');
+    expect(screen.getByRole('img', { name: 'Recorded trend' })).not.toHaveAttribute('aria-hidden');
+  });
 });
 
 describe('MiniChart — non-finite sanitisation (regression guard)', () => {

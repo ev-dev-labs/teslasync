@@ -10,19 +10,21 @@ import {
 import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
 import { DataSourceNotice, resolveDataSourceStatus, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { chartTokens } from '@/lib/tokens';
 
 import { analyzeNotificationLatency } from '../lib/notificationLatency';
+import { useNotificationPhoneChartAxes } from '../lib/useNotificationPhoneChartAxes';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export function NotificationLatencyPanel() {
   const { formatDateTime } = useDateFormat();
-  const { fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
+  const { fmtInt, fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
+  const phoneAxes = useNotificationPhoneChartAxes();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
   const source = useDataState(logsQuery, { provenance: 'historical' });
@@ -68,6 +70,19 @@ export function NotificationLatencyPanel() {
       render: record => <Text variant="body" mono className="font-medium">{latencyLabel(record.latencyMs)}</Text>,
     },
   ], [latencyLabel, t, formatDateTime]);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<(typeof summary.slowest)[number]>>(() => ({
+    roles: { notification: 'title', latency: 'primary', source: 'badge' },
+    displayValue: (record, key) => {
+      switch (key) {
+        case 'notification': return record.title;
+        case 'latency': return latencyLabel(record.latencyMs);
+        case 'source': return record.source === 'measured'
+          ? t('notificationLatency.slowest.measured', 'Measured')
+          : t('notificationLatency.slowest.derived', 'Derived');
+        default: return null;
+      }
+    },
+  }), [latencyLabel, t]);
   const histogramData = useMemo(
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null
@@ -82,6 +97,11 @@ export function NotificationLatencyPanel() {
     })),
     [summary.histogram, t, fmtNumber],
   );
+  const latencyAxis = phoneAxes?.categoryAxis(histogramData.map(({ range }) => range));
+  const histogramMargin = phoneAxes ? {
+    ...phoneAxes.margin,
+    right: Math.max(phoneAxes.margin.right, Math.ceil(phoneAxes.numericWidth(summary.count, fmtInt) / 2)),
+  } : undefined;
   const sourceDescriptor = { id: 'notification-latency', label: t('notificationLatency.title', 'Notification latency'), query: logsQuery };
   const isLoading = resolveDataSourceStatus(sourceDescriptor) === 'loading';
   const isBlocked = !source.hasData && source.isRefreshBlocked;
@@ -182,6 +202,11 @@ export function NotificationLatencyPanel() {
             loading={isLoading}
             empty={summary.count === 0}
             height={310}
+            mobileHeight={phoneAxes
+              ? Math.max(310, Math.ceil(phoneAxes.margin.top + phoneAxes.xHeight
+                + histogramData.length * phoneAxes.tick.fontSize * 2.5))
+              : undefined}
+            className={phoneAxes?.className}
             data={histogramData}
             dataColumns={[
               { key: 'range', label: t('notificationLatency.columns.range', 'Latency range') },
@@ -191,16 +216,28 @@ export function NotificationLatencyPanel() {
           >
             {/* Single histogram count series; percentile summaries are KPIs rather than toggleable series. */}
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={histogramData}>
+              <BarChart data={histogramData} layout={phoneAxes ? 'vertical' : 'horizontal'} margin={histogramMargin}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+                {phoneAxes && latencyAxis ? (
+                  <>
+                    <XAxis key={`x-${phoneAxes.key}`} type="number" tickFormatter={(value: number) => fmtInt(value)} allowDecimals={false}
+                      tick={phoneAxes.tick} height={phoneAxes.xHeight} minTickGap={phoneAxes.minTickGap}
+                      tickMargin={phoneAxes.tickMargin} />
+                    <YAxis key={`y-${phoneAxes.key}`} type="category" dataKey="range" width={latencyAxis.width}
+                      tickFormatter={latencyAxis.format} tick={phoneAxes.tick} interval={0} />
+                  </>
+                ) : (
+                  <>
+                    <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+                  </>
+                )}
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="count"
                   name={t('notificationLatency.columns.count', 'Deliveries')}
                   fill={chartTokens.series[0]}
-                  radius={[3, 3, 0, 0]}
+                  radius={phoneAxes ? [0, 3, 3, 0] : [3, 3, 0, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -246,8 +283,8 @@ export function NotificationLatencyPanel() {
                   <Table aria-label={group.title}>
                     <tbody>
                       {group.rows.map((cohort) => (
-                        <tr key={cohort.key}>
-                          <th scope="row" className="min-w-0 break-words">
+                        <tr data-app-part="table-row" key={cohort.key}>
+                          <th data-app-part="table-cell" scope="row" className="min-w-0 break-words">
                             <Text as="p" variant="bodySm" className="font-medium">
                               {cohort.key.replace('_', ' ')}
                             </Text>
@@ -260,7 +297,7 @@ export function NotificationLatencyPanel() {
                               })}
                             </Text>
                           </th>
-                          <td className="text-right tabular-nums">
+                          <td data-app-part="table-cell" className="text-right tabular-nums">
                             <Text variant="bodySm" mono>{latencyLabel(cohort.p95Ms)}</Text>
                           </td>
                         </tr>
@@ -296,6 +333,7 @@ export function NotificationLatencyPanel() {
               tableId="notifications:slow-deliveries"
               caption={t('notificationLatency.slowest.title', 'Slowest delivery records')}
               columns={slowestColumns}
+              mobilePresentation={mobilePresentation}
               data={summary.slowest}
               keyExtractor={record => record.id}
               rowLabel={record => record.title}

@@ -173,7 +173,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
   }, [vidStr, vehiclesQuery.refetch, refetch]);
 
   const renderHistory = (slots?: TimelineSlots) => (
-          <div role="list" aria-label={t('widget.eventFeed.label', 'Event feed')} className={slots?.feed}>
+          <div data-app-part="list" role="list" aria-label={t('widget.eventFeed.label', 'Event feed')} className={slots?.feed}>
             {sorted.slice(0, 15).map((upd) => {
               const meta = updateStatusMeta(upd.status);
               const installed = isInstalledStatus(upd.status);

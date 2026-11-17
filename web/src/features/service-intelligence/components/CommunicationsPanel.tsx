@@ -55,11 +55,13 @@ export function CommunicationsPanel({
       >
           <div className="space-y-3">
             {unknown && (
-              <div role="status" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                <Text as="p" variant="bodySm" color="secondary">
-                  {t('provenance.unknown', 'Unknown source')}
-                </Text>
-                <Button type="button" variant="secondary" className="mt-2" onClick={onRetry}>
+              <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="neutral" role="status" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <div data-app-part="feedback-content">
+                  <Text data-app-part="feedback-message" as="p" variant="bodySm" color="secondary">
+                    {t('provenance.unknown', 'Unknown source')}
+                  </Text>
+                </div>
+                <Button data-app-part="button feedback-retry" type="button" variant="secondary" className="mt-2" onClick={onRetry}>
                   {t('common.retry', 'Retry')}
                 </Button>
               </div>
@@ -78,6 +80,9 @@ export function CommunicationsPanel({
                 </Text>
                 {source?.source_url && (
                   <a
+                    data-app-part="button"
+                    data-app-variant="ghost"
+                    data-app-size="sm"
                     href={source.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -114,16 +119,18 @@ export function CommunicationsPanel({
                 )}
               />
             ) : communications.length > 0 ? (
-              <ol className="space-y-3">
+              <ol data-app-part="list" data-app-list="records" className="space-y-3">
                 {communications.map((communication) => (
                   <li
                     key={communication.id}
+                    data-app-part="card"
+                    data-app-card-kind="record"
                     className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <Heading level="panel">{communication.communication_number}</Heading>
-                        <Caption className="mt-1 block">
+                        <Heading data-app-part="record-title" level="panel">{communication.communication_number}</Heading>
+                        <Caption data-app-part="record-context" className="mt-1 block">
                           {communication.component || '—'} ·{' '}
                           <DateTime value={communication.published_at} variant="day" />
                         </Caption>
@@ -143,35 +150,40 @@ export function CommunicationsPanel({
                         </Badge>
                       </div>
                     </div>
-                    <Caption className="mt-2 block">
-                      {communication.communication_type ||
-                        t('serviceIntelligence.communications.typeUnknown', 'Communication type unavailable')}
-                    </Caption>
-                    <Text as="p" variant="bodySm" className="mt-2">{communication.summary}</Text>
-                    <div className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                      <Caption className="mb-1 block">
-                        {t('serviceIntelligence.communications.hypothesis', 'Applicability hypothesis')}
+                    <div data-app-part="record-body">
+                      <Caption className="mt-2 block">
+                        {communication.communication_type ||
+                          t('serviceIntelligence.communications.typeUnknown', 'Communication type unavailable')}
                       </Caption>
-                      <Text as="p" variant="bodySm">{communication.hypothesis}</Text>
+                      <Text as="p" variant="bodySm" className="mt-2">{communication.summary}</Text>
+                      <div data-app-part="card" data-app-card-kind="record" className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                        <Caption data-app-part="record-header record-title" className="mb-1 block">
+                          {t('serviceIntelligence.communications.hypothesis', 'Applicability hypothesis')}
+                        </Caption>
+                        <Text data-app-part="record-body" as="p" variant="bodySm">{communication.hypothesis}</Text>
+                      </div>
+                      {communication.symptom_matches.length > 0 && (
+                        <Badge variant="warning" className="mt-3">
+                          {t(
+                            'serviceIntelligence.communications.symptoms',
+                            '{{count}} observed symptom match',
+                            { count: communication.symptom_matches.length },
+                          )}
+                        </Badge>
+                      )}
+                      <a
+                        data-app-part="button"
+                        data-app-variant="ghost"
+                        data-app-size="sm"
+                        href={communication.source_document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'mt-2 min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
+                      >
+                        {t('serviceIntelligence.communications.source', 'Open official NHTSA document')}
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
                     </div>
-                    {communication.symptom_matches.length > 0 && (
-                      <Badge variant="warning" className="mt-3">
-                        {t(
-                          'serviceIntelligence.communications.symptoms',
-                          '{{count}} observed symptom match',
-                          { count: communication.symptom_matches.length },
-                        )}
-                      </Badge>
-                    )}
-                    <a
-                      href={communication.source_document_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, typography.size.sm, 'mt-2 min-h-11 max-w-full justify-start whitespace-normal px-2 hover:underline')}
-                    >
-                      {t('serviceIntelligence.communications.source', 'Open official NHTSA document')}
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
                   </li>
                 ))}
               </ol>

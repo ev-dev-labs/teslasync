@@ -565,6 +565,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
   return (
     <div
       ref={wrapperRef}
+      data-app-part="field"
       className={cn('relative', className)}
       onBlur={handleWrapperBlur}
     >
@@ -573,7 +574,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           {label}
         </VisuallyHidden>
       ) : (
-        <label htmlFor={inputId} id={labelId} className={visibleLabelClass}>
+        <label data-app-part="field-label" htmlFor={inputId} id={labelId} className={visibleLabelClass}>
           {label}
         </label>
       )}
@@ -588,6 +589,8 @@ export function Combobox<T>(props: ComboboxProps<T>) {
         )}
         <input
           ref={inputRef}
+          data-app-part="field-control"
+          aria-busy={loading || undefined}
           id={inputId}
           type="text"
           role="combobox"
@@ -637,6 +640,9 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           {showClear && (
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="ghost"
+              data-app-icon-only="true"
               tabIndex={-1}
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleClear}
@@ -649,6 +655,9 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           {!noChevron && (
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="ghost"
+              data-app-icon-only="true"
               tabIndex={-1}
               disabled={disabled}
               onMouseDown={(e) => e.preventDefault()}
@@ -689,6 +698,8 @@ export function Combobox<T>(props: ComboboxProps<T>) {
       {open && (
         <ul
           id={listboxId}
+          data-app-part="popover"
+          aria-busy={loading || undefined}
           role="listbox"
           aria-label={label}
           className={cn('absolute start-0 end-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] py-1 shadow-lg', listboxClassName)}
@@ -722,6 +733,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                 key={getOptionKey(opt)}
                 id={optionId}
                 role="option"
+                data-active={isActive || undefined}
                 aria-selected={isSelected}
                 // A plain `title` is inert markup — it adds a native hover
                 // tooltip without touching ARIA semantics or introducing

@@ -13,11 +13,14 @@ export function RangeTips() {
   ];
   return (
     <LayoutCard title={t('range.tips', 'Tips to Maximize Range')}>
-      <ul className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @5xl:grid-cols-4">
+      <ul data-app-part="list" className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @5xl:grid-cols-4">
         {tips.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex min-w-0 items-start gap-2 rounded-lg bg-[var(--surface-2)] p-3">
-            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-            <Text as="span" size="sm" color="secondary">{text}</Text>
+          <li key={text} data-app-part="card list-row" data-app-card-kind="record" data-surface-variant="standalone"
+            className="flex min-w-0 items-start gap-2 rounded-lg bg-[var(--surface-2)] p-3">
+            <div data-app-part="record-body" className="flex min-w-0 items-start gap-2">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+              <Text as="span" size="sm" color="secondary">{text}</Text>
+            </div>
           </li>
         ))}
       </ul>

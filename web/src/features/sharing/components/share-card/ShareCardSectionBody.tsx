@@ -88,7 +88,7 @@ export function ShareCardSectionBody({
         errorMessage={t('shareCard.states.error', 'Selected-window drive evidence is unavailable.')}
         emptyContent={emptyContent}
         loadingContent={(
-          <div className="min-h-28" role="status" aria-label={label}>
+          <div data-app-part="status" className="min-h-28" role="status" aria-label={label}>
             <Skeleton height={skeletonHeight} />
           </div>
         )}

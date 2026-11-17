@@ -109,11 +109,13 @@ export function ActionableEmptyState({
     return (
       <div
         role="status"
+        data-app-part="feedback empty"
+        data-app-feedback-kind="empty"
         data-testid="actionable-empty-state"
         data-guidance-id={guidanceId}
         className={cn('px-4 py-10 text-center', className)}
       >
-        <Text as="p" variant="bodySm">
+        <Text data-app-part="feedback-message" as="p" variant="bodySm">
           {fallbackMessage ?? t('emptyState.generic', 'No data available yet.')}
         </Text>
       </div>
@@ -123,22 +125,25 @@ export function ActionableEmptyState({
   return (
     <div
       role="status"
+      data-app-part="feedback empty"
+      data-app-feedback-kind="empty"
       data-testid="actionable-empty-state"
       data-guidance-id={guidance.id}
       className={cn('flex flex-col items-center gap-4 px-4 py-10 text-center', className)}
     >
       <div
+        data-app-part="feedback-icon"
         className="rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-[var(--theme-primary)]"
         aria-hidden
       >
         {icon ?? <Info className="h-5 w-5" />}
       </div>
 
-      <Text as="p" variant="body" className="max-w-xl leading-relaxed">
+      <Text data-app-part="feedback-message" as="p" variant="body" className="max-w-xl leading-relaxed">
         {t(guidance.meaningKey, guidance.meaningFallback)}
       </Text>
 
-      <div className="w-full max-w-2xl space-y-1.5 text-left">
+      <div data-app-part="feedback-detail" className="w-full max-w-2xl space-y-1.5 text-left">
         <GuidanceRow label={t('emptyState.label.prerequisite', 'What has to happen first')}>
           {t(guidance.prerequisiteKey, guidance.prerequisiteFallback)}
         </GuidanceRow>
@@ -147,6 +152,7 @@ export function ActionableEmptyState({
         </GuidanceRow>
       </div>
       <MaybeLink
+        data-app-part="feedback-actions"
         to={guidance.action.to}
         className={linkButtonClasses}
         data-testid="actionable-empty-state-action"

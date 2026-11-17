@@ -8,6 +8,7 @@ import { PageHeader } from '../PageHeader';
 import { Button } from '@/components/ui/Button';
 import type { FreshnessQuery } from '@/components/data-display/FreshnessDot';
 import { typography } from '@/lib/tokens';
+import { APPLICATION_DESIGNS, getAppDesignAttributes } from '@/components/ui/app-designs/designs';
 
 // Mock react-i18next so PageContainer + FreshnessDotAuto get fallback strings
 // without booting the full i18n runtime.
@@ -57,6 +58,44 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 }
 
 describe('PageContainer', () => {
+  it.each(Object.keys(APPLICATION_DESIGNS) as (keyof typeof APPLICATION_DESIGNS)[])(
+    'retains ordered progressive sections and every action slot in the %s application composition',
+    pack => {
+      const onExport = vi.fn();
+      const { container } = renderWith(
+        <div data-app-design-preview {...getAppDesignAttributes(pack)}>
+          <PageContainer title="Evidence" busy className="space-y-8"
+            metadataActions={<span>Retained source age</span>}
+            contextActions={<Button>Local workflow scope</Button>}
+            secondaryActions={<Button>Compare</Button>}
+            destructiveActions={<Button>Delete</Button>}
+            overflowActions={<Button onClick={onExport}>Export</Button>}
+            primaryAction={<Button>Save</Button>}>
+            <section aria-label="Live">Live readings</section>
+            <section aria-label="Cached">Retained cached chart</section>
+            <section aria-label="Unavailable">Source unavailable; retry independently</section>
+          </PageContainer>
+        </div>,
+      );
+      const page = container.querySelector('[data-app-part~="page"]')!;
+      expect(page).toHaveAttribute('data-app-part', 'page page-content');
+      expect(page).toHaveClass('space-y-8');
+      expect(page).not.toHaveClass('space-y-3', 'space-y-6');
+      expect(page).toHaveAttribute('aria-busy', 'true');
+      expect(page.children).toHaveLength(4);
+      expect(page.firstElementChild).toHaveAttribute('data-app-part', 'page-header');
+      expect(screen.getByRole('heading', { name: 'Evidence' }).closest('[data-app-part~="page-title"]'))
+        .toBeInTheDocument();
+      expect(Array.from(page.querySelectorAll('section')).map(section => section.getAttribute('aria-label')))
+        .toEqual(['Live', 'Cached', 'Unavailable']);
+      expect(page.querySelector('[data-role="page-actions"]')).toHaveAttribute('data-app-part', 'page-actions');
+      expect(Array.from(page.querySelectorAll('[data-action-group]')).map(group => group.getAttribute('data-action-group')))
+        .toEqual(['context', 'metadata', 'secondary', 'destructive', 'overflow', 'primary']);
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      expect(onExport).toHaveBeenCalledOnce();
+    },
+  );
+
   it('preserves intrinsic title width when desktop actions need another row', () => {
     renderWith(<PageContainer title="Aurora" subtitle="Vehicle details" actions={<button>Vehicle actions</button>}>Content</PageContainer>);
     const header = screen.getByRole('heading', { level: 1, name: 'Aurora' }).closest('header');

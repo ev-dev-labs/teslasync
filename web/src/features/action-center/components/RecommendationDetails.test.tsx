@@ -499,7 +499,7 @@ describe('RecommendationDetails projection presentation', () => {
     preferences.locale = 'de-DE';
     preferences.decimal_precision = 1;
     preferences.timezone_user = 'Europe/Berlin';
-    await i18n.changeLanguage('de');
+    await act(async () => { await i18n.changeLanguage('de'); });
     rerender(details());
     const impact = screen.getByRole('region', { name: 'Projected impact' });
     expect(within(impact).getByText('1,3 kWh')).toBeVisible();

@@ -101,9 +101,11 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
             <div key={`${rate.hour}-${index}`} role="img" aria-label={label} title={label}
               className="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end">
               <div aria-hidden="true" className="absolute bottom-full z-10 mb-1 hidden group-hover:block">
-                <div className="whitespace-nowrap rounded border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1">
-                  <Text as="div" size="xs" weight="medium" color="primary">{formatHour(rate.hour, locale)}</Text>
-                  <Text as="div" size="xs" color="secondary">{value == null ? '—' : `${fmtNumber(value)}¢/kWh`}</Text>
+                <div data-app-part="chart-tooltip" className="whitespace-nowrap rounded border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1">
+                  <Text data-chart-tooltip-label as="div" size="xs" weight="medium" color="primary">{formatHour(rate.hour, locale)}</Text>
+                  <Text data-chart-tooltip-row as="div" size="xs" color="secondary">
+                    <span data-chart-tooltip-value className="col-span-full">{value == null ? '—' : `${fmtNumber(value)}¢/kWh`}</span>
+                  </Text>
                 </div>
               </div>
               <div className={cn('w-full rounded-t-sm',

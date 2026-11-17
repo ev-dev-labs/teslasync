@@ -24,6 +24,7 @@
  * real ChartContainer) are stubbed to no-ops so nothing touches html2canvas or
  * the network.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -134,6 +135,8 @@ function readTableRows(): string[][] {
     .slice(1)
     .map((r) => within(r).getAllByRole('cell').map((c) => c.textContent ?? ''));
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('SpeedTrendChart — panel shell + a11y', () => {
   it('renders the ChartContainer figure with its title, subtitle and img region', () => {

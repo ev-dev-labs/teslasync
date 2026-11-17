@@ -517,27 +517,28 @@ function TripCard({ trip }: { trip: Trip }) {
         )}
       </div>
 
-      <div className="mt-auto grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3">
-        <div className="min-w-0">
-          <MetricLabel>{t('trips.card.distance', 'Distance')}</MetricLabel>
-          <Text as="p" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
-            {distanceDisplay === null ? '—' : fmtInt(distanceDisplay)} {distancePref}
+      <div data-app-part="metric-grid" data-app-metric-grid="inline" className="mt-auto grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3">
+        <div data-app-part="metric" data-app-metric="inline" className="min-w-0">
+          <MetricLabel data-app-part="metric-label">{t('trips.card.distance', 'Distance')}</MetricLabel>
+          <Text as="p" data-app-part="metric-reading" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
+            <span data-app-part="metric-value">{distanceDisplay === null ? '—' : fmtInt(distanceDisplay)}</span>{' '}
+            <span data-app-part="metric-unit">{distancePref}</span>
           </Text>
         </div>
-        <div className="min-w-0">
-          <MetricLabel>{t('trips.card.energy', 'Energy')}</MetricLabel>
-          <Text as="p" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
+        <div data-app-part="metric" data-app-metric="inline" className="min-w-0">
+          <MetricLabel data-app-part="metric-label">{t('trips.card.energy', 'Energy')}</MetricLabel>
+          <Text as="p" data-app-part="metric-reading metric-value" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
             {formatEnergy(energyWh)}
           </Text>
-          <Caption className="block break-words [overflow-wrap:anywhere]">
+          <Caption data-app-part="metric-context" className="block break-words [overflow-wrap:anywhere]">
             {efficiencyDisplay !== null
               ? `${fmtInt(efficiencyDisplay)} ${efficiencyUnit}`
               : '—'}
           </Caption>
         </div>
-        <div className="min-w-0">
-          <MetricLabel>{t('trips.card.cost', 'Cost')}</MetricLabel>
-          <Text as="p" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
+        <div data-app-part="metric" data-app-metric="inline" className="min-w-0">
+          <MetricLabel data-app-part="metric-label">{t('trips.card.cost', 'Cost')}</MetricLabel>
+          <Text as="p" data-app-part="metric-reading metric-value" variant="body" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
             {cost !== null ? formatCurrency(cost) : '—'}
           </Text>
         </div>

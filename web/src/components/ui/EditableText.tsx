@@ -296,10 +296,11 @@ export function EditableText({
   // ─── Edit mode ──────────────────────────────────────────────────────
   if (editing) {
     return (
-      <div className={cn('inline-flex flex-col gap-1', className)}>
+      <div data-app-part="field" className={cn('inline-flex flex-col gap-1', className)}>
         <div className="inline-flex items-center gap-2">
           <input
             ref={inputRef}
+            data-app-part="field-control"
             id={inputId}
             type="text"
             value={draft}
@@ -334,7 +335,7 @@ export function EditableText({
           )}
         </div>
         {error && (
-          <ErrorText id={`${inputId}-error`} className="text-xs">
+          <ErrorText data-app-part="status" data-app-field-feedback="error" id={`${inputId}-error`} className="text-xs">
             {error}
           </ErrorText>
         )}
@@ -361,6 +362,8 @@ export function EditableText({
   return (
     <button
       type="button"
+      data-app-part="button"
+      data-app-variant="ghost"
       onClick={startEdit}
       onDoubleClick={startEdit}
       onKeyDown={handleDisplayKeyDown}

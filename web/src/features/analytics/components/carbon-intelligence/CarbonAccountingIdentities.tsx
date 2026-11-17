@@ -128,7 +128,7 @@ export function CarbonAccountingIdentities({
             'Each row compares independently returned or independently derived values. Tolerances explicitly include backend wire rounding; unavailable inputs never pass by default.',
           )}
         </Text>
-        <ul className="grid gap-2 lg:grid-cols-2">
+        <ul data-app-part="list" data-app-list="records" className="grid gap-2 lg:grid-cols-2">
           {analysis.reconciliations.map((check) => {
             const status = check.status === 'balances'
               ? {
@@ -147,43 +147,48 @@ export function CarbonAccountingIdentities({
             return (
               <li
                 key={check.id}
+                data-app-part="card list-row"
+                data-app-card-kind="record"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <Text as="p" variant="label">{checkLabel(check.id, t)}</Text>
+                <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
+                  <Text data-app-part="record-title" as="p" variant="label">{checkLabel(check.id, t)}</Text>
                   <Badge variant={status.variant}>{status.label}</Badge>
                 </div>
+                <div data-app-part="record-body">
                 <Table className="mt-2" aria-label={checkLabel(check.id, t)}>
 
                   <tbody>
-                    <tr>
-                      <th scope="row"><Text variant="caption">{t('carbon.accounting.expected', 'Expected')}</Text></th>
-                      <td className="text-right"><Text variant="caption" mono>
+                    <tr data-app-part="table-row">
+                      <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('carbon.accounting.expected', 'Expected')}</Text></th>
+                      <td data-app-part="table-cell" className="text-right"><Text variant="caption" mono>
                         {check.unit === 'hour_set'
                           ? hourSetValue(check.expectedHours, display, t)
                           : checkValue(check.expected, check, display, t)}
                       </Text></td>
                     </tr>
-                    <tr>
-                      <th scope="row"><Text variant="caption">{t('carbon.accounting.observed', 'Observed')}</Text></th>
-                      <td className="text-right"><Text variant="caption" mono>
+                    <tr data-app-part="table-row">
+                      <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('carbon.accounting.observed', 'Observed')}</Text></th>
+                      <td data-app-part="table-cell" className="text-right"><Text variant="caption" mono>
                         {check.unit === 'hour_set'
                           ? hourSetValue(check.observedHours, display, t)
                           : checkValue(check.observed, check, display, t)}
                       </Text></td>
                     </tr>
                     {check.unit !== 'hour_set' && <>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('carbon.accounting.residual', 'Residual')}</Text></th>
-                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.residual, check, display, t)}</Text></td>
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('carbon.accounting.residual', 'Residual')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right"><Text variant="caption" mono>{checkValue(check.residual, check, display, t)}</Text></td>
                       </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('carbon.accounting.tolerance', 'Tolerance')}</Text></th>
-                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.tolerance, check, display, t)}</Text></td>
+                      <tr data-app-part="table-row">
+                        <th data-app-part="table-cell" scope="row"><Text variant="caption">{t('carbon.accounting.tolerance', 'Tolerance')}</Text></th>
+                        <td data-app-part="table-cell" className="text-right"><Text variant="caption" mono>{checkValue(check.tolerance, check, display, t)}</Text></td>
                       </tr>
                     </>}
                   </tbody>
                 </Table>
+                </div>
               </li>
             );
           })}

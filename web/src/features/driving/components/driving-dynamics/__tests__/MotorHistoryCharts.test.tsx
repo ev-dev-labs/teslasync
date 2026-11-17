@@ -24,6 +24,7 @@
  * in src/test-setup.ts, which makes `useDateFormat().formatTime` hermetic.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -167,6 +168,8 @@ function renderCharts(motorHistory: MotorSnapshot[] | undefined) {
     </QueryClientProvider>,
   );
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MotorHistoryCharts', () => {
   it('lets every motor plot use its responsive frame allocation', () => {

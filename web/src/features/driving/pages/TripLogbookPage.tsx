@@ -7,7 +7,7 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import {
   Text, Button, Select, Input, HelpTooltip,
-  DataTable, Icon, type Column,
+  DataTable, Icon, type Column, type MobileDataTablePresentation,
 } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
@@ -205,6 +205,23 @@ export default function TripLogbookPage() {
     },
   ], [t, formatDistance, formatCurrency, setCategory, categoryOptions]);
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<LogbookRow>>(() => ({
+    roles: { date: 'title', route: 'meta', distanceM: 'primary', category: 'meta', amount: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'date': return formatDateShort(row.date);
+        case 'route': return row.route;
+        case 'distanceM': return formatDistance(row.distanceM);
+        case 'category': return row.category == null
+          ? t('logbook.unclassified', 'Unclassified')
+          : t(CATEGORY_META[row.category].i18nKey, CATEGORY_META[row.category].fallback);
+        case 'amount': return row.category != null && row.amount > 0 ? formatCurrency(row.amount) : '—';
+        default: return null;
+      }
+    },
+    inlineActions: (row) => columns.find((column) => column.key === 'category')?.render(row),
+  }), [columns, formatCurrency, formatDistance, t]);
+
   /* ---- Rate editing (display in the user's distance unit) ---- */
   const perMile = unitPrefs.distance === 'mi';
   const rateUnitLabel = perMile
@@ -310,11 +327,13 @@ export default function TripLogbookPage() {
               />
             </>}>
 
-            <div className="mb-4 flex items-baseline gap-2">
-              <Text variant="metricValue" className="font-mono tabular-nums text-[var(--text-primary)]">
-                {!sourceAvailable ? '—' : formatCurrency(summary.totalAmount)}
-              </Text>
-              <Text variant="caption">{t('logbook.inPeriod', 'reimbursable in this period')}</Text>
+            <div data-app-part="metric" data-app-metric="headline" className="mb-4 flex items-baseline gap-2">
+              <div data-app-part="metric-reading">
+                <Text data-app-part="metric-value" variant="metricValue" className="font-mono tabular-nums text-[var(--text-primary)]">
+                  {!sourceAvailable ? '—' : formatCurrency(summary.totalAmount)}
+                </Text>
+              </div>
+              <Text data-app-part="metric-context" variant="caption">{t('logbook.inPeriod', 'reimbursable in this period')}</Text>
             </div>
 
             <div className="flex flex-col gap-4">
@@ -378,10 +397,10 @@ export default function TripLogbookPage() {
             </>}>
 
             {suggestions.length > 0 && (
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                <div className="flex items-center gap-2">
-                  <Icon icon={Sparkles} size="md" />
-                  <Text variant="bodySm">
+              <div data-app-part="feedback" data-app-feedback-kind="notice" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <Icon data-app-part="feedback-icon" icon={Sparkles} size="md" />
+                <div data-app-part="feedback-content" className="min-w-0 flex-1">
+                  <Text data-app-part="feedback-message" variant="bodySm">
                     {t(
                       'logbook.suggestionBanner',
                       '{{count}} unclassified drives match routes you have already classified.',
@@ -389,9 +408,11 @@ export default function TripLogbookPage() {
                     )}
                   </Text>
                 </div>
-                <Button variant="secondary" wrapLabel onClick={() => setCategories(suggestions)}>
-                  {t('logbook.applySuggestions', 'Apply suggestions')}
-                </Button>
+                <div data-app-part="feedback-actions">
+                  <Button variant="secondary" wrapLabel onClick={() => setCategories(suggestions)}>
+                    {t('logbook.applySuggestions', 'Apply suggestions')}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -414,6 +435,7 @@ export default function TripLogbookPage() {
                 columns={columns}
                 variant="embedded"
                 mobileColumns={['date', 'route', 'distanceM', 'category', 'amount']}
+                mobilePresentation={mobilePresentation}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('logbook.noneInFilter', 'No drives in this category yet.')}

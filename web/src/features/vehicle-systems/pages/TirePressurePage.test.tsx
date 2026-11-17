@@ -25,6 +25,7 @@
  * interactions use `fireEvent`.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { COLOR } from '@/lib/colors';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
@@ -336,6 +337,8 @@ beforeEach(() => {
 /* ══════════════════════════════════════════════════════════════════════════
  * 1. Pure helpers
  * ════════════════════════════════════════════════════════════════════════ */
+
+setupMeasuredChartContainers(800, 320);
 
 describe('normaliseTpmsToPa — source-unit detection + sentinel guard', () => {
   it('passes SI Pascals straight through and up-scales kPa / psi / bar into Pascals', () => {

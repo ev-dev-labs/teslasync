@@ -138,15 +138,17 @@ export function PreconditioningDataAvailability({
           )}
         </Text>
         <Grid cols={{ default: 1, lg: 2 }} gap={3}>
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <MetricLabel>{t('preconditioningEffectiveness.availability.climateQuery', 'Climate query')}</MetricLabel>
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+            <div data-app-part="record-header" className="flex items-center justify-between gap-3">
+              <MetricLabel data-app-part="record-title">{t('preconditioningEffectiveness.availability.climateQuery', 'Climate query')}</MetricLabel>
               <Badge variant={climateStatus.variant}>{climateStatus.label}</Badge>
             </div>
           </div>
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <MetricLabel>{t('preconditioningEffectiveness.availability.driveQuery', 'Drive query')}</MetricLabel>
+          <div data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+            <div data-app-part="record-header" className="flex items-center justify-between gap-3">
+              <MetricLabel data-app-part="record-title">{t('preconditioningEffectiveness.availability.driveQuery', 'Drive query')}</MetricLabel>
               <Badge variant={driveStatus.variant}>{driveStatus.label}</Badge>
             </div>
           </div>
@@ -173,14 +175,17 @@ export function PreconditioningDataAvailability({
               </Badge>,
             }))}
           />
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
-            <DatabaseZap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-            <Text as="p" variant="caption">
-              {t(
-                'preconditioningEffectiveness.availability.note',
-                'A successful empty response is valid evidence of no returned rows; it is not treated as a transport failure.',
-              )}
-            </Text>
+          <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="neutral"
+            className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
+            <DatabaseZap data-app-part="feedback-icon" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+            <div data-app-part="feedback-content">
+              <Text data-app-part="feedback-message" as="p" variant="caption">
+                {t(
+                  'preconditioningEffectiveness.availability.note',
+                  'A successful empty response is valid evidence of no returned rows; it is not treated as a transport failure.',
+                )}
+              </Text>
+            </div>
           </div>
         </PreconditioningSectionBody>
       </LayoutCard>

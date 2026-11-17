@@ -1,6 +1,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parse, type Rule } from 'postcss';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 import {
   SETTINGS_BUNDLE_SCHEMA_VERSION,
   SETTINGS_BUNDLE_SECTION_KEYS,
@@ -90,12 +96,24 @@ function drop(next: File) {
   fireEvent.drop(screen.getByTestId('settings-import-dropzone'), { dataTransfer: { files: [next] } });
 }
 
-function mount() {
+function mount(pack?: PackId) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={client}><SettingsExportImport /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={client}>
+      {pack ? (
+        <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+          <SettingsExportImport />
+        </div>
+      ) : <SettingsExportImport />}
+    </QueryClientProvider>,
+  );
 }
+
+const controlRules: Rule[] = [];
+parse(readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8'))
+  .walkRules(rule => { controlRules.push(rule); });
 
 async function preview(name: string, count = 1) {
   requestMock.mockResolvedValueOnce(result(count));
@@ -116,6 +134,80 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe('settings import native design ownership', () => {
+  it.each(PACK_IDS)('%s owns the actual intake and diagnostic without replacing file parsing or alerts', async pack => {
+    const view = mount(pack);
+    const release = observeAppDesignScopes(view.container);
+    try {
+      const intake = screen.getByTestId('settings-import-dropzone');
+      expect(intake).toHaveAttribute('data-app-control-kind', 'dropzone');
+      expect(intake).toHaveAttribute('aria-busy', 'false');
+      expect(controlRules.some(rule => rule.selector.includes('[data-app-field-surface]')
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-color')
+        && intake.matches(rule.selector))).toBe(true);
+      expect(intake).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+      expect(screen.getByTestId('settings-import-file-input')).toHaveAttribute('accept', 'application/json,.json');
+
+      fireEvent.dragOver(intake);
+      expect(intake).toHaveAttribute('data-app-drag-active', 'true');
+      const dragRules = controlRules.filter(rule => rule.selector.includes('[data-app-drag-active="true"]'));
+      expect(dragRules.some(rule => intake.matches(rule.selector)
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'border-color'
+          && node.value === 'var(--focus-ring)'))).toBe(true);
+      expect(intake).toHaveClass('border-2', 'border-dashed', 'rounded-lg');
+      fireEvent.dragLeave(intake);
+      expect(intake).toHaveAttribute('data-app-drag-active', 'false');
+      expect(dragRules.some(rule => intake.matches(rule.selector))).toBe(false);
+
+      const reading = deferred<string>();
+      const unsupported = { ...bundle(), schema_version: 99 };
+      fireEvent.dragOver(intake);
+      pick(file('future', unsupported, reading.promise));
+      expect(intake).toHaveAttribute('aria-busy', 'true');
+      expect(dragRules.some(rule => intake.matches(rule.selector))).toBe(false);
+      expect(controlRules.some(rule => rule.selector.includes('[data-app-control-kind="dropzone"]')
+        && intake.matches(rule.selector)
+        && rule.nodes.some(node => node.type === 'decl' && node.prop === 'cursor' && node.value === 'progress'))).toBe(true);
+      expect(screen.getByRole('button', { name: 'Reading…' })).toBeDisabled();
+      await settle(reading, JSON.stringify(unsupported));
+      const error = await screen.findByTestId('settings-import-error');
+      await waitFor(() => expect(error).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`)));
+      expect(intake).toHaveAttribute('aria-busy', 'false');
+      expect(error).toHaveAttribute('data-app-feedback-kind', 'notice');
+      expect(error).toHaveAttribute('data-app-tone', 'danger');
+      expect(error).toHaveAttribute('data-validation-code', 'schema_version_unsupported');
+      expect(error.querySelector('[data-app-part~="feedback-message"][role="alert"]'))
+        .toHaveTextContent('Failed to preview import.');
+      expect(error.querySelector('[data-app-part~="feedback-detail"]'))
+        .toHaveTextContent('schema_version 99 is newer than this build supports (max 1)');
+      expect(error.querySelector('[data-app-part~="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+      expect(matchesAppDesignCss(error, '[data-app-feedback-kind="notice"]')
+        .some(match => match.declarations.display === 'grid')).toBe(true);
+      expect(screen.getByRole('button', { name: 'Choose a file' })).toBeEnabled();
+      expect(requestMock).not.toHaveBeenCalled();
+    } finally { release(); }
+  });
+
+  it('keeps ordinary intake neutral and adopts only a complete preview profile', async () => {
+    const view = mount();
+    const intake = screen.getByTestId('settings-import-dropzone');
+    const boundary = view.container;
+    boundary.setAttribute('data-app-design-preview', '');
+    const release = observeAppDesignScopes(view.container);
+    try {
+      expect(intake).not.toHaveAttribute('data-app-design-owner');
+      for (const [name, value] of Object.entries(getAppDesignAttributes('blueprint'))) {
+        boundary.setAttribute(name, value);
+      }
+      await waitFor(() => expect(intake).toHaveAttribute('data-app-design-owner', expect.stringContaining('pack-blueprint')));
+      boundary.removeAttribute('data-app-chart');
+      await waitFor(() => expect(intake).not.toHaveAttribute('data-app-design-owner'));
+      expect(intake).toHaveClass('border-2', 'border-dashed', 'rounded-lg');
+      expect(screen.getByTestId('settings-import-file-input')).toHaveAttribute('accept', 'application/json,.json');
+    } finally { release(); }
+  });
+});
 
 describe('phase6 import generation ownership', () => {
   it('ignores an older file read after a newer drop and applies exactly the displayed bundle', async () => {

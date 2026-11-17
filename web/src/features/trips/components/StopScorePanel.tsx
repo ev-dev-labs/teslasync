@@ -117,6 +117,7 @@ function SessionStopScorePanel({ session }: { session: JourneySession }) {
         {sites.length === 0 ? emptySites : (
         <FormSection title={t('journey.scoring.candidates', 'Candidate stops')}>
           <div
+            data-app-field-surface
             className="grid max-h-48 min-w-0 gap-1 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2 sm:grid-cols-2"
             role="group"
             aria-label={t('journey.scoring.candidates', 'Candidate stops')}

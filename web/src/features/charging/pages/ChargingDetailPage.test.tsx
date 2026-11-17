@@ -41,7 +41,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -57,6 +57,7 @@ import { downloadCSV } from '@/lib/csvExport';
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
 const translations = vi.hoisted(() => new Map<string, string>());
+const nativeChart = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -126,7 +127,8 @@ vi.mock('framer-motion', () => {
 //    so we swap the plot primitives for inert passthroughs, keeping the real
 //    EmbeddedChart frame to exercise its accessibility contract. LinearGauge surfaces
 //    its label/value/max as data-* so gauge maths stays assertable. ───────────
-vi.mock('@/components/charts', async () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const { EmbeddedChart } = await import('@/components/charts/EmbeddedChart');
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
@@ -155,19 +157,26 @@ vi.mock('@/components/charts', async () => {
         data-color={color}
       />
     ),
-    ResponsiveContainer: Passthrough,
-    AreaChart: Passthrough,
-    ComposedChart: Passthrough,
-    Area: ({ dataKey, stroke, fillOpacity }: { dataKey: string; stroke: string; fillOpacity?: number }) =>
-      <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} data-opacity={fillOpacity} />,
-    Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
-      <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} />,
-    XAxis: ({ label }: { label?: { value: string } }) =>
-      <div data-testid="chart-axis" data-label={label?.value} />,
-    YAxis: () => null,
-    Tooltip: () => null,
-    ReferenceLine: () => null,
-    ChartBrush: () => null,
+    ResponsiveContainer: ({ children }: { children: ReactElement<{ width?: number; height?: number }> }) =>
+      nativeChart.enabled ? cloneElement(children, { width: 640, height: 320 }) : <Passthrough>{children}</Passthrough>,
+    get AreaChart() { return nativeChart.enabled ? actual.AreaChart : Passthrough; },
+    get ComposedChart() { return nativeChart.enabled ? actual.ComposedChart : Passthrough; },
+    get Area() {
+      return nativeChart.enabled ? actual.Area : ({ dataKey, stroke, fillOpacity }: { dataKey: string; stroke: string; fillOpacity?: number }) =>
+        <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} data-opacity={fillOpacity} />;
+    },
+    get Line() {
+      return nativeChart.enabled ? actual.Line : ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+        <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} />;
+    },
+    get XAxis() {
+      return nativeChart.enabled ? actual.XAxis : ({ label }: { label?: { value: string } }) =>
+        <div data-testid="chart-axis" data-label={label?.value} />;
+    },
+    get YAxis() { return nativeChart.enabled ? actual.YAxis : () => null; },
+    get Tooltip() { return nativeChart.enabled ? actual.Tooltip : () => null; },
+    get ReferenceLine() { return nativeChart.enabled ? actual.ReferenceLine : () => null; },
+    get ChartBrush() { return nativeChart.enabled ? actual.ChartBrush : () => null; },
     ChartTooltip: () => null,
     ChartTimeRangeProvider: Passthrough,
     useSyncedCursor: () => ({ syncId: 'test', syncMethod: 'value', onMouseMove: () => {} }),
@@ -175,7 +184,7 @@ vi.mock('@/components/charts', async () => {
     chartGrid: null,
     axisTickSm: {},
     chartMargin: {},
-    AREA_DEFAULTS: {},
+    AREA_DEFAULTS: { isAnimationActive: false },
     areaGradient: () => null,
   };
 });
@@ -455,6 +464,7 @@ function gauge(label: string): HTMLElement {
 }
 
 beforeEach(() => {
+  nativeChart.enabled = false;
   vi.clearAllMocks();
   translations.clear();
   mockSettings.mockReturnValue(defaultSettingsResult);
@@ -468,6 +478,29 @@ beforeEach(() => {
 });
 
 describe('ChargingDetailPage — display-zone dates', () => {
+  it('zooms actual native timeline charts from the SoC brush while retaining every source row in alternatives', () => {
+    nativeChart.enabled = true;
+    const { container } = renderPage();
+    const charts = [...container.querySelectorAll('.recharts-wrapper')].slice(1);
+    expect(charts).toHaveLength(3);
+    expect(charts[0].querySelectorAll('.recharts-yAxis')).toHaveLength(2);
+    expect(charts[0].querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+    expect(charts[0].querySelectorAll('.recharts-area-curve')).toHaveLength(1);
+    expect(charts[1].querySelectorAll('.recharts-line-curve')).toHaveLength(3);
+    expect(charts[2].querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+    const travellers = within(charts[0] as HTMLElement).getAllByRole('slider');
+    const firstTime = charts[0].querySelector('.recharts-xAxis .recharts-cartesian-axis-tick-value')?.textContent;
+    const before = charts[0].querySelector('.recharts-area-curve')?.getAttribute('d');
+    fireEvent.keyDown(travellers[0], { key: 'ArrowRight' });
+    expect(charts[0].querySelector('.recharts-area-curve')?.getAttribute('d')).not.toBe(before);
+    expect(firstTime).toBeTruthy();
+    for (const chart of charts) {
+      expect(chart.querySelector('.recharts-xAxis')).not.toHaveTextContent(firstTime ?? '');
+    }
+    expect(within(screen.getByRole('table', { name: 'SoC, Energy & Range over Time — data table' })).getAllByRole('row')).toHaveLength(4);
+    expect(within(screen.getByRole('table', { name: 'Temperature — data table' })).getAllByRole('row')).toHaveLength(4);
+    expect(within(screen.getByRole('table', { name: 'Voltage & Current — data table' })).getAllByRole('row')).toHaveLength(4);
+  });
   it('follows the saved display zone for record dates and chart times, not the vehicle zone', () => {
     const locale = 'de-DE';
     const tz = 'Asia/Tokyo';

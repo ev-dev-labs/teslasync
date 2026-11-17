@@ -64,6 +64,8 @@ export default function NotificationHealthPage() {
             {sections.map(({ id, label, description, number }) => (
               <a
                 key={id}
+                data-app-part="button"
+                data-app-variant="secondary"
                 href={`#${id}`}
                 aria-label={label}
                 aria-current={hash === `#${id}` ? 'location' : undefined}

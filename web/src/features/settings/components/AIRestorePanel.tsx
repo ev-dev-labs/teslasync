@@ -73,7 +73,7 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
   )
 
   return (
-    <section
+    <section data-app-part="feedback"
       role="alert"
       aria-live="polite"
       className="space-y-2 rounded-xl border border-purple-400/40 bg-purple-500/5 p-4 sm:p-5"
@@ -95,7 +95,7 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
             )}
           </Caption>
           {items.length > 0 && (
-            <ul className="mt-2 list-inside list-disc space-y-0.5">
+            <ul data-app-part="list" className="mt-2 list-inside list-disc space-y-0.5">
               {items.map((item) => (
                 <Text as="li" key={item.id} variant="bodySm">
                   {item.label}

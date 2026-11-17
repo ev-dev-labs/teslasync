@@ -25,18 +25,23 @@ interface PassiveStateProps {
 function PassiveState({ message, className }: PassiveStateProps) {
   return (
     <div
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
       className={cn(
         'flex min-h-44 flex-col items-center justify-center py-10 text-center',
         className,
       )}
     >
       <CalendarClock
+        data-app-part="feedback-icon"
         className="mb-3 h-8 w-8 text-[var(--text-muted)]"
         aria-hidden="true"
       />
-      <Text as="p" variant="bodySm" className="max-w-lg">
-        {message}
-      </Text>
+      <div data-app-part="feedback-content">
+        <Text data-app-part="feedback-message" as="p" variant="bodySm" className="max-w-lg">
+          {message}
+        </Text>
+      </div>
     </div>
   );
 }

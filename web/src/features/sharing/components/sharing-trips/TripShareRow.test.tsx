@@ -31,6 +31,10 @@ import '@/i18n'
 import { TripShareRow } from './TripShareRow'
 import type { Trip } from '@/api/types'
 import type { UnitFormatter } from '@/hooks/useUnits'
+import postcss from 'postcss'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
 
 function makeTrip(overrides: Partial<Trip> = {}): Trip {
   return {
@@ -87,6 +91,43 @@ function renderRow(opts: RenderOpts = {}) {
 }
 
 describe('TripShareRow', () => {
+  it('activates native inline readings without splitting formatted units or altering selection and icon geometry', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8')
+    const formatDistance = vi.fn<UnitFormatter>(() => '0,00 very long distance unit')
+    const formatEnergy = vi.fn<UnitFormatter>(() => '—')
+    const { container, onSelect } = renderRow({
+      trip: makeTrip({ total_distance_m: 0, total_energy_wh: undefined as unknown as number }),
+      formatDistance, formatEnergy,
+    })
+    container.setAttribute('data-app-design-preview', '')
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v3'))) container.setAttribute(name, value)
+    const release = observeAppDesignScopes(container)
+    try {
+      for (const [kind, value] of [['trip-distance', '0,00 very long distance unit'], ['trip-energy', '—']]) {
+        const metric = container.querySelector(`[data-app-metric-kind="${kind}"]`)!
+        expect(metric).toHaveAttribute('data-app-metric', 'inline')
+        expect(metric.querySelector('[data-app-part~="metric-value"]')).toHaveTextContent(value)
+        expect(metric.querySelector('[data-app-part~="metric-unit"]')).toBeNull()
+        expect(metric.querySelector('svg')).toHaveClass('h-3.5', 'w-3.5')
+        const matches: string[] = []
+        postcss.parse(feedbackCss).walkRules(rule => {
+          if (rule.selector.includes('[data-app-metric="inline"]') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'flex-wrap')) {
+            matches.push(...rule.selectors.filter(selector => metric.matches(selector)))
+          }
+        })
+        expect(matches.length).toBeGreaterThan(0)
+        metric.removeAttribute('data-app-design-owner')
+        expect(matches.every(selector => !metric.matches(selector))).toBe(true)
+      }
+      expect(formatDistance).toHaveBeenCalledWith(0)
+      expect(formatEnergy).toHaveBeenCalledWith(undefined)
+      expect(container.querySelectorAll('[data-app-metric="inline"]')).toHaveLength(5)
+      fireEvent.click(screen.getByText('0,00 very long distance unit'))
+      expect(onSelect).toHaveBeenCalledExactlyOnceWith(7)
+      expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'false')
+    } finally { release() }
+  })
+
   it('renders the name, date, duration, drive count, distance, and energy', () => {
     const { formatDistance, formatEnergy, trip } = renderRow()
 

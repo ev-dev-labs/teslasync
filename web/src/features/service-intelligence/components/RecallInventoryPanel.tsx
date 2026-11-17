@@ -42,7 +42,7 @@ export function RecallInventoryPanel({
         )}
         onRetry={onRetry}
       >
-        <ol className="space-y-3">
+        <ol data-app-part="list" className="space-y-3">
           {findings.map((finding) => (
             <RecallFindingCard key={finding.id} finding={finding} />
           ))}

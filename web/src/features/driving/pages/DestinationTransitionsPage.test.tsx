@@ -1,6 +1,6 @@
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -165,7 +165,6 @@ function driveAt(
     id: nextId++,
     vehicleId: 7,
     startTs,
-    endTs,
     durationS,
     distanceM: 20_000,
     startAddress,
@@ -340,7 +339,7 @@ describe('DestinationTransitionsPage', () => {
     expect(data).toEqual(original);
     expectEverySection();
 
-    setGlobalLocale('fr-FR');
+    act(() => { setGlobalLocale('fr-FR'); });
     view.rerenderPage();
     expect(within(screen.getByTestId('destination-weekday-profile'))
       .getAllByText('samedi').length).toBeGreaterThan(0);
@@ -990,7 +989,7 @@ describe('DestinationTransitionsPage', () => {
     const view = renderPage();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
-    retry.focus();
+    act(() => { retry.focus(); });
     await user.keyboard('{Enter}');
     expect(historyRefetch).toHaveBeenCalledTimes(1);
     await user.keyboard(' ');

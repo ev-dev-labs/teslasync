@@ -54,10 +54,10 @@ export function ScoreExtremeDrive({
               ]} />
             </div>
           </div>
-          <div className={cn('rounded-lg border p-3',
+          <div data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone={best ? 'success' : 'danger'} className={cn('rounded-lg border p-3',
             best ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-rose-500/30 bg-rose-500/10')}>
-            <Text variant="bodySm" className={best ? 'text-emerald-300' : 'text-rose-300'}>
-              <Icon className="me-1 inline h-3 w-3" aria-hidden="true" />{insight}
+            <Text data-app-part="feedback-message" variant="bodySm" className={best ? 'text-emerald-300' : 'text-rose-300'}>
+              <Icon data-app-part="feedback-icon" className="me-1 inline h-3 w-3" aria-hidden="true" />{insight}
             </Text>
           </div>
         </div>

@@ -72,6 +72,7 @@ export function WidgetStatusGrid({
   return (
     <div
       role="list"
+      data-app-part="list"
       className={cn(
         'grid min-w-0',
         dashboardTokens.density.gridGap,
@@ -89,6 +90,7 @@ export function WidgetStatusGrid({
           <div
             key={cell.id}
             role="listitem"
+            data-app-part="status"
             data-status={cell.status}
             className={cn(
               // `relative` is a positioning hook only (no absolute descendants):

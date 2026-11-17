@@ -119,17 +119,20 @@ export function ArchetypeClusterComposition({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <ul className="grid shrink-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <ul data-app-part="list" data-app-list="records" className="grid shrink-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => (
               <li
                 key={row.cluster}
+                data-app-part="card list-row"
+                data-app-card-kind="record"
+                data-surface-variant="standalone"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <Text variant="label">{row.cluster}</Text>
+                <div data-app-part="record-header" className="flex items-start justify-between gap-2">
+                  <Text data-app-part="record-title" variant="label">{row.cluster}</Text>
                   <Badge variant="info">{fmtPercent(row.share)}</Badge>
                 </div>
-                <Text as="p" variant="caption" className="mt-1">
+                <Text data-app-part="record-body record-context" as="p" variant="caption" className="mt-1">
                   {t(
                     'archetypes.composition.cardDetail',
                     '{{drives}} drives · {{distance}} · {{energy}}',

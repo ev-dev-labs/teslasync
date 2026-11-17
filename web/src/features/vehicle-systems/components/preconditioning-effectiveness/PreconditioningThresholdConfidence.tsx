@@ -63,15 +63,16 @@ export function PreconditioningThresholdConfidence({
           )}
         </Text>
         <PreconditioningSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 2, md: 4, xl: 7 }} gap={3}>
+          <Grid data-app-part="grid metric-grid" cols={{ default: 2, md: 4, xl: 7 }} gap={3}>
             {gates.map(([label, value, affected]) => (
               <div
                 key={label}
+                data-app-part="metric" data-app-metric="tile"
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{value}</MetricValue>
-                <Text as="p" variant="caption" className="mt-1">
+                <MetricLabel data-app-part="metric-label">{label}</MetricLabel>
+                <MetricValue data-app-part="metric-reading metric-value" className="mt-1">{value}</MetricValue>
+                <Text data-app-part="metric-context" as="p" variant="caption" className="mt-1">
                   {t(
                     'preconditioningEffectiveness.thresholds.affected',
                     '{{value}} applicable or excluded',

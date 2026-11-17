@@ -50,7 +50,7 @@ export function ChannelsGrid({
 
   if (source?.status === 'initial' && (source.isRefreshBlocked || !isLoading)) {
     return (
-      <div role="status" className="space-y-3">
+      <div data-app-part="status" role="status" className="space-y-3">
         <Text as="p" color="secondary">
           {source.isRefreshBlocked
             ? t('dataSources.status.paused', 'Refresh paused')
@@ -65,7 +65,7 @@ export function ChannelsGrid({
 
   if (isLoading && rows.length === 0) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-busy="true"
         aria-label={t('notifications.channels.loading', 'Loading channels…')}
@@ -90,7 +90,7 @@ export function ChannelsGrid({
   }
 
   return (
-    <ul
+    <ul data-app-part="list"
       aria-label={t('notifications.channels.listAria', 'Configured channels')}
       className={`grid list-none gap-3 sm:gap-4 xl:gap-5 ${AUTO_FIT}`}
     >

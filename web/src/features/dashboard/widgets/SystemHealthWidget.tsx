@@ -204,7 +204,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
         className="py-2"
       />
     ) : null}
-    {isLoading && <div role="status" aria-label={t('widget.systemHealth.loadingServices', 'Loading Services')}>
+    {isLoading && <div data-app-part="status" role="status" aria-label={t('widget.systemHealth.loadingServices', 'Loading Services')}>
       <Skeleton className="h-24 w-full rounded-xl" />
     </div>}
     <WidgetStatGrid

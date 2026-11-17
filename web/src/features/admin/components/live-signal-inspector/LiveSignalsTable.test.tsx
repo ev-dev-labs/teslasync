@@ -31,6 +31,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { forceMobileDataTables } from '@/test/mobileGridTestUtils';
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -105,6 +106,24 @@ function getFilterInput(): HTMLInputElement {
 }
 
 describe('LiveSignalsTable — shell & accessibility', () => {
+  it('keeps values and source details accessible in the phone grid', () => {
+    const bounds = forceMobileDataTables();
+    try {
+      const { container } = render(<LiveSignalsTable rows={[makeRow({
+        name: 'BatteryLevel', value: { level: 42 }, kind: 'ValueKindCompound',
+        source: 'l1', ageMs: 2000, timestamp: '2026-01-07T12:00:00Z',
+      })]} />);
+      const grid = container.querySelector('[data-mobile-table]') as HTMLElement;
+      expect(grid).toHaveTextContent('BatteryLevel');
+      expect(grid).toHaveTextContent('{"level":42}');
+      expect(grid).toHaveTextContent('Compound');
+      fireEvent.click(within(grid).getByRole('button', { name: 'Quick view' }));
+      const detail = screen.getByRole('dialog');
+      expect(within(detail).getByTestId('source-badge')).toHaveAttribute('data-source', 'l1');
+      expect(within(detail).getByTestId('timestamp')).toHaveTextContent('2026-01-07T12:00:00Z');
+    } finally { bounds.mockRestore(); }
+  });
+
   it('renders the filter box, a table, and all five column headers', () => {
     const { container } = render(
       <LiveSignalsTable rows={[makeRow({ name: 'a' }), makeRow({ name: 'b' })]} />,

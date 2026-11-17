@@ -168,7 +168,7 @@ describe('DraftRestorePrompt', () => {
     expect(screen.getByText(/2 unsaved drafts/)).toBeInTheDocument()
   })
 
-  it('opens the modal listing all drafts when Review is clicked', () => {
+  it('opens the modal listing all drafts when Review is clicked', async () => {
     writeEnvelope(ENV_KEY_RULE_42, Date.now() - 30_000)
     registerDraft({
       storageKey: ENV_KEY_RULE_42,
@@ -183,6 +183,7 @@ describe('DraftRestorePrompt', () => {
     act(() => { vi.advanceTimersByTime(60) })
 
     fireEvent.click(screen.getByTestId('draft-restore-prompt-review'))
+    await act(async () => { await vi.dynamicImportSettled() })
     const modalList = screen.getByTestId('draft-restore-modal-list')
     expect(within(modalList).getByText('Brake-temp alert')).toBeInTheDocument()
     expect(
@@ -193,7 +194,7 @@ describe('DraftRestorePrompt', () => {
     ).toBeInTheDocument()
   })
 
-  it('Discard removes the envelope and the index entry, then closes the prompt', () => {
+  it('Discard removes the envelope and the index entry, then closes the prompt', async () => {
     writeEnvelope(ENV_KEY_RULE_42, Date.now() - 30_000)
     registerDraft({
       storageKey: ENV_KEY_RULE_42,
@@ -207,6 +208,7 @@ describe('DraftRestorePrompt', () => {
     renderPrompt({ gracePeriodMs: 50 })
     act(() => { vi.advanceTimersByTime(60) })
     fireEvent.click(screen.getByTestId('draft-restore-prompt-review'))
+    await act(async () => { await vi.dynamicImportSettled() })
     fireEvent.click(screen.getByTestId(`draft-restore-discard-${ENV_KEY_RULE_42}`))
 
     // Envelope is gone from storage.
@@ -222,7 +224,7 @@ describe('DraftRestorePrompt', () => {
     expect(screen.queryByTestId('draft-restore-modal-list')).toBeNull()
   })
 
-  it('Resume navigates to the draft route', () => {
+  it('Resume navigates to the draft route', async () => {
     writeEnvelope(ENV_KEY_RULE_42, Date.now() - 30_000)
     registerDraft({
       storageKey: ENV_KEY_RULE_42,
@@ -236,6 +238,7 @@ describe('DraftRestorePrompt', () => {
     const { getLocation } = renderPromptWithLocationProbe({ gracePeriodMs: 50 })
     act(() => { vi.advanceTimersByTime(60) })
     fireEvent.click(screen.getByTestId('draft-restore-prompt-review'))
+    await act(async () => { await vi.dynamicImportSettled() })
     fireEvent.click(screen.getByTestId(`draft-restore-resume-${ENV_KEY_RULE_42}`))
 
     const loc = getLocation()

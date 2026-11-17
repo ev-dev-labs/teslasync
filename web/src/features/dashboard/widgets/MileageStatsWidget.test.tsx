@@ -133,7 +133,13 @@ describe.each(PACK_IDS)('MileageStatsWidget (%s)', packId => {
     expect(screen.getByTestId('mileage-milestone')).toBeInTheDocument();
     expect(screen.getByText('45,000 km')).toBeInTheDocument();
     expect(screen.getByText('Next milestone 50,000 km · ~6 mo')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Next milestone' })).toHaveAttribute('aria-valuenow', '50');
+    const milestoneTrack = screen.getByRole('progressbar', { name: 'Next milestone' });
+    expect(milestoneTrack).toHaveAttribute('aria-valuenow', '50');
+    expect(milestoneTrack).toHaveAttribute('data-app-metric', 'bar');
+    expect(milestoneTrack).toHaveAttribute('data-metric-track');
+    expect(milestoneTrack).toHaveClass('h-2', 'rounded-shape-sm');
+    expect(milestoneTrack.querySelector('[data-metric-fill]')).toBe(milestoneTrack.firstElementChild);
+    expect(milestoneTrack.firstElementChild).toHaveStyle({ width: '50%' });
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
   });
 
@@ -172,6 +178,7 @@ describe.each(PACK_IDS)('MileageStatsWidget (%s)', packId => {
     expect(screen.getAllByText('—')).toHaveLength(3);
     expect(screen.queryByTestId('mileage-milestone')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-metric-track]')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
 
     cleanup();
@@ -188,7 +195,10 @@ describe.each(PACK_IDS)('MileageStatsWidget (%s)', packId => {
     expect(screen.getAllByText('0')).toHaveLength(3);
     expect(screen.getByText('0 km')).toBeInTheDocument();
     expect(screen.getByText('Next milestone 10,000 km')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Next milestone' })).toHaveAttribute('aria-valuenow', '0');
+    const milestoneTrack = screen.getByRole('progressbar', { name: 'Next milestone' });
+    expect(milestoneTrack).toHaveAttribute('aria-valuenow', '0');
+    expect(milestoneTrack).toHaveAttribute('data-metric-track');
+    expect(milestoneTrack.querySelector('[data-metric-fill]')).toHaveStyle({ width: '0%' });
     expect(screen.queryByText(/~\d+ mo/)).not.toBeInTheDocument();
 
     cleanup();

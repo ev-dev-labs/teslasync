@@ -193,10 +193,10 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     // robust whether the user has stale rows or not. The same stub
     // answers the suggestions diagnosis GET; the page null-guards the
     // missing suggestion arrays.
-    mockRequest.mockResolvedValue({
+    mockRequest.mockImplementation((path: string) => Promise.resolve(path === '/vehicles' ? [] : {
       stale_charging: [],
       stale_drives: [],
-    });
+    }));
 
     renderDataRepairPage();
 

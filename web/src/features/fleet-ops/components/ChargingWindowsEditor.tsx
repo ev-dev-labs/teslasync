@@ -29,12 +29,12 @@ export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindow
   ]);
 
   return (
-    <fieldset
+    <fieldset data-app-part="field"
       className="space-y-3 rounded-xl border border-[var(--glass-border)] p-4"
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
     >
-      <legend className="text-sm font-semibold text-[var(--text-primary)]">
+      <legend data-app-part="field-label" className="text-sm font-semibold text-[var(--text-primary)]">
         {t('fleetOps.policyDialog.windows', 'Allowed charging windows')}
       </legend>
       <div className="flex justify-end">

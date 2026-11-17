@@ -197,7 +197,7 @@ function StandardView({
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <div
+      <div data-app-part="list"
         data-timeline-appearance={timeline?.appearance}
         role="list"
         aria-label={t('widget.eventFeed.label', 'Event feed')}

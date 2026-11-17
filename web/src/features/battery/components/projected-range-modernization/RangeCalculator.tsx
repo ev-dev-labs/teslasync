@@ -51,12 +51,13 @@ export function RangeCalculator({ source, loading, speed, temperature, onSpeedCh
               </div>
             </div>
           </div>
-          <div className="flex min-w-0 items-center justify-center rounded-lg bg-[var(--surface-2)] p-4">
+          <div data-app-part="card" data-surface-variant="standalone"
+            className="flex min-w-0 items-center justify-center rounded-lg bg-[var(--surface-2)] p-4">
             {result ? (
-              <div className="min-w-0 text-center">
-                <Text as="p" variant="metricValue" className="tabular-nums">{formatDistance(result.rangeKm * 1000)}</Text>
-                <HelperText className="mt-1">{fmtNumber(convertEfficiencyFromSI(result.effWhKm, unitPrefs.distance))} {unit}</HelperText>
-                <HelperText className="mt-1">{t('range.whatIfConditions', 'at {{speed}}, {{temp}}',
+              <div data-app-part="metric" data-app-metric="headline" className="min-w-0 text-center">
+                <Text data-app-part="metric-reading metric-value" as="p" variant="metricValue" className="tabular-nums">{formatDistance(result.rangeKm * 1000)}</Text>
+                <HelperText data-app-part="metric-context" className="mt-1">{fmtNumber(convertEfficiencyFromSI(result.effWhKm, unitPrefs.distance))} {unit}</HelperText>
+                <HelperText data-app-part="metric-label" className="mt-1">{t('range.whatIfConditions', 'at {{speed}}, {{temp}}',
                   { speed: formatSpeed(speed / 3.6), temp: formatTemperature(temperature) })}</HelperText>
               </div>
             ) : <Text as="p" variant="bodySm">

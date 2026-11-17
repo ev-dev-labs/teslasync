@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -92,6 +93,8 @@ beforeEach(() => {
 });
 
 afterEach(() => cleanup());
+
+setupCanvasTextMeasurement();
 
 describe('SpeedProfileWidget redesign', () => {
   it('renders one sweet-spot headline and the sourced frequency/power chart without metric duplication', () => {

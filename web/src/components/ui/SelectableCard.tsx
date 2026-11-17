@@ -34,6 +34,8 @@ export const SelectableCard = forwardRef<HTMLButtonElement, SelectableCardProps>
     return (
       <button
         ref={ref}
+        data-app-part="card button"
+        data-app-variant="choice"
         type={type ?? 'button'}
         role={role}
         aria-pressed={!role || role === 'button' ? selected : undefined}

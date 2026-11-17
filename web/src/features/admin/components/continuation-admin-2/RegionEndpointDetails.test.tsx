@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { RegionEndpointDetails } from './RegionEndpointDetails';
 import { RegionEndpointPanel, type RegionEndpointPanelProps } from '../tesla-region/RegionEndpointPanel';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 vi.mock('@/api/client', () => ({
   request: vi.fn().mockResolvedValue({}),
@@ -23,6 +27,7 @@ vi.mock('react-i18next', async importOriginal => ({
 const URL = 'https://fleet-api.prd.eu.vn.cloud.tesla.com/path?raw=%20';
 const writeText = vi.fn<(text: string) => Promise<void>>();
 const manualHint = 'Clipboard unavailable. Select the displayed text and copy it manually.';
+const controlsCss = readFileSync(resolve(process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css'), 'utf8');
 
 beforeEach(() => {
   writeText.mockReset().mockResolvedValue(undefined);
@@ -35,6 +40,55 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+it('owns the endpoint readout surface without creating a control or inventing an unknown URL', () => {
+  const props: RegionEndpointPanelProps = {
+    region: 'Supported source region', baseUrl: URL, host: null, scheme: null,
+    regionKey: null, regionLabel: '', fetchedAt: null, isLoading: false, isError: false,
+    error: null, onRetry: vi.fn(), onRefresh: vi.fn(),
+  };
+  const view = render(<RegionEndpointDetails {...props} />);
+  const field = view.container.querySelector('[data-app-field-kind="readout"]')!;
+  const surface = field.querySelector('[data-app-field-surface="readout"]')!;
+  expect(field.querySelector('[data-app-part="field-label"]')).toHaveTextContent('Fleet API base URL');
+  expect(surface.querySelector('code')?.textContent).toBe(URL);
+  expect(surface).toContainElement(screen.getByRole('button', { name: 'Copy Fleet API base URL' }));
+  expect(within(surface as HTMLElement).queryByRole('textbox')).toBeNull();
+  view.rerender(<RegionEndpointDetails {...props} baseUrl={null} />);
+  expect(surface.querySelector('code')?.textContent).toBe('—');
+  expect(screen.queryByRole('button', { name: 'Copy Fleet API base URL' })).toBeNull();
+  expect(screen.getAllByText('Supported source region')).toHaveLength(2);
+});
+
+it.each(['classic', 'v3', 'v2', 'v6'] as const)('%s activates the exact field-surface consumer on the unchanged endpoint', pack => {
+  const props: RegionEndpointPanelProps = {
+    region: 'Supported source region', baseUrl: URL, host: null, scheme: null,
+    regionKey: null, regionLabel: '', fetchedAt: null, isLoading: false, isError: false,
+    error: null, onRetry: vi.fn(), onRefresh: vi.fn(),
+  };
+  const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><RegionEndpointDetails {...props} /></div>);
+  const release = observeAppDesignScopes(view.container.firstElementChild!);
+  try {
+    const surface = view.container.querySelector('[data-app-field-surface="readout"]')!;
+    expect(surface).toHaveAttribute('data-app-design-owner', expect.stringContaining(`controls-${APPLICATION_DESIGNS[pack].controls}`));
+    const matches: string[] = [];
+    postcss.parse(controlsCss).walkRules(rule => {
+      for (const selector of rule.selectors) {
+        if (selector.includes('[data-app-field-surface]') && selector.includes('[data-app-controls=') &&
+          surface.matches(selector)) matches.push(selector);
+      }
+    });
+    expect(matches.length).toBeGreaterThan(0);
+    for (const selector of matches) {
+      expect(selector).toContain(`[data-app-controls="${APPLICATION_DESIGNS[pack].controls}"]`);
+      expect(selector).toContain(`[data-app-design-owner~="controls-${APPLICATION_DESIGNS[pack].controls}"]`);
+    }
+    expect(surface.querySelector('code')?.textContent).toBe(URL);
+    expect(surface.querySelector('code')).toHaveClass('select-text', 'whitespace-pre-wrap', 'break-all');
+    expect(within(surface as HTMLElement).queryByRole('textbox')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Copy Fleet API base URL' })).toBeEnabled();
+  } finally { release(); }
 });
 
 describe.each([

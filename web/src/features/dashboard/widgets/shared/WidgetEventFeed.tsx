@@ -114,6 +114,7 @@ export function WidgetEventFeed({
   const renderFeed = (slots?: TimelineSlots) => (
     <div
       role="list"
+      data-app-part="list timeline"
       aria-label={t('widget.eventFeed.label', 'Event feed')}
       className={cn('widget-event-feed space-y-0 overflow-x-clip overflow-y-auto h-full', slots?.feed)}
     >

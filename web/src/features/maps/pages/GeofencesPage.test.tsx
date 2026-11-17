@@ -763,6 +763,26 @@ describe('GeofencesPage — create modal', () => {
     expect(post[1]).toMatchObject({ requiresLiveMode: true });
   });
 
+  it.each([false, true])('restores the create invoker after pointer activation without focus (dirty=%s)', async (dirty) => {
+    renderPage();
+    await zones().findByText('Home');
+    const opener = screen.getByRole('button', { name: 'Add geofence' });
+    expect(opener).not.toHaveFocus();
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole('dialog', { name: 'Create geofence' });
+    if (dirty) {
+      fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Unsaved local draft' } });
+    }
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    if (dirty) {
+      const discard = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+      fireEvent.click(within(discard).getByRole('button', { name: 'Discard changes' }));
+    }
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await waitFor(() => expect(opener).toHaveFocus());
+    expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(0);
+  });
+
   it('prompts to discard unsaved edits when cancelling a dirty form', async () => {
     renderPage();
     await zones().findByText('Home');

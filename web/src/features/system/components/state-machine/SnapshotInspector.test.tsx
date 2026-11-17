@@ -16,7 +16,7 @@
  * are driven via `fireEvent`, matching the sibling component tests.
  */
 
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SnapshotInspector } from './SnapshotInspector';
 import type { FSMTransition } from '@/types/fsm';
@@ -35,8 +35,10 @@ vi.mock('@/lib/timezone', async importOriginal => ({
   useTimezone: () => 'Asia/Tokyo',
 }));
 afterEach(() => {
-  setGlobalLocale('en-US');
-  setGlobalPrecision(2);
+  act(() => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  });
 });
 
 // Deterministic i18n: two-arg form returns the default; an options bag

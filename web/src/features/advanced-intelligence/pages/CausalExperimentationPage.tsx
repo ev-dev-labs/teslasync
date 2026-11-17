@@ -10,7 +10,7 @@ import { ValidationSummary } from '@/components/forms';
 import { KVList, StatGroup, type StatMetric } from '@/components/data-display';
 import { PageLayout, SourceContent } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, Icon, Input, Pagination, Select, Text } from '@/components/ui';
+import { Badge, Button, Card, ConfirmDialog, Icon, Input, Pagination, Select, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -225,7 +225,8 @@ export default function CausalExperimentationPage() {
               onClick={() => { void query.refetch(); }}
             >{t('common.retry', 'Retry')}</Button>}
             {experiments.map((item) => (
-              <article key={item.id} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+              <article key={item.id} className="min-w-0">
+                <Card className="rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] shadow-none">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <Icon icon={GitCommitHorizontal} size="lg" className={typography.color.secondary} aria-hidden={true} />
@@ -239,6 +240,7 @@ export default function CausalExperimentationPage() {
                 <StatGroup metrics={historyMetrics(item)} className="mt-4"
                   period={{ kind: 'unknown', label: formatDateTime(item.updated_at) }}
                 />
+                </Card>
               </article>
             ))}
           </div>

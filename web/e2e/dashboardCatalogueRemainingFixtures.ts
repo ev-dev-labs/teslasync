@@ -476,10 +476,14 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await expect(weekly).not.toContainText(/\d/);
     const help = panel.getByRole('button', { name: 'More info about FSD this week', exact: true });
     await help.focus();
-    const explanation = panel.getByRole('tooltip', { name: /Unmeasured is not zero/ });
+    await expect(help).toHaveAttribute('aria-describedby', /\S/);
+    const descriptionId = await help.getAttribute('aria-describedby');
+    const explanation = panel.page().getByRole('tooltip', { name: /Unmeasured is not zero/ })
+      .and(panel.page().locator(`[id=${JSON.stringify(descriptionId)}]`));
     await expect(explanation).toBeVisible();
     await expect.poll(() => explanation.evaluate(node => getComputedStyle(node).opacity)).toBe('1');
     await panel.page().keyboard.press('Escape');
+    await expect.poll(() => explanation.evaluate(node => getComputedStyle(node).opacity)).toBe('0');
     await help.blur();
     if (width === 1440) {
       for (const [name, href] of [['FSD insights', '/fsd'], ['Weekly digest', '/weekly-digest']]) {

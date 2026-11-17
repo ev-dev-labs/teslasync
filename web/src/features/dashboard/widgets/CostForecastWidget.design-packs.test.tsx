@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentProps, ComponentType, ReactNode } from 'react';
 import type { ChartTooltipProps } from '@/components/charts';
 import type { CostForecastMonth, CostHistoricalMonth } from '@/types/charging';
 import { PackBoundary } from './designPacks/PackBoundary';
@@ -64,8 +64,8 @@ vi.mock('@/components/charts', async importOriginal => {
       React.useEffect(() => { if (mocks.renderTooltip) mocks.tooltipMounted(); }, []);
       return mocks.renderTooltip ? <span data-testid="mounted-forecast-tooltip" /> : <actual.ChartTooltip {...props} />;
     },
-    Legend: ({ payload }: { payload: readonly { value: string }[] }) => (
-      <div data-testid="cost-legend">{payload.map(item => <span key={item.value}>{item.value}</span>)}</div>
+    ChartLegend: (props: ComponentProps<typeof actual.ChartLegend>) => (
+      <div data-testid="cost-legend"><actual.ChartLegend {...props} /></div>
     ),
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     chartGrid: null,
@@ -175,6 +175,8 @@ describe.each(packs)('cost forecast %s (%s)', (packId) => {
     expect(screen.getByTestId('month-axis')).toHaveAttribute('data-key', 'month');
     expect(within(screen.getByTestId('cost-legend')).getByText('Actual')).toBeInTheDocument();
     expect(within(screen.getByTestId('cost-legend')).getByText('Forecast')).toBeInTheDocument();
+    expect(screen.getByTestId('cost-legend').querySelector('[data-app-part="chart-legend"]')).toBeInTheDocument();
+    expect(screen.getByTestId('cost-legend').querySelector('button')).not.toBeInTheDocument();
     const table = screen.getByRole('table', { name: 'Cost forecast — data table' });
     expect(within(table).getAllByRole('row')).toHaveLength(5);
     expect(within(table).getByText('$130.00')).toBeInTheDocument();

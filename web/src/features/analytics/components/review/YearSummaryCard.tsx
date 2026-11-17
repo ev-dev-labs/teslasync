@@ -46,7 +46,7 @@ export function YearSummaryCard({ data }: Props) {
         </div>
       </div>
 
-      <ul className="space-y-2.5" aria-label={t('yearReview.highlights', 'Year highlights')}>
+      <ul data-app-part="list" className="space-y-2.5" aria-label={t('yearReview.highlights', 'Year highlights')}>
         {stats.map(({ icon: Icon, label, value }) => (
           <li key={label} className="flex items-center gap-3">
             <Icon className="h-5 w-5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />

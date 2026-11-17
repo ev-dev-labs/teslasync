@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react'
 import { DefaultLegendContent, Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
@@ -90,8 +91,9 @@ export interface LegendSeriesLabelProps {
  * `formatter` so its dimming / a11y branches can be asserted directly in
  * jsdom (recharts never paints its legend without a layout engine).
  *
- * Hidden series render dimmed (40% opacity, line-through). When a toggle
- * source is present the item advertises its pressed (hidden) state via
+ * Hidden series use a line-through and 40% opacity unless a presentation
+ * token overrides it. When a toggle source is present the item advertises
+ * its pressed (hidden) state via
  * `aria-pressed`; passive legends omit it so assistive tech doesn't announce
  * a non-interactive control.
  */
@@ -101,12 +103,13 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
   const dimmed = interactive ? resolved.isHidden(seriesKey) : false
   const sharedProps = {
     style: {
-      opacity: dimmed ? 0.4 : 1,
+      opacity: dimmed ? 'var(--app-chart-hidden-legend-opacity, 0.4)' : 1,
       textDecoration: dimmed ? 'line-through' : 'none',
       cursor: interactive ? 'pointer' : 'default',
     },
     'data-series-key': seriesKey,
     'data-series-hidden': dimmed ? 'true' : 'false',
+    'data-chart-legend-label': '',
   } as const
 
   if (interactive) {
@@ -156,11 +159,29 @@ export interface ChartLegendProps
   state?: ChartLegendToggleSource
 }
 
-function HorizontalLegendContent(props: React.ComponentPropsWithoutRef<typeof DefaultLegendContent>) {
+type ChartLegendContentProps = React.ComponentPropsWithoutRef<typeof DefaultLegendContent> & {
+  notifyLayoutChange: () => void
+}
+
+function ChartLegendContent({ notifyLayoutChange, ...props }: ChartLegendContentProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const node = contentRef.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    // Native Legend only measures during React updates, not CSS/font changes.
+    const observer = new ResizeObserver(notifyLayoutChange)
+    observer.observe(node, { box: 'border-box' })
+    return () => observer.disconnect()
+  }, [notifyLayoutChange])
+
   return (
     <div
-      data-chart-legend-layout="horizontal"
-      className="min-w-0 max-w-full [&_.recharts-default-legend]:grid [&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] [&_.recharts-default-legend]:gap-1 [&_.recharts-legend-item]:!m-0 [&_.recharts-legend-item]:!flex [&_.recharts-legend-item]:min-w-0 [&_.recharts-legend-item]:items-center [&_.recharts-legend-item]:justify-center [&_.recharts-legend-item>svg]:shrink-0 [&_.recharts-legend-item-text]:min-w-0"
+      ref={contentRef}
+      data-app-part="chart-legend"
+      data-chart-legend-layout={props.layout ?? 'horizontal'}
+      className={props.layout === 'vertical'
+        ? 'min-w-0 max-w-full'
+        : 'min-w-0 max-w-full [&_.recharts-default-legend]:grid [&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] [&_.recharts-default-legend]:gap-1 [&_.recharts-legend-item]:!m-0 [&_.recharts-legend-item]:!flex [&_.recharts-legend-item]:min-w-0 [&_.recharts-legend-item]:items-center [&_.recharts-legend-item]:justify-center [&_.recharts-legend-item>svg]:shrink-0 [&_.recharts-legend-item-text]:min-w-0'}
     >
       <DefaultLegendContent {...props} />
     </div>
@@ -171,8 +192,8 @@ function HorizontalLegendContent(props: React.ComponentPropsWithoutRef<typeof De
  * Recharts `<Legend>` wrapper that toggles series visibility on click and
  * persists the hidden set via the supplied (or context-resolved) state.
  *
- * Hidden series render dimmed (40% opacity, line-through) in the legend so
- * users can find and re-enable them later.
+ * Hidden series retain a line-through in the legend so users can find and
+ * re-enable them later. Their default dimming can be overridden by a pack.
  *
  * Note: this component does NOT hide the rendered series itself — that's the
  * caller's responsibility via `<Line hide={state.isHidden(key)} />`. We can't
@@ -188,14 +209,27 @@ export function ChartLegend({
 }: ChartLegendProps) {
   const contextState = useChartHiddenSeries()
   const resolved: ChartLegendToggleSource | null = state ?? contextState
+  const legendRef = useRef<Legend>(null)
+  // Recharts also inherits an element-ref prop; only the native class can remeasure.
+  const setLegendRef = useCallback((instance: Legend | React.ReactElement | null) => {
+    legendRef.current = instance && 'forceUpdate' in instance ? instance : null
+  }, [])
+  const remeasureLegend = useCallback(() => legendRef.current?.forceUpdate(), [])
+  const defaultContent = useCallback(
+    (props: React.ComponentPropsWithoutRef<typeof DefaultLegendContent>) => (
+      <ChartLegendContent {...props} notifyLayoutChange={remeasureLegend} />
+    ),
+    [remeasureLegend],
+  )
   return (
     <Legend
+      ref={setLegendRef}
       {...legendProps}
       layout={layout}
       wrapperStyle={layout === 'horizontal'
         ? { left: 0, width: '100%', maxWidth: '100%', ...wrapperStyle }
         : wrapperStyle}
-      content={content ?? (layout === 'horizontal' ? HorizontalLegendContent : undefined)}
+      content={content ?? defaultContent}
       onClick={(data) => toggleFromLegend(resolved, data as LegendPayloadEntry)}
       formatter={(value, entry) => (
         <LegendSeriesLabel

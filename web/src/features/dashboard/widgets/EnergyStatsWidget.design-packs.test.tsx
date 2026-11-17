@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -128,6 +129,8 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+setupCanvasTextMeasurement();
 
 describe.each(presentationPacks)('Energy stats %s (%s)', (pack, appearance) => {
   it('keeps the real daily chart, all metrics, estimate disclosure and retained-data refresh', async () => {

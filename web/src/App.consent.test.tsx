@@ -108,7 +108,8 @@ describe('App :: consent policy on standalone routes', () => {
     setVersion(undefined)
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await act(() => vi.dynamicImportSettled())
     cleanup()
     localStorage.clear()
     clearConsent()

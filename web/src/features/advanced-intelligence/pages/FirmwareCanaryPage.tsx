@@ -109,11 +109,11 @@ export default function FirmwareCanaryPage() {
                       value={formatDateTime(item.generated_at)}
                     />
                   </MetricGrid>
-                  <div className="mt-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]">
-                    <Text as="p" variant="label">
+                  <div data-app-part="feedback" data-app-feedback-kind="insight" className="mt-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]">
+                    <Text data-app-part="feedback-title" as="p" variant="label">
                       {t('advancedIntelligence.firmware.rationale.title', 'Decision rationale')}
                     </Text>
-                    <Text as="p" variant="bodySm">
+                    <Text data-app-part="feedback-message" as="p" variant="bodySm">
                       {item.decision === 'insufficient'
                         ? t(
                           'advancedIntelligence.firmware.rationale.insufficient',

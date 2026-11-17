@@ -16,9 +16,18 @@
 //   9. The decorative icon + fill stay out of the accessibility tree.
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { BatteryPill } from './BatteryPill';
 import { STATUS_COLORS } from '@/lib/colors';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { BatteryPanel } from '../weekly-digest-modernization/BatteryPanel';
+import type { WeeklyDigestMetrics } from './useWeeklyDigest';
+import type { StatPeriod } from '@/lib/metric-reference';
 
 function fill(): HTMLElement {
   const meter = screen.getByRole('meter');
@@ -123,5 +132,92 @@ describe('BatteryPill', () => {
     expect(fill()).toHaveAttribute('aria-hidden', 'true');
     // Exactly one accessible gauge is exposed for the pill.
     expect(screen.getAllByRole('meter')).toHaveLength(1);
+  });
+});
+
+describe('BatteryPill native quantitative integration', () => {
+  it('uses the existing meter, original readout and compatible native consumers for all complete profiles', () => {
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { rules.push(rule); });
+    const { container } = render(<BatteryPill level={85.7} label="Average battery" />);
+    container.setAttribute('data-app-design-preview', '');
+    const meter = screen.getByRole('meter', { name: 'Average battery' });
+    const reading = screen.getByText('86%');
+    const label = screen.getByText('Average battery');
+    expect(reading).toHaveAttribute('data-app-part', 'metric-reading');
+    expect(label).toHaveAttribute('data-app-part', 'metric-label');
+    expect(reading.parentElement).toHaveAttribute('aria-hidden', 'true');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(meter).toHaveAttribute('data-app-part', 'metric');
+        expect(meter).toHaveAttribute('data-app-metric', 'bar');
+        expect(meter).toHaveAttribute('data-metric-track');
+        expect(meter).toHaveClass('ml-auto', 'h-2', 'w-16', 'overflow-hidden', 'rounded-full', 'bg-[var(--surface-3)]');
+        expect(meter).toHaveAttribute('aria-valuenow', '85.7');
+        expect(meter).toHaveAttribute('aria-valuetext', '86%');
+        expect(fill()).toHaveAttribute('data-metric-fill');
+        expect(fill()).toHaveAttribute('aria-hidden', 'true');
+        expect(fill()).toHaveStyle({ width: '85.7%', backgroundColor: STATUS_COLORS.good });
+        for (const [element, property] of [[meter, 'outline'], [fill(), 'min-inline-size'],
+          [reading, 'font-variant-numeric'], [label, 'overflow-wrap']] as const) {
+          const candidates = property === 'outline' || property === 'min-inline-size'
+            ? rules.filter(rule => rule.selector.includes('[data-app-metric="bar"][data-metric-track]'))
+            : rules;
+          expect(candidates.some(rule => rule.nodes.some(node => node.type === 'decl' && node.prop === property)
+            && rule.selectors.some(selector => element.matches(selector)))).toBe(true);
+        }
+      } finally { release(); }
+    }
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it.each([0, NaN, Infinity, -Infinity, undefined, null])('preserves the existing direct runtime %s fallback without inventing an unknown state', level => {
+    render(<BatteryPill level={level as number} label="Runtime input" />);
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('meter')).toHaveAttribute('data-metric-track');
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(fill()).toHaveStyle({ width: '0%', backgroundColor: STATUS_COLORS.critical });
+  });
+
+  it('keeps the real route presenter’s known-zero, missing readouts, rounding and feedback alternatives', () => {
+    const metrics: WeeklyDigestMetrics = {
+      totalDistanceM: 0, prevDistanceM: 0, totalDrives: 0, prevDriveCount: 0,
+      energyUsedWh: 0, prevEnergyWh: 0, chargingCost: 0, prevChargingCost: 0,
+      co2Saved: 0, prevCo2: 0, avgEfficiencyWhPerM: 0, prevAvgEfficiencyWhPerM: 0,
+      totalDurationS: 0, topDrive: undefined, chargeEnergyAddedWh: null, prevChargeEnergyWh: null,
+      avgChargePowerW: 0, chargingSessionCount: 1, batteryStart: 0, batteryEnd: null,
+      alertsByType: {}, alertTotal: 0,
+    };
+    const period: StatPeriod = { kind: 'analysis', label: 'Selected week', start: '2026-11-02T00:00:00Z',
+      endExclusive: '2026-11-09T00:00:00Z', timezone: 'UTC', completeness: 'unknown', provenance: 'Available history' };
+    const tree = (overrides: Partial<Parameters<typeof BatteryPanel>[0]> = {}) => (
+      <MemoryRouter><BatteryPanel metrics={metrics} period={period} {...overrides} /></MemoryRouter>
+    );
+    const { container, rerender } = render(tree());
+    expect(screen.getAllByRole('meter')).toHaveLength(1);
+    expect(screen.getByRole('meter', { name: 'Avg battery at charge start' })).toHaveAttribute('aria-valuenow', '0');
+    const missingEnd = screen.getByText('Avg battery at charge end').closest('[data-app-part~="panel"]')!;
+    expect(missingEnd).toHaveTextContent('—');
+    expect(missingEnd.querySelector('[data-metric-track]')).toBeNull();
+    rerender(tree({ metrics: { ...metrics, batteryStart: null } }));
+    expect(container.querySelector('[data-metric-track]')).toBeNull();
+    expect(screen.queryByText('0%')).toBeNull();
+    rerender(tree({ metrics: { ...metrics, batteryStart: 20.4, batteryEnd: 80.6 } }));
+    expect(screen.getAllByRole('meter').map(meter => meter.getAttribute('aria-valuetext'))).toEqual(['20%', '81%']);
+    expect(container.querySelectorAll('[data-metric-track] > [data-metric-fill]')).toHaveLength(2);
+    rerender(tree({ metrics: { ...metrics, chargingSessionCount: 0 } }));
+    expect(screen.getByText('No battery data is available for this week.')).toBeInTheDocument();
+    expect(container.querySelector('[data-metric-track]')).toBeNull();
+    rerender(tree({ isLoading: true }));
+    expect(container.querySelector('[data-metric-track]')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Battery health' })).toBeInTheDocument();
+    rerender(tree({ isError: true, error: new Error('History failed') }));
+    expect(container.querySelector('[data-metric-track]')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Battery health' })).toBeInTheDocument();
+    rerender(tree());
+    expect(screen.getByRole('meter', { name: 'Avg battery at charge start' })).toHaveAttribute('data-metric-track');
   });
 });

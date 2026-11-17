@@ -154,7 +154,8 @@ describe('SandboxPreviewPanel', () => {
       await client.invalidateQueries({ queryKey: intelPackQueryKeys.trust(EFFICIENCY_INSIGHTS_ENVELOPE.manifest.id) });
     });
     expect(await screen.findByText(/^Using installed capability grant$/)).toBeInTheDocument();
-    expect(screen.getByText('0.00 flag')).toBeInTheDocument();
+    expect(screen.getByText('0.00', { selector: '[data-app-part~="metric-value"]' })).toBeInTheDocument();
+    expect(screen.getByText('flag', { selector: '[data-app-part~="metric-unit"]' })).toBeInTheDocument();
     expect(screen.getByText('avg 0.00 flag')).toBeInTheDocument();
     expect(screen.getAllByText(/capability denied/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Installed pack: synthetic preview is simulating/i)).not.toBeInTheDocument();

@@ -78,7 +78,7 @@ export function XRayTopFields({
           )}
         />
       ) : (
-        <ul
+        <ul data-app-part="list"
           className="space-y-3"
           aria-label={t('admin.xray.topFields.title', 'Top fields by volume')}
         >

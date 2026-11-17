@@ -23,12 +23,98 @@
  * `patchMatchMedia()`.
  */
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import type { Mock } from 'vitest'
 
 // A minimal structural view of an object we can hang browser globals off of:
 // `globalThis` in real use, or a throwaway fake target in unit tests.
 type GlobalLike = Record<string, unknown>
+
+/** Give real responsive charts an allocated box in jsdom, which has no layout engine. */
+export function measureChartContainers(width: number, height: number) {
+  const measure = Element.prototype.getBoundingClientRect
+  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return this.classList.contains('recharts-responsive-container')
+      ? new DOMRect(0, 0, width, height) : measure.call(this)
+  })
+}
+
+/** Supply axis text measurement without pretending to implement canvas drawing. */
+export function patchCanvasTextMeasurement() {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
+  const contexts = new WeakMap<HTMLCanvasElement, { font: string; measureText: (text: string) => { width: number } }>()
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value(this: HTMLCanvasElement, contextId: string) {
+      if (contextId !== '2d') return null
+      let context = contexts.get(this)
+      if (!context) {
+        context = { font: '', measureText: text => ({ width: text.length * 8 }) }
+        contexts.set(this, context)
+      }
+      return context
+    },
+  })
+  return () => {
+    if (descriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', descriptor)
+    else Reflect.deleteProperty(HTMLCanvasElement.prototype, 'getContext')
+  }
+}
+
+export function setupCanvasTextMeasurement() {
+  let restore: (() => void) | undefined
+  beforeEach(() => { restore = patchCanvasTextMeasurement() })
+  afterEach(() => { restore?.() })
+}
+
+/** Opt a fixture into real chart rendering without fabricating layout for other elements. */
+export function setupMeasuredChartContainers(width: number, height: number) {
+  let measurement: ReturnType<typeof measureChartContainers> | undefined
+  let restoreCanvas: (() => void) | undefined
+  beforeEach(() => {
+    measurement = measureChartContainers(width, height)
+    restoreCanvas = patchCanvasTextMeasurement()
+  })
+  afterEach(() => {
+    measurement?.mockRestore()
+    measurement = undefined
+    restoreCanvas?.()
+  })
+}
+
+/** jsdom has no viewport scrolling engine; keep coordinates and scroll events observable. */
+export function patchWindowScroll(target: Window = window) {
+  const keys = ['scrollTo', 'scrollX', 'scrollY', 'pageXOffset', 'pageYOffset'] as const
+  const descriptors = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(target, key)]))
+  const root = target.document.documentElement
+  const originalPosition = { left: root.scrollLeft, top: root.scrollTop }
+  const scrollTo = (options?: ScrollToOptions | number, y?: number) => {
+    const left = typeof options === 'number' ? options : options?.left ?? target.scrollX
+    const top = typeof options === 'number' ? y ?? 0 : options?.top ?? target.scrollY
+    const xPosition = Number.isFinite(left) ? left : 0
+    const yPosition = Number.isFinite(top) ? top : 0
+    root.scrollLeft = xPosition
+    root.scrollTop = yPosition
+    for (const [key, value] of Object.entries({
+      scrollX: xPosition, pageXOffset: xPosition, scrollY: yPosition, pageYOffset: yPosition,
+    })) {
+      Object.defineProperty(target, key, { configurable: true, writable: true, value })
+    }
+    target.dispatchEvent(new Event('scroll'))
+  }
+  Object.defineProperty(target, 'scrollTo', { configurable: true, writable: true, value: scrollTo })
+  return {
+    restore() {
+      for (const key of keys) {
+        const descriptor = descriptors.get(key)
+        if (descriptor) Object.defineProperty(target, key, descriptor)
+        else Reflect.deleteProperty(target, key)
+      }
+      root.scrollLeft = originalPosition.left
+      root.scrollTop = originalPosition.top
+    },
+  }
+}
 
 /**
  * jsdom-safe `IntersectionObserver`. `observe()` reports the target as fully

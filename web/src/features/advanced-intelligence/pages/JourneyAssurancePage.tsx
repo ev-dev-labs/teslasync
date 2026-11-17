@@ -266,16 +266,16 @@ export default function JourneyAssurancePage() {
             {factors.length === 0 ? <EmptyState variant="informational"
               message={t('advancedIntelligence.journey.factors.empty', 'No supported readiness factors are available.')}
               description={t('advancedIntelligence.journey.factors.emptyHelp', 'Factors appear when the selected vehicle has supported readiness data for this journey.')} /> : factors.map((factor) => (
-              <article key={factor.factor} className={`min-w-0 break-words ${glassCardClasses.md}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <Text as="h3" variant="label" className="min-w-0 break-words">{factor.factor}</Text>
+              <article key={factor.factor} data-app-part="card metric" data-surface-variant="standalone" data-app-metric="stat-card" className={`min-w-0 break-words ${glassCardClasses.md}`}>
+                <div data-app-part="metric-heading" className="flex flex-wrap items-center justify-between gap-3">
+                  <Text data-app-part="metric-label" as="h3" variant="label" className="min-w-0 break-words">{factor.factor}</Text>
                   <Badge variant={factor.status === 'supported' ? 'info' : factor.status === 'unsupported' ? 'warning' : 'neutral'}>
                     {factor.status === 'unsupported'
                       ? t('advancedIntelligence.unsupported.short', 'Unsupported') : factor.status || t('common.unknown', 'Unknown')}
                   </Badge>
                 </div>
-                <Text as="p" variant="bodySm" className="mt-2">{factor.explanation}</Text>
-                <Text as="p" variant="metricValue" className="mt-3">
+                <Text data-app-part="metric-context" as="p" variant="bodySm" className="mt-2">{factor.explanation}</Text>
+                <Text data-app-part="metric-reading metric-value" as="p" variant="metricValue" className="mt-3">
                   {factor.score_pct != null ? `${fmtNumber(factor.score_pct)}%` : '—'}
                 </Text>
               </article>

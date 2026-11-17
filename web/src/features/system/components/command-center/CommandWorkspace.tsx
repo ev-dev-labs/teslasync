@@ -151,7 +151,7 @@ export function CommandWorkspace({
             {latestState.fatalError ? (
               <QueryError error={latestState.fatalError} onRetry={latestState.retry ?? undefined} />
             ) : !latestState.hasData ? (
-              <div role="status">
+              <div data-app-part="status" role="status">
                 <Text variant="bodySm">
                   {latestState.isRefreshBlocked
                     ? t('dataSources.status.paused', 'Refresh paused')

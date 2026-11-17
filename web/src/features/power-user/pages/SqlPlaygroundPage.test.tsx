@@ -461,8 +461,10 @@ describe('SqlPlaygroundPage page-owned modernization', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(getEditor()).toHaveValue(''));
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    await waitFor(() => {
+      expect(getEditor()).toHaveValue('');
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
     expect(writeText).not.toHaveBeenCalled();
   });
 

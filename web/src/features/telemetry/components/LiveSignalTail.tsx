@@ -144,7 +144,7 @@ export function LiveSignalTail({
   return (
     <FadeIn className="min-w-0 max-w-full">
       <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5 space-y-3', className)}>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div data-app-part="table-toolbar" className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {title ? (
             <div className="flex min-w-0 items-center gap-2">
               <Radio className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />

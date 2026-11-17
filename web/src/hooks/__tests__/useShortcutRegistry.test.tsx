@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { cleanup, act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -19,6 +19,7 @@ function wrapperWith(initial: string) {
 }
 
 afterEach(() => {
+  cleanup();
   _resetShortcutRegistry()
 })
 
@@ -197,7 +198,7 @@ describe('useShortcutRegistry', () => {
       )
       const input = document.createElement('input')
       document.body.appendChild(input)
-      input.focus()
+      act(() => { input.focus(); })
       act(() => {
         input.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'x', bubbles: true }),
@@ -224,7 +225,7 @@ describe('useShortcutRegistry', () => {
       )
       const input = document.createElement('input')
       document.body.appendChild(input)
-      input.focus()
+      act(() => { input.focus(); })
       act(() => {
         input.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
@@ -253,7 +254,7 @@ describe('useShortcutRegistry', () => {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }))
       })
       expect(handler).not.toHaveBeenCalled()
-      unregisterShortcut('h.route')
+      act(() => { unregisterShortcut('h.route') })
     })
   })
 })

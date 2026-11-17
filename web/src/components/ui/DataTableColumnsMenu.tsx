@@ -122,6 +122,7 @@ export function DataTableColumnsMenu({
       {open && (
         <div
           role="menu"
+          data-app-part="popover"
           aria-label={t('table.columns.menu', 'Show or hide columns')}
           data-testid="datatable-columns-menu"
           className={cn(
@@ -135,6 +136,8 @@ export function DataTableColumnsMenu({
             </span>
             <button
               type="button"
+              data-app-part="button"
+              data-app-variant="ghost"
               onClick={showAll}
               disabled={cols.length === 0}
               className="text-2xs font-medium text-theme-accent hover:text-theme-accent focus-visible:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed"

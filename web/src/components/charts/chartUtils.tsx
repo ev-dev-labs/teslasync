@@ -6,6 +6,7 @@ export { CHART_COLORS, CHART_COLORS_NEON as NEON_COLORS } from '../../lib/colors
 
 export const axisTick = { fill: chartTokens.axisStroke, fontSize: 11 }
 export const axisTickSm = { fill: chartTokens.axisStroke, fontSize: 10 }
+export const axisTickXs = { fill: chartTokens.axisStroke, fontSize: 9 }
 
 export const chartGrid = <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
 

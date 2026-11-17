@@ -197,6 +197,8 @@ export function BulkActionsToolbar({
       >
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <Text
+            data-app-part="badge"
+            data-app-variant="neutral"
             as="span"
             variant="bodySm"
             className="min-w-0 max-w-full break-words rounded-shape-sm bg-[var(--surface-2)] px-2 py-1 font-medium"

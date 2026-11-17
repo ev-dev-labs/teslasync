@@ -5,6 +5,10 @@ import { fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision
 import { analyzeShareCard } from '../../lib/shareCard';
 import { ShareCardAccountingIdentities } from './ShareCardAccountingIdentities';
 import type { ShareCardDisplay, ShareCardQueryState } from './types';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -49,6 +53,37 @@ function populatedAnalysis() {
 }
 
 describe('ShareCardAccountingIdentities diagnostic precision', () => {
+  it('owns actual accounting frames only on an opted-in host and preserves every identity table', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const analysis = populatedAnalysis();
+    const before = structuredClone(analysis);
+    const { container } = render(<ShareCardAccountingIdentities analysis={analysis} state={state} display={display} />);
+    const records = container.querySelectorAll('[data-app-record-kind="share-accounting-identity"]');
+    expect(records).toHaveLength(analysis.identities.length);
+    for (const record of records) expect(record).not.toHaveAttribute('data-app-design-owner');
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      for (const record of records) {
+        expect(record.tagName).toBe('LI');
+        expect(record.querySelector('[data-app-part="record-header"] [data-app-part="record-title"]')).not.toBeNull();
+        expect(record.querySelector('[data-app-part="record-body"]')).toContainElement(within(record as HTMLElement).getByRole('table'));
+        expect(within(record as HTMLElement).getAllByRole('rowheader')).toHaveLength(3);
+        const matches: string[] = [];
+        postcss.parse(feedbackCss).walkRules(rule => {
+          if (rule.selector.includes('[data-app-card-kind="record"]') && rule.nodes.some(node => node.type === 'decl' && node.prop === 'display')) {
+            matches.push(...rule.selectors.filter(selector => record.matches(selector)));
+          }
+        });
+        expect(matches.length).toBeGreaterThan(0);
+        record.removeAttribute('data-app-design-owner');
+        expect(matches.every(selector => !record.matches(selector))).toBe(true);
+      }
+      expect(analysis).toEqual(before);
+    } finally { release(); }
+  });
+
   it.each([0, 2])('keeps tolerance and signed residuals visible at preference precision %s', precision => {
     setGlobalPrecision(precision);
     setGlobalLocale('en-US');

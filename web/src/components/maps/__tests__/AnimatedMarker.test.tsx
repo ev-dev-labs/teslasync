@@ -138,6 +138,13 @@ describe('AnimatedMarker', () => {
   it('rotates the marker to the supplied heading', () => {
     render(<AnimatedMarker position={[1, 2]} heading={90} />);
     expect(latestIconHtml()).toContain('rotate(90deg)');
+    const host = document.createElement('div');
+    host.innerHTML = latestIconHtml();
+    const marker = host.querySelector('[data-app-part~="map-marker"]');
+    expect(marker).toHaveAttribute('data-map-marker', 'playhead');
+    expect(marker).toHaveAttribute('aria-label', 'Vehicle position');
+    expect(marker?.querySelector('.app-map-marker-core')?.getAttribute('style')).toContain('rotate(90deg)');
+    expect(h.setLatLngCalls).toEqual([{ lat: 1, lng: 2 }]);
   });
 
   it('rotates to 0deg for a zero heading but omits rotation entirely when heading is absent', () => {

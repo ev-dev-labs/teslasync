@@ -64,6 +64,8 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
     return (
       <div
         ref={ref}
+        data-app-part="field"
+        data-app-field-kind="choice"
         className={cn(
           'inline-flex max-w-full items-center gap-2 select-none',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
@@ -80,6 +82,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       >
         <button
           type="button"
+          data-app-part="field-control"
           role="switch"
           aria-checked={isChecked}
           // Visible `label` wins (points at the rendered span); otherwise
@@ -98,6 +101,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           )}
         >
           <span
+            data-app-switch-track
             className={cn(
               'relative inline-flex shrink-0 items-center rounded-full px-0.5 ring-1 ring-inset ring-[var(--control-border)] transition-colors duration-fast ease-standard motion-reduce:transition-none',
               // Preserve track boundaries when forced colors flatten the tint.
@@ -122,7 +126,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           </span>
         </button>
         {label && (
-          <span id={labelId} className="min-w-0 break-words text-sm font-medium text-[var(--text-secondary)]">
+          <span data-app-part="field-label" id={labelId} className="min-w-0 break-words text-sm font-medium text-[var(--text-secondary)]">
             {label}
           </span>
         )}

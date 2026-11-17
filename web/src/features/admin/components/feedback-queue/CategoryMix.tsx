@@ -23,7 +23,7 @@ export function CategoryMix({ counts }: { counts: FeedbackCounts }) {
   // `FeedbackCounts` bag also carries status facets that must not dilute it.
   const catTotal = ORDER.reduce((sum, key) => sum + (counts[key] ?? 0), 0)
   return (
-    <div
+    <div data-app-part="list"
       className="space-y-3"
       role="list"
       aria-label={t('feedback.category.mixLabel', 'Feedback category mix')}

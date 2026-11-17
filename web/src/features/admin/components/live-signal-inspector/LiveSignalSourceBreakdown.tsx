@@ -13,6 +13,7 @@ import { Layers } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { SourceLayerBadge } from '@/components/data-display';
+import { Grid } from '@/components/layout';
 import { cn } from '@/lib/cn';
 
 import { LiveSectionState } from './LiveSectionState';
@@ -107,6 +108,9 @@ export function LiveSignalSourceBreakdown({
       >
         <div className="space-y-4">
           <div
+            data-app-part="metric"
+            data-app-metric="bar"
+            data-metric-track
             className="flex h-3 overflow-hidden rounded-full bg-white/[0.05]"
             role="img"
             aria-label={barAria}
@@ -116,6 +120,7 @@ export function LiveSignalSourceBreakdown({
               return (
                 <div
                   key={key}
+                  data-metric-fill
                   className={cn('h-full', bar)}
                   style={{ width: `${pct}%` }}
                   title={`${t(labelKey, labelFallback)}: ${count} (${roundedPct}%)`}
@@ -124,29 +129,33 @@ export function LiveSignalSourceBreakdown({
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Grid minItemWidth="wide" gap={3}>
             {segments.map(({ key, labelKey, labelFallback, count, roundedPct }) => (
               <div
+                data-app-part="metric"
+                data-app-metric="tile"
+                data-surface-variant="standalone"
                 key={key}
                 className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div data-app-part="metric-context" className="flex items-center justify-between gap-2">
                   <SourceLayerBadge source={key} showLabel />
                   <Caption className="tabular-nums">{roundedPct}%</Caption>
                 </div>
                 <Text
+                  data-app-part="metric-reading"
                   as="div"
                   size="xl"
                   weight="bold"
                   color="primary"
                   className="mt-2 tabular-nums"
                 >
-                  {count}
+                  <span data-app-part="metric-value">{count}</span>
                 </Text>
-                <Caption>{t(labelKey, labelFallback)}</Caption>
+                <Caption data-app-part="metric-label">{t(labelKey, labelFallback)}</Caption>
               </div>
             ))}
-          </div>
+          </Grid>
         </div>
       </LiveSectionState>
     </GlassPanel>

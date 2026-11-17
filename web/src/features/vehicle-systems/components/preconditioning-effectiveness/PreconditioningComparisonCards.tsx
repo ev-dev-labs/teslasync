@@ -48,14 +48,17 @@ export function PreconditioningComparisonCards({
         return (
           <article
             key={comparison.regime}
+            data-app-part="card"
+            data-app-card-kind="record"
+            data-surface-variant="standalone"
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
           >
-            <div className="flex flex-wrap items-start justify-between gap-2">
+            <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <Text as="h4" variant="label">
+                <Text data-app-part="record-title" as="h4" variant="label">
                   {preconditioningRegimeLabel(t, comparison.regime)}
                 </Text>
-                <Text as="p" variant="caption" className="mt-1">
+                <Text data-app-part="record-context" as="p" variant="caption" className="mt-1">
                   {t(
                     'preconditioningEffectiveness.comparison.support',
                     '{{active}} active · {{control}} explicit-off control',
@@ -70,31 +73,35 @@ export function PreconditioningComparisonCards({
                 {preconditioningEvidenceLabel(t, comparison.evidence)}
               </Badge>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <MetricLabel>
+            <div data-app-part="record-body metric-grid" className="mt-4 grid grid-cols-2 gap-3">
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                <MetricLabel data-app-part="metric-label">
                   {t(
                     'preconditioningEffectiveness.groups.observedActiveShort',
                     'HVAC-active',
                   )}
                 </MetricLabel>
-                <MetricValue className="mt-1">
-                  {published ? formatDelta(active) : '—'}
-                </MetricValue>
+                <div data-app-part="metric-reading" className="mt-1">
+                  <MetricValue data-app-part="metric-value">
+                    {published ? formatDelta(active) : '—'}
+                  </MetricValue>
+                </div>
               </div>
-              <div>
-                <MetricLabel>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                <MetricLabel data-app-part="metric-label">
                   {t(
                     'preconditioningEffectiveness.groups.explicitOffShort',
                     'Explicit-off control',
                   )}
                 </MetricLabel>
-                <MetricValue className="mt-1">
-                  {published ? formatDelta(control) : '—'}
-                </MetricValue>
+                <div data-app-part="metric-reading" className="mt-1">
+                  <MetricValue data-app-part="metric-value">
+                    {published ? formatDelta(control) : '—'}
+                  </MetricValue>
+                </div>
               </div>
-              <div>
-                <MetricLabel>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                <MetricLabel data-app-part="metric-label">
                   {metric === 'readiness'
                     ? t(
                         'preconditioningEffectiveness.comparison.readinessDifference',
@@ -105,22 +112,26 @@ export function PreconditioningComparisonCards({
                         'Active minus control',
                       )}
                 </MetricLabel>
-                <MetricValue className="mt-1">
-                  {published
-                    ? formatDelta(difference, { signed: true })
-                    : '—'}
-                </MetricValue>
+                <div data-app-part="metric-reading" className="mt-1">
+                  <MetricValue data-app-part="metric-value">
+                    {published
+                      ? formatDelta(difference, { signed: true })
+                      : '—'}
+                  </MetricValue>
+                </div>
               </div>
-              <div>
-                <MetricLabel>
+              <div data-app-part="metric" data-app-metric="tile" data-surface-variant="embedded">
+                <MetricLabel data-app-part="metric-label">
                   {t(
                     'preconditioningEffectiveness.comparison.confidence',
                     'Confidence',
                   )}
                 </MetricLabel>
-                <MetricValue className="mt-1">
-                  {published ? fmtPercent(comparison.confidence * 100) : '—'}
-                </MetricValue>
+                <div data-app-part="metric-reading" className="mt-1">
+                  <MetricValue data-app-part="metric-value">
+                    {published ? fmtPercent(comparison.confidence * 100) : '—'}
+                  </MetricValue>
+                </div>
               </div>
             </div>
           </article>

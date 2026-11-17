@@ -123,10 +123,11 @@ function ScopedRedactionEditor({ clip }: RedactionEditorProps) {
       {regions.length === 0 ? (
         <Caption>{t('dashcam.redaction.empty', 'No redaction regions defined yet.')}</Caption>
       ) : (
-        <ul className="space-y-4">
+        <ul data-app-part="list" className="space-y-4">
           {regions.map((region) => (
-            <li key={region.id} className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <li key={region.id} data-app-part="card" data-app-card-kind="record" data-surface-variant="standalone"
+              className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-3">
+              <div data-app-part="record-body" className="flex min-w-0 flex-wrap items-center gap-2">
                 <Select
                   size="sm"
                   label={t('dashcam.redaction.kindLabel', 'Region kind')}
@@ -159,7 +160,7 @@ function ScopedRedactionEditor({ clip }: RedactionEditorProps) {
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div data-app-part="record-body" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Slider label="X" min={0} max={1} step={0.01} value={region.x} onChange={(v) => updateRegion(region.id, { x: v })} formatValue={(n) => `${Math.round(n * 100)}%`} />
                 <Slider label="Y" min={0} max={1} step={0.01} value={region.y} onChange={(v) => updateRegion(region.id, { y: v })} formatValue={(n) => `${Math.round(n * 100)}%`} />
                 <Slider label={t('dashcam.redaction.width', 'Width')} min={0.02} max={1} step={0.01} value={region.width} onChange={(v) => updateRegion(region.id, { width: v })} formatValue={(n) => `${Math.round(n * 100)}%`} />

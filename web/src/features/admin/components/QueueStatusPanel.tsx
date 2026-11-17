@@ -147,7 +147,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
         />
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+      <dl data-app-part="list" className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
         <div>
           <Caption>{t('queueStatus.metric.succeeded24h', 'Succeeded 24h')}</Caption>
           <Text
@@ -237,7 +237,7 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
       </div>
 
       {isLoading ? (
-        <div
+        <div data-app-part="status"
           className="grid grid-cols-1 gap-4 md:grid-cols-3"
           data-testid="queue-loading"
           role="status"

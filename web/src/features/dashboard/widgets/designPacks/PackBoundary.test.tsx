@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Button } from '@/components/ui';
 import { PACK_MANIFEST, resolveAvailablePackId, resolvePackId } from './manifest';
 import { PackBoundary, usePackModule, usePackPresentation } from './PackBoundary';
+import { resolvePackModule } from './packModules';
 import { EXPERIMENTAL_PACK_IDS } from './types';
 
 vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
@@ -65,6 +66,15 @@ describe('PackBoundary', () => {
     render(<PackBoundary requestedPackId="classic"><ModuleController load={load} /></PackBoundary>);
     expect(load).not.toHaveBeenCalled();
     expect(screen.getByTestId('presentation')).toHaveTextContent('classic');
+  });
+
+  it('renders a preloaded presentation on the first selected-pack render', async () => {
+    const load = vi.fn<() => Promise<{ default: ComponentType }>>()
+      .mockResolvedValue({ default: () => <p>Preloaded presentation</p> });
+    await resolvePackModule(load);
+    render(<PackBoundary requestedPackId="v3"><ModuleController load={load} /></PackBoundary>);
+    expect(screen.getByText('Preloaded presentation')).toBeInTheDocument();
+    expect(load).toHaveBeenCalledOnce();
   });
 
   it('shows failed imports and retries without resetting the existing controller', async () => {

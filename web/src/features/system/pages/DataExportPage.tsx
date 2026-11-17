@@ -10,7 +10,7 @@ import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib
 import { typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
-import { PageLayout } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -25,7 +25,7 @@ import {
   Label,
   Text,
   HelperText,
-  type Column, IconButton } from '@/components/ui';
+  type Column, type MobileDataTablePresentation, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import {
@@ -364,7 +364,7 @@ function FormatInfoCards() {
         <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
         </Text>
-        <div className={previewClass}>
+        <div data-app-part="card" data-app-card-kind="code-example" data-surface-variant="standalone" className={previewClass}>
           <p>date,distance_m,efficiency_wh_per_m</p>
           <p>2025-01-15,45200,0.152</p>
           <p>2025-01-16,32800,0.148</p>
@@ -379,7 +379,7 @@ function FormatInfoCards() {
         <Text as="p" variant="caption" className="mb-3">
           {t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')}
         </Text>
-        <div className={previewClass}>
+        <div data-app-part="card" data-app-card-kind="code-example" data-surface-variant="standalone" className={previewClass}>
           <p>{`[{ "date": "2025-01-15",`}</p>
           <p>{`   "distance_m": 45200,`}</p>
           <p>{`   "efficiency": 152 }]`}</p>
@@ -521,7 +521,7 @@ interface VehicleTargetProps {
 function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }: VehicleTargetProps & { unknownTarget?: string }) {
   const { t } = useTranslation();
   return (
-    <div role="status">
+    <div data-app-part="status" role="status">
       <StaleRefreshWarning state={vehiclesState} label={t('dataExport.vehicle', 'Vehicle')} />
       {vehiclesState.fatalError ? (
         <QueryError error={vehiclesState.fatalError} onRetry={onRetryVehicles} />
@@ -654,7 +654,7 @@ function ExportWizard({
         <Label className="mb-2 block">{t('dataExport.wizard.step1', 'STEP 1 — select data type')}</Label>
         <ExportTypeSelector selected={exportType} onChange={handleExportTypeChange} />
         {jobType === null && (
-          <div role="status" className="mt-3">
+          <div data-app-part="status" role="status" className="mt-3">
             <Text>{t('error.unsupported.title', 'Feature not supported')}</Text>
             <HelperText>
               {t('error.unsupported.message', 'This feature is not available with the current server or deployment configuration.')}
@@ -865,7 +865,12 @@ function ColumnPickerSection({
     <div className="mb-5" data-testid="export-column-picker">
       <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
       <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', "STEP 2½ — Columns")} />
-      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+      <div
+        data-app-part="panel"
+        data-surface-variant="standalone"
+        data-app-field-surface="export-columns"
+        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+      >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <HelperText className="max-w-prose">
             {t(
@@ -898,10 +903,10 @@ function ColumnPickerSection({
           </div>
         </div>
         <div
-          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
           role="group"
           aria-label={t('dataExport.columns.title', "STEP 2½ — Columns")}
         >
+          <Grid minItemWidth="wide" gap={2}>
           {data.columns.map((col) => {
             const checked = selectedSet.has(col.name);
             const required = requiredSet.has(col.name);
@@ -909,6 +914,9 @@ function ColumnPickerSection({
               <div
                 key={col.name}
                 data-testid={`export-column-row-${col.name}`}
+                data-app-part="card"
+                data-app-choice-surface="export-column"
+                data-surface-variant="standalone"
                 className={cn(
                   'flex min-w-0 min-h-11 flex-wrap items-center gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2 md:min-h-0',
                   !required && 'hover:bg-[var(--surface-2)]',
@@ -932,6 +940,7 @@ function ColumnPickerSection({
               </div>
             );
           })}
+          </Grid>
         </div>
       </div>
     </div>
@@ -1108,6 +1117,29 @@ function ExportHistoryTable({
     [t, vehicleMap, onDownload, formatBytes, displayPrecision, displayLocale, formatDurationMsLong],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(() => ({
+    roles: { type: 'title', size: 'primary', status: 'badge', format: 'meta', records: 'meta', vehicle: 'meta' },
+    displayValue: (job, key) => {
+      switch (key) {
+        case 'type': {
+          const type = EXPORT_TYPES.find((entry) => entry.value === job.type);
+          return type ? t(type.labelKey, type.label) : job.type || '—';
+        }
+        case 'size': return formatBytes(job.file_size, { zeroAsEmpty: false });
+        case 'status': {
+          const status: StatusConfigEntry | undefined = (STATUS_CONFIG as Record<string, StatusConfigEntry>)[job.status];
+          return status ? t(status.labelKey, status.label) : job.status || '—';
+        }
+        case 'format': return typeof job.format === 'string' && job.format ? job.format.toUpperCase() : '—';
+        case 'records': return fmtInt(job.record_count);
+        case 'vehicle': return job.vehicle_id ? vehicleMap.get(job.vehicle_id) ?? `#${job.vehicle_id}` : '—';
+        default: return null;
+      }
+    },
+    inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),
+    canShowField: (key) => key !== 'actions',
+  }), [columns, formatBytes, t, vehicleMap]);
+
   return (
     <GlassPanel className="overflow-hidden p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
@@ -1149,6 +1181,7 @@ function ExportHistoryTable({
           <DataTable
             tableId="system:data-export-jobs"
             columns={columns}
+            mobilePresentation={mobilePresentation}
             data={sortedJobs}
             sortKey={sortKey}
             sortDir={sortDir}

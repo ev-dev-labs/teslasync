@@ -13,10 +13,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps, WidgetSize } from './types';
 import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { loadActionsPresentation } from './designPacks/packModules';
 import { PACK_APPEARANCES } from './designPacks/types';
 import type { CommandActionPresentation } from './designPacks/families/Actions.types';
-
-const loadActionsPresentation = () => import('./designPacks/families/CommandActionsLayout');
 
 export interface QuickCommand {
   id: string;

@@ -89,6 +89,7 @@
     "e2e:visual": "node scripts/run-e2e-suite.mjs e2e:visual:run",
     "e2e:visual:run": "playwright test --config=playwright.visual.config.ts",
     "e2e:update-visual": "node scripts/run-e2e-suite.mjs e2e:update-visual:run",
+    "capture:design-packs": "node scripts/capture-design-packs.mjs",
     "e2e:update-visual:run": "playwright test --config=playwright.visual.config.ts --update-snapshots",
     "screenshots:docs": "node scripts/capture-docs-screenshots.mjs",
     "e2e:routes": "node scripts/check-e2e-route-registry.mjs",

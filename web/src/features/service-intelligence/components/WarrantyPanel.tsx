@@ -67,12 +67,12 @@ export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: Wa
         )}
         onRetry={onRetry}
       >
-        <div className="space-y-3">
+        <div data-app-part="list" data-app-list="definitions" className="space-y-3">
           {(outlook?.coverages ?? []).map((c) => (
-            <div key={c.name} className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <Text variant="bodySm" className="font-medium">{c.name}</Text>
-                <Caption className="block tabular-nums">
+            <div key={c.name} data-app-part="list-row" className="flex items-center justify-between gap-3">
+              <div data-app-part="metric-reading" className="min-w-0 flex-col">
+                <Text data-app-part="metric-label" variant="bodySm" className="font-medium">{c.name}</Text>
+                <Caption data-app-part="metric-value metric-context" className="block tabular-nums">
                   {t('serviceIntelligence.warranty.detail', 'ends {{date}} · {{days}} days left', {
                     date: formatDayKey(c.expires_at ?? '', opts),
                     days: fmtInt(Math.max(c.days_remaining, 0)),

@@ -12,12 +12,14 @@ import {
   GlassPanel,
   PanelTitle,
   Text,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { RepairCaseFiltersBar } from './RepairCaseFiltersBar';
 import { RepairRefreshWarning } from './RepairRefreshWarning';
 import { useRepairCaseColumns } from './useRepairCaseColumns';
-import { repairCodeLabel } from './repairCasePresentation';
+import { repairCodeLabel, repairStatusLabel } from './repairCasePresentation';
+import { formatDateTime } from '@/lib/dateFormat';
 
 interface RepairCaseQueueProps {
   cases: RepairCase[];
@@ -74,6 +76,27 @@ export function RepairCaseQueue({
       ),
     } : column,
   ), [baseColumns, t]);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<RepairCase>>(() => ({
+    roles: {
+      case: 'title', status: 'primary', confidence: 'badge',
+      rule: 'meta', assigned_to: 'meta', last_seen_at: 'meta',
+    },
+    displayValue: (item, key) => {
+      switch (key) {
+        case 'case': return t('dataRepair.cases.caseNumber', 'Case #{{id}}', { id: item.id });
+        case 'status': return repairStatusLabel(t, item.status);
+        case 'confidence': return item.confidence === 'high'
+          ? t('dataRepair.confidence.high', 'High confidence')
+          : t('dataRepair.confidence.medium', 'Medium confidence');
+        case 'rule': return repairCodeLabel(t, item.rule);
+        case 'assigned_to': return item.assigned_to ?? t('dataRepair.cases.unassignedValue', 'Unassigned');
+        case 'last_seen_at': return formatDateTime(item.last_seen_at);
+        default: return null;
+      }
+    },
+    onOpenRow: (item) => onOpenCase(item.id),
+    inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+  }), [columns, onOpenCase, t]);
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5">
@@ -137,6 +160,7 @@ export function RepairCaseQueue({
             selectedKeys={selectedCaseIds}
             onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}
             mobileColumns={['case', 'actions']}
+            mobilePresentation={mobilePresentation}
             emptyMessage={t('dataRepair.cases.empty', 'No repair cases match these filters.')}
             maxHeight={620}
             stickyHeader

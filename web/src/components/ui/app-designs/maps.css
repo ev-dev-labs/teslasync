@@ -1,0 +1,969 @@
+/* MapContainer/Popup/Marker stay native exports. Leaflet owns their DOM,
+   transforms, anchors and panes; only its chrome and inner marker frames change.
+   Tiles, path paint/geometry and authentic vehicle imagery are never themed here.
+   Pack identity sheets refine these four compositions through the same parts;
+   descriptor :where() keeps those later identity rules authoritative. */
+@media screen and (forced-colors: none) {
+  /* The nearest verified host owns composition, including nested previews. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(.leaflet-container, [data-app-part~="map"]):where([data-app-design-owner]) {
+    border-radius: var(--panel-radius);
+    color: var(--text-primary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-container:where([data-app-design-owner]) {
+    container-type: inline-size;
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--leading);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"]):where([data-app-design-owner]) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    color: var(--text-primary);
+    background-color: var(--surface-1);
+    border-color: var(--control-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-2);
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="layers"]:where([data-app-design-owner]) {
+    inline-size: fit-content;
+    max-inline-size: calc(100% - 1rem);
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="layers"] button:where([data-app-design-owner]) {
+    min-inline-size: 2.75rem;
+    min-block-size: 2.75rem;
+    block-size: auto;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="layers"] button[aria-pressed="true"]:where([data-app-design-owner]) {
+    color: var(--text-primary);
+    background-color: var(--surface-3);
+    border-color: var(--control-border-hover, var(--text-secondary));
+    box-shadow: inset 0 -3px var(--theme-accent);
+  }
+
+  /* Leaflet and the existing index.css use important chrome declarations.
+     These bounded overrides do not reach the raster or vector panes. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-container :where(.leaflet-bar, .leaflet-control-layers):where([data-app-design-owner]) {
+    border: 1px solid var(--control-border) !important;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-1);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-container :where(.leaflet-bar a, .leaflet-control-layers-toggle):where([data-app-design-owner]) {
+    box-sizing: border-box;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    line-height: 2.75rem;
+    border-color: var(--control-border) !important;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+    backdrop-filter: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-zoom a:where([data-app-design-owner]) {
+    font-family: var(--font-mono);
+    font-size: calc(1.25rem * var(--font-scale, 1));
+    font-weight: var(--font-weight-medium);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers-expanded:where([data-app-design-owner]) {
+    max-inline-size: min(24rem, calc(100vw - 2rem));
+    padding: 0.75rem;
+    color: var(--text-primary);
+    font-size: calc(0.875rem * var(--font-scale, 1));
+    white-space: normal;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers :where(label, .leaflet-control-layers-separator):where([data-app-design-owner]) {
+    margin-block: 0.375rem;
+    border-color: var(--border-strong);
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers label:where([data-app-design-owner]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-block-size: 2.75rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers label > span:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers input:where([data-app-design-owner]) {
+    accent-color: var(--theme-accent);
+    flex-shrink: 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers-toggle:where([data-app-design-owner]) {
+    position: relative;
+    background-image: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-layers-toggle:where([data-app-design-owner])::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: 26px;
+    block-size: 26px;
+    background-color: currentColor;
+    mask-image: url("leaflet/dist/images/layers.png");
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    pointer-events: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-scale-line:where([data-app-design-owner]) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: 0.25rem 0.5rem;
+    border-color: var(--text-primary);
+    background-color: var(--surface-1);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: calc(0.75rem * var(--font-scale, 1));
+    line-height: var(--leading);
+    text-shadow: none;
+  }
+
+  /* Bound either native bottom corner without :has so complete provider
+     credits can wrap within the map in every supported browser. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-bottom:where([data-app-design-owner]) {
+    max-inline-size: 100%;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-attribution:where([data-app-design-owner]) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: 0.25rem 0.5rem;
+    border-block-start: 1px solid var(--control-border);
+    background: var(--surface-1) !important;
+    color: var(--text-secondary) !important;
+    font-family: var(--font-sans);
+    font-size: calc(0.75rem * var(--font-scale, 1)) !important;
+    line-height: var(--leading);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: end;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-control-attribution a:where([data-app-design-owner]) {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(.leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-tooltip, [data-app-part~="map-popup"]):where([data-app-design-owner]) {
+    background-color: var(--surface-1);
+    color: var(--text-primary);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-popup-content-wrapper:where([data-app-design-owner]) {
+    padding: 1rem;
+    padding-inline-end: 2.75rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-popup-content:where([data-app-design-owner]) {
+    margin: 0;
+    max-inline-size: min(28rem, calc(100vw - 5.5rem));
+    max-inline-size: min(28rem, calc(100cqw - 5.5rem));
+    max-block-size: min(60vh, 28rem);
+    overflow: auto;
+    overflow-wrap: anywhere;
+    font-family: var(--font-sans);
+    font-size: calc(0.875rem * var(--font-scale, 1));
+    line-height: var(--leading);
+    font-weight: var(--font-weight-normal);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-popup-content :where(p, dl):where([data-app-design-owner]) {
+    margin-block: 0.5rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-popup-content :where(img, video):where([data-app-design-owner]) {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-container a.leaflet-popup-close-button:where([data-app-design-owner]) {
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    inset-inline: auto 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: calc(1.25rem * var(--font-scale, 1));
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-tooltip:where([data-app-design-owner]) {
+    max-inline-size: min(24rem, calc(100vw - 2rem));
+    padding: 0.375rem 0.625rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: calc(0.75rem * var(--font-scale, 1));
+    line-height: var(--leading);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-tooltip-top:where([data-app-design-owner])::before {
+    border-top-color: var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-tooltip-bottom:where([data-app-design-owner])::before {
+    border-bottom-color: var(--control-border);
+  }
+
+  /* Only inner frames change. Never resize, translate or rotate the Leaflet
+     marker itself: it contains geographic positioning and keyboard focus. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="map-marker"]:where([data-app-design-owner]) {
+    box-sizing: border-box;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .app-map-marker-core:where([data-app-design-owner]) {
+    border-color: var(--surface-1) !important;
+    box-shadow: none !important;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .app-map-marker-halo:where([data-app-design-owner]) {
+    animation: none !important;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .teslasync-cluster:where([data-app-design-owner]) {
+    display: grid;
+    place-items: center;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-marker="cluster"]:where([data-app-design-owner]) {
+    inline-size: max-content !important;
+    min-inline-size: 100%;
+    min-block-size: 2.25rem;
+    padding-inline: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: calc(0.75rem * var(--font-scale, 1)) !important;
+    font-weight: var(--font-weight-bold) !important;
+    font-variant-numeric: tabular-nums;
+    outline: 1px solid var(--text-secondary);
+    outline-offset: 1px;
+    backdrop-filter: none !important;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="map-legend"]:where([data-app-design-owner]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--control-border);
+    padding: 0.5rem 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-legend="playback"]:where([data-app-design-owner]) {
+    max-inline-size: calc(100% - 4.5rem);
+    inset-inline: auto 0.5rem;
+    text-align: start;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="playback"]:where([data-app-design-owner]) {
+    border-block-start: 1px solid var(--control-border);
+    border-radius: 0;
+    padding: 0.75rem;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="fullscreen"]:where([data-app-design-owner]) {
+    padding: 0;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="fullscreen"] button:where([data-app-design-owner]) {
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-1);
+    color: var(--text-primary);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="playback"] :where([role="slider"], button):where([data-app-design-owner]) {
+    min-block-size: 2.75rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="playback"] [data-timeline-track]:where([data-app-design-owner]) {
+    outline: 1px solid var(--control-border);
+    outline-offset: 1px;
+  }
+
+  /* These are the original feature slots, not a second map surface. In
+     particular replay's mobile split is display:contents; its children keep
+     the existing MAP -> TRANSPORT -> DETAILS order and all viewport sizing. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-app-part~="map-stage"]:where([data-app-design-owner]) {
+    border-color: var(--control-border);
+    color: var(--text-primary);
+    background-color: var(--surface-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-app-part~="map-split"] > [data-app-part~="map-details"]:where([data-app-design-owner]) {
+    border-color: var(--control-border);
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-app-part~="map-details"] > :where([data-app-part~="list-heading"], [data-map-control="sources"]):where([data-app-design-owner]) {
+    color: var(--text-primary);
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-map-control="mode"], [data-map-control="actions"], [data-map-control="sources"]):where([data-app-design-owner]) {
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-app-part~="map-sources"], [data-app-part~="map-provenance"]):where([data-app-design-owner]) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    line-height: var(--leading);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-app-part~="map-provenance"]:where([data-app-design-owner]) {
+    display: block;
+    padding: 0.5rem;
+  }
+
+  /* Text roles can set their own leading, so style the actual readable
+     descendants too. Zoom/sprite/close glyph centering remains independent. */
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(.leaflet-popup-content, .leaflet-tooltip, .leaflet-draw-tooltip, .leaflet-control-attribution, [data-app-part~="map-legend"], [data-app-part~="map-provenance"], [data-app-part~="map-sources"], [data-app-part~="map-details"]) :where(p, span, time, a, dt, dd):where([data-app-design-owner]) {
+    line-height: var(--leading);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-app-part~="map-details"] [data-heading-level]:where([data-app-design-owner]) {
+    line-height: var(--leading);
+    font-weight: var(--font-weight-bold);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-app-part~="map-sources"], [data-app-part~="map-provenance"], [data-app-part~="map-legend"]):where([data-app-design-owner]) {
+    line-height: var(--leading);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-map-legend="endpoints"], [data-map-legend="unknown-speed"]):where([data-app-design-owner]) {
+    max-inline-size: calc(100% - 1.5rem);
+    white-space: normal;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="instrument"]) [data-app-part~="map-stage"]:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    box-shadow: inset 0 2px var(--text-secondary);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="instrument"]) [data-app-part~="map-split"] > [data-app-part~="map-details"]:where([data-app-design-owner~="map-instrument"]) {
+    background-color: var(--surface-2);
+    outline: 1px solid var(--control-border);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="instrument"]) :where([data-map-control="mode"], [data-app-part~="map-details"] > [data-app-part~="list-heading"], [data-map-control="sources"]):where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    background-color: var(--surface-2);
+    box-shadow: inset 0 -2px var(--control-border);
+    font-family: var(--font-mono);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="instrument"]) [data-app-part~="map-sources"]:where([data-app-design-owner~="map-instrument"]) {
+    border: 1px solid var(--control-border);
+    border-inline-start-width: 3px;
+    border-radius: 0;
+    padding: 0.75rem;
+    background-color: var(--surface-2);
+    font-family: var(--font-mono);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="instrument"]) [data-app-part~="map-provenance"]:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    outline: 1px solid var(--text-secondary);
+    outline-offset: -1px;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="atlas"]) [data-app-part~="map-stage"]:where([data-app-design-owner~="map-atlas"]) {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="atlas"]) [data-app-part~="map-split"] > [data-app-part~="map-details"]:where([data-app-design-owner~="map-atlas"]) {
+    background-color: var(--surface-1);
+    box-shadow: inset 0 3px var(--control-border), inset 0 -1px var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="atlas"]) :where([data-map-control="mode"], [data-app-part~="map-details"] > [data-app-part~="list-heading"], [data-map-control="sources"]):where([data-app-design-owner~="map-atlas"]) {
+    border-radius: 0;
+    background-color: var(--surface-1);
+    outline: 3px double var(--control-border);
+    outline-offset: -3px;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="atlas"]) [data-app-part~="map-sources"]:where([data-app-design-owner~="map-atlas"]) {
+    border-block: 3px double var(--control-border);
+    padding-block: 0.75rem;
+    padding-inline: 1rem;
+    background-color: var(--surface-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="atlas"]) [data-app-part~="map-provenance"]:where([data-app-design-owner~="map-atlas"]) {
+    border-radius: var(--radius-sm);
+    outline: 3px double var(--control-border);
+    outline-offset: -3px;
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="minimal"]) [data-app-part~="map-stage"]:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="minimal"]) [data-app-part~="map-split"] > [data-app-part~="map-details"]:where([data-app-design-owner~="map-minimal"]) {
+    background-color: var(--surface-1);
+    border-color: var(--border-default);
+    box-shadow: inset 0 1px var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="minimal"]) :where([data-map-control="mode"], [data-app-part~="map-details"] > [data-app-part~="list-heading"], [data-map-control="sources"]):where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: inset 0 -1px var(--border-default);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="minimal"]) [data-app-part~="map-sources"]:where([data-app-design-owner~="map-minimal"]) {
+    border-inline-start: 2px solid var(--control-border);
+    padding-block: 0.5rem;
+    padding-inline: 1rem;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="minimal"]) [data-app-part~="map-provenance"]:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 0;
+    outline: 1px solid var(--control-border);
+    outline-offset: -1px;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="framed"]) [data-app-part~="map-stage"]:where([data-app-design-owner~="map-framed"]) {
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="framed"]) [data-app-part~="map-split"] > [data-app-part~="map-details"]:where([data-app-design-owner~="map-framed"]) {
+    background-color: var(--surface-2);
+    box-shadow: inset 0 0 0 2px var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="framed"]) :where([data-map-control="mode"], [data-app-part~="map-details"] > [data-app-part~="list-heading"], [data-map-control="sources"]):where([data-app-design-owner~="map-framed"]) {
+    border-radius: var(--radius-md);
+    background-color: var(--surface-3);
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="framed"]) [data-app-part~="map-sources"]:where([data-app-design-owner~="map-framed"]) {
+    border: 2px solid var(--control-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    background-color: var(--surface-2);
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack]:where([data-app-map="framed"]) [data-app-part~="map-provenance"]:where([data-app-design-owner~="map-framed"]) {
+    border-radius: var(--radius-md);
+    outline: 2px solid var(--control-border);
+    outline-offset: -2px;
+    box-shadow: var(--elevation-2);
+  }
+
+  /* Reuse the plugin's own sprite silhouettes as themeable ink, not a second
+     drawing UI. Existing handlers, sr-only labels and edit modes stay intact. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar a:where([data-app-design-owner]) {
+    position: relative;
+    background-image: none;
+    color: var(--text-primary) !important;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="geofence"]:where([data-app-design-owner]) {
+    /* Its child bars are the controls; do not paint an opaque plate across
+       the otherwise transparent space between draw and edit groups. */
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar a:where([data-app-design-owner])::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: 30px;
+    block-size: 30px;
+    background-color: currentColor;
+    mask-image: url("leaflet-draw/dist/images/spritesheet.svg");
+    mask-repeat: no-repeat;
+    mask-size: 300px 30px;
+    pointer-events: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar .leaflet-draw-draw-polygon:where([data-app-design-owner])::before {
+    mask-position: -30px 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar .leaflet-draw-draw-rectangle:where([data-app-design-owner])::before {
+    mask-position: -60px 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar .leaflet-draw-draw-circle:where([data-app-design-owner])::before {
+    mask-position: -90px 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar .leaflet-draw-edit-edit:where([data-app-design-owner])::before {
+    mask-position: -150px 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-toolbar .leaflet-draw-edit-remove:where([data-app-design-owner])::before {
+    mask-position: -180px 0;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-actions:where([data-app-design-owner]) {
+    white-space: normal;
+    inline-size: max-content;
+    max-inline-size: min(18rem, calc(100vw - 5rem));
+    background-color: var(--surface-1);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-actions li:where([data-app-design-owner]) {
+    max-inline-size: 100%;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-actions a:where([data-app-design-owner]) {
+    box-sizing: border-box;
+    block-size: auto;
+    min-block-size: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-sans) !important;
+    font-size: calc(0.875rem * var(--font-scale, 1)) !important;
+    line-height: var(--leading);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-tooltip:where([data-app-design-owner]) {
+    max-inline-size: min(24rem, calc(100vw - 3rem));
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border-color: var(--control-border);
+    font-family: var(--font-sans);
+    font-size: calc(0.875rem * var(--font-scale, 1));
+    line-height: var(--leading);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-tooltip:where([data-app-design-owner])::before {
+    border-right-color: var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-tooltip-subtext:where([data-app-design-owner]) {
+    color: var(--text-secondary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-error-draw-tooltip:where([data-app-design-owner]) {
+    color: var(--semantic-danger);
+    border-color: var(--semantic-danger);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-editing-icon:where([data-app-design-owner]) {
+    background-color: var(--surface-1);
+    border-color: var(--text-primary);
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-edit-marker-selected:where([data-app-design-owner]) {
+    background-color: var(--surface-2);
+    border-color: var(--focus-ring);
+  }
+
+  /* Instrument: joined precision rails, squared readouts and a divided
+     transport deck. Shape comes from composition, not recolored map tiles. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) [data-map-control="layers"]:where([data-app-design-owner~="map-instrument"]) {
+    gap: 0;
+    padding: 0;
+    border-radius: 0;
+    border-block-start: 3px solid var(--text-secondary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) [data-map-control="layers"] button:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    border-inline-end: 1px solid var(--control-border);
+    font-family: var(--font-mono);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) :where(.leaflet-bar, .leaflet-control-scale-line, .leaflet-draw-actions):where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    box-shadow: none;
+    font-family: var(--font-mono);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) .leaflet-draw-toolbar a:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    border-block-end: 1px solid var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) .leaflet-popup-content-wrapper:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    border-block-start: 3px solid var(--text-secondary);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) .leaflet-popup-content :where(dl, time):where([data-app-design-owner~="map-instrument"]) {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) :where([data-map-marker="cluster"], [data-map-marker="point"]):where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 2px !important;
+    outline-style: solid;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) :where([data-map-marker="vehicle"], [data-map-marker="playhead"]):where([data-app-design-owner~="map-instrument"]) {
+    outline: 1px solid var(--text-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) [data-app-part~="map-legend"]:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    border-inline-start: 3px solid var(--text-secondary);
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) [data-map-control="playback"]:where([data-app-design-owner~="map-instrument"]) {
+    border-block-start-width: 3px;
+    background-color: var(--surface-2);
+    padding-block: 0.5rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="instrument"]) [data-map-control="playback"] [data-timeline-track]:where([data-app-design-owner~="map-instrument"]) {
+    border-radius: 0;
+    block-size: 0.5rem;
+  }
+
+  /* Atlas: a two-column layer index, cartographic double-ring markers,
+     document popups and a separate caption-style legend. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) [data-map-control="layers"]:where([data-app-design-owner~="map-atlas"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.375rem;
+    padding: 0.375rem;
+    border-radius: var(--radius-lg);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) [data-map-control="layers"] button:where([data-app-design-owner~="map-atlas"]) {
+    justify-content: start;
+    border-color: var(--control-border);
+    padding-inline: 0.75rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) .leaflet-popup-content-wrapper:where([data-app-design-owner~="map-atlas"]) {
+    border-radius: var(--radius-sm);
+    border-inline-start: 4px solid var(--text-secondary);
+    padding-block: 1.25rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) .leaflet-popup-content :where(dl, p + p):where([data-app-design-owner~="map-atlas"]) {
+    border-block-start: 1px solid var(--border-default);
+    padding-block-start: 0.5rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) :where([data-map-marker="vehicle"], [data-map-marker="playhead"], [data-map-marker="point"], [data-map-marker="cluster"]):where([data-app-design-owner~="map-atlas"]) {
+    border-radius: 50% !important;
+    outline: 3px double var(--text-primary);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) [data-app-part~="map-legend"]:where([data-app-design-owner~="map-atlas"]) {
+    border-radius: var(--radius-sm);
+    border-block-end: 3px double var(--control-border);
+    padding-block: 0.625rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) .leaflet-control-scale-line:where([data-app-design-owner~="map-atlas"]) {
+    border-width: 0 2px 3px;
+    border-radius: 0;
+    padding-block: 0.375rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) :where(.leaflet-control-zoom, .leaflet-draw-toolbar):where([data-app-design-owner~="map-atlas"]) {
+    padding: 0.25rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) .leaflet-draw-actions a:where([data-app-design-owner~="map-atlas"]) {
+    border-block-end: 2px solid var(--control-border);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="atlas"]) [data-map-control="playback"]:where([data-app-design-owner~="map-atlas"]) {
+    padding: 1rem;
+    border-block-start: 3px double var(--control-border);
+  }
+
+  /* Minimal: unboxed segmented choices, independent zoom keys, a quiet
+     edge-rule popup and an uninterrupted, surface-integrated transport. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) [data-map-control="layers"]:where([data-app-design-owner~="map-minimal"]) {
+    gap: 0.25rem;
+    border-width: 0;
+    border-block-end: 1px solid var(--control-border);
+    border-radius: 0;
+    padding-block: 0.125rem;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) [data-map-control="layers"] button:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 0;
+    border-color: transparent;
+    background-color: var(--surface-1);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) .leaflet-control-zoom:where([data-app-design-owner~="map-minimal"]) {
+    display: grid;
+    gap: 0.375rem;
+    border: 0 !important;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) .leaflet-control-zoom a:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) .leaflet-draw-toolbar:where([data-app-design-owner~="map-minimal"]) {
+    display: grid;
+    gap: 0.25rem;
+    border: 0 !important;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) .leaflet-draw-actions:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) .leaflet-popup-content-wrapper:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: var(--radius-sm);
+    border-width: 0;
+    border-block-start: 2px solid var(--text-secondary);
+    box-shadow: var(--elevation-1);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) [data-map-marker="cluster"]:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 50% !important;
+    outline-offset: 0;
+    font-family: var(--font-sans);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) :where([data-map-marker="vehicle"], [data-map-marker="playhead"]):where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 50%;
+    outline: 1px solid var(--text-primary);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) [data-app-part~="map-legend"]:where([data-app-design-owner~="map-minimal"]) {
+    border-radius: 0;
+    border-width: 0;
+    border-inline-start: 2px solid var(--control-border);
+    box-shadow: none;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="minimal"]) [data-map-control="playback"]:where([data-app-design-owner~="map-minimal"]) {
+    padding-inline: 0.5rem;
+    border-block-start-color: var(--border-default);
+    background-color: var(--surface-1);
+  }
+
+  /* Framed: separated layer tiles, paneled popup, inset caption and rounded
+     count tags. Controls remain in their native map-local stacking contexts. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) [data-map-control="layers"]:where([data-app-design-owner~="map-framed"]) {
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-width: 2px;
+    border-radius: var(--radius-lg);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) [data-map-control="layers"] button:where([data-app-design-owner~="map-framed"]) {
+    border: 1px solid var(--control-border);
+    background-color: var(--surface-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) .leaflet-popup-content-wrapper:where([data-app-design-owner~="map-framed"]) {
+    border: 2px solid var(--control-border);
+    border-radius: var(--radius-lg);
+    padding-block: 1.25rem;
+    box-shadow: var(--elevation-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) :where(.leaflet-control-zoom, .leaflet-draw-toolbar):where([data-app-design-owner~="map-framed"]) {
+    padding: 0.25rem;
+    border-width: 2px !important;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) .leaflet-popup-content :where(dl, footer):where([data-app-design-owner~="map-framed"]) {
+    border-block-start: 1px solid var(--control-border);
+    padding-block-start: 0.75rem;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) [data-map-marker="cluster"]:where([data-app-design-owner~="map-framed"]) {
+    border-radius: var(--radius-sm) !important;
+    outline-width: 2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) :where([data-map-marker="vehicle"], [data-map-marker="playhead"]):where([data-app-design-owner~="map-framed"]) {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) [data-app-part~="map-legend"]:where([data-app-design-owner~="map-framed"]) {
+    border-width: 2px;
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack]:where([data-app-map="framed"]) [data-map-control="playback"]:where([data-app-design-owner~="map-framed"]) {
+    border-block-start-width: 2px;
+    background-color: var(--surface-2);
+    padding: 1rem;
+  }
+
+  /* Hover never substitutes for keyboard focus or controlled selection. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="map-toolbar"] button, .leaflet-bar a, .leaflet-control-layers-toggle, .leaflet-draw-actions a, .leaflet-popup-close-button):hover:not(:disabled, [aria-disabled="true"], .leaflet-disabled):where([data-app-design-owner]) {
+    background-color: var(--surface-3) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--control-border-hover, var(--text-primary)) !important;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where(.leaflet-container, .leaflet-marker-icon, .leaflet-container a, .leaflet-container button, .leaflet-container input, [data-app-part~="map-toolbar"] button, [data-app-part~="map-toolbar"] [role="slider"]):focus-visible:where([data-app-design-owner]) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-marker-icon:is(:focus-visible, [aria-selected="true"], [aria-pressed="true"]) [data-app-part~="map-marker"]:where([data-app-design-owner]) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is(.leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled, [data-app-part~="map-toolbar"] [aria-pressed="true"], [data-app-part~="map-marker"][aria-selected="true"]):where([data-app-design-owner]) {
+    border-color: var(--text-primary) !important;
+    box-shadow: inset 0 -3px var(--theme-accent);
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is([data-app-part~="map-toolbar"] button:disabled, [data-app-part~="map-toolbar"] [aria-disabled="true"], .leaflet-bar a.leaflet-disabled):where([data-app-design-owner]) {
+    background-color: var(--surface-2) !important;
+    color: var(--text-muted) !important;
+    border-style: dashed;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Trust states decorate the existing labels, never desaturate/hide a route,
+     recolor a vehicle, invent online status, or turn a missing value into zero.
+     Feature owners attach these only from their authoritative source state. */
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is([data-app-part~="map"], [data-app-part~="map-legend"], [data-app-part~="map-popup"], [data-app-part~="map-marker"]):is([data-map-state="stale"], [data-data-state="stale"], [data-freshness="stale"]):where([data-app-design-owner]) {
+    outline: 2px dashed var(--semantic-warning);
+    outline-offset: -2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is([data-app-part~="map"], [data-app-part~="map-legend"], [data-app-part~="map-popup"]):is([data-map-state="error"], [data-data-state="initialFailure"]):where([data-app-design-owner]) {
+    outline: 2px solid var(--semantic-danger);
+    outline-offset: -1px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is([data-app-part~="map-legend"], [data-app-part~="map-popup"]):is([data-map-state="unavailable"], [data-data-state="unavailable"]):where([data-app-design-owner]) {
+    border-inline-start: 3px solid var(--text-secondary);
+    border-inline-end-style: dashed;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="map"]:is([data-map-state="loading"], [aria-busy="true"]):where([data-app-design-owner]) {
+    outline: 2px dotted var(--text-secondary);
+    outline-offset: -2px;
+  }
+
+  :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-app-part~="map"][data-map-state="empty"]:where([data-app-design-owner]) {
+    min-inline-size: 0;
+    outline: 1px dashed var(--control-border);
+    outline-offset: -1px;
+    background-color: var(--surface-1);
+  }
+
+  @media (max-width: 767px) {
+    /* Keep a single 44px-target row in small maps; long translated labels
+       retain their existing icon-only accessible names below sm. */
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-map] [data-map-control="layers"]:where([data-app-design-owner]) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.125rem;
+      padding: 0.25rem;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack][data-app-map] [data-map-control="layers"] button:where([data-app-design-owner]) {
+      justify-content: center;
+      padding-inline: 0.25rem;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-draw-actions:where([data-app-design-owner]) {
+      /* Below the trigger rather than off the edge on a 320px map. */
+      inset-inline: auto 0;
+      margin-block-start: 2.75rem;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :is(.leaflet-left, .leaflet-right:dir(rtl)) .leaflet-draw-actions:where([data-app-design-owner]) {
+      /* Leaflet's corner is geographic/screen-local, not reading direction. */
+      inset-inline: 0 auto;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] .leaflet-left:dir(rtl) .leaflet-draw-actions:where([data-app-design-owner]) {
+      inset-inline: auto 0;
+    }
+
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] [data-map-control="playback"]:where([data-app-design-owner]) {
+      padding: 0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :is(:root, [data-app-design-preview]):where(:is(:root, [data-app-design-preview])[data-app-design-pack])[data-app-design-pack] :where([data-app-part~="map-toolbar"], [data-app-part~="map-legend"], [data-app-part~="map-marker"], .leaflet-popup-content-wrapper):where([data-app-design-owner]) {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

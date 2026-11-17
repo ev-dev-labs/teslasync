@@ -59,7 +59,7 @@ export function TrueCostAccountingIdentities({
           {t('tco.accounting.subtitle', 'Every check states a wire-rounding tolerance. Missing or malformed operands remain unavailable rather than passing as zero.')}
         </Text>
         <TrueCostSectionBody state={state}>
-          <ul className="grid gap-3 lg:grid-cols-2">
+          <ul data-app-part="list" data-app-list="records" className="grid gap-3 lg:grid-cols-2">
             {analysis.identities.map((check) => {
               const status = check.status === 'balances'
                 ? { label: t('tco.accounting.balances', 'Balances'), variant: 'success' as const }
@@ -69,28 +69,32 @@ export function TrueCostAccountingIdentities({
               return (
                 <li
                   key={check.id}
+                  data-app-part="card list-row"
+                  data-app-card-kind="record"
+                  data-surface-variant="standalone"
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <Text as="p" variant="label">{identityLabel(check.id, t)}</Text>
+                  <div data-app-part="record-header" className="flex flex-wrap items-start justify-between gap-2">
+                    <Text data-app-part="record-title" as="p" variant="label">{identityLabel(check.id, t)}</Text>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </div>
-                  <Table className="mt-2" aria-label={identityLabel(check.id, t)}>
-
-                    <tbody>
-                      {([
-                        [t('tco.accounting.expected', 'Expected'), check.expected],
-                        [t('tco.accounting.observed', 'Observed'), check.observed],
-                        [t('tco.accounting.residual', 'Residual'), check.residual],
-                        [t('tco.accounting.tolerance', 'Tolerance'), check.tolerance],
-                      ] as const).map(([label, amount]) => (
-                        <tr key={label}>
-                          <th scope="row"><Text variant="caption">{label}</Text></th>
-                          <td className="text-right"><Text variant="caption" mono>{value(amount, check, display, t)}</Text></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                  <div data-app-part="record-body">
+                    <Table className="mt-2" aria-label={identityLabel(check.id, t)}>
+                      <tbody>
+                        {([
+                          [t('tco.accounting.expected', 'Expected'), check.expected],
+                          [t('tco.accounting.observed', 'Observed'), check.observed],
+                          [t('tco.accounting.residual', 'Residual'), check.residual],
+                          [t('tco.accounting.tolerance', 'Tolerance'), check.tolerance],
+                        ] as const).map(([label, amount]) => (
+                          <tr data-app-part="table-row" key={label}>
+                            <th data-app-part="table-cell" scope="row"><Text variant="caption">{label}</Text></th>
+                            <td data-app-part="table-cell" className="text-right"><Text variant="caption" mono>{value(amount, check, display, t)}</Text></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
                 </li>
               );
             })}

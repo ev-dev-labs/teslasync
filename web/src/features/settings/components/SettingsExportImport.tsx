@@ -334,6 +334,11 @@ export function SettingsExportImport() {
 
           {stage !== 'preview' && stage !== 'applied' && (
             <div
+              data-app-part="field"
+              data-app-field-surface=""
+              data-app-control-kind="dropzone"
+              data-app-drag-active={dragActive}
+              aria-busy={stage === 'parsing'}
               className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
                 dragActive
                   ? 'border-theme-accent bg-theme-accent/5'
@@ -374,19 +379,24 @@ export function SettingsExportImport() {
 
           {parseError && (
             <div
+              data-app-part="feedback"
+              data-app-feedback-kind="notice"
+              data-app-tone="danger"
               className="rounded-md border border-tesla-red/30 bg-tesla-red/5 p-3 flex items-start gap-2"
               data-testid="settings-import-error"
               data-validation-code={validationIssue?.code}
             >
-              <AlertTriangle className="h-4 w-4 mt-0.5 text-rose-300 shrink-0" aria-hidden />
-              {validationIssue ? (
-                <div>
-                  <ErrorText>{t('backup.import.errorPreview', 'Failed to preview import.')}</ErrorText>
-                  <HelperText>{parseError}</HelperText>
-                </div>
-              ) : (
-                <ErrorText>{parseError}</ErrorText>
-              )}
+              <AlertTriangle data-app-part="feedback-icon" className="h-4 w-4 mt-0.5 text-rose-300 shrink-0" aria-hidden />
+              <div data-app-part="feedback-content">
+                {validationIssue ? (
+                  <>
+                    <ErrorText data-app-part="feedback-message">{t('backup.import.errorPreview', 'Failed to preview import.')}</ErrorText>
+                    <HelperText data-app-part="feedback-detail">{parseError}</HelperText>
+                  </>
+                ) : (
+                  <ErrorText data-app-part="feedback-message">{parseError}</ErrorText>
+                )}
+              </div>
             </div>
           )}
 
@@ -482,7 +492,7 @@ function SectionDiffList({ result }: SectionDiffListProps) {
     counts: result.sections[key],
   }));
   return (
-    <ul className="space-y-1.5" data-testid="settings-import-section-list">
+    <ul data-app-part="list" className="space-y-1.5" data-testid="settings-import-section-list">
       {rows.map((row) => (
         <li
           key={row.key}

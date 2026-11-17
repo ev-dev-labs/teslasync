@@ -260,7 +260,7 @@ export default function StatusApiDocsPage() {
               <Plug className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('statusApi.integrations.title', 'Designed for')}
             </PanelTitle>
-            <ul className="space-y-2.5">
+            <ul data-app-part="list" className="space-y-2.5">
               {integrations.map(({ name, how, icon: Icon }) => (
                 <li
                   key={name}

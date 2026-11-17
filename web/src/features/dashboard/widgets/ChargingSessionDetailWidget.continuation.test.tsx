@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
@@ -33,6 +34,8 @@ beforeEach(() => {
   hooks.detail.mockReturnValue(queryResult({ total_energy_added_wh: 0, duration_s: 2700, charger_type: 'AC' }));
   hooks.telemetry.mockReturnValue(queryResult(telemetry));
 });
+
+setupCanvasTextMeasurement();
 
 describe('latest charging detail and telemetry source boundaries', () => {
   it('keeps latest-session zero power/SOC telemetry when detail fails', () => {

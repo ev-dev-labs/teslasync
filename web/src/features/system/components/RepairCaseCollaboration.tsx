@@ -73,12 +73,14 @@ export function RepairCaseCollaboration({
         </div>
         <div className="space-y-3">
           {(comments ?? []).map((entry) => (
-            <div key={entry.id} className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <div key={entry.id} data-app-part="card" data-app-record-kind="repair-note"
+              data-surface-variant="standalone"
+              className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <Text as="span" size="sm" weight="semibold">{entry.actor}</Text>
-                <Text as="span" variant="caption">{formatDateTime(entry.created_at)}</Text>
+                <Text as="span" size="sm" weight="semibold" data-app-record-slot="label">{entry.actor}</Text>
+                <Text as="span" variant="caption" data-app-record-slot="context">{formatDateTime(entry.created_at)}</Text>
               </div>
-              <Text as="p" variant="bodySm" className="mt-2 whitespace-pre-wrap">{entry.body}</Text>
+              <Text as="p" variant="bodySm" className="mt-2 whitespace-pre-wrap" data-app-record-slot="body">{entry.body}</Text>
             </div>
           ))}
           {(comments ?? []).length === 0 ? (

@@ -26,6 +26,7 @@
  * comes from the global stub in src/test-setup.ts.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { gaugeTone } from '@/lib/tokens';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
@@ -289,6 +290,8 @@ beforeEach(() => {
 });
 
 /* ── efficiencyColor: the 5-stop ramp + its exact boundaries ─────────────── */
+setupMeasuredChartContainers(800, 320);
+
 describe('efficiencyColor', () => {
   it('maps Wh/km to the correct colour stop at every threshold boundary', () => {
     expect(efficiencyColor(100)).toBe(gaugeTone.success);

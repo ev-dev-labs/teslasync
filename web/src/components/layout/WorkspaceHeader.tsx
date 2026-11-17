@@ -36,12 +36,13 @@ export function WorkspaceHeader({
 
   return (
     <header
+      data-app-part="workspace-header"
       data-role="workspace-header"
       aria-label={t('nav.workspaceHeader', 'Workspace command bar')}
       data-layout="balanced-three-track"
       className="hidden h-workspace-header shrink-0 grid-cols-workspace-header items-center gap-4 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1 xl:grid 2xl:px-6"
     >
-      <div className="min-w-0 overflow-hidden justify-self-start">
+      <div data-app-header-slot="context" className="min-w-0 overflow-hidden justify-self-start">
         <Caption className="mb-1 hidden 3xl:block">
           {t('nav.workspaceContext', 'Fleet operations')}
         </Caption>
@@ -51,11 +52,12 @@ export function WorkspaceHeader({
       <div
         className="w-full min-w-0 justify-self-center"
         data-role="workspace-search"
+        data-app-header-slot="discovery"
       >
         <CommandPaletteTrigger />
       </div>
 
-      <div className="flex min-w-0 items-center justify-self-end gap-2">
+      <div data-app-header-slot="controls" className="flex min-w-0 items-center justify-self-end gap-2">
         <WorkspaceContextControl
           hidden={!showRange}
           className="max-w-32 px-2 2xl:max-w-40 2xl:px-3"

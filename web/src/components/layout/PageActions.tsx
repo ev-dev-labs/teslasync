@@ -116,6 +116,7 @@ export function PageActions({
         className,
       )}
       data-role="page-actions"
+      data-app-part="page-actions"
       data-action-order="context-secondary-destructive-overflow-primary"
     >
       {/* Scope selectors (vehicle, range, layout) may take their own row. */}

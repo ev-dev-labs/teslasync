@@ -41,6 +41,7 @@
  * network.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -181,6 +182,8 @@ function renderTab(query: FleetAnalyticsQuery) {
     </QueryClientProvider>,
   );
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('ChargingTab — loading', () => {
   it('renders skeletons for the KPI band and every chart panel, with no KPI labels or state leakage', () => {

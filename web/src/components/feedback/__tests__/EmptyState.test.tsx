@@ -3,6 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import '@/i18n';
 import { EmptyState } from '../EmptyState';
+import { getAppDesignAttributes, observeAppDesignScopes } from '../../ui/app-designs/designs';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss, { type Rule } from 'postcss';
+
+const controlRules: Rule[] = [];
+postcss.parse(readFileSync(resolve(
+  process.cwd(), 'src', 'components', 'ui', 'app-designs', 'controls.css',
+), 'utf8')).walkRules(rule => { controlRules.push(rule); });
 
 function renderInRouter(ui: React.ReactNode) {
   return render(
@@ -16,6 +26,63 @@ function renderInRouter(ui: React.ReactNode) {
 }
 
 describe('EmptyState', () => {
+  it.each(PACK_IDS)('%s binds both navigation CTAs to real control consumers without replacing anchors', pack => {
+    const view = render(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <MemoryRouter>
+          <EmptyState
+            message="Retained empty-state guidance"
+            actionTo={{ label: 'Review drives', to: '/drives?range=7d' }}
+            secondaryActionTo={{ label: 'Review settings', to: '/settings' }}
+          />
+        </MemoryRouter>
+      </div>,
+    );
+    const release = observeAppDesignScopes(view.container.firstElementChild!);
+    try {
+      const links = screen.getAllByRole('link');
+      expect(links.map(link => link.getAttribute('href'))).toEqual(['/drives?range=7d', '/settings']);
+      for (const link of links) {
+        expect(link.tagName).toBe('A');
+        expect(link).toHaveAttribute('data-app-part', 'button');
+        expect(link).toHaveAttribute('data-app-variant', 'secondary');
+        expect(link).toHaveAttribute('data-app-size', 'md');
+        const selected = controlRules.flatMap(rule => rule.selectors.filter(selector =>
+          selector.includes('[data-app-part~="button"]') && selector.includes('[data-app-variant="secondary"]')
+          && [...document.querySelectorAll(selector)].includes(link),
+        ));
+        expect(selected.length).toBeGreaterThan(0);
+        expect(link.querySelector('button')).toBeNull();
+        link.focus();
+        expect(link).toHaveFocus();
+      }
+    } finally {
+      release();
+    }
+  });
+
+  it('keeps routerless navigation fallback and disabled/busy imperative actions separate', () => {
+    const onClick = vi.fn();
+    const view = render(<EmptyState
+      message="Retained routerless guidance"
+      actionTo={{ label: 'Choose a vehicle', to: '/vehicles' }}
+      secondaryActionTo={{ label: 'Read help', to: '/help' }}
+    />);
+    expect(screen.getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/vehicles', '/help']);
+    expect(screen.getByRole('status')).toHaveTextContent('Retained routerless guidance');
+    expect(screen.getAllByRole('link')[0]).not.toHaveAttribute('data-app-design-owner');
+    view.rerender(<EmptyState message="Retained guidance" action={{ label: 'Retry', onClick, disabled: true }} />);
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    expect(retry).toBeDisabled();
+    fireEvent.click(retry);
+    expect(onClick).not.toHaveBeenCalled();
+    view.rerender(<EmptyState message="Retained guidance" action={{ label: 'Retry', onClick, loading: true }} />);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(retry);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it('renders icon, title, and message', () => {
     renderInRouter(
       <EmptyState

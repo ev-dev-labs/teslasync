@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
-import { Heading, Text } from '@/components/ui';
+import { Card, Heading, Text } from '@/components/ui';
 
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type {
@@ -122,15 +122,14 @@ export function ArchetypeMethodology({
         </Text>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
-            <article
-              key={item.key}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
-            >
-              <div className="mb-2 flex items-center gap-2 text-[var(--text-muted)]">
-                {item.icon}
-                <Heading level="sub">{item.title}</Heading>
-              </div>
-              <Text as="p" variant="bodySm">{item.body}</Text>
+            <article key={item.key}>
+              <Card variant="embedded" className="h-full rounded-xl bg-[var(--surface-2)]">
+                <div className="mb-2 flex items-center gap-2 text-[var(--text-muted)]">
+                  {item.icon}
+                  <Heading level="sub">{item.title}</Heading>
+                </div>
+                <Text as="p" variant="bodySm">{item.body}</Text>
+              </Card>
             </article>
           ))}
         </div>

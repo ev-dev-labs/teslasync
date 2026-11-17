@@ -144,7 +144,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                 </div>
               </div>
             ) : (
-              <p
+              <p data-app-part="status"
                 role="status"
                 className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)]"
               >

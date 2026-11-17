@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -124,6 +125,8 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+setupMeasuredChartContainers(800, 320);
 
 describe('VampireDrainWidget redesign contract', () => {
   it('renders one After-style headline and status dot for a measured normal rate', () => {

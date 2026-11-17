@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed two-line PreviewMap frame-height successor; recover the unchanged exact application-preview catalog producer before its original source comparison.",
+  "independentPredecessorProof": {
+    "map": "full-design-runtime-frozen-dist-v11/assets/DYa-qNc3.js.map",
+    "mapSha256": "f48735013681daaf4ab1350d71cbe6e116190e5cbab669eebd8bd3631a71a57e",
+    "mapSource": "../../src/features/settings/components/app-design-preview/PreviewMap.tsx",
+    "corroboratingMap": "full-design-runtime-candidate-dist-v9/assets/DYa-qNc3.js.map",
+    "corroboratingMapSha256": "f48735013681daaf4ab1350d71cbe6e116190e5cbab669eebd8bd3631a71a57e",
+    "sha256": "ba1acdb232e5d3f1a7b4a2af25b164c8a4ce432afb1266343a4926d813acd7bd"
+  },
+  "dependencies": [
+    {"file": "web/src/features/settings/components/app-design-preview/fixtures.ts", "sha256": "6223bd4ec1e17f4c4193b914702714c3c861f0866684f884b9e61ed30f277ae7"},
+    {"file": "web/src/features/settings/components/app-design-preview/PreviewMapControls.tsx", "sha256": "e9f6de0d3b2e4ec118177f4a1d84b2094a641145706bc21bc2559499869b0541"}
+  ],
+  "sources": [
+    {
+      "file": "web/src/features/settings/components/app-design-preview/PreviewMap.tsx",
+      "before": "ba1acdb232e5d3f1a7b4a2af25b164c8a4ce432afb1266343a4926d813acd7bd",
+      "after": "cc2b432e4e21ed4c3dddf8f0cabba350259bc9063b43a35a0d961f717775e43d",
+      "originalCallCount": 9,
+      "originalCallsSha256": "f031b159ba61eba315fdfe154701747518c1d85dd6e2fb35580d8b7e8b1f0a3d",
+      "hunks": [
+        {
+          "start": 19,
+          "old": ["      <div data-app-part=\"map map-stage\" className=\"relative isolate min-w-0 overflow-hidden rounded-panel border border-[var(--border-default)]\">"],
+          "new": ["      <div data-app-part=\"map map-stage\" className=\"relative isolate h-72 min-w-0 overflow-hidden rounded-panel border border-[var(--border-default)]\">"]
+        },
+        {
+          "start": 21,
+          "old": ["          zoomControl={false} attributionControl={false} className=\"h-72 w-full\""],
+          "new": ["          zoomControl={false} attributionControl={false} className=\"h-full w-full\""]
+        }
+      ]
+    }
+  ]
+}

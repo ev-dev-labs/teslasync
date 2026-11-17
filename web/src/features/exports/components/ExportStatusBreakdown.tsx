@@ -51,7 +51,7 @@ export function ExportStatusBreakdown({
     <LayoutCard title={t('exportsList.breakdown.title', 'Status breakdown')}>
 
       {isLoading ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t(
@@ -102,12 +102,12 @@ export function ExportStatusBreakdown({
             })}
           </div>
 
-          <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
-            <Caption className="flex items-center gap-1.5">
+          <div data-app-part="metric" data-app-metric="inline" data-app-metric-kind="export-storage" className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
+            <Caption data-app-part="metric-label" className="flex items-center gap-1.5">
               <Icons.hardDrive className="h-3.5 w-3.5" aria-hidden="true" />
               {t('exportsList.breakdown.storage', 'Storage used')}
             </Caption>
-            <Text variant="body" mono className="tabular-nums">
+            <Text data-app-part="metric-reading metric-value" variant="body" mono className="tabular-nums">
               {formatBytes(stats.totalBytes, { zeroAsEmpty: true })}
             </Text>
           </div>

@@ -37,6 +37,8 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ variant = 'neutral', size = 'md', dot, className, children, ...props }, ref) => (
     <span
       ref={ref}
+      data-app-part="badge"
+      data-app-variant={variant}
       className={cn(
         'inline-flex min-w-0 max-w-full items-center gap-1 rounded-full whitespace-normal break-words font-medium',
         // In forced-colors mode, badge backgrounds can collapse into the OS

@@ -26,20 +26,6 @@ vi.mock('@/api/client', async () => ({
   request: requestMock,
 }));
 
-vi.mock('framer-motion', () => ({
-  m: new Proxy(
-    {},
-    {
-      get: () => (props: Record<string, unknown>) => {
-        const { children, ...rest } = props as { children?: React.ReactNode };
-        return <div {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>;
-      },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  useReducedMotion: () => false,
-}));
-
 // Module-level mocks for the two hooks the component depends on. The test
 // suite swaps their return values per scenario via `mockImplementation`.
 const useGroupMembersMock = vi.fn();

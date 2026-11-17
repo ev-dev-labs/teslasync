@@ -594,7 +594,7 @@ export default function SystemStatusPage() {
                     <DetailLink to="/live-monitor" label={t('systemStatus.openLiveMonitor', 'Open live monitor')} />
                   </div>
                   {components.length > 0 ? (
-                    <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    <ul data-app-part="list" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {components.map(([name, comp]) => (
                         <li key={name} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
                           <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words">{name}</Text>
@@ -701,8 +701,8 @@ export default function SystemStatusPage() {
               </section>
             </FadeIn>
 
-            <details ref={operatorDetails} id="operator-details" className="group rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)]">
-              <summary className="cursor-pointer px-4 py-4 text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:px-5">
+            <details ref={operatorDetails} id="operator-details" data-app-part="panel" data-surface-variant="standalone" className="group rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)]">
+              <summary data-app-part="button" data-app-variant="ghost" className="cursor-pointer px-4 py-4 text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:px-5">
                 <Text as="span" weight="semibold">{t('systemStatus.operatorDetails', 'Operator diagnostics')}</Text>
                 <Caption className="ms-2">{t('systemStatus.operatorDetailsHint', 'Resources, workers, telemetry, maintenance and system details')}</Caption>
               </summary>

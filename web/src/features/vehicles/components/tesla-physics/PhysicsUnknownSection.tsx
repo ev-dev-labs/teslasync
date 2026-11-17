@@ -42,17 +42,19 @@ export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPag
       <Text as="p" variant="bodySm">{t('teslaOnly.unknownWorst', 'Largest returned signal gap: {{signal}} · {{duration}}', {
         signal: worst?.kind ?? unknown(t), duration: hours(worst?.hours, t),
       })}</Text>
-      {sorted.length ? <div className="grid gap-3 md:grid-cols-2">
-        {sorted.map((row) => <div key={row.kind} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
-          <div className="flex justify-between gap-2"><Text as="span" variant="bodySm">{row.kind}</Text><Badge variant={row.unknown ? 'warning' : 'neutral'} size="sm">{hours(row.hours, t)}</Badge></div>
+      {sorted.length ? <div data-app-part="metric-grid" className="grid gap-3 md:grid-cols-2">
+        {sorted.map((row) => <div data-app-part="card metric" data-app-metric="card" key={row.kind} className="space-y-1 rounded-lg border border-[var(--glass-border)] p-3">
+          <div data-app-part="metric-body" className="flex flex-wrap justify-between gap-2"><Text data-app-part="metric-label" as="span" variant="bodySm">{row.kind}</Text><Badge data-app-part="badge metric-value metric-reading" variant={row.unknown ? 'warning' : 'neutral'} size="sm">{hours(row.hours, t)}</Badge>
+          <div data-app-part="metric-context" className="basis-full">
           <Text as="p" variant="caption">{t('teslaOnly.unknownBudgetShare', '{{value}} of requested window', { value: window != null && window > 0 ? `${fmtNumber(Math.min(100, Math.max(0, 100 * row.hours / window)))}%` : unknown(t) })}</Text>
           <Text as="p" variant="caption">{row.unknown ? t('teslaOnly.unknownBudgetFlagged', 'Uncertain signal coverage') : t('teslaOnly.unknownBudgetUnflagged', 'No unknown flag reported for this budget')}</Text>
+          </div></div>
         </div>)}
       </div> : <Text as="p" variant="bodySm">{t('teslaOnly.unknownNoBudgets', 'No signal-specific budgets returned; individual signal coverage cannot be assessed.')}</Text>}
       <div className="flex flex-wrap gap-4">
-        <Link to="/tesla-physics/clocks" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectClocks', 'Check event and ingest intervals')} →</Link>
-        <Link to="/tesla-physics/nervous-system" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectNerves', 'Check silent and contradictory signals')} →</Link>
-        <Link to="/tesla-physics/car-kept-living" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.unknownInspectQueue', 'Check broker and replay context')} →</Link>
+        <Link to="/tesla-physics/clocks" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectClocks', 'Check event and ingest intervals')} →</Link>
+        <Link to="/tesla-physics/nervous-system" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectNerves', 'Check silent and contradictory signals')} →</Link>
+        <Link to="/tesla-physics/car-kept-living" className="inline-flex max-w-full items-center break-words text-[var(--theme-primary)] underline-offset-4 hover:underline max-md:min-h-11 max-md:min-w-11">{t('teslaOnly.unknownInspectQueue', 'Check broker and replay context')} →</Link>
       </div>
       <RawRows title={t('teslaOnly.budgetBreakdown', 'Per-signal coverage budget')} rows={sorted} tableId="physics:unknown" t={t}
         keyExtractor={(r) => r.kind} columns={[

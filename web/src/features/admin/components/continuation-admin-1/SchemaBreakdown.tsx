@@ -21,7 +21,7 @@ export function SchemaBreakdown({ state }: { state: SchemaSectionState }) {
           message={t('admin.schemaDrift.breakdownEmpty', 'No comparison available yet.')} />
       ) : (
         <>
-          <ul className="space-y-3">
+          <ul data-app-part="list" className="space-y-3">
             <CategoryRow label={t('admin.schemaDrift.tables', 'Tables')}
               current={drift.current?.table_count} expected={drift.expected?.table_count} delta={drift.table_count_delta} />
             <CategoryRow label={t('admin.schemaDrift.columns', 'Columns')}

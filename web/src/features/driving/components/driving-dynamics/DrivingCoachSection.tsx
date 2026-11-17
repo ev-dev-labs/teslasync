@@ -159,7 +159,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
             </PanelTitle>
             {coachData?.style_breakdown ? (
               <>
-                <div className="flex h-4 rounded-full overflow-hidden mb-4">
+                <div data-app-part="metric" data-app-metric="bar" data-metric-track className="flex h-4 rounded-full overflow-hidden mb-4">
                   {(['efficient', 'moderate', 'aggressive'] as const).map((style) => {
                     const count = measuredCount(coachData.style_breakdown?.[style]);
                     if (count == null || totalDrives == null || totalDrives <= 0 || count > totalDrives) return null;
@@ -168,6 +168,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                     return (
                       <div
                         key={style}
+                        data-metric-fill
                         className={cn(
                           'shrink-0',
                           style === 'efficient' ? 'bg-[var(--semantic-success)]' :
@@ -182,7 +183,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                     );
                   })}
                 </div>
-                <div className="space-y-2">
+                <div data-app-part="chart-legend" className="space-y-2">
                   {([
                     { key: 'efficient', color: 'bg-[var(--semantic-success)]' },
                     { key: 'moderate', color: 'bg-[var(--semantic-warning)]' },
@@ -191,9 +192,9 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                     <div key={key} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className={cn('inline-block h-2 w-2 rounded-full', color)} />
-                        <Text as="span" color="secondary">{t(`dynamics.coach.styles.${key}`, key)}</Text>
+                        <Text data-chart-legend-label as="span" color="secondary">{t(`dynamics.coach.styles.${key}`, key)}</Text>
                       </div>
-                      <Text as="span" weight="bold" className="tabular-nums">
+                      <Text data-app-part="metric-value" as="span" weight="bold" className="tabular-nums">
                         {measuredCount(coachData.style_breakdown?.[key]) == null ? '—'
                           : fmtNumber(coachData.style_breakdown[key], 0)}
                       </Text>
@@ -259,15 +260,16 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
             </PanelTitle>
             {coachData?.patterns ? <div className="space-y-3">
               {patterns.map((p) => (
-                <div key={p.label} className="space-y-1">
+                <div key={p.label} data-app-part="metric" data-app-metric="bar" className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <Text as="span" color="secondary">{p.label}</Text>
-                    <Text as="span" weight="bold" className="tabular-nums">
+                    <Text data-app-part="metric-label" as="span" color="secondary">{p.label}</Text>
+                    <Text data-app-part="metric-value" as="span" weight="bold" className="tabular-nums">
                       {isFiniteNumber(p.value) ? `${fmtNumber(p.value)}%` : '—'}
                     </Text>
                   </div>
-                  {isFiniteNumber(p.value) ? <div className="h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+                  {isFiniteNumber(p.value) ? <div data-metric-track className="h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
                     <div
+                      data-metric-fill
                       className="h-full rounded-full bg-[var(--theme-primary)]"
                       style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }}
                     />
@@ -294,6 +296,8 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                 {(coachData?.recommendations ?? []).map((rec, i) => (
                   <div
                     key={i}
+                    data-app-part="feedback"
+                    data-app-feedback-kind="insight"
                     className="flex items-start gap-3 rounded-xl p-3 bg-[var(--surface-2)] border border-[var(--border-default)]"
                   >
                     <Badge
@@ -303,7 +307,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
                     >
                       {t(`dynamics.coach.impact.${rec.impact}`, rec.impact)}
                     </Badge>
-                    <Text as="p" size="sm" color="secondary">{rec.tip}</Text>
+                    <Text data-app-part="feedback-message" as="p" size="sm" color="secondary">{rec.tip}</Text>
                   </div>
                 ))}
               </div>

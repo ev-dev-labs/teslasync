@@ -24,7 +24,7 @@ vi.mock('./CostStatSection', () => ({
     children: ReactNode; isEmpty: boolean; emptyMessage: string;
   }) => <section>{isEmpty ? emptyMessage : children}</section>,
 }));
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
   const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const Series = (props: Record<string, unknown>) => {
     captured.series.push(props);
@@ -42,7 +42,8 @@ vi.mock('@/components/charts', () => {
     Area: Series, Line: Series, XAxis: () => null, YAxis: () => null,
     CartesianGrid: () => null, Tooltip: () => null, ChartTooltip: () => null,
     ChartLegend: () => { captured.legends++; return null; },
-    chartGrid: {}, axisTickSm: {}, AREA_DEFAULTS: { strokeWidth: 2, connectNulls: false },
+    chartGrid: (await vi.importActual<typeof import('@/components/charts')>('@/components/charts')).chartGrid,
+    axisTickSm: {}, AREA_DEFAULTS: { strokeWidth: 2, connectNulls: false },
   };
 });
 beforeEach(() => {

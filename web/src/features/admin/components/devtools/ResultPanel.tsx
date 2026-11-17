@@ -41,26 +41,31 @@ export function ResultPanel({ title, data, error, idleMessage, context }: Result
 
   return (
     <div
+      data-app-part={hasError ? 'feedback' : 'panel'}
+      data-app-panel-kind={hasError ? undefined : 'code'}
+      data-app-feedback-kind={hasError ? 'error' : undefined}
+      data-app-tone={hasError ? 'danger' : undefined}
+      data-app-state={hasError ? 'error' : hasData ? 'value' : 'idle'}
       className={cn(
         'mt-3 rounded-lg p-3',
         hasError ? 'bg-[var(--semantic-danger-bg)]' : 'bg-[var(--surface-2)]',
       )}
     >
-      <div className="mb-1 flex items-center justify-between">
-        <Caption>{title}</Caption>
+      <div data-app-code-slot={hasError ? undefined : 'heading'} className="mb-1 flex items-center justify-between">
+        <Caption data-app-part={hasError ? 'feedback-title' : undefined}>{title}</Caption>
         {showData ? <CopyButton text={stringifiedData} /> : null}
       </div>
-      {context && (hasData || hasError) ? <HelperText>{context}</HelperText> : null}
+      {context && (hasData || hasError) ? <HelperText data-app-code-slot={hasError ? undefined : 'context'} data-app-part={hasError ? 'feedback-detail' : undefined}>{context}</HelperText> : null}
       {hasError ? (
-        <ErrorText>
+        <ErrorText data-app-part="feedback-message">
           {error}
         </ErrorText>
       ) : hasData ? (
-        <Text as="pre" variant="code" className="max-h-64 overflow-auto rounded bg-[var(--surface-1)] p-2">
+        <Text data-app-part="panel" data-app-panel-kind="code" data-app-code-slot="body" as="pre" variant="code" className="max-h-64 overflow-auto rounded bg-[var(--surface-1)] p-2">
           {stringifiedData}
         </Text>
       ) : (
-        <HelperText className="italic">
+        <HelperText data-app-code-slot="context" className="italic">
           {idleMessage ?? t('devtools.resultPanel.noResult', 'No result yet')}
         </HelperText>
       )}

@@ -197,6 +197,12 @@ describe('FSMSubFSMPanel', () => {
 
     expect(screen.getByText('Drive session')).toBeInTheDocument();
     expect(screen.getByText('Charge session')).toBeInTheDocument();
+    for (const label of ['Drive session', 'Charge session']) {
+      const record = screen.getByText(label).closest('[data-app-record-kind="fsm-session"]');
+      expect(record).toHaveAttribute('data-app-part', 'card');
+      expect(screen.getByText(label)).toHaveAttribute('data-app-record-slot', 'label');
+      expect(record?.querySelector('[data-app-record-slot="context"]')).toBeInTheDocument();
+    }
 
     const badges = screen.getAllByTestId('state-badge');
     expect(badges).toHaveLength(2);

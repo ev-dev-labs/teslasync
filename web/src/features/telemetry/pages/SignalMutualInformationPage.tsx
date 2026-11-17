@@ -4,7 +4,7 @@ import { Grid3X3, Network, RadioTower } from 'lucide-react';
 
 import { useSignalHistory, useSignals } from '@/api/hooks/useTelemetry';
 import {
-  Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip,
+  Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip, EmbeddedChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
@@ -296,10 +296,28 @@ export default function SignalMutualInformationPage() {
                 : t('signalMutualInformation.heatmap.empty', 'Choose two signals to build the joint-state heatmap.')}
             />
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <EmbeddedChart
+              title={t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
+              embeddedTitleHeading={false}
+              ariaLabel={t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
+              viewportClassName="h-auto min-h-0 max-h-none sm:min-h-0 [contain:layout]"
+              data={result.cells.map(cell => ({
+                cell: t('signalMutualInformation.heatmap.pair', 'A{{a}} / B{{b}}', { a: cell.aBin + 1, b: cell.bBin + 1 }),
+                contribution: cell.contribution, count: cell.count, probability: cell.probability * 100,
+              }))}
+              dataColumns={[
+                { key: 'cell', label: t('signalMutualInformation.columns.cell', 'Quantile pair') },
+                { key: 'contribution', label: t('signalMutualInformation.columns.contribution', 'Contribution (bits)'), format: value => fmtScientificNumber(Number(value), 3) },
+                { key: 'count', label: t('signalMutualInformation.columns.count', 'Aligned samples'), kind: 'count' },
+                { key: 'probability', label: '%', format: value => fmtPercent(Number(value)) },
+              ]}
+            >
+            <div data-app-part="chart-plot" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {result.cells.map((cell) => (
                 <div
                   key={`${cell.aBin}-${cell.bBin}`}
+                  data-chart-family="heatmap"
+                  data-heatmap-state={cell.count === 0 ? 'idle' : 'active'}
                   className={cn(
                     'min-w-0 rounded-lg border border-[var(--border-subtle)] p-2 break-words',
                     heatClass(cell.contribution, maxContribution),
@@ -321,7 +339,7 @@ export default function SignalMutualInformationPage() {
                       b: cell.bBin + 1,
                     })}
                   </Text>
-                  <Text as="p" variant="caption">
+                  <Text as="p" variant="caption" data-chart-readout>
                     {t('signalMutualInformation.heatmap.value', '{{count}} samples · {{bits}} bits', {
                       count: cell.count,
                       bits: fmtScientificNumber(cell.contribution, 3),
@@ -335,6 +353,7 @@ export default function SignalMutualInformationPage() {
                 </div>
               ))}
             </div>
+            </EmbeddedChart>
           )}
         </GlassPanel>
       </FadeIn>

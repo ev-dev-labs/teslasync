@@ -13,6 +13,8 @@ import { createElement, type ComponentProps, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import english from '@/i18n/en.json';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 const translations = vi.hoisted(() => new Map<string, string>());
 
@@ -130,6 +132,40 @@ function expectChartShell() {
 }
 
 describe('WaitOraclePanel', () => {
+  it('binds the modeled headline and actual best-arrival notice to all 27 consumers without splitting translated readings', () => {
+    const { container } = renderPanel();
+    container.setAttribute('data-app-design-preview', '');
+    const headline = screen.getByText('44.10 min expected wait').closest('[data-app-metric="headline"]')!;
+    const reading = headline.querySelector('[data-app-part="metric-reading"]')!;
+    const notice = screen.getByText('Arrive 15:00 instead to save ~44.10 min.')
+      .closest('[data-app-feedback-kind="notice"]')!;
+    expect(reading.querySelector('[data-app-part="metric-value"]')).toHaveTextContent('44.10 min expected wait');
+    expect(headline.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('73.80% chance of any wait · ~4 stalls');
+    expect(notice).toHaveAttribute('data-app-tone', 'info');
+    expect(notice.querySelector('[data-app-part="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(notice.querySelector('[data-app-part="feedback-content"] > [data-app-part="feedback-message"]'))
+      .toHaveTextContent('Arrive 15:00 instead to save ~44.10 min.');
+    for (const pack of Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expectAppDesignDataMode(reading, APPLICATION_DESIGNS[pack].data, '[data-app-metric="headline"]');
+        expect(matchesAppDesignCss(notice, `[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`)
+          .some(match => match.selector.includes('[data-app-feedback-kind="notice"]')), pack).toBe(true);
+      } finally { release(); }
+    }
+    expect(screen.getByText(/1740 sessions over 10.0 weeks/)).toBeInTheDocument();
+    expect(forecast.expected_wait_s).toBe(2646);
+  });
+
+  it.each([59.9, 60])('keeps the best-hour threshold at exactly one displayed minute (%s source seconds)', seconds => {
+    mockForecast.mockReturnValue(idle({ data: { ...forecast, save_s: seconds } }));
+    renderPanel();
+    const notice = document.querySelector('[data-app-feedback-kind="notice"][data-app-tone="info"]');
+    if (seconds < 60) expect(notice).toBeNull();
+    else expect(notice).toHaveTextContent('Arrive 15:00 instead to save ~1.00 min.');
+  });
+
   it.each([
     ['quiet', 'Quiet'],
     ['steady', 'Steady'],

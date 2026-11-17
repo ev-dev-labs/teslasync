@@ -20,7 +20,7 @@ export function SegmentedMeter({ value, max = 100, color, label, className }: Se
     ? Math.max(0, Math.min(1, value / max))
     : null;
   return (
-    <div aria-hidden={label ? undefined : true} role={label ? inRange ? 'meter' : 'group' : undefined}
+    <div data-app-part="metric" data-app-metric="segments" aria-hidden={label ? undefined : true} role={label ? inRange ? 'meter' : 'group' : undefined}
       aria-label={label ? `${label}: ${known ? fmtNumber(value) : t('common.noReading', 'No reading')}` : undefined}
       aria-valuenow={label && inRange ? value : undefined}
       aria-valuemin={label && inRange ? 0 : undefined}

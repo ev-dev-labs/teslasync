@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable, Text, useSortToggle, type Column } from '@/components/ui';
+import { DataTable, Text, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
-import { RouteDisplay, DateTime } from '@/components/data-display';
+import { RouteDisplay, DateTime, endpointLabel } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import {formatDateShort} from '@/lib/dateFormat'
@@ -119,6 +119,22 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
     [t, formatDistance, formatEnergy],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<TripDriveSummary>>(() => ({
+    roles: { route: 'title', distance_m: 'primary', started_at: 'meta', energy_used_wh: 'meta', duration_s: 'meta' },
+    displayValue: (row, key) => {
+      if (key === 'route') {
+        const start = endpointLabel({ address: row.start_place });
+        const end = endpointLabel({ address: row.end_place });
+        const missing = t('route.noLocationData', 'No location data');
+        if (!start && !end) return missing;
+        if (start && start === end) return `${start} ↻ ${t('route.roundTrip', 'round trip')}`;
+        return `${start ?? missing} → ${end ?? missing}`;
+      }
+      const column = columns.find((candidate) => candidate.key === key);
+      return column?.filterValueLabel?.(column.filterValue?.(row) ?? null, row) ?? null;
+    },
+  }), [columns, t]);
+
   return (
     <LayoutCard title={t('trips.detail.drivesTitle', 'Drives in this trip')}>
       {isError ? (
@@ -136,6 +152,7 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
           tableId="trips:trip-detail-drives"
           columns={columns}
           mobileColumns={['route', 'started_at', 'distance_m']}
+          mobilePresentation={mobilePresentation}
           data={sortedDrives}
           keyExtractor={(d) => d.id}
           sortKey={sortKey}

@@ -21,6 +21,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
 import {
   render,
   screen,
@@ -31,6 +34,7 @@ import {
   act,
 } from '@testing-library/react';
 import type { SavedView } from '@/api/types';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import {
   __resetAnnouncerForTests,
   subscribeAnnouncer,
@@ -167,6 +171,100 @@ function openMenu() {
 }
 
 describe('SavedViewMenu — trigger + popover', () => {
+  it('connects opened menu/manage records and their active state to all complete data profiles (source selectors only)', async () => {
+    hooks.query.data = [
+      makeView({ id: 0, name: 'Active', query: 'q=active', is_default: true }),
+      makeView({ id: 2, name: 'Pinned', query: 'q=pinned', is_pinned: true }),
+    ];
+    const rules: postcss.Rule[] = [];
+    postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'))
+      .walkRules(rule => { rules.push(rule); });
+    const recordRules = rules.filter(rule => rule.selector.includes('[data-app-list="saved-views"] > [data-app-record="saved-view"]')
+      && rule.nodes.some(node => node.type === 'decl' && node.prop.startsWith('border')));
+    const labelRules = rules.filter(rule => rule.selector.includes('[data-app-record-slot="label"]')
+      && rule.nodes.some(node => node.type === 'decl' && node.prop === 'white-space' && node.value === 'normal'));
+    const activeRules = rules.filter(rule => rule.selector.includes('[data-app-record-state="active"]')
+      && rule.nodes.some(node => node.type === 'decl' && node.prop === 'outline'));
+    const matchesRule = (element: Element, rule: postcss.Rule) =>
+      rule.selectors.some(selector => element.matches(selector));
+    const packs = Object.keys(APPLICATION_DESIGNS) as Array<Parameters<typeof getAppDesignAttributes>[0]>;
+    const root = document.documentElement;
+    const previous = Object.keys(getAppDesignAttributes('classic')).map(name => [name, root.getAttribute(name)] as const);
+    let release = () => {};
+    const view = render(<SavedViewMenu route="/telemetry/signal-diff" currentQuery="q=active" onApply={vi.fn()} />);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Saved views: Active' }));
+      const menu = screen.getByRole('menu', { name: 'Saved views' });
+      expect(within(menu).getAllByRole('listitem').some(row => recordRules.some(rule => matchesRule(row, rule)))).toBe(false);
+      const verifyRecords = async (host: HTMLElement) => {
+        const rows = within(host).getAllByRole('listitem');
+        for (const pack of packs) {
+          await act(async () => {
+            release();
+            for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) root.setAttribute(name, value);
+            release = observeAppDesignScopes(root);
+          });
+          for (const row of rows) {
+            expect(recordRules.some(rule => matchesRule(row, rule)), pack).toBe(true);
+            const label = row.querySelector('[data-app-record-slot="label"]')!;
+            expect(labelRules.some(rule => matchesRule(label, rule)), pack).toBe(true);
+            expect(row.querySelectorAll('button[data-app-record-slot="action"]')).toHaveLength(4);
+          }
+          expect(activeRules.some(rule => matchesRule(rows[0], rule)), pack).toBe(true);
+          expect(activeRules.some(rule => matchesRule(rows[1], rule)), pack).toBe(false);
+        }
+      };
+      await verifyRecords(menu);
+      fireEvent.click(within(menu).getByRole('button', { name: 'Manage views' }));
+      const dialog = screen.getByRole('dialog', { name: 'Manage views' });
+      await verifyRecords(dialog);
+      await act(async () => { root.removeAttribute('data-app-data'); });
+      expect(within(dialog).getAllByRole('listitem').some(row => recordRules.some(rule => matchesRule(row, rule)))).toBe(false);
+    } finally {
+      view.unmount();
+      release();
+      for (const [name, value] of previous) {
+        if (value == null) root.removeAttribute(name);
+        else root.setAttribute(name, value);
+      }
+    }
+  });
+
+  it('owns each real active/inactive saved-view record in the menu and manage dialog without changing actions', () => {
+    hooks.query.data = [
+      makeView({ id: 0, name: 'Active', query: 'q=active', is_default: true }),
+      makeView({ id: 2, name: 'Pinned', query: 'q=pinned', is_pinned: true }),
+    ];
+    const { onApply } = renderMenu({ currentQuery: 'q=active' });
+    fireEvent.click(screen.getByRole('button', { name: 'Saved views: Active' }));
+    const menu = screen.getByRole('menu', { name: 'Saved views' });
+    const checkRecords = (host: HTMLElement) => {
+      const list = within(host).getByRole('list');
+      expect(list).toHaveAttribute('data-app-list', 'saved-views');
+      const rows = within(list).getAllByRole('listitem');
+      expect(rows).toHaveLength(2);
+      for (const [index, row] of rows.entries()) {
+        expect(row).toHaveAttribute('data-app-part', 'list-row');
+        expect(row).toHaveAttribute('data-app-record', 'saved-view');
+        expect(row).toHaveAttribute('data-app-record-state', index === 0 ? 'active' : 'idle');
+        expect(row.querySelector('[data-app-record-slot="label"]')).toHaveTextContent(index === 0 ? 'Active' : 'Pinned');
+        expect(row.querySelectorAll('button[data-app-record-slot="action"]')).toHaveLength(4);
+        expect(row.parentElement).toBe(list);
+      }
+      return rows;
+    };
+    const menuRows = checkRecords(menu);
+    fireEvent.click(within(menuRows[1]).getByRole('button', { name: 'Unpin' }));
+    expect(hooks.updateMutate).toHaveBeenCalledWith({ id: 2, route: '/drives', patch: { is_pinned: false } });
+    expect(menu).toBeInTheDocument();
+    fireEvent.click(within(menu).getByRole('button', { name: 'Manage views' }));
+    const dialog = screen.getByRole('dialog', { name: 'Manage views' });
+    const manageRows = checkRecords(dialog);
+    fireEvent.click(within(manageRows[1]).getByRole('button', { name: 'Pinned' }));
+    expect(onApply).toHaveBeenCalledWith('q=pinned');
+    expect(screen.queryByRole('dialog', { name: 'Manage views' })).not.toBeInTheDocument();
+  });
+
   it('keeps saved-view controls accessible with an icon-only trigger', () => {
     hooks.query.data = [makeView()];
     const onApply = vi.fn();

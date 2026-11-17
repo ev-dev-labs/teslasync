@@ -92,6 +92,13 @@ function metric(container: HTMLElement, id: string) {
   return tile as HTMLElement;
 }
 
+function calendarViewport() {
+  const viewport = screen.getByRole('group', { name: 'Charging sessions by weekday and hour of day' });
+  expect(viewport).toHaveAttribute('data-chart-viewport', 'bounded');
+  expect(viewport.querySelector('[data-heatmap-grid]')).toBeInTheDocument();
+  return viewport;
+}
+
 function expectPanels(container: HTMLElement) {
   const cards = container.querySelectorAll<HTMLElement>('[data-card]');
   expect(cards).toHaveLength(4);
@@ -113,6 +120,7 @@ function expectPanels(container: HTMLElement) {
 }
 
 beforeEach(() => {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1024, 300));
   void vi.mocked(useSelectedVehicle).mockReset();
   void vi.mocked(useRangeState).mockReset();
   void vi.mocked(useSettings).mockReset();
@@ -125,6 +133,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   if (savedFullscreenEnabled) {
     Object.defineProperty(document, 'fullscreenEnabled', savedFullscreenEnabled);
   } else {
@@ -144,22 +153,38 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('24.00 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$6.00');
     expect(metric(container, 'charge.avgDuration')).toHaveTextContent('2.00 h');
-    const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
-    expect(grid.querySelectorAll('[title]')).toHaveLength(168);
-    const populated = grid.querySelector('[title="Mon 10:00 — 2 sessions"]');
-    expect(populated).not.toBeNull();
-    fireEvent.mouseEnter(populated as HTMLElement);
-    expect(within(grid).getByText('2 sessions · 24.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('Less')).toBeInTheDocument();
-    expect(screen.getByText('More')).toBeInTheDocument();
+    const grid = calendarViewport();
+    const cells = within(grid).getAllByRole('button', { name: / — \d+ sessions$/ });
+    expect(cells).toHaveLength(168);
+    expect(new Set(cells.map(cell => cell.getAttribute('data-heatmap-slot'))).size).toBe(168);
+    expect(cells.filter(cell => cell.tabIndex === 0)).toHaveLength(1);
+    const populated = within(grid).getByRole('button', { name: 'Mon 10:00 — 2 sessions' });
+    fireEvent.mouseEnter(populated);
+    const detail = screen.getByRole('dialog', { name: 'Mon 10:00' });
+    expect(detail).toHaveTextContent('2 sessions · 24.00 kWh');
+    expect(grid).not.toContainElement(detail);
+    const legend = within(grid).getByRole('group', { name: 'Less – More' });
+    expect(within(legend).getByText('Less')).toBeInTheDocument();
+    expect(within(legend).getByText('More')).toBeInTheDocument();
+    expect(legend.querySelectorAll('[aria-hidden="true"] [data-heatmap-level]')).toHaveLength(5);
+    fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
     for (const label of ['Favorite Charging Time', 'Busiest Day', 'Busiest Hour', 'Weekdays', 'Weekends']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    // The grid figure wraps the role-img calendar; the two breakdown
-    // figures carry their own accessible names.
+    // Interactive cell controls remain exposed inside one named viewport.
     expect(screen.getAllByRole('figure')).toHaveLength(3);
-    for (const name of ['Top Charging Locations', 'Sessions by Day of Week']) {
+    for (const name of ['Weekly Charging Heatmap', 'Top Charging Locations', 'Sessions by Day of Week']) {
       expect(screen.getByRole('figure', { name })).toBeInTheDocument();
+    }
+    for (const [title, label, count] of [
+      ['Top Charging Locations', 'Charging session counts at the most frequently used locations', 1],
+      ['Sessions by Day of Week', 'Charging session counts for each day of the week', 7],
+    ] as const) {
+      const chart = screen.getByRole('figure', { name: title });
+      const plot = within(chart).getByRole('img', { name: label });
+      expect(plot).toHaveAttribute('data-chart-viewport', 'bounded');
+      expect(plot.querySelector('svg.recharts-surface')).toBeInTheDocument();
+      expect(plot.querySelectorAll('.recharts-bar-rectangle')).toHaveLength(count);
     }
   });
 
@@ -167,11 +192,11 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     const data = [session(1), session(2)];
     setQuery({ data });
     const { container, rerender } = mount();
-    const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
+    const grid = calendarViewport();
     setQuery({ data, isError: true, status: 'error', error: new Error('refresh failed') });
     rerender(<ChargingHeatmapPage />);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBe(grid);
+    expect(calendarViewport()).toBe(grid);
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('24.00 kWh');
     expectPanels(container);
     setQuery({ data, fetchStatus: 'paused' });
@@ -183,6 +208,8 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     setQuery({ data });
     rerender(<ChargingHeatmapPage />);
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(calendarViewport()).toBe(grid);
+    expect(grid.querySelectorAll('[data-heatmap-slot]')).toHaveLength(168);
   });
 
   it('keeps shells during initial loading, fatal failure, pause and successful empty data', () => {
@@ -220,7 +247,12 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     setQuery({ data: [session(1, { total_energy_added_wh: 0, cost_decimal: 0, ended_at: null })] });
     const { container, rerender } = mount();
     expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-value-state', 'value');
+    expect(metric(container, 'charge.energyAdded')).toHaveTextContent('0.00 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$0.00');
+    fireEvent.mouseEnter(within(calendarViewport()).getByRole('button', { name: 'Mon 10:00 — 1 sessions' }));
+    const recordedDetail = screen.getByRole('dialog', { name: 'Mon 10:00' });
+    expect(recordedDetail).toHaveTextContent('1 sessions · 0.00 kWh');
+    fireEvent.click(within(recordedDetail).getByRole('button', { name: 'Close' }));
     // Face-value disclosure: the unfinished duration is omitted, never zero.
     expect(container.querySelector('[data-operational-metric="charging-heatmap-average-duration"]')).toBeNull();
     setQuery({ data: [session(1, { total_energy_added_wh: 0, cost_decimal: null, ended_at: null })] });
@@ -229,6 +261,15 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const missingDetails = screen.getByRole('dialog', { name: 'Returned charging sessions details' });
     expect(within(missingDetails).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(missingDetails, { key: 'Escape' });
+    setQuery({ data: [session(1, { total_energy_added_wh: null, cost_decimal: null, ended_at: null })] });
+    rerender(<ChargingHeatmapPage />);
+    expect(container.querySelector('[data-operational-metric="charging-heatmap-total-energy"]')).toBeNull();
+    expect(metric(container, 'charge.sessions')).toHaveTextContent('1');
+    fireEvent.mouseEnter(within(calendarViewport()).getByRole('button', { name: 'Mon 10:00 — 1 sessions' }));
+    const unknownDetail = screen.getByRole('dialog', { name: 'Mon 10:00' });
+    expect(unknownDetail).toHaveTextContent('1 sessions · No recorded measurements in the returned sessions');
+    expect(unknownDetail).not.toHaveTextContent('0.00 kWh');
   });
 
   it('retains the positive completed-duration denominator and recorded-only cost total', () => {
@@ -262,20 +303,20 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     const bytes = JSON.stringify(data);
     setQuery({ data });
     const { container, rerender } = mount();
-    const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
+    const grid = calendarViewport();
     act(() => setSettings(3, 'de-DE', '€'));
     rerender(<ChargingHeatmapPage />);
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('24,000 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('€6,000');
-    expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBe(grid);
+    expect(calendarViewport()).toBe(grid);
     expect(JSON.stringify(data)).toBe(bytes);
-    // Controls belong to the two opted-in breakdown cards, not the calendar.
+    // Card actions stay outside the calendar's interactive viewport.
     expect(within(grid).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     expect(within(grid).queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
-    const breakdownCharts = ['Top Charging Locations', 'Sessions by Day of Week']
+    const charts = ['Weekly Charging Heatmap', 'Top Charging Locations', 'Sessions by Day of Week']
       .map(name => screen.getByRole('figure', { name }));
-    expect(breakdownCharts).toHaveLength(2);
-    for (const chart of breakdownCharts) {
+    expect(charts).toHaveLength(3);
+    for (const chart of charts) {
       const owner = chart.closest('[data-card]');
       expect(owner).toBeInstanceOf(HTMLElement);
       expect(within(owner as HTMLElement).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();

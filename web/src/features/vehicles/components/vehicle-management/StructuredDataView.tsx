@@ -65,6 +65,8 @@ function renderNode(value: unknown, depth: number, labels: RendererLabels): Reac
         {value.map((item, index) => (
           <div
             key={index}
+            data-app-part="card"
+            data-surface-variant="standalone"
             className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
           >
             <Text variant="label">{labels.item(index + 1)}</Text>
@@ -81,21 +83,26 @@ function renderNode(value: unknown, depth: number, labels: RendererLabels): Reac
       return <Text variant="helper">{labels.emptyObject}</Text>
     }
     return (
-      <dl className="grid gap-2">
+      <dl data-app-part="list" data-app-list="definitions" className="grid gap-2">
         {entries.map(([key, nested]) => (
           <div
             key={key}
+            data-app-part="list-row"
             className="grid gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 sm:grid-cols-[minmax(9rem,0.35fr)_minmax(0,1fr)]"
           >
-            <dt className="min-w-0">
+            <dt data-app-part="metric-label" className="min-w-0">
               <Text variant="label" title={key}>
                 {humanizeManagementLabel(key)}
               </Text>
             </dt>
-            <dd className="min-w-0">
+            <dd data-app-part="metric-reading" className="min-w-0">
               {isSensitiveManagementKey(key)
                 ? <Text variant="helper">{labels.redacted}</Text>
-                : renderNode(nested, depth + 1, labels)}
+                : nested !== null && typeof nested === 'object'
+                  ? <div className="w-full min-w-0 text-start">
+                    {renderNode(nested, depth + 1, labels)}
+                  </div>
+                  : <div data-app-part="metric-value">{renderNode(nested, depth + 1, labels)}</div>}
             </dd>
           </div>
         ))}

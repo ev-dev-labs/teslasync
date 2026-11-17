@@ -102,16 +102,17 @@ export function EntityPreviewDrawer({
         </div>
       }
     >
-      <div className="space-y-6">
+      <div data-app-part="section" className="space-y-6">
         <div>
           <PanelTitle>{t('operations.evidence', 'Evidence')}</PanelTitle>
-          <dl className="mt-3 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2">
+          <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2">
             {fields.map((field) => (
-              <div key={field.key} className="min-w-0 bg-[var(--surface-2)] p-3">
-                <dt>
+              <div data-app-part="list-row" key={field.key} className="min-w-0 bg-[var(--surface-2)] p-3">
+                <dt data-app-part="metric-label">
                   <MetricLabel className="break-words">{field.label}</MetricLabel>
                 </dt>
                 <Text
+                  data-app-part="metric-value"
                   as="dd"
                   size="sm"
                   weight="medium"
@@ -121,7 +122,7 @@ export function EntityPreviewDrawer({
                   {field.value}
                 </Text>
                 {field.detail && (
-                  <Text as="p" variant="caption" className="mt-1 whitespace-pre-wrap break-words">
+                  <Text data-app-part="metric-context" as="p" variant="caption" className="mt-1 whitespace-pre-wrap break-words">
                     {field.detail}
                   </Text>
                 )}
@@ -141,6 +142,8 @@ export function EntityPreviewDrawer({
                 <Link
                   key={action.key}
                   to={action.to}
+                  data-app-part="button"
+                  data-app-variant="outline"
                   className={cn(
                     BUTTON_BASE,
                     BUTTON_VARIANTS.outline,

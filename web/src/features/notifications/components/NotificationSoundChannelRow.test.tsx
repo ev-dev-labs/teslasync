@@ -11,9 +11,8 @@
  *   • the switch mirrors `enabled` via `aria-checked` across both variants;
  *   • toggling the switch calls `onToggle` with the *negated* state, and the
  *     Test button calls `onTest` exactly once without toggling the switch;
- *   • the master gate dims the row (`opacity-60`) when off yet keeps both
- *     controls enabled and interactive — the documented "dims but stays
- *     interactive" contract — and leaves the row undimmed when on;
+ *   • the master gate outlines the row when off while keeping both controls
+ *     enabled, interactive, and legible;
  *   • a11y / hardening: the Test control is an explicit `type="button"` (a bare
  *     <button> would default to submit and could post an enclosing form), its
  *     glyph is decorative (aria-hidden), and both controls are native,
@@ -170,22 +169,22 @@ describe('NotificationSoundChannelRow — Test button', () => {
 });
 
 describe('NotificationSoundChannelRow — master gate', () => {
-  it('dims the row when the master gate is off', () => {
+  it('distinguishes the inactive row without fading its interactive labels', () => {
     const { container } = setup({ master: false });
-    expect(container.firstChild as HTMLElement).toHaveClass('opacity-60');
-  });
-
-  it('does not dim the row when the master gate is on', () => {
-    const { container } = setup({ master: true });
+    expect(container.firstChild as HTMLElement).toHaveClass('border-dashed');
     expect(container.firstChild as HTMLElement).not.toHaveClass('opacity-60');
   });
 
-  it('keeps both controls interactive while dimmed (master off)', () => {
+  it('uses the normal border when the master gate is on', () => {
+    const { container } = setup({ master: true });
+    expect(container.firstChild as HTMLElement).not.toHaveClass('border-dashed');
+  });
+
+  it('keeps both controls interactive when the master is off', () => {
     const { onToggle, onTest } = setup({ master: false, enabled: false });
     const sw = getSwitch();
     const testBtn = getTestButton();
 
-    // Dimmed but never disabled — the documented contract.
     expect(sw).not.toBeDisabled();
     expect(testBtn).not.toBeDisabled();
 

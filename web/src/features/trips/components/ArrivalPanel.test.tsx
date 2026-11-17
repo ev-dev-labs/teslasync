@@ -11,6 +11,9 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { formatTime } from '@/lib/dateFormat';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
@@ -115,6 +118,36 @@ beforeEach(() => {
 });
 
 describe('ArrivalPanel', () => {
+  it('activates the deliberate inline readout consumers without adding a gauge or changing ETA context', () => {
+    const { container } = renderPanel();
+    const readout = screen.getByText('ETA').closest('[data-app-metric="inline"]')!;
+    const reading = readout.querySelector('[data-app-part~="metric-reading"]')!;
+    const label = readout.querySelector('[data-app-part~="metric-label"]')!;
+    const context = readout.querySelector('[data-app-part~="metric-context"]')!;
+    const contents = readout.textContent;
+    expect(readout).not.toHaveAttribute('data-app-design-owner');
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      for (const [name, value] of Object.entries(getAppDesignAttributes(pack))) container.setAttribute(name, value);
+      const release = observeAppDesignScopes(container);
+      try {
+        expect(matchesAppDesignCss(readout, '[data-app-metric="inline"]')
+          .some(rule => rule.declarations['flex-wrap'] === 'wrap'), pack).toBe(true);
+        expect(matchesAppDesignCss(reading, '[data-app-part~="metric-reading"]')
+          .some(rule => rule.declarations['font-variant-numeric'] === 'tabular-nums lining-nums'), pack).toBe(true);
+        for (const node of [label, context]) {
+          expect(matchesAppDesignCss(node).some(rule => rule.declarations['overflow-wrap'] === 'anywhere'), pack).toBe(true);
+        }
+        expect(readout).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`));
+        expect(readout.textContent).toBe(contents);
+        expect(readout.querySelector('[role="meter"], [role="progressbar"], [data-app-part~="card"]')).toBeNull();
+      } finally {
+        release();
+      }
+    }
+    expect(readout).not.toHaveAttribute('data-app-design-owner');
+  });
+
   it('formats ETA in the selected locale and timezone', () => {
     Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     renderPanel();
@@ -132,6 +165,11 @@ describe('ArrivalPanel', () => {
     expect(screen.getByText(/top up ≈ 15700 Wh en route/)).toBeInTheDocument();
     expect(screen.getByText('adjusted 1.05× from 2 trips')).toBeInTheDocument();
     expect(screen.getByText(/hold the buffer/)).toBeInTheDocument();
+    const readout = screen.getByText('ETA').closest('[data-app-metric="inline"]')!;
+    expect(readout).toHaveClass('flex', 'flex-wrap', 'items-baseline');
+    expect(readout.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent(formatTime(arrival.eta_at, datePreferences));
+    expect(readout.querySelector('[data-app-part="metric-context"]')).toHaveTextContent('moving · 25 m/s · 450000 m');
+    expect(readout.querySelector('[data-app-part="metric-label"]')).toHaveTextContent('ETA');
   });
 
   it('reads parked without an ETA and omits the shortfall when covered', () => {
@@ -182,5 +220,29 @@ describe('ArrivalPanel', () => {
     expect(screen.getByText(/0 m\/s · 0 m/)).toBeInTheDocument();
     expect(screen.getByText('top up ≈ 0 Wh en route')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('ETA').closest('[data-app-metric="inline"]')?.querySelector('[data-app-part~="metric-reading"]'))
+      .toHaveTextContent('—');
+  });
+
+  it('keeps unavailable ETA and absent pace distinct from a resolved empty or loading source', () => {
+    mockArrival.mockReturnValue(idle({
+      data: { ...arrival, eta_at: null, pace_ms: null, left_m: null, verdict: 'unknown', shortfall_wh: null },
+    }));
+    const { unmount } = renderPanel();
+    const readout = screen.getByText('ETA').closest('[data-app-metric="inline"]')!;
+    expect(readout.querySelector('[data-app-part~="metric-reading"]')).toHaveTextContent('—');
+    expect(readout.querySelector('[data-app-part~="metric-context"]')).toHaveTextContent(/^moving$/);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    unmount();
+    mockArrival.mockReturnValue(idle({ isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching' }));
+    const loading = renderPanel();
+    expect(screen.getByRole('heading', { name: 'Arrival' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Preparing arrival…' })).toBeInTheDocument();
+    expect(screen.queryByText('ETA')).not.toBeInTheDocument();
+    loading.unmount();
+    mockArrival.mockReturnValue(idle({ data: null, isSuccess: true }));
+    renderPanel();
+    expect(screen.getByText('No arrival reading yet.')).toBeInTheDocument();
+    expect(screen.queryByText('ETA')).not.toBeInTheDocument();
   });
 });

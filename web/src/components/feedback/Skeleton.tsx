@@ -22,9 +22,10 @@ export function Skeleton({ width, height, rounded, lines = 1, className, style, 
       // role="status"/aria-busy announcement. Static source-shaped boxes remain
       // distinct from real content without an ambient pulse, including in
       // reduced-motion and low-bandwidth modes.
-      <div {...props} className={cn('space-y-2', className)} style={style} aria-hidden="true">
+      <div data-app-part="skeleton" data-app-skeleton="lines" {...props} className={cn('space-y-2', className)} style={style} aria-hidden="true">
         {Array.from({ length: lineCount }).map((_, i) => (
           <div
+            data-app-part="skeleton"
             key={i}
             className="h-4 rounded bg-[var(--skeleton-bg)]"
             style={{
@@ -39,6 +40,7 @@ export function Skeleton({ width, height, rounded, lines = 1, className, style, 
 
   return (
     <div
+      data-app-part="skeleton"
       {...props}
       aria-hidden="true"
       className={cn(

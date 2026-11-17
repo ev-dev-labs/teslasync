@@ -67,7 +67,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
       ) : breakdown.status === 'initial' ? (
         <Caption role="status">{t('ai.settings.featureSpend.loading', 'Loading feature spend…')}</Caption>
       ) : breakdown.status === 'initialFailure' ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-2">
+        <div data-app-part="feedback" role="alert" className="flex flex-wrap items-center justify-between gap-2">
           <Caption>{t('ai.settings.featureSpend.error', 'Feature spend could not be loaded.')}</Caption>
           <Button type="button" size="sm" variant="ghost" onClick={() => void breakdownQuery.refetch()}>
             {t('ai.settings.featureSpend.retry', 'Retry')}
@@ -76,7 +76,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
       ) : (
         <>
           {breakdown.status === 'stale' && (
-            <div role="status" className="flex flex-wrap items-center justify-between gap-2">
+            <div data-app-part="status" role="status" className="flex flex-wrap items-center justify-between gap-2">
               <Caption>{t('ai.settings.featureSpend.stale', 'Showing retained spend; the latest refresh failed.')}</Caption>
               <Button type="button" size="sm" variant="ghost" onClick={() => void breakdownQuery.refetch()}>
                 {t('ai.settings.featureSpend.retry', 'Retry')}
@@ -97,7 +97,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
                   {t('ai.settings.featureSpend.recentUnavailable', 'Recent call attribution is unavailable or out of date. Spend totals remain available.')}
                 </Caption>
               ) : null}
-              <div className="space-y-2" role="list">
+              <div data-app-part="list" className="space-y-2" role="list">
                 {rows.map(row => {
                   const meta = AI_FEATURES[row.feature_id as AiFeatureId]
                   const name = meta

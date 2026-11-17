@@ -12,7 +12,7 @@ export function MobileReferenceFooter({ model, callbacks }: Props) {
     <>
       {model.state.kind !== 'loading' && model.state.kind !== 'empty' && model.state.kind !== 'noMatch'
         && (model.state.kind !== 'error' || model.state.retained) && (
-        <div className="mt-2 text-center">
+        <div data-app-part="pagination" className="mt-2 text-center">
           {paging.kind === 'single' && !paging.countInHeading && (
             <Text>{t('developerReference.mobileGrid.footer.rows', '{{count}} rows', { count: paging.count })}</Text>
           )}
@@ -32,7 +32,7 @@ export function MobileReferenceFooter({ model, callbacks }: Props) {
         </div>
       )}
       {model.selection.enabled && (
-        <div className="mgr-selection sticky z-10 mt-2 flex flex-wrap items-center gap-2 bg-[var(--surface-1)] p-2">
+        <div data-app-part="table-toolbar" data-app-toolbar-slot="selection" className="mgr-selection sticky z-10 mt-2 flex flex-wrap items-center gap-2 bg-[var(--surface-1)] p-2">
           <Text role="status" className="mr-auto">{t('developerReference.mobileGrid.selection.count', '{{count}} selected', { count: model.selection.keys.length })}</Text>
           {selectedExport && (
             <Button variant="secondary" className="min-h-11" loading={model.exportBusy}

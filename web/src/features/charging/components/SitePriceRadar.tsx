@@ -48,7 +48,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
           enabled,
         }]} />
       ) : !state.hasData && query.isLoading ? (
-        <div role="status" aria-label={t('dataSources.status.loading', 'Loading')}>
+        <div data-app-part="status" role="status" aria-label={t('dataSources.status.loading', 'Loading')}>
           <Skeleton height={220} />
         </div>
       ) : sites.length === 0 ? (
@@ -58,27 +58,29 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
         />
       ) : (
         <div className="space-y-2.5">
+          <ol data-app-part="list" data-app-list="ranked" className="space-y-2.5">
           {sites.map((s, i) => (
-            <div key={s.site} className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
+            <li data-app-part="list-row" key={s.site} className="flex items-center justify-between gap-3">
+              <div data-app-part="metric-label" className="min-w-0 flex-1">
                 <Text variant="bodySm" className="truncate font-medium">
                   {i + 1}. {s.site}
                 </Text>
-                <Caption className="block tabular-nums">
+                <Caption data-app-part="metric-context" className="block tabular-nums">
                   {t('tesla_charging.siteVisits', '{{count}} visits · last {{date}}', {
                     count: s.visits,
                     date: s.last_visit || '—',
                   })}
                 </Caption>
               </div>
-              <Text variant="bodySm" className="shrink-0 tabular-nums">
-                <span className={`font-semibold ${i === 0 ? typography.color.primary : ''}`}>
+              <Text data-app-part="metric-reading" variant="bodySm" className="shrink-0 tabular-nums">
+                <span data-app-part="metric-value" className={`font-semibold ${i === 0 ? typography.color.primary : ''}`}>
                   {formatCurrency(s.avg_per_kwh)}
                 </span>{' '}
-                <Text as="span" variant="caption">/kWh</Text>
+                <Text data-app-part="metric-unit" as="span" variant="caption">/kWh</Text>
               </Text>
-            </div>
+            </li>
           ))}
+          </ol>
           {(data?.unpriced_count ?? 0) > 0 && (
             <Caption className="block pt-1">
               {t('tesla_charging.unpriced', '+{{count}} visits without invoice pricing', {

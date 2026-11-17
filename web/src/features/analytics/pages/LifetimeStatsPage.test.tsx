@@ -25,7 +25,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { cleanup, act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -125,7 +125,7 @@ it('offers keyboard-accessible lifetime aggregate help without source data', () 
   h.query = makeQuery();
   renderPage();
   const help = screen.getByRole('button', { name: 'Lifetime stats' });
-  help.focus();
+  act(() => { help.focus(); });
   expect(help).toHaveFocus();
   expect(help).toHaveAccessibleDescription(english.lifetime.brief.description);
 });
@@ -247,6 +247,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });

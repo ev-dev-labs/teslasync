@@ -53,7 +53,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const feedbackId = error ? errorId : hint ? hintId : undefined;
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
-      <div className="min-w-0">
+      <div data-app-part="field" className="min-w-0">
         {label && (
           <div className="mb-1 flex flex-wrap items-start gap-1">
             <Label
@@ -76,6 +76,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         <textarea
           ref={ref}
+          data-app-part="field-control"
+          data-app-size={size}
           id={textareaId}
           required={required}
           aria-required={required ? 'true' : undefined}
@@ -99,12 +101,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p id={errorId} role="alert" className="mt-1 break-words text-xs text-[var(--semantic-danger)]">
+          <p data-app-part="status" data-app-field-feedback="error" id={errorId} role="alert" className="mt-1 break-words text-xs text-[var(--semantic-danger)]">
             {error}
           </p>
         )}
         {hint && !error && (
-          <p id={hintId} className="mt-1 break-words text-xs text-[var(--text-muted)]">
+          <p data-app-part="status" data-app-field-feedback="hint" id={hintId} className="mt-1 break-words text-xs text-[var(--text-muted)]">
             {hint}
           </p>
         )}

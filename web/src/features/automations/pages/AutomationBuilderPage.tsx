@@ -1058,7 +1058,7 @@ export default function AutomationBuilderPage() {
                   <Icon icon={ListChecks} className={typography.color.secondary} />
                   {t('automations.builder.readiness', 'Readiness')}
                 </PanelTitle>
-                <ul className="space-y-2">
+                <ul data-app-part="list" className="space-y-2">
                   {readinessItems.map((item) => (
                     <li key={item.key} className="flex min-w-0 items-start gap-2">
                       {item.ok ? (

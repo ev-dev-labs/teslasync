@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 /**
  * useUrlState — small `useState`-compatible hook that mirrors a single piece
@@ -56,9 +56,9 @@ export interface UrlStateSetOptions {
 
 /**
  * Setter for a single URL-mirrored value. Safe in isolation, but DO NOT
- * call ≥ 2 of these setters in the same synchronous handler — under
- * react-router-dom v6 the second `navigate(replace)` will discard the
- * first because both callbacks read the SAME `searchParamsRef` snapshot.
+ * call ≥ 2 of these setters in the same synchronous handler — the
+ * second `navigate(replace)` will discard the first because both
+ * callbacks read the SAME rendered query snapshot.
  * Use {@link useUrlBatch} for multi-key updates.
  */
 export type UrlStateSetter<T> = (
@@ -70,7 +70,9 @@ export type UrlStateSetter<T> = (
  * Hook overload for arbitrary `T` — supply `parse` and `serialize`.
  */
 export function useUrlState<T>(opts: UrlStateOptions<T>): [T, UrlStateSetter<T>] {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { hash } = useLocation();
 
   const raw = params.get(opts.key);
 
@@ -98,37 +100,35 @@ export function useUrlState<T>(opts: UrlStateOptions<T>): [T, UrlStateSetter<T>]
 
   const set = useCallback<UrlStateSetter<T>>(
     (value, setOpts) => {
-      setParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          const resolved =
-            typeof value === 'function'
-              ? (value as (prev: T) => T)(
-                  next.get(opts.key) == null
-                    ? opts.defaultValue
-                    : opts.parse
-                      ? (opts.parse(next.get(opts.key)!) ?? opts.defaultValue)
-                      : (next.get(opts.key)! as unknown as T),
-                )
-              : value;
+      const next = new URLSearchParams(params);
+      const resolved =
+        typeof value === 'function'
+          ? (value as (prev: T) => T)(
+              next.get(opts.key) == null
+                ? opts.defaultValue
+                : opts.parse
+                  ? (opts.parse(next.get(opts.key)!) ?? opts.defaultValue)
+                  : (next.get(opts.key)! as unknown as T),
+            )
+          : value;
 
-          const serialized = opts.serialize ? opts.serialize(resolved) : String(resolved);
-          const omit = opts.omitDefault !== false;
-          const defaultSerialized = opts.serialize
-            ? opts.serialize(opts.defaultValue)
-            : String(opts.defaultValue);
+      const serialized = opts.serialize ? opts.serialize(resolved) : String(resolved);
+      const omit = opts.omitDefault !== false;
+      const defaultSerialized = opts.serialize
+        ? opts.serialize(opts.defaultValue)
+        : String(opts.defaultValue);
 
-          if (serialized === '' || (omit && serialized === defaultSerialized)) {
-            next.delete(opts.key);
-          } else {
-            next.set(opts.key, serialized);
-          }
-          return next;
-        },
+      if (serialized === '' || (omit && serialized === defaultSerialized)) {
+        next.delete(opts.key);
+      } else {
+        next.set(opts.key, serialized);
+      }
+      navigate(
+        { search: next.toString(), hash },
         { replace: !setOpts?.push },
       );
     },
-    [opts.key, opts.defaultValue, opts.parse, opts.serialize, opts.omitDefault, setParams],
+    [opts.key, opts.defaultValue, opts.parse, opts.serialize, opts.omitDefault, params, navigate, hash],
   );
 
   return [parsed, set];
@@ -235,13 +235,11 @@ export interface UrlBatchSetOptions {
 }
 
 /**
- * useUrlBatch — atomically write multiple URL params in a single
- * `setSearchParams` call.
+ * useUrlBatch — atomically write multiple URL params in a single navigation.
  *
- * Why: react-router-dom v6's `useSearchParams` setter reads from a ref
- * that is only refreshed on the NEXT render. Two synchronous setter
- * calls within the same tick both see the SAME `prev` snapshot, and the
- * second `navigate(..., { replace: true })` discards the first.
+ * Why: the rendered query snapshot only refreshes on the NEXT render.
+ * Two synchronous setter calls within the same tick see the SAME snapshot,
+ * and the second `navigate(..., { replace: true })` discards the first.
  *
  * ```ts
  * // ❌ Race — only `to` survives:
@@ -267,25 +265,25 @@ export function useUrlBatch(): (
   updates: UrlBatchUpdate,
   options?: UrlBatchSetOptions,
 ) => void {
-  const [, setParams] = useSearchParams();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { hash } = useLocation();
 
   return useCallback(
     (updates, options) => {
-      setParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          for (const [key, value] of Object.entries(updates)) {
-            if (value == null || value === '') {
-              next.delete(key);
-            } else {
-              next.set(key, value);
-            }
-          }
-          return next;
-        },
+      const next = new URLSearchParams(params);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value == null || value === '') {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      }
+      navigate(
+        { search: next.toString(), hash },
         { replace: !options?.push },
       );
     },
-    [setParams],
+    [params, navigate, hash],
   );
 }

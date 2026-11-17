@@ -962,7 +962,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
           <Caption className={typography.weight.medium}>
             {t('onboarding.progress.label', 'Setup progress')}
           </Caption>
-          <ol className="mt-5 space-y-5">
+          <ol data-app-part="list" className="mt-5 space-y-5">
             {setupSteps.map((step, index) => {
               const active = !step.complete && setupSteps.slice(0, index).every((item) => item.complete);
               return (
@@ -998,7 +998,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
       </div>
 
       <div className="border-t border-[var(--border-default)] bg-[var(--surface-1)] px-6 py-5 sm:px-8">
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <ul data-app-part="list" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {features.map((f) => (
             <li key={f.label} className="flex gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)]">
@@ -1022,7 +1022,7 @@ function LoadingSkeleton() {
   const loadingLabel = t('dashboard.loading', 'Loading command center');
 
   return (
-    <div
+    <div data-app-part="status"
       className="space-y-5"
       role="status"
       aria-label={loadingLabel}

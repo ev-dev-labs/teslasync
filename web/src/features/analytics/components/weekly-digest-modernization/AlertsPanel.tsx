@@ -70,7 +70,7 @@ export function AlertsPanel({
       ) : (
         <>
           <Caption>{t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}</Caption>
-          <div
+          <div data-app-part="list"
             className="flex min-w-0 flex-col gap-3"
             role="list"
             aria-label={t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}

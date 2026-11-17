@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,15 +8,19 @@ import { completionCopy as c } from './completionCopy';
 import SharedLibraryCompletionReference from './SharedLibraryCompletionReference';
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(Response.json({}))));
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('DEV completion companion host', () => {
   it('renders all twelve contracts in eight identified sections and resets caller interactions', async () => {
+    const warnings = vi.spyOn(console, 'warn');
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     await act(async () => {
       render(
@@ -58,5 +63,6 @@ describe('DEV completion companion host', () => {
     expect(container.querySelector('[data-allocated-width]')).toHaveAttribute('data-allocated-width', 'available');
     expectUniqueContracts();
     queryClient.clear();
+    expect(warnings).not.toHaveBeenCalled();
   });
 });

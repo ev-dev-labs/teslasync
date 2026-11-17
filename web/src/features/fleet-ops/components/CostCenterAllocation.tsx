@@ -71,7 +71,7 @@ export function CostCenterAllocation({
         return state.fatalError ? (
           <QueryError key={key} error={state.fatalError} onRetry={() => state.retry?.()} resourceName={label} />
         ) : (
-          <div key={key} role="status">
+          <div data-app-part="status" key={key} role="status">
             <Text as="p" variant="bodySm" color="muted">
               {label}: {state.isRefreshBlocked
                 ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')

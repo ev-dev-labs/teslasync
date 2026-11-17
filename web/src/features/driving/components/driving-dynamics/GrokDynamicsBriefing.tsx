@@ -105,7 +105,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
       {motorTrust.fatalError ? <QueryError error={motorTrust.fatalError} onRetry={() => void motorQuery.refetch()} /> : null}
       {dynamicsTrust.fatalError ? <QueryError error={dynamicsTrust.fatalError} onRetry={() => void dynamicsQuery.refetch()} /> : null}
       {isLoading ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('dynamics.liveInterpretation.loading', 'Loading current powertrain signals…')}
@@ -172,23 +172,26 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
             </Text>
           )}
 
-          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <ul data-app-part="list" className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {findings.map((finding) => {
               const Icon = TONE_ICON.info;
               return (
                 <li
                   key={finding.id}
                   data-finding={finding.id}
+                  data-app-part="feedback"
+                  data-app-feedback-kind="insight"
                   className={cn(
                     'flex items-start gap-3 rounded-lg p-3',
                     'bg-[var(--surface-2)] border border-[var(--border-default)]',
                   )}
                 >
                   <Icon
+                    data-app-part="feedback-icon"
                     className={cn('mt-0.5 h-4 w-4 shrink-0', TONE_ICON_CLASS.info)}
                     aria-hidden="true"
                   />
-                  <Text as="p" variant="bodySm">
+                  <Text data-app-part="feedback-message" as="p" variant="bodySm">
                     {findingText(finding.id, read, t, formatTemperature)}
                   </Text>
                 </li>

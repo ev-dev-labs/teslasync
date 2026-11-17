@@ -41,6 +41,7 @@
  * at 2dp.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -360,6 +361,8 @@ afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
+
+setupMeasuredChartContainers(800, 320)
 
 describe('VampireDrainPage', () => {
   it('uses the typed history hooks without changing the populated cache envelopes', async () => {

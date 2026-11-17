@@ -24,7 +24,7 @@ export function VehicleCostTalkers({ talkers, totalRows, loading, error, onRetry
       actions={<Flame className="h-4 w-4 text-amber-300" aria-hidden />}>
       <Caption>{t('admin.vehicleCost.topTalkersSubtitle', 'Share of total rows ingested')}</Caption>
       {error ? <QueryError error={error} onRetry={onRetry} /> : loading && items.length === 0 ? (
-        <div className="space-y-3" role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
+        <div data-app-part="status" className="space-y-3" role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
           {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} height={40} />)}
         </div>
       ) : items.length === 0 ? (
@@ -39,7 +39,7 @@ export function VehicleCostTalkers({ talkers, totalRows, loading, error, onRetry
           }))} />
         </>
       ) : (
-        <ul className="space-y-3" aria-label={t('admin.vehicleCost.topTalkersListLabel', 'Top talkers ranked by ingested rows')}>
+        <ul data-app-part="list" className="space-y-3" aria-label={t('admin.vehicleCost.topTalkersListLabel', 'Top talkers ranked by ingested rows')}>
           {items.map((item, index) => {
             const value = item.rows ?? 0;
             const percent = Math.min(max > 0 ? value / max * 100 : 0, 100);

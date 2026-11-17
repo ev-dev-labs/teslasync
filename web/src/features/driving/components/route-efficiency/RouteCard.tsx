@@ -19,11 +19,11 @@ interface RangeStatProps {
 function RangeStat({ label, value, unit, colorClass }: RangeStatProps) {
   const { fmtInt } = useNumberFormatting();
   return (
-    <div className="min-w-0">
-      <Caption className="block truncate">{label}</Caption>
-      <Text as="p" size="sm" weight="semibold" className={cn('block', colorClass)}>
-        <span className="tabular-nums">{fmtInt(value)}</span>{' '}
-        <Text as="span" color="muted">{unit}</Text>
+    <div data-app-part="list-row" className="min-w-0">
+      <Caption data-app-part="metric-label" as="dt" className="block truncate">{label}</Caption>
+      <Text data-app-part="metric-reading" as="dd" size="sm" weight="semibold" className={cn('block', colorClass)}>
+        <span data-app-part="metric-value" className="tabular-nums">{fmtInt(value)}</span>{' '}
+        <Text data-app-part="metric-unit" as="span" color="muted">{unit}</Text>
       </Text>
     </div>
   );
@@ -98,13 +98,14 @@ export function RouteCard({ route, unit }: RouteCardProps) {
       </div>
 
       <div
+        data-app-part="metric" data-app-metric="bar" data-metric-track
         aria-hidden="true"
         className="mt-4 h-2.5 overflow-hidden rounded-full bg-[var(--surface-2)]"
       >
-        <div className="h-full rounded-full" style={{ background: rangeGradient }} />
+        <div data-metric-fill className="h-full rounded-full" style={{ background: rangeGradient }} />
       </div>
 
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <dl data-app-part="list" data-app-list="definitions" className="mt-2 grid grid-cols-3 gap-2">
         <RangeStat
           label={t('routeEfficiency.best', 'Best')}
           value={bestEff}
@@ -123,7 +124,7 @@ export function RouteCard({ route, unit }: RouteCardProps) {
           unit={unit.efficiencyUnit}
           colorClass="text-rose-300"
         />
-      </div>
+      </dl>
     </GlassPanel>
   );
 }

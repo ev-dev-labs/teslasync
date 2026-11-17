@@ -45,7 +45,7 @@ function DraftBody({ draft }: { draft: ClaimDraft }) {
       {draft.issue && <Text variant="bodySm">{draft.issue}</Text>}
       <Text variant="bodySm">{draft.ask}</Text>
       {draft.communications.length > 0 && (
-        <ul className="space-y-1">
+        <ul data-app-part="list" className="space-y-1">
           {draft.communications.map((c, i) => (
             <li key={i}><Caption className="break-words">{c}</Caption></li>
           ))}

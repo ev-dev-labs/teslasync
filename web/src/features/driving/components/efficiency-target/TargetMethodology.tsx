@@ -133,14 +133,16 @@ export function TargetMethodology(
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
           <EfficiencyTargetSectionBody state={coverageState} className="min-h-64">
-            <div className="grid grid-cols-3 gap-2">
+            <div data-app-part="metric-grid" className="grid grid-cols-3 gap-2">
               {coverage.map((item) => (
                 <div
                   key={item.label}
+                  data-app-part="metric"
+                  data-app-metric="tile"
                   className="rounded-xl bg-[var(--surface-2)] p-3"
                 >
-                  <MetricValue>{item.value}</MetricValue>
-                  <MetricLabel>{item.label}</MetricLabel>
+                  <MetricValue data-app-part="metric-reading metric-value">{item.value}</MetricValue>
+                  <MetricLabel data-app-part="metric-label">{item.label}</MetricLabel>
                 </div>
               ))}
             </div>
@@ -154,41 +156,45 @@ export function TargetMethodology(
                 )}
               />
             ) : (
-              <div className="mt-4 rounded-xl border border-[var(--border-subtle)] p-3">
-                <Text as="p" variant="bodySm">
-                  {t(
-                    'effTarget.method.coverage',
-                    '{{eligible}} eligible and {{excluded}} excluded across {{observed}} returned rows.',
-                    {
-                      eligible: fmtInt(summary.analyzed),
-                      excluded: fmtInt(summary.excluded),
-                      observed: fmtInt(summary.observed),
-                    },
-                  )}
-                </Text>
-              </div>
-            )}
-            <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-              <Text as="p" variant="caption">
-                {summary.historyCapReached
-                  ? t(
-                      'effTarget.method.capped',
-                      'This request reached the {{limit}}-drive API cap. Results describe the returned history window; older drives may not be represented.',
-                      { limit: fmtInt(historyLimit) },
-                    )
-                  : t(
-                      'effTarget.method.window',
-                      'Results describe the {{count}} drives returned in this observed history window, up to the {{limit}}-drive API limit.',
+              <div data-app-part="feedback" data-app-feedback-kind="notice" className="mt-4 rounded-xl border border-[var(--border-subtle)] p-3">
+                <div data-app-part="feedback-content">
+                  <Text data-app-part="feedback-message" as="p" variant="bodySm">
+                    {t(
+                      'effTarget.method.coverage',
+                      '{{eligible}} eligible and {{excluded}} excluded across {{observed}} returned rows.',
                       {
-                        count: summary.observed,
-                        limit: fmtInt(historyLimit),
+                        eligible: fmtInt(summary.analyzed),
+                        excluded: fmtInt(summary.excluded),
+                        observed: fmtInt(summary.observed),
                       },
                     )}
-              </Text>
+                  </Text>
+                </div>
+              </div>
+            )}
+            <div data-app-part="feedback" data-app-feedback-kind="notice" className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <div data-app-part="feedback-content">
+                <Text data-app-part="feedback-message" as="p" variant="caption">
+                  {summary.historyCapReached
+                    ? t(
+                        'effTarget.method.capped',
+                        'This request reached the {{limit}}-drive API cap. Results describe the returned history window; older drives may not be represented.',
+                        { limit: fmtInt(historyLimit) },
+                      )
+                    : t(
+                        'effTarget.method.window',
+                        'Results describe the {{count}} drives returned in this observed history window, up to the {{limit}}-drive API limit.',
+                        {
+                          count: summary.observed,
+                          limit: fmtInt(historyLimit),
+                        },
+                      )}
+                </Text>
+              </div>
             </div>
           </EfficiencyTargetSectionBody>
 
-          <ul className="space-y-3">
+          <ul data-app-part="list" className="space-y-3">
             {methods.map((method) => (
               <li
                 key={method.text}

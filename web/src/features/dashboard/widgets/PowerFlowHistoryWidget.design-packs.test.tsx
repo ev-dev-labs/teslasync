@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -157,6 +158,8 @@ beforeEach(() => {
   mocks.sites.mockReset().mockReturnValue(query([site]));
   mocks.history.mockReset().mockReturnValue(query(history));
 });
+
+setupCanvasTextMeasurement();
 
 describe.each(Object.entries(PACK_APPEARANCES) as [Exclude<PackId, 'classic'>, string][])(
   'Power flow history — %s / %s',

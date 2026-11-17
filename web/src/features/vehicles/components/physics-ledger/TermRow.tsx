@@ -17,8 +17,8 @@ export function TermRow({
 }) {
   const t = useT();
   return (
-    <tr>
-      <th scope="row" className="min-w-0 font-normal">
+    <tr data-app-part="table-row">
+      <th data-app-part="table-cell" scope="row" className="min-w-0 font-normal">
         <Text as="span" size="sm">
           {label}
         </Text>{' '}
@@ -27,7 +27,7 @@ export function TermRow({
           {term?.missing_signals?.length ? ` · ${t('physicsLedger.missing', 'missing')}: ${term.missing_signals.join(', ')}` : ''}
         </Caption>
       </th>
-      <td className="text-right tabular-nums">
+      <td data-app-part="table-cell" className="text-right tabular-nums">
         <Text
           as="span"
           size="sm"

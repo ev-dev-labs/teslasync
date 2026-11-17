@@ -168,6 +168,61 @@ async function localizedTwin(props: Partial<VehicleTwinProps>) {
 }
 
 describe('VehicleTwin source-derived inspection', () => {
+  it.each([280, 340, 560])('keeps page-only touch targets separate at %ipx without changing widget defaults', async width => {
+    const observers: TestObserver[] = [];
+    class TestObserver implements ResizeObserver {
+      targets: Element[] = [];
+      constructor(private callback: ResizeObserverCallback) { observers.push(this); }
+      observe(target: Element) { this.targets.push(target); }
+      unobserve() {}
+      disconnect() {}
+      resize(target: Element) {
+        this.callback([{ target, contentRect: { width } } as ResizeObserverEntry], this);
+      }
+    }
+    vi.stubGlobal('ResizeObserver', TestObserver);
+    const { container } = await localizedTwin({ interactive: true, touchFriendly: true, size: 'lg', sentryMode: true });
+    const scene = container.querySelector('[data-vehicle-twin]')!;
+    act(() => observers.filter(observer => observer.targets.includes(scene)).forEach(observer => observer.resize(scene)));
+    const expected: Record<string, [number, number]> = {
+      frunk: [119, 164], trunk: [506, 117], frontWindow: [247, 117], rearWindow: [364, 113],
+      frontDoor: [256, 194], rearDoor: [372, 191], chargePort: [532, 136], sentry: [320, 91], lock: [320, 114],
+    };
+    const scale = width / 560;
+    const viewBox = scene.querySelector('svg.select-none')!.getAttribute('viewBox')!.split(' ').map(Number);
+    const minY = viewBox[1]!;
+    const targets = Array.from(scene.querySelectorAll<HTMLElement>('[data-twin-touch-target]'));
+    expect(targets).toHaveLength(9);
+    const boxes = targets.map(target => {
+      const name = target.dataset.twinTouchTarget!;
+      const x = parseFloat(target.style.left) / scale;
+      const y = parseFloat(target.style.top) / scale + minY;
+      const w = parseFloat(target.style.width) / scale;
+      const h = parseFloat(target.style.height) / scale;
+      const [originalX, originalY] = expected[name];
+      expect(w * width / 560).toBeGreaterThanOrEqual(44);
+      expect(h * width / 560).toBeGreaterThanOrEqual(44);
+      expect(originalX).toBeGreaterThanOrEqual(x);
+      expect(originalX).toBeLessThanOrEqual(x + w);
+      expect(originalY).toBeGreaterThanOrEqual(y);
+      expect(originalY).toBeLessThanOrEqual(y + h);
+      expect(target.querySelector('button')).toHaveAccessibleName();
+      return { x, y, w, h };
+    });
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        expect(a.x + a.w <= b.x + 0.001 || b.x + b.w <= a.x + 0.001
+          || a.y + a.h <= b.y + 0.001 || b.y + b.h <= a.y + 0.001).toBe(true);
+      }
+    }
+    const icon = scene.querySelector('[data-twin-touch-target="lock"] svg')!;
+    const bounds = scene.querySelector<HTMLElement>('[data-twin-touch-target="lock"]')!;
+    const iconFrame = icon.parentElement as HTMLElement;
+    expect((parseFloat(bounds.style.left) + parseFloat(iconFrame.style.left)) / scale).toBeCloseTo(311);
+    expect((parseFloat(bounds.style.top) + parseFloat(iconFrame.style.top)) / scale + minY).toBeCloseTo(105);
+  });
+
   it.each(['photo', 'svg'] as const)('keeps all null states unknown and image semantics in %s mode', async variant => {
     const { container } = await localizedTwin({
       doors: { driverFront: null, driverRear: null, passengerFront: null, passengerRear: null, trunkFront: null, trunkRear: null },

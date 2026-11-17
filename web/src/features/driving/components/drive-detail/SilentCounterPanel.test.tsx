@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -47,6 +47,37 @@ vi.mock('@/api/hooks/useTeslaPhysics', () => ({
 }));
 
 describe('SilentCounterPanel', () => {
+  it('retains the evidence, duration and both endpoints in the phone quick view', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      render(<MemoryRouter><SilentCounterPanel driveId="295" /></MemoryRouter>);
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 360 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      const mobile = screen.getByRole('group', { name: 'drive-silent-intervals' });
+      expect(within(mobile).getAllByText(/5(?:[.,]0+)? min/).length).toBeGreaterThan(0);
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('Counter silent while moving');
+      expect(dialog).toHaveTextContent('Duration');
+      expect(dialog).toHaveTextContent(/5(?:[.,]0+)? min/);
+      for (const at of ['2026-03-03T10:20:00Z', '2026-03-03T10:25:00Z']) {
+        expect(dialog).toHaveTextContent(formatDateTime(at, {
+          locale: 'de-DE', tz: 'America/Los_Angeles',
+        }));
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('uses saved date preferences without losing source timestamps', () => {
     const { container } = render(<MemoryRouter><SilentCounterPanel driveId="295" /></MemoryRouter>);
     for (const at of ['2026-04-02T00:30:00Z', '2026-04-02T08:30:00Z', 'invalid', '']) {

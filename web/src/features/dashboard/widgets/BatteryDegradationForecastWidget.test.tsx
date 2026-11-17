@@ -31,6 +31,7 @@
  *   - refresh wiring: the header freshness control invokes the query refetch.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -155,6 +156,8 @@ beforeEach(() => {
   mockVehicles.mockReturnValue(qr({ data: [{ id: 1 }] }));
   mockDegradation.mockReturnValue(qr({ data: makeData() }));
 });
+
+setupMeasuredChartContainers(800, 320);
 
 it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
   renderWidget({ cols, rows: 4 });

@@ -27,6 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
+import { Modal } from '@/components/ui/Modal'
 import type { SectionGroup } from '../sectionGroups'
 import CommandDeckDefault, { CommandDeck, type CommandDeckProps } from './CommandDeck'
 
@@ -150,6 +151,93 @@ afterEach(() => {
 })
 
 describe('CommandDeck', () => {
+  it('keeps an existing modal in control across the tablet breakpoint without losing the docked panel preference', () => {
+    const props = baseProps({ panelOpen: true })
+    function Harness() {
+      const [reviewOpen, setReviewOpen] = useState(true)
+      return <MemoryRouter>
+        <CommandDeck {...props} />
+        <Modal open={reviewOpen} onClose={() => setReviewOpen(false)} title="Review">
+          Review content
+        </Modal>
+      </MemoryRouter>
+    }
+    render(<Harness />)
+    const review = screen.getByRole('dialog', { name: 'Review' })
+    expect(review).toContainElement(document.activeElement as HTMLElement)
+    act(() => {
+      setViewportWidth(768)
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(review).toContainElement(document.activeElement as HTMLElement)
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(within(review).getByRole('button', { name: 'Close', exact: true }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Home' }))
+    expect(props.onPanelOpenChange).toHaveBeenLastCalledWith(true)
+    expect(screen.getByRole('dialog', { name: 'Home' })).toBeVisible()
+    act(() => {
+      setViewportWidth(1440)
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
+    expect(props.onPanelOpenChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it.each(['ltr', 'rtl'])('supports inline arrows in the horizontal %s composition without changing selection', direction => {
+    renderControlledDeck()
+    const scroll = screen.getByTestId('rail-scroll')
+    scroll.style.flexDirection = 'row'
+    scroll.style.direction = direction
+    const home = desktopRail().getByRole('button', { name: 'Home' })
+    const driving = desktopRail().getByRole('button', { name: 'Driving' })
+    act(() => home.focus())
+    fireEvent.keyDown(home, { key: direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight' })
+    expect(driving).toHaveFocus()
+    expect(driving).toHaveAttribute('tabindex', '0')
+    expect(home).toHaveAttribute('aria-current', 'true')
+    expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
+    fireEvent.keyDown(driving, { key: direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft' })
+    expect(home).toHaveFocus()
+    fireEvent.keyDown(home, { key: 'End' })
+    expect(driving).toHaveFocus()
+    fireEvent.keyDown(driving, { key: 'Home' })
+    expect(home).toHaveFocus()
+    fireEvent.click(driving)
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' }))
+      .toHaveAttribute('data-app-part', 'nav-item')
+  })
+
+  it('keeps vertical arrows and unhandled inline keys on the vertical rail', () => {
+    renderControlledDeck()
+    screen.getByTestId('rail-scroll').style.flexDirection = 'column'
+    const home = desktopRail().getByRole('button', { name: 'Home' })
+    const driving = desktopRail().getByRole('button', { name: 'Driving' })
+    act(() => home.focus())
+    expect(fireEvent.keyDown(home, { key: 'ArrowRight' })).toBe(true)
+    expect(home).toHaveFocus()
+    fireEvent.keyDown(home, { key: 'ArrowDown' })
+    expect(driving).toHaveFocus()
+    fireEvent.keyDown(driving, { key: 'ArrowUp' })
+    expect(home).toHaveFocus()
+  })
+
+  it('exposes composition slots on the same live deck and contextual navigation owners', () => {
+    const { container } = renderControlledDeck()
+    expect(container.querySelector('[data-role="command-deck"]')).toHaveAttribute('data-panel-open', 'false')
+    const driving = desktopRail().getByRole('button', { name: 'Driving' })
+    expect(driving).toHaveAttribute('data-app-part', 'nav-item')
+    fireEvent.click(driving)
+    expect(container.querySelector('[data-role="command-deck"]')).toHaveAttribute('data-panel-open', 'true')
+    const panel = screen.getByTestId('atlas-panel-secondary')
+    expect(panel).toHaveAttribute('data-app-part', 'navigation')
+    expect(Array.from(panel.children).map(child => child.getAttribute('data-app-nav-slot')).filter(Boolean))
+      .toEqual(['heading', 'filter', 'pages'])
+    expect(screen.getAllByRole('button', { name: 'Driving' })).toHaveLength(1)
+  })
+
   it('exports the component as both a named and default export', () => {
     expect(CommandDeckDefault).toBe(CommandDeck)
   })

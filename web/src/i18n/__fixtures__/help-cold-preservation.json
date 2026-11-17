@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Only the reviewed Help fourth cold pair; earlier fixtures and fingerprints remain immutable.",
+  "baselineCommit": "737cd60375a1cee64cc4e2c12572d0efd8c193ec",
+  "sources": [
+    {
+      "file": "web/src/components/layout/status-bar/HelpSegment.tsx",
+      "before": "f2d6478ba4710a3cd47fe342bb97555e73ef294315c5a1884ba57c65f66b74e2",
+      "after": "9a61e65a126d6662fac96edb00c90ac918b39aefe2a48c5eb6b7e1788d0052d0",
+      "hunks": [
+        {
+          "start": 0,
+          "old": [
+            "import { useRef } from 'react';",
+            "import { Bug, CircleHelp, Compass, Keyboard } from 'lucide-react';"
+          ],
+          "new": [
+            "import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';",
+            "import { CircleHelp } from 'lucide-react';"
+          ]
+        },
+        {
+          "start": 6,
+          "old": [
+            "import { PanelTitle, Text } from '@/components/ui/Typography';"
+          ],
+          "new": [
+            "import { Text } from '@/components/ui/Typography';"
+          ]
+        },
+        {
+          "start": 8,
+          "old": [
+            "import { dispatchTourLauncherOpen } from '@/lib/tourRegistry';"
+          ],
+          "new": [
+            "import { AlertBanner } from '@/components/feedback/AlertBanner';",
+            "import { reportFrontendError } from '@/lib/errorReporter';"
+          ]
+        },
+        {
+          "start": 12,
+          "old": [
+            "import { VersionSegment } from './VersionSegment';"
+          ],
+          "new": [
+            "import type { HelpMenuContent } from './HelpMenuContent';"
+          ]
+        },
+        {
+          "start": 21,
+          "old": [],
+          "new": [
+            "}",
+            "",
+            "function HelpMenuBody(props: ComponentProps<typeof HelpMenuContent>) {",
+            "  const { t } = useTranslation();",
+            "  const [Content, setContent] = useState<typeof HelpMenuContent | null>(null);",
+            "  const [loadFailed, setLoadFailed] = useState(false);",
+            "  const [attempt, setAttempt] = useState(0);",
+            "  const bodyRef = useRef<HTMLDivElement>(null);",
+            "",
+            "  useEffect(() => {",
+            "    let cancelled = false;",
+            "    setLoadFailed(false);",
+            "    void import('./HelpMenuContent').then(module => {",
+            "      if (!cancelled) setContent(() => module.HelpMenuContent);",
+            "    }, error => {",
+            "      if (cancelled) return;",
+            "      reportFrontendError(error, 'react');",
+            "      setLoadFailed(true);",
+            "    });",
+            "    return () => { cancelled = true; };",
+            "  }, [attempt]);",
+            "",
+            "  useLayoutEffect(() => {",
+            "    if (Content && bodyRef.current?.contains(document.activeElement)) {",
+            "      bodyRef.current.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });",
+            "    }",
+            "  }, [Content]);",
+            "",
+            "  return (",
+            "    <div ref={bodyRef} tabIndex={-1}>",
+            "      {Content ? <Content {...props} /> : loadFailed ? (",
+            "        <AlertBanner variant=\"danger\" role=\"alert\">",
+            "          {t('errorBoundary.inlineTitle', 'Component failed to load')}",
+            "          <Button variant=\"secondary\" onClick={() => {",
+            "            bodyRef.current?.focus({ preventScroll: true });",
+            "            setAttempt(value => value + 1);",
+            "          }}>",
+            "            {t('error.retry', 'Retry')}",
+            "          </Button>",
+            "        </AlertBanner>",
+            "      ) : <Text role=\"status\">{t('a11y.loading', 'Loading')}</Text>}",
+            "    </div>",
+            "  );"
+          ]
+        },
+        {
+          "start": 76,
+          "old": [
+            "  const menuActionClassName = cn(",
+            "    'h-auto min-h-11 min-w-11 w-full justify-start px-3 py-2 md:min-h-9 md:min-w-0',",
+            "    typography.color.secondary,",
+            "  );",
+            "",
+            "  const runAndClose = (action: () => void) => {",
+            "    close();",
+            "    onAction?.();",
+            "    action();",
+            "  };",
+            "",
+            "  const menu = (",
+            "    <div className=\"p-1\" data-testid=\"status-bar-help-menu\">",
+            "      <PanelTitle className=\"px-3 pb-1 pt-2\">",
+            "        {t('statusBar.help.title', 'Help & support')}",
+            "      </PanelTitle>",
+            "      <Button",
+            "        type=\"button\"",
+            "        variant=\"ghost\"",
+            "        size=\"sm\"",
+            "        wrapLabel",
+            "        aria-label={t('help.shortcuts', 'Open keyboard shortcuts')}",
+            "        onClick={() =>",
+            "          runAndClose(() =>",
+            "            window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts')),",
+            "          )",
+            "        }",
+            "        className={menuActionClassName}",
+            "        icon={<Icon icon={Keyboard} size=\"sm\" />}",
+            "      >",
+            "        <Text as=\"span\" size=\"xs\" weight=\"medium\">",
+            "          {t('help.shortcutsLabel', 'Keyboard shortcuts')}",
+            "        </Text>",
+            "      </Button>",
+            "      <Button",
+            "        type=\"button\"",
+            "        variant=\"ghost\"",
+            "        size=\"sm\"",
+            "        wrapLabel",
+            "        aria-label={t('help.tour', 'Open tour launcher')}",
+            "        onClick={() => runAndClose(dispatchTourLauncherOpen)}",
+            "        className={menuActionClassName}",
+            "        icon={<Icon icon={Compass} size=\"sm\" />}",
+            "        data-tour-launcher-trigger",
+            "      >",
+            "        <Text as=\"span\" size=\"xs\" weight=\"medium\">",
+            "          {t('help.tourLabel', 'Take a tour')}",
+            "        </Text>",
+            "      </Button>",
+            "      <Button",
+            "        type=\"button\"",
+            "        variant=\"ghost\"",
+            "        size=\"sm\"",
+            "        wrapLabel",
+            "        aria-label={t('help.feedback', 'Open feedback / bug report form')}",
+            "        onClick={() =>",
+            "          runAndClose(() =>",
+            "            window.dispatchEvent(new CustomEvent('open-feedback-modal')),",
+            "          )",
+            "        }",
+            "        className={menuActionClassName}",
+            "        icon={<Icon icon={Bug} size=\"sm\" />}",
+            "        data-testid=\"status-bar-feedback-trigger\"",
+            "      >",
+            "        <Text as=\"span\" size=\"xs\" weight=\"medium\">",
+            "          {t('help.feedbackLabel', 'Report a problem')}",
+            "        </Text>",
+            "      </Button>",
+            "      <div className=\"mt-1 border-t border-[var(--border-subtle)] pt-1\">",
+            "        <VersionSegment",
+            "          variant=\"menu\"",
+            "          aboutOpen={false}",
+            "          onOpenAbout={() => runAndClose(onOpenAbout)}",
+            "        />",
+            "      </div>",
+            "    </div>",
+            "  );"
+          ],
+          "new": [
+            "  const menu = <HelpMenuBody close={close} onAction={onAction} onOpenAbout={onOpenAbout} />;"
+          ]
+        }
+      ]
+    }
+  ],
+  "relocations": [
+    [
+      "web/src/components/layout/status-bar/HelpSegment.tsx",
+      "web/src/components/layout/status-bar/HelpMenuContent.tsx"
+    ]
+  ],
+  "dependencies": [
+    {
+      "file": "web/src/components/feedback/AlertBanner.tsx",
+      "sha256": "ea55bde4ca359a6acf79638154c63cfc3c29a6b7409b38f37009cab299536c8a"
+    },
+    {
+      "file": "web/src/components/layout/status-bar/HelpMenuContent.tsx",
+      "sha256": "0ea1b6faf17b4e85ec0737ae7dc864c38a709ea0aa7df93693e6f2726de0779b"
+    },
+    {
+      "file": "web/src/components/layout/status-bar/StatusBarContext.tsx",
+      "sha256": "35bfe8ff00ecef10e2d0e245deb4be8a3a467f664a9991de3e6cd851295554bf"
+    },
+    {
+      "file": "web/src/components/layout/status-bar/VersionSegment.tsx",
+      "sha256": "7666cb1c57a7472f4f874b5963bd3665297e409d172d2d1131cb6373a40b9b16"
+    },
+    {
+      "file": "web/src/components/layout/status-bar/useAboutBuild.ts",
+      "sha256": "6b697fed946306caf8a3eee8eac497f5eddb6f9caab1dd9228b542f9118e978d"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "6b4bebfb892b281079c5b8cac37cc960e0eaba0f39a377a7764e807b7cb3ac5d"
+    },
+    {
+      "file": "web/src/components/ui/Icon.tsx",
+      "sha256": "f11cd1cc1c93284940b096c0ffd9fe0e15fddb8ede442bdf4a64c1de86b32743"
+    },
+    {
+      "file": "web/src/components/ui/Popover.tsx",
+      "sha256": "a896ac23c169fc247615fd7234a3e26cc71252a3dfb8a752f12dc42436016225"
+    },
+    {
+      "file": "web/src/components/ui/Tooltip.tsx",
+      "sha256": "f9fcbb0a648f69d95e690cefca8c60c6074cb867142302e5ffe46470be9a1a8a"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "fcb1c7a8a04d0f828acfea0082c2b3d139d20cc84a500ce05fc066ea024eeb8c"
+    },
+    {
+      "file": "web/src/lib/cn.ts",
+      "sha256": "acde17243c0a88a7d5ad0183353c32e7e332d883ee36363b7f86bcfd85447d7b"
+    },
+    {
+      "file": "web/src/lib/errorReporter.ts",
+      "sha256": "cd3fec79ff70a3f4ecd45cb1781dbcc30070e76e9ee0e702b142a34769c97f3d"
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "40b895c99a997822562bf9e78a9648d816a2c0085bb73c1f32ad651fa84f57af"
+    },
+    {
+      "file": "web/src/lib/tourRegistry.ts",
+      "sha256": "e46967c1b03260ae7ca2cd92028383911a82b19837ae94e8357ddc83971e35bb"
+    }
+  ],
+  "originalCalls": [
+    "t('statusBar.help.title', 'Help & support')",
+    "t('help.shortcuts', 'Open keyboard shortcuts')",
+    "t('help.shortcutsLabel', 'Keyboard shortcuts')",
+    "t('help.tour', 'Open tour launcher')",
+    "t('help.tourLabel', 'Take a tour')",
+    "t('help.feedback', 'Open feedback / bug report form')",
+    "t('help.feedbackLabel', 'Report a problem')",
+    "t('statusBar.help.open', 'Open help and about')",
+    "t('statusBar.help.tooltip', 'Help and about')",
+    "t('statusBar.help.buildNews', 'Update or release notes available')",
+    "t('statusBar.help.short', 'Help')",
+    "t('statusBar.help.title', 'Help & support')"
+  ],
+  "movedCalls": [
+    "t('statusBar.help.title', 'Help & support')",
+    "t('help.shortcuts', 'Open keyboard shortcuts')",
+    "t('help.shortcutsLabel', 'Keyboard shortcuts')",
+    "t('help.tour', 'Open tour launcher')",
+    "t('help.tourLabel', 'Take a tour')",
+    "t('help.feedback', 'Open feedback / bug report form')",
+    "t('help.feedbackLabel', 'Report a problem')"
+  ],
+  "retainedCalls": [
+    "t('statusBar.help.open', 'Open help and about')",
+    "t('statusBar.help.tooltip', 'Help and about')",
+    "t('statusBar.help.buildNews', 'Update or release notes available')",
+    "t('statusBar.help.short', 'Help')",
+    "t('statusBar.help.title', 'Help & support')"
+  ],
+  "addedLoaderCalls": [
+    "t('errorBoundary.inlineTitle', 'Component failed to load')",
+    "t('error.retry', 'Retry')",
+    "t('a11y.loading', 'Loading')"
+  ]
+}

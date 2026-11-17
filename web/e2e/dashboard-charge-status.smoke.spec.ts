@@ -1,8 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './app-design-test';
 import { join } from 'node:path';
 import { prepareCatalogueState } from './dashboardCatalogueStateHarness';
 import { positionCataloguePanel } from './dashboardCatalogueCapture';
-import { fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { assertMockApiAfterNavigation, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 
 const ids = ['battery-gauge', 'battery-radial-gauge', 'charge-status', 'charge-status-live', 'charging-telemetry'];
 
@@ -107,7 +108,10 @@ for (const theme of ['light', 'dark'] as const) for (const width of [375, 1440])
     await expect(indicator.locator('[data-charge-bolt]')).toBeVisible();
 
     charging = false;
+    const origin = new URL(page.url()).origin;
+    await prepareMockApiNavigation(page);
     await page.reload();
+    await assertMockApiAfterNavigation(page, origin);
     await waitForHarnessReady(page, mocks);
     for (const id of ids) {
       const panel = page.locator(`[data-widget-id="state-${id}"] > .widget-panel`);

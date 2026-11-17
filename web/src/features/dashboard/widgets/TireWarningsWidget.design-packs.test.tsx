@@ -236,7 +236,7 @@ it.each(PACKS)('%s / %s retains failed-refresh readings but never claims retaine
   expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
   mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, { isFetching: true }));
   view.rerender(tree(pack));
-  expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /refresh data/i })).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
   expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
 });

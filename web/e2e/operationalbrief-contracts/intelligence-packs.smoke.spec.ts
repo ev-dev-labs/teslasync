@@ -42,6 +42,16 @@ function card(page: Page, title: string, occurrence = 0): Locator {
     .locator('xpath=ancestor::*[@data-card][1]');
 }
 
+async function expectZeroFlag(card: Locator) {
+  const reading = card.locator('[data-app-metric="tile"] [data-app-part="metric-reading"]');
+  const value = reading.locator('[data-app-part="metric-value"]');
+  const unit = reading.locator('[data-app-part="metric-unit"]');
+  await expect(value).toHaveText('0.00');
+  await expect(value).toBeVisible();
+  await expect(unit).toHaveText('flag');
+  await expect(unit).toBeVisible();
+}
+
 for (const width of [320, 1440]) {
   for (const theme of ['light', 'dark'] as const) {
     for (const fixture of INSTALLED_GRANT_EXPECTATIONS) {
@@ -90,7 +100,7 @@ for (const width of [320, 1440]) {
           await expect(widget.getByText('Referenced formula not found.', { exact: true })).toHaveCount(0);
         }
         const flag = card(page, 'Currently Below Target');
-        await expect(flag.getByText('0.00 flag', { exact: true })).toBeVisible();
+        await expectZeroFlag(flag);
         await expect(flag.getByText(fixture.flagAverage, { exact: true })).toBeVisible();
         await expect(flag.getByText('—', { exact: true })).toHaveCount(0);
         await expect(flag.getByText('0.00%', { exact: true })).toHaveCount(0);
@@ -277,7 +287,7 @@ for (const width of [320, 1440]) {
       await expect(card(page, 'Sandbox preview').locator('[data-card-content] [data-card-title]')).toHaveText(
         STARTER_EXPECTATION.envelope.manifest.dashboards.flatMap(dashboard => dashboard.widgets.map(widget => widget.title)));
       const flag = card(page, 'Currently Below Target');
-      await expect(flag.getByText('0.00 flag', { exact: true })).toBeVisible();
+      await expectZeroFlag(flag);
       await expect(flag.getByText('avg 0.64 flag', { exact: true })).toBeVisible();
       await expect(flag.getByText('—', { exact: true })).toHaveCount(0);
       // A boolean formula is not a score; the observed-range widget is not confidence.

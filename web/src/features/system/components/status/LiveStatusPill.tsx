@@ -47,7 +47,7 @@ export function LiveStatusPill({ state, lastUpdateAt, now }: LiveStatusPillProps
   const tone = TONE[state] ?? TONE.offline
   const rel = useMemo(() => relative(now, lastUpdateAt), [now, lastUpdateAt])
   return (
-    <span
+    <span data-app-part="status"
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 tabular-nums',
         tone.cls,

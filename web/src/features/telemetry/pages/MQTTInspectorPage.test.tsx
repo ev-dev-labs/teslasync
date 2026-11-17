@@ -26,6 +26,7 @@
  * existing TestMqttSseInspectorAIOffShowsRawInspectorOnly baseline test).
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -204,6 +205,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MQTTInspectorPage — connected happy path', () => {
   it('opens the real operational review with complete cumulative counters and the rate-versus-delta caveat', () => {

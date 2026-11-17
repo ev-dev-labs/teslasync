@@ -61,6 +61,8 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
 
   return (
     <div
+      data-app-part="card"
+      data-surface-variant="standalone"
       className={cn(
         'relative flex flex-col items-center rounded-xl border p-3',
         cfg.gap,

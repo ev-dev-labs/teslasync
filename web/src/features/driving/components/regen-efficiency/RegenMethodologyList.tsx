@@ -68,9 +68,11 @@ export function RegenMethodologyList({
   ];
 
   return (
-    <ul className="mt-5 grid gap-3 lg:grid-cols-2">
+    <ul data-app-part="list" className="mt-5 grid gap-3 lg:grid-cols-2">
       {methods.map((method) => (
         <li
+          data-app-part="card"
+          data-surface-variant="standalone"
           key={method.text}
           className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
         >

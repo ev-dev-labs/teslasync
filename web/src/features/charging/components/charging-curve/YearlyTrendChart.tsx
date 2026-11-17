@@ -13,7 +13,6 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   AREA_DEFAULTS,
@@ -64,7 +63,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
       {({ hiddenSeries }) => (
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis dataKey="year" tick={axisTickSm} />
           <YAxis
             yAxisId="min"

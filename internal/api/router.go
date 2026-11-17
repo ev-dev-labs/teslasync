@@ -245,6 +245,7 @@ import (
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	ratemw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/integrations/nhtsa"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -436,22 +437,22 @@ type vehicleManagementRouteHandler interface {
 
 func mountVehicleScopedManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
 	r.Get("/options", h.VehicleOptions)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", h.RefreshVehicleOptions)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", h.RefreshVehicleOptions)
 	r.Get("/specs", h.VehicleSpecs)
-	r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", h.RefreshVehicleSpecs)
+	r.With(ratemw.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", h.RefreshVehicleSpecs)
 	r.Get("/subscriptions", h.SubscriptionEligibility)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", h.RefreshSubscriptionEligibility)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", h.RefreshSubscriptionEligibility)
 	r.Get("/upgrades", h.UpgradeEligibility)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", h.RefreshUpgradeEligibility)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", h.RefreshUpgradeEligibility)
 	r.Get("/warranty", h.WarrantyDetails)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/warranty/refresh", h.RefreshWarrantyDetails)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/warranty/refresh", h.RefreshWarrantyDetails)
 	r.Get("/enterprise-roles", h.EnterpriseRoles)
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/enterprise-roles/refresh", h.RefreshEnterpriseRoles)
-	r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/enterprise-payer", h.EnterprisePayer)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/enterprise-roles/refresh", h.RefreshEnterpriseRoles)
+	r.With(ratemw.LimitByIP(2, 1*time.Minute)).Post("/enterprise-payer", h.EnterprisePayer)
 }
 
 func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
-	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
+	r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
 }
 
 type dataRepairRoutes interface {
@@ -482,7 +483,7 @@ type dataRepairRoutes interface {
 
 func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes) {
 	r.Route("/data-repair", func(r chi.Router) {
-		r.Use(httprate.LimitByIP(20, time.Minute))
+		r.Use(ratemw.LimitByIP(20, time.Minute))
 		r.Get("/stale-sessions", h.GetStaleSessions)
 		r.Get("/suggestions", h.GetSuggestions)
 		r.Get("/cases", h.ListCases)
@@ -490,7 +491,7 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes) {
 		r.Get("/cases/{id}", h.GetCase)
 		r.Post("/cases/{id}/correction-preview", h.PreviewCaseCorrection)
 		r.Get("/quarantine", h.ListQuarantines)
-		r.With(httprate.LimitByIP(2, time.Minute), tsauth.RequireNotImpersonating()).Post("/cases/scan", h.ScanCases)
+		r.With(ratemw.LimitByIP(2, time.Minute), tsauth.RequireNotImpersonating()).Post("/cases/scan", h.ScanCases)
 		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/transition", h.TransitionCase)
 		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/correction", h.ApplyCaseCorrection)
 		r.With(tsauth.RequireNotImpersonating()).Put("/cases/{id}/assignment", h.AssignCase)
@@ -633,7 +634,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		AllowedOrigins: corsOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders: nativeAppCORSHeaders,
-		ExposedHeaders: []string{"X-Request-ID", "X-Response-Time"},
+		ExposedHeaders: []string{
+			"X-Request-ID", "X-Response-Time", "Date", "Retry-After",
+			"X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset",
+			"X-RateLimit-Bucket", "X-RateLimit-Scope", "X-RateLimit-Methods",
+			"X-RateLimit-Source", "X-RateLimit-Enforcement", "X-RateLimit-Limited",
+		},
 		// AllowCredentials is only enabled when explicit origins are set.
 		// With wildcard ("*"), credentials are disabled per the Fetch spec,
 		// preventing cookie/auth header leakage to arbitrary origins.
@@ -2450,7 +2456,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Rate limited to prevent abuse of public endpoints.
 	// NOTE: If using ForwardAuth (Authentik/Authelia), exempt /api/v1/share/ from auth.
 	r.With(
-		httprate.LimitByIP(60, 1*time.Minute),
+		ratemw.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
 
 	// Public: Battery certificate verification (no auth — the HMAC
@@ -2458,7 +2464,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// health attestation without an account.
 	// NOTE: If using ForwardAuth (Authentik/Authelia), exempt /api/v1/public/ from auth.
 	r.With(
-		httprate.LimitByIP(60, 1*time.Minute),
+		ratemw.LimitByIP(60, 1*time.Minute),
 	).Post("/api/v1/public/battery-certificate/verify", batteryCertHandler.Verify)
 
 	// Public: Web Vitals ingest. Anonymous browsers
@@ -2468,7 +2474,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// label cardinality. Rate-limited per IP to bound abuse.
 	webVitalsHandler := apivitals.NewHandler()
 	r.With(
-		httprate.LimitByIP(120, 1*time.Minute),
+		ratemw.LimitByIP(120, 1*time.Minute),
 	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
 
 	// Public: Web error reports. The SPA's global
@@ -2483,7 +2489,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// instance so the rolling-window state is consistent.
 	webErrorHandler := apiwerr.NewHandler()
 	r.With(
-		httprate.LimitByIP(50, 1*time.Minute),
+		ratemw.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
 	// System state: single-row maintenance/degraded-mode
@@ -3182,6 +3188,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
+		r.Use(ratemw.RateLimitResponses(cfg.Auth.ForwardAuthHeader))
 
 		// All authenticated mutations prove browser same-origin intent and are
 		// bounded by a shared per-client backstop. Public browser telemetry is
@@ -3213,11 +3220,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Open mode is a passthrough.
 		r.Use(tsauth.ImpersonationMiddleware(cfg.Auth.ForwardAuthHeader, impersonationStore))
 
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/audit/reveal", maskedRevealHandler.Reveal)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/audit/reveal", maskedRevealHandler.Reveal)
 
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(10, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(10, 1*time.Minute))
 			r.Get("/login", authHandler.Login)
 			r.Post("/url", authHandler.Login)
 			r.Get("/callback", authHandler.Callback)
@@ -3253,7 +3260,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// resolves it ahead of the /{vehicleID} parameter node below
 			// (same precedence the existing static /sync route relies on).
 			r.Get("/states", fleetStateHandler.List)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/silence", vehicleHandler.Silence)
 				r.Get("/", vehicleHandler.Get)
@@ -3261,8 +3268,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(tsauth.RequireNotImpersonating()).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/commands/latest", commandHandler.LatestCommands)
 				// Optional from/to: RFC3339 [from,to) instants or legacy inclusive calendar dates.
 				r.Get("/commands/history", commandHandler.CommandHistory)
@@ -3327,19 +3334,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Vehicle access: drivers & share invitations
 				r.Route("/drivers", func(r chi.Router) {
 					r.Get("/", vehicleAccessHandler.ListDrivers)
-					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshDrivers)
-					r.With(httprate.LimitByIP(5, 1*time.Minute)).Delete("/", vehicleAccessHandler.RemoveDriver)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshDrivers)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute)).Delete("/", vehicleAccessHandler.RemoveDriver)
 				})
 				r.Route("/invitations", func(r chi.Router) {
 					r.Get("/", vehicleAccessHandler.ListInvitations)
-					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/", vehicleAccessHandler.CreateInvitation)
-					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshInvitations)
-					r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/{invitationID}/revoke", vehicleAccessHandler.RevokeInvitation)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/", vehicleAccessHandler.CreateInvitation)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/refresh", vehicleAccessHandler.RefreshInvitations)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/{invitationID}/revoke", vehicleAccessHandler.RevokeInvitation)
 				})
 
 				// Vehicle info: mobile access, options, specs
 				r.Get("/mobile-enabled", vehicleInfoHandler.MobileEnabled)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/mobile-enabled/refresh", vehicleInfoHandler.RefreshMobileEnabled)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/mobile-enabled/refresh", vehicleInfoHandler.RefreshMobileEnabled)
 				mountVehicleScopedManagementRoutes(r, vehicleInfoHandler)
 
 				// /guard endpoints restored.
@@ -3353,10 +3360,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Route("/guard", func(r chi.Router) {
 					r.Get("/", guardHandler.Status)
 					r.Get("/config", guardHandler.Config)
-					r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)
 					r.Get("/events", guardHandler.Events)
-					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
-					r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/panic", guardHandler.Panic)
+					r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
+					r.With(ratemw.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/panic", guardHandler.Panic)
 				})
 
 				// FSM debug diagnostics
@@ -3376,8 +3383,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// keeps a buggy or malicious client from saturating
 				// the upsert path.
 				r.Get("/settings", vehicleSettingsHandler.List)
-				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
-				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
+				r.With(ratemw.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
+				r.With(ratemw.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
 
 				// vehicle hero photo. POST
 				// + DELETE are rate-limited at 5/min (uploads are
@@ -3385,8 +3392,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// explicit user action). GET routes are unguarded
 				// — they're served frequently by the hero card.
 				r.Get("/photo", vehiclePhotoHandler.GetMeta)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/photo", vehiclePhotoHandler.Upload)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Delete("/photo", vehiclePhotoHandler.Delete)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/photo", vehiclePhotoHandler.Upload)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Delete("/photo", vehiclePhotoHandler.Delete)
 				r.Get("/photo/{size}", vehiclePhotoHandler.GetFile)
 			})
 		})
@@ -3397,14 +3404,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
 			// Bulk delete
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/road-anomalies", roadAnomalyHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
 				// Share link management
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
 				r.Get("/shares", shareHandler.List)
 				//
 				// Drive-end diagnostic. Returns the fsm_transitions
@@ -3416,13 +3423,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					drivedb.NewDriveRepo(db),
 					drivedb.NewDriveDiagnosticRepo(db.Pool),
 				)
-				r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 					Get("/why-ended", driveDiagnosticHandler.Get)
 			})
 		})
 
 		// Share link revocation (by token, not by drive)
-		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/shares/{token}", shareHandler.Revoke)
+		r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/shares/{token}", shareHandler.Revoke)
 		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)
 		r.Route("/maintenance", func(r chi.Router) {
 			r.Get("/", maintenanceHandler.List)
@@ -3433,12 +3440,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", chargingHandler.ListByVehicle)
 			r.Get("/bill-variance", chargingHandler.BillVariance)
 			// Bulk delete
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
 				// Session share link management (mirrors /drives/{driveID})
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.CreateSessionShare)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.CreateSessionShare)
 				r.Get("/shares", shareHandler.ListSessionShares)
 			})
 		})
@@ -3472,49 +3479,49 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Route("/history", func(r chi.Router) {
 				r.Get("/", teslaChargingHistoryHandler.List)
 				r.Get("/sites", teslaChargingHistoryHandler.Sites)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
 			})
 			r.Get("/invoice/{contentID}", teslaChargingHistoryHandler.Invoice)
 			// Fleet charging sessions (business accounts only)
 			r.Route("/sessions", func(r chi.Router) {
 				r.Get("/", teslaChargingSessionHandler.List)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
 			})
 		})
 
 		// Tesla Energy Sites (product discovery)
 		r.Get("/tesla/energy-sites", energySiteHandler.List)
-		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/energy-sites/refresh", energySiteHandler.Refresh)
+		r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/tesla/energy-sites/refresh", energySiteHandler.Refresh)
 
 		// Tesla Energy Site History (calendar_history + telemetry_history)
 		r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {
 			// Site info (configuration, components, firmware)
 			r.Get("/site-info", energySiteHandler.SiteInfo)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/site-info/refresh", energySiteHandler.RefreshSiteInfo)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/site-info/refresh", energySiteHandler.RefreshSiteInfo)
 
 			r.Get("/energy-history", teslaEnergyHistoryHandler.EnergyHistory)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
 			r.Get("/backup-history", teslaEnergyHistoryHandler.BackupHistory)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/backup-history/refresh", teslaEnergyHistoryHandler.RefreshBackupHistory)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/backup-history/refresh", teslaEnergyHistoryHandler.RefreshBackupHistory)
 			r.Get("/charging-history", teslaEnergyHistoryHandler.ChargingHistory)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/charging-history/refresh", teslaEnergyHistoryHandler.RefreshChargingHistory)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/charging-history/refresh", teslaEnergyHistoryHandler.RefreshChargingHistory)
 
 			// Live status (power flow snapshots)
 			r.Get("/live-status", teslaEnergyLiveStatusHandler.LiveStatus)
 			r.Get("/live-status/history", teslaEnergyLiveStatusHandler.LiveStatusHistory)
 			r.Get("/charge-advice", teslaEnergyLiveStatusHandler.ChargeAdvice)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
 
 			// Time-of-Use settings (rate plan / tariff)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tou-settings", energySiteHandler.UpdateTOUSettings)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/tou-settings", energySiteHandler.UpdateTOUSettings)
 		})
 
 		// Tesla Fleet Telemetry Errors (partner-level — all vehicles)
 		r.Route("/tesla/fleet-telemetry", func(r chi.Router) {
 			r.Get("/error-vins", fleetTelemetryErrorHandler.ErrorVINs)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
 			// package-derived routing snapshot for the
 			// admin Fleet Telemetry Coverage page. Read-only, DB-free.
 			// Rate limiting matches the admin /system endpoints' 60/min
@@ -3522,19 +3529,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// same handler is intentionally NOT mounted here — no
 			// frontend caller exists today and the request allows only
 			// one new route.
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
 		})
 
 		// Tesla User Config (feature flags, region) and Orders
 		r.Route("/tesla/user", func(r chi.Router) {
 			r.Get("/feature-config", teslaUserConfigHandler.FeatureConfig)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/feature-config/refresh", teslaUserConfigHandler.RefreshFeatureConfig)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/feature-config/refresh", teslaUserConfigHandler.RefreshFeatureConfig)
 			r.Get("/region", teslaUserConfigHandler.Region)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/region/refresh", teslaUserConfigHandler.RefreshRegion)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/region/refresh", teslaUserConfigHandler.RefreshRegion)
 			r.Get("/orders", teslaUserOrderHandler.Orders)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/orders/refresh", teslaUserOrderHandler.RefreshOrders)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/orders/refresh", teslaUserOrderHandler.RefreshOrders)
 			r.Get("/profile", teslaUserProfileHandler.Profile)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/profile/refresh", teslaUserProfileHandler.RefreshProfile)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/profile/refresh", teslaUserProfileHandler.RefreshProfile)
 		})
 
 		// Tesla Vehicle Management account-level endpoints.
@@ -3547,10 +3554,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Bulk operations, the "Needs Setup" queue, and the bulk
 			// current-rates lookup are all kept ahead of the
 			// {geofenceID} subrouter so chi matches the static path first.
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Get("/needs-review", geofenceHandler.NeedsReview)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/visited-candidates", geofenceHandler.VisitedCandidates)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/resolve", geofenceHandler.ResolveName)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Get("/visited-candidates", geofenceHandler.VisitedCandidates)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/resolve", geofenceHandler.ResolveName)
 			r.Get("/rates/current", geofenceHandler.CurrentRates)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
@@ -3559,21 +3566,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 				// Charging-place discovery review + archive lifecycle
 				// (migration 000228_geofence_charging_place_pricing).
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/archive", geofenceHandler.Archive)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/unarchive", geofenceHandler.Unarchive)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/reviewed", geofenceHandler.MarkReviewed)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/archive", geofenceHandler.Archive)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/unarchive", geofenceHandler.Unarchive)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/reviewed", geofenceHandler.MarkReviewed)
 
 				// Time-versioned electricity rates.
 				r.Get("/rates", geofenceHandler.ListRates)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rates", geofenceHandler.CreateRate)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/rates", geofenceHandler.CreateRate)
 				r.Route("/rates/{rateID}", func(r chi.Router) {
-					r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", geofenceHandler.DeleteRate)
+					r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/", geofenceHandler.DeleteRate)
 					// Preview is read-only (no DB writes) but still
 					// rate-limited: it runs the same candidate-session
 					// scan ApplyRate does and must not become a free DoS
 					// vector against charging_sessions.
-					r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/preview", geofenceHandler.PreviewApplyRate)
-					r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/apply", geofenceHandler.ApplyRate)
+					r.With(ratemw.LimitByIP(30, 1*time.Minute)).Get("/preview", geofenceHandler.PreviewApplyRate)
+					r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/apply", geofenceHandler.ApplyRate)
 				})
 
 				// Read-only charging-activity views for this place.
@@ -3587,9 +3594,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Separate from the global settings limiter: shared query polling is a
 		// read, while writes still carry the API-wide and explicit IP limits.
 		r.Get("/settings/widget-design-pack", widgetDesignHandler.ServeHTTP)
-		r.With(httprate.LimitByIP(20, time.Minute)).Put("/settings/widget-design-pack", widgetDesignHandler.ServeHTTP)
+		r.With(ratemw.LimitByIP(20, time.Minute)).Put("/settings/widget-design-pack", widgetDesignHandler.ServeHTTP)
 		r.Group(func(r chi.Router) {
-			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(20, 1*time.Minute,
+				"/settings", "/settings/suspend-api", "/settings/polling-config",
+				"/settings/dashboard-layouts", "/settings/ai/validate-config",
+				"/settings/export", "/settings/import", "/settings/reset",
+			))
 			r.Get("/settings", settingsHandler.Get)
 			r.Put("/settings", settingsHandler.Update)
 			r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
@@ -3620,7 +3631,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// holds the active in-app blob, this is the per-row "save as
 		// preset" library scoped per-vehicle.
 		r.Route("/dashboard/layouts", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(20, 1*time.Minute))
 			r.Get("/", dashboardLayoutHandler.List)
 			r.Post("/", dashboardLayoutHandler.Create)
 			r.Put("/{id}", dashboardLayoutHandler.Update)
@@ -3633,7 +3644,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// the previous localStorage-only store so annotations survive a device
 		// swap or fresh browser profile.
 		r.Route("/annotations", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/", chartAnnotationHandler.List)
 			r.Post("/", chartAnnotationHandler.Create)
 			r.Patch("/{id}", chartAnnotationHandler.Update)
@@ -3644,7 +3655,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// powering pinned-first ordering across vehicles, dashboard widgets,
 		// alert rules, geofences, automations, and commands.
 		r.Route("/pinned", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/", pinnedHandler.List)
 			r.Post("/", pinnedHandler.Create)
 			r.Patch("/{id}", pinnedHandler.Update)
@@ -3657,7 +3668,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// view per (user, route) may be marked default and auto-applies on
 		// mount when the URL has no querystring.
 		r.Route("/saved-views", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/", savedViewsHandler.List)
 			r.Post("/", savedViewsHandler.Create)
 			r.Put("/{id}", savedViewsHandler.Update)
@@ -3670,7 +3681,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// limiting still applies via the parent router. Push delivery
 		// itself runs out-of-band in the notification worker.
 		r.Route("/push", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/public-key", pushHandler.PublicKey)
 			r.Get("/subscribe", pushHandler.List)
 			r.Post("/subscribe", pushHandler.Subscribe)
@@ -3698,16 +3709,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Alert Packs install ordinary rules without replacing existing rules.
 			r.Get("/packs", alertHandler.ListPacks)
 			r.Get("/pack-installations", alertHandler.ListPackInstallations)
-			r.With(httprate.LimitByIP(10, time.Minute)).Post("/packs/{packID}/install", alertHandler.InstallPack)
-			r.With(httprate.LimitByIP(10, time.Minute)).Post("/pack-installations/{installationID}/remove", alertHandler.RemovePack)
+			r.With(ratemw.LimitByIP(10, time.Minute)).Post("/packs/{packID}/install", alertHandler.InstallPack)
+			r.With(ratemw.LimitByIP(10, time.Minute)).Post("/pack-installations/{installationID}/remove", alertHandler.RemovePack)
 			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/rules/{ruleID}/snooze", alertHandler.SnoozeRule)
 			// Bulk enable/disable
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/delete", alertHandler.BulkDeleteRules)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/delete", alertHandler.BulkDeleteRules)
 			r.Post("/test", alertHandler.TestRule)
 			// alert message template helpers.
 			// These are static read paths registered BEFORE the
@@ -3723,27 +3734,27 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
 			// above so chi's static-first matching routes them correctly.
 			r.Get("/{alertID}", alertHandler.GetAlert)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/acknowledge", alertHandler.AcknowledgeAlert)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/comment", alertHandler.CommentAlert)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/reopen", alertHandler.ReopenAlert)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/acknowledge", alertHandler.AcknowledgeAlert)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/comment", alertHandler.CommentAlert)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/reopen", alertHandler.ReopenAlert)
 		})
 
 		// Automations
 		r.Route("/automations", func(r chi.Router) {
 			r.Get("/", automationHandler.List)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
 
 			// Bulk operations — registered before the
 			// {id} subrouter so chi matches the static `/bulk` path first.
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
 			r.Get("/events", sse.SSEHandler(automationEventHub, sse.WithDrainSignal(ShutdownGate.Drained())))
 
 			// Import/Export (static routes before {id} param)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/import", automationHandler.Import)
 
 			// Execution history (static routes before {id} param)
 			r.Route("/history", func(r chi.Router) {
@@ -3760,19 +3771,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Geofence routine templates (static routes before {id} param)
 			r.Route("/routine-templates", func(r chi.Router) {
 				r.Get("/", automationHandler.ListRoutineTemplates)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/{id}/install", automationHandler.InstallRoutine)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/{id}/install", automationHandler.InstallRoutine)
 			})
 
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", automationHandler.Get)
 				r.Get("/export", automationHandler.ExportOne)
 				r.Get("/history", automationHandler.ListAutomationHistory)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
-				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/undo", automationHandler.UndoLast)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+				r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/undo", automationHandler.UndoLast)
 			})
 		})
 
@@ -3780,8 +3791,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/fleet", analyticsHandler.Fleet)
 		r.Get("/analytics/tco", tcoHandler.GetTCO)
 		r.Get("/analytics/tco/ledger", tcoLedgerHandler.List)
-		r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/analytics/tco/ledger", tcoLedgerHandler.Create)
-		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/analytics/tco/ledger/{id}", tcoLedgerHandler.Delete)
+		r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/analytics/tco/ledger", tcoLedgerHandler.Create)
+		r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/analytics/tco/ledger/{id}", tcoLedgerHandler.Delete)
 
 		// Carbon Intelligence — the vehicle-independent diurnal grid
 		// carbon-intensity model (seeded, admin-editable). Mounted as a
@@ -3803,7 +3814,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
 		r.Get("/analytics/battery-health", batteryDegradationHandler.Health)
-		r.With(httprate.LimitByIP(20, 1*time.Minute)).Get("/analytics/battery-health/certificate", batteryCertHandler.Issue)
+		r.With(ratemw.LimitByIP(20, 1*time.Minute)).Get("/analytics/battery-health/certificate", batteryCertHandler.Issue)
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
@@ -3831,12 +3842,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/benchmarks", func(r chi.Router) {
 			r.Use(tsauth.RequireSubjectMiddleware(cfg.Auth.ForwardAuthHeader))
 			r.Get("/privacy", benchmarkHandler.Status)
-			r.With(httprate.LimitByIP(10, time.Minute)).
+			r.With(ratemw.LimitByIP(10, time.Minute)).
 				Put("/privacy/consent", benchmarkHandler.Consent)
-			r.With(httprate.LimitByIP(10, time.Minute)).
+			r.With(ratemw.LimitByIP(10, time.Minute)).
 				Delete("/privacy/consent", benchmarkHandler.Revoke)
 			r.Get("/releases", benchmarkHandler.ListReleases)
-			r.With(httprate.LimitByIP(10, time.Minute)).
+			r.With(ratemw.LimitByIP(10, time.Minute)).
 				Post("/releases", benchmarkHandler.CreateRelease)
 		})
 
@@ -3846,7 +3857,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		ownershipIntelHandler.MountRoutes(r)
 		r.Get("/action-center", actionCenterHandler.List)
 		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
-		r.With(httprate.LimitByIP(30, time.Minute)).
+		r.With(ratemw.LimitByIP(30, time.Minute)).
 			Post("/action-center/{recommendationID}/actions", actionCenterHandler.ApplyAction)
 
 		// Fleet operations owns its write throttles. Service-intelligence
@@ -3859,7 +3870,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			communicationsAdminHandler.Status,
 		)
 		r.With(
-			httprate.LimitByIP(10, time.Hour),
+			ratemw.LimitByIP(10, time.Hour),
 			tsauth.RequireNotImpersonating(),
 		).Post(
 			"/admin/service-intelligence/communications/import",
@@ -3868,9 +3879,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Charge Planner (smart scheduling)
 		r.Route("/charge-planner", func(r chi.Router) {
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/optimize", chargePlannerHandler.Optimize)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/queue", chargePlannerHandler.Queue)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/apply", chargePlannerHandler.Apply)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/optimize", chargePlannerHandler.Optimize)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/queue", chargePlannerHandler.Queue)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/apply", chargePlannerHandler.Apply)
 			r.Get("/history", chargePlannerHandler.ListPlans)
 			r.Get("/rate-plans", chargePlannerHandler.ListRatePlans)
 		})
@@ -3878,9 +3889,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Charge Autopilot (always-on profile + next-run preview + savings ledger)
 		r.Route("/charge-autopilot", func(r chi.Router) {
 			r.Get("/profile", chargeAutopilotHandler.GetProfile)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/profile", chargeAutopilotHandler.UpsertProfile)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/preview", chargeAutopilotHandler.Preview)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/run", chargeAutopilotRunHandler.Run)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Put("/profile", chargeAutopilotHandler.UpsertProfile)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/preview", chargeAutopilotHandler.Preview)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/run", chargeAutopilotRunHandler.Run)
 			r.Get("/savings", chargeAutopilotHandler.Savings)
 			r.Get("/decision", nextChargeHandler.Get)
 		})
@@ -3894,15 +3905,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Storm Guardian (severe-weather auto-prep; evaluator runs hourly in app)
 		r.Route("/stormguard", func(r chi.Router) {
 			r.Get("/status", stormguardHandler.Status)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", stormguardHandler.UpsertConfig)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Put("/config", stormguardHandler.UpsertConfig)
 			r.Get("/events", stormguardHandler.Events)
 		})
 
 		// Cabin Comfort (calendar-aware preconditioning; evaluator runs every 5m in app)
 		r.Route("/comfort", func(r chi.Router) {
 			r.Get("/next", comfortHandler.Next)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", comfortHandler.UpsertConfig)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/now", comfortHandler.PreconditionNow)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Put("/config", comfortHandler.UpsertConfig)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/now", comfortHandler.PreconditionNow)
 			r.Get("/runs", comfortHandler.Runs)
 		})
 
@@ -3914,23 +3925,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Journey Autopilot (trip sessions + versioned plans)
 		r.Route("/journey", func(r chi.Router) {
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/sessions", journeyHandler.Create)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/sessions", journeyHandler.Create)
 			r.Get("/sessions", journeyHandler.List)
 			r.Get("/sessions/{id}", journeyHandler.Get)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/start", journeyHandler.Start)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/pause", journeyHandler.Pause)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/resume", journeyHandler.Resume)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/complete", journeyHandler.Complete)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/abort", journeyHandler.Abort)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/sessions/{id}/plans", journeyHandler.SavePlan)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/score-stops", journeyHandler.ScoreStops)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/start", journeyHandler.Start)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/pause", journeyHandler.Pause)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/resume", journeyHandler.Resume)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/complete", journeyHandler.Complete)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/abort", journeyHandler.Abort)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/sessions/{id}/plans", journeyHandler.SavePlan)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/score-stops", journeyHandler.ScoreStops)
 			r.Get("/sessions/{id}/departure", journeyDeparture.Advise)
 			r.Get("/sessions/{id}/checklist", journeyChecklist.Latest)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/checklist/runs", journeyChecklist.Refresh)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/checklist/runs", journeyChecklist.Refresh)
 			r.Get("/sessions/{id}/live", journeyLive.View)
-			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/checkpoints", journeyLive.Append)
+			r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/checkpoints", journeyLive.Append)
 			r.Get("/sessions/{id}/replan", journeyReplan.Assess)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/replan", journeyReplan.Rescore)
+			r.With(ratemw.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/replan", journeyReplan.Rescore)
 			r.Get("/sessions/{id}/arrival", journeyArrival.Prep)
 			r.Get("/sessions/{id}/report", journeyReport.Card)
 			r.Get("/sessions/{id}/nudge", journeyNudge.Monitor)
@@ -3938,17 +3949,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Trip Planner (route planning with charging stop estimation)
 		r.Route("/trip-planner", func(r chi.Router) {
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/plan", tripPlannerHandler.Plan)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/confidence", tripPlannerHandler.Confidence)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/plan", tripPlannerHandler.Plan)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/confidence", tripPlannerHandler.Confidence)
 		})
 
 		// Geocoding (forward address search + reverse coordinate lookup)
-		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/search", geocodeHandler.Search)
-		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/geocode/reverse", geocodeHandler.Reverse)
+		r.With(ratemw.LimitByIP(30, 1*time.Minute)).Get("/geocode/search", geocodeHandler.Search)
+		r.With(ratemw.LimitByIP(30, 1*time.Minute)).Get("/geocode/reverse", geocodeHandler.Reverse)
 
 		// Global app-wide entity search (vehicles/drives/charging/alerts/...).
 		// Rate-limited because each call fans out into ~9 ILIKE sub-queries.
-		r.With(httprate.LimitByIP(30, 1*time.Minute)).Get("/search", searchHandler.Search)
+		r.With(ratemw.LimitByIP(30, 1*time.Minute)).Get("/search", searchHandler.Search)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
@@ -3993,7 +4004,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Mounted before /{channelID} for the same reason as
 			// /quiet-hours above — chi otherwise binds "webhooks" as
 			// the channel id.
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Post("/webhooks/preview-signature", notificationChannelHandler.WebhookSignaturePreview)
 			r.Route("/{channelID}", func(r chi.Router) {
 				r.Get("/", notificationHandler.GetChannel)
@@ -4005,7 +4016,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// of /test so the legacy generic test stays available;
 				// this endpoint exists solely for webhook-kind channels
 				// and 404s on any other kind.
-				r.With(httprate.LimitByIP(20, 1*time.Minute)).
+				r.With(ratemw.LimitByIP(20, 1*time.Minute)).
 					Post("/webhook-test", notificationChannelHandler.WebhookTest)
 				r.Get("/preferences", notifScheduleHandler.GetPreferences)
 				r.Put("/preferences", notifScheduleHandler.UpdatePreference)
@@ -4109,7 +4120,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// /vehicle-states.
 		vampireDrainHandler := apivamp.NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/", vampireDrainHandler.Events)
 			r.Get("/stats", vampireDrainHandler.Stats)
 			r.Get("/watch", vampireDrainHandler.Watch)
@@ -4126,7 +4137,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// /vehicle-states.
 		mileageHandler := apimileage.NewHandler(drivedb.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)
 			r.Get("/stats", mileageHandler.Stats)
 			// Per-day buckets for MileagePage.tsx's "Odometer Over Time" +
@@ -4146,7 +4157,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// charge_count / total_cost. Uses the same admin-style rate limit
 		// (60/min) as related admin reads.
 		tripsDetailHandler := apitripsd.NewHandler(tripdb.NewTripsDetailRepo(db.Pool))
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
 
 		// /vehicle-states/{timeline,summary} are derived from
 		// fsm_transitions because the vehicle_states snapshot table no longer exists.
@@ -4155,7 +4166,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// stop returning 404. Same admin-style rate limit as /system/queues.
 		vehicleStatesHandler := apivehstates.NewHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/timeline", vehicleStatesHandler.Timeline)
 			r.Get("/summary", vehicleStatesHandler.Summary)
 		})
@@ -4165,7 +4176,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// security_events, software_updates, and signal_log edges. Same
 		// admin-style rate limit as /vehicle-states.
 		dayLogHandler := apidaylog.NewHandler(daylogdb.NewDayLogRepo(db.Pool))
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/day-log", dayLogHandler.Get)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/day-log", dayLogHandler.Get)
 
 		// FSM shadow mode stats + transition log
 		r.Route("/fsm", func(r chi.Router) {
@@ -4295,7 +4306,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// The parent ForwardAuth gate still applies in protected mode.
 			// Per-IP rate-limited because the SPA polls it
 			// at boot and on focus refresh.
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
 
 			r.Get("/api-usage", apiteslausage.NewTeslaUsageHandler(db).Get)
@@ -4328,14 +4339,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// call fans out concurrent probes against every shared
 			// dependency.
 			diagnosticHandler := apidiag.NewHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).
 				Post("/diagnostic", diagnosticHandler.ServeHTTP)
 
 			// Rate-limit status panel feed.
 			// Read-only; cheap (no DB / no Redis); polled every 30s
 			// by the admin status panel. Per-IP throttle still
 			// applies in case a misconfigured client busy-loops it.
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/rate-limits", rateLimitHandler.ServeHTTP)
 
 			// Job queue status feed.
@@ -4349,9 +4360,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				QueueRepo:      workerdb.NewWorkerQueueRepo(db),
 				HeartbeatStore: queueHeartbeatStore,
 			})
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/queues", queueStatusHandler.ServeStatus)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 
 			// DLQ
@@ -4369,16 +4380,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				cfg.Auth.ForwardAuthHeader,
 				cfg.Features.DLQReplayEnabled,
 			)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/dlq", dlqHandler.List)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/dlq/audit", dlqHandler.Audit)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/dlq/{id}", dlqHandler.Get)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/dlq/{id}/audit", dlqHandler.Audit)
 			r.With(
-				httprate.LimitByIP(10, 1*time.Minute),
+				ratemw.LimitByIP(10, 1*time.Minute),
 				tsauth.RequireNotImpersonating(),
 			).Post("/dlq/{id}/replay", dlqHandler.Replay)
 
@@ -4395,20 +4406,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				opt.FeatureFlagChangesRepo,
 				cfg.Auth.ForwardAuthHeader,
 			)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/flags", flagsHandler.List)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/flags/changes", flagsHandler.Changes)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/flags/{key}", flagsHandler.Get)
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/flags/{key}/changes", flagsHandler.Changes)
 			r.With(
-				httprate.LimitByIP(20, 1*time.Minute),
+				ratemw.LimitByIP(20, 1*time.Minute),
 				tsauth.RequireNotImpersonating(),
 			).Put("/flags/{key}", flagsHandler.Set)
 			r.With(
-				httprate.LimitByIP(20, 1*time.Minute),
+				ratemw.LimitByIP(20, 1*time.Minute),
 				tsauth.RequireNotImpersonating(),
 			).Delete("/flags/{key}", flagsHandler.Delete)
 
@@ -4421,7 +4432,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// unbounded fleet-wide query is too high for the
 			// signal_log hypertable.
 			ingestXRayHandler := apixray.NewHandler(dbobs.NewIngestXRayRepo(db.Pool))
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).
 				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
 
@@ -4444,22 +4455,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			StartedAt:        startTime,
 		})
 		r.Route("/status", func(r chi.Router) {
-			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", statusV1.Overall)
-			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/components", statusV1.Components)
-			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/resources", statusV1.Resources)
-			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/uptime", statusV1.Uptime)
+			r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/", statusV1.Overall)
+			r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/components", statusV1.Components)
+			r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/resources", statusV1.Resources)
+			r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/uptime", statusV1.Uptime)
 			// SSE endpoint — no per-IP rate limit because it's a long-lived
 			// connection. The connection itself acts as the throttle.
 			r.Get("/live", statusV1.Live)
 			// Incidents CRUD + timeline append.
 			r.Route("/incidents", func(r chi.Router) {
-				r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.List)
-				r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/", incidentsHandler.Create)
+				r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.List)
+				r.With(ratemw.LimitByIP(30, 1*time.Minute)).Post("/", incidentsHandler.Create)
 				r.Route("/{id}", func(r chi.Router) {
-					r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.Get)
-					r.With(httprate.LimitByIP(60, 1*time.Minute)).Patch("/", incidentsHandler.Patch)
-					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/updates", incidentsHandler.AppendUpdate)
-					r.With(httprate.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
+					r.With(ratemw.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.Get)
+					r.With(ratemw.LimitByIP(60, 1*time.Minute)).Patch("/", incidentsHandler.Patch)
+					r.With(ratemw.LimitByIP(60, 1*time.Minute)).Post("/updates", incidentsHandler.AppendUpdate)
+					r.With(ratemw.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
 				})
 			})
 		})
@@ -4485,7 +4496,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		v1AdminAudit := v1handlers.NewAdminAuditHandler(auditViewerSvc)
 		v1GDPRExport := v1handlers.NewGDPRExportHandler(gdprexportsvc.New(opt.GDPRArtifactRepo))
 		r.Group(func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute,
+				"/admin/observability/*", "/admin/audit-log", "/admin/audit-log/*",
+				"/admin/gdpr/exports", "/admin/gdpr/exports/*",
+			))
 			r.Use(handlermw.QueryBudget(handlermw.QueryBudgets{
 				"GET /admin/observability/schema-drift":    5,
 				"GET /admin/observability/slow-queries":    3,
@@ -4579,7 +4593,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// audit trail is the accountability surface; a future RBAC
 		// layer can wrap this without changing the response shape).
 		r.Route("/admin/maintenance", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(30, 1*time.Minute))
 			r.Get("/", adminMaintenanceHandler.Get)
 			r.Post("/", adminMaintenanceHandler.Set)
 		})
@@ -4594,7 +4608,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// user_feedback so it survives pod restarts; a tighter per-IP
 		// httprate ceiling guards against payload-flooding even when
 		// the DB lookup fails open.
-		r.With(httprate.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
+		r.With(ratemw.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
 
 		// Admin feedback queue: list / get /
 		// patch the user_feedback rows. PATCH optionally forwards the
@@ -4602,7 +4616,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// authenticated caller can read/write — audit_logs is the
 		// accountability surface, mirroring /admin/maintenance.
 		r.Route("/admin/feedback", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(60, 1*time.Minute))
 			r.Get("/", adminFeedbackHandler.List)
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", adminFeedbackHandler.Get)
@@ -4620,7 +4634,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// In open mode every endpoint returns 501 AUTH_MODE_OPEN
 		// inside the handler.
 		r.Route("/admin/impersonate", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(30, 1*time.Minute))
 			r.Get("/", impersonationHandler.GetState)
 			r.Get("/candidates", impersonationHandler.Candidates)
 			r.With(tsauth.RequireNotImpersonating()).Post("/", impersonationHandler.Start)
@@ -4638,7 +4652,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// actions per the request's intent. httprate caps reconnect
 		// storms to 10/min/IP.
 		r.Route("/admin/logs", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(10, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(10, 1*time.Minute))
 			r.Get("/stream", logStreamHandler.ServeHTTP)
 		})
 
@@ -4650,7 +4664,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Developer Tools
 		r.Route("/dev-tools", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Use(ratemw.LimitByIP(30, 1*time.Minute))
 			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
 			r.Get("/detect-region", devToolsHandler.DetectRegion)
 			r.Post("/register-partner", devToolsHandler.RegisterPartner)
@@ -4685,7 +4699,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// loop the per-vehicle path to bulk-purge by stealth. The
 			// shared limiter caps total destructive calls at 5/min/IP
 			// (per-vehicle + cluster-wide combined).
-			redisPurgeLimiter := httprate.LimitByIP(5, 1*time.Minute)
+			redisPurgeLimiter := ratemw.LimitByIP(5, 1*time.Minute)
 			r.With(redisPurgeLimiter).Delete("/redis-signals", devToolsHandler.RedisSignalsPurge)
 			r.With(redisPurgeLimiter).Delete("/redis-signals/keys", devToolsHandler.RedisSignalsPurgeAll)
 
@@ -4786,8 +4800,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Mounted BEFORE /signals/{vehicleID} so the static paths take
 		// precedence under chi v5's longest-static-prefix matching.
 		signalsCatalogHandler := apisigcat.NewHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
@@ -4815,7 +4829,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", apiexports.NewExportHandler(db))
+		r.With(ratemw.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", apiexports.NewExportHandler(db))
 
 		// Export Jobs (async, MQTT-backed)
 		var pahoClient pahomqtt.Client
@@ -4827,7 +4841,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// column-selector UI fetches the publishable
 		// column catalog for the active export type. Read-only and cheap;
 		// rate-limited to soak up accidental SPA loops.
-		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
+		r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
@@ -4835,7 +4849,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(tsauth.RequireNotImpersonating()).Post("/import", exportJobHandler.SubmitImportJob)
 			// Bulk operations — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
@@ -4850,11 +4864,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (DisallowUnknownFields). Per-row writes are scoped at the
 		// SQL layer so cross-user mutations collapse to 404.
 		r.Route("/scheduled-exports", func(r chi.Router) {
-			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/", scheduledExportsHandler.List)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", scheduledExportsHandler.Create)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/{id}", scheduledExportsHandler.Update)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/{id}", scheduledExportsHandler.Delete)
-			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/{id}/run", scheduledExportsHandler.RunNow)
+			r.With(ratemw.LimitByIP(60, 1*time.Minute)).Get("/", scheduledExportsHandler.List)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/", scheduledExportsHandler.Create)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Put("/{id}", scheduledExportsHandler.Update)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Delete("/{id}", scheduledExportsHandler.Delete)
+			r.With(ratemw.LimitByIP(20, 1*time.Minute)).Post("/{id}/run", scheduledExportsHandler.RunNow)
 		})
 
 		// ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç
@@ -4997,7 +5011,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(APIKeyAuthRequired(db))
 			r.Get("/summary", watchHandler.Summary)
 			r.Get("/complication", watchHandler.Complication)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/command", watchHandler.Command)
+			r.With(ratemw.LimitByIP(5, 1*time.Minute)).Post("/command", watchHandler.Command)
 		})
 	})
 

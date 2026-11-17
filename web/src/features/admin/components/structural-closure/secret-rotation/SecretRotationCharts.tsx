@@ -91,7 +91,7 @@ export function SecretRotationCharts({ controller }: Props) {
                   { key: 'value', label: t('admin.secretRotation.col.count', 'Count') },
                 ]}
                 footer={!isLoading && !showError && severitySlices.length > 0 && (
-                <ul className="space-y-1.5">
+                <ul data-app-part="list" className="space-y-1.5">
                   {SEVERITY_ORDER.map((key) => (
                     <li key={key} className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">

@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -74,6 +75,8 @@ beforeEach(() => {
   mocks.drives.mockReturnValue(query([drive], mocks.retryDrives));
   mocks.telemetry.mockReturnValue(query(samples, mocks.retryTelemetry));
 });
+
+setupCanvasTextMeasurement();
 
 describe('DriveTelemetryWidget redesign', () => {
   it('matches the two-series hierarchy and renders one real route label', () => {

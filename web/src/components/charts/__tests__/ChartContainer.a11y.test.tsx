@@ -360,6 +360,7 @@ describe('ChartContainer accessibility contract', () => {
     // The table lives inside the figcaption — query by role.
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
+    expect(table).toHaveAttribute('data-mobile-stack-table');
     expect(table).toHaveAccessibleName('Daily kWh — data table');
     expect(table.closest('figcaption')).toHaveAttribute(
       'id',
@@ -373,6 +374,10 @@ describe('ChartContainer accessibility contract', () => {
     // Three data rows + 1 header row = 4 total.
     const rows = within(table).getAllByRole('row');
     expect(rows).toHaveLength(4);
+    for (const row of rows.slice(1)) {
+      expect(within(row).getAllByRole('cell').map(cell => cell.getAttribute('data-mobile-label')))
+        .toEqual(['Day', 'kWh']);
+    }
 
     // The formatter ran for the kWh column.
     expect(within(table).getByText('10 kWh')).toBeInTheDocument();

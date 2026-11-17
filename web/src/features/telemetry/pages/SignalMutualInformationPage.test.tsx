@@ -21,7 +21,7 @@ const H = vi.hoisted(() => ({
   fetching: false,
   paused: false,
   catalogRetry: vi.fn(), aRetry: vi.fn(), bRetry: vi.fn(),
-  history: vi.fn(), brief: vi.fn(), chart: vi.fn(), layout: vi.fn(),
+  history: vi.fn(), brief: vi.fn(), chart: vi.fn(), heatmap: vi.fn(), layout: vi.fn(),
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
@@ -63,7 +63,14 @@ vi.mock('../components/operationalbrief-all/TelemetrySummaryBrief', () => ({
     H.brief(props); return <section><h2>{props.title}</h2></section>;
   },
 }));
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async (original) => {
+  const actual = await original<typeof import('@/components/charts')>();
+  return {
+  ...actual,
+  EmbeddedChart: (props: ChartContainerProps) => {
+    H.heatmap(props);
+    return <actual.EmbeddedChart {...props} />;
+  },
   ChartContainer: (props: ChartContainerProps) => {
     H.chart(props);
     return <section><h2>{props.title}</h2>{props.error ? <p>History unavailable</p>
@@ -73,7 +80,7 @@ vi.mock('@/components/charts', () => ({
   BarChart: ({ children }: { children: ReactNode }) => <>{children}</>,
   Bar: () => null, CartesianGrid: () => null, ChartTooltip: () => null,
   Tooltip: () => null, XAxis: () => null, YAxis: () => null,
-}));
+}; });
 // Frozen synthetic measurements stay in this test; production still uses the pure domain analysis.
 const points = Object.freeze(Array.from({ length: 64 }, (_, index) => Object.freeze({
   ts: new Date(Date.UTC(2026, 0, 1) + index * 60_000).toISOString(),
@@ -92,7 +99,7 @@ function brief(): TelemetrySummaryBriefProps { return H.brief.mock.calls.at(-1)?
 function chart(): ChartContainerProps { return H.chart.mock.calls.at(-1)?.[0] as ChartContainerProps; }
 function assertSections() {
   for (const title of ['Signals to compare', 'Mutual information metrics', 'Top joint-state contributions', 'Contribution heatmap']) {
-    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
   }
 }
 beforeEach(() => {
@@ -128,6 +135,29 @@ describe('SignalMutualInformationPage', () => {
         contribution: cell.contribution, count: cell.count })));
     expect(screen.getAllByLabelText(/^Signal A bin /)).toHaveLength(result.cells.length);
     expect(JSON.stringify([H.a, H.b])).toBe(original);
+  });
+  it('composes every joint-state tile with the canonical full-data alternative, including negative contributions', () => {
+    H.a = response('NumericA');
+    H.b = response('NumericB', points.map((point, index) => ({ ...point, value: index % 9 })));
+    const result = analyzeSignalMutualInformation(H.a.data, H.b.data)!;
+    const { container } = render(<SignalMutualInformationPage />);
+    choosePair();
+    const props = H.heatmap.mock.calls.at(-1)?.[0] as ChartContainerProps;
+    expect(props).toEqual(expect.objectContaining({
+      title: 'Contribution heatmap',
+      viewportClassName: expect.stringContaining('[contain:layout]'),
+      data: result.cells.map(cell => ({
+        cell: `A${cell.aBin + 1} / B${cell.bBin + 1}`,
+        contribution: cell.contribution, count: cell.count, probability: cell.probability * 100,
+      })),
+    }));
+    expect(screen.getByRole('table', { name: 'Contribution heatmap — data table' }).querySelectorAll('tbody tr'))
+      .toHaveLength(result.cells.length);
+    const negative = result.cells.find(cell => cell.contribution < 0)!;
+    expect(negative).toBeDefined();
+    const tile = screen.getByLabelText(`Signal A bin ${negative.aBin + 1}, signal B bin ${negative.bBin + 1}, ${negative.count} samples, ${negative.contribution} bits`);
+    expect(tile).toHaveClass('border-dashed');
+    expect(container.querySelector('[data-app-part="chart-plot"].grid')).toHaveClass('grid-cols-2', 'sm:grid-cols-4');
   });
   it('retains returned source bounds and requested-window provenance', () => {
     H.a = response('NumericA'); H.b = response('NumericB');

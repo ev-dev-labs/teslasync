@@ -72,9 +72,9 @@ export function TrueCostTemporalCoverage({
           <Table aria-label={t('tco.coverage.title', 'Temporal, coverage, and gap evidence')}>
             <tbody>
             {rows.map((row) => (
-              <tr key={row.label}>
-                <th scope="row"><Text variant="metricLabel">{row.label}</Text></th>
-                <td className="text-right"><Text variant="bodySm" mono>{row.value}</Text></td>
+              <tr data-app-part="table-row" key={row.label}>
+                <th data-app-part="table-cell" scope="row"><Text variant="metricLabel">{row.label}</Text></th>
+                <td data-app-part="table-cell" className="text-right"><Text variant="bodySm" mono>{row.value}</Text></td>
               </tr>
             ))}
             </tbody>

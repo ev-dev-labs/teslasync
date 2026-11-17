@@ -120,7 +120,7 @@ export function DashboardPresetPanel() {
 
       <Link
         to="/"
-        className="mt-3 inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
+        className="mt-3 inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline max-md:min-h-[var(--app-touch-size,2.75rem)] max-md:min-w-[var(--app-touch-size,2.75rem)] max-md:max-w-full max-md:items-center max-md:text-[length:var(--app-body-size,1rem)]"
         data-testid="dashboard-preset-open-dashboard"
       >
         {pending !== null
@@ -264,6 +264,9 @@ function PresetCard({
 
   return (
     <div
+      data-app-part="card"
+      data-app-record-kind="dashboard-preset"
+      data-surface-variant="standalone"
       data-testid="dashboard-preset-card"
       data-preset-role={preset.role}
       data-selected={selected}
@@ -282,10 +285,10 @@ function PresetCard({
           aria-hidden
         />
         <div className="min-w-0 flex-1">
-          <Text as="p" size="sm" weight="medium" color="primary">
+          <Text as="p" size="sm" weight="medium" color="primary" data-app-record-slot="label">
             {t(preset.nameKey, preset.nameFallback)}
           </Text>
-          <Text as="p" variant="bodySm" color="muted">
+          <Text as="p" variant="bodySm" color="muted" data-app-record-slot="context">
             {t(preset.audienceKey, preset.audienceFallback)}
           </Text>
         </div>
@@ -305,7 +308,7 @@ function PresetCard({
         )}
       </div>
 
-      <Text as="p" variant="bodySm" color="muted">
+      <Text as="p" variant="bodySm" color="muted" data-app-record-slot="body">
         {t(preset.rationaleKey, preset.rationaleFallback)}
       </Text>
 
@@ -313,10 +316,12 @@ function PresetCard({
         <Text as="p" variant="caption">
           {t('dashboardPresets.includes', 'Includes')}
         </Text>
-        <ul className="mt-1 flex flex-wrap gap-1">
+        <ul data-app-part="list" className="mt-1 flex flex-wrap gap-1">
           {preset.widgets.map((widget) => (
             <li
               key={widget.widgetId}
+              data-app-part="badge"
+              data-app-variant="neutral"
               data-preset-widget={widget.widgetId}
               className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs text-[var(--text-muted)]"
             >

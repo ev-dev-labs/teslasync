@@ -40,6 +40,8 @@ export function QuickLinksSection() {
             <Link
               key={link.to}
               to={link.to}
+              data-app-part="button nav-item"
+              data-app-variant="outline"
               className={cn(
                 'block rounded-xl',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',

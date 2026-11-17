@@ -1,0 +1,9 @@
+
+Running 2 tests using 1 worker
+
+PHONE_NAV {"clipped":[],"split":[],"geometry":{"paddingTop":"0px","paddingBottom":"0px","rowGap":"2px","buttons":[{"text":"Home","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Vehicles","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Driving","buttonFont":"11px","labelFont":"16px","top":748,"bottom":808,"height":60},{"text":"Charging","buttonFont":"11px","labelFont":"16px","top":797,"bottom":857,"height":60},{"text":"More","buttonFont":"11px","labelFont":"16px","top":797,"bottom":857,"height":60}]}}
+  ✓  1 ..\docs\design-packs\shots\v4\dom-review.spec.cjs:34:1 › phone labels fit after v4 navigation correction (6.4s)
+DESKTOP_HEADER {"headerHeight":117,"tracks":"265px 424px 371px","controls":[{"label":"Last 7 days","top":18,"bottom":54,"width":127.34375},{"label":"Select vehicle","top":12,"bottom":60,"width":160},{"label":"<div class=\"relative inline-block\" data-role=\"notification-bell-popover\" data-app-design-owner=\"pack","top":18,"bottom":54,"width":36},{"label":"<div class=\"relative inline-block \" data-role=\"theme-popover\" data-app-design-owner=\"pack-v4 navigat","top":68,"bottom":104,"width":36}]}
+  ✓  2 ..\docs\design-packs\shots\v4\dom-review.spec.cjs:63:1 › desktop workspace control wrapping is observable (7.2s)
+
+  2 passed (23.9s)

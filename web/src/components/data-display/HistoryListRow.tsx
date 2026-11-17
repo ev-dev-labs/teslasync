@@ -104,6 +104,8 @@ export function HistoryListRow({
 
   const body = (
     <GlassPanel
+      data-app-part="panel"
+      data-history-action-rail={actions && actions.length > 0 ? 'true' : undefined}
       hover
       glow={glow}
       onClick={onClick}
@@ -121,10 +123,10 @@ export function HistoryListRow({
         )}
 
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">{primary}</div>
+          <div data-history-primary className="flex flex-wrap items-center gap-2 mb-1">{primary}</div>
           {route && <div className="mb-1">{route}</div>}
           {metrics && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] tabular-nums">
+            <div data-app-part="metric-grid" data-app-metric-grid="inline" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] tabular-nums">
               {metrics}
             </div>
           )}
@@ -140,6 +142,7 @@ export function HistoryListRow({
 
   return (
     <div
+      data-app-part="list-row"
       className="group/row relative flex items-stretch gap-2"
       data-testid={testId}
     >

@@ -7,6 +7,8 @@
 
 export type NeonColor = 'cyan' | 'green' | 'red' | 'purple' | 'amber' | 'blue' | 'neutral'
 
+export const touchTargetPixels = 44
+
 // Historical variant names remain compatible; presentation uses semantic roles.
 export const neonColorMap: Record<NeonColor, {
   text: string
@@ -380,6 +382,9 @@ export function resolveGaugeColor(tone?: GaugeTone, color?: string): string {
 // axes do the theming work).
 
 export const chartTokens = {
+  heatmap: {
+    cell: 'rounded-[3px] border border-[var(--border-subtle)]',
+  },
   /** Stroke color for axis lines and ticks — theme-aware muted text. */
   axisStroke: 'var(--text-muted)',
   /** Stroke color for cartesian grid lines — theme-aware subtle border. */
@@ -413,6 +418,7 @@ export const chartTokens = {
     fill: 'color-mix(in srgb, var(--text-secondary) 6%, transparent)',
     travellerWidth: 8,
     height: 28,
+    touchSize: touchTargetPixels,
   },
   /**
    * Synced-cursor reference line — drawn by recharts when two charts share

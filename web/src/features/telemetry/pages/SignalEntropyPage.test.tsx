@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -142,6 +143,8 @@ afterEach(() => {
   setGlobalLocale(preferences.locale); setGlobalPrecision(preferences.precision);
 });
 
+setupMeasuredChartContainers(800, 320);
+
 describe('SignalEntropyPage preservation and presentation', () => {
   it('keeps all five sections and four unknown metrics before signal selection', () => {
     mountPage();
@@ -202,7 +205,8 @@ describe('SignalEntropyPage preservation and presentation', () => {
     expect(after.dataColumns?.[0]?.format?.(after.data?.[0]?.time)).toBe('01.01.26, 11:00');
     expect(after.metadata).toEqual({ unitLabel: 'bits' });
     expect(screen.queryByText('America/Los_Angeles', { exact: true })).not.toBeInTheDocument();
-    expect(screen.getByText('01.01.26, 11:00')).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Rolling information density — data table', hidden: true });
+    expect(within(table).getByText('01.01.26, 11:00')).toBeInTheDocument();
   });
 
   it.each([

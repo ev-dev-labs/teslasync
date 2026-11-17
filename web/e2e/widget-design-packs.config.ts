@@ -2,10 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
+const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4189';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: /widget-design-packs\.(?:initial|settings|climate|complete|signals|sync)\.spec\.ts$/,
+  testMatch: /widget-design-packs\.(?:initial|settings|climate|complete|signals|sync|app)\.spec\.ts$/,
   outputDir: '../test-results/widget-design-packs',
   fullyParallel: false,
   workers: 1,
@@ -14,7 +15,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:4189',
+    baseURL,
     locale: 'en-US',
     timezoneId: 'UTC',
     reducedMotion: 'reduce',
@@ -23,9 +24,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run preview -- --host 127.0.0.1 --port 4189 --strictPort',
+    command: `npm run preview -- --host 127.0.0.1 --port ${new URL(baseURL).port} --strictPort`,
     cwd,
-    url: 'http://127.0.0.1:4189',
+    url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,
   },

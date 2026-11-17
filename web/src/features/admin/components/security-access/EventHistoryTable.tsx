@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { Badge, GlassPanel, PanelTitle, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, DataTable, Text, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Skeleton, QueryError, DataStateNotice } from '@/components/feedback';
 import type { DataState } from '@/api/dataState';
 import { TimeStamp } from '@/components/data-display';
@@ -87,6 +87,25 @@ export function EventHistoryTable({ history, sourceState, isLoading, error, onRe
     [t],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<SecurityEvent>>(() => ({
+    roles: { locked: 'title', sentryMode: 'primary', doorState: 'meta', windows: 'meta' },
+    displayValue: (row, key) => {
+      if (key === 'windows') return windowSummary(row, t);
+      const column = eventColumns.find((candidate) => candidate.key === key);
+      const raw = column?.filterValue?.(row) ?? null;
+      const value = key === 'locked' && row.locked == null
+        ? t('admin.security.unknown', 'Unknown')
+        : column?.filterValueLabel?.(raw, row) ?? null;
+      return key === 'locked' || key === 'sentryMode'
+        ? `${column?.header ?? ''}: ${value ?? '—'}` : value;
+    },
+    inlineActions: (row) => (
+      <Text as="span" variant="bodySm">
+        {t('admin.security.col.time', 'Time')}: <TimeStamp value={row.createdAt} />
+      </Text>
+    ),
+  }), [eventColumns, t]);
+
   // Null-safe view of the (untyped-at-runtime) history feed, wired to the
   // "Time" column's sort affordance. `useSortToggle` starts with no active
   // key, so the initial order matches what the parent supplies; clicking the
@@ -119,6 +138,7 @@ export function EventHistoryTable({ history, sourceState, isLoading, error, onRe
           tableId="admin:security-events"
           columns={eventColumns}
           mobileColumns={['createdAt', 'locked', 'sentryMode', 'doorState', 'windows']}
+          mobilePresentation={mobilePresentation}
           data={rows}
           enableValueFilters
           keyExtractor={(row) => row.id}

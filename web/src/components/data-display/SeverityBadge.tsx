@@ -45,6 +45,7 @@ export function SeverityBadge({
 
   return (
     <span
+      data-app-part="status badge"
       className={cn(
         'inline-flex items-center rounded-full border font-medium',
         tokens.bg,
@@ -71,5 +72,5 @@ export function SeverityIcon({ severity, className }: SeverityIconProps) {
   const sev = normalizeSeverity(severity)
   const tokens = severityTokens[sev]
   const Icon = iconMap[tokens.icon]
-  return <Icon className={cn(tokens.fg, className)} aria-hidden="true" />
+  return <Icon data-app-part="status" className={cn(tokens.fg, className)} aria-hidden="true" />
 }

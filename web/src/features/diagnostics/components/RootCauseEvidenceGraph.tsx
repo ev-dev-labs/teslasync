@@ -115,8 +115,9 @@ export function RootCauseEvidenceGraph({
           }
         />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[auto_1fr] lg:items-center">
+        <div data-app-part="chart" className="grid gap-4 lg:grid-cols-[auto_1fr] lg:items-center">
           <svg
+            data-app-part="chart-plot"
             viewBox={`0 0 ${GRAPH_SIZE} ${GRAPH_SIZE}`}
             width={GRAPH_SIZE}
             height={GRAPH_SIZE}
@@ -153,7 +154,7 @@ export function RootCauseEvidenceGraph({
               {t('rootCauseIntelligence.graph.focalNodeLabel', 'Focal')}
             </text>
           </svg>
-          <ul className="space-y-2">
+          <ul data-app-part="chart-legend list" className="space-y-2">
             <li className="flex items-center gap-2">
               <svg width={10} height={10} aria-hidden="true">
                 <circle cx={5} cy={5} r={5} fill="var(--theme-primary)" />

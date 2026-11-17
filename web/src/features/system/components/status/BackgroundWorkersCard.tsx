@@ -168,10 +168,12 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
     return (
       <div className="space-y-3">
         {summary}
-        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
+        <Text as="p" variant="bodySm" data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="rounded-lg bg-white/[0.03] p-4">
+          <span data-app-part="feedback-message">
           {!health
             ? t('systemStatus.workersCopy.unavailable', 'Background worker health is unavailable.')
             : t('systemStatus.workersCopy.empty', 'No background workers reporting. Ensure the notification, export, and automation worker processes are running and reachable on their configured ports.')}
+          </span>
         </Text>
       </div>
     )
@@ -187,7 +189,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
       {summary}
 
       {/* Per-worker-name groups, each containing 1..N instance rows. */}
-      <ul className="space-y-3">
+      <ul data-app-part="list" className="space-y-3">
         {groups.map((g) => {
           const groupCls = severityClasses(g.severity)
           const isMulti = g.total > 1
@@ -209,6 +211,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
                 <Boxes className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
                 <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words">{g.name}</Text>
                 <Text
+                  data-app-part="badge"
                   size="xs"
                   className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${groupCls.chip}`}
                 >
@@ -222,7 +225,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
               </div>
 
               {/* Per-instance rows */}
-              <ul className="divide-y divide-white/[0.05]">
+              <ul data-app-part="list" className="divide-y divide-white/[0.05]">
                 {g.instances.map((inst) => {
                   const cls = instanceClasses(inst.status)
                   const host = shortHost(inst.host)
@@ -251,6 +254,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
 
                       <div className="flex shrink-0 items-center gap-2 sm:justify-end">
                         <Text
+                          data-app-part="badge"
                           size="xs"
                           className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}
                         >
@@ -263,9 +267,9 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
 
                       {inst.error && (
                         <div className="basis-full sm:basis-full">
-                          <Text as="div" size="xs" className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-red-300 ring-1 ring-red-500/25">
-                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-                            <span className="break-all">{inst.error}</span>
+                          <Text as="div" size="xs" data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="danger" className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-red-300 ring-1 ring-red-500/25">
+                            <AlertTriangle data-app-part="feedback-icon" className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                            <span data-app-part="feedback-message" className="break-all">{inst.error}</span>
                           </Text>
                         </div>
                       )}
@@ -281,7 +285,8 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
       {/* Footer guidance: explain how to scale, since most operators won't
           know the *_HOSTS env contract until the panel tells them. */}
       {multiInstanceGroups === 0 && (
-        <Text as="p" variant="caption" className="break-words rounded-md bg-white/[0.02] p-2.5 ring-1 ring-white/[0.05]">
+        <Text as="p" variant="caption" data-app-part="feedback" data-app-feedback-kind="insight" data-app-tone="neutral" className="break-words rounded-md bg-white/[0.02] p-2.5 ring-1 ring-white/[0.05]">
+          <span data-app-part="feedback-message">
           <Trans
             i18nKey="systemStatus.workersCopy.replicationGuidance"
             defaults="Running multiple instances of a worker? Set <notification>{{notification}}</notification>, <export>{{export}}</export>, or <automation>{{automation}}</automation> to a comma-separated list of hostnames. Each instance will then appear here with its own status and latency."
@@ -297,11 +302,14 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
             <Code>EXPORT_WORKER_HOSTS</Code>, or{' '}
             <Code>AUTOMATION_WORKER_HOSTS</Code> to a comma-separated list of hostnames. Each instance will then appear here with its own status and latency.
           </Trans>
+          </span>
         </Text>
       )}
 
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
+          data-app-part="button"
+          data-app-variant="ghost"
           to="/api-logs"
           className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >

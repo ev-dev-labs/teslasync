@@ -174,10 +174,11 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
     {isCompact ? coveragePercent == null ? '—' : `${coveragePercent}%` : healthLabel}
   </Badge>;
   const coverage = (
-    <div role="progressbar" aria-label={t('widget.signalHealth.reportingCoverage', 'Reporting coverage')}
+    <div data-app-part="metric" data-app-metric="bar" data-metric-track
+      role="progressbar" aria-label={t('widget.signalHealth.reportingCoverage', 'Reporting coverage')}
       aria-valuemin={0} aria-valuemax={100} aria-valuenow={coveragePercent ?? undefined}
       className="h-1.5 overflow-hidden rounded-shape-sm bg-[var(--track)]">
-      {coveragePercent != null && <div className={`h-full rounded-shape-sm ${meterColor}`} style={{ width: `${coveragePercent}%` }} />}
+      {coveragePercent != null && <div data-metric-fill className={`h-full rounded-shape-sm ${meterColor}`} style={{ width: `${coveragePercent}%` }} />}
     </div>
   );
   const details = (isWide || !hasData) && (

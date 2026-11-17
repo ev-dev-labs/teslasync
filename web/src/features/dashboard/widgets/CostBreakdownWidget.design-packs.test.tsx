@@ -7,6 +7,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { MonthlyCostEntry } from '@/types/analytics';
 import CostBreakdownWidget from './CostBreakdownWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import * as packModules from './designPacks/packModules';
 import { PACK_APPEARANCES, type PackId } from './designPacks/types';
 import type { WidgetProps } from './types';
 
@@ -237,12 +238,21 @@ it('preserves Classic as the default and unknown-pack recovery, including its or
 });
 
 it('keeps the original Classic body intact until the requested appearance has loaded', async () => {
+  let releaseLoad = () => {};
+  const pendingLoad = new Promise<void>(resolve => { releaseLoad = resolve; });
+  const resolveModule = packModules.resolvePackModule;
+  vi.spyOn(packModules, 'cachedPackModule').mockReturnValue(null);
+  vi.spyOn(packModules, 'resolvePackModule').mockImplementation(async load => {
+    await pendingLoad;
+    return resolveModule(load);
+  });
   const { container } = renderWidget('v5');
   expect(container.querySelector('[data-instrument-appearance]')).toBeNull();
   expect(container.querySelector('.recharts-pie')).not.toBeNull();
   expect(screen.getByText('Saved $40.00 vs gas')).toBeInTheDocument();
   expect(screen.getByText('Lifetime')).toBeInTheDocument();
   expect(monthlyRows()).toEqual([['2026-10', '$70.00'], ['2026-11', '$40.00']]);
+  releaseLoad();
   await expectPack(container, 'v5');
   expect(container.querySelector('.recharts-bar')).not.toBeNull();
 });

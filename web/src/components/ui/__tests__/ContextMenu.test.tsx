@@ -20,6 +20,7 @@ import '@/i18n';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { useRef } from 'react';
+import { getAppDesignAttributes } from '../app-designs/designs';
 import {
   ContextMenuRoot,
   useContextMenu,
@@ -81,7 +82,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  closeContextMenu();
+  act(() => closeContextMenu());
   __resetContextMenuForTests();
   cleanup();
 });
@@ -91,6 +92,15 @@ afterEach(() => {
 /* ------------------------------------------------------------------ */
 
 describe('ContextMenu — open / close lifecycle', () => {
+  it('inherits the right-clicked preview rather than the globally mounted menu root', async () => {
+    const attributes = getAppDesignAttributes('bauhaus');
+    renderWithRoot(<section data-app-design-preview="" {...attributes}><Trigger items={makeItems()} /></section>);
+    await openMenuByRightClick('trigger');
+    const boundary = screen.getByRole('menu').closest('[data-app-design-portal]');
+    expect(boundary?.parentElement).toBe(document.body);
+    for (const [name, value] of Object.entries(attributes)) expect(boundary).toHaveAttribute(name, value);
+  });
+
   it('opens via right-click on a trigger bound through useContextMenu', async () => {
     const items = makeItems();
     renderWithRoot(<Trigger items={items} />);

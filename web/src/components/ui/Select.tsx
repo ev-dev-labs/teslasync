@@ -64,7 +64,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         : undefined;
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
-      <div className="min-w-0 space-y-1">
+      <div data-app-part="field" className="min-w-0 space-y-1">
         {label && (
           <div className="flex min-w-0 items-center gap-1">
             <Label
@@ -88,6 +88,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         )}
         <select
           ref={ref}
+          data-app-part="field-control"
+          data-app-size={size}
+          data-app-native-popup="true"
           id={selectId}
           required={required}
           aria-required={required ? 'true' : undefined}
@@ -110,8 +113,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p id={`${selectId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
-        {hint && !error && <p id={`${selectId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}
+        {error && <p data-app-part="status" data-app-field-feedback="error" id={`${selectId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
+        {hint && !error && <p data-app-part="status" data-app-field-feedback="hint" id={`${selectId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );
   },

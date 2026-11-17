@@ -23,11 +23,15 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Link, MemoryRouter } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { severityTokens } from '@/lib/tokens';
+import postcss from 'postcss';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const motion = vi.hoisted(() => ({ osReduce: false, lowBandwidth: false }));
 vi.mock('framer-motion', async (importOriginal) => ({
@@ -85,6 +89,45 @@ describe('Stepper', () => {
   beforeEach(() => {
     motion.osReduce = false;
     motion.lowBandwidth = false;
+  });
+
+  it('binds real done/current/pending/unknown anatomy while retaining first-unconfirmed action and indicator geometry', () => {
+    const feedbackCss = readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8');
+    const { container } = renderStepper({ steps: [
+      ...threeSteps(),
+      mkStep({ key: 'unknown', title: 'Unknown evidence', done: null }),
+    ] });
+    container.setAttribute('data-app-design-preview', '');
+    for (const [name, value] of Object.entries(getAppDesignAttributes('v2'))) container.setAttribute(name, value);
+    const release = observeAppDesignScopes(container);
+    try {
+      const list = screen.getByRole('list', { name: 'Onboarding steps' });
+      expect(list).toHaveAttribute('data-app-list', 'steps');
+      const rows = within(list).getAllByRole('listitem');
+      expect(rows.map(row => row.getAttribute('data-state'))).toEqual(['done', 'current', 'pending', 'unknown']);
+      expect(rows.map(row => row.getAttribute('data-step-id'))).toEqual(['tesla', 'vehicle', 'telemetry', 'unknown']);
+      for (const row of rows) {
+        expect(row).toHaveAttribute('data-app-step-kind', 'onboarding');
+        const indicator = row.querySelector('[data-app-part="step-indicator"]')!;
+        expect(indicator).toHaveClass('h-9', 'w-9');
+        expect(indicator).toHaveAttribute('aria-hidden', 'true');
+        expect(row.querySelector('[data-app-part="step-body"]')).toContainElement(row.querySelector('[data-app-part="step-title"]') as HTMLElement);
+        const matches: string[] = [];
+        postcss.parse(feedbackCss).walkRules(rule => {
+          if (rule.selector.includes('onboarding') && rule.nodes.some(node => node.type === 'decl')) {
+            matches.push(...rule.selectors.filter(selector => row.matches(selector)));
+          }
+        });
+        expect(matches.length).toBeGreaterThan(0);
+        row.removeAttribute('data-app-design-owner');
+        expect(matches.every(selector => !row.matches(selector))).toBe(true);
+      }
+      expect(container.querySelectorAll('[data-app-part="step-connector"]')).toHaveLength(3);
+      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(rows[1]).toHaveAttribute('aria-current', 'step');
+      expect(rows[3]).not.toHaveAttribute('aria-current');
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+    } finally { release(); }
   });
 
   it('renders an accessible ordered list with every step title and description', () => {

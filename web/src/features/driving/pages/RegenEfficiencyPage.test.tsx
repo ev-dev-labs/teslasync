@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -293,6 +294,8 @@ beforeEach(() => {
     drivesRefetch,
   );
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('RegenEfficiencyPage', () => {
   it('renders the ready state with all eight persistent evidence sections', () => {

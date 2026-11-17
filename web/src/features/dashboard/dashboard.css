@@ -71,6 +71,23 @@
     box-shadow: inset 0 -1px 0 var(--border-subtle);
   }
 
+  @media (max-width: 767px) {
+    /* Widget-owned accessibility: do not retheme or resize the vehicle scene. */
+    .widget-twin-accessibility [data-role="widget-header-actions"] [data-app-icon-only="true"] {
+      min-width: 2.75rem !important;
+      min-height: 2.75rem !important;
+    }
+
+    .widget-twin-accessibility [data-role="widget-header-line"] {
+      flex-wrap: wrap;
+    }
+
+    .widget-twin-accessibility [data-role="widget-header-title"],
+    .widget-twin-accessibility .text-sm {
+      font-size: max(1rem, calc(1rem * var(--font-scale, 1)));
+    }
+  }
+
   .widget-status-tile,
   .widget-tip-card {
     border-block-end: 1px solid var(--border-subtle);

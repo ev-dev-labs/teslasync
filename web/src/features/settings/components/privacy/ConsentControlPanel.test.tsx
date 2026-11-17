@@ -28,6 +28,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import { getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -185,6 +188,37 @@ describe('ConsentControlPanel — policy copy across version-fetch states', () =
 })
 
 describe('ConsentControlPanel — live status region', () => {
+  it.each(PACK_IDS)('%s owns only the browser-local consent notice while policy failure leaves actions usable', pack => {
+    const handlers = makeHandlers()
+    const view = render(
+      <div data-app-design-preview="" {...getAppDesignAttributes(pack)}>
+        <ConsentControlPanel consent="declined" requireConsent={false} isLoading={false} isError
+          {...handlers} />
+      </div>,
+    )
+    const release = observeAppDesignScopes(view.container)
+    try {
+      const notice = stateRegion()
+      expect(notice).toHaveAttribute('data-app-feedback-kind', 'notice')
+      expect(notice).toHaveAttribute('data-app-tone', 'warning')
+      expect(notice).toHaveAttribute('data-app-design-owner', expect.stringContaining(`pack-${pack}`))
+      expect(matchesAppDesignCss(notice, '[data-app-feedback-kind="notice"]')
+        .some(match => match.declarations.display === 'grid')).toBe(true)
+      expect(notice.querySelector('[data-app-part~="feedback-content"]')).toHaveTextContent('Declined')
+      expect(notice.querySelector('[data-app-part~="feedback-message"]'))
+        .toHaveTextContent('Declined — preview only; reporting stays on without a consent gate')
+      expect(notice).toHaveAttribute('role', 'status')
+      expect(declineBtn()).toBeDisabled()
+      fireEvent.click(acceptBtn())
+      fireEvent.click(resetBtn())
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(handlers.onAccept).toHaveBeenCalledTimes(1)
+      expect(handlers.onReset).toHaveBeenCalledTimes(1)
+      expect(handlers.onRetry).toHaveBeenCalledTimes(1)
+      expect(handlers.onDecline).not.toHaveBeenCalled()
+    } finally { release() }
+  })
+
   it('is exposed as an assistive-tech status region so changes are announced', () => {
     renderPanel({ consent: 'accepted' })
     // role="status" is an implicit polite live region.

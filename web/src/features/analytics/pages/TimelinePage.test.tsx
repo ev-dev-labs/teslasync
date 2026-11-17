@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
+import { cleanup, render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useSearchParams } from 'react-router-dom'
@@ -94,6 +94,10 @@ import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
 import type { Vehicle } from '@/types/vehicle'
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockedRequest = vi.mocked(request)
 
@@ -260,6 +264,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  cleanup();
   setGlobalLocale('en-US')
   onlineManager.setOnline(true)
 })
@@ -371,7 +376,7 @@ describe('TimelinePage', () => {
       const inspect = within(mobile).getByRole('button', { name: 'Inspect transition asleep to driving' })
       expect(within(mobile).getByText('1h')).toBeInTheDocument()
       expect(inspect).toHaveClass('min-h-11')
-      inspect.focus()
+      act(() => { inspect.focus(); })
       await user.keyboard('{Enter}')
       const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
       expect(within(drawer).getByText('1h')).toBeInTheDocument()

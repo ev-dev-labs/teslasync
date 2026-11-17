@@ -25,6 +25,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import '@/i18n'
 import { Base64Tool } from './Base64Tool'
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs'
+import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils'
 
 function getInput(): HTMLTextAreaElement {
   return screen.getByLabelText('Input') as HTMLTextAreaElement
@@ -39,6 +41,22 @@ function modeButton(name: RegExp): HTMLElement {
 }
 
 describe('Base64Tool', () => {
+  it.each(['classic', 'v3', 'v2', 'v1'] as const)('%s activates the real code consumer without changing UTF-8 output or its paint', async pack => {
+    const view = render(<div data-app-design-preview="" {...getAppDesignAttributes(pack)}><Base64Tool /></div>)
+    setInput('€\nTesla')
+    const release = observeAppDesignScopes(view.container.firstElementChild!)
+    try {
+      const body = view.container.querySelector('pre')!
+      expectAppDesignDataMode(body, APPLICATION_DESIGNS[pack].data, '[data-app-code-slot="body"]')
+      expect(body.textContent).toBe('4oKsClRlc2xh')
+      expect(body).toHaveClass('whitespace-pre-wrap', 'break-all', 'text-theme-accent')
+      fireEvent.click(modeButton(/^decode$/i))
+      setInput('4oKsClRlc2xh')
+      await waitFor(() => expect(view.container.querySelector('pre')?.textContent).toBe('€\nTesla'))
+      expect(screen.queryByRole('alert')).toBeNull()
+    } finally { release() }
+  })
+
   afterEach(() => {
     cleanup()
   })
@@ -71,6 +89,9 @@ describe('Base64Tool', () => {
 
     const output = screen.getByText('SGVsbG8gV29ybGQ=')
     expect(output.tagName).toBe('PRE')
+    expect(output).toHaveAttribute('data-app-code-slot', 'body')
+    expect(output.closest('[data-app-panel-kind="code"]')).toHaveAttribute('data-app-part', 'panel')
+    expect(output).toHaveClass('whitespace-pre-wrap', 'break-all', 'text-theme-accent')
     expect(screen.getByText('Output')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^copy$/i })).toBeInTheDocument()
   })

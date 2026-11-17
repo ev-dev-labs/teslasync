@@ -28,6 +28,7 @@
  * page's own `isApiError`/`ApiError` 503 branch is exercised honestly.
  */
 
+import { setupMeasuredChartContainers } from '@/test/setup'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -168,6 +169,8 @@ async function waitForSummary() {
 beforeEach(() => {
   mockedRequest.mockReset()
 })
+
+setupMeasuredChartContainers(800, 320)
 
 describe('SecretRotationPage retained source', () => {
   it('keeps the complete table, both chart alternatives and urgency after refresh failure', async () => {

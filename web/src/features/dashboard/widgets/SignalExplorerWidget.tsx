@@ -11,7 +11,7 @@ import { Button, Caption, Input, PanelTitle, Select, Text } from '@/components/u
 import { SourceContent, type SourceState } from '@/components/layout';
 import { Timeline } from '@/components/data-display';
 import {
-  EmbeddedChart, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  EmbeddedChart, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
   ChartTooltip, CHART_COLORS, axisTick, chartGrid,
 } from '@/components/charts';
 import { useDataState } from '@/hooks/useDataState';
@@ -217,7 +217,7 @@ export default function SignalExplorerWidget({ vehicleId, size, config }: Widget
         errorMessage={t('dashboardWidgets.driving.signalExplorer.liveError', 'Live signal evidence could not be loaded.')}
         emptyMessage={t('dashboardWidgets.driving.signalExplorer.observationEmpty', 'Choose a field; unobserved compound children require the routing inventory.')}
         errorRecovery={{ onRetry: () => { void liveQuery.refetch(); } }}>
-        <ul aria-label={liveLabel} className={cn('min-w-0 overflow-y-auto', compact ? 'max-h-56' : 'max-h-80', appearance?.feed)}>
+        <ul data-app-part="list" aria-label={liveLabel} className={cn('min-w-0 overflow-y-auto', compact ? 'max-h-56' : 'max-h-80', appearance?.feed)}>
           {childNames.map(name => {
             const reading = observation(signals[name]);
             const rowDropped = routes.get(name)?.destination === 'drop';
@@ -267,7 +267,7 @@ export default function SignalExplorerWidget({ vehicleId, size, config }: Widget
           ]}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={plot}>
-              <CartesianGrid {...chartGrid} />
+              {chartGrid}
               <XAxis type="number" scale="time" dataKey="instant" tick={axisTick}
                 domain={[Date.parse(range.startInstant), Date.parse(range.endInstantExclusive)]}
                 tickFormatter={value => formatTime(Number(value))} />

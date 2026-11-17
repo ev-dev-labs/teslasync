@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -126,6 +127,8 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+setupCanvasTextMeasurement();
+
 describe('SpeedProfileWidget production design packs', () => {
   it.each(packs)('%s preserves the real histogram, signed power, gaps, details and refresh in %s', async (pack, appearance) => {
     const view = render(widget(pack));
@@ -162,7 +165,7 @@ describe('SpeedProfileWidget production design packs', () => {
     useSpeedProfileMock.mockReturnValue(query({ isFetching: true }));
     view.rerender(widget(pack));
     const refresh = screen.getByRole('button', { name: /refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

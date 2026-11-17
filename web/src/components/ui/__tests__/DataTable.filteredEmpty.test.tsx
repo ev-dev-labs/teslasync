@@ -221,6 +221,27 @@ describe('DataTable filtered empty copy', () => {
     expect(screen.queryByText('No results')).not.toBeInTheDocument()
   })
 
+  it('honors caller-specific no-match copy across presentations without replacing genuine empty copy', async () => {
+    const noMatchMessage = 'No loaded samples match.'
+    const view = mount({ noMatchMessage, mobilePresentation: presentation })
+    search('absent')
+    expect(await screen.findByText(noMatchMessage)).toBeInTheDocument()
+    expect(screen.queryByText(cleanCopy)).not.toBeInTheDocument()
+    resize(375)
+    expect(screen.getByText(noMatchMessage)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    await waitFor(() => expect(view.container.querySelectorAll('[data-card]')).toHaveLength(3))
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    view.rerender(<DataTable tableId="filtered-empty:records" columns={columns} data={[]}
+      keyExtractor={row => row.id} mobilePresentation={presentation}
+      emptyMessage={cleanCopy} noMatchMessage={noMatchMessage} />)
+    expect(screen.getByText(cleanCopy)).toBeInTheDocument()
+    expect(screen.queryByText(noMatchMessage)).not.toBeInTheDocument()
+    resize(640)
+    expect(within(screen.getByRole('table')).getByText(cleanCopy)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
+  })
+
   it('shows no-match for an empty value selection and reset restores all loaded values', () => {
     mount({ enableValueFilters: true })
     excludeAllValues()

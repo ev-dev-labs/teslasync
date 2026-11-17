@@ -878,7 +878,7 @@ export default function BatteryHealthPage() {
                 <Icon icon={Lightbulb} className={typography.color.muted} />
                 {t('battery.recommendations.title', 'Recommendations')}
               </PanelTitle>
-              <ul className="space-y-4">
+              <ul data-app-part="list" className="space-y-4">
                 {recommendations.map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2">
                     <Icon icon={Lightbulb} className={cn('mt-0.5', typography.color.muted)} />

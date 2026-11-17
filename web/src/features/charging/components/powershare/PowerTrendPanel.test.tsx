@@ -33,6 +33,7 @@
  * is intentionally NOT a dependency of this repo; `fireEvent.click` is the
  * established interaction convention for the Retry CTA.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -136,6 +137,8 @@ function renderPanel(overrides: Partial<PanelProps> = {}) {
 function heading(): HTMLElement {
   return screen.getByRole('heading', { level: 3, name: TITLE });
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('PowerTrendPanel — persistent chrome + a11y', () => {
   it('renders the h3 title with a decorative aria-hidden icon (icon excluded from the name)', () => {

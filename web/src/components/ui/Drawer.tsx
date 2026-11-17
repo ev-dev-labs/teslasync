@@ -1,6 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { motion } from '@/components/motion'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -9,6 +8,7 @@ import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { useDialogFocus } from '@/hooks/useDialogFocus'
 import { Button } from './Button'
 import { Heading, Text } from './Typography'
+import { AppDesignPortal } from './AppDesignPortal'
 
 export type DrawerSize = 'sm' | 'md' | 'lg'
 
@@ -96,9 +96,10 @@ export function Drawer({
   if (typeof document === 'undefined') return null
   // Drawer is a slide-in panel primitive, not a centered dialog.
   // Phase-45 / Prompt 04: NOT migrated to <Modal>.
-  return createPortal(
+  return <AppDesignPortal>
     <div
       ref={drawerRef}
+      data-app-part="overlay"
       className="fixed inset-0 z-overlay"
       role="dialog"
       aria-modal="true"
@@ -122,6 +123,8 @@ export function Drawer({
         exit={reduce ? { opacity: 0 } : { x: side === 'right' ? '100%' : '-100%' }}
         transition={{ duration: durationMs / 1000, ease: transitions.ease.ease }}
         data-drawer-panel
+        data-app-part="dialog"
+        data-app-dialog-kind="drawer"
         data-drawer-size={size}
         className={cn(
           'absolute top-0 bottom-[var(--shell-chrome-bottom)] flex w-full max-w-none flex-col glass-panel rounded-none border-0 shadow-e3',
@@ -132,6 +135,7 @@ export function Drawer({
       >
         <div
           className="shrink-0 border-b border-[var(--border-default)] px-4 py-4 sm:px-6"
+          data-app-part="dialog-header"
           data-drawer-header
         >
           <div className="flex items-start justify-between gap-4">
@@ -185,12 +189,13 @@ export function Drawer({
             {tabs}
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-drawer-body>
+        <div data-app-part="dialog-body" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-drawer-body>
           {children}
         </div>
         {footer !== null && (
           <div
             className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 sm:py-4"
+            data-app-part="dialog-footer"
             data-drawer-footer
           >
             {footer === undefined ? (
@@ -210,7 +215,6 @@ export function Drawer({
           </div>
         )}
       </motion.div>
-    </div>,
-    document.body,
-  )
+    </div>
+  </AppDesignPortal>
 }

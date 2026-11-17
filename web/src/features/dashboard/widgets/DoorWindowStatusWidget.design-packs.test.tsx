@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { DataStateSource } from '@/api/dataState';
 import type { SecurityEvent } from '@/api/types';
@@ -204,7 +204,7 @@ it('preserves Classic default/recovery and refresh focus while changing all pres
   expect(screen.getByText('Partial')).toBeVisible();
   expect(screen.getByText('—')).toBeVisible();
   const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-  refresh.focus();
+  act(() => { refresh.focus(); });
 
   for (const [pack, appearance] of packs) {
     view.rerender(tree(pack));
@@ -281,7 +281,7 @@ describe.each(packs)('Door and window lifecycle %s (%s)', (pack, appearance) => 
     await presentation(view.container, appearance);
     expectReportedRows();
     const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(mocks.refreshSecurity).not.toHaveBeenCalled();
   });

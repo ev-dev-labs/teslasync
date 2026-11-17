@@ -43,6 +43,11 @@ export function WeeklyPunchcard({
   const favoriteLabel = summary.favorite
     ? `${dayLabel(summary.favorite.day)} ${hourLabel(summary.favorite.hour)}:${hourLabel(0)}`
     : '—';
+  const punchcardLabel = t(
+    'rhythm.weeklyPunchcard.aria',
+    'Drive starts by local weekday and hour; strongest slot {{slot}}',
+    { slot: favoriteLabel },
+  );
 
   return (
     <GlassPanel
@@ -67,7 +72,7 @@ export function WeeklyPunchcard({
           )}
         />
       </PanelTitle>
-      <Text as="p" variant="caption" className="mt-1">
+      <Text as="p" variant="bodySm" className="mt-1">
         {t(
           'rhythm.weeklyPunchcard.timezone',
           '24-hour departures grouped by local start hour.',
@@ -91,29 +96,20 @@ export function WeeklyPunchcard({
             role="region"
             // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allows keyboard users to scroll through all hours.
             tabIndex={0}
-            aria-label={t(
-              'rhythm.weeklyPunchcard.scroll',
-              'Weekly drive-start counts; scroll to see all hours',
-            )}
+            aria-label={punchcardLabel}
           >
-            <div className="min-w-[800px]">
-              <Table variant="embedded" className="w-full table-fixed">
+            <div data-weekly-punchcard-frame className="min-w-[800px]">
+              <Table data-weekly-punchcard variant="embedded" className="w-full table-fixed">
                 <caption className="pb-3 text-start">
-                  <Text variant="caption">
-                    {t(
-                      'rhythm.weeklyPunchcard.aria',
-                      'Drive starts by local weekday and hour; strongest slot {{slot}}',
-                      { slot: favoriteLabel },
-                    )}
-                  </Text>
+                  <Text variant="bodySm">{punchcardLabel}</Text>
                 </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className="w-12">
+                <thead data-app-part="table-head">
+                  <tr data-app-part="table-row">
+                    <th data-app-part="table-cell" scope="col" className="w-12">
                       <Text variant="caption">{t('rhythm.weeklyPunchcard.day', 'Day')}</Text>
                     </th>
                     {Array.from({ length: 24 }, (_, hour) => (
-                      <th key={hour} scope="col">
+                      <th data-app-part="table-cell" key={hour} scope="col">
                         <Text variant="caption" className="text-center tabular-nums">
                           {hourLabel(hour)}
                         </Text>
@@ -123,19 +119,27 @@ export function WeeklyPunchcard({
                 </thead>
                 <tbody>
                   {DAY_ORDER.map((day) => (
-                    <tr key={day}>
-                      <th scope="row">
+                    <tr data-app-part="table-row" key={day}>
+                      <th data-app-part="table-cell" scope="row">
                         <Text variant="caption">{dayLabel(day)}</Text>
                       </th>
                       {Array.from({ length: 24 }, (_, hour) => {
                         const count = summary.matrix[day]![hour]!;
                         return (
-                          <td
+                          <td data-app-part="table-cell"
                             key={hour}
+                            data-punchcard-hour={hourLabel(hour)}
                             aria-label={t(
                               'rhythm.weeklyPunchcard.cell',
-                              '{{day}} {{hour}} · {{visits}} drives',
-                              { day: dayLabel(day), hour: `${hourLabel(hour)}:${hourLabel(0)}`, visits: fmtInt(count) },
+                              '{{day}} {{hour}} · {{count}} drives',
+                              {
+                                count,
+                                replace: {
+                                  day: dayLabel(day),
+                                  hour: `${hourLabel(hour)}:${hourLabel(0)}`,
+                                  count: fmtInt(count),
+                                },
+                              },
                             )}
                             className="border border-[var(--border-subtle)] bg-[var(--surface-2)] py-3 text-center"
                             style={{

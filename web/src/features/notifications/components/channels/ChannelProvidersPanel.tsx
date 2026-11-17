@@ -63,13 +63,15 @@ export function ChannelProvidersPanel({ channels, source }: ChannelProvidersPane
       {source?.fatalError && <QueryError compact error={source.fatalError}
         onRetry={source.retry ?? undefined} resourceName={sourceLabel} />}
 
-      <ul className="grid list-none grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+      <ul data-app-part="list" className="grid list-none grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-3">
         {CHANNEL_TYPES.map((p) => {
           const Icon = p.icon;
           const count = counts.get(p.value) ?? 0;
           return (
             <li
               key={p.value}
+              data-app-part="card"
+              data-surface-variant="standalone"
               className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-3 ring-1 ring-white/5"
             >
               <div

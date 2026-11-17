@@ -50,9 +50,10 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
     const inputId = id ?? autoId
     const descriptionId = description != null ? `${inputId}-description` : undefined
     return (
-      <label htmlFor={inputId} className={cn('block min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
+      <label data-app-part="field" data-app-field-kind="choice" htmlFor={inputId} className={cn('block min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
         <input
           ref={ref}
+          data-app-part="field-control"
           id={inputId}
           type="radio"
           className="peer sr-only"
@@ -66,6 +67,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
           {...inputProps}
         />
         <span
+          data-app-choice-surface="radio"
           className={cn(
             'flex min-h-11 min-w-0 items-start gap-3 rounded-panel border p-3 text-start transition-colors duration-fast motion-reduce:transition-none',
             checked
@@ -98,7 +100,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
             </span>
           )}
           <span className="min-w-0 flex-1">
-            <Text as="span" size="sm" weight="medium" color="primary" className="block break-words">
+            <Text data-app-part="field-label" as="span" size="sm" weight="medium" color="primary" className="block break-words">
               {label}
             </Text>
             {description != null && <Caption id={descriptionId} className="mt-0.5 block break-words">{description}</Caption>}

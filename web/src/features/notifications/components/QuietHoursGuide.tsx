@@ -94,7 +94,7 @@ export function QuietHoursGuide() {
         </div>
       </div>
 
-      <ul className="space-y-3">
+      <ul data-app-part="list" className="space-y-3">
         {steps.map((step) => (
           <li key={step.key} className="flex items-start gap-2.5">
             <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{step.icon}</span>
@@ -109,7 +109,7 @@ export function QuietHoursGuide() {
         <Text as="p" variant="label" id={severityTitleId}>
           {t('notifications.quietHours.guide.severityTitle', 'Severity levels')}
         </Text>
-        <ul className="space-y-2" aria-labelledby={severityTitleId}>
+        <ul data-app-part="list" className="space-y-2" aria-labelledby={severityTitleId}>
           {severities.map((row) => (
             <li key={row.key} className="flex items-center gap-2">
               <Badge variant={row.variant} size="sm" className="shrink-0">

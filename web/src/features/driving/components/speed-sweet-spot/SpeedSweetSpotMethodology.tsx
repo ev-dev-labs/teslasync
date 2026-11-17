@@ -182,7 +182,7 @@ export function SpeedSweetSpotMethodology(
               </Text>
             </div>
           </div>
-          <ul className="space-y-3">
+          <ul data-app-part="list" className="space-y-3">
             {methods.map((method) => (
               <li
                 key={method.text}

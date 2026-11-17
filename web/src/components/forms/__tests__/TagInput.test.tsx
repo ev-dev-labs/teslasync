@@ -6,7 +6,7 @@
  * announcer wiring, and basic a11y wiring (label, aria-describedby).
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useState } from 'react';
 import '@/i18n';
@@ -226,7 +226,7 @@ describe('TagInput', () => {
     render(<Harness onChange={onChange} handleRef={ref} />);
     const input = getInput();
     fireEvent.change(input, { target: { value: 'foo' } });
-    ref.current?.commitPending();
+    act(() => { ref.current?.commitPending(); });
     expect(onChange).toHaveBeenCalledWith(['foo']);
   });
 

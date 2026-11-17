@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Area,
+  ChartTooltip,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -87,7 +88,7 @@ export function UtilizationForecastChart({
               {chartGrid}
               <XAxis dataKey="date" tick={axisTick} />
               <YAxis domain={[0, 100]} unit="%" tick={axisTick} />
-              <Tooltip />
+              <Tooltip content={<ChartTooltip />} />
               <Area
                 type="monotone"
                 dataKey="lower"

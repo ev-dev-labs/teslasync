@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -83,6 +84,8 @@ beforeEach(() => {
   mocks.units.mockReturnValue(units());
 });
 afterEach(cleanup);
+
+setupMeasuredChartContainers(800, 320);
 
 describe.each(PACKS)('WeeklyDigestWidget %s (%s)', (pack, appearance) => {
   it('renders actual weekly bars, every comparison and the working source refresh', async () => {

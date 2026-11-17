@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { VisuallyHidden } from '@/components/a11y';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TFunction } from 'i18next';
-import { Badge, Button, Code, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
+import { Badge, Button, Card, Code, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
@@ -187,7 +187,7 @@ export function DayLogTimeline({
 
       <div className="mt-4">
         {isLoading ? (
-          <div role="status" aria-label={t('dayLog.timeline.loading', 'Loading timeline')}>
+          <div data-app-part="status" role="status" aria-label={t('dayLog.timeline.loading', 'Loading timeline')}>
             <Skeleton lines={8} />
           </div>
         ) : error ? (
@@ -268,7 +268,7 @@ export function DayLogTimeline({
                   action={{ label: t('dayLog.list.showAll', 'Show all'), onClick: showAll }}
                 />
               ) : (
-                <div ref={parentRef} data-testid="daylog-list" role="list" aria-labelledby={titleId} tabIndex={-1} onKeyDownCapture={navigateEvents} className="h-[55vh] min-h-80 overflow-auto p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
+                <div data-app-part="list timeline" ref={parentRef} data-testid="daylog-list" role="list" aria-labelledby={titleId} tabIndex={-1} onKeyDownCapture={navigateEvents} className="h-[55vh] min-h-80 overflow-auto p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
                   <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
                     {virtualizer.getVirtualItems().map((vi) => {
                       const row = rows[vi.index];
@@ -363,8 +363,8 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
       : null;
 
   return (
-    <div role="listitem" aria-labelledby={`${titleId} ${timeId} ${identityId}`} aria-posinset={position + 1} aria-setsize={total} data-event-position={position} className="min-w-0 border-b border-[var(--border-subtle)] py-1.5" data-testid={`daylog-event-${event.id}`}>
-      <div className="flex items-center gap-2.5">
+    <div data-app-part="timeline-row" role="listitem" aria-labelledby={`${titleId} ${timeId} ${identityId}`} aria-posinset={position + 1} aria-setsize={total} data-event-position={position} className="min-w-0 border-b border-[var(--border-subtle)] py-1.5" data-testid={`daylog-event-${event.id}`}>
+      <div data-app-part="timeline-content" className="flex items-center gap-2.5">
         <Text id={timeId} variant="caption" className="w-16 shrink-0 tabular-nums">
           {formatTimeSeconds(event.ts, timezone)}
         </Text>
@@ -375,7 +375,7 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
           <Icon className="h-3.5 w-3.5" />
         </span>
         <div className="min-w-0 flex-1">
-          <Text id={titleId} as="div" size="sm" weight="medium" className="break-words">
+          <Text data-app-part="metric-label" id={titleId} as="div" size="sm" weight="medium" className="break-words">
             {href ? (
               <Link to={href} className="inline-flex min-h-11 min-w-11 max-w-full items-center break-words text-inherit underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:inline md:min-h-0 md:min-w-0">
                 {title}
@@ -385,7 +385,7 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
             )}
           </Text>
           {detail != null && (
-            <Text variant="caption" className="truncate">
+            <Text data-app-part="metric-context" variant="caption" className="truncate">
               {detail}
             </Text>
           )}
@@ -415,19 +415,21 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
       </div>
       <VisuallyHidden id={identityId}>{event.id}</VisuallyHidden>
       {expanded && (
-        <div id={detailsId} className="mt-1.5 min-w-0 space-y-1 rounded-md bg-surface-2 p-3">
+        <Card padding="none" id={detailsId} className="mt-1.5 min-w-0 space-y-1 rounded-md border-0 bg-surface-2 p-3 text-inherit shadow-none">
+          <dl data-app-part="list" data-app-list="definitions" className="space-y-1">
           <DetailLine label={t('dayLog.list.detailCategory', 'Category')} value={t(`dayLog.categories.${categoryOf(event.type)}`, categoryOf(event.type))} />
           <DetailLine label={t('dayLog.list.detailSource', 'Source')} value={event.source} mono />
           <DetailLine label={t('dayLog.list.detailId', 'Event')} value={event.id} mono />
           <DetailLine label={t('dayLog.list.detailLayer', 'Layer')} value={event.layer} mono />
           <DetailLine label={t('dayLog.list.detailTime', 'Timestamp')} value={event.ts} mono />
+          </dl>
           <div>
             <Text variant="caption" className="font-medium">
               {t('dayLog.list.detailPayload', 'Recorded details')}
             </Text>
             <PayloadDetails event={event} subtitle={detail} t={t} formatDistance={formatDistance} formatEnergy={formatEnergy} formatDuration={formatDuration} />
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -435,14 +437,16 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
 
 function DetailLine({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-wrap gap-x-2">
-      <Text variant="caption" className="font-medium">
+    <div data-app-part="list-row" className="flex min-w-0 flex-wrap gap-x-2">
+      <Text data-app-part="metric-label" as="dt" variant="caption" className="font-medium">
         {label}:
       </Text>
       {mono ? (
-        <Code className="min-w-0 max-w-full break-all">{value}</Code>
+        <dd data-app-part="metric-value" className="min-w-0 max-w-full">
+          <Code className="break-all">{value}</Code>
+        </dd>
       ) : (
-        <Text variant="caption" className="min-w-0 max-w-full break-words">{value}</Text>
+        <Text data-app-part="metric-value" as="dd" variant="caption" className="min-w-0 max-w-full break-words">{value}</Text>
       )}
     </div>
   );
@@ -563,11 +567,11 @@ function PayloadDetails({ event, subtitle, t, formatDistance, formatEnergy, form
     return <Text variant="caption">{t('dayLog.list.detailEmpty', 'No further details recorded.')}</Text>;
   }
   return (
-    <div className="mt-1 space-y-1">
+    <dl data-app-part="list" data-app-list="definitions" className="mt-1 space-y-1">
       {rows.map((r) => (
         <DetailLine key={r.label} label={r.label} value={r.value} mono={r.mono} />
       ))}
-    </div>
+    </dl>
   );
 }
 

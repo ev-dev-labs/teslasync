@@ -58,7 +58,7 @@ export function PreconditioningDepartureDirectory({
               },
             )}
           </Text>
-          <ol className="max-h-[52rem] space-y-3 overflow-y-auto pr-1">
+          <ol data-app-part="list" className="max-h-[52rem] space-y-3 overflow-y-auto pr-1">
             {directory.items.map((item) => (
               <PreconditioningDepartureCard
                 key={item.driveId}

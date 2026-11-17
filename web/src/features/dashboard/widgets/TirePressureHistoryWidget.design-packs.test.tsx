@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { cloneElement, type ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -112,6 +113,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+setupCanvasTextMeasurement();
 
 describe.each(packCases)('tire pressure history %s / %s', (packId, appearance) => {
   it('retains the four original series, every sample and gap, scoped history, timestamps and refresh', async () => {
@@ -251,7 +254,7 @@ describe.each(packCases)('tire pressure history %s / %s source states', (packId,
 
     historyMock.mockReturnValue(makeQuery(samples, { isFetching: true }));
     view.rerender(widget(packId));
-    expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /refresh data/i })).toHaveAttribute('aria-disabled', 'true');
     expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
   });
 

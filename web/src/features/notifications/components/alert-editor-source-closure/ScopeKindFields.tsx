@@ -10,7 +10,7 @@ export function ScopeKindFields({ controller }: { controller: AlertRuleEditorCon
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       {editor.kind !== 'system_component' && <div>
-        <label className={fieldLabelRowCls} htmlFor="alert-vehicle-picker">
+        <label data-app-part="field-label" className={fieldLabelRowCls} htmlFor="alert-vehicle-picker">
           {t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles')}
           <HelpIcon i18nKey="help.fields.alertStudio.vehicles" content="Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later. Otherwise pick a specific subset." for="alert-vehicle-picker" />
         </label>

@@ -88,7 +88,7 @@ export default function RecentDrivesListWidget({ vehicleId, size, config }: Widg
   });
   const latest = rows[0];
   const content = rows.length > 0 ? (
-    <ul className="space-y-1.5 overflow-y-auto h-full">
+    <ul data-app-part="list" className="space-y-1.5 overflow-y-auto h-full">
       {rows.map(({ id: driveId, distanceLabel, dateLabel, durationLabel, efficiencyLabel, routeLabel }) => (
         <li key={driveId}>
           <Link

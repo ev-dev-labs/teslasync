@@ -38,6 +38,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { LayoutSwitcher } from './LayoutSwitcher';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import type { SavedDashboard } from '../widgets/types';
 import type { Vehicle } from '@/types/vehicle';
 
@@ -187,6 +188,7 @@ describe('LayoutSwitcher', () => {
     const btn = trigger();
     expect(btn).toHaveAttribute('aria-haspopup', 'menu');
     expect(btn).toHaveAttribute('aria-expanded', 'false');
+    expect(btn).toHaveAccessibleDescription('Main');
     expect(within(btn).getByText('Layout')).toBeInTheDocument();
     expect(within(btn).getByText('Main')).toBeInTheDocument();
     expect(btn).toHaveAttribute('title', 'Switch, create, or edit layouts here');
@@ -216,7 +218,10 @@ describe('LayoutSwitcher', () => {
 
     const menu = screen.getByRole('menu', { name: 'Saved layouts' });
     expect(menu).toBeInTheDocument();
-    expect(menu).toHaveClass('top-full', 'mt-1');
+    expect(menu).toHaveAttribute('data-app-part', 'popover');
+    expect(menu.parentElement).toBe(trigger().parentElement);
+    expect(menu).not.toHaveAttribute('aria-modal');
+    expect(menu).toHaveClass('absolute', 'top-full', 'left-0', 'z-50', 'mt-1');
     expect(menu).not.toHaveClass('bottom-full');
     expect(trigger()).toHaveAttribute('aria-expanded', 'true');
 
@@ -238,6 +243,43 @@ describe('LayoutSwitcher', () => {
     expect(menu).toContainElement(screen.getByRole('menuitemradio', { name: 'Layout 11' }));
     expect(menu).toContainElement(screen.getByRole('menuitem', { name: 'Reset to default' }));
   });
+
+  it.each(Object.keys(APPLICATION_DESIGNS) as Array<keyof typeof APPLICATION_DESIGNS>)(
+    'keeps the inline popup in its nearest complete %s profile without replacing its menu',
+    async (packId) => {
+      const { container } = render(
+        <section data-app-design-preview="" {...getAppDesignAttributes('quiet')}>
+          <section data-app-design-preview="" {...getAppDesignAttributes(packId)}>
+            <LayoutSwitcher
+              dashboards={[mkDash()]}
+              activeId="main"
+              onSwitch={vi.fn()}
+              onCreate={vi.fn()}
+              onReset={vi.fn()}
+              onOpenTemplates={vi.fn()}
+            />
+          </section>
+        </section>,
+      );
+      const release = observeAppDesignScopes(container);
+      try {
+        openMenu();
+        const menu = screen.getByRole('menu', { name: 'Saved layouts' });
+        await waitFor(() => expect(menu).toHaveAttribute(
+          'data-app-design-owner',
+          expect.stringContaining(`pack-${packId} `),
+        ));
+        expect(menu).toHaveAttribute('data-app-part', 'popover');
+        expect(menu.closest('[data-app-design-preview]')).toHaveAttribute('data-app-design-pack', packId);
+        expect(menu.parentElement).toBe(trigger().parentElement);
+        expect(within(menu).getByRole('menuitemradio', { name: 'Main' })).toHaveAttribute('aria-checked', 'true');
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      } finally {
+        release();
+      }
+    },
+  );
 
   it('switches to the clicked layout and closes the menu', () => {
     const { onSwitch } = setup({
@@ -448,6 +490,7 @@ describe('LayoutSwitcher', () => {
     });
 
     expect(within(trigger()).getByText('Pinned Car')).toBeInTheDocument();
+    expect(trigger()).toHaveAccessibleDescription('Main');
     expect(within(trigger()).queryByText('Selected Car')).not.toBeInTheDocument();
     first.unmount();
 

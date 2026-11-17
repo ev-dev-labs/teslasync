@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import type { NotificationLog } from '@/api/types';
@@ -16,6 +16,10 @@ import {
   assertOperationalBriefDisclosure,
   assertOperationalMetricUnavailable,
 } from '@/test/operationalBriefAssertions';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const state = vi.hoisted(() => ({
   analysis: undefined as NotificationLog[] | undefined,
@@ -131,6 +135,7 @@ describe('Notification health continuation source independence', () => {
     localStorage.clear();
   });
   afterEach(() => {
+    cleanup();
     setGlobalLocale('en-US');
     setGlobalPrecision(2);
     vi.restoreAllMocks();

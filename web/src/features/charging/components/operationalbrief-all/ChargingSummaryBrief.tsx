@@ -74,7 +74,7 @@ export function ChargingSummaryBrief({
           provenance: [{ source: context ?? period.label }],
         }}
       />
-      {comparisonLabel && <Text as="p" variant="caption" className="mt-2">{comparisonLabel}</Text>}
+      {comparisonLabel && <Text as="p" variant="bodySm" className="mt-2">{comparisonLabel}</Text>}
       {secondary != null && <div className="mt-3">{secondary}</div>}
       {footer != null && <div className="mt-3">{footer}</div>}
       {!loading && available === 0 && emptyContent != null && <div className="mt-3">{emptyContent}</div>}

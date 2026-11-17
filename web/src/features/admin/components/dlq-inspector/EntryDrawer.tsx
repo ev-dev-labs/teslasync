@@ -270,7 +270,7 @@ export function EntryDrawer({
                 )}
               </AlertBanner>
             ) : !payload ? (
-              <div
+              <div data-app-part="status"
                 role="status"
                 aria-busy="true"
                 aria-label={t('admin.dlq.drawer.loading', 'Loading payload details…')}
@@ -290,6 +290,10 @@ export function EntryDrawer({
                 </div>
                 {panels.map(panel => (
                   <Text
+                    data-app-part="panel"
+                    data-app-panel-kind="code"
+                    data-app-code-slot="body"
+                    data-surface-variant="standalone"
                     key={panel.key}
                     as="pre"
                     variant="code"
@@ -308,7 +312,7 @@ export function EntryDrawer({
           </GlassPanel>
         </div>
       ) : loading ? (
-        <div
+        <div data-app-part="status"
           role="status"
           aria-busy="true"
           aria-label={t('admin.dlq.drawer.loading', 'Loading payload details…')}

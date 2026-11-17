@@ -47,7 +47,7 @@ export function YearChargingMix({ data, loading, error, onRetry, emptyMessage }:
         { key: 'share', label: t('yearReview.share', 'Share (%)') },
       ]}
       footer={!loading && slices.length > 0 ? (
-        <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+        <ul data-app-part="list" className="flex flex-wrap justify-center gap-x-4 gap-y-2">
           {slices.map(s => (
             <li key={s.name} className="flex flex-wrap items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} aria-hidden="true" />

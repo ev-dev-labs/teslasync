@@ -43,6 +43,9 @@ import {
   ROUTE_FOCUS_TARGET_SELECTOR,
 } from '@/lib/routeFocus';
 
+const activeDialogOwners = new WeakSet<HTMLElement>();
+const DIALOG_OWNER_SELECTOR = '[role="dialog"], [role="alertdialog"]';
+
 /**
  * Elements that can hold keyboard focus inside a dialog.
  *
@@ -158,7 +161,9 @@ export function useDialogFocus({
     if (!container) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousDialog = previouslyFocused?.closest<HTMLElement>(DIALOG_OWNER_SELECTOR);
     const explicitReturnFocus = returnFocusTargetRef.current !== undefined;
+    activeDialogOwners.add(container);
 
     const autofocus = container.querySelector<HTMLElement>(
       `[${DIALOG_AUTOFOCUS_ATTR}]`,
@@ -211,13 +216,14 @@ export function useDialogFocus({
     // the topmost dialog's keyboard handling, without taking another surface's focus.
     const handleLostFocusKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.target !== document.body) return;
-      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
+      const dialogs = document.querySelectorAll(DIALOG_OWNER_SELECTOR);
       if (dialogs[dialogs.length - 1] === container) handleKeyDown(e);
     };
 
     container.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keydown', handleLostFocusKeyDown);
     return () => {
+      activeDialogOwners.delete(container);
       container.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keydown', handleLostFocusKeyDown);
 
@@ -231,10 +237,14 @@ export function useDialogFocus({
         container.contains(active);
       if (!dialogStillOwnsFocus) return;
 
+      // Deleted children clean up before a closing parent's update effect.
+      // Let that still-pending owner restore its invoker instead of taking focus.
+      if (previousDialog && !previousDialog.isConnected && activeDialogOwners.has(previousDialog)) return;
+
       if (explicitReturnFocus) {
         // Body recovery must not take focus outside another still-live owner.
         const liveDialogs = Array.from(
-          document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'),
+          document.querySelectorAll<HTMLElement>(DIALOG_OWNER_SELECTOR),
         ).filter((dialog) => dialog !== container && !container.contains(dialog));
         const liveTopmost = active == null || active === document.body
           ? liveDialogs[liveDialogs.length - 1]

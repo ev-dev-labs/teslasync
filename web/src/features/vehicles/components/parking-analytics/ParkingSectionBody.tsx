@@ -31,7 +31,7 @@ export function ParkingSectionBody({
 
   if (state.isLoading) {
     return (
-      <div
+      <div data-app-part="status"
         role="status"
         aria-label={t('parking.states.loading', 'Loading parking analysis')}
         className={cn('py-4', classes)}

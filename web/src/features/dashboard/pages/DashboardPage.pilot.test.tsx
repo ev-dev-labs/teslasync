@@ -264,14 +264,14 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
   it('keeps dashboard tools Escape dismissal and trigger focus without changing the saved layout', async () => {
     mount();
     const trigger = screen.getByRole('button', { name: 'More dashboard actions' });
-    trigger.focus();
+    act(() => { trigger.focus(); });
     expect(trigger).toHaveFocus();
     fireEvent.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'More dashboard actions' });
     expect(within(dialog).getAllByRole('button').map((button) => button.textContent?.trim()))
       .toEqual(['Export dashboard', 'Import dashboard', 'Kiosk', 'Print snapshot']);
     const exportAction = within(dialog).getByRole('button', { name: 'Export dashboard' });
-    exportAction.focus();
+    act(() => { exportAction.focus(); });
     expect(exportAction).toHaveFocus();
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'More dashboard actions' })).toBeNull());

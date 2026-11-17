@@ -12,7 +12,7 @@ import {
 } from '@/components/feedback/DataSourceNotice';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { Tooltip, TooltipPortalContext } from '@/components/ui/Tooltip';
 import { Icon } from '@/components/ui/Icon';
 import { Heading, Text } from '@/components/ui/Typography';
 import { Info } from 'lucide-react';
@@ -171,8 +171,10 @@ export function PageContainer({
     <div
       className={cn('min-w-0 space-y-6', compactHeader && 'space-y-3 sm:space-y-4', className)}
       data-role="page-container"
+      data-app-part="page page-content"
       aria-busy={loading || busy || undefined}
     >
+      <TooltipPortalContext.Provider value={true}>
       <header
         className={cn(
           'relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between',
@@ -182,8 +184,9 @@ export function PageContainer({
           compactHeader && 'flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0',
         )}
         data-role="page-header"
+        data-app-part="page-header"
       >
-        <div className={cn('flex min-w-0 max-w-4xl gap-4 xl:flex-auto', compactHeader && 'gap-3')}>
+        <div data-app-part="page-title" className={cn('flex min-w-0 max-w-4xl gap-4 xl:flex-auto', compactHeader && 'gap-3')}>
           <span
             className="w-1 shrink-0 self-stretch rounded-pill bg-[var(--theme-primary)]"
             aria-hidden="true"
@@ -252,6 +255,7 @@ export function PageContainer({
           primary={primaryAction}
         />
       </header>
+      </TooltipPortalContext.Provider>
 
       {loading ? (
         <PageLoadSkeleton panels={2} showHeader={false} />

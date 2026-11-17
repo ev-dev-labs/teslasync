@@ -179,6 +179,8 @@ export function ActiveFilterChips({
         <div ref={overflowRef} className="relative inline-block">
           <button
             type="button"
+            data-app-part="button"
+            data-app-variant="secondary"
             onClick={() => setOverflowOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={overflowOpen}
@@ -193,6 +195,7 @@ export function ActiveFilterChips({
           {overflowOpen && (
             <div
               role="menu"
+              data-app-part="popover"
               aria-label={t('filters.moreLabel', 'Additional active filters')}
               className={cn(
                 'absolute left-0 z-30 mt-1 min-w-[12rem] max-w-xs rounded-lg p-2',
@@ -220,6 +223,8 @@ export function ActiveFilterChips({
       {onClearAll && filters.length > 0 && (
         <button
           type="button"
+          data-app-part="button"
+          data-app-variant="ghost"
           onClick={handleClearAll}
           className={cn(
             'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
@@ -253,6 +258,7 @@ function Chip({ descriptor, onRemove, onKey, fullWidth }: ChipProps) {
   );
   return (
     <span
+      data-app-part="badge"
       className={cn(
         'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium',
         'border-[var(--border-subtle)] bg-[var(--surface-2)]/40 text-[var(--text-secondary)]',
@@ -265,6 +271,8 @@ function Chip({ descriptor, onRemove, onKey, fullWidth }: ChipProps) {
       </span>
       <button
         type="button"
+        data-app-part="button"
+        data-app-icon-only="true"
         onClick={() => onRemove(descriptor)}
         onKeyDown={(e) => onKey(e, descriptor)}
         aria-label={removeLabel}

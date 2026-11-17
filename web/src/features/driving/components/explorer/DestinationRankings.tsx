@@ -74,14 +74,16 @@ export function DestinationRankings({
                     'Great-circle distance from the inferred observed base',
                   )}
                 </Text>
-                <ol className="space-y-2">
+                <ol data-app-part="list" data-app-list="ranked" className="space-y-2">
                   {summary.farthestRanking.map((destination, index) => (
                     <li
                       key={destination.id}
+                      data-app-part="list-row"
                       className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3"
                     >
                       <Text
                         as="span"
+                        data-app-part="metric-reading metric-value"
                         variant="label"
                         mono
                         className="shrink-0 text-theme-accent"
@@ -91,6 +93,7 @@ export function DestinationRankings({
                       <div className="min-w-0 flex-1">
                         <Text
                           as="p"
+                          data-app-part="metric-label"
                           variant="bodySm"
                           className="truncate"
                         >
@@ -101,7 +104,7 @@ export function DestinationRankings({
                               { number: destination.ordinal },
                             )}
                         </Text>
-                        <Text as="p" variant="caption">
+                        <Text data-app-part="metric-context" as="p" variant="caption">
                           {t(
                             'explorer.rankings.distanceVisits',
                             '{{distance}} · {{count}} arrivals',
@@ -139,14 +142,16 @@ export function DestinationRankings({
                     )}
                   />
                 ) : (
-                  <ol className="space-y-2">
+                  <ol data-app-part="list" data-app-list="ranked" className="space-y-2">
                     {summary.rareRanking.map((destination, index) => (
                       <li
                         key={destination.id}
+                        data-app-part="list-row"
                         className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3"
                       >
                         <Text
                           as="span"
+                          data-app-part="metric-reading metric-value"
                           variant="label"
                           mono
                           className="shrink-0 text-amber-300"
@@ -156,6 +161,7 @@ export function DestinationRankings({
                         <div className="min-w-0 flex-1">
                           <Text
                             as="p"
+                            data-app-part="metric-label"
                             variant="bodySm"
                             className="truncate"
                           >
@@ -166,7 +172,7 @@ export function DestinationRankings({
                                 { number: destination.ordinal },
                               )}
                           </Text>
-                          <Text as="p" variant="caption">
+                          <Text data-app-part="metric-context" as="p" variant="caption">
                             {t(
                               'explorer.rankings.rareDetail',
                               '{{count}} arrivals · first observed {{date}}',

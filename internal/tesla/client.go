@@ -15,6 +15,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -356,6 +357,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, ErrUnauthorized
 		}
 		if resp.StatusCode == http.StatusTooManyRequests {
+			httputil.RecordUpstreamRateLimit(ctx, "tesla", resp.Header)
 			// 429 is not a server failure — don't trigger circuit breaker.
 			// Return success to the breaker, the caller handles the rate limit.
 			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil

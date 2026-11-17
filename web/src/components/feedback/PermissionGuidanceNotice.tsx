@@ -47,60 +47,64 @@ export function PermissionGuidanceNotice({
   return (
     <section
       role="status"
+      data-app-part="feedback"
+      data-app-feedback-kind="notice"
+      data-app-tone="warning"
       data-testid="permission-guidance"
       data-access-block={guidance.kind}
       className={cn(
-        'rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
+        'flex items-start gap-3 rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
         className,
       )}
       aria-label={t(guidance.titleKey, guidance.titleFallback)}
     >
-      <div className="flex items-start gap-3">
-        <ShieldQuestion className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Text as="p" size="sm" weight="medium" color="primary">
-            {t(guidance.titleKey, guidance.titleFallback)}
-          </Text>
-          <Text as="p" variant="bodySm">
-            {t(guidance.explanationKey, guidance.explanationFallback)}
-          </Text>
+      <ShieldQuestion data-app-part="feedback-icon" className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+      <div data-app-part="feedback-content" className="min-w-0 flex-1 space-y-2">
+        <Text data-app-part="feedback-title" as="p" size="sm" weight="medium" color="primary">
+          {t(guidance.titleKey, guidance.titleFallback)}
+        </Text>
+        <Text data-app-part="feedback-message" as="p" variant="bodySm">
+          {t(guidance.explanationKey, guidance.explanationFallback)}
+        </Text>
 
-          {!compact && (
-            <>
-              <Text as="p" variant="bodySm" color="muted">
-                <span className="font-medium">
-                  {t('accessGuidance.grantedByLabel', 'Who can grant this')}:{' '}
-                </span>
-                {t(guidance.grantedByKey, guidance.grantedByFallback)}
+        {!compact && (
+          <div data-app-part="feedback-detail" className="space-y-2">
+            <Text as="p" variant="bodySm" color="muted">
+              <span className="font-medium">
+                {t('accessGuidance.grantedByLabel', 'Who can grant this')}:{' '}
+              </span>
+              {t(guidance.grantedByKey, guidance.grantedByFallback)}
+            </Text>
+
+            <div>
+              <Text as="p" variant="caption">
+                {t('accessGuidance.stepsLabel', 'How to request access')}
               </Text>
+              <ol className="mt-1 list-decimal space-y-1 pl-5">
+                {guidance.steps.map((step) => (
+                  <li key={step.key}>
+                    <Text as="span" variant="bodySm" color="muted">
+                      {t(step.key, step.fallback)}
+                    </Text>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
 
-              <div>
-                <Text as="p" variant="caption">
-                  {t('accessGuidance.stepsLabel', 'How to request access')}
-                </Text>
-                <ol className="mt-1 list-decimal space-y-1 pl-5">
-                  {guidance.steps.map((step) => (
-                    <li key={step.key}>
-                      <Text as="span" variant="bodySm" color="muted">
-                        {t(step.key, step.fallback)}
-                      </Text>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </>
-          )}
-
-          {guidance.actionTo && guidance.actionLabelKey && (
-            <MaybeLink
-              to={guidance.actionTo}
-              className="inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
-              data-testid="permission-guidance-action"
-            >
-              {t(guidance.actionLabelKey, guidance.actionLabelFallback ?? '')}
-            </MaybeLink>
-          )}
-        </div>
+        {guidance.actionTo && guidance.actionLabelKey && (
+          <MaybeLink
+            to={guidance.actionTo}
+            data-app-part="feedback-actions button"
+            data-app-variant="ghost"
+            data-app-size="sm"
+            className="inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
+            data-testid="permission-guidance-action"
+          >
+            {t(guidance.actionLabelKey, guidance.actionLabelFallback ?? '')}
+          </MaybeLink>
+        )}
       </div>
     </section>
   )

@@ -42,25 +42,25 @@ export default function PhysicsRangeSection({ physics }: { physics: PhysicsPage 
           { metricId: 'status', occurrenceId: 'disagreement', label: t('teslaOnly.rangeDisagreementLabel', 'Estimator disagreement'), rawValue: range == null ? null : range.disagree ? t('teslaOnly.estimatesDiffer', 'Estimates differ') : t('teslaOnly.noDetectedDifference', 'No detected difference in available estimates') },
           { metricId: 'efficiency', occurrenceId: 'recent-efficiency', label: t('teslaOnly.rangeRecentEfficiency', 'Recent Wh/km').replace('Wh/km', efficiencyUnit), rawValue: range?.recent_wh_per_km == null ? null : range.recent_wh_per_km / 1000, display: { formatter: raw => ({ value: efficiency(raw * 1000), unit: efficiencyUnit }) } },
         ]} />
-      {known.map((row) => <div key={row.label} className="flex justify-between gap-3 rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="span" variant="bodySm">{row.label}</Text><Text as="span" variant="bodySm">{distance(row.value)}</Text>
+      {known.map((row) => <div data-app-part="card metric" data-app-metric="brief" key={row.label} className="flex justify-between gap-3 rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-part="metric-label" as="span" variant="bodySm">{row.label}</Text><Text data-app-part="metric-value metric-reading" as="span" variant="bodySm">{distance(row.value)}</Text>
       </div>)}
       <Text as="p" variant="bodySm">{t('teslaOnly.noTrueRange', 'No true range. Recent Wh/km: {{value}}', { value: range?.recent_wh_per_km == null ? unknown(t) : efficiency(range.recent_wh_per_km) }).replace('Wh/km', efficiencyUnit)}</Text>
       {range?.true_range_m != null && <Badge variant="warning" size="sm">{t('teslaOnly.trueRangeBug', 'true_range must stay empty')}</Badge>}
     </Evidence>
     <Evidence title={t('teslaOnly.rangePairs', 'Pairwise estimate comparisons')}>
-      {pairs.length ? pairs.map(({ first, second, difference }) => <div key={`${first.label}-${second.label}`} className="rounded-lg border border-[var(--glass-border)] p-3">
-        <Text as="p" variant="bodySm">{t('teslaOnly.rangePairReading', '{{first}} vs {{second}}: {{distance}} apart', {
+      {pairs.length ? pairs.map(({ first, second, difference }) => <div data-app-part="card" data-app-record-kind="physics-evidence" key={`${first.label}-${second.label}`} className="rounded-lg border border-[var(--glass-border)] p-3">
+        <Text data-app-record-slot="reading" as="p" variant="bodySm">{t('teslaOnly.rangePairReading', '{{first}} vs {{second}}: {{distance}} apart', {
           first: first.label, second: second.label, distance: distance(Math.abs(difference)),
         })}</Text>
-        <Text as="p" variant="caption">{difference === 0
+        <Text data-app-record-slot="context" as="p" variant="caption">{difference === 0
           ? t('teslaOnly.rangePairEqual', '{{first}} and {{second}} are equal in the returned estimates', {
             first: first.label, second: second.label,
           })
           : t('teslaOnly.rangePairDirection', '{{higher}} is higher in the returned estimates', {
             higher: difference > 0 ? first.label : second.label,
           })}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.rangePairRelative', 'Difference relative to {{baseline}}: {{value}}', {
+        <Text data-app-record-slot="context" as="p" variant="caption">{t('teslaOnly.rangePairRelative', 'Difference relative to {{baseline}}: {{value}}', {
           baseline: first.label,
           value: first.value > 0 ? `${fmtNumber(100 * Math.abs(difference) / first.value)}%` : unknown(t),
         })}</Text>

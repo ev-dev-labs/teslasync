@@ -334,7 +334,7 @@ it.each(presentationPackIds)('%s does not allow a refresh to duplicate an in-fli
   mocks.detail.mockReturnValue(query(detail, mocks.retryDetail, { isFetching: true }));
   await mount(packId);
   const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(mocks.retrySessions).not.toHaveBeenCalled();
   expect(mocks.retryDetail).not.toHaveBeenCalled();

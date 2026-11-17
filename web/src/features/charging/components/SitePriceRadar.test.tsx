@@ -8,6 +8,8 @@ import type { ReactNode } from 'react';
 
 import type { ChargingSiteRanking } from '@/api/hooks/useCharging';
 import { typography } from '@/lib/tokens';
+import { APPLICATION_DESIGNS, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchingAppDesignDataRules, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -100,17 +102,48 @@ describe('SitePriceRadar', () => {
   });
 
   it('lists cheapest first with per-kWh prices', () => {
-    render(<SitePriceRadar />);
+    const { container } = render(<SitePriceRadar />);
     const items = screen.getAllByText(/SC/);
     expect(items[0].textContent).toContain('Cheap SC');
     expect(screen.getByText('$0.30')).toBeTruthy();
     expect(screen.getByText('$0.50')).toBeTruthy();
+    const rows = container.querySelectorAll('[data-app-list="ranked"] > [data-app-part="list-row"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent('1. Cheap SC');
+    expect(rows[0].querySelector('[data-app-part="metric-context"]')).toHaveTextContent('4 visits · last 2026-01-10');
+    expect(rows[0].querySelector('[data-app-part="metric-reading"] [data-app-part="metric-value"]')).toHaveTextContent('$0.30');
+    expect(rows[0].querySelector('[data-app-part="metric-unit"]')).toHaveTextContent('/kWh');
   });
 
   it('shows the spread and unpriced count', () => {
     render(<SitePriceRadar />);
     expect(screen.getByText('+1 visits without invoice pricing')).toBeTruthy();
     expect(screen.getByText('Cheapest stop saves $0.20/kWh vs priciest')).toBeTruthy();
+  });
+
+  it('binds recorded rank, zero price, visits and units to every data mode without changing the ranking', () => {
+    const data = { ...ranking, sites: [
+      { ...ranking.sites[0], site: 'Long recorded charging location without a replacement label', avg_per_kwh: 0 },
+      ranking.sites[1],
+    ] };
+    const original = structuredClone(data);
+    setQuery({ data });
+    const { container } = render(<SitePriceRadar />);
+    container.setAttribute('data-app-design-preview', '');
+    const rows = container.querySelectorAll('[data-app-list="ranked"] > [data-app-part="list-row"]');
+    expect(matchingAppDesignDataRules(rows[0])).toEqual([]);
+    for (const pack of ['classic', 'v3', 'v2', 'v1'] as const) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        rows.forEach(row => expectAppDesignDataMode(row, APPLICATION_DESIGNS[pack].data, '[data-app-list="ranked"]'));
+        expect(rows[0].querySelector('[data-app-part="metric-label"]')).toHaveTextContent(data.sites[0].site);
+        expect(rows[0].querySelector('[data-app-part="metric-value"]')).toHaveTextContent('$0.00');
+        expect(rows[0].querySelector('[data-app-part="metric-unit"]')).toHaveTextContent('/kWh');
+        expect(screen.getByText('Cheapest stop saves $0.50/kWh vs priciest')).toBeInTheDocument();
+      } finally { release(); }
+    }
+    expect(data).toEqual(original);
   });
 
   it('compares the complete returned ranking while displaying only the first eight sites in source order', () => {

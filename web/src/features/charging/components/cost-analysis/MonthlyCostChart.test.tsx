@@ -30,6 +30,7 @@
  * global test setup (currency '$', precision 2, en-US), so the real
  * `useFormatting` produces deterministic currency strings.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { type ComponentProps, type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
@@ -146,6 +147,8 @@ function readTableRows(): string[][] {
     .slice(1)
     .map((r) => within(r).getAllByRole('cell').map((c) => c.textContent ?? ''));
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MonthlyCostChart — panel shell + a11y', () => {
   it('renders the ChartContainer figure with its title heading and labelled img region', () => {

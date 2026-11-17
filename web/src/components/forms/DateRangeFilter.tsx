@@ -79,10 +79,12 @@ export function DateRangeFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2 sm:px-3 py-1.5 ring-1 ring-white/[0.08] w-full sm:w-auto">
+      <div data-app-part="field" data-app-field-kind="date-range" className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2 sm:px-3 py-1.5 ring-1 ring-white/[0.08] w-full sm:w-auto">
         <Calendar className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0 hidden sm:block" />
         <input
           type="date"
+          data-app-part="field-control"
+          data-app-native-popup="true"
           aria-label={t('date.range.start', 'Start date')}
           value={startDate}
           onChange={e => onStartDateChange(e.target.value)}
@@ -91,6 +93,8 @@ export function DateRangeFilter({
         <span className="text-xs text-[var(--text-muted)]">→</span>
         <input
           type="date"
+          data-app-part="field-control"
+          data-app-native-popup="true"
           aria-label={t('date.range.end', 'End date')}
           value={endDate}
           onChange={e => onEndDateChange(e.target.value)}

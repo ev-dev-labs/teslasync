@@ -22,6 +22,7 @@ export function ListSkeleton({
 
   return (
     <div
+      data-app-part="list loading"
       role="status"
       aria-busy="true"
       aria-label={loadingLabel}
@@ -30,6 +31,7 @@ export function ListSkeleton({
     >
       {Array.from({ length: rowCount }).map((_, index) => (
         <div
+          data-app-part="list-row"
           key={index}
           aria-hidden="true"
           className="flex min-h-16 items-center gap-3 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"

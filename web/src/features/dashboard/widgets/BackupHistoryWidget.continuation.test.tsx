@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { DataStateSource } from '@/api/dataState';
 import { queryResult, renderWidget } from '../components/continuation-dashboard-2/testSupport';
 import BackupHistoryWidget from './BackupHistoryWidget';
@@ -161,7 +161,7 @@ it('preserves the source window and focused refresh command while switching thro
   const view = renderWidget(tree('classic'));
   const originalArguments = hooks.history.mock.calls[0];
   const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-  refresh.focus();
+  act(() => { refresh.focus(); });
   for (const pack of PACK_IDS) {
     view.rerender(tree(pack));
     if (pack !== 'classic') {

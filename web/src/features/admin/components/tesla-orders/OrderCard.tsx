@@ -60,7 +60,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
         </Badge>
       </div>
 
-      <dl className="space-y-2">
+      <dl data-app-part="list" className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Text as="dt" variant="caption">{t('admin.teslaOrders.card.orderId', 'Order ID')}</Text>
           <Text
@@ -103,9 +103,9 @@ function OrderCardImpl({ order }: OrderCardProps) {
       </dl>
 
       {order.is_upgradable && (
-        <div className="mt-auto flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1">
-          <Sparkles className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-          <Caption>
+        <div data-app-part="feedback" data-app-feedback-kind="notice" data-app-tone="neutral" className="mt-auto flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1">
+          <Sparkles data-app-part="feedback-icon" className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+          <Caption data-app-part="feedback-content feedback-message">
             {t('admin.teslaOrders.card.upgradable', 'Upgrade available')}
           </Caption>
         </div>

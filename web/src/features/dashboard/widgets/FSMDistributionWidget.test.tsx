@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import { queryResult, renderWidget } from '../components/continuation-dashboard-2/testSupport';
@@ -19,6 +19,7 @@ vi.mock('@/components/charts', async (original) => {
   return {
     ...actual,
     ...chartTestDoubles,
+    ChartTooltip: actual.ChartTooltip,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     PieChart: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     Pie: ({ data }: { data?: unknown[] }) => {
@@ -26,7 +27,15 @@ vi.mock('@/components/charts', async (original) => {
       return <div data-testid="fsm-pie" />;
     },
     Cell: () => null,
-    Tooltip: () => null,
+    Tooltip: ({ content }: { content?: ReactNode }) => isValidElement<{
+      active?: boolean;
+      payload?: Array<{ payload: { state: string; value: number; pct: number } }>;
+    }>(content)
+      ? cloneElement(content, {
+        active: true,
+        payload: [{ payload: { state: 'driving', value: 3_600_000, pct: 60 } }],
+      })
+      : null,
   };
 });
 
@@ -40,6 +49,14 @@ beforeEach(() => {
 });
 
 describe('FSMDistributionWidget redesign', () => {
+  it('uses the shared accessible tooltip while retaining translated state, elapsed duration and source share', () => {
+    const { container } = renderWidget(<FSMDistributionWidget size={{ cols: 2, rows: 4 }} />);
+    const tooltip = screen.getAllByRole('tooltip').find(node => node.dataset.appPart === 'chart-tooltip')!;
+    expect(tooltip).toHaveAttribute('data-app-part', 'chart-tooltip');
+    expect(tooltip).toHaveTextContent(/driving/i);
+    expect(tooltip).toHaveTextContent('1h 0m · 60.00%');
+    expect(container.querySelector('[data-chart-tooltip-swatch]')).toBeInTheDocument();
+  });
   it('renders the leading state and honest ranked shares in the After-card layout', () => {
     renderWidget(<FSMDistributionWidget size={{ cols: 2, rows: 4 }} />);
 

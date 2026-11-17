@@ -72,59 +72,61 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
       ) : keys.length === 0 ? (
         <HelperText>{t('resaleVault.keys.empty', 'No signing keys yet in this browser.')}</HelperText>
       ) : (
-        <ul className="space-y-2">
+        <ul data-app-part="list" data-app-list="records" className="space-y-2">
           {keys.map((key) => (
-            <li key={key.key_id} className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[var(--text-primary)] break-all">{key.key_id}</span>
+            <li key={key.key_id} data-app-part="card" data-app-card-kind="record" className="rounded-lg border border-white/[0.06] p-2.5 text-xs">
+              <div data-app-part="record-header" className="flex items-center justify-between gap-2">
+                <span data-app-part="record-title" className="font-mono text-[var(--text-primary)] break-all">{key.key_id}</span>
                 <Badge variant={key.revoked_at ? 'danger' : 'success'}>
                   {key.revoked_at ? t('resaleVault.keys.revoked', 'Revoked') : t('resaleVault.keys.active', 'Active')}
                 </Badge>
               </div>
-              <div className="mt-1 text-[var(--text-muted)]">
-                <Badge variant={key.persisted ? 'success' : 'warning'}>
-                  {key.persisted
-                    ? t('resaleVault.keys.persisted', 'Persisted (survives reload)')
-                    : t('resaleVault.keys.sessionOnly', 'Session-only (lost on reload)')}
-                </Badge>
-              </div>
-              <div className="mt-1 text-[var(--text-muted)]">
-                {t('resaleVault.keys.created', 'Created')}: {displayDate(key.created_at)}
-                {key.rotated_from && ` · ${t('resaleVault.keys.rotatedFrom', 'Rotated from')} ${key.rotated_from}`}
-              </div>
-              {key.revoked_at && (
+              <div data-app-part="record-body">
                 <div className="mt-1 text-[var(--text-muted)]">
-                  {t('resaleVault.keys.revokedAt', 'Revoked at')} {displayDate(key.revoked_at)}
-                  {key.revoked_reason && ` (${key.revoked_reason})`}
+                  <Badge variant={key.persisted ? 'success' : 'warning'}>
+                    {key.persisted
+                      ? t('resaleVault.keys.persisted', 'Persisted (survives reload)')
+                      : t('resaleVault.keys.sessionOnly', 'Session-only (lost on reload)')}
+                  </Badge>
                 </div>
-              )}
-              {!key.revoked_at && (
-                <div className="mt-2">
-                  {revokeTarget === key.key_id ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        wrapLabel
-                        size="sm"
-                        variant="danger"
-                        disabled={isLoading || isMutating}
-                        onClick={() => {
-                          void revokeKey(key.key_id, 'manual_revocation');
-                          setRevokeTarget(null);
-                        }}
-                      >
-                        {t('resaleVault.keys.confirmRevoke', 'Confirm revoke')}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setRevokeTarget(null)}>
-                        {t('common.cancel', 'Cancel')}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" variant="outline" disabled={isLoading || isMutating} onClick={() => setRevokeTarget(key.key_id)}>
-                      {t('resaleVault.keys.revoke', 'Revoke')}
-                    </Button>
-                  )}
+                <div data-app-part="record-context" className="mt-1 text-[var(--text-muted)]">
+                  {t('resaleVault.keys.created', 'Created')}: {displayDate(key.created_at)}
+                  {key.rotated_from && ` · ${t('resaleVault.keys.rotatedFrom', 'Rotated from')} ${key.rotated_from}`}
                 </div>
-              )}
+                {key.revoked_at && (
+                  <div data-app-part="record-context" className="mt-1 text-[var(--text-muted)]">
+                    {t('resaleVault.keys.revokedAt', 'Revoked at')} {displayDate(key.revoked_at)}
+                    {key.revoked_reason && ` (${key.revoked_reason})`}
+                  </div>
+                )}
+                {!key.revoked_at && (
+                  <div className="mt-2">
+                    {revokeTarget === key.key_id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          wrapLabel
+                          size="sm"
+                          variant="danger"
+                          disabled={isLoading || isMutating}
+                          onClick={() => {
+                            void revokeKey(key.key_id, 'manual_revocation');
+                            setRevokeTarget(null);
+                          }}
+                        >
+                          {t('resaleVault.keys.confirmRevoke', 'Confirm revoke')}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRevokeTarget(null)}>
+                          {t('common.cancel', 'Cancel')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled={isLoading || isMutating} onClick={() => setRevokeTarget(key.key_id)}>
+                        {t('resaleVault.keys.revoke', 'Revoke')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>

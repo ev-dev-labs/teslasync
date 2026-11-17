@@ -87,19 +87,19 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
     !isLive || isStale || dataState.status === 'stale' || stateData?.freshness !== 'fresh'
   );
   const locationDetails = !isCompact && (
-    <dl
+    <dl data-app-part="list" data-app-list="definitions"
       className="grid min-w-0 grid-cols-2 gap-3"
       aria-label={t('widget.locationMap.status', 'Vehicle location status')}
     >
-      <div className="min-w-0">
-        <Caption as="dt">{t('dashboardWidgets.maps.locationMap.position', 'Position')}</Caption>
-        <Text as="dd" variant="bodySm" className="break-words tabular-nums">
+      <div data-app-part="list-row" className="min-w-0">
+        <Caption as="dt" data-app-part="metric-label">{t('dashboardWidgets.maps.locationMap.position', 'Position')}</Caption>
+        <Text as="dd" data-app-part="metric-value" variant="bodySm" className="break-words tabular-nums">
           {hasCoords ? `${fmtNumber(lat, 2)}, ${fmtNumber(lng, 2)}` : '—'}
         </Text>
       </div>
-      <div className="min-w-0">
-        <Caption as="dt">{t('widget.locationMap.heading', 'Heading')}</Caption>
-        <Text as="dd" variant="bodySm" className="tabular-nums">
+      <div data-app-part="list-row" className="min-w-0">
+        <Caption as="dt" data-app-part="metric-label">{t('widget.locationMap.heading', 'Heading')}</Caption>
+        <Text as="dd" data-app-part="metric-value" variant="bodySm" className="tabular-nums">
           {hasCoords && heading != null ? `${fmtNumber(heading, 0)}°` : '—'}
         </Text>
       </div>
@@ -143,12 +143,15 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
               so only information present in the vehicle payload is exposed. */}
           {hasCoords && !isCompact && (
             <div
-              className="flex min-w-0 items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2"
+              data-app-part="map-legend"
+              data-map-legend="location-status"
+              data-map-state={retainedPosition ? 'stale' : undefined}
+              className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2"
               role="group"
               aria-label={t('widget.locationMap.status', 'Vehicle location status')}
             >
               {!isLive && (
-                <Text variant="caption" className="min-w-0 truncate text-amber-300">
+                <Text variant="caption" className="min-w-0 [overflow-wrap:anywhere] text-amber-300">
                   {t('widget.locationMap.lastKnown', 'Last known position')}
                 </Text>
               )}

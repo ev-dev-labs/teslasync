@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -84,6 +85,8 @@ beforeEach(() => {
   ];
   window.localStorage.clear();
 });
+
+setupMeasuredChartContainers(800, 320);
 
 describe('Continuous drive report with real summary, journey, energy, cost and chart panels', () => {
   it.each(['recorded', 'missing'] as const)('keeps the entire %s story visible with direct section links, not hidden tabs', (record) => {

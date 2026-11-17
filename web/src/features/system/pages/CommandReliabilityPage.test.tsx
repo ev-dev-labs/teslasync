@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -55,6 +55,10 @@ import {
 } from '@/test/operationalBriefAssertions';
 import { MockResizeObserver } from '@/test/setup';
 import CommandReliabilityPage from './CommandReliabilityPage';
+import { measureChartContainers } from '@/test/setup';
+
+beforeEach(() => { measureChartContainers(800, 320); });
+
 
 const mockHistory = useCommandReliabilityHistory as unknown as ReturnType<typeof vi.fn>;
 const mockVehicle = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -111,6 +115,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
   vi.unstubAllGlobals();

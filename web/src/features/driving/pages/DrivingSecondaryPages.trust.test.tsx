@@ -76,6 +76,7 @@ vi.mock('@/components/layout', async (importActual) => ({
 vi.mock('@/components/charts', () => {
   const Inert = () => null;
   return {
+    EmbeddedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
     ChartTooltip: Inert, ComposedChart: Inert, Line: Inert, Scatter: Inert, Area: Inert,
     XAxis: Inert, YAxis: Inert, CartesianGrid: Inert, Tooltip: Inert, ResponsiveContainer: Inert,
   };

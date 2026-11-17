@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
+import { assertUnion, balance, familyGroups, inventory, resultInventory, suiteOptions } from './playwright-duration-shards.mjs';
 
 const require = createRequire(new URL('../../web/package.json', import.meta.url));
 const { load } = require('js-yaml');
@@ -10,7 +11,7 @@ const ci = workflow('ci.yml');
 const browser = workflow('frontend-quality.yml');
 const commands = job => job.steps.map(step => step.run ?? '').join('\n');
 
-test('unit shard matrices match the strict merge counts and never fail-fast', () => {
+test('unit shard matrices match strict merge counts and never fail-fast', () => {
   for (const domain of ['backend', 'frontend']) {
     const count = Number(ci.env[`${domain.toUpperCase()}_SHARDS`]);
     const job = ci.jobs[`${domain}-tests`];
@@ -26,7 +27,7 @@ test('unit shard matrices match the strict merge counts and never fail-fast', ()
   assert.match(commands(ci.jobs['frontend-tests']), /--maxWorkers=2/);
 });
 
-test('existing aggregate names reject any required job that did not succeed', () => {
+test('existing required summary names and complete dependency gates remain strict after report merging', () => {
   for (const [jobs, id, name, dependencies] of [
     [ci.jobs, 'backend', 'Backend (lint + test + build)',
       ['backend-checks', 'backend-tests', 'backend-coverage', 'backend-database', 'backend-build']],
@@ -39,53 +40,181 @@ test('existing aggregate names reject any required job that did not succeed', ()
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
       ['contract', 'browser-build', 'visual-tests']],
     [browser.jobs, 'cross-browser', '${{ matrix.browser }} critical smoke',
-      ['contract', 'browser-build', 'cross-browser-tests']],
+      ['contract', 'browser-build', 'cross-browser-tests', 'app-design-tests']],
   ]) {
     const job = jobs[id];
     assert.equal(job.name, name);
     assert.equal(job.if, 'always()');
     assert.deepEqual(job.needs, dependencies);
-    assert.match(commands(job), /all\(job\["result"\] == "success" for job in results\.values\(\)\)/);
-    assert.equal(job.steps[0].env.RESULTS, '${{ toJSON(needs) }}');
+    const gate = job.steps.find(step => /all\(job\["result"\] == "success" for job in results\.values\(\)\)/.test(step.run ?? ''));
+    assert.ok(gate, `${id}: missing strict result gate`);
+    assert.equal(gate.env.RESULTS, '${{ toJSON(needs) }}');
+    if (jobs === browser.jobs) assert.equal(gate.if, 'always()');
   }
 });
 
-test('independent validation and Docker builds start together; final gate checks their results', () => {
-  for (const id of ['workflow-lint', 'generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'docs', 'docker']) {
+test('cheap validations and unit tests start independently of the shared browser build', () => {
+  for (const id of ['workflow-lint', 'generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'frontend-tests', 'docs', 'docker']) {
     assert.equal(ci.jobs[id].needs, undefined);
   }
+  assert.equal(browser.jobs.contract.needs, undefined);
+  assert.equal(browser.jobs['browser-build'].needs, undefined);
   assert.equal(ci.jobs.docker.if, undefined);
   const build = ci.jobs.docker.steps.find(step => step.uses?.startsWith('docker/build-push-action'));
   assert.equal(build.with.push, false);
+  for (const config of [ci, browser]) {
+    assert.equal(config.concurrency['cancel-in-progress'], "${{ github.event_name == 'pull_request' }}");
+    for (const job of Object.values(config.jobs)) {
+      if (job.strategy) assert.equal(job.strategy['fail-fast'], false);
+    }
+  }
 });
 
-test('browser shards reuse one build and retain isolated performance and Windows baselines', () => {
-  const shards = browser.jobs['chromium-tests'].strategy.matrix.include;
-  assert.deepEqual(shards.filter(shard => shard.suite === 'quality').map(shard => shard.shard),
-    Array.from({ length: 32 }, (_, i) => `${i + 1}/32`));
-  for (const [suite, count] of [['a11y', 13], ['performance', 1]]) {
-    assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard),
+test('node_modules caches require exact OS, architecture, resolved Node and lockfile keys, without fallbacks', () => {
+  for (const config of [ci, browser]) {
+    for (const [id, job] of Object.entries(config.jobs)) {
+      const installs = job.steps.filter(step => step.run?.includes('npm ci --legacy-peer-deps'));
+      if (!installs.length) continue;
+      const cache = job.steps.find(step => step.id === 'dependencies');
+      assert.match(cache.uses, /^actions\/cache@/);
+      assert.equal(cache.with['restore-keys'], undefined);
+      for (const token of ['${{ runner.os }}', '${{ runner.arch }}', '${{ steps.node.outputs.node-version }}', 'hashFiles(']) {
+        assert.ok(cache.with.key.includes(token), `${id}: missing ${token}`);
+      }
+      assert.ok(cache.with.key.includes(job.container ? '-pw163-noble-' : '-host-'));
+      assert.equal(cache.with.path, id === 'docs' ? 'docs/node_modules' : 'web/node_modules');
+      assert.ok(cache.with.key.includes(id === 'docs' ? 'docs/package-lock.json' : 'web/package-lock.json'));
+      for (const install of installs) assert.equal(install.if, "steps.dependencies.outputs.cache-hit != 'true'");
+      assert.equal(job.steps.find(step => step.id === 'node').with['node-version'], '26');
+    }
+  }
+});
+
+test('browser caches use actual Playwright versions and Edge caches its real system executable', () => {
+  for (const id of ['contract', 'visual-tests']) {
+    const job = browser.jobs[id];
+    const cache = job.steps.find(step => step.id === 'browsers');
+    assert.ok(cache.with.key.includes('${{ steps.playwright.outputs.version }}'));
+    assert.ok(cache.with.key.includes('${{ runner.os }}-${{ runner.arch }}'));
+    assert.equal(cache.with['restore-keys'], undefined);
+    assert.equal(cache.with.path, '${{ env.PLAYWRIGHT_BROWSERS_PATH }}');
+    assert.match(job.steps.find(step => step.id === 'playwright').run, /require\('@playwright\/test\/package.json'\)\.version/);
+    assert.equal(job.steps.find(step => step.run === 'npx playwright install chromium').if, "steps.browsers.outputs.cache-hit != 'true'");
+  }
+  assert.match(commands(browser.jobs.contract), /npx playwright install-deps chromium/);
+  const edge = browser.jobs['cross-browser-tests'];
+  assert.equal(edge.steps.find(step => step.id === 'edge').with.path, '/opt/microsoft/msedge');
+  assert.ok(edge.steps.find(step => step.id === 'edge').with.key.includes('${{ steps.playwright.outputs.version }}'));
+  assert.equal(edge.steps.find(step => step.run === 'npx playwright install msedge').if,
+    "matrix.browser == 'edge' && steps.edge.outputs.cache-hit != 'true'");
+  assert.match(commands(edge), /test -x \/opt\/microsoft\/msedge\/msedge/);
+  assert.match(commands(edge), /ln -sf .*\/usr\/bin\/microsoft-edge/);
+  for (const job of Object.values(browser.jobs).filter(job => job.container)) {
+    assert.doesNotMatch(commands(job), /playwright install (chromium|firefox|webkit)/);
+    assert.equal(job.env?.PLAYWRIGHT_BROWSERS_PATH, undefined);
+  }
+});
+
+test('49 execution jobs reuse the sole build while balancing heavy cases and consolidating tiny shards', () => {
+  const rows = browser.jobs['chromium-tests'].strategy.matrix.include;
+  assert.deepEqual(rows.slice(0, 16).map(row => row.name), Array.from({ length: 16 }, (_, i) => `responsive-${i + 1}`));
+  for (const [suite, count] of [['ordinary', 4], ['design', 12], ['a11y', 1], ['performance', 1]]) {
+    assert.deepEqual(rows.filter(row => row.suite === suite).map(row => row.shard),
       Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
   }
-  assert.deepEqual(browser.jobs['cross-browser-tests'].strategy.matrix,
-    { browser: ['firefox', 'webkit', 'edge'], shard: [1, 2, 3] });
-  assert.deepEqual(browser.jobs['cross-browser'].strategy.matrix.browser, ['firefox', 'webkit', 'edge']);
-  const edgeInstall = browser.jobs['cross-browser-tests'].steps.find(step => step.run === 'npx playwright install msedge');
-  assert.equal(edgeInstall?.if, "matrix.browser == 'edge'");
-  assert.equal(browser.jobs['cross-browser-tests'].steps.find(step => step.name === 'Run lightweight engine smoke')?.env.HOME, '/root');
-  assert.match(commands(browser.jobs['cross-browser-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/3/);
-  assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/32 --workers=2/);
-  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests']) {
+  assert.deepEqual(browser.jobs['cross-browser-tests'].strategy.matrix, { browser: ['firefox', 'webkit', 'edge'] });
+  assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard, [1, 2, 3, 4]);
+  assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
+  assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
+  for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests', 'app-design-tests']) {
     const job = browser.jobs[id];
     assert.equal(job.needs, 'browser-build');
-    assert.equal(job.strategy['fail-fast'], false);
     assert.ok(job.steps.some(step => step.with?.name === 'e2e-app' && step.uses?.startsWith('actions/download-artifact')));
-    assert.equal(job.steps.find(step => step.env?.E2E_REUSE_BUILD)?.env.E2E_REUSE_BUILD, '1');
+    const run = job.steps.find(step => step.run?.includes('playwright-duration-shards.mjs run'));
+    assert.ok(run);
+    assert.equal(run.env?.E2E_REUSE_BUILD ?? job.env?.E2E_REUSE_BUILD, '1');
+    assert.equal(run.env?.E2E_MOCKS ?? job.env?.E2E_MOCKS, '1');
+    assert.equal(job.steps.find(step => step.with?.path === 'web/ci-evidence/').if, 'always()');
+    assert.equal(job.steps.find(step => step.name === 'Upload heavy failure evidence').if, 'failure()');
   }
-  assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
-  assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard,
-    Array.from({ length: 32 }, (_, i) => i + 1));
-  assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
+  assert.equal(rows.length + browser.jobs['app-design-tests'].strategy.matrix.include.length + 3 + 4, 49);
+});
+
+test('full engine/width/theme profiles and replay have exact partitions with unchanged capacity workers', () => {
+  const job = browser.jobs['app-design-tests'];
+  assert.equal(job.strategy.matrix.include.length, 24);
+  for (const engine of ['firefox', 'webkit']) {
+    for (const width of [1440, 390]) {
+      for (const theme of ['dark', 'light', 'custom']) {
+        const count = engine === 'webkit' ? width === 1440 ? 4 : 2 : 1;
+        const rows = job.strategy.matrix.include.filter(row => row.browser === engine && row.width === width && row.theme === theme);
+        assert.deepEqual(rows.map(row => row.shard), Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
+        assert.equal(suiteOptions('profile', engine, width, theme).workers, engine === 'webkit' ? width === 1440 ? 1 : 2 : 4);
+        assert.ok(familyGroups(engine).some(([group, n]) => group === `profile-${engine}-${width}-${theme}` && n === count));
+      }
+    }
+    assert.ok(familyGroups(engine).some(([group, count]) => group === `replay-${engine}` && count === 1));
+  }
+  assert.equal(job.env.APP_DESIGN_WORKERS, "${{ matrix.browser == 'webkit' && (matrix.width == 1440 && '1' || '2') || '4' }}");
+  assert.equal(job.env.HOME, '/root');
+  assert.equal(job.env.E2E_APP_DESIGN_CROSS_BROWSER, '1');
+  const replay = job.steps.find(step => step.name === 'Preserve engine replay contract');
+  assert.equal(replay.if, "always() && matrix.width == 1440 && matrix.theme == 'dark' && (matrix.shard == '1/1' || matrix.shard == '1/4')");
+  assert.match(replay.run, /--suite=replay.*--out=ci-evidence\/replay/);
+  const envelope = job.steps.find(step => step.name === 'Bind application design evidence to its source and build');
+  assert.match(envelope.run, /indexSHA256: hash\('e2e\/\.app-dist\/index\.html'\)/);
+  assert.match(envelope.run, /acceptanceSourceSHA256: hash\('e2e\/widget-design-packs\.app\.spec\.ts'\)/);
+});
+
+test('summary jobs require every suite blob merge and publish combined failure HTML only on failure', () => {
+  const contract = browser.jobs.contract;
+  assert.match(commands(contract), /npm run e2e:contract -- --reporter=line,json/);
+  assert.match(commands(contract), /npm run e2e:list -- --reporter=line/);
+  const contractReport = contract.steps.find(step => step.name === 'Upload contract JSON');
+  assert.equal(contractReport.if, 'always()');
+  assert.equal(contractReport.with.path, 'web/ci-contract/results.json');
+  assert.equal(contractReport.with['if-no-files-found'], 'error');
+  for (const id of ['chromium-quality', 'cross-browser', 'visual']) {
+    const job = browser.jobs[id];
+    assert.match(commands(job), /playwright-duration-shards\.mjs merge --family=/);
+    assert.equal(job.steps.find(step => step.name === 'Upload merged suite JSON').if, 'always()');
+    assert.equal(job.steps.find(step => step.name === 'Upload combined failure HTML').if,
+      "failure() || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')");
+    assert.equal(job.steps.find(step => step.name === 'Upload merged suite JSON').with['if-no-files-found'], 'error');
+  }
+  const helper = readFileSync(new URL('./playwright-duration-shards.mjs', import.meta.url), 'utf8');
+  assert.match(helper, /--reporter=line,json,blob/);
+  assert.match(helper, /merge-reports', '--reporter=json,github'/);
+  assert.match(helper, /merge-reports', '--reporter=html'/);
+  assert.match(helper, /report\.stats\.unexpected \|\| report\.errors\.length \|\| process\.env\.REPORT_FAILURE/);
+  assert.match(helper, /Number\(width\) === 1440 \? 23 : 21/);
+  assert.match(helper, /throw new AggregateError\(errors/);
+  assert.match(helper, /await compactBlob\(join\(out, 'blob'/);
+  assert.match(helper, /test\.expectedStatus === 'passed' && result\.status === 'passed' && !result\.errors\.length/);
+  assert.match(helper, /eligible\.get\(test\.testId\) \?\? true/);
+});
+
+test('duration balancing uses every full test identity once and rejects missing or duplicated cases', () => {
+  const cases = ['Native record-states real routes at 1440px in dark', 'short a', 'short b', 'short c']
+    .map((title, i) => ({ project: 'chromium-smoke', file: 'sample.spec.ts', path: [], title, key: String(i) }));
+  const shards = balance(cases, 2);
+  assert.equal(shards[0].tests[0].title, cases[0].title);
+  assert.equal(shards[0].tests.length, 1);
+  assertUnion(cases, shards.flatMap(shard => shard.tests));
+  assert.throws(() => assertUnion(cases, [...cases.slice(1), cases[1]]), /multiset union/);
+  assert.throws(() => balance(cases, 5), /shard count/);
+  const report = { suites: [{ title: 'sample.spec.ts', file: 'sample.spec.ts', suites: ['phone', 'desktop'].map(title => ({
+    title, specs: [{ file: 'sample.spec.ts', title: 'same leaf', tests: [{ projectName: 'chromium-smoke' }] }],
+  })) }] };
+  assert.equal(new Set(inventory(report).map(item => item.key)).size, 2);
+  assert.throws(() => resultInventory(report), /Missing actual test outcomes/);
+  for (const suite of report.suites[0].suites) suite.specs[0].tests[0].results = [{ status: 'passed' }];
+  assertUnion(inventory(report), resultInventory(report));
+  report.suites[0].suites[0].specs[0].tests[0].results = [{}];
+  assert.throws(() => resultInventory(report), /Invalid actual test outcome/);
+  const helper = readFileSync(new URL('./playwright-duration-shards.mjs', import.meta.url), 'utf8');
+  assert.match(helper, /const measured = measuredDurations\.durations\[test\.key\]/);
+  assert.match(helper, /unmeasured: full\.filter\(test => !Object\.hasOwn\(measuredDurations\.durations, test\.key\)\)/);
 });
 
 test('parallelization introduces no additional nonblocking test exceptions', () => {

@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
@@ -186,6 +186,6 @@ describe('ImpersonationBanner', () => {
     await waitFor(() => {
       expect(screen.getByTestId('impersonation-banner-end')).toHaveTextContent(/ending/i)
     })
-    resolveEnd()
+    await act(async () => { resolveEnd() })
   })
 })

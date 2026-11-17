@@ -88,6 +88,7 @@ export function Tabs({ tabs, activeTab, onChange, className, idBase, ariaLabel }
 
   return (
     <div
+      data-app-part="tabs"
       className={cn(
         'scrollbar-none flex max-w-full gap-1 overflow-x-auto border-b border-[var(--panel-border)]',
         className,
@@ -101,6 +102,7 @@ export function Tabs({ tabs, activeTab, onChange, className, idBase, ariaLabel }
         return (
           <button
             key={tab.key}
+            data-app-part="tab"
             id={`${tablistId}-tab-${tab.key}`}
             ref={(el) => {
               if (el) refs.current.set(tab.key, el);

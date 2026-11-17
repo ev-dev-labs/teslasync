@@ -1,3 +1,4 @@
+import { setupMeasuredChartContainers } from "@/test/setup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -93,6 +94,8 @@ beforeEach(() => {
   distributionQuery.mockReturnValue(makeQuery(samples, { refetch: distributionRefetch }));
 });
 afterEach(cleanup);
+
+setupMeasuredChartContainers(800, 320);
 
 describe("DrivingDynamicsWidget production design packs", () => {
   it.each(packs)("%s preserves real peak values, every histogram bin, and refresh actions (%s)", async (packId, appearance) => {
@@ -220,7 +223,7 @@ describe("DrivingDynamicsWidget production design packs", () => {
     const { container } = render(widget(packId));
     await waitForPack(container, appearance);
     const refresh = screen.getByRole("button", { name: /refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(distributionRefetch).not.toHaveBeenCalled();
     expect(dynamicsRefetch).not.toHaveBeenCalled();

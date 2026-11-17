@@ -636,7 +636,7 @@ describe.each(PACK_IDS)('BatteryHealthAnalyticsWidget — %s acceptance', packId
     useBatteryHealthAnalyticsMock.mockReturnValue({ ...retained, isFetching: true });
     view.rerender(widgetElement(size, 42, undefined, packId));
     const refreshControl = screen.getByRole('button', { name: /refresh/i });
-    expect(refreshControl).toBeDisabled();
+    expect(refreshControl).toHaveAttribute('aria-disabled', 'true');
     expect(refreshControl).toHaveAttribute('aria-busy', 'true');
     fireEvent.click(refreshControl);
     expect(refetch).toHaveBeenCalledOnce();

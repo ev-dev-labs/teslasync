@@ -229,6 +229,8 @@ function InnerSection(props: AINLGrafanaPanelProps) {
             </Button>
           </div>
           <div
+            data-app-part="card"
+            data-surface-variant="standalone"
             role="group"
             aria-label={t(
               'powerGrafana.aiDrafter.previewLabel',

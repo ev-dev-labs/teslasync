@@ -15,6 +15,7 @@
  * controllable doubles, and useConfirm / useEditLease / useNavigate are stubbed
  * for determinism.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -244,6 +245,8 @@ afterEach(() => {
 });
 
 // ── 1. Pure helpers ──────────────────────────────────────────────────────────
+setupMeasuredChartContainers(800, 320);
+
 describe('subjectOf', () => {
   it('returns the metric id for computed-metric rules', () => {
     expect(subjectOf(makeRule({ kind: 'computed_metric', metric_id: 'efficiency' }))).toBe(

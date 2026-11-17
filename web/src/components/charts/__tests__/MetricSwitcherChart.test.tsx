@@ -6,6 +6,7 @@
  * same way `ChartContainer.test.tsx` does so the chart renders in
  * isolation.
  */
+import { setupMeasuredChartContainers } from '@/test/setup';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -64,6 +65,8 @@ function renderWithProviders(ui: React.ReactNode) {
     </QueryClientProvider>,
   );
 }
+
+setupMeasuredChartContainers(800, 320);
 
 describe('MetricSwitcherChart', () => {
   it('keeps an unavailable cost metric visible without plotting invented zero prices', () => {

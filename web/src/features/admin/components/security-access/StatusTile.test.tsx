@@ -30,6 +30,9 @@ import { render, screen } from '@testing-library/react';
 
 import type { TileTone } from './helpers';
 import { StatusTile, type StatusTileProps } from './StatusTile';
+import { observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { expectAppDesignDataMode, matchesAppDesignCss, setAppDesignTestProfile } from '@/components/feedback/appDesignCss.test-utils';
+import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 
 function renderTile(overrides: Partial<StatusTileProps> = {}) {
   const props: StatusTileProps = {
@@ -60,6 +63,29 @@ const TONES: Array<{ tone: TileTone; chip: string; value: string }> = [
 // ── Content + structure ──────────────────────────────────────────────────────
 
 describe('StatusTile — content + structure', () => {
+  it('composes the actual label/state/context tile without manufacturing a gauge or numeric state', () => {
+    const { container, root, chip } = renderTile({
+      value: 'Unknown', tone: 'muted', description: 'No verified boolean observation; do not infer off.',
+    });
+    container.setAttribute('data-app-design-preview', '');
+    for (const pack of PACK_IDS) {
+      setAppDesignTestProfile(container, pack);
+      const release = observeAppDesignScopes(container);
+      try {
+        expectAppDesignDataMode(root!, container.getAttribute('data-app-data')!, '[data-app-metric="tile"]');
+        expect(root?.querySelector(':scope > [data-app-part~="metric-label"]')).toHaveTextContent('Lock status');
+        expect(root?.querySelector(':scope > [data-app-part~="metric-reading"]')).toHaveTextContent('Unknown');
+        const context = screen.getByText('No verified boolean observation; do not infer off.');
+        expect(matchesAppDesignCss(context, '[data-app-part~="metric-context"]')
+          .some(rule => rule.declarations['white-space'] === 'normal')).toBe(true);
+        expect(chip).toHaveClass('bg-white/[0.04]');
+        expect(root?.querySelector('[role="progressbar"], [data-metric-track]')).toBeNull();
+      } finally {
+        release();
+      }
+    }
+  });
+
   it('renders the label, value and description as visible text', () => {
     renderTile({
       label: 'Sentry mode',

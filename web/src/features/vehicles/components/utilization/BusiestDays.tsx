@@ -97,27 +97,27 @@ export function BusiestDays({
           <>
           <div className="hidden sm:block">
             <Table aria-label={t('utilization.sections.busiest', 'Ranked busiest observed days')}>
-              <thead>
-                <tr>
-                  <th scope="col" className="text-right">#</th>
-                  <th scope="col">{t('common.date', 'Date')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.drivingTime', 'Driving time')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.distance', 'Distance')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.drives', 'Drives')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.energy', 'Energy')}</th>
+              <thead data-app-part="table-head">
+                <tr data-app-part="table-row">
+                  <th data-app-part="table-cell" scope="col" className="text-right">#</th>
+                  <th data-app-part="table-cell" scope="col">{t('common.date', 'Date')}</th>
+                  <th data-app-part="table-cell" scope="col" className="text-right">{t('utilization.busiest.drivingTime', 'Driving time')}</th>
+                  <th data-app-part="table-cell" scope="col" className="text-right">{t('utilization.busiest.distance', 'Distance')}</th>
+                  <th data-app-part="table-cell" scope="col" className="text-right">{t('utilization.busiest.drives', 'Drives')}</th>
+                  <th data-app-part="table-cell" scope="col" className="text-right">{t('utilization.busiest.energy', 'Energy')}</th>
                 </tr>
               </thead>
               <tbody>
                 {summary.busiestDays.map((day, index) => (
-                  <tr key={day.day}>
-                    <td className="text-right tabular-nums">
+                  <tr data-app-part="table-row" key={day.day}>
+                    <td data-app-part="table-cell" className="text-right tabular-nums">
                       <Badge variant="neutral">{t('utilization.busiest.rank', '#{{rank}}', { rank: index + 1 })}</Badge>
                     </td>
-                    <th scope="row" className="font-normal">{formatDay(day.day)}</th>
-                    <td className="text-right tabular-nums">{formatDuration(day.drivingS)}</td>
-                    <td className="text-right tabular-nums">{formatDistance(day.distanceM)}</td>
-                    <td className="text-right tabular-nums">{fmtInt(day.driveCount)}</td>
-                    <td className="text-right tabular-nums">
+                    <th data-app-part="table-cell" scope="row" className="font-normal">{formatDay(day.day)}</th>
+                    <td data-app-part="table-cell" className="text-right tabular-nums">{formatDuration(day.drivingS)}</td>
+                    <td data-app-part="table-cell" className="text-right tabular-nums">{formatDistance(day.distanceM)}</td>
+                    <td data-app-part="table-cell" className="text-right tabular-nums">{fmtInt(day.driveCount)}</td>
+                    <td data-app-part="table-cell" className="text-right tabular-nums">
                       {day.energyWh > 0 ? formatEnergy(day.energyWh) : '—'}
                     </td>
                   </tr>
@@ -125,13 +125,15 @@ export function BusiestDays({
               </tbody>
             </Table>
           </div>
-          <ol className="space-y-3 sm:hidden">
+          <div className="sm:hidden">
+          <ol data-app-part="list" data-app-list="ranked" className="space-y-3">
             {summary.busiestDays.map((day, index) => (
               <li
                 key={day.day}
+                data-app-part="list-row"
                 className="grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <Badge variant="neutral">
+                <Badge data-app-part="badge metric-context" variant="neutral">
                   {t(
                     'utilization.busiest.rank',
                     '#{{rank}}',
@@ -139,47 +141,48 @@ export function BusiestDays({
                   )}
                 </Badge>
                 <Text
+                  data-app-part="metric-label"
                   size="sm"
                   weight="semibold"
                   color="primary"
                 >
                   {formatDay(day.day)}
                 </Text>
-                <div>
-                  <MetricLabel>
+                <div data-app-part="metric" data-app-metric="inline">
+                  <MetricLabel data-app-part="metric-label">
                     {t(
                       'utilization.busiest.drivingTime',
                       'Driving time',
                     )}
                   </MetricLabel>
-                  <Text variant="bodySm" mono>
+                  <Text data-app-part="metric-value" variant="bodySm" mono>
                     {formatDuration(day.drivingS)}
                   </Text>
                 </div>
-                <div>
-                  <MetricLabel>
+                <div data-app-part="metric" data-app-metric="inline">
+                  <MetricLabel data-app-part="metric-label">
                     {t(
                       'utilization.busiest.distance',
                       'Distance',
                     )}
                   </MetricLabel>
-                  <Text variant="bodySm" mono>
+                  <Text data-app-part="metric-value" variant="bodySm" mono>
                     {formatDistance(day.distanceM)}
                   </Text>
                 </div>
-                <div>
-                  <MetricLabel>
+                <div data-app-part="metric" data-app-metric="inline">
+                  <MetricLabel data-app-part="metric-label">
                     {t('utilization.busiest.drives', 'Drives')}
                   </MetricLabel>
-                  <Text variant="bodySm" mono>
+                  <Text data-app-part="metric-value" variant="bodySm" mono>
                     {fmtInt(day.driveCount)}
                   </Text>
                 </div>
-                <div>
-                  <MetricLabel>
+                <div data-app-part="metric" data-app-metric="inline">
+                  <MetricLabel data-app-part="metric-label">
                     {t('utilization.busiest.energy', 'Energy')}
                   </MetricLabel>
-                  <Text variant="bodySm" mono>
+                  <Text data-app-part="metric-value" variant="bodySm" mono>
                     {day.energyWh > 0
                       ? formatEnergy(day.energyWh)
                       : '—'}
@@ -188,6 +191,7 @@ export function BusiestDays({
               </li>
             ))}
           </ol>
+          </div>
           </>
         )}
       </UtilizationSectionBody>

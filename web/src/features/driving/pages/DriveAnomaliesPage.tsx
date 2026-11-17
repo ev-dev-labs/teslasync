@@ -275,7 +275,7 @@ export default function DriveAnomaliesPage() {
               message={t('anomalies.noOutliers', 'No drives beyond ±2σ — everything fits your usual pattern.')}
             />
           ) : (
-            <ul className="space-y-2">
+            <ul data-app-part="list" className="space-y-2">
               {summary.outliers.map((o) => (
                 <li
                   key={o.driveId}
