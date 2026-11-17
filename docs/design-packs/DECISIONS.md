@@ -1,5 +1,93 @@
 # Design Pack Decisions
 
+## 2026-11-17 measured WebKit transition storm
+
+The corrected four-worker/four-CPU replay reproduces the exact classic
+dashboard screenshot timeout: **1 failed / 3 passed (6.3m)**. A session-only
+WebKit native Timeline capture inside that original operation then records
+34,545 events in 9.210 seconds, including 5,322 style recalculations and
+3,024 event dispatches. The longest repeated dispatches are `transitionrun`;
+their handler invokes native `getAnimations`. This is not a font download:
+the actual CI trace contains no font requests.
+
+The global reduced-motion safety rule sets `transition-duration: 0.01ms`
+on every element and pseudo-element. Because the default transition property
+is `all`, a positive duration inadvertently creates transitions on otherwise
+static descendants. Native screenshot animation completion then processes a
+storm of transition events and repeated style recalculations. This is
+distinct from the earlier phone hidden-table layout cost.
+
+Set reduced-motion transition duration and delay to zero. Preserve the
+finite keyframe completion behavior, all normal-motion styling, native
+screenshots and their deadlines. Strengthen the existing accessibility case
+to require genuinely absent transitions, including a plain descendant and
+a deliberately delayed control. Against the unchanged CI assets it fails
+with expected `0`, received `0.01`; no new suite or matrix is introduced.
+The production rebuild and unchanged affected phases are being validated
+before this repair can be shipped. No passing result is inferred yet.
+
+The existing accessibility case now passes against the repaired assets
+**1 passed (10.0s)**. The same one-core native capture drops from 9.210 to
+2.370 seconds, style recalculations from 5,322 to 5, and transition dispatches
+from 3,024 to **zero**. This verifies the causal mechanism without changing
+the screenshot operation. Full lint, TypeScript, the browser build and the
+scoped guideline audit pass; both required suppression diffs have zero
+matches. Source repair: `3128e15a53`. Four original Firefox/WebKit phases and
+four other failed WebKit phases continue under four-worker/four-core limits;
+they are still acceptance work, not presumed passing. No page, section,
+hook, screenshot or historical fingerprint was changed.
+
+The four original constrained phases now pass: **4 passed (8.8m)**,
+four workers/four CPUs, no retries, zero proxy errors. The diagnostic
+one-core WebKit phase also completes all 27 packs: **1 passed (6.7m)**.
+The downloaded original Firefox trace confirms both the failed `v4` PUT
+and subsequent GET were fulfilled with `v4` within roughly 26 milliseconds;
+the root-attribute assertion then stalls. This rules out inventing a
+preference-delivery workaround based only on the last observed old attribute.
+Four additional WebKit phases continue independently while the verified
+repair is prepared for the next CI loop.
+
+The task-only Docker build for `3128e15a53` passes all production/postbuild
+gates, including **399.2 KB / 400 KB** startup JavaScript. Docker 3120 is
+running/healthy; `/assets/index-Dr_SKJTB.js` contains `3128e15a53`, and root,
+health, readiness and auth-mode return 200. Its predecessor remains stopped
+as `teslasync-design-packs-v2-rollback-before-3128e15a53`. Shared aggregate
+health/status still return 503 with Tesla `no_token` and a closed breaker;
+no shared backend was changed. The old 50725 helper and verified Vite child
+PID 10708 are stopped; direct connection now refuses. Repaired helper 50726
+remains needed by the four ongoing phases.
+
+## 2026-11-17 latest-head queue limit and newly available native failures
+
+On `788cdb3638`, CI, Security, Ops Gate, SI Canonical Gate and Auto Label all
+pass. Quality attempt 1 reached 106 successful checks but still had twenty
+jobs queued for 46 minutes. Its live job-log endpoint again returned
+`BlobNotFound`/404; the monitor also inspects failed steps inside unfinished
+jobs. Cancelled only this over-age workflow and issued its one permitted
+`gh run rerun 43997247453 --failed`, retaining successful same-head jobs.
+
+The completed cancellation logs expose genuine failures before cancellation:
+WebKit light/custom desktop native font/stability/click waits, and Firefox
+custom desktop root preference attributes staying on the preceding pack.
+Some already use the observation-clock helper. These are not accepted as
+flaky or repaired merely because earlier local phases passed.
+
+Re-read the entire 496-line workflow and the full relevant failure contexts
+before choosing another repair. CI uses Ubuntu x64, Node 26 and four workers.
+The earlier local browser image actually supplies Node 24.20.0 on ARM64
+with twenty visible CPUs, and its static assets came from the production
+build rather than the actual CI artifact. The package requires Node >=26.
+Correct the diagnostic runtime to Node 26.13.1, download the real shared
+`e2e-app` artifact, and replay four exact failed phases with four CPUs and
+four workers, no retries and unchanged deadlines/assertions. ARM64 remains
+an explicit architectural difference; no CI-equivalence claim is made.
+The local ten-case WebKit pass also contained 19.78-minute core interactions
+and 16.45-minute accessibility, not ten equally short cases.
+
+No new production or harness fix is inferred yet. The allowed CI retry
+continues while the newly available traces and resource-matched reproduction
+are investigated. No further unchanged retry is authorized after this one.
+
 ## 2026-11-17 immediate latest-head CI follow-through
 
 The first `a3285f3d30` poll with failures exposed discovery and Security;

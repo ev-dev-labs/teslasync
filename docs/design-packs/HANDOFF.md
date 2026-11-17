@@ -1,5 +1,63 @@
 # Design packs wrap-up handoff
 
+## Active investigation: 2026-11-17, head `788cdb3638`
+
+Five workflows pass on this head: CI, Security, Ops Gate, SI Canonical Gate
+and Auto Label. Quality run `43997247453` is on its one permitted failed-job
+retry after twenty attempt-1 jobs had queued for 46 minutes. The active
+`pr-watch-788-attempt2` monitor checks every 90 seconds plus API time.
+Do not issue another unchanged retry if it hangs again.
+
+The now-available interrupted logs show real WebKit desktop native-action
+timeouts and Firefox custom-desktop previous-pack attributes. All ten
+executed interrupted Chromium logs were also inspected: no independent
+test failure was reported; responsive-14 completed 112 cases before its
+cancellation cleanup. These native failures remain open FIXLIST work.
+
+Prior browser replays used Node 24/ARM64/twenty visible CPUs and production
+assets, unlike Node 26/x64 CI. The exact current CI `e2e-app` artifact is now
+served by the task-only Vite helper on 50725. Task image
+`teslasync-design-packs-browser:788-node26` reports Node 26.13.1. A four-CPU,
+four-worker replay of the four original custom-desktop dashboard/drive-detail
+phases reproduces the WebKit classic dashboard screenshot font wait:
+**1 failed / 3 passed (6.3m)**. No deadlines, assertions or source were
+changed. This is still ARM64, not full x64 parity.
+
+The actual CI WebKit trace has no font network requests. A session-only
+native Timeline probe identifies 3,024 transition dispatches and 5,322 style
+recalculations during the failed screenshot. The global reduced-motion
+0.01ms duration accidentally creates transitions on static descendants.
+Commit `3128e15a53` uses zero duration/delay, preserving keyframe completion
+and normal-motion appearance. The same capture drops from 9.210 to 2.370
+seconds, with five recalculations and zero transition dispatches.
+
+The strengthened existing accessibility case fails on old CI assets and
+passes on repaired assets (10.0s). Full lint/types/browser build/scoped audit
+pass; suppression diffs against both bases have zero matches. Four original
+Firefox/WebKit phases pass with four workers/four CPUs: **4 passed (8.8m)**,
+unchanged assertions, no retries, zero proxy errors. The one-core native
+diagnostic completes all 27 packs: **1 passed (6.7m)**. Four other WebKit
+failure phases continue independently; their acceptance is not assumed.
+
+Docker 3120 now serves `teslasync-web:design-packs-v2-3128e15a53`,
+running/healthy. Actual entry `/assets/index-Dr_SKJTB.js` contains the repair
+SHA; production/postbuild gates pass with 399.2 KB startup JS. Root,
+health/readiness/auth-mode return 200; shared Tesla aggregate status remains
+503/no_token/closed breaker. Rollback is
+`teslasync-design-packs-v2-rollback-before-3128e15a53`.
+The verified repair and these receipts are the next shipping batch; new-head
+CI acceptance remains mandatory.
+
+Session receipts: `788-resource-repro.log`, `788-webkit-native-profile.log`,
+`788-webkit-native-fixed.log`, `788-motion-replay.log`,
+`788-motion-native-followup.log` and `3128-docker-build.log`.
+The original Firefox artifact in `788-firefox-custom-attempt1` confirms the
+requested `v4` PUT and GET were fulfilled promptly before the root assertion
+stalled; no transport workaround was added. Helper 50725 and verified child
+PID 10708 are stopped, with connection refusal verified. Stop repaired helper
+50726 after its four dependent phases; keep Docker 3120 and unrelated shared
+services intact.
+
 ## Latest CI follow-through: 2026-11-17
 
 The published `a3285f3d30` batch exposed two failures immediately: discovery
