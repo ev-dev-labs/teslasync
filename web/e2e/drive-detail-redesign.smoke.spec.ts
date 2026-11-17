@@ -81,9 +81,16 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(overview.getByText('Odometer (from → to)', { exact: true })).toBeVisible();
 
     await expect.poll(() => Date.now() - lastFailureAt).toBeGreaterThanOrEqual(1100);
-    await retry.evaluate(button => button.addEventListener('click', () => {
-      sessionStorage.setItem('e2e-drive-pricing-recovery', '1');
-    }, { capture: true, once: true }));
+    await overview.evaluate(section => {
+      // A settings refetch can replace the Retry button before native input.
+      const allowRecovery = (event: Event) => {
+        const button = event.target instanceof Element ? event.target.closest('button') : null;
+        if (button?.textContent?.trim() !== 'Retry') return;
+        sessionStorage.setItem('e2e-drive-pricing-recovery', '1');
+        section.removeEventListener('click', allowRecovery, true);
+      };
+      section.addEventListener('click', allowRecovery, true);
+    });
     await retry.click();
     const expectedCost = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2, maximumFractionDigits: 2,
