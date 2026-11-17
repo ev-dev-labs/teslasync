@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from "@/test/setup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -96,6 +97,8 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+setupCanvasTextMeasurement();
 
 describe("DrivingDynamicsWidget redesign", () => {
   it("renders one Style headline and measured peak G-force stats", () => {

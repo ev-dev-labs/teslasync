@@ -46,6 +46,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * dashboard tests.
  */
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -294,6 +295,8 @@ beforeEach(() => {
 });
 
 /* ── Specs ────────────────────────────────────────────────────────── */
+
+setupCanvasTextMeasurement();
 
 describe('WallConnectorWidget', () => {
   it('does not imply current charging activity from historical energy', () => {

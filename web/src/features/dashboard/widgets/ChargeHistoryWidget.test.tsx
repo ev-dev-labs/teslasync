@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
@@ -82,6 +83,8 @@ function renderWidget(size: WidgetSize) {
 
 beforeEach(() => requestMock.mockReset());
 afterEach(cleanup);
+
+setupCanvasTextMeasurement();
 
 describe('ChargeHistoryWidget redesign contract', () => {
   it('renders one true total and no fabricated average', async () => {

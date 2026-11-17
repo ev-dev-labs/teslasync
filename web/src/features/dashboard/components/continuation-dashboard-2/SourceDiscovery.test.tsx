@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
@@ -39,6 +40,8 @@ beforeEach(() => {
   hooks.safety.mockReturnValue(queryResult({ automatic_emergency_braking_off: false }));
   hooks.charging.mockReturnValue(queryResult([]));
 });
+
+setupCanvasTextMeasurement();
 
 describe.each(widgets)('$name discovery recovery', ({ Widget }) => {
   it('retries fleet discovery rather than the disabled reading when no vehicle resolved', () => {

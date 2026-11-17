@@ -39,32 +39,46 @@ export function measureChartContainers(width: number, height: number) {
   })
 }
 
+/** Supply axis text measurement without pretending to implement canvas drawing. */
+export function patchCanvasTextMeasurement() {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
+  const contexts = new WeakMap<HTMLCanvasElement, { font: string; measureText: (text: string) => { width: number } }>()
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value(this: HTMLCanvasElement, contextId: string) {
+      if (contextId !== '2d') return null
+      let context = contexts.get(this)
+      if (!context) {
+        context = { font: '', measureText: text => ({ width: text.length * 8 }) }
+        contexts.set(this, context)
+      }
+      return context
+    },
+  })
+  return () => {
+    if (descriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', descriptor)
+    else Reflect.deleteProperty(HTMLCanvasElement.prototype, 'getContext')
+  }
+}
+
+export function setupCanvasTextMeasurement() {
+  let restore: (() => void) | undefined
+  beforeEach(() => { restore = patchCanvasTextMeasurement() })
+  afterEach(() => { restore?.() })
+}
+
 /** Opt a fixture into real chart rendering without fabricating layout for other elements. */
 export function setupMeasuredChartContainers(width: number, height: number) {
   let measurement: ReturnType<typeof measureChartContainers> | undefined
-  let canvasDescriptor: PropertyDescriptor | undefined
+  let restoreCanvas: (() => void) | undefined
   beforeEach(() => {
     measurement = measureChartContainers(width, height)
-    canvasDescriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
-    const contexts = new WeakMap<HTMLCanvasElement, { font: string; measureText: (text: string) => { width: number } }>()
-    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
-      configurable: true,
-      value(this: HTMLCanvasElement, contextId: string) {
-        if (contextId !== '2d') return null
-        let context = contexts.get(this)
-        if (!context) {
-          context = { font: '', measureText: text => ({ width: text.length * 8 }) }
-          contexts.set(this, context)
-        }
-        return context
-      },
-    })
+    restoreCanvas = patchCanvasTextMeasurement()
   })
   afterEach(() => {
     measurement?.mockRestore()
     measurement = undefined
-    if (canvasDescriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', canvasDescriptor)
-    else Reflect.deleteProperty(HTMLCanvasElement.prototype, 'getContext')
+    restoreCanvas?.()
   })
 }
 

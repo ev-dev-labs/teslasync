@@ -30,6 +30,7 @@
  * No network is touched.
  */
 
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -145,6 +146,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+
+setupCanvasTextMeasurement();
 
 describe('RecentActivity — activity feed', () => {
   it('renders drives and charges as timeline rows with SI→km conversion and rich subtitles', () => {

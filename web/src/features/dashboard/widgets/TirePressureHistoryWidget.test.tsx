@@ -29,6 +29,7 @@
  * `@testing-library/user-event` is intentionally NOT a dependency of this
  * codebase — interactions use `fireEvent`, consistent with the other slice tests.
  */
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -187,6 +188,8 @@ afterEach(() => {
 });
 
 // ── RECOMMENDED_RANGE_KPA (constant) ─────────────────────────────────────────
+setupCanvasTextMeasurement();
+
 describe('RECOMMENDED_RANGE_KPA', () => {
   it('is expressed in SI kilopascals (2.4–2.8 bar), not bar or Pascals', () => {
     expect(RECOMMENDED_RANGE_KPA).toEqual({ low: 240, high: 280 });

@@ -37,39 +37,6 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
-// ── framer-motion: keep tests fast + deterministic ─────────────────────
-vi.mock('framer-motion', () => {
-  const motionProxy: Record<string, unknown> = new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-          const safeRest: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(rest)) {
-            if (
-              k === 'animate' ||
-              k === 'initial' ||
-              k === 'exit' ||
-              k === 'transition' ||
-              k === 'whileHover' ||
-              k === 'whileTap' ||
-              k === 'variants'
-            )
-              continue;
-            safeRest[k] = v;
-          }
-          return <div {...(safeRest as Record<string, unknown>)}>{children}</div>;
-        },
-    },
-  );
-  return {
-    m: motionProxy,
-    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-    useReducedMotion: () => true,
-  };
-});
-
 // ── Vehicle hook: mutable so the empty-fleet safety state stays covered ─
 const vehicleHook = vi.hoisted(() => ({
   data: [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }] as

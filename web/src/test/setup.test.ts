@@ -34,12 +34,31 @@ import {
   patchServiceWorkerLifecycle,
   TestCleanupRegistry,
   measureChartContainers,
+  patchCanvasTextMeasurement,
   patchWindowScroll,
 } from './setup'
 
 afterEach(() => {
   // Guard against a test that forgot to restore leaking the stub across files.
   Reflect.deleteProperty(window, 'matchMedia')
+})
+
+it('keeps canvas text contexts independent and restores the original API', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
+  const restore = patchCanvasTextMeasurement()
+  try {
+    const canvas = document.createElement('canvas')
+    const first = canvas.getContext('2d')!
+    const second = document.createElement('canvas').getContext('2d')!
+    first.font = '12px sans-serif'
+    expect(canvas.getContext('2d')).toBe(first)
+    expect(second.font).not.toBe(first.font)
+    expect(first.measureText('long label').width).toBeGreaterThan(first.measureText('x').width)
+    expect(canvas.getContext('webgl')).toBeNull()
+  } finally {
+    restore()
+  }
+  expect(Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')).toEqual(descriptor)
 })
 
 it('reallocates responsive chart fixtures without replacing ordinary element measurements', () => {

@@ -1,5 +1,83 @@
 # Design Pack Decisions
 
+## 2026-11-17 current-head retry and native stability investigation
+
+CI, Security, Ops, SI and Auto Label pass on `7a70264b45`. Quality attempt 1
+was cancelled after eleven jobs queued for 46 minutes. Its single permitted
+failed-job retry is now running. The interrupted custom-desktop WebKit log
+contains genuine pre-cancellation failures: invalid-focus form captures,
+battery-cell details captures and a drive-detail marker click. Unlike the
+previous transition storm, every screenshot call log completes its font
+wait and then stalls in native stability checking. Core retries fail in
+Classic or Horizon Loft; the marker click reaches native dispatch.
+
+Reread the complete Quality workflow and the failed-action/retry logs before
+another source hypothesis. Preserve all native operations and deadlines.
+The next experiment profiles the exact downloaded current-head CI artifact
+with Node 26 and four visible CPUs/workers. The hypothesis to test is native
+layout/frame starvation during these specific interactions, not a missing
+font download or failed preference response. Existing local passes do not
+clear these newly exposed failures.
+
+The two missing-path errors are proven cancellation cleanup, not missing
+builds: responsive-19 explicitly reports cancellation during checkout at
+03:54:53.593 before its always-running receipt cannot find the workdir;
+responsive-24 reports cancellation during setup-node at 03:54:53.568 before
+its receipt cannot find the not-yet-downloaded artifact. Neither reached
+the browser command. No receipt or aggregate enforcement is weakened.
+
+## 2026-11-17 repairing diagnostics in passing unit shards
+
+Remove the redundant destination fixture timestamp and four motion doubles
+that forwarded non-DOM props. Use the existing real LazyMotion test root.
+Attribute native canvas calls with a session-only call-through diagnostic,
+then scope text measurement to the 26 actual fixtures. Do not install a
+global partial canvas implementation. An initial geometry-helper experiment
+was rejected because it changed fixtures' bespoke allocations; extract only
+its existing text-measurement behavior with exact descriptor restoration.
+The existing setup suite verifies independent per-canvas contexts and cleanup.
+
+MonthlyMileage's previous hook-call count mistook renders for subscriptions:
+real axis measurement legitimately rerenders the component. Its fixture now
+tracks source subscriptions in effects keyed by source arguments. Retain
+exactly one subscription per source, exact arguments on every evaluation,
+and exactly one explicit refresh. No production query behavior changes.
+The dashcam fixture implements pause/load events and verifies each cleanup
+operation plus source removal, preserving its decode-error assertions.
+
+The final changed-file coverage run passes **33 files / 2,240 tests (144.98s)**;
+the existing geometry-helper consumer passes **31 tests**. Full lint,
+scoped final ESLint, TypeScript, shared-helper audit and production/postbuild
+gates pass. Corrected fixtures emit none of the missing-API, duplicate-key,
+non-boolean DOM, act or listener-limit warnings. The separate intentional
+unsupported-canvas negative case and native jsdom navigation limitations
+remain observable; neither establishes a production browser defect. No
+output suppression, baseline change or application-navigation workaround
+was added. These test-only repairs do not change preview assets.
+
+## 2026-11-17 shipped repair and second-attempt evidence
+
+Pushed the verified repair as `3128e15a53` plus receipts `7a70264b45`;
+cancelled superseded Quality attempt 2 and resumed all-workflow monitoring
+on the new head. The monitor now also requires active workflow runs to
+finish before declaring terminal checks sufficient.
+
+Collected all sixteen executed interrupted-job logs from the superseded
+attempt. Their reported failures are nine previous-pack attribute assertions,
+three native screenshot waits and three native scroll waits; no additional
+failure category is inferred from cancellation cleanup. The selection stalls
+also occur in Firefox light/dark desktop and Chromium custom-phone charging.
+The four exact newly exposed phases pass against the shipped repair:
+**4 passed (4.9m)**, four workers/four CPUs, no retries, zero proxy errors.
+No extra production or transport change is needed on that evidence.
+The four remaining original WebKit phases also pass: **4 passed (24.2m)**,
+four workers/four CPUs, unchanged assertions, no retries, zero proxy errors.
+This covers light desktop core interactions/accessibility, drive list and
+custom desktop charging. Temporary helper 50726 and verified child PID 5408
+are stopped, with connection refusal confirmed; persistent Docker preview
+3120 remains healthy. Refreshed main ancestry is `258 0`. Current-head CI
+remains mandatory.
+
 ## 2026-11-17 measured WebKit transition storm
 
 The corrected four-worker/four-CPU replay reproduces the exact classic

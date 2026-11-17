@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -20,17 +19,6 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }))
-
-// Hide the framer-motion machinery so the test focuses on behaviour, not animation.
-vi.mock('framer-motion', () => {
-  return {
-    m: new Proxy({}, {
-      get: () => (props: Record<string, unknown>) => React.createElement('div', props, props.children as React.ReactNode),
-    }),
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
-    useReducedMotion: () => false,
-  }
-})
 
 import { AchievementUnlockedToast } from '../AchievementUnlockedToast'
 import type { AchievementUnlockedEvent } from '@/api/hooks/useAchievementUnlocks'

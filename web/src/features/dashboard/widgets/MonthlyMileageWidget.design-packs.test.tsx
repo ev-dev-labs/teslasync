@@ -1,7 +1,8 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import type { MonthlyMileageBucket } from '@/types/analytics';
 import { chartTokens } from '@/lib/tokens';
 import { PackBoundary } from './designPacks/PackBoundary';
@@ -30,11 +31,23 @@ const api = vi.hoisted(() => {
     result,
     mileage: vi.fn<(vehicleId: string, timezone?: string) => typeof result>(() => result),
     vehicles: vi.fn(() => ({ data: [{ id: 41 }] })),
+    mileageSubscription: vi.fn(),
+    vehicleSubscription: vi.fn(),
   };
 });
 
-vi.mock('@/api/hooks/useAnalytics', () => ({ useMonthlyMileage: api.mileage }));
-vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: api.vehicles }));
+vi.mock('@/api/hooks/useAnalytics', () => ({
+  useMonthlyMileage: (vehicleId: string, timezone?: string) => {
+    useEffect(() => { api.mileageSubscription(vehicleId, timezone); }, [vehicleId, timezone]);
+    return api.mileage(vehicleId, timezone);
+  },
+}));
+vi.mock('@/api/hooks/useVehicles', () => ({
+  useVehicles: () => {
+    useEffect(() => { api.vehicleSubscription(); }, []);
+    return api.vehicles();
+  },
+}));
 vi.mock('@/hooks/useSettings', async importOriginal => {
   const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
   return {
@@ -109,6 +122,8 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+setupCanvasTextMeasurement();
+
 describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
   it('uses the actual pack with the original monthly plot, summaries and refresh action', async () => {
     const { container } = render(widget(packId));
@@ -143,8 +158,9 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
     expect(container.querySelector('[data-widget-family="bars"] [aria-hidden="true"] > svg')).not.toBeNull();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(api.mileage).toHaveBeenCalledExactlyOnceWith('7', 'UTC');
-    expect(api.vehicles).toHaveBeenCalledTimes(1);
+    expect(api.mileageSubscription).toHaveBeenCalledExactlyOnceWith('7', 'UTC');
+    expect(api.vehicleSubscription).toHaveBeenCalledTimes(1);
+    for (const args of api.mileage.mock.calls) expect(args).toEqual(['7', 'UTC']);
 
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(api.result.refetch).toHaveBeenCalledTimes(1);
@@ -161,7 +177,7 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Distance driven by month' })).not.toBeInTheDocument();
     expect(screen.queryByText('12-month average')).not.toBeInTheDocument();
-    expect(api.mileage).toHaveBeenCalledTimes(1);
+    expect(api.mileageSubscription).toHaveBeenCalledExactlyOnceWith('7', 'UTC');
 
     api.result.data = [];
     view.rerender(widget(packId, { size: { cols: 1, rows: 1 } }));

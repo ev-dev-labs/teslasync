@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -118,6 +119,8 @@ afterEach(() => {
   cleanup();
   clients.splice(0).forEach(client => client.clear());
 });
+
+setupCanvasTextMeasurement();
 
 describe('ChargeHistoryWidget production design packs', () => {
   it.each(packs)('%s keeps the real history plot, readings, source identity and scope', async (pack, appearance) => {

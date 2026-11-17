@@ -31,7 +31,6 @@ function driveAt(
     id: nextId++,
     vehicleId: 1,
     startTs,
-    endTs,
     durationS,
     distanceM: 10_000,
     startAddress,

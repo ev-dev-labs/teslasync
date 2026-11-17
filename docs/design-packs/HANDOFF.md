@@ -1,5 +1,41 @@
 # Design packs wrap-up handoff
 
+## Current CI loop: `7a70264b45`
+
+Latest update: CI, Security, Ops, SI and Auto Label pass. Quality attempt 1
+was cancelled at the 46-minute queue threshold; its single permitted retry
+is active under `pr-watch-7a702-attempt2`. No further unchanged rerun is
+permitted. Newly exposed WebKit custom-desktop core interactions, battery
+details and drive-detail marker waits remain open. Exact CI assets are served
+by task helper 50727 for a bounded native replay. Docker 3120 is unchanged.
+The uncommitted fixture batch passes 33 files/2,240 tests plus 31 helper-parity
+cases, lint, types, audit and build; see the newest DECISIONS entry.
+Earlier monitoring statements below are historical, not current acceptance.
+
+Pushed `3128e15a53` and receipt commit `7a70264b45`. Superseded Quality run
+`43997247453` is cancelled/completed. The strict monitor
+`pr-watch-7a702-strict` is active, requires both terminal checks and completed
+workflows, and watches all current-head runs:
+CI `44007392801`, Quality `44007392584`, Security `44007392719`,
+Ops `44007392572`, SI `44007392587`, Auto Label `44007392753`.
+Ops, SI and Auto Label pass; other workflows remain active. No final
+acceptance claim and no further rerun has been used on this head.
+
+All sixteen interrupted attempt-2 logs were collected after cancellation.
+They report the same native screenshot/scroll waits and previous-pack
+attribute stalls, including Firefox light/dark and Chromium custom-phone
+charging. The four newly exposed selection cases pass against the shipped
+repair: **4 passed (4.9m)**, four workers/four CPUs, no retries and zero
+proxy errors (`7a702-selection-followup.log`). The four-WebKit follow-up
+also passes: **4 passed (24.2m)**, unchanged assertions, no retries and
+zero proxy errors. It covers light desktop core interactions/accessibility,
+drive list and custom desktop charging. Helper 50726 and its verified child
+PID 5408 are stopped; direct connection refusal is confirmed. Docker 3120
+remains healthy. Refreshed main ancestry is `258 0`; PR is ready, open and
+mergeable, with checks still pending.
+The updated template-preserving PR-body draft is session-only
+`pr259-verified-repair-body.md`; publish final receipts after acceptance.
+
 ## Active investigation: 2026-11-17, head `788cdb3638`
 
 Five workflows pass on this head: CI, Security, Ops Gate, SI Canonical Gate

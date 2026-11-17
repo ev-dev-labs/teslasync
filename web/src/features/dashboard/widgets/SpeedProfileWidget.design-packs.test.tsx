@@ -1,3 +1,4 @@
+import { setupCanvasTextMeasurement } from '@/test/setup';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -125,6 +126,8 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+setupCanvasTextMeasurement();
 
 describe('SpeedProfileWidget production design packs', () => {
   it.each(packs)('%s preserves the real histogram, signed power, gaps, details and refresh in %s', async (pack, appearance) => {
