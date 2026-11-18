@@ -21,7 +21,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Read-PackageLayout([string]$Directory, [string]$ExpectedArchitecture) {
-    $root = (Resolve-Path -LiteralPath $Directory).Path
+    $root = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Directory).Path)
     $manifest = [xml](Get-Content -LiteralPath (Join-Path $root 'AppxManifest.xml') -Raw)
     $identity = $manifest.Package.Identity
     $arch = [string]$identity.ProcessorArchitecture
@@ -42,8 +42,12 @@ function Read-PackageLayout([string]$Directory, [string]$ExpectedArchitecture) {
     if ($applications.Count -ne 1 -or -not $applications[0].Executable) {
         throw 'Expected one application executable in the package manifest.'
     }
+    if ([IO.Path]::IsPathRooted($applications[0].Executable)) {
+        throw 'Application executable must be inside the package.'
+    }
     $executable = [IO.Path]::GetFullPath((Join-Path $root $applications[0].Executable))
-    if (-not $executable.StartsWith("$root$([IO.Path]::DirectorySeparatorChar)", [StringComparison]::OrdinalIgnoreCase)) {
+    $rootPrefix = $root.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    if (-not $executable.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
         throw 'Application executable must be inside the package.'
     }
     $reader = [IO.BinaryReader]::new([IO.File]::OpenRead($executable))
