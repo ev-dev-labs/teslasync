@@ -62,5 +62,14 @@
   generic dialog frame. This preserves the Swiss Grid cap and other pack
   details without changing unrelated dialogs.
 - The consolidated header and restored full rail intentionally change the Windows
-  shell screenshots. Refresh only existing baselines that the Windows
-  comparison flagged; keep the same viewport projects, masks, and thresholds.
+  shell screenshots. Refresh the 49 baselines flagged by the Windows comparison
+  for `81aafb82be` (run 44263304566); all three attempts agree within the existing
+  threshold. Keep the same viewport projects, masks, and thresholds.
+- Load the notification bell and appearance trigger with the selected header,
+  not the startup shell. Keep their labels in the shell catalog. The shell
+  reads the unread count once and passes it to both the bell and navigation
+  badge. The appearance shortcut and control positions stay unchanged.
+- Capture dashboard overflow evidence from the measured widget rectangles
+  rather than waiting for Playwright's element screenshot action to find a
+  stable moment on the live grid. Keep all six configurations and twelve
+  captures. Compare edit-mode header geometry after the grid transition.

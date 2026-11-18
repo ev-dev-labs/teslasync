@@ -63,4 +63,4 @@ including on mobile-sized cards. Edge checked each thumbnail at 360px,
 applied the pack through **Use pack**, and verified the live Driving panel
 picked up Material Play's ownership without a separate preference write.
 
-[review]: https://github.com/ev-dev-labs/teslasync/pull/267#issuecomment-6970371615
+[review]: https://github.com/ev-dev-labs/teslasync/pull/267#issuecomment-6974125220

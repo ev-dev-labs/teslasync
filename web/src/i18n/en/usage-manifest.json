@@ -3003,6 +3003,8 @@
   ],
   "declaredRuntimeKeys": [
     "date.preset.last7",
+    "notifications.bellPopover.loading",
+    "theme.openPicker",
     "workspace.analysis.trigger"
   ],
   "autoDiscoveredRuntimeKeys": [],
@@ -8655,7 +8657,6 @@
       "notifications.alertStudio.editor.vehiclesSummaryPartial",
       "notifications.alertStudio.editor.vehiclesUnknownBadge",
       "notifications.alertStudio.editor.vehiclesUnknownLabel",
-      "notifications.bellPopover.loading",
       "notifications.bellPopover.title",
       "operationalMode.asOf.description",
       "operationalMode.asOf.label",
@@ -9348,7 +9349,6 @@
       "tesla.reauth.body",
       "tesla.reauth.cta",
       "tesla.reauth.title",
-      "theme.openPicker",
       "timeMachine.ageFresh",
       "timeMachine.banner.body",
       "timeMachine.banner.cancel",

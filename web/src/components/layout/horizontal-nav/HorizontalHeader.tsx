@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useWorkspaceScope } from '@/hooks/useWorkspaceScope'
@@ -6,6 +6,7 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { CommandPaletteTrigger } from '@/components/ui/CommandPaletteTrigger'
 import { NotificationBellPopover } from '../NotificationBellPopover'
+import { ThemeQuickSwitcher } from '../ThemeQuickSwitcher'
 import { LayoutBreadcrumbs } from '../LayoutBreadcrumbs'
 import { VehiclePicker } from '../VehiclePicker'
 import { WorkspaceContextControl } from '../WorkspaceContextControl'
@@ -18,9 +19,9 @@ import { usePrioritySections } from './usePrioritySections'
 import './horizontal-nav.css'
 
 type Popup = { kind: 'more'; section?: never } | { kind: 'section'; section: string; fromMore?: boolean } | { kind: 'sheet'; section?: string }
-type Props = NavModel & { activeSectionTitle?: string; appearance: ReactNode }
+type Props = NavModel & { activeSectionTitle?: string; notificationLabel: string }
 
-export default function HorizontalHeader({ activeSectionTitle, appearance, ...data }: Props) {
+export default function HorizontalHeader({ activeSectionTitle, notificationLabel, ...data }: Props) {
   const { t } = useTranslation()
   const compact = useMediaQuery('(max-width: 1023px)')
   const scope = useWorkspaceScope()
@@ -138,8 +139,8 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
     {!compact && workspace}
     <div className="horizontal-nav-tools">
       <CommandPaletteTrigger compact />
-      <NotificationBellPopover className="horizontal-nav-bell" />
-      {appearance}
+      <NotificationBellPopover count={data.unreadCount} label={notificationLabel} className="horizontal-nav-bell" />
+      <ThemeQuickSwitcher />
       {account && <Button data-horizontal-nav-trigger variant="ghost" className="horizontal-nav-icon"
         aria-label={label(account)} aria-haspopup={compact ? 'dialog' : 'menu'}
         aria-expanded={!!popup && popup.section === account.title} aria-controls={popup?.section === account.title ? id : undefined}

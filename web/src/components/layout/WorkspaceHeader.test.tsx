@@ -7,6 +7,7 @@ import postcss, { type Root } from 'postcss'
 import tailwindcss from 'tailwindcss'
 import loadConfig from 'tailwindcss/loadConfig'
 import { cn } from '@/lib/cn'
+import { Button } from '@/components/ui/Button'
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope'
 import {
   getWorkspaceQuickRangePresets,
@@ -44,6 +45,14 @@ vi.mock('./VehiclePicker', () => ({
   ),
 }))
 
+vi.mock('./NotificationBellPopover', () => ({
+  NotificationBellPopover: ({ label }: { label: string }) => <Button type="button">{label}</Button>,
+}))
+
+vi.mock('./ThemeQuickSwitcher', () => ({
+  ThemeQuickSwitcher: () => <Button type="button">Theme</Button>,
+}))
+
 vi.mock('./WorkspaceContextControl', () => ({
   WorkspaceContextControl: ({ className, hidden }: { className?: string; hidden?: boolean }) => (
     <button type="button" className={className} hidden={hidden}>
@@ -52,12 +61,11 @@ vi.mock('./WorkspaceContextControl', () => ({
   ),
 }))
 
+const bellProps = { unreadCount: 0, notificationLabel: 'Notifications' }
+
 describe('WorkspaceHeader', () => {
   it('marks existing context, discovery and control owners without changing their DOM order', () => {
-    render(<WorkspaceHeader
-      notifications={<button type="button">Notifications</button>}
-      themeControl={<button type="button">Theme</button>}
-    />)
+    render(<WorkspaceHeader {...bellProps} />)
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     expect(header).toHaveAttribute('data-app-part', 'workspace-header')
     expect(Array.from(header.children).map(child => child.getAttribute('data-app-header-slot')))
@@ -68,12 +76,7 @@ describe('WorkspaceHeader', () => {
   })
 
   it('groups context, discovery, vehicle scope, and utilities in one desktop command plane', () => {
-    render(
-      <WorkspaceHeader
-        notifications={<button type="button">Notifications</button>}
-        themeControl={<button type="button">Theme</button>}
-      />,
-    )
+    render(<WorkspaceHeader {...bellProps} />)
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     expect(header).toHaveClass(
@@ -99,7 +102,7 @@ describe('WorkspaceHeader', () => {
   })
 
   it('lets the caption primitive own restrained context typography without changing header geometry', () => {
-    render(<WorkspaceHeader />)
+    render(<WorkspaceHeader {...bellProps} />)
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     const caption = within(header).getByText('Fleet operations')
@@ -119,8 +122,7 @@ describe('WorkspaceHeader', () => {
     render(
       <WorkspaceScopeProvider scope={scope}>
         <WorkspaceHeader
-          notifications={<button type="button">Notifications</button>}
-          themeControl={<button type="button">Theme</button>}
+          {...bellProps}
         />
       </WorkspaceScopeProvider>,
     )
@@ -155,7 +157,7 @@ describe('WorkspaceHeader route-specific scope corrections', () => {
     expect(scope).toEqual({ range, vehicle })
     render(
       <WorkspaceScopeProvider scope={scope}>
-        <WorkspaceHeader />
+        <WorkspaceHeader {...bellProps} />
       </WorkspaceScopeProvider>,
     )
 
@@ -255,8 +257,7 @@ describe('WorkspaceHeader exact geometry naming', () => {
 
   it('keeps native discovery and utility focus targets in their original order', () => {
     render(<WorkspaceHeader
-      notifications={<button type="button">Notifications</button>}
-      themeControl={<button type="button">Theme</button>}
+      {...bellProps}
     />)
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     const buttons = within(header).getAllByRole('button')

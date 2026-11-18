@@ -9,13 +9,15 @@ import type { BreadcrumbSection } from './sidebar/sidebarBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { WorkspaceContextControl } from './WorkspaceContextControl'
 import MobileWorkspaceControls from './MobileWorkspaceControls'
+import { NotificationBellPopover } from './NotificationBellPopover'
+import { ThemeQuickSwitcher } from './ThemeQuickSwitcher'
 import { PrefetchNavLink } from './PrefetchLink'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 
 interface WorkspaceHeaderProps {
-  notifications?: ReactNode
-  themeControl?: ReactNode
+  unreadCount: number
+  notificationLabel: string
   compact?: boolean
   browseControl?: ReactNode
   breadcrumbSections?: readonly BreadcrumbSection[]
@@ -30,8 +32,8 @@ interface WorkspaceHeaderProps {
  * centered within the workspace regardless of breadcrumb or utility width.
  */
 export function WorkspaceHeader({
-  notifications,
-  themeControl,
+  unreadCount,
+  notificationLabel,
   compact = false,
   browseControl,
   breadcrumbSections,
@@ -79,8 +81,8 @@ export function WorkspaceHeader({
             className="w-40 border-b-0 px-0 py-0 lg:px-0 lg:py-0 2xl:w-44"
           />
         )}
-        {notifications}
-        {themeControl}
+        <NotificationBellPopover count={unreadCount} label={notificationLabel} className="max-lg:[&>button]:min-h-11 max-lg:[&>button]:min-w-11" />
+        <ThemeQuickSwitcher />
         {accountPath && <PrefetchNavLink to={accountPath} aria-label={t('nav.groups.account', 'Account')}
           className="flex min-h-11 min-w-11 items-center justify-center rounded-shape-md hover:bg-[var(--control-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--theme-accent)]">
           <Icons.user className="size-5" aria-hidden />

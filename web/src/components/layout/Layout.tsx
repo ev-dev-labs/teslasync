@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
@@ -51,7 +51,6 @@ import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
 import { CommandPaletteHost } from './CommandPaletteHost'
-import { NotificationBellPopover } from './NotificationBellPopover'
 import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'
 import { appNavigationOrientation } from '@/components/ui/app-designs/designs'
 import { request } from '@/api/client'
@@ -137,11 +136,6 @@ const CommandDeck = lazy(async () => {
 const LazyKeyboardShortcutsModal = lazy(async () => {
   const module = await import('../feedback/KeyboardShortcutsModal')
   return { default: module.KeyboardShortcutsModal }
-})
-
-const ThemeQuickSwitcherPopover = lazy(async () => {
-  const module = await import('./ThemeQuickSwitcherPopover')
-  return { default: module.ThemeQuickSwitcherPopover }
 })
 
 // Sidebar nav labels resolve per-item: every entry in `navSections` carries a
@@ -550,160 +544,6 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
   return paths.filter(path => NAV_CATALOG_PATHS.has(path))
 }
 
-/**
- * Header bell trigger.
- *
- * Replaced the original NavLink-only bell with `NotificationBellPopover`,
- * which renders the same bell + badge but opens an in-place triage panel
- * on desktop click (latest 10 unread + Mark-all-read + View-all). On
- * mobile (viewport ≤ 640 px) the popover is bypassed and the trigger
- * navigates straight to /notifications/inbox, preserving the original UX
- * where popover positioning would clip on narrow viewports.
- */
-
-/**
- * Top-bar quick theme switcher.
- *
- * A small palette icon button that opens a popover containing a compact
- * `<ThemePicker>`. The popover hides the custom-color builder to keep it
- * small; users who want to build a custom theme follow the "Customize…"
- * link to /settings#appearance.
- *
- * Listens for `open-theme-popover` window events so other surfaces (the
- * command palette, the dashboard first-run banner) can open the popover
- * without prop drilling.
- */
-function ThemeQuickSwitcher({
-  className,
-  placement = 'right',
-  onOpen,
-  triggerIcon,
-}: {
-  className?: string
-  onOpen?: () => void
-  triggerIcon?: React.ReactNode
-  /**
-   * Which side of the trigger to anchor the popover to. The popover
-   * grows AWAY from the anchored side, so use 'left' when the trigger
-   * sits near the left edge of the viewport (sidebar header) and
-   * 'right' when it sits near the right edge (mobile header).
-   */
-  placement?: 'left' | 'right'
-}) {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
-  // Position is computed from the trigger's bbox so the popover can be
-  // portaled into <body>. Portaling is required because the sidebar
-  // (which contains the trigger) creates a stacking context via
-  // backdrop-filter, and the main content area (`relative z-10`) sits
-  // above it — without a portal the popover renders BEHIND dashboard
-  // content that overflows into its area.
-  const [coords, setCoords] = useState<{ top: number; bottom?: number; left?: number; right?: number } | null>(null)
-
-  // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
-  useEffect(() => {
-    if (!open) return
-    const onClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (containerRef.current?.contains(target)) return
-      if (popoverRef.current?.contains(target)) return
-      if (document.activeElement?.closest('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')) return
-      setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return
-      const owner = e.target instanceof Element
-        ? e.target.closest('[role="dialog"], [role="alertdialog"]')
-        : null
-      if (owner && owner !== popoverRef.current) return
-      e.stopPropagation()
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  // Cross-component opener — wired by the command palette + first-run banner.
-  useEffect(() => {
-    // The header owns global open requests; the footer picker is trigger-owned.
-    if (placement === 'left') return
-    const handler = () => setOpen(true)
-    window.addEventListener('open-theme-popover', handler)
-    return () => window.removeEventListener('open-theme-popover', handler)
-  }, [placement])
-
-  // Recompute popover coordinates whenever it opens or the viewport
-  // changes (resize, scroll). Uses capture-phase scroll so nested
-  // scroll containers also reposition the popover.
-  useEffect(() => {
-    if (!open) {
-      setCoords(null)
-      return
-    }
-    const update = () => {
-      const el = triggerRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const top = rect.bottom + 8 // matches the previous mt-2 spacing
-      const vertical = rect.top > window.innerHeight / 2
-        ? { bottom: window.innerHeight - rect.top + 8 }
-        : {}
-      if (placement === 'left') {
-        setCoords({ top, ...vertical, left: rect.left })
-      } else {
-        setCoords({ top, ...vertical, right: window.innerWidth - rect.right })
-      }
-    }
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [open, placement])
-
-  return (
-    <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
-      <Button
-        ref={triggerRef}
-        data-nav-action={triggerIcon ? true : undefined}
-        type="button"
-        variant="ghost"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label={t('theme.openPicker', 'Open theme picker')}
-        onClick={() => { if (!open) onOpen?.(); setOpen(v => !v) }}
-        className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
-      >
-        {triggerIcon ?? <Icons.palette className="h-5 w-5" aria-hidden="true" />}
-      </Button>
-      {open && coords && (
-        <Suspense fallback={null}>
-          <ThemeQuickSwitcherPopover
-            coords={coords}
-            popoverRef={popoverRef}
-            triggerRef={triggerRef}
-            onClose={() => setOpen(false)}
-            onCustomize={() => {
-              setOpen(false)
-              navigate('/settings#appearance')
-            }}
-          />
-        </Suspense>
-      )}
-    </div>
-  )
-}
-
 export default function Layout() {
   const presentation = usePresentationMode()
   const horizontal = appNavigationOrientation(useContext(ActiveAppNavigation)) === 'horizontal'
@@ -962,6 +802,9 @@ export default function Layout() {
   const { data: alerts } = useAlerts()
   const { data: vehicles } = useVehicles()
   const { data: unreadCount = 0 } = useUnreadCount()
+  const notificationLabel = unreadCount > 0
+    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count: unreadCount })
+    : t('notifications.bellPopover.title', 'Notifications')
   const vehicleCount = vehicles?.length ?? 0
   // Focused vehicle for sidebar suggestions: the persisted selection when
   // it still exists, else the first vehicle. Router-free on purpose —
@@ -1230,6 +1073,7 @@ export default function Layout() {
       {presentation.mode === 'standard' && horizontal && (
         <Suspense fallback={<div className="min-h-14 shrink-0" aria-hidden="true" />}>
           <HorizontalHeader
+            notificationLabel={notificationLabel}
             sections={groupedSidebarSections}
             collections={visibleCollections}
             activeSectionTitle={activeSectionTitle}
@@ -1242,7 +1086,6 @@ export default function Layout() {
             vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
-            appearance={<ThemeQuickSwitcher />}
           />
         </Suspense>
       )}
@@ -1287,8 +1130,8 @@ export default function Layout() {
       )}>
         {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className="h-workspace-header shrink-0" />}>
           <WorkspaceHeader
-            notifications={<NotificationBellPopover className="max-lg:[&>button]:min-h-11 max-lg:[&>button]:min-w-11" />}
-            themeControl={<ThemeQuickSwitcher />}
+            unreadCount={unreadCount}
+            notificationLabel={notificationLabel}
             compact={!dockedNav}
             browseControl={compactNav && <Button ref={sidebarTriggerRef} variant="ghost"
               aria-label={t('nav.flyout.browse', 'Browse sections')} aria-haspopup="dialog" aria-expanded={sidebarOpen}

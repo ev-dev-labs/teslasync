@@ -510,9 +510,18 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
         for (const widgetId of SHOT_WIDGETS) {
           const panel = page.locator(`[data-widget-id="${instanceId.get(widgetId)}"]`)
           if (await panel.count() > 0) {
-            await panel.screenshot({
+            // Capture the current paint without asking Playwright to wait for
+            // a live widget to stop moving while it scrolls into view.
+            const clip = await panel.evaluate((element) => {
+              element.scrollIntoView({ block: 'center', behavior: 'instant' })
+              const { left, top, width, height } = element.getBoundingClientRect()
+              return { x: left + window.scrollX, y: top + window.scrollY, width, height }
+            })
+            await page.screenshot({
               path: testInfo.outputPath(`row16-${widgetId}-${size}.png`),
               animations: 'disabled',
+              fullPage: true,
+              clip,
             })
           }
         }
