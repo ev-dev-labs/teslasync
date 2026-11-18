@@ -31,14 +31,15 @@ afterEach(cleanup)
 const svg = (element: Element) => element.querySelector('svg')?.innerHTML
 
 describe('sidenav polish', () => {
-  it('puts overflow sections behind More and leaves Settings last', () => {
+  it('renders the full registry directly in the rail and opens Diagnostics without More', () => {
     render(<Deck />)
     const rail = within(screen.getByTestId('rail-scroll'))
-    expect(rail.getAllByRole('button').slice(-2).map(button => button.getAttribute('aria-label'))).toEqual(['More', 'Settings'])
-    expect(rail.queryByRole('button', { name: 'Security' })).toBeNull()
-    fireEvent.click(rail.getByRole('button', { name: 'More' }))
+    expect(rail.getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(sections.map(section => section.title))
+    expect(rail.queryByRole('button', { name: 'More' })).not.toBeInTheDocument()
+    fireEvent.click(rail.getByRole('button', { name: 'Diagnostics' }))
     const panel = within(screen.getByTestId('atlas-panel-secondary'))
-    expect(panel.getAllByRole('button').map(button => button.textContent)).toEqual(sections.filter(section => section.railPlacement === 'more').map(section => section.title))
+    expect(panel.getByText('Diagnostics', { exact: true })).toBeVisible()
+    expect(panel.getByRole('link', { name: 'System Status', exact: true })).toHaveAttribute('href', '/system-status')
   })
 
   it.each(navSections)('$title resolves real rail, panel and palette glyphs for every destination', section => {
@@ -69,14 +70,11 @@ describe('sidenav polish', () => {
     expect(resolveSectionIcon(title)).toBe(SIDEBAR_SECTION_ICONS[title])
     const view = render(<Deck title={title} />)
     const rail = screen.getByTestId('command-deck-rail')
-    const overflow = sections.some(section => section.title === title && section.railPlacement === 'more')
-    if (overflow) fireEvent.click(within(rail).getByRole('button', { name: 'More' }))
-    const item = within(overflow ? screen.getByTestId('atlas-panel-secondary') : rail).getByRole('button', { name: title, exact: true })
+    const item = within(rail).getByRole('button', { name: title, exact: true })
     expect(item).toHaveAccessibleName(title)
     expect(item).not.toHaveAttribute('title')
     expect(item).not.toHaveAttribute('aria-describedby')
     const glyph = svg(item)!
-    if (overflow) fireEvent.click(item)
     expect(svg(screen.getByTestId('atlas-panel-secondary'))).toBe(glyph)
     view.unmount()
     Object.defineProperty(window, 'innerWidth', { value: 375 })

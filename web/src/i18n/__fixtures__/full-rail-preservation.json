@@ -1,0 +1,471 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "1ca36768a2e5a7db7a309b1d04abdf602fb68218e20f0cc5d77b3b69c62808bd",
+    "after": "b4bc502c2ac86df83f60ee31b968db56a9a1dc3b1249487dd4f55b29d784edac",
+    "hunks": [
+      {
+        "start": 358,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 376,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 392,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 400,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 409,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 424,
+        "new": [],
+        "old": [
+          "    railPlacement: 'bottom' as const,"
+        ]
+      },
+      {
+        "start": 434,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 444,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 453,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 492,
+        "new": [],
+        "old": [
+          "    railPlacement: 'more' as const,"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sectionGroups.ts",
+    "before": "ff05619681551b2fcdeb0c08402f1d92a2f4e0f2e4020da4bd50588f82c57756",
+    "after": "6e38b9205b19e7eb8e90519f0dccf934997afd838176a35ce32cd27503653cdb",
+    "hunks": [
+      {
+        "start": 21,
+        "new": [],
+        "old": [
+          "  railPlacement?: 'more' | 'bottom'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/CommandDeck.tsx",
+    "before": "e1e1195e6298478bda8accd5c3d54cc7d068515b390a6457c25229d13311eeb2",
+    "after": "6e99c668cb3f6509ac564d123c0790fd0c2689a229f94a0a7948bb6e58705580",
+    "hunks": [
+      {
+        "start": 1,
+        "new": [],
+        "old": [
+          "import { useTranslation } from 'react-i18next'"
+        ]
+      },
+      {
+        "start": 2,
+        "new": [],
+        "old": [
+          "import { Button } from '@/components/ui/runtime'"
+        ]
+      },
+      {
+        "start": 5,
+        "new": [],
+        "old": [
+          "import { resolveSectionIcon } from './sidebarIcons'"
+        ]
+      },
+      {
+        "start": 7,
+        "new": [],
+        "old": [
+          "import { Icons } from '@/lib/icons'"
+        ]
+      },
+      {
+        "start": 10,
+        "new": [],
+        "old": [
+          "type RailSelection = { kind: 'more' } | { kind: 'section'; title: string }"
+        ]
+      },
+      {
+        "start": 49,
+        "new": [],
+        "old": [
+          "  const { t } = useTranslation()"
+        ]
+      },
+      {
+        "start": 60,
+        "new": [],
+        "old": [
+          "  const [moreOpen, setMoreOpen] = useState(false)"
+        ]
+      },
+      {
+        "start": 101,
+        "new": [],
+        "old": [
+          "    setMoreOpen(false)"
+        ]
+      },
+      {
+        "start": 113,
+        "new": [
+          "  }, [panelVisible, title])"
+        ],
+        "old": [
+          "  }, [panelVisible, title, moreOpen])"
+        ]
+      },
+      {
+        "start": 116,
+        "new": [
+          "    onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.()"
+        ],
+        "old": [
+          "    onPanelOpenChange(false); setPhoneSheet(null); setMoreOpen(false); onItemSelect?.()"
+        ]
+      },
+      {
+        "start": 119,
+        "new": [
+          "  const select = (sectionTitle: string, trigger: HTMLButtonElement, enter = false) => {",
+          "    invoker.current = trigger"
+        ],
+        "old": [
+          "  const select = (selection: RailSelection, trigger: HTMLButtonElement, enter = false, fromMore = false) => {",
+          "    if (!fromMore) invoker.current = trigger"
+        ]
+      },
+      {
+        "start": 123,
+        "new": [
+          "    if (panelVisible && title === sectionTitle) {",
+          "      if (enter) (menuItems(content.current)[0] ?? content.current?.querySelector('input'))?.focus()",
+          "      else close()"
+        ],
+        "old": [
+          "    enterPanel.current = enter",
+          "    if (selection.kind === 'more') {",
+          "      if (!enter && moreOpen && panelVisible) { close(); return }",
+          "      if (moreOpen && panelVisible) menuItems(content.current)[0]?.focus()",
+          "      setMoreOpen(true)",
+          "      onPanelOpenChange(true)"
+        ]
+      },
+      {
+        "start": 128,
+        "new": [
+          "    enterPanel.current = enter",
+          "    setBrowsed({ pathname, title: sectionTitle })",
+          "    setStored({ kind: 'section', title: sectionTitle })"
+        ],
+        "old": [
+          "    if (!enter && panelVisible && !moreOpen && title === selection.title) { close(); return }",
+          "    if (enter && panelVisible && !moreOpen && title === selection.title) menuItems(content.current)[0]?.focus()",
+          "    setMoreOpen(false)",
+          "    setBrowsed({ pathname, title: selection.title })",
+          "    setStored(selection)"
+        ]
+      },
+      {
+        "start": 141,
+        "new": [
+          "    <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}",
+          "      onClose={close} onHomeViewChange={setHomeView}",
+          "      onItemSelect={() => { if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />"
+        ],
+        "old": [
+          "    {moreOpen ? <div role=\"navigation\" data-testid=\"atlas-panel-secondary\" data-app-part=\"navigation\"",
+          "      aria-label={t('nav.mobileMore', 'More')} className=\"sidenav-panel min-h-0 flex-1 overflow-y-auto bg-[var(--nav-context-bg)] p-2\">",
+          "      {sections.filter(section => section.railPlacement === 'more').map(section => {",
+          "        const Icon = resolveSectionIcon(section.title)",
+          "        return <Button key={section.title} data-nav-choice variant=\"ghost\" className=\"min-h-11 w-full justify-start whitespace-normal text-start\"",
+          "          onKeyDown={event => {",
+          "            if (event.key !== inlineKeys(event.currentTarget).forward) return",
+          "            event.preventDefault()",
+          "            select({ kind: 'section', title: section.title }, event.currentTarget, true, true)",
+          "          }}",
+          "          onClick={event => select({ kind: 'section', title: section.title }, event.currentTarget, true, true)}>",
+          "          <Icon className=\"size-4 shrink-0\" aria-hidden />{sectionLabel(section)}<Icons.next className=\"ms-auto size-4 shrink-0 rtl:rotate-180\" aria-hidden />",
+          "        </Button>",
+          "      })}",
+          "    </div> : <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}",
+          "    onClose={close} onHomeViewChange={setHomeView}",
+          "    onItemSelect={() => { if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />}"
+        ]
+      },
+      {
+        "start": 150,
+        "new": [
+          "        selected={title} onSelect={select} panelOpen={panelVisible} panelId={id} pathname={pathname} /></div>"
+        ],
+        "old": [
+          "        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelVisible} panelId={id} moreOpen={moreOpen} pathname={pathname} /></div>"
+        ]
+      },
+      {
+        "start": 153,
+        "new": [
+          "        ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+        ],
+        "old": [
+          "        ariaLabel={moreOpen ? t('nav.mobileMore', 'More') : sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+    "before": "f41807a9728b02e3b91aaed850a24a996ecf449a62d64800e7854350bfd16fab",
+    "after": "3739e170da09fa98edb745013e59eea213c4ea295166bf1333d6bab9c638b7e1",
+    "hunks": [
+      {
+        "start": 5,
+        "new": [],
+        "old": [
+          "import { NAV_UTILITY_ICONS } from './NavIcons'"
+        ]
+      },
+      {
+        "start": 9,
+        "new": [],
+        "old": [
+          "import type { DeckSelection } from './CommandDeck'"
+        ]
+      },
+      {
+        "start": 12,
+        "new": [
+          "  selected: string",
+          "  onSelect: (title: string, trigger: HTMLButtonElement, enter?: boolean) => void"
+        ],
+        "old": [
+          "  selection: DeckSelection | null",
+          "  onSelect: (selection: { kind: 'more' } | { kind: 'section'; title: string }, trigger: HTMLButtonElement, enter?: boolean) => void"
+        ]
+      },
+      {
+        "start": 17,
+        "new": [],
+        "old": [
+          "  moreOpen?: boolean"
+        ]
+      },
+      {
+        "start": 20,
+        "new": [
+          "export function SectionRail({ sections, selected, onSelect, navSectionTitle, panelOpen, panelId, pathname }: SectionRailProps) {"
+        ],
+        "old": [
+          "export function SectionRail({ sections, selection, onSelect, navSectionTitle, panelOpen, panelId, moreOpen, pathname }: SectionRailProps) {"
+        ]
+      },
+      {
+        "start": 24,
+        "new": [
+          "  const [focusTitle, setFocusTitle] = useState(selected)",
+          "  const [fades, setFades] = useState({ top: false, bottom: false })",
+          "  const shortLabels: Record<string, string> = {",
+          "    'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),",
+          "    'Ownership intelligence': t('nav.sidenav.shortOwnership', 'Ownership'),",
+          "    'Tesla physics': t('nav.sidenav.shortPhysics', 'Physics'),",
+          "    Notifications: t('nav.sidenav.shortInbox', 'Inbox'),",
+          "    Integrations: t('nav.sidenav.shortConnect', 'Connect'),",
+          "  }"
+        ],
+        "old": [
+          "  const [focusTitle, setFocusTitle] = useState<string>()",
+          "  const selected = selection?.kind === 'section' ? selection.title : undefined",
+          "  const more = sections.filter(section => section.railPlacement === 'more')",
+          "  const moreActive = more.some(section => section.title === selected)",
+          "  const current = moreActive ? 'more' : selected"
+        ]
+      },
+      {
+        "start": 34,
+        "new": [
+          "    setFocusTitle(selected)"
+        ],
+        "old": [
+          "    setFocusTitle(current)"
+        ]
+      },
+      {
+        "start": 38,
+        "new": [
+          "  }, [selected, pathname])",
+          "  useEffect(() => {",
+          "    const scroll = rail.current",
+          "    if (!scroll) return",
+          "    const update = () => {",
+          "      const top = scroll.scrollTop > 1",
+          "      const bottom = scroll.scrollTop + scroll.clientHeight < scroll.scrollHeight - 2",
+          "      setFades(previous => previous.top === top && previous.bottom === bottom ? previous : { top, bottom })",
+          "    }",
+          "    update()",
+          "    scroll.addEventListener('scroll', update, { passive: true })",
+          "    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)",
+          "    observer?.observe(scroll)",
+          "    return () => { observer?.disconnect(); scroll.removeEventListener('scroll', update) }",
+          "  }, [sections.length])",
+          "  const tabStop = sections.some(section => section.title === focusTitle) ? focusTitle",
+          "    : sections.some(section => section.title === selected) ? selected : sections[0]?.title"
+        ],
+        "old": [
+          "  }, [current, pathname])",
+          "  const asEntry = (section: SidebarSectionInput) => ({",
+          "    title: section.title, label: navSectionTitle(section), Icon: resolveSectionIcon(section.title),",
+          "    kind: 'section' as const, bottom: section.railPlacement === 'bottom',",
+          "  })",
+          "  const entries = [",
+          "    ...sections.filter(section => !section.railPlacement).map(asEntry),",
+          "    ...(more.length ? [{ title: 'more', label: t('nav.mobileMore', 'More'), Icon: NAV_UTILITY_ICONS.more, kind: 'more' as const, bottom: true }] : []),",
+          "    ...sections.filter(section => section.railPlacement === 'bottom').map(asEntry),",
+          "  ]",
+          "  const tabStop = entries.some(entry => entry.title === focusTitle) ? focusTitle",
+          "    : moreActive ? 'more' : entries.some(entry => entry.title === selected) ? selected : entries[0]?.title"
+        ]
+      },
+      {
+        "start": 58,
+        "new": [
+          "    <div className=\"sidenav-scroll-wrap\">",
+          "      <div ref={rail} data-testid=\"rail-scroll\" className=\"sidenav-rail-scroll\" onKeyDown={event => {",
+          "        if (event.defaultPrevented) return",
+          "        if (event.ctrlKey && event.key === 'ArrowDown') {",
+          "          const items = menuItems(event.currentTarget)",
+          "          const index = items.indexOf(event.target as HTMLElement)",
+          "          if (index >= 0) { event.preventDefault(); items[(index + 1) % items.length]?.focus() }",
+          "          return",
+          "        }",
+          "        handleMenuVertical(event)",
+          "      }}>",
+          "        {sections.map(section => {",
+          "          const { title } = section",
+          "          const label = navSectionTitle(section)",
+          "          const Icon = resolveSectionIcon(title)",
+          "          const isCurrent = selected === title",
+          "          const expanded = !!panelOpen && isCurrent",
+          "          return <Button key={title} data-nav-choice data-nav-action data-app-part=\"nav-item\" type=\"button\" variant=\"ghost\"",
+          "            aria-label={label} aria-current={isCurrent ? 'true' : undefined} aria-expanded={expanded}",
+          "            aria-controls={expanded ? panelId : undefined} tabIndex={tabStop === title ? 0 : -1}",
+          "            className={cn('sidenav-rail-item', isCurrent && 'is-selected')}",
+          "            onFocus={() => setFocusTitle(title)}",
+          "            onKeyDown={event => {",
+          "              if ((event.key === 'ArrowDown' && !event.ctrlKey) || event.key === inlineKeys(event.currentTarget).forward) {",
+          "                event.preventDefault()",
+          "                onSelect(title, event.currentTarget, true)",
+          "              }",
+          "            }} onClick={event => onSelect(title, event.currentTarget)}>",
+          "            <span data-nav-motion className=\"sidenav-icon nav-motion-target\"><Icon className=\"h-5 w-5\" aria-hidden /></span>",
+          "            <span className=\"sidenav-short-label\">{shortLabels[title] ?? label}</span>",
+          "          </Button>",
+          "        })}",
+          "      </div>",
+          "      <div aria-hidden data-testid=\"rail-fade-top\" data-visible={fades.top} className=\"sidenav-fade sidenav-fade-top\" />",
+          "      <div aria-hidden data-testid=\"rail-fade-bottom\" data-visible={fades.bottom} className=\"sidenav-fade sidenav-fade-bottom\" />"
+        ],
+        "old": [
+          "    <div ref={rail} data-testid=\"rail-scroll\" className=\"sidenav-rail-scroll\" onKeyDown={event => {",
+          "      if (event.defaultPrevented) return",
+          "      if (event.ctrlKey && event.key === 'ArrowDown') {",
+          "        const items = menuItems(event.currentTarget)",
+          "        const index = items.indexOf(event.target as HTMLElement)",
+          "        if (index >= 0) { event.preventDefault(); items[(index + 1) % items.length]?.focus() }",
+          "        return",
+          "      }",
+          "      handleMenuVertical(event)",
+          "    }}>",
+          "      {entries.map(({ title, label, Icon, kind, bottom }, index) => {",
+          "        const isCurrent = kind === 'more' ? moreActive : selected === title",
+          "        const expanded = !!panelOpen && (kind === 'more' ? moreOpen || moreActive : isCurrent && !moreOpen)",
+          "        const target = kind === 'more' ? { kind } : { kind, title }",
+          "        return <Button key={title} data-nav-choice data-nav-action data-app-part=\"nav-item\" type=\"button\" variant=\"ghost\"",
+          "          aria-label={label} aria-current={isCurrent ? 'true' : undefined} aria-expanded={expanded}",
+          "          aria-controls={expanded ? panelId : undefined} tabIndex={tabStop === title ? 0 : -1}",
+          "          className={cn('sidenav-rail-item', (expanded || isCurrent) && 'is-selected', bottom && !entries[index - 1]?.bottom && 'sidenav-rail-bottom')}",
+          "          onFocus={() => setFocusTitle(title)}",
+          "          onKeyDown={event => {",
+          "            if ((event.key === 'ArrowDown' && !event.ctrlKey) || event.key === inlineKeys(event.currentTarget).forward) {",
+          "              event.preventDefault()",
+          "              onSelect(target, event.currentTarget, true)",
+          "            }",
+          "          }} onClick={event => onSelect(target, event.currentTarget)}>",
+          "          <span data-nav-motion className=\"sidenav-icon nav-motion-target\"><Icon className=\"h-5 w-5\" aria-hidden /></span>",
+          "          <span className=\"sidenav-short-label\">{title === 'Notifications' ? t('nav.sidenav.shortInbox', 'Inbox') : label}</span>",
+          "        </Button>",
+          "      })}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/sidenav.css",
+    "before": "1624fcd80c7af8371eea74713c717b7c831b6aee13f9aed30627ba389c1e2217",
+    "after": "ff19a1b53b6e40a3922821980c8c72bed22666f5d43c33ab571304f0ee0e33d4",
+    "hunks": [
+      {
+        "start": 6,
+        "new": [
+          ".sidenav-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-height: 0; }",
+          ".sidenav-rail-scroll { display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }",
+          ".sidenav-rail-scroll::-webkit-scrollbar { display: none; }",
+          ".sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }",
+          ".sidenav-fade { position: absolute; z-index: 1; inset-inline: 0; height: 48px; pointer-events: none; opacity: 0; }",
+          ".sidenav-fade[data-visible='true'] { opacity: 1; }",
+          ".sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg) 15%, transparent); }",
+          ".sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg) 85%); }"
+        ],
+        "old": [
+          ".sidenav-rail-scroll { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: 0 4px 6px; }",
+          ".sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: auto; min-height: 44px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }",
+          ".sidenav-rail-bottom { margin-block-start: auto; }"
+        ]
+      }
+    ]
+  }
+]

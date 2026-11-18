@@ -19,7 +19,6 @@ export type SidebarSectionInput = {
   title: string
   /** Catalog key for the section title (`nav.groups.*`) — canonical sections only. */
   titleKey?: string
-  railPlacement?: 'more' | 'bottom'
   items: Array<{
     to: string
     icon: typeof Icons.home

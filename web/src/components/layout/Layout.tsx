@@ -356,7 +356,6 @@ export const navSections = [
   },
   {
     title: 'Advanced intelligence',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.advanced_intelligence',
     items: [
       { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle twin lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-theme-accent' },
@@ -375,7 +374,6 @@ export const navSections = [
   },
   {
     title: 'Ownership intelligence',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.ownership_intelligence',
     items: [
       { to: '/ownership/insurance-telematics', icon: Icons.securityCheck, label: 'Insurance telematics', labelKey: 'nav.items.ownership_insurance-telematics', color: 'text-theme-accent' },
@@ -392,7 +390,6 @@ export const navSections = [
   },
   {
     title: 'Tesla physics',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.tesla_physics',
     items: [
       { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics overview', labelKey: 'nav.items.tesla-physics', color: 'text-theme-accent' },
@@ -401,7 +398,6 @@ export const navSections = [
   },
   {
     title: 'Security',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.security',
     items: [
       { to: '/security-access', icon: Icons.locked, label: 'Security & access', labelKey: 'nav.items.security-access', color: 'text-emerald-400' },
@@ -411,7 +407,6 @@ export const navSections = [
   },
   {
     title: 'Account',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.account',
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla account', labelKey: 'nav.items.tesla-account', color: 'text-theme-accent' },
@@ -427,7 +422,6 @@ export const navSections = [
   },
   {
     title: 'Settings',
-    railPlacement: 'bottom' as const,
     titleKey: 'nav.groups.settings',
     items: [
       { to: '/settings', icon: navRouteIcons['/settings'], label: 'General settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
@@ -438,7 +432,6 @@ export const navSections = [
   },
   {
     title: 'Integrations',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.integrations',
     items: [
       { to: '/integrations/helix', icon: Icons.link, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
@@ -449,7 +442,6 @@ export const navSections = [
   },
   {
     title: 'Data',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.data',
     items: [
       { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data export', labelKey: 'nav.items.data-export', color: 'text-lime-400' },
@@ -459,7 +451,6 @@ export const navSections = [
   },
   {
     title: 'Diagnostics',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.diagnostics',
     items: [
       { to: '/system-status', icon: Icons.speedCircle, label: 'System status', labelKey: 'nav.items.system-status', color: 'text-emerald-400' },
@@ -499,7 +490,6 @@ export const navSections = [
   },
   {
     title: 'About',
-    railPlacement: 'more' as const,
     titleKey: 'nav.groups.about',
     items: [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', labelKey: 'nav.items.roadmap', color: 'text-violet-400' },

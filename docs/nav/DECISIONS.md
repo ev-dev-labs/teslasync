@@ -18,12 +18,15 @@
   The six `top` packs retain the shared two-pane flyout. All remaining packs
   retain Atlas beside the rail. The six `hybrid` packs keep their palette,
   density, and rail width but no longer arrange Atlas in a horizontal strip.
-- The authored sections mark rail placement. The rail shows ordinary sections
-  in persona order, then **More** and **Settings** at the bottom. **More**
-  contains Security, Advanced intelligence, Ownership intelligence, Tesla
-  physics, Data, Diagnostics, Account, Integrations (Connect), and About, in
-  persona order with the same visibility rules as the catalog. No secondary
-  owns a second route list.
+- The full vertical rail shows every eligible section in persona order,
+  including Settings, without a desktop **More** button. This replaces the
+  768px no-scroll compaction at the user's request. The rail scrolls internally
+  with edge fades; the horizontal width-based overflow and phone drill-down
+  are unchanged. No secondary owns a second route list.
+- Keep the reference layout of rail, section heading, filter, and vertical
+  groups. The active application design still supplies the rail and Atlas
+  panel styling through their existing tokens and design ownership. Do not
+  bring back rail utility icons or empty pin groups from the reference.
 - Below 1024px both primary orientations open `NavSheet`, with Back between
   sections, groups and pages. Rail quick tabs can open a section directly.
   At 1024–1279px the rail opens Atlas as a modal beside the rail; from 1280px
@@ -37,3 +40,6 @@
 - The shared phone sheet uses the selected pack's navigation frame, not its
   generic dialog frame. This preserves the Swiss Grid cap and other pack
   details without changing unrelated dialogs.
+- The consolidated header and restored full rail intentionally change the Windows
+  shell screenshots. Refresh only existing baselines that the Windows
+  comparison flagged; keep the same viewport projects, masks, and thresholds.

@@ -30,8 +30,8 @@ beforeEach(() => { localStorage.clear(); preference.reduce = false; Object.defin
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('selection-only nav icon motion', () => {
-  it.each(sections.filter(section => section.railPlacement !== 'more').map(section => section.title).concat('More'))('%s has a multipart animated variant and settles after one selection', title => {
-    expect(title === 'More' ? NAV_UTILITY_ICONS.more : NAV_SECTION_ICONS[title]).toBeDefined()
+  it.each(sections.map(section => section.title))('%s has a multipart animated variant and settles after one selection', title => {
+    expect(NAV_SECTION_ICONS[title]).toBeDefined()
     render(<Deck />)
     const item = rail().getByRole('button', { name: title, exact: true })
     const icon = item.querySelector('svg')!

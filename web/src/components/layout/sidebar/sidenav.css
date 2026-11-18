@@ -4,9 +4,14 @@
 .sidenav-context-column { width: 272px; }
 .sidenav-rail { display: flex; flex-direction: column; width: 76px; min-height: 0; height: 100%; border-inline-end: 1px solid var(--border-default); background: var(--nav-rail-bg); }
 .sidenav-brand { height: 48px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }
-.sidenav-rail-scroll { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: 0 4px 6px; }
-.sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: auto; min-height: 44px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }
-.sidenav-rail-bottom { margin-block-start: auto; }
+.sidenav-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-height: 0; }
+.sidenav-rail-scroll { display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }
+.sidenav-rail-scroll::-webkit-scrollbar { display: none; }
+.sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }
+.sidenav-fade { position: absolute; z-index: 1; inset-inline: 0; height: 48px; pointer-events: none; opacity: 0; }
+.sidenav-fade[data-visible='true'] { opacity: 1; }
+.sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg) 15%, transparent); }
+.sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg) 85%); }
 .sidenav-rail-item.is-selected { background: color-mix(in srgb, var(--theme-accent) 12%, var(--nav-rail-bg)); color: var(--text-primary); }
 .sidenav-rail-item.is-selected::before { content: ''; position: absolute; inset-inline-start: -4px; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--theme-accent); }
 .sidenav-icon { display: grid; place-items: center; width: 36px; height: 22px; border-radius: 8px; }

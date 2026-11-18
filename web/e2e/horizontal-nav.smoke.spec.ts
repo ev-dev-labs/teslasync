@@ -36,7 +36,8 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
         if (top) await expect(rail).toHaveCount(0)
         else {
           await expect(side).toHaveCount(0)
-          await expect.poll(() => rail.getByTestId('rail-scroll').evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1)
+          await expect(rail.getByRole('button', { name: 'More', exact: true })).toHaveCount(0)
+          await expect(rail.getByRole('button', { name: 'Diagnostics', exact: true })).toHaveCount(1)
         }
         await trigger.press('ArrowDown')
         const panel = top ? flyout : side
@@ -55,6 +56,16 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
         await page.keyboard.press('Escape')
         await expect(panel).toHaveCount(0)
         await expect(trigger).toBeFocused()
+        if (pack === 'atlas' && width === 1440) {
+          const settings = rail.getByRole('button', { name: 'Settings', exact: true })
+          await settings.click()
+          await expect(side.getByRole('searchbox', { name: 'Filter Settings pages' })).toBeVisible()
+          await expect(side.locator('[data-app-nav-slot="heading"]')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+          await expect(side.getByRole('button', { name: 'Pinned', exact: true })).toHaveCount(0)
+          await page.keyboard.press('Escape')
+          await expect(side).toHaveCount(0)
+          await expect(settings).toBeFocused()
+        }
       })
     }
   }

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { expect } from 'vitest'
 import patches from './__fixtures__/horizontal-navigation-preservation.json'
 import orientation from './__fixtures__/nav-orientation-preservation.json'
+import fullRail from './__fixtures__/full-rail-preservation.json'
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex')
 
@@ -13,6 +14,7 @@ export function restoreHorizontalNavigationSource(file: string, source: string):
 }
 
 export function restoreNavOrientationSource(file: string, source: string): string {
+  source = restoreExactPatch(file, source, fullRail, 'b9d164d8b130b983dcbc8e14b69231f4197c3df71426153eadea92e3b50b076f')
   return restoreExactPatch(file, source, orientation, 'daf65568925bca0a969b30284c28cbfe880ec1e171e176f8746b8a7522732845')
 }
 
