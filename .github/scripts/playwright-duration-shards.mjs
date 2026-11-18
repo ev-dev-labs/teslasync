@@ -114,14 +114,38 @@ export function resultInventory(report) {
   return inventory(report);
 }
 
-export function balance(tests, count) {
+export function projectedSeconds(tests, workers) {
+  const lanes = Array(workers).fill(0);
+  for (const test of tests) {
+    const lane = lanes.indexOf(Math.min(...lanes));
+    lanes[lane] += estimate(test);
+  }
+  return Math.max(...lanes);
+}
+
+export function balance(tests, count, workers = 1) {
   assert.ok(Number.isInteger(count) && count > 0 && count <= tests.length, 'Invalid/nonempty shard count');
+  assert.ok(Number.isInteger(workers) && workers > 0, 'Invalid worker count');
   const shards = Array.from({ length: count }, () => ({ seconds: 0, tests: [] }));
+  const order = new Map(tests.map((test, index) => [test.key, index]));
   for (const test of [...tests].sort((a, b) => estimate(b) - estimate(a) || a.key.localeCompare(b.key))) {
-    const target = shards.reduce((best, shard) => shard.seconds < best.seconds
-      || (shard.seconds === best.seconds && shard.tests.length < best.tests.length) ? shard : best);
+    // --test-list selects tests but does not reorder Playwright's discovery.
+    // Model worker tails in that real order, not serial work / worker count.
+    const candidates = shards.map(shard => ({
+      shard,
+      seconds: workers === 1 ? shard.seconds + estimate(test)
+        : projectedSeconds([...shard.tests, test].sort((a, b) => order.get(a.key) - order.get(b.key)), workers),
+    }));
+    const target = candidates.reduce((best, candidate) => candidate.seconds < best.seconds
+      || (candidate.seconds === best.seconds && candidate.shard.seconds < best.shard.seconds)
+      || (candidate.seconds === best.seconds && candidate.shard.seconds === best.shard.seconds
+        && candidate.shard.tests.length < best.shard.tests.length) ? candidate : best).shard;
     target.tests.push(test);
     target.seconds += estimate(test);
+  }
+  for (const shard of shards) {
+    shard.tests.sort((a, b) => order.get(a.key) - order.get(b.key));
+    shard.projectedSeconds = projectedSeconds(shard.tests, workers);
   }
   assertUnion(tests, shards.flatMap(shard => shard.tests));
   return shards;
@@ -144,6 +168,7 @@ function invoke(args, options = {}) {
 
 export function suiteOptions(suite, browser, width, theme) {
   const quality = ['--project=chromium-*-*', '--project=chromium-smoke'];
+  if (suite === 'quality') return { script: 'e2e:quality', args: quality, workers: 4 };
   if (suite === 'ordinary') return { script: 'e2e:quality', args: [...quality, `--grep-invert=${designPattern}`], workers: 2 };
   if (suite === 'design') return { script: 'e2e:quality', args: [...quality, `--grep=${designPattern}`], workers: 4 };
   if (suite === 'a11y') return { script: 'e2e:a11y', args: ['--project=chromium-a11y', '--fully-parallel'], workers: 1 };
@@ -210,7 +235,7 @@ function plan(options) {
     assert.ok(full.every(test => test.project === `app-design-${browser}`
       && test.title.startsWith(`Application design languages at ${width}px in ${theme} — phase `)));
   }
-  const shards = balance(full, count);
+  const shards = balance(full, count, suite === 'quality' ? settings.workers : 1);
   assert.ok(index >= 1 && index <= count, 'Invalid shard index');
   const out = resolve(options.out ?? 'ci-evidence');
   const selected = shards[index - 1].tests;
@@ -221,13 +246,14 @@ function plan(options) {
   assertUnion(selected, actual);
   const data = {
     group: groupName(suite, browser, width, theme), index, count, full, selected,
-    seconds: shards[index - 1].seconds, settings, sourceSHA: process.env.GITHUB_SHA ?? null,
+    seconds: shards[index - 1].seconds, projectedSeconds: shards[index - 1].projectedSeconds,
+    settings, sourceSHA: process.env.GITHUB_SHA ?? null,
     measuredCases: full.filter(test => Object.hasOwn(measuredDurations.durations, test.key)).length,
     unmeasured: full.filter(test => !Object.hasOwn(measuredDurations.durations, test.key))
       .map(test => ({ key: test.key, fallbackSeconds: estimate(test) })),
   };
   save(join(out, 'plan.json'), data);
-  console.log(`${data.group} ${index}/${count}: ${selected.length}/${full.length} tests; estimated serial work ${data.seconds.toFixed(1)}s; workers ${settings.workers}; measured ${data.measuredCases}; unmeasured ${data.unmeasured.length}; actual --list matches`);
+  console.log(`${data.group} ${index}/${count}: ${selected.length}/${full.length} tests; estimated serial work ${data.seconds.toFixed(1)}s; workers ${settings.workers}; projected ${data.projectedSeconds.toFixed(1)}s; measured ${data.measuredCases}; unmeasured ${data.unmeasured.length}; actual --list matches`);
   return { data, out, list };
 }
 
@@ -378,11 +404,11 @@ function files(directory, name) {
     ? files(join(directory, entry.name), name) : entry.name === name ? [join(directory, entry.name)] : []);
 }
 
-export function familyGroups(family) {
-  if (family === 'chromium') return [['ordinary', 4], ['design', 12], ['a11y', 1], ['performance', 1]];
+export function familyGroups(family, profiles = true) {
+  if (family === 'chromium') return [['quality', 20], ['a11y', 1], ['performance', 1]];
   if (family === 'visual') return [['visual', 4]];
   assert.ok(['firefox', 'webkit', 'edge'].includes(family), 'Unknown report family');
-  if (family === 'edge') return [['engine-edge', 1]];
+  if (family === 'edge' || !profiles) return [[`engine-${family}`, 1]];
   return [[`engine-${family}`, 1], ...[1440, 390].flatMap(width => ['dark', 'light', 'custom']
     .map(theme => [`profile-${family}-${width}-${theme}`, family === 'webkit' ? width === 1440 ? 4 : 2 : 1])),
   [`replay-${family}`, 1]];
@@ -391,7 +417,8 @@ export function familyGroups(family) {
 function merge(options) {
   const plans = files(resolve(options.input), 'plan.json').map(path => ({ path, data: JSON.parse(readFileSync(path, 'utf8')) }));
   const errors = [];
-  for (const [group, count] of familyGroups(options.family)) {
+  assert.ok(options.profiles === undefined || ['true', 'false'].includes(options.profiles), 'Invalid profile mode');
+  for (const [group, count] of familyGroups(options.family, options.profiles !== 'false')) {
     try {
       const parts = plans.filter(plan => plan.data.group === group);
       assert.equal(parts.length, count, `${group}: missing/duplicate shard evidence`);
@@ -431,6 +458,77 @@ function merge(options) {
   if (errors.length) throw new AggregateError(errors, 'Required suite report merge failed');
 }
 
+function refreshDurations(options) {
+  const reports = files(resolve(options.input), 'results.json');
+  const updated = new Set();
+  for (const path of reports) {
+    const report = JSON.parse(readFileSync(path, 'utf8'));
+    const identities = resultInventory(report);
+    const actual = [];
+    function visit(suites) {
+      for (const suite of suites ?? []) {
+        for (const spec of suite.specs ?? []) {
+          for (const test of spec.tests ?? []) actual.push(test);
+        }
+        visit(suite.suites);
+      }
+    }
+    visit(report.suites);
+    identities.forEach((test, index) => {
+      if (!test.project.startsWith('chromium-')) return;
+      assert.ok(!updated.has(test.key), `Duplicate duration input: ${test.key}`);
+      const attempts = actual[index].results;
+      const seconds = attempts.reduce((sum, attempt) => sum + attempt.duration / 1000, 0);
+      if (seconds > 0) {
+        measuredDurations.durations[test.key] = [Number(seconds.toFixed(3)), attempts.length];
+        updated.add(test.key);
+      }
+    });
+  }
+  assert.ok(updated.size, 'No measured Chromium cases');
+  assert.match(options.run, /^\d+$/, 'Expected actual source workflow run ID');
+  measuredDurations.chromiumOverride = {
+    run: Number(options.run), cases: updated.size,
+    aggregation: 'latest complete run; per-test elapsed seconds including all attempts; other engines retain the original medians',
+  };
+  writeFileSync(new URL('./playwright-test-durations.json', import.meta.url), JSON.stringify(measuredDurations) + '\n');
+  console.log(`Refreshed ${updated.size} Chromium durations from run ${options.run}; other engine measurements unchanged`);
+}
+
+function verifyLayout(options) {
+  const { load } = createRequire(join(web, 'package.json'))('js-yaml');
+  const workflow = load(readFileSync(new URL('../workflows/frontend-quality.yml', import.meta.url), 'utf8'));
+  const root = resolve(options.out);
+  const groups = new Map();
+  const verify = (suite, shard, extra = {}) => {
+    const group = groupName(suite, extra.browser, extra.width, extra.theme);
+    const { data } = plan({ suite, shard, ...extra, out: join(root, group, shard.replace('/', '-')) });
+    const entry = groups.get(group) ?? { full: data.full, selected: [] };
+    assertUnion(entry.full, data.full);
+    entry.selected.push(...data.selected);
+    groups.set(group, entry);
+  };
+  for (const row of workflow.jobs['chromium-tests'].strategy.matrix.include) {
+    verify('quality', row.shard);
+    if (row.extra) verify(row.extra, '1/1');
+  }
+  for (const browser of workflow.jobs['cross-browser-tests'].strategy.matrix.browser) verify('engine', '1/1', { browser });
+  for (const shard of workflow.jobs['visual-tests'].strategy.matrix.shard) verify('visual', `${shard}/4`);
+  for (const row of workflow.jobs['app-design-tests'].strategy.matrix.include) verify('profile', row.shard, row);
+  for (const browser of ['firefox', 'webkit']) verify('replay', '1/1', { browser });
+  for (const [group, { full, selected }] of groups) {
+    assertUnion(full, selected);
+    console.log(`PASS ${group}: exact union ${full.length}, no missing or duplicated tests`);
+  }
+  const main = inventory(discover(['--project=chromium-*', '--project=firefox-smoke', '--project=webkit-smoke',
+    '--project=edge-smoke', '--project=app-design-*']));
+  assertUnion(main, [...groups.entries()].filter(([group]) => group !== 'visual').flatMap(([, data]) => data.selected));
+  const contracts = inventory(discover(['--config=playwright.contract.config.ts']));
+  assertUnion(inventory(discover([])), [...main, ...contracts]);
+  save(join(root, 'contract-inventory.json'), contracts);
+  console.log(`PASS full default inventory: ${main.length} browser + ${contracts.length} contract tests; 90 separate visual tests`);
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = Object.fromEntries(process.argv.slice(3).map(arg => {
     const equals = arg.indexOf('=');
@@ -440,6 +538,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const command = process.argv[2];
   if (command === 'plan') plan(options);
   else if (command === 'run') await run(options);
+  else if (command === 'refresh-durations') refreshDurations(options);
+  else if (command === 'verify-layout') verifyLayout(options);
   else if (command === 'compact-blob') await compactBlob(resolve(options.input));
   else {
     assert.equal(command, 'merge', 'Expected plan, run or merge');

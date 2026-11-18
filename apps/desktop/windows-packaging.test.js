@@ -23,7 +23,7 @@ function layout(root, name, arch, options = {}) {
   fs.writeFileSync(path.join(directory, 'AppxManifest.xml'), `<Package>
     <Identity Name="${options.name ?? 'TeslaSync.Test'}" Publisher="CN=Test" Version="${options.version ?? '1.2.3.0'}" ProcessorArchitecture="${arch}" />
     <Dependencies><TargetDeviceFamily MinVersion="${options.minVersion ?? '10.0.17763.0'}" /></Dependencies>
-    <Applications><Application Executable="app.exe" /></Applications>
+    <Applications><Application Executable="${options.executable ?? 'app.exe'}" /></Applications>
   </Package>`);
   return directory;
 }
@@ -55,6 +55,43 @@ for (const arch of ['x64', 'arm64']) {
     const result = run(['-Layout', directory, '-Architecture', arch]);
     assert.equal(result.status, 0, result.output);
     assert.match(result.output, new RegExp(`Validated ${arch} package layout`));
+  });
+}
+
+test('accepts a package layout with a trailing directory separator', { skip: !windows }, (t) => {
+  const directory = layout(fixture(t), 'trailing-separator', 'x64');
+  const result = run(['-Layout', `${directory}${path.sep}`, '-Architecture', 'x64']);
+  assert.equal(result.status, 0, result.output);
+});
+
+test('accepts a package layout using Windows short path aliases', { skip: !windows }, (t) => {
+  const directory = layout(fixture(t), 'long-package-directory-name', 'x64');
+  const alias = spawnSync('pwsh', ['-NoProfile', '-NonInteractive', '-Command',
+    '(New-Object -ComObject Scripting.FileSystemObject).GetFolder($env:TESLASYNC_TEST_LAYOUT).ShortPath'], {
+    encoding: 'utf8',
+    env: { ...process.env, TESLASYNC_TEST_LAYOUT: directory },
+    timeout: 120_000,
+  });
+  if (alias.error) throw alias.error;
+  assert.equal(alias.status, 0, alias.stderr);
+  const shortDirectory = alias.stdout.trim();
+  if (shortDirectory.toLowerCase() === directory.toLowerCase()) {
+    t.skip('Short path aliases are disabled for the temporary directory.');
+    return;
+  }
+  const result = run(['-Layout', shortDirectory, '-Architecture', 'x64']);
+  assert.equal(result.status, 0, result.output);
+});
+
+for (const absolute of [false, true]) {
+  test(`rejects a ${absolute ? 'rooted' : 'relative'} executable outside a similarly named package directory`, { skip: !windows }, (t) => {
+    const root = fixture(t);
+    const sibling = layout(root, 'package-outside', 'x64');
+    const executable = absolute ? path.join(sibling, 'app.exe') : '..\\package-outside\\app.exe';
+    const directory = layout(root, 'package', 'x64', { executable });
+    const result = run(['-Layout', directory, '-Architecture', 'x64']);
+    assert.notEqual(result.status, 0);
+    assert.match(result.output, /Application executable must be inside the package/);
   });
 }
 

@@ -9,15 +9,10 @@ on:
         type: string
   pull_request:
     branches: [main, revamped-ui]
-    paths:
-      - 'web/**'
-      - 'scripts/screenshots.js'
-      - 'cmd/routetemplategen/**'
-      - 'internal/api/webvitals/routetemplates_gen.go'
-      - '.github/workflows/frontend-quality.yml'
-      - '.github/scripts/ci_workflows.test.mjs'
-      - '.github/scripts/playwright-duration-shards.mjs'
-      - '.github/scripts/playwright-test-durations.json'
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    - cron: '43 8 * * *'
   push:
     branches: [main, revamped-ui]
     paths:
@@ -40,6 +35,9 @@ permissions:
 defaults:
   run:
     working-directory: web
+
+env:
+  APP_DESIGNS: ${{ contains(fromJSON('["merge_group","schedule","workflow_dispatch"]'), github.event_name) }}
 
 jobs:
   contract:
@@ -132,25 +130,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Consolidate cheap jobs; balance heavy cases, not files. See CI-PERF.
-          - {name: responsive-1, suite: ordinary, shard: '1/4'}
-          - {name: responsive-2, suite: ordinary, shard: '2/4'}
-          - {name: responsive-3, suite: ordinary, shard: '3/4'}
-          - {name: responsive-4, suite: ordinary, shard: '4/4'}
-          - {name: responsive-5, suite: design, shard: '1/12'}
-          - {name: responsive-6, suite: design, shard: '2/12'}
-          - {name: responsive-7, suite: design, shard: '3/12'}
-          - {name: responsive-8, suite: design, shard: '4/12'}
-          - {name: responsive-9, suite: design, shard: '5/12'}
-          - {name: responsive-10, suite: design, shard: '6/12'}
-          - {name: responsive-11, suite: design, shard: '7/12'}
-          - {name: responsive-12, suite: design, shard: '8/12'}
-          - {name: responsive-13, suite: design, shard: '9/12'}
-          - {name: responsive-14, suite: design, shard: '10/12'}
-          - {name: responsive-15, suite: design, shard: '11/12'}
-          - {name: responsive-16, suite: design, shard: '12/12'}
-          - {name: accessibility, suite: a11y, shard: '1/1'}
-          - {name: performance, suite: performance, shard: '1/1'}
+          # Mix measured long cases and short routes instead of reserving
+          # four undersized-worker runners for all 2,681 ordinary tests.
+          - {name: responsive-1, shard: '1/20', extra: a11y}
+          - {name: responsive-2, shard: '2/20', extra: performance}
+          - {name: responsive-3, shard: '3/20'}
+          - {name: responsive-4, shard: '4/20'}
+          - {name: responsive-5, shard: '5/20'}
+          - {name: responsive-6, shard: '6/20'}
+          - {name: responsive-7, shard: '7/20'}
+          - {name: responsive-8, shard: '8/20'}
+          - {name: responsive-9, shard: '9/20'}
+          - {name: responsive-10, shard: '10/20'}
+          - {name: responsive-11, shard: '11/20'}
+          - {name: responsive-12, shard: '12/20'}
+          - {name: responsive-13, shard: '13/20'}
+          - {name: responsive-14, shard: '14/20'}
+          - {name: responsive-15, shard: '15/20'}
+          - {name: responsive-16, shard: '16/20'}
+          - {name: responsive-17, shard: '17/20'}
+          - {name: responsive-18, shard: '18/20'}
+          - {name: responsive-19, shard: '19/20'}
+          - {name: responsive-20, shard: '20/20'}
     steps:
       - uses: actions/checkout@v7
       - *node
@@ -171,9 +172,15 @@ jobs:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
           GUARD_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
-        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=${{ matrix.suite }} --shard=${{ matrix.shard }}
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=quality --shard=${{ matrix.shard }}
+      - name: Run isolated single-worker accessibility or performance gate
+        if: always() && matrix.extra != ''
+        env:
+          E2E_MOCKS: '1'
+          E2E_REUSE_BUILD: '1'
+        run: node ../.github/scripts/playwright-duration-shards.mjs run --suite=${{ matrix.extra }} --shard=1/1 --out=ci-evidence/${{ matrix.extra }}
       - name: Record application design build receipt
-        if: always() && (matrix.suite == 'ordinary' || matrix.suite == 'design')
+        if: always()
         run: |
           node --input-type=module <<'NODE'
           import { createHash } from 'node:crypto';
@@ -306,6 +313,7 @@ jobs:
 
   app-design-tests:
     name: ${{ matrix.browser }} application designs (${{ matrix.width }}px/${{ matrix.theme }}, ${{ matrix.shard }})
+    if: contains(fromJSON('["merge_group","schedule","workflow_dispatch"]'), github.event_name)
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -402,15 +410,15 @@ jobs:
           path: browser-evidence
       - name: Merge engine, complete profiles and replay
         env: *report-failure
-        run: node ../.github/scripts/playwright-duration-shards.mjs merge --family=${{ matrix.browser }} --input=../browser-evidence
+        run: node ../.github/scripts/playwright-duration-shards.mjs merge --family=${{ matrix.browser }} --profiles=${{ env.APP_DESIGNS }} --input=../browser-evidence
       - *merged-json
       - *merged-html
       - name: Require every engine smoke shard
         if: always()
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: |
-          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required engine job failed, was cancelled, or was skipped"'
+          SKIPPED_JOBS: ${{ env.APP_DESIGNS != 'true' && 'app-design-tests' || '' }}
+        run: node ../.github/scripts/ci-job-results.mjs
 
   visual-tests:
     name: Windows visual snapshots (${{ matrix.shard }}/4)
