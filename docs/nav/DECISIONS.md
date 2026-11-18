@@ -8,3 +8,4 @@
 - **Preservation checks**: Verify the exact navigation source and English catalog changes before reconstructing the older localization checkpoints. Keep the historical hashes, call counts, and translation assertions intact.
 - **Browser review**: Exercised Driving in all six packs at 1440px, 1024px, and 390px in both themes. Used synthetic data and captured before/after screenshots for Expressive Form, Editorial, and Swiss Grid.
 - **Search styling**: The shared search trigger uses the icon treatment only in horizontal navigation. The labeled trigger retains its regular weight and original forced-colors border so vertical and hybrid visuals do not change.
+- **Existing browser checks**: Assert the exact banner name for each pack's navigation mode. Keep the existing route, containment, and layout assertions for every pack.

@@ -5,7 +5,7 @@ import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-te
 import { assertMockApiAfterNavigation, assertMockApiComplete, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
 import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
-import { getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
 import { assertHeatmapSampleOutlines, inspectSpecializedRoute, specializedReviewRoutes } from './widget-design-packs.specialized';
@@ -1455,8 +1455,10 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
         });
       }
-      const workspaceHeader = page.getByRole('banner', {
-        name: width < 1280 ? 'Site header' : 'Workspace command bar', exact: true,
+      const workspaceHeader = (pack: PackId) => page.getByRole('banner', {
+        name: width < 1280 || APPLICATION_DESIGNS[pack].navigation === 'top'
+          ? 'Site header' : 'Workspace command bar',
+        exact: true,
       });
       const mode = theme === 'custom' ? 'dark' : theme;
       const reviewUnits = {
@@ -1541,7 +1543,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
           await test.step(`${packId} real ${path}`, async () => {
             await selectReviewPack(page, packId);
             await expectProfile(page, packId);
-            await expect(workspaceHeader).toBeVisible();
+            await expect(workspaceHeader(packId)).toBeVisible();
             await expect(page.locator('[data-app-part~="page"]').first()).toBeVisible();
             if (path === '/') {
               await expect(page.locator('[data-vehicle-studio]')).toBeVisible();
@@ -1838,8 +1840,8 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         for (const outerPack of ['memphis', 'blueprint'] as const) {
           await selectReviewPack(page, outerPack);
           await expectProfile(page, outerPack);
-          await expect(workspaceHeader).toBeVisible();
-          outer[outerPack] = await isolationAppearance(workspaceHeader);
+          await expect(workspaceHeader(outerPack)).toBeVisible();
+          outer[outerPack] = await isolationAppearance(workspaceHeader(outerPack));
           const outerBefore = await preservedPreferences(page);
           await picker.getByRole('button', { name: 'Preview Quiet Form', exact: true }).click();
           const dialog = page.getByRole('dialog', { name: 'Preview Quiet Form', exact: true });
