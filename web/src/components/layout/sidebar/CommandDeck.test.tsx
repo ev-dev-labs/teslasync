@@ -166,7 +166,7 @@ describe('CommandDeck', () => {
     const review = screen.getByRole('dialog', { name: 'Review' })
     expect(review).toContainElement(document.activeElement as HTMLElement)
     act(() => {
-      setViewportWidth(768)
+      setViewportWidth(1024)
       window.dispatchEvent(new Event('resize'))
     })
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
@@ -186,42 +186,35 @@ describe('CommandDeck', () => {
     expect(props.onPanelOpenChange).not.toHaveBeenCalledWith(false)
   })
 
-  it.each(['ltr', 'rtl'])('supports inline arrows in the horizontal %s composition without changing selection', direction => {
+  it.each(['ltr', 'rtl'])('opens the vertical panel with the forward inline arrow in %s', direction => {
     renderControlledDeck()
-    const scroll = screen.getByTestId('rail-scroll')
-    scroll.style.flexDirection = 'row'
-    scroll.style.direction = direction
+    const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
     const home = desktopRail().getByRole('button', { name: 'Home' })
     const driving = desktopRail().getByRole('button', { name: 'Driving' })
-    act(() => home.focus())
-    fireEvent.keyDown(home, { key: direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight' })
-    expect(driving).toHaveFocus()
-    expect(driving).toHaveAttribute('tabindex', '0')
-    expect(home).toHaveAttribute('aria-current', 'true')
-    expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
-    fireEvent.keyDown(driving, { key: direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft' })
-    expect(home).toHaveFocus()
+    driving.style.direction = direction
     fireEvent.keyDown(home, { key: 'End' })
     expect(driving).toHaveFocus()
     fireEvent.keyDown(driving, { key: 'Home' })
     expect(home).toHaveFocus()
-    fireEvent.click(driving)
+    fireEvent.keyDown(driving, { key: forward })
     expect(secondaryPanel().getByRole('link', { name: 'Drives' }))
       .toHaveAttribute('data-app-part', 'nav-item')
   })
 
-  it('keeps vertical arrows and unhandled inline keys on the vertical rail', () => {
+  it('uses ArrowDown to enter the panel and keeps rail traversal available', () => {
     renderControlledDeck()
     screen.getByTestId('rail-scroll').style.flexDirection = 'column'
     const home = desktopRail().getByRole('button', { name: 'Home' })
     const driving = desktopRail().getByRole('button', { name: 'Driving' })
     act(() => home.focus())
-    expect(fireEvent.keyDown(home, { key: 'ArrowRight' })).toBe(true)
-    expect(home).toHaveFocus()
-    fireEvent.keyDown(home, { key: 'ArrowDown' })
+    fireEvent.keyDown(home, { key: 'ArrowDown', ctrlKey: true })
     expect(driving).toHaveFocus()
     fireEvent.keyDown(driving, { key: 'ArrowUp' })
     expect(home).toHaveFocus()
+    fireEvent.keyDown(driving, { key: 'ArrowDown' })
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveFocus()
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    expect(driving).toHaveFocus()
   })
 
   it('exposes composition slots on the same live deck and contextual navigation owners', () => {
@@ -256,10 +249,10 @@ describe('CommandDeck', () => {
     expect(desktopRail().queryByRole('button', { name: 'Suggested' })).not.toBeInTheDocument()
     expect(desktopRail().queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
     expect(desktopRail().queryByRole('button', { name: /pages/ })).not.toBeInTheDocument()
-    expect(desktopRail().getByRole('link', { name: 'Alerts' })).toHaveAttribute('href', '/notifications/inbox')
+    expect(desktopRail().queryByRole('link', { name: 'Alerts' })).toBeNull()
     expect(desktopRail().queryByRole('link', { name: 'Cars' })).not.toBeInTheDocument()
-    expect(desktopRail().getByRole('link', { name: 'Display' })).toHaveAttribute('href', '/settings#appearance')
-    expect(desktopRail().getByLabelText('3 unread alerts')).toBeInTheDocument()
+    expect(desktopRail().queryByRole('link', { name: 'Display' })).toBeNull()
+    expect(desktopRail().queryByLabelText('3 unread alerts')).toBeNull()
     expect(desktopRail().queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument()
     expect(desktopRail().queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument()
 
@@ -293,7 +286,7 @@ describe('CommandDeck', () => {
   it('keeps My Vehicles and its count in the Vehicles section, not the primary shortcuts', () => {
     const sections = [
       ...makeSections(),
-      { title: 'Vehicles', titleKey: 'nav.groups.vehicles', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', labelKey: 'nav.items.vehicles' }] },
+      { title: 'Vehicles', titleKey: 'nav.groups.vehicles', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', labelKey: 'nav.items.vehicles', badge: 'vehicles' as const }] },
     ]
     renderControlledDeck({ sections, vehicleCount: 2 })
 
@@ -316,23 +309,14 @@ describe('CommandDeck', () => {
     expect(driving.closest('[data-testid="rail-scroll"]')?.querySelector('[role="tooltip"]')).toBeNull()
   })
 
-  it('keeps visible rail labels and gives icon-only utilities right-side tooltips', () => {
-    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1280)
-    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100)
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 40, 36, 36))
+  it('keeps visible rail labels without duplicate header utilities', () => {
     renderControlledDeck({})
     const rail = screen.getByTestId('command-deck-rail')
     for (const button of rail.querySelectorAll('.sidenav-rail-item')) {
       expect(within(button as HTMLElement).getByText(button.getAttribute('aria-label')!)).toBeInTheDocument()
       expect(button).not.toHaveAttribute('title')
     }
-    const utilities = rail.querySelector('.sidenav-utilities')!
-    const tips = utilities.querySelectorAll('[role="tooltip"]')
-    expect(tips).toHaveLength(3)
-    for (const tip of tips) {
-      expect(tip).toHaveClass('top-1/2', '-translate-y-1/2')
-      expect(tip).toHaveStyle({ left: '44px' })
-    }
+    expect(rail.querySelector('.sidenav-utilities')).toBeNull()
   })
 
   it('docks the secondary panel to a group and collapses it on re-press', () => {
@@ -435,11 +419,11 @@ describe('CommandDeck', () => {
       )
     }
     render(<Harness />)
-    const pins = secondaryPanel().getByRole('button', { name: 'Pinned' })
-    expect(pins).toHaveAttribute('aria-expanded', 'true')
-    expect(secondaryPanel().getByText('Pin a page below to keep it close.')).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('button', { name: 'Pinned' })).toBeNull()
     expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Pin Trips to favorites' }))
+    const pins = secondaryPanel().getByRole('button', { name: 'Pinned' })
+    expect(pins).toHaveAttribute('aria-expanded', 'true')
     expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
     // Pin state is reflected on both surfaces: the section row and the Pinned row.
     expect(secondaryPanel().getAllByRole('button', { name: 'Unpin Trips' })).toHaveLength(2)
@@ -466,7 +450,7 @@ describe('CommandDeck', () => {
     const quickLink = secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })
     fireEvent.click(within(quickLink.parentElement as HTMLElement).getByRole('button', { name: 'Unpin Trips' }))
     await waitFor(() => expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument())
-    expect(secondaryPanel().getByText('Pin a page below to keep it close.')).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('button', { name: 'Pinned' })).toBeNull()
     expect(secondaryPanel().getByRole('button', { name: 'Pin Trips to favorites' })).toBeInTheDocument()
   })
 
@@ -524,18 +508,9 @@ describe('CommandDeck', () => {
     const drivingButton = desktopRail().getByRole('button', { name: 'Driving' })
 
     fireEvent.click(drivingButton)
-    fireEvent.keyDown(screen.getByTestId('atlas-panel-secondary'), { key: 'Escape' })
-    expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
-
-    // jsdom has no requestAnimationFrame; run the focus callback synchronously.
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 0 })
-    try {
-      fireEvent.click(secondaryPanel().getByRole('button', { name: 'Hide panel' }))
-      expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
-      expect(document.activeElement).toBe(drivingButton)
-    } finally {
-      vi.unstubAllGlobals()
-    }
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Hide panel' }))
+    expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
+    expect(drivingButton).toHaveFocus()
   })
 
   it('keeps the secondary panel navigable with always-labeled links (no icon-only collapsed rail)', () => {
@@ -625,46 +600,39 @@ describe('CommandDeck', () => {
     expect(onUnpin).not.toHaveBeenCalled()
   })
 
-  it('opens phone tabs into a More grid and a section sheet, dismissed with Escape', () => {
+  it('opens phone tabs into the shared section and group drill-down, dismissed with Escape', () => {
     setViewportWidth(375)
     renderControlledDeck({ collections: [tripCollection] })
     const tabs = within(screen.getByRole('navigation', { name: 'Quick navigation' }))
-    expect(tabs.getAllByRole('button')).toHaveLength(5)
+    expect(tabs.getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(['Home', 'Driving', 'More'])
     expect(screen.queryByRole('dialog')).toBeNull()
 
     fireEvent.click(tabs.getByRole('button', { name: 'More' }))
     let dialog = screen.getByRole('dialog')
-    expect(within(dialog).queryByRole('button', { name: 'Driving' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Driving' })).toBeVisible()
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
     fireEvent.click(tabs.getByRole('button', { name: 'Driving' }))
     dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Trip Records/ }))
     expect(within(dialog).getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
-    expect(within(dialog).getByText('Trip Records')).toBeInTheDocument()
 
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('navigation', { name: 'Quick navigation' })).toBeInTheDocument()
   })
 
-  it.each(['All pages', 'Alerts', 'Display'])(
-    'notifies the host when the %s shortcut is followed',
-    async (label) => {
+  it('notifies the host when the All pages shortcut is followed', async () => {
       const onItemSelect = vi.fn()
       renderControlledDeck({ onItemSelect })
       fireEvent.click(desktopRail().getByRole('button', { name: 'Home' }))
       await act(async () => {
-        fireEvent.click(
-          label === 'All pages'
-            ? secondaryPanel().getByRole('link', { name: /All pages/ })
-            : desktopRail().getByRole('link', { name: label }),
-        )
+        fireEvent.click(secondaryPanel().getByRole('link', { name: /All pages/ }))
       })
       expect(onItemSelect).toHaveBeenCalledTimes(1)
-    },
-  )
+  })
 
   it('closes the tablet drawer on Escape while keeping the rail selection', () => {
-    setViewportWidth(768)
+    setViewportWidth(1024)
     const onItemSelect = vi.fn()
     renderControlledDeck({ onItemSelect })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
@@ -698,7 +666,7 @@ describe('CommandDeck', () => {
     expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
 
     cleanup()
-    setViewportWidth(768)
+    setViewportWidth(1024)
     const onTabletSelect = vi.fn()
     renderControlledDeck({ pinnedItems: [drivesItem], onItemSelect: onTabletSelect })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
@@ -801,8 +769,7 @@ describe('CommandDeck', () => {
 
   it('degrades instead of crashing on undefined props', () => {
     renderDeck({ sections: undefined, pinnedItems: undefined } as unknown as Partial<CommandDeckProps>)
-    expect(desktopRail().getByRole('link', { name: 'Alerts' })).toBeInTheDocument()
-    expect(desktopRail().getByRole('link', { name: 'Display' })).toBeInTheDocument()
+    expect(desktopRail().queryByRole('link')).toBeNull()
     expect(desktopRail().queryByRole('button')).not.toBeInTheDocument()
   })
 
@@ -816,7 +783,7 @@ describe('CommandDeck', () => {
 
     cleanup()
     window.localStorage.clear()
-    setViewportWidth(900)
+    setViewportWidth(1024)
     renderDeck({ panelOpen: true })
     const tablet = screen.getByRole('dialog')
     expect(tablet).toHaveClass('sidenav-tablet-panel')
@@ -838,7 +805,7 @@ describe('CommandDeck', () => {
     cleanup()
     // Isolate the halves: the desktop half above stored Driving as the selection.
     window.localStorage.clear()
-    setViewportWidth(768)
+    setViewportWidth(1024)
     renderDeck({ panelOpen: true })
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(dialogPanel().getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()

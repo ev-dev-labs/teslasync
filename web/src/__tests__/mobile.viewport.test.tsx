@@ -9,6 +9,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Accordion } from '@/components/ui/Accordion';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { BottomTabBar } from '@/components/layout/BottomTabBar';
+import { navSections } from '@/components/layout/Layout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar, FilterSheet, ComboboxMulti } from '@/components/forms';
 import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMediaQuery';
@@ -106,21 +107,15 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nextProvider i18n={i18n}>
-          <BottomTabBar />
+          <BottomTabBar sections={navSections} />
         </I18nextProvider>
       </MemoryRouter>,
     );
     const nav = document.querySelector('nav[aria-label]') as HTMLElement | null;
     expect(nav).not.toBeNull();
     expect(nav!.className).toMatch(/safe-bottom/);
-    // The merged sidenav shell hides the phone tab bar with a stylesheet
-    // rule rather than a Tailwind class: sidenav.css drops
-    // `.sidenav-phone-tabs` at the 768px `md` gate where the icon rail
-    // takes over navigation.
+    // CommandDeck mounts the tab bar only below the navigation breakpoint.
     expect(nav!.className).toMatch(/(?:^|\s)sidenav-phone-tabs(?:\s|$)/);
-    expect(sidenavCss).toMatch(
-      /@media\s*\(min-width:\s*768px\)\s*\{\s*\.sidenav-phone-tabs\s*\{\s*display:\s*none;?\s*\}\s*\}/,
-    );
     // Every tab button must satisfy WCAG 2.5.5 minimum touch-target size:
     // `sidenav-phone-tab` floors height at 60px (sidenav polish preserves
     // the full icon plus touch size) and `flex: 1` spreads the five tabs

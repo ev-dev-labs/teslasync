@@ -2513,7 +2513,7 @@ describe('additive widget implementation preservation', () => {
   describe('exact CommandDeck local modal-deferral successor before original app-design proof', () => {
     const file = 'web/src/components/layout/sidebar/CommandDeck.tsx';
     const patch = commandDeckModal.sources[0];
-    const current = source(file);
+    const current = historicalSource(file);
     const previous = () => restoreCommandDeckModalSource(file, current);
     const parse = (text: string) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = (text: string) => parse(text).statements.find(node =>
@@ -2557,14 +2557,14 @@ describe('additive widget implementation preservation', () => {
       expect(current.trimEnd().split('\n')).toHaveLength(158);
       expect(patch.originalLineCount).toBe(144);
       expect(patch.currentLineCount).toBe(158);
-      const oldest = restoreAppDesignSource(file, current);
+      const oldest = restoreAppDesignSource(file, source(file));
       expect(hash(oldest)).toBe('887a29202c7a33f1968832ce9bd7aa4ae02d4fb32c4ed0d67459bef6f0a71f64');
       expect(hash(oldest)).toBe(appDesign.sources.find(entry => entry.file === file)?.before);
       for (const changed of [original, oldest, current + '\n', current.slice(1)]) {
         expect(() => restoreCommandDeckModalSource(file, changed)).toThrow();
         expect(() => restoreAppDesignSource(file, changed)).toThrow();
       }
-      expect(source(file)).toBe(current);
+      expect(historicalSource(file)).toBe(current);
     });
 
     it('preserves the ordered original call/default/arity/options and full translator/control projection', () => {

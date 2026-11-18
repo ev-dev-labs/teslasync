@@ -8,6 +8,7 @@ export interface NavGroup {
   id: string
   label: string
   pages: FlatSidebarEntry[]
+  ungrouped?: boolean
 }
 
 export interface NavModel {
@@ -29,14 +30,26 @@ export const PINNED = 'pinned'
 export function useNavGroups(section: SidebarSectionInput | undefined, model: NavModel, editing: boolean) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
+  const { groups } = deriveNavGroups(section, model, query, t)
+  return { groups: editing ? groups.filter(group => group.id !== PINNED) : groups, query, setQuery }
+}
+
+export function deriveNavGroups(
+  section: SidebarSectionInput | undefined,
+  model: Pick<NavModel, 'collections' | 'pinnedPaths'>,
+  query: string,
+  t: (key: string, fallback: string) => string,
+) {
   const tokens = tokenizeSidebarQuery(query)
-  const hits = new Set(section ? searchSidebarSections([section], model.collections, query,
+  const hits = new Set(section && tokens.length ? searchSidebarSections([section], model.collections, query,
     item => t(item.labelKey, item.label), { matchSectionTitle: false }).flatMap(result => result.hits.map(hit => hit.to)) : [])
   const groups: NavGroup[] = []
   const other: FlatSidebarEntry[] = []
   const pinned: FlatSidebarEntry[] = []
+  const collectionIds: string[] = []
   for (const { label, labelKey, entries } of groupSidebarItems(section?.items ?? [], model.collections)) {
     const name = label && labelKey ? t(labelKey, label) : label
+    if (name) collectionIds.push(entries[0].to)
     const matchGroup = name && matchesSidebarTokens(`${label} ${name}`.toLowerCase(), tokens)
     const pages = entries.filter(page => !tokens.length || matchGroup || hits.has(page.to))
     for (const page of pages) if (model.pinnedPaths.has(page.to)) pinned.push(page)
@@ -44,7 +57,7 @@ export function useNavGroups(section: SidebarSectionInput | undefined, model: Na
     if (name) groups.push({ id: entries[0].to, label: name, pages })
     else other.push(...pages)
   }
-  if (other.length) groups.push({ id: 'other', label: groups.length ? t('nav.flyout.other', 'Other pages') : t('nav.flyout.pages', 'Pages'), pages: other })
-  if (pinned.length && !editing) groups.unshift({ id: PINNED, label: t('nav.sidenav.pinned', 'Pinned'), pages: pinned })
-  return { groups, query, setQuery }
+  if (other.length) groups.push({ id: 'other', label: groups.length ? t('nav.flyout.other', 'Other pages') : t('nav.flyout.pages', 'Pages'), pages: other, ungrouped: true })
+  if (pinned.length) groups.unshift({ id: PINNED, label: t('nav.sidenav.pinned', 'Pinned'), pages: pinned })
+  return { groups, collectionIds }
 }

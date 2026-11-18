@@ -682,21 +682,23 @@ for (const width of [320, 1440]) {
     }, { limit: '100', offset: '0' });
     await page.goto('/ownership/subscription-roi');
     await waitForHarnessReady(page, api);
-    // Phone viewports have no section rail: the header button opens the
-    // More grid, which drills into the sheet panel (collection-navigation).
-    const scope = width < 1280 ? page.locator('.sidenav-sheet') : page;
-    if (width < 1280) {
-      await page.getByRole('button', { name: 'Open sidebar', exact: true }).click();
+    const compact = width < 1024;
+    const scope = compact ? page.getByRole('dialog', { name: 'Browse sections' }) : page;
+    if (compact) {
+      await page.getByRole('button', { name: 'Browse sections', exact: true }).click();
       await scope.getByRole('button', { name: 'Ownership intelligence' }).click();
+      await scope.getByRole('searchbox').fill('Utility tariff lab');
+      await scope.locator('[data-nav-choice]').first().click();
     } else {
       // Clicking the already-selected section toggles the panel closed, so
       // only click when the panel is shut (collection-navigation).
       if ((await page.getByTestId('command-deck-secondary').count()) === 0) {
         const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' });
-        await rail.getByRole('button', { name: 'Ownership intelligence' }).click();
+        await rail.getByRole('button', { name: 'More', exact: true }).click();
+        await page.getByTestId('atlas-panel-secondary').getByRole('button', { name: 'Ownership intelligence' }).click();
       }
     }
-    const nav = scope.getByRole('navigation', { name: 'Sidebar navigation' });
+    const nav = compact ? scope : scope.getByRole('navigation', { name: 'Sidebar navigation' });
     const link = nav.locator('a[href="/ownership/tariff-lab"]').first();
     if ((await link.count()) === 0) {
       // The toggle reads Collapse when groups start expanded; only expand

@@ -1,11 +1,11 @@
 import { DIAGNOSTIC_GROUPS } from '../diagnosticGroups'
 import { REPORT_GROUPS } from '../reportGroups'
-import { sectionPrimaryPath, type NavBadge, type SectionGroup } from '../sectionGroups'
+import { sectionPrimaryPath, type NavBadge, type SectionGroup, type SidebarSectionInput } from '../sectionGroups'
 import type { Icons, LucideIcon } from '@/lib/icons'
 
 type Item = { to: string; label: string; labelKey: string }
 type IconItem = Item & { icon: typeof Icons.home; color?: string; badge?: NavBadge }
-type Section<T extends Item> = { title: string; items: T[] }
+type Section<T extends Item> = Omit<SidebarSectionInput, 'items'> & { items: T[] }
 
 /**
  * One flat, directly-renderable sidebar row.

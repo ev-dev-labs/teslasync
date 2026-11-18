@@ -77,8 +77,7 @@ describe('WorkspaceHeader', () => {
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     expect(header).toHaveClass(
-      'hidden',
-      'xl:grid',
+      'grid',
       'grid-cols-workspace-header',
     )
     expect(header).toHaveAttribute('data-layout', 'balanced-three-track')
@@ -362,11 +361,11 @@ describe('application shell composition CSS contracts (not mounted browser geome
         expect(rule.selector).toContain('[data-presentation-mode="standard"]')
       }
     }
-    for (const mode of ['top', 'hybrid']) {
-      expect(familyRules('data-app-navigation', mode).some(rule =>
-        rule.toString().includes('#helix-dock-slot > [data-role="helix-side-panel"]'))).toBe(true)
-    }
     const horizontal = familyRules('data-app-navigation', 'top')
+    expect(horizontal.some(rule => rule.toString().includes('#helix-dock-slot > [data-role="helix-side-panel"]'))).toBe(true)
+    const hybrid = familyRules('data-app-navigation', 'hybrid')
+    expect(geometry(hybrid)).not.toMatch(/grid-template|display:grid/)
+    expect(hybrid.some(rule => rule.selector.includes('.sidenav-context-column .sidenav-panel'))).toBe(true)
     for (const rule of horizontal) {
       expect(rule.selector).toContain('[data-horizontal-shell][data-presentation-mode="standard"]')
       expect(rule.parent?.type === 'atrule' && rule.parent.params).not.toContain('min-width')

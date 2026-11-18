@@ -46,7 +46,6 @@ import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
-  Logo,
 } from '@/components/ui/runtime'
 import {
   BreadcrumbOverridesProvider,
@@ -56,7 +55,8 @@ import { NotificationBellPopover } from './NotificationBellPopover'
 import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
-import { useAlerts } from '@/api/hooks/useNotifications'
+import { useAlerts, useUnreadCount } from '@/api/hooks/useNotifications'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import { useNavigationPins } from '@/api/hooks/useNavigationPins'
@@ -116,7 +116,6 @@ const LazyGotoIndicator = lazy(async () => {
   return { default: module.GotoIndicator }
 })
 
-const MobileWorkspaceControls = lazy(() => import('./MobileWorkspaceControls'))
 const HorizontalHeader = lazy(() => import('./horizontal-nav/HorizontalHeader'))
 const WorkspaceHeader = lazy(async () => {
   const module = await import('./WorkspaceHeader')
@@ -357,6 +356,7 @@ export const navSections = [
   },
   {
     title: 'Advanced intelligence',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.advanced_intelligence',
     items: [
       { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle twin lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-theme-accent' },
@@ -375,6 +375,7 @@ export const navSections = [
   },
   {
     title: 'Ownership intelligence',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.ownership_intelligence',
     items: [
       { to: '/ownership/insurance-telematics', icon: Icons.securityCheck, label: 'Insurance telematics', labelKey: 'nav.items.ownership_insurance-telematics', color: 'text-theme-accent' },
@@ -391,6 +392,7 @@ export const navSections = [
   },
   {
     title: 'Tesla physics',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.tesla_physics',
     items: [
       { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics overview', labelKey: 'nav.items.tesla-physics', color: 'text-theme-accent' },
@@ -399,6 +401,7 @@ export const navSections = [
   },
   {
     title: 'Security',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.security',
     items: [
       { to: '/security-access', icon: Icons.locked, label: 'Security & access', labelKey: 'nav.items.security-access', color: 'text-emerald-400' },
@@ -408,6 +411,7 @@ export const navSections = [
   },
   {
     title: 'Account',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.account',
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla account', labelKey: 'nav.items.tesla-account', color: 'text-theme-accent' },
@@ -423,6 +427,7 @@ export const navSections = [
   },
   {
     title: 'Settings',
+    railPlacement: 'bottom' as const,
     titleKey: 'nav.groups.settings',
     items: [
       { to: '/settings', icon: navRouteIcons['/settings'], label: 'General settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
@@ -433,6 +438,7 @@ export const navSections = [
   },
   {
     title: 'Integrations',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.integrations',
     items: [
       { to: '/integrations/helix', icon: Icons.link, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
@@ -443,6 +449,7 @@ export const navSections = [
   },
   {
     title: 'Data',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.data',
     items: [
       { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data export', labelKey: 'nav.items.data-export', color: 'text-lime-400' },
@@ -452,6 +459,7 @@ export const navSections = [
   },
   {
     title: 'Diagnostics',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.diagnostics',
     items: [
       { to: '/system-status', icon: Icons.speedCircle, label: 'System status', labelKey: 'nav.items.system-status', color: 'text-emerald-400' },
@@ -491,6 +499,7 @@ export const navSections = [
   },
   {
     title: 'About',
+    railPlacement: 'more' as const,
     titleKey: 'nav.groups.about',
     items: [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', labelKey: 'nav.items.roadmap', color: 'text-violet-400' },
@@ -704,32 +713,14 @@ function ThemeQuickSwitcher({
   )
 }
 
-const MOBILE_BRAND_CONTAINMENT = 'min-w-0 max-w-full [&>span]:min-w-0 [&>span]:truncate'
-
 export default function Layout() {
   const presentation = usePresentationMode()
   const horizontal = useContext(ActiveAppNavigation) === 'top'
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
-  const mobileHeaderRef = useRef<HTMLElement>(null)
-  const mobileHeaderSpacerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const header = mobileHeaderRef.current
-    const spacer = mobileHeaderSpacerRef.current
-    if (!header || !spacer || typeof ResizeObserver === 'undefined') return
-    const reserveHeaderHeight = () => {
-      const height = header.getBoundingClientRect().height
-      if (height > 0) spacer.style.height = `${height}px`
-    }
-    reserveHeaderHeight()
-    const observer = new ResizeObserver(reserveHeaderHeight)
-    observer.observe(header)
-    return () => {
-      observer.disconnect()
-      spacer.style.removeProperty('height')
-    }
-  }, [sidebarOpen, presentation.mode, horizontal])
+  const compactNav = useMediaQuery('(max-width: 1023px)')
+  const getBrowseTrigger = useCallback(() => sidebarTriggerRef.current, [])
   const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
     try {
       const stored = window.localStorage.getItem('teslasync-deck-panel-open')
@@ -742,10 +733,7 @@ export default function Layout() {
       return false
     }
   })
-  // Viewport bracket read synchronously so the deck Suspense fallback below
-  // reserves the exact in-flow width of the loaded deck. Same brackets as
-  // CommandDeck's own viewport state (phone <768 < tablet <1280 <= desktop).
-  const [deckViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
+  const dockedNav = useMediaQuery('(min-width: 1280px)')
   useEffect(() => {
     try {
       window.localStorage.setItem('teslasync-deck-panel-open', deckPanelOpen ? '1' : '0')
@@ -982,7 +970,7 @@ export default function Layout() {
   // Live data for sidebar
   const { data: alerts } = useAlerts()
   const { data: vehicles } = useVehicles()
-  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
+  const { data: unreadCount = 0 } = useUnreadCount()
   const vehicleCount = vehicles?.length ?? 0
   // Focused vehicle for sidebar suggestions: the persisted selection when
   // it still exists, else the first vehicle. Router-free on purpose —
@@ -1259,6 +1247,7 @@ export default function Layout() {
             onPin={pinNavPath}
             onUnpin={unpinNavPath}
             pinSyncUnavailable={navigationPins.syncUnavailable}
+            unreadCount={unreadCount}
             vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
@@ -1274,7 +1263,7 @@ export default function Layout() {
             squeezes the content column when the deck resolves (Lighthouse CLS
             0.19 on every route). Both sides read the same deckPanelOpen state
             so they cannot disagree. */}
-        <Suspense fallback={deckViewport === 'phone' ? null : <div className="sidenav-loading" data-panel-open={deckPanelOpen} style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >
+        <Suspense fallback={compactNav ? null : <div className="sidenav-loading" data-panel-open={deckPanelOpen} style={{ width: 76 + (dockedNav && deckPanelOpen ? 272 : 0) }} />} >
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
@@ -1286,63 +1275,36 @@ export default function Layout() {
             onUnpin={unpinNavPath}
             pinSyncUnavailable={navigationPins.syncUnavailable}
             onItemSelect={() => setSidebarOpen(false)}
-            alertCount={unreadAlerts}
+            alertCount={unreadCount}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
             vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             collections={visibleCollections}
             panelOpen={deckPanelOpen}
             onPanelOpenChange={setDeckPanelOpen}
-            appearanceControl={<ThemeQuickSwitcher placement="left" onOpen={() => {
-              if (window.innerWidth < 1280) { setDeckPanelOpen(false); setSidebarOpen(false) }
-            }} />}
             mobileBrowseOpen={sidebarOpen}
+            getBrowseTrigger={getBrowseTrigger}
             activeSectionTitle={activeSectionTitle}
           />
         </Suspense>
       </nav>}
-
-      {/* Mobile top bar */}
-      {presentation.mode === 'standard' && !horizontal && !sidebarOpen && (
-        <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] md:start-[76px] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
-          <Button
-            ref={sidebarTriggerRef}
-            onClick={() => setSidebarOpen(true)}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={t('nav.openSidebar', 'Open sidebar')}
-            aria-expanded={false}
-            className="relative z-10 -ms-1 h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
-          >
-            <Icons.menu className="h-6 w-6" />
-          </Button>
-          <div className="flex min-w-0 flex-1 basis-16 justify-center">
-            <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />
-          </div>
-          <div data-role="mobile-header-actions" className="ms-auto flex shrink-0 items-center gap-2">
-            <NotificationBellPopover className="max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11" />
-            <ThemeQuickSwitcher />
-          </div>
-          {deckViewport !== 'desktop' && (workspaceScope.range || workspaceScope.vehicle) && (
-            <Suspense fallback={<div className="h-11 w-full basis-full" aria-hidden="true" />}>
-              <MobileWorkspaceControls />
-            </Suspense>
-          )}
-        </header>
-      )}
 
       {/* Main content */}
       <div data-app-part="shell-main" className={cn(
         'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip',
         presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
       )}>
-        {/* Spacer for fixed mobile header */}
-        {presentation.mode === 'standard' && !horizontal && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
-        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
+        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className="h-workspace-header shrink-0" />}>
           <WorkspaceHeader
-            notifications={<NotificationBellPopover />}
+            notifications={<NotificationBellPopover className="max-lg:[&>button]:min-h-11 max-lg:[&>button]:min-w-11" />}
             themeControl={<ThemeQuickSwitcher />}
+            compact={!dockedNav}
+            browseControl={compactNav && <Button ref={sidebarTriggerRef} variant="ghost"
+              aria-label={t('nav.flyout.browse', 'Browse sections')} aria-haspopup="dialog" aria-expanded={sidebarOpen}
+              className="min-h-11 min-w-11 p-0" onClick={() => setSidebarOpen(true)}
+              onKeyDown={event => {
+                if (event.key === 'ArrowDown') { event.preventDefault(); setSidebarOpen(true) }
+              }}><Icons.menu className="size-5" aria-hidden /></Button>}
             breadcrumbSections={groupedSidebarSections}
             breadcrumbCollections={visibleCollections}
           />

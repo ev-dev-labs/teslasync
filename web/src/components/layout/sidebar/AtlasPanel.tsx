@@ -7,11 +7,12 @@ import { Icons } from '@/lib/icons'
 import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
 import { PrefetchNavLink } from '../PrefetchLink'
 import { isExclusiveActivePath } from './compactNav'
-import { groupSidebarItems, flattenSidebarItems, type FlatSidebarEntry } from './collections'
-import { matchesSidebarTokens, searchSidebarSections, tokenizeSidebarQuery } from './sidebarSearch'
+import { flattenSidebarItems, type FlatSidebarEntry } from './collections'
 import { NavSectionHeader } from './NavSectionHeader'
-import { SidebarCountChip, SidebarNotificationDot, SidebarRow } from './SidebarRow'
-import { SidebarDriveBadge } from './SidebarDriveBadge'
+import { SidebarRow } from './SidebarRow'
+import { deriveNavGroups, PINNED } from '../horizontal-nav/navGroups'
+import { NavPageBadge } from '../horizontal-nav/NavPageBadge'
+import { inlineKeys } from '../horizontal-nav/navKeyboard'
 import type { SidebarSuggestion } from './sidebarSuggest'
 import { resolveSectionIcon } from './sidebarIcons'
 import type { DeckSelection } from './CommandDeck'
@@ -46,7 +47,7 @@ function readCollapsed(): Record<string, boolean> {
   } catch { return {} }
 }
 
-/** The same section content serves the desktop panel, tablet drawer and phone sheet. */
+/** Vertical section content for the docked panel and tablet drawer. */
 export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pinnedItems = [], suggestions = [], pathname,
   navLabel, navSectionTitle, onPin, onUnpin, pinSyncUnavailable = false, onItemSelect, alertCount = 0, vehicleCount = 0, staleCount = 0, vehicleId, collections = [] }: AtlasPanelProps) {
   const { t } = useTranslation()
@@ -55,23 +56,25 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const [query, setQuery] = useState('')
   const [filterClosed, setFilterClosed] = useState<Set<string>>(() => new Set())
   const viewKey = view.kind === 'section' ? `section:${view.title}` : view.kind
-  const section = view.kind === 'section' ? sections.find(candidate => candidate.title === view.title) : null
+  const section = view.kind === 'section' ? sections.find(candidate => candidate.title === view.title) : undefined
   const title = view.kind === 'suggested' ? t('nav.suggested', 'Suggested')
     : view.kind === 'favorites' ? t('nav.deck.saved', 'Saved') : section ? navSectionTitle(section) : t('nav.empty', 'No pages yet.')
   const allPaths = useMemo(() => sections.flatMap(candidate => flattenSidebarItems(candidate.items, collections).map(item => item.to)), [sections, collections])
   const isActive = (to: string) => isExclusiveActivePath(pathname, to, allPaths)
   const pinned = new Set(pinnedItems.map(item => item.to))
-  const groups = section ? groupSidebarItems(section.items, collections) : []
-  const sectionPaths = new Set(groups.flatMap(group => group.entries.map(item => item.to)))
   const filtering = query.trim().length > 0
-  const matches = new Set(section && filtering ? searchSidebarSections([section], collections, query, navLabel, { matchSectionTitle: false }).flatMap(result => result.hits.map(item => item.to)) : [])
-  const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
-  const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))
-  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]
+  const { groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)
+  const activeGroup = groups.find(group => group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id
+  const [activeGroupOverride, setActiveGroupOverride] = useState<{ route: string; closed: boolean }>()
+  const activeClosed = activeGroupOverride?.route === pathname && activeGroupOverride.closed
+  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : key === activeGroup ? !activeClosed : !collapsed[viewKey + ':' + key]
   const SectionIcon = resolveSectionIcon(section?.title ?? 'Home')
   const toggle = (key: string) => {
     if (filtering) setFilterClosed(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next })
-    else setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: isOpen(key) }))
+    else {
+      if (key === activeGroup) setActiveGroupOverride({ route: pathname, closed: isOpen(key) })
+      setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: isOpen(key) }))
+    }
   }
   useEffect(() => { setQuery('') }, [viewKey])
   useEffect(() => {
@@ -82,11 +85,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
     const label = navLabel(item)
     const pinLabel = pinned.has(item.to) ? t('nav.unpinPage', { page: label, defaultValue: 'Unpin {{page}}' })
       : t('nav.pinPage', { page: label, defaultValue: 'Pin {{page}} to favorites' })
-    const trailing = vehicleId && item.to === '/drives' ? <SidebarDriveBadge kind="today" vehicleId={vehicleId} />
-      : vehicleId && item.to === '/drive-score' ? <SidebarDriveBadge kind="score" vehicleId={vehicleId} />
-      : item.to === '/notifications/inbox' && alertCount > 0 ? <SidebarNotificationDot />
-      : item.to === '/vehicles' && vehicleCount > 0 ? <SidebarCountChip value={vehicleCount} label={t('nav.vehicleCount', { count: vehicleCount, defaultValue: '{{count}} vehicles' })} />
-      : item.to === '/data-repair' && staleCount > 0 ? <SidebarCountChip value={staleCount} label={t('nav.staleCount', { count: staleCount, defaultValue: '{{count}} stale rows' })} /> : null
+    const trailing = item.badge ? <NavPageBadge badge={item.badge} model={{ vehicleId, unreadCount: alertCount, vehicleCount, staleCount }} /> : null
     return <SidebarRow key={key} to={item.to} label={label} icon={item.icon} active={isActive(item.to)} context={context}
       ariaLabel={quickPin ? t('nav.deck.quickAccessLink', { page: label, defaultValue: 'Quick access: {{page}}' }) : undefined}
       onSelect={onItemSelect} onDoubleClick={() => { if (!pinned.has(item.to)) onPin(item.to) }} trailing={trailing} dataTour={item.dataTour}
@@ -95,13 +94,19 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
         aria-describedby={pinSyncUnavailable ? `${id}-pin-offline` : undefined} data-testid={`atlas-pin-${item.to}`} />} />
   }
   const groupHeader = (key: string, label: string, count: number) => <Button type="button" variant="ghost" size="sm"
-    aria-label={label} aria-expanded={isOpen(key)} aria-controls={`${id}-${key}`} onClick={() => toggle(key)}
+    data-nav-choice aria-label={label} aria-expanded={isOpen(key)} aria-controls={`${id}-${key}`} onClick={() => toggle(key)}
+    onKeyDown={event => {
+      if (event.key !== inlineKeys(event.currentTarget).forward) return
+      event.preventDefault()
+      if (isOpen(key)) event.currentTarget.nextElementSibling?.querySelector<HTMLElement>('[data-nav-choice]')?.focus()
+      else toggle(key)
+    }}
     className="sidenav-group-header min-h-11 w-full justify-start gap-2 px-2 text-sm text-[var(--text-secondary)]">
     {isOpen(key) ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden /> : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
     <span className="min-w-0 flex-1 truncate text-start">{label}</span>
     <span aria-hidden className="rounded-shape-sm bg-[var(--surface-3)] px-2 text-xs tabular-nums">{count}</span>
   </Button>
-  const collectionKeys = groups.filter(group => group.label).map(group => group.entries[0].to)
+  const collectionKeys = collectionIds
   const anyClosed = collectionKeys.some(key => !isOpen(key))
   return <div role="navigation" data-app-part="navigation" aria-label={t('nav.sidebar', 'Sidebar navigation')} data-testid="atlas-panel-secondary"
     className="sidenav-panel flex h-full min-h-0 w-full flex-col border-s border-e border-[var(--border-default)] bg-[var(--nav-context-bg)]">
@@ -112,7 +117,10 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
         icon={anyClosed ? <Icons.expandAll className="h-5 w-5" aria-hidden /> : <Icons.collapseAll className="h-5 w-5" aria-hidden />}
         onClick={() => {
           if (filtering) setFilterClosed(new Set(anyClosed ? [] : collectionKeys))
-          else setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))
+          else {
+            if (activeGroup) setActiveGroupOverride({ route: pathname, closed: !anyClosed })
+            setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))
+          }
         }} className="min-h-11 min-w-11" />}
       <IconButton label={t('nav.sidenav.hidePanel', 'Hide panel')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={onClose} className="min-h-11 min-w-11" />
     </div>
@@ -140,15 +148,15 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
       </>}
       {view.kind === 'favorites' && <>{pinnedItems.length ? pinnedItems.map(item => row(item)) : <p className="px-2 py-4 text-xs text-[var(--text-muted)]">{t('nav.deck.noFavorites', 'Pin pages from any row and they will live here.')}</p>}</>}
       {section && <>
-        {(!filtering || pins.length > 0) && <div>{groupHeader('pinned', t('nav.sidenav.pinned', 'Pinned'), pins.length)}
-          <div id={`${id}-pinned`}>{isOpen('pinned') && (pins.length ? pins.map(item => row(item, `pinned-${item.to}`, true)) : <p className="px-2 py-2 text-xs text-[var(--text-muted)]">{t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}</p>)}</div>
-        </div>}
-        {filtering && visibleGroups.length === 0 && pins.length === 0 && <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match "{{query}}".' })}</p>}
-        {visibleGroups.map(group => {
-          const key = group.groupKey
-          return <div key={key}>
-            {group.label && groupHeader(key, group.labelKey ? t(group.labelKey, group.label) : group.label, group.entries.length)}
-            <div id={group.label ? `${id}-${key}` : undefined}>{(!group.label || isOpen(key)) && group.entries.map(item => row(item))}</div>
+        {filtering && groups.length === 0 && <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match "{{query}}".' })}</p>}
+        {groups.map(group => {
+          const quickPin = group.id === PINNED
+          const pages = quickPin ? group.pages.filter(item => !isActive(item.to)) : group.pages
+          if (!pages.length) return null
+          return <div key={group.id}>
+            {!group.ungrouped && groupHeader(group.id, group.label, pages.length)}
+            <div id={group.ungrouped ? undefined : `${id}-${group.id}`}>{(group.ungrouped || isOpen(group.id)) &&
+              pages.map(item => row(item, quickPin ? `pinned-${item.to}` : item.to, quickPin))}</div>
           </div>
         })}
       </>}

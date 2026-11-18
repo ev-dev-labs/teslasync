@@ -7,12 +7,14 @@ import { resolveSectionIcon } from '../sidebar/sidebarIcons'
 import { NavFilter } from './NavFilter'
 import { NavPages } from './NavPages'
 import { PINNED, useNavGroups, type NavModel } from './navGroups'
-import { menuItems } from './navKeyboard'
+import { handleMenuVertical, menuItems } from './navKeyboard'
+import './horizontal-nav.css'
 
-export function NavSheet({ id, model, initialSection, onClose, getReturnFocusTarget }: {
+export function NavSheet({ id, model, initialSection, activeSectionTitle, onClose, getReturnFocusTarget }: {
   id: string
   model: NavModel
   initialSection?: string
+  activeSectionTitle?: string
   onClose: () => void
   getReturnFocusTarget: () => HTMLElement | null
 }) {
@@ -53,7 +55,7 @@ export function NavSheet({ id, model, initialSection, onClose, getReturnFocusTar
         <Icons.close className="size-5" aria-hidden />
       </Button>
     </div>
-    <div ref={content} className="horizontal-nav-sheet-body">
+    <div ref={content} className="horizontal-nav-sheet-body" onKeyDown={event => { handleMenuVertical(event) }}>
       {group ? <NavPages group={group} model={model} editing={editing} onSelect={onClose} />
         : section ? <>
           <NavFilter label={label} query={query} setQuery={setQuery} />
@@ -66,6 +68,7 @@ export function NavSheet({ id, model, initialSection, onClose, getReturnFocusTar
         </> : model.sections.map(candidate => {
           const Icon = resolveSectionIcon(candidate.title)
           return <Button key={candidate.title} data-nav-choice={candidate.title} variant="ghost" className="horizontal-nav-row"
+            aria-current={candidate.title === activeSectionTitle ? 'true' : undefined}
             onClick={() => { setQuery(''); setSectionId(candidate.title) }}>
             <Icon className="size-5 shrink-0" aria-hidden />
             <span>{candidate.titleKey ? t(candidate.titleKey, candidate.title) : candidate.title}</span>

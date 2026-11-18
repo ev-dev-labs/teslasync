@@ -9,3 +9,31 @@
 - **Browser review**: Exercised Driving in all six packs at 1440px, 1024px, and 390px in both themes. Used synthetic data and captured before/after screenshots for Expressive Form, Editorial, and Swiss Grid.
 - **Search styling**: The shared search trigger uses the icon treatment only in horizontal navigation. The labeled trigger retains its regular weight and original forced-colors border so vertical and hybrid visuals do not change.
 - **Existing browser checks**: Assert the exact banner name for each pack's navigation mode. Keep the existing route, containment, and layout assertions for every pack.
+- **Local pack selection**: Keep the picker disabled when the saved preference cannot be loaded. A web-only Docker update left the older API returning 404 for `/api/v1/settings/widget-design-pack`. Rebuild the API from the same revision and let startup apply additive migrations 257 and 258 to the existing database. Verify the deployed preference route, not just container health: local writes returned 200, and Edge showed the saved pack after reload with both picker controls enabled.
+- **Panel styling**: Use the selected pack's overlay surface, display typography, and frame on the section flyout, More menu, and portaled phone sheet. Preserve pack signatures (such as Deco's double rule, Expressive Form's asymmetric corners, and Brutal's hard shadow) through tokens; the panel markup and navigation behavior stay shared.
+
+## Matching navigation orientations
+
+- `Layout` still resolves the primary orientation from `ActiveAppNavigation`.
+  The six `top` packs retain the shared two-pane flyout. All remaining packs
+  retain Atlas beside the rail. The six `hybrid` packs keep their palette,
+  density, and rail width but no longer arrange Atlas in a horizontal strip.
+- The authored sections mark rail placement. The rail shows ordinary sections
+  in persona order, then **More** and **Settings** at the bottom. **More**
+  contains Security, Advanced intelligence, Ownership intelligence, Tesla
+  physics, Data, Diagnostics, Account, Integrations (Connect), and About, in
+  persona order with the same visibility rules as the catalog. No secondary
+  owns a second route list.
+- Below 1024px both primary orientations open `NavSheet`, with Back between
+  sections, groups and pages. Rail quick tabs can open a section directly.
+  At 1024–1279px the rail opens Atlas as a modal beside the rail; from 1280px
+  Atlas docks beside it. Top-bar priority measurement stays active from 1024px.
+- Group filters, pins and badge definitions share the route model. Atlas
+  shows Pinned only when the current section has matching pins and opens
+  the active route's group on entry without preventing manual collapse.
+- The workspace header owns the rail layout's search, notifications,
+  appearance, and account shortcut at all widths. The alert list still
+  drives suggestions; the inbox badge and bell use the unread-count query.
+- The shared phone sheet uses the selected pack's navigation frame, not its
+  generic dialog frame. This preserves the Swiss Grid cap and other pack
+  details without changing unrelated dialogs.

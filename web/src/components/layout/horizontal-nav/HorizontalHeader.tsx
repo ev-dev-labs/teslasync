@@ -1,12 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useUnreadCount } from '@/api/hooks/useNotifications'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useWorkspaceScope } from '@/hooks/useWorkspaceScope'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { CommandPaletteTrigger } from '@/components/ui/CommandPaletteTrigger'
 import { NotificationBellPopover } from '../NotificationBellPopover'
+import { LayoutBreadcrumbs } from '../LayoutBreadcrumbs'
 import { VehiclePicker } from '../VehiclePicker'
 import { WorkspaceContextControl } from '../WorkspaceContextControl'
 import { resolveSectionIcon } from '../sidebar/sidebarIcons'
@@ -18,12 +18,11 @@ import { usePrioritySections } from './usePrioritySections'
 import './horizontal-nav.css'
 
 type Popup = { kind: 'more'; section?: never } | { kind: 'section'; section: string; fromMore?: boolean } | { kind: 'sheet'; section?: string }
-type Props = Omit<NavModel, 'unreadCount'> & { activeSectionTitle?: string; appearance: ReactNode }
+type Props = NavModel & { activeSectionTitle?: string; appearance: ReactNode }
 
 export default function HorizontalHeader({ activeSectionTitle, appearance, ...data }: Props) {
   const { t } = useTranslation()
-  const compact = useMediaQuery('(max-width: 1023px), (hover: none)')
-  const { data: unreadCount = 0 } = useUnreadCount()
+  const compact = useMediaQuery('(max-width: 1023px)')
   const scope = useWorkspaceScope()
   const id = useId()
   const header = useRef<HTMLElement>(null)
@@ -32,7 +31,7 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
   const moreTrigger = useRef<HTMLButtonElement>(null)
   const returnTarget = useRef<HTMLElement | null>(null)
   const [popup, setPopup] = useState<Popup | null>(null)
-  const model = { ...data, unreadCount }
+  const model = data
   const account = data.sections.find(section => section.titleKey === 'nav.groups.account')
   const sections = data.sections.filter(section => section !== account)
   const label = (section: (typeof sections)[number]) => section.titleKey ? t(section.titleKey, section.title) : section.title
@@ -97,12 +96,15 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
     }} onBlur={event => {
       if (desktopPopup && event.relatedTarget && !header.current?.contains(event.relatedTarget)) close()
     }}>
-    <span className="horizontal-nav-brand" aria-hidden><Icons.charging className="size-5" /></span>
+    <div className="horizontal-nav-context">
+      <LayoutBreadcrumbs variant="workspace" sections={data.sections} collections={data.collections} />
+    </div>
     <nav data-app-part="navigation" data-tour="sidebar" aria-label={t('a11y.primaryNav', 'Primary')} className="horizontal-nav-primary">
       {compact ? <Button ref={browseTrigger} data-horizontal-nav-trigger variant="ghost" className="horizontal-nav-trigger"
-        aria-haspopup="dialog" aria-expanded={popup?.kind === 'sheet' && !popup.section} aria-controls={popup?.kind === 'sheet' ? id : undefined}
+        aria-label={browseLabel} aria-haspopup="dialog" aria-expanded={popup?.kind === 'sheet' && !popup.section}
+        aria-controls={popup?.kind === 'sheet' ? id : undefined}
         onClick={event => activate({ kind: 'sheet' }, event.currentTarget)} onKeyDown={event => openOnDown(event, { kind: 'sheet' })}>
-        <Icons.menu className="size-5 shrink-0" aria-hidden /><span>{browseLabel}</span>
+        <Icons.menu className="size-5 shrink-0" aria-hidden /><span className="hidden sm:inline">{browseLabel}</span>
       </Button> : <>
         <div ref={lane} className="horizontal-nav-lane">
           {sections.slice(0, count).map(candidate => {
@@ -165,7 +167,7 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
     </div>}
     {desktopPopup && popup.kind === 'section' && section && <SectionFlyout key={section.title} id={id}
       section={section} model={model} onSelect={() => close()} />}
-    {compact && popup?.kind === 'sheet' && <NavSheet id={id} model={model} initialSection={popup.section}
+    {compact && popup?.kind === 'sheet' && <NavSheet id={id} model={model} initialSection={popup.section} activeSectionTitle={activeSectionTitle}
       onClose={() => close()} getReturnFocusTarget={getReturnFocusTarget} />}
   </header>
 }

@@ -31,20 +31,14 @@ afterEach(cleanup)
 const svg = (element: Element) => element.querySelector('svg')?.innerHTML
 
 describe('sidenav polish', () => {
-  it('updates both rail fade states at the top, middle and bottom', () => {
+  it('puts overflow sections behind More and leaves Settings last', () => {
     render(<Deck />)
-    const scroll = screen.getByTestId('rail-scroll')
-    Object.defineProperties(scroll, { clientHeight: { value: 400 }, scrollHeight: { value: 1000 } })
-    const verify = (position: number, top: boolean, bottom: boolean) => {
-      scroll.scrollTop = position
-      fireEvent.scroll(scroll)
-      expect(screen.getByTestId('rail-fade-top')).toHaveAttribute('data-visible', String(top))
-      expect(screen.getByTestId('rail-fade-bottom')).toHaveAttribute('data-visible', String(bottom))
-    }
-    verify(0, false, true)
-    verify(200, true, true)
-    verify(600, true, false)
-    verify(0, false, true)
+    const rail = within(screen.getByTestId('rail-scroll'))
+    expect(rail.getAllByRole('button').slice(-2).map(button => button.getAttribute('aria-label'))).toEqual(['More', 'Settings'])
+    expect(rail.queryByRole('button', { name: 'Security' })).toBeNull()
+    fireEvent.click(rail.getByRole('button', { name: 'More' }))
+    const panel = within(screen.getByTestId('atlas-panel-secondary'))
+    expect(panel.getAllByRole('button').map(button => button.textContent)).toEqual(sections.filter(section => section.railPlacement === 'more').map(section => section.title))
   })
 
   it.each(navSections)('$title resolves real rail, panel and palette glyphs for every destination', section => {
@@ -61,26 +55,28 @@ describe('sidenav polish', () => {
       expect(markup, item.to).not.toMatch(/lucide-(dot|signal-zero|signal-low)\b/)
     }
   })
-  it('uses an Inbox caption for Notifications and reserves the bell for the pinned Alerts utility', () => {
+  it('uses an Inbox caption for Notifications without a duplicate rail bell', () => {
     render(<Deck title="Notifications" path="/notifications/inbox" />)
     const rail = screen.getByTestId('command-deck-rail')
     const notifications = within(rail).getByRole('button', { name: 'Notifications', exact: true })
     expect(notifications).toHaveTextContent('Inbox')
     expect(notifications).not.toHaveTextContent('Alerts')
     expect(notifications.querySelector('svg')).toHaveClass('lucide-inbox')
-    expect(within(rail).getByRole('link', { name: 'Alerts', exact: true }).querySelector('svg')).toHaveClass('lucide-bell-ring')
-    expect(rail.querySelectorAll('.lucide-bell, .lucide-bell-ring')).toHaveLength(1)
+    expect(rail.querySelectorAll('.lucide-bell, .lucide-bell-ring')).toHaveLength(0)
     expect(screen.getByTestId('atlas-panel-secondary')).toHaveTextContent('Notifications')
   })
   it.each(sections.map(section => section.title))('%s has one shared glyph in the rail, header, phone tab or More, and section sheet', title => {
     expect(resolveSectionIcon(title)).toBe(SIDEBAR_SECTION_ICONS[title])
     const view = render(<Deck title={title} />)
     const rail = screen.getByTestId('command-deck-rail')
-    const item = within(rail).getByRole('button', { name: title, exact: true })
+    const overflow = sections.some(section => section.title === title && section.railPlacement === 'more')
+    if (overflow) fireEvent.click(within(rail).getByRole('button', { name: 'More' }))
+    const item = within(overflow ? screen.getByTestId('atlas-panel-secondary') : rail).getByRole('button', { name: title, exact: true })
     expect(item).toHaveAccessibleName(title)
     expect(item).not.toHaveAttribute('title')
     expect(item).not.toHaveAttribute('aria-describedby')
     const glyph = svg(item)!
+    if (overflow) fireEvent.click(item)
     expect(svg(screen.getByTestId('atlas-panel-secondary'))).toBe(glyph)
     view.unmount()
     Object.defineProperty(window, 'innerWidth', { value: 375 })
@@ -92,29 +88,29 @@ describe('sidenav polish', () => {
     } else {
       fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }))
       const sheet = screen.getByRole('dialog')
-      for (const tab of PHONE_TAB_SECTIONS) expect(within(sheet).queryByRole('button', { name: tab, exact: true })).toBeNull()
+      for (const tab of PHONE_TAB_SECTIONS) expect(within(sheet).getByRole('button', { name: tab, exact: true })).toBeVisible()
       const item = within(sheet).getByRole('button', { name: title, exact: true })
       expect(item).toHaveAttribute('aria-current', 'true')
       expect(svg(item)).toBe(glyph)
       fireEvent.click(item)
     }
-    expect(svg(screen.getByTestId('atlas-panel-secondary'))).toBe(glyph)
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: title })).toBeVisible()
   })
 
   it('expands small-section groups initially and restores an explicit collapse on remount', () => {
-    const view = render(<Deck />)
-    expect(screen.getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
+    const view = render(<Deck path="/" />)
+    expect(screen.queryByRole('button', { name: 'Pinned' })).toBeNull()
     const group = screen.getByRole('button', { name: 'Battery insights' })
     expect(group).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(group)
     view.unmount()
-    render(<Deck />)
+    render(<Deck path="/" />)
     expect(screen.getByRole('button', { name: 'Battery insights' })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('expands every large-section group and preserves explicit collapses after remount', () => {
     const view = render(<Deck large path="/large/0" />)
-    expect(screen.getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.queryByRole('button', { name: 'Pinned' })).toBeNull()
     expect(screen.getByRole('button', { name: 'First group' })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Second group' }))
@@ -122,19 +118,19 @@ describe('sidenav polish', () => {
     view.unmount()
     render(<Deck large path="/large/0" />)
     expect(screen.getByRole('button', { name: 'Second group' })).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getByRole('button', { name: 'First group' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'First group' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('ignores collapse state written by the old design once, then persists new choices', () => {
     localStorage.setItem('teslasync-sidenav-collapsed-groups', JSON.stringify({ 'section:Battery:/battery': true, 'section:Battery:pinned': true }))
-    const view = render(<Deck />)
-    expect(screen.getByRole('button', { name: 'Pinned' })).toHaveAttribute('aria-expanded', 'true')
+    const view = render(<Deck path="/" />)
+    expect(screen.queryByRole('button', { name: 'Pinned' })).toBeNull()
     const group = screen.getByRole('button', { name: 'Battery insights' })
     expect(group).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(group)
     expect(JSON.parse(localStorage.getItem('teslasync-sidenav-collapsed-groups-v2')!)).toMatchObject({ 'section:Battery:/battery': true })
     view.unmount()
-    render(<Deck />)
+    render(<Deck path="/" />)
     expect(screen.getByRole('button', { name: 'Battery insights' })).toHaveAttribute('aria-expanded', 'false')
   })
 

@@ -4,7 +4,7 @@ import { SidebarCountChip, SidebarNotificationDot } from '../sidebar/SidebarRow'
 import { SidebarDriveBadge } from '../sidebar/SidebarDriveBadge'
 import type { NavModel } from './navGroups'
 
-export function NavPageBadge({ badge, model }: { badge: NavBadge; model: NavModel }) {
+export function NavPageBadge({ badge, model }: { badge: NavBadge; model: Pick<NavModel, 'vehicleId' | 'unreadCount' | 'vehicleCount' | 'staleCount'> }) {
   const { t } = useTranslation()
   switch (badge) {
     case 'drives-today':

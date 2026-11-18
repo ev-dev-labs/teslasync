@@ -45,9 +45,11 @@
     --app-surface-overlay: initial;
     --app-card-radius: initial;
     --app-nav-bar: initial;
-    --app-nav-flyout: initial;
     --app-nav-pane: initial;
     --app-nav-rule: initial;
+    --app-nav-frame: initial;
+    --app-nav-cap: initial;
+    --app-nav-panel-radius: initial;
     --app-nav-shadow: initial;
     --app-card-shadow: initial;
     --app-display-font: initial;

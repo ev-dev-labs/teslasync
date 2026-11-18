@@ -24,8 +24,7 @@
     --app-card-radius: var(--radius-lg);
     --app-nav-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-sm);
     --app-nav-bar: var(--surface-1);
-    --app-nav-flyout: var(--surface-2);
-    --app-nav-pane: var(--surface-3);
+    --app-nav-pane: var(--app-surface-raised);
     --app-nav-rule: var(--border-strong);
     --app-card-shadow: var(--elevation-1);
     --app-display-font: var(--font-sans);

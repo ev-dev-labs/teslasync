@@ -8,10 +8,16 @@ import type { SectionGroup } from './sectionGroups'
 import type { BreadcrumbSection } from './sidebar/sidebarBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { WorkspaceContextControl } from './WorkspaceContextControl'
+import MobileWorkspaceControls from './MobileWorkspaceControls'
+import { PrefetchNavLink } from './PrefetchLink'
+import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/cn'
 
 interface WorkspaceHeaderProps {
   notifications?: ReactNode
   themeControl?: ReactNode
+  compact?: boolean
+  browseControl?: ReactNode
   breadcrumbSections?: readonly BreadcrumbSection[]
   breadcrumbCollections?: readonly SectionGroup[]
 }
@@ -26,6 +32,8 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   notifications,
   themeControl,
+  compact = false,
+  browseControl,
   breadcrumbSections,
   breadcrumbCollections,
 }: WorkspaceHeaderProps) {
@@ -33,6 +41,7 @@ export function WorkspaceHeader({
   const workspaceScope = useWorkspaceScope()
   const showRange = !workspaceScope.managed || workspaceScope.range
   const showVehicle = !workspaceScope.managed || workspaceScope.vehicle
+  const accountPath = breadcrumbSections?.find(section => section.titleKey === 'nav.groups.account')?.items[0]?.to
 
   return (
     <header
@@ -40,9 +49,11 @@ export function WorkspaceHeader({
       data-role="workspace-header"
       aria-label={t('nav.workspaceHeader', 'Workspace command bar')}
       data-layout="balanced-three-track"
-      className="hidden h-workspace-header shrink-0 grid-cols-workspace-header items-center gap-4 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1 xl:grid 2xl:px-6"
+      className={cn('relative z-20 shrink-0 items-center border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1',
+        compact ? 'flex min-h-14 flex-wrap gap-1 pb-1 pt-[calc(0.25rem+env(safe-area-inset-top,0px))]' : 'grid h-workspace-header grid-cols-workspace-header gap-4 2xl:px-6')}
     >
-      <div data-app-header-slot="context" className="min-w-0 overflow-hidden justify-self-start">
+      {browseControl}
+      <div data-app-header-slot="context" className={cn('min-w-0 overflow-hidden justify-self-start', compact && 'flex-1')}>
         <Caption className="mb-1 hidden 3xl:block">
           {t('nav.workspaceContext', 'Fleet operations')}
         </Caption>
@@ -50,19 +61,19 @@ export function WorkspaceHeader({
       </div>
 
       <div
-        className="w-full min-w-0 justify-self-center"
+        className={cn('min-w-0 justify-self-center', compact ? 'shrink-0' : 'w-full')}
         data-role="workspace-search"
         data-app-header-slot="discovery"
       >
-        <CommandPaletteTrigger />
+        <CommandPaletteTrigger compact={compact} />
       </div>
 
       <div data-app-header-slot="controls" className="flex min-w-0 items-center justify-self-end gap-2">
-        <WorkspaceContextControl
+        {!compact && <WorkspaceContextControl
           hidden={!showRange}
           className="max-w-32 px-2 2xl:max-w-40 2xl:px-3"
-        />
-        {showVehicle && (
+        />}
+        {!compact && showVehicle && (
           <VehiclePicker
             hideWhenSingle={false}
             className="w-40 border-b-0 px-0 py-0 lg:px-0 lg:py-0 2xl:w-44"
@@ -70,7 +81,12 @@ export function WorkspaceHeader({
         )}
         {notifications}
         {themeControl}
+        {accountPath && <PrefetchNavLink to={accountPath} aria-label={t('nav.groups.account', 'Account')}
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-shape-md hover:bg-[var(--control-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--theme-accent)]">
+          <Icons.user className="size-5" aria-hidden />
+        </PrefetchNavLink>}
       </div>
+      {compact && (workspaceScope.range || workspaceScope.vehicle) && <MobileWorkspaceControls />}
     </header>
   )
 }

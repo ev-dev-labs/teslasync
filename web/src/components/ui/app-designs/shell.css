@@ -28,7 +28,7 @@
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-rail-item[data-app-design-owner] {
     block-size: auto;
-    min-block-size: 3.75rem;
+    min-block-size: 2.75rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-short-label[data-app-design-owner] {
     white-space: normal;
@@ -542,7 +542,6 @@
     flex-direction: column;
     justify-content: center;
     gap: 0.1875rem;
-    min-block-size: 3.375rem;
     padding-inline: 0.125rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-short-label[data-app-design-owner~="navigation-sidebar"] {
@@ -554,34 +553,10 @@
     align-items: center;
   }
 
-  /* Source order stays rail -> contextual pages -> workspace; never CSS order. */
-  [data-app-part~="shell"][data-presentation-mode="standard"][data-app-design-owner~="navigation-hybrid"] {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] > [data-app-part~="shell-main"][data-app-design-owner~="navigation-hybrid"] {
-    grid-row: 2;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] #helix-dock-slot > [data-role="helix-side-panel"][data-app-design-owner~="navigation-hybrid"] {
-    grid-row: 2;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column[data-app-design-owner~="navigation-hybrid"] {
-    inline-size: 100%;
-    padding-block-end: 0;
-    min-inline-size: 0;
-  }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column .sidenav-panel[data-app-design-owner~="navigation-hybrid"] {
     --sidenav-row-height: 1.875rem;
     --sidenav-group-height: 1.75rem;
     --sidenav-filter-height: 2rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
-    grid-template-rows: auto minmax(0, 1fr);
-    block-size: auto;
-    max-block-size: 10.5rem;
-    padding-inline: 0.5rem;
-    border-inline-width: 0;
-    border-block-end: 1px solid var(--border-default);
     background-color: var(--surface-1);
     background-color: color-mix(in srgb, var(--surface-2) 55%, var(--surface-1));
   }
@@ -597,62 +572,11 @@
     min-block-size: 2rem;
     block-size: 2rem;
   }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="filter"][data-app-design-owner~="navigation-hybrid"] {
-    padding-block: 0.1875rem;
-    padding-inline: 0.5rem;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"][data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    overflow: auto;
-    padding-block: 0.375rem 0.5rem;
-    padding-inline: 0.5rem;
-    border-block-start: 1px solid var(--border-subtle);
-    scroll-padding-inline: 1rem;
-    scroll-padding-block: 0.5rem;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"] > [data-app-design-owner~="navigation-hybrid"] {
-    flex: 0 0 min(14.75rem, 76vw);
-    min-inline-size: 0;
-    margin-block: 0;
-    padding: 0.25rem 0.375rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    background-color: var(--surface-1);
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column [data-app-nav-slot="pages"] > :empty[data-app-design-owner~="navigation-hybrid"] {
-    flex-basis: 0;
-    padding: 0;
-    border-width: 0;
-  }
-
-  [data-app-part~="shell"][data-presentation-mode="standard"][data-app-design-owner~="navigation-hybrid"] {
-    grid-template-columns: 5.25rem minmax(0, 1fr) auto;
-  }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-rail-column[data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 1;
-    grid-row: 1 / -1;
-    inline-size: 100%;
+    inline-size: 5.25rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-rail[data-app-design-owner~="navigation-hybrid"] {
     inline-size: 100%;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-context-column[data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 2 / -1;
-    grid-row: 1;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] > [data-app-part~="shell-main"][data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 2;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] #helix-dock-slot > [data-role="helix-side-panel"][data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 3;
-  }
-  [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-loading[data-app-design-owner~="navigation-hybrid"] {
-    grid-column: 1;
-    grid-row: 1 / -1;
-    max-inline-size: 100%;
   }
   [data-app-part~="workspace-header"][data-app-design-owner~="header-compact"] {
     display: flex;
