@@ -12,6 +12,10 @@ export interface ApplicationDesign {
   readonly feedback: 'inline' | 'callout' | 'terminal';
 }
 
+export function appNavigationOrientation(navigation: ApplicationDesign['navigation'] | null) {
+  return navigation === 'top' ? 'horizontal' : 'vertical';
+}
+
 /**
  * Static composition choices, not preference defaults. Only verified app-wide
  * selection activates these; Classic is an explicit design, not an opt-out.

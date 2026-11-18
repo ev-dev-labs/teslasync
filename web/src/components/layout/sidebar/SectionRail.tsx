@@ -49,8 +49,9 @@ export function SectionRail({ sections, selected, onSelect, navSectionTitle, pan
     scroll.addEventListener('scroll', update, { passive: true })
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
     observer?.observe(scroll)
+    if (observer) for (const item of scroll.children) observer.observe(item)
     return () => { observer?.disconnect(); scroll.removeEventListener('scroll', update) }
-  }, [sections.length])
+  }, [sections])
   const tabStop = sections.some(section => section.title === focusTitle) ? focusTitle
     : sections.some(section => section.title === selected) ? selected : sections[0]?.title
 

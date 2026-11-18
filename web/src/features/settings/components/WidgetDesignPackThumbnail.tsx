@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Sparkline } from '@/components/charts';
 import { GlassPanel, MetricValue, Text } from '@/components/ui';
-import { APPLICATION_DESIGNS, getAppDesignAttributes } from '@/components/ui/app-designs/designs';
+import { appNavigationOrientation, getAppDesignAttributes } from '@/components/ui/app-designs/designs';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { cn } from '@/lib/cn';
 
@@ -9,9 +9,10 @@ const SAMPLE_TREND = [3, 5, 4, 7, 6, 9];
 
 export default function WidgetDesignPackThumbnail({ packId, chartColor }: { packId: PackId; chartColor: string }) {
   const { t } = useTranslation('settings');
-  const verticalNavigation = ['rail', 'sidebar'].includes(APPLICATION_DESIGNS[packId].navigation);
+  const design = getAppDesignAttributes(packId);
+  const verticalNavigation = appNavigationOrientation(design['data-app-navigation']) === 'vertical';
   return <div aria-hidden="true" data-app-design-thumbnail={packId} data-app-design-preview=""
-    {...getAppDesignAttributes(packId)}
+    {...design}
     className="@container pointer-events-none h-64 min-w-0 w-full shrink-0 overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--bg-app)]">
     <div data-app-part="shell" className={cn('flex h-full min-w-0', !verticalNavigation && 'flex-col')}>
       <div data-app-part="shell-sidebar navigation" className={cn(

@@ -42,6 +42,17 @@ describe('sidenav polish', () => {
     expect(panel.getByRole('link', { name: 'System Status', exact: true })).toHaveAttribute('href', '/system-status')
   })
 
+  it('keeps the Home links and collections in registry order without an empty Pinned group', () => {
+    render(<Deck title="Home" path="/" />)
+    const panel = within(screen.getByTestId('atlas-panel-secondary'))
+    const liveMap = panel.getByRole('link', { name: 'Live map', exact: true })
+    const history = panel.getByRole('button', { name: 'Vehicle history', exact: true })
+    const digest = panel.getByRole('link', { name: 'Weekly digest', exact: true })
+    expect(liveMap.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(history.compareDocumentPosition(digest) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(panel.queryByRole('button', { name: 'Pinned', exact: true })).not.toBeInTheDocument()
+  })
+
   it.each(navSections)('$title resolves real rail, panel and palette glyphs for every destination', section => {
     const SectionIcon = SIDEBAR_SECTION_ICONS[section.title]
     expect(SectionIcon).toBeDefined()

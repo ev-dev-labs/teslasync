@@ -8,6 +8,7 @@ import dashboardCatalog from './en/locale-dashboard.json';
 import shell from './en/shell.json';
 import { producerProjection } from './producer-projection';
 import { catalogBeforeDashboardPolish, designProfileCopy } from './verified-combined-contract';
+import { restoreVerticalNavigationStyleSource } from './verified-horizontal-navigation-contract';
 import { restoreMobilePresentationSource } from './verified-native-source-repair-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -15,9 +16,10 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 describe('mobile presentation source preservation', () => {
   it.each(changes)('preserves the historical translation producer for $file', change => {
     const source = readFileSync(resolve(process.cwd(), '..', change.file), 'utf8');
-    expect(hash(restoreMobilePresentationSource(change.file, source))).toBe(change.before);
-    expect(() => restoreMobilePresentationSource(change.file, `${source}\n// unexpected`)).toThrow();
-    expect(() => restoreMobilePresentationSource(change.file, source.slice(1))).toThrow();
+    const restore = (text: string) => restoreMobilePresentationSource(change.file, restoreVerticalNavigationStyleSource(change.file, text));
+    expect(hash(restore(source))).toBe(change.before);
+    expect(() => restore(`${source}\n// unexpected`)).toThrow();
+    expect(() => restore(source.slice(1))).toThrow();
   });
 
   it('rejects partially reverted Helix pointer-focus repairs', () => {

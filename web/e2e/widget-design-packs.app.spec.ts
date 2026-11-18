@@ -802,7 +802,7 @@ for (const { theme, width, allocation } of [
   });
 }
 
-test('live application thumbnails remain isolated and usable on phones', async ({ page }, testInfo) => {
+test('live application thumbnails show desktop navigation placement and remain usable on phones', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const origin = testInfo.project.use.baseURL;
   if (typeof origin !== 'string') throw new Error('A running application origin is required');
@@ -826,12 +826,19 @@ test('live application thumbnails remain isolated and usable on phones', async (
       const value = panel?.querySelector<HTMLElement>('[data-app-part~="metric-value"]');
       const chart = element.querySelector<HTMLElement>('[data-app-part~="chart"]');
       const navigation = element.querySelector<HTMLElement>('[data-app-part~="navigation"]');
+      const main = element.querySelector<HTMLElement>('[data-app-part~="shell-main"]');
+      const navBounds = navigation?.getBoundingClientRect();
+      const mainBounds = main?.getBoundingClientRect();
       const card = element.closest('section');
       return {
         id: element.getAttribute('data-app-design-thumbnail'),
         owner: panel?.getAttribute('data-app-design-owner'),
         radius: panel ? getComputedStyle(panel).borderTopLeftRadius : '',
         navigation: navigation ? getComputedStyle(navigation).flexDirection : '',
+        placement: navBounds && mainBounds
+          ? navBounds.right <= mainBounds.left + 1 ? 'side'
+            : navBounds.bottom <= mainBounds.top + 1 ? 'top' : 'overlap'
+          : 'missing',
         chartWidth: chart?.getBoundingClientRect().width ?? 0,
         chartColor: chart?.querySelector('polyline')?.getAttribute('stroke'),
         bounds: value && panel ? {
@@ -856,14 +863,15 @@ test('live application thumbnails remain isolated and usable on phones', async (
     expect(geometry.filter(item => !item.valueFits).map(({ id, bounds }) => ({ id, bounds })), `${width}px clipped values`).toEqual([]);
     for (const item of geometry) {
       expect(item.owner, `${width}px ${item.id}`).toContain(`pack-${item.id}`);
+      const top = APPLICATION_DESIGNS[item.id as PackId].navigation === 'top';
+      expect(item.placement, `${width}px ${item.id} navigation placement`).toBe(top ? 'top' : 'side');
+      expect(item.navigation, `${width}px ${item.id} navigation direction`).toBe(top ? 'row' : 'column');
       expect(item.stageHeight, `${width}px ${item.id}`).toBe(256);
       expect(item.chartWidth, `${width}px ${item.id}`).toBeGreaterThan(0);
       expect(item.chartColor, `${width}px ${item.id}`).toBe(CHART_COLORS_NEON_DARK[0]);
       expect(item.cardOverflow, `${width}px ${item.id}`).toBeLessThanOrEqual(1);
       for (const target of item.targets) expect(target, `${width}px ${item.id}`).toBeGreaterThanOrEqual(44);
     }
-    expect(geometry.find(item => item.id === 'v2')?.navigation).toBe('column');
-    expect(geometry.find(item => item.id === 'v6')?.navigation).toBe('row');
     expect(geometry.find(item => item.id === 'v2')?.radius).not.toBe(geometry.find(item => item.id === 'v7')?.radius);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   }
@@ -876,6 +884,25 @@ test('live application thumbnails remain isolated and usable on phones', async (
   await waitForHarnessReady(page, mocks);
   await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');
   await expect(gallery.getByRole('button', { name: 'Cyberdeck active' })).toBeDisabled();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const picker = await appearance(page, 1440);
+  await picker.getByRole('button', { name: 'Preview Material Play', exact: true }).click();
+  const preview = page.getByRole('dialog', { name: 'Preview Material Play', exact: true });
+  const previewNav = preview.getByRole('navigation', { name: 'Sandbox navigation', exact: true });
+  await expect(previewNav).toHaveCSS('flex-direction', 'column');
+  const navBox = await previewNav.boundingBox();
+  const mainBox = await preview.locator('[data-preview-synthetic] [data-app-part~="shell-main"]').boundingBox();
+  expect(navBox!.x + navBox!.width).toBeLessThanOrEqual(mainBox!.x + 1);
+  await preview.getByRole('button', { name: 'Close preview', exact: true }).click();
+  await picker.getByRole('button', { name: 'Use Material Play pack', exact: true }).click();
+  await expectProfile(page, 'material');
+  const rail = page.getByTestId('command-deck-rail');
+  await expect(rail).toBeVisible();
+  const driving = rail.getByRole('button', { name: 'Driving', exact: true });
+  await driving.click();
+  const secondary = page.getByTestId('atlas-panel-secondary');
+  await expect(secondary).toHaveAttribute('data-app-design-owner', /\bpack-material\b/);
+  await page.keyboard.press('Escape');
   await assertMockApiComplete(page, mocks);
 });
 

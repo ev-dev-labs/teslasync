@@ -27,6 +27,21 @@
   groups. The active application design still supplies the rail and Atlas
   panel styling through their existing tokens and design ownership. Do not
   bring back rail utility icons or empty pin groups from the reference.
+- Match production vertical rail density and preserve registry order when
+  standalone pages and collections are interleaved. The horizontal flyout
+  still gathers standalone pages in one group. Theme and pack tokens apply
+  without overriding anyone's appearance, pins, or group preferences.
+- Settings thumbnails depict the desktop shell even on a phone. They and the
+  interactive preview's desktop layout use the same orientation resolver as
+  the live shell: only `top` shows navigation above the content. Iconic
+  Showroom, Motorsport, Atlas, Material Play, Kinetic Type, and Memphis Pop
+  now preview their rail beside the content. Pack descriptors and saved
+  preferences stay unchanged.
+- Keep both vertical rail fades tied to the remaining scroll range. A fade
+  appears only if there are more sections above or below that edge.
+- Rail buttons, icon highlights, and page rows take their corners from the
+  app design's navigation token. Keep the vertical layout and do not apply
+  app styling in widgets-only mode.
 - Horizontal packs use the reference's icon and section title, close
   control, filter, chevrons, and group counts in the shared top-bar flyout.
   Keep the two panes and prefer the active page's group when the section

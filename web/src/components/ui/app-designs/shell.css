@@ -28,7 +28,7 @@
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-rail-item[data-app-design-owner] {
     block-size: auto;
-    min-block-size: 2.75rem;
+    min-block-size: 3.75rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-short-label[data-app-design-owner] {
     white-space: normal;
@@ -542,6 +542,7 @@
     flex-direction: column;
     justify-content: center;
     gap: 0.1875rem;
+    min-block-size: 3.375rem;
     padding-inline: 0.125rem;
   }
   [data-app-part~="shell"][data-presentation-mode="standard"] .sidenav-short-label[data-app-design-owner~="navigation-sidebar"] {

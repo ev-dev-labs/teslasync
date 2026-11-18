@@ -38,6 +38,7 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
           await expect(side).toHaveCount(0)
           await expect(rail.getByRole('button', { name: 'More', exact: true })).toHaveCount(0)
           await expect(rail.getByRole('button', { name: 'Diagnostics', exact: true })).toHaveCount(1)
+          await expect(trigger).toHaveAttribute('data-app-design-owner', new RegExp(`\\bpack-${pack}\\b`))
         }
         await trigger.press('ArrowDown')
         const panel = top ? flyout : side
@@ -49,9 +50,16 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
           expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(header!.y + header!.height - 1)
           await expect(panel.getByRole('menu', { name: 'Drive records', exact: true })).toBeInViewport({ ratio: 1 })
         } else {
+          await expect(panel).toHaveAttribute('data-app-design-owner', new RegExp(`\\bpack-${pack}\\b`))
           const railBox = await rail.boundingBox()
           const panelBox = await (width < 1280 ? page.locator('.sidenav-tablet-panel') : panel).boundingBox()
           expect(Math.abs(panelBox!.x - railBox!.x - railBox!.width)).toBeLessThanOrEqual(1)
+          if (pack === 'material') {
+            const icon = trigger.locator('.sidenav-icon')
+            const firstPage = panel.getByRole('link', { name: /^Drives/ })
+            await expect.poll(async () => parseFloat(await icon.evaluate(element => getComputedStyle(element).borderTopLeftRadius))).toBeGreaterThan(30)
+            await expect.poll(async () => parseFloat(await firstPage.evaluate(element => getComputedStyle(element).borderTopLeftRadius))).toBeGreaterThan(30)
+          }
         }
         await page.keyboard.press('Escape')
         await expect(panel).toHaveCount(0)

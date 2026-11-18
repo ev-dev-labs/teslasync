@@ -57,4 +57,10 @@ pack-specific frame. The [before/after comparisons][review]
 show Classic and Memphis (rails, before the full rail was restored) and
 Expressive Form and Editorial (top bars).
 
+The Settings gallery shows desktop navigation placement for all 27 packs,
+including on mobile-sized cards. Edge checked each thumbnail at 360px,
+430px, and 1440px. The Settings test also opened the Material Play preview,
+applied the pack through **Use pack**, and verified the live Driving panel
+picked up Material Play's ownership without a separate preference write.
+
 [review]: https://github.com/ev-dev-labs/teslasync/pull/267#issuecomment-6970371615

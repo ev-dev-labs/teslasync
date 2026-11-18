@@ -63,8 +63,8 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const isActive = (to: string) => isExclusiveActivePath(pathname, to, allPaths)
   const pinned = new Set(pinnedItems.map(item => item.to))
   const filtering = query.trim().length > 0
-  const { groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)
-  const activeGroup = groups.find(group => group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id
+  const { orderedGroups: groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)
+  const activeGroup = groups.find(group => !group.ungrouped && group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id
   const [activeGroupOverride, setActiveGroupOverride] = useState<{ route: string; closed: boolean }>()
   const activeClosed = activeGroupOverride?.route === pathname && activeGroupOverride.closed
   const isOpen = (key: string) => filtering ? !filterClosed.has(key) : key === activeGroup ? !activeClosed : !collapsed[viewKey + ':' + key]
@@ -153,9 +153,10 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
           const quickPin = group.id === PINNED
           const pages = quickPin ? group.pages.filter(item => !isActive(item.to)) : group.pages
           if (!pages.length) return null
+          if (group.ungrouped) return pages.map(item => row(item))
           return <div key={group.id}>
-            {!group.ungrouped && groupHeader(group.id, group.label, pages.length)}
-            <div id={group.ungrouped ? undefined : `${id}-${group.id}`}>{(group.ungrouped || isOpen(group.id)) &&
+            {groupHeader(group.id, group.label, pages.length)}
+            <div id={`${id}-${group.id}`}>{isOpen(group.id) &&
               pages.map(item => row(item, quickPin ? `pinned-${item.to}` : item.to, quickPin))}</div>
           </div>
         })}

@@ -3,18 +3,18 @@
 .sidenav-rail-column { width: 76px; }
 .sidenav-context-column { width: 272px; }
 .sidenav-rail { display: flex; flex-direction: column; width: 76px; min-height: 0; height: 100%; border-inline-end: 1px solid var(--border-default); background: var(--nav-rail-bg); }
-.sidenav-brand { height: 48px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }
+.sidenav-brand { height: 60px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }
 .sidenav-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-height: 0; }
-.sidenav-rail-scroll { display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }
+.sidenav-rail-scroll { position: relative; z-index: 0; display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }
 .sidenav-rail-scroll::-webkit-scrollbar { display: none; }
-.sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }
+.sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: var(--app-nav-radius, 8px); color: var(--text-secondary); }
 .sidenav-fade { position: absolute; z-index: 1; inset-inline: 0; height: 48px; pointer-events: none; opacity: 0; }
 .sidenav-fade[data-visible='true'] { opacity: 1; }
 .sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg) 15%, transparent); }
 .sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg) 85%); }
 .sidenav-rail-item.is-selected { background: color-mix(in srgb, var(--theme-accent) 12%, var(--nav-rail-bg)); color: var(--text-primary); }
 .sidenav-rail-item.is-selected::before { content: ''; position: absolute; inset-inline-start: -4px; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--theme-accent); }
-.sidenav-icon { display: grid; place-items: center; width: 36px; height: 22px; border-radius: 8px; }
+.sidenav-icon { display: grid; place-items: center; width: 36px; height: 30px; border-radius: var(--app-nav-radius, 8px); }
 .is-selected .sidenav-icon { background: var(--theme-accent); color: var(--theme-on-accent); }
 .sidenav-short-label { display: block; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 14px; font-weight: 500; }
 .sidenav-rail-item:focus-visible, .sidenav-phone-tab:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: -2px; }
@@ -36,7 +36,7 @@
 
 /* Density follows the input device; phone sheets always keep touch targets. */
 .sidenav-panel { --sidenav-row-height: 44px; --sidenav-group-height: 44px; --sidenav-filter-height: 44px; }
-.sidenav-panel .sidenav-page-row > a { min-height: var(--sidenav-row-height); padding-block: 6px; font-size: 14px; outline-offset: -2px; }
+.sidenav-panel .sidenav-page-row > a { min-height: var(--sidenav-row-height); padding-block: 6px; border-radius: var(--app-nav-radius, var(--radius-md)); font-size: 14px; outline-offset: -2px; }
 .sidenav-panel .sidenav-pin { min-height: var(--sidenav-row-height); height: var(--sidenav-row-height); min-width: var(--sidenav-row-height); padding: 4px; }
 .sidenav-panel .sidenav-group-header { min-height: var(--sidenav-group-height); height: var(--sidenav-group-height); padding-block: 2px; outline-offset: -2px; }
 .sidenav-panel .sidenav-filter { min-height: var(--sidenav-filter-height); height: var(--sidenav-filter-height); padding-block: 4px; }

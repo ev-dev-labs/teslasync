@@ -53,6 +53,7 @@ import {
 import { CommandPaletteHost } from './CommandPaletteHost'
 import { NotificationBellPopover } from './NotificationBellPopover'
 import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'
+import { appNavigationOrientation } from '@/components/ui/app-designs/designs'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts, useUnreadCount } from '@/api/hooks/useNotifications'
@@ -705,7 +706,7 @@ function ThemeQuickSwitcher({
 
 export default function Layout() {
   const presentation = usePresentationMode()
-  const horizontal = useContext(ActiveAppNavigation) === 'top'
+  const horizontal = appNavigationOrientation(useContext(ActiveAppNavigation)) === 'horizontal'
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)

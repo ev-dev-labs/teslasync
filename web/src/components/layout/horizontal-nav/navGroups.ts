@@ -46,6 +46,7 @@ export function deriveNavGroups(
   const groups: NavGroup[] = []
   const other: FlatSidebarEntry[] = []
   const pinned: FlatSidebarEntry[] = []
+  const orderedGroups: NavGroup[] = []
   const collectionIds: string[] = []
   for (const { label, labelKey, entries } of groupSidebarItems(section?.items ?? [], model.collections)) {
     const name = label && labelKey ? t(labelKey, label) : label
@@ -54,10 +55,20 @@ export function deriveNavGroups(
     const pages = entries.filter(page => !tokens.length || matchGroup || hits.has(page.to))
     for (const page of pages) if (model.pinnedPaths.has(page.to)) pinned.push(page)
     if (!pages.length) continue
-    if (name) groups.push({ id: entries[0].to, label: name, pages })
-    else other.push(...pages)
+    if (name) {
+      const group = { id: entries[0].to, label: name, pages }
+      groups.push(group)
+      orderedGroups.push(group)
+    } else {
+      other.push(...pages)
+      orderedGroups.push({ id: entries[0].to, label: '', pages, ungrouped: true })
+    }
   }
   if (other.length) groups.push({ id: 'other', label: groups.length ? t('nav.flyout.other', 'Other pages') : t('nav.flyout.pages', 'Pages'), pages: other, ungrouped: true })
-  if (pinned.length) groups.unshift({ id: PINNED, label: t('nav.sidenav.pinned', 'Pinned'), pages: pinned })
-  return { groups, collectionIds }
+  if (pinned.length) {
+    const group = { id: PINNED, label: t('nav.sidenav.pinned', 'Pinned'), pages: pinned }
+    groups.unshift(group)
+    orderedGroups.unshift(group)
+  }
+  return { groups, orderedGroups, collectionIds }
 }

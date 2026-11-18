@@ -15,6 +15,8 @@ for (const theme of ['dark', 'light'] as const) {
     await scroll.evaluate(element => { element.scrollTop = 0 })
     await expect(top).toHaveAttribute('data-visible', 'false')
     await expect(bottom).toHaveAttribute('data-visible', 'true')
+    const home = scroll.getByRole('button', { name: 'Home', exact: true })
+    expect((await home.boundingBox())!.height).toBeGreaterThanOrEqual(60)
     await scroll.evaluate(element => { element.scrollTop = 315 })
     await expect(top).toHaveAttribute('data-visible', 'true')
     await expect(bottom).toHaveAttribute('data-visible', 'true')

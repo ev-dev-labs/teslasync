@@ -40,6 +40,7 @@ import {
   restoreSharedGridCompositionSource,
   sharedGridCompositionSources,
 } from './verified-widget-implementation-contract';
+import { restoreVerticalNavigationStyleSource } from './verified-horizontal-navigation-contract';
 
 describe('additive widget implementation preservation', () => {
   it('rejects source drift instead of silently projecting an unverified edit', () => {
@@ -1418,7 +1419,7 @@ describe('additive widget implementation preservation', () => {
         const predecessor = previewProducerPredecessor(producer.file, current);
         expect(hash(predecessor)).toBe(producer.sha256);
         if (![previewMapFrame.sources[0].file, tableNoMatch.sources[1].file, previewMapReset.sources[0].file].includes(producer.file)) {
-          expect(predecessor).toBe(restorePreviewChartQuerySource(producer.file, current));
+          expect(predecessor).toBe(restorePreviewChartQuerySource(producer.file, restoreVerticalNavigationStyleSource(producer.file, current)));
         }
         const changed = current + '\n// unrelated producer drift\n';
         expect(restorePreviewOverlayInvokerSource(producer.file, changed)).toBe(changed);
