@@ -24,13 +24,17 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
   const flyout = page.locator('[data-role="section-flyout"]')
   const rail = page.getByTestId('command-deck-rail')
   const side = page.getByTestId('atlas-panel-secondary')
-  for (const [id, design] of Object.entries(APPLICATION_DESIGNS)) {
+  for (const [index, [id, design]] of Object.entries(APPLICATION_DESIGNS).entries()) {
     const pack = id as PackId
     if (pack !== 'classic') await selectReviewPack(page, pack)
     await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack)
-    for (const width of [1440, 1024]) {
+    // Start each pack at the preceding pack's final width so only one resize is needed.
+    for (const width of index % 2 === 0 ? [1440, 1024] : [1024, 1440]) {
       await test.step(`${pack} at ${width}×768`, async () => {
-        await page.setViewportSize({ width, height: 768 })
+        const viewport = page.viewportSize()
+        if (viewport?.width !== width || viewport.height !== 768) {
+          await page.setViewportSize({ width, height: 768 })
+        }
         const top = design.navigation === 'top'
         const trigger = (top ? nav : rail).getByRole('button', { name: 'Driving', exact: true })
         if (top) await expect(rail).toHaveCount(0)

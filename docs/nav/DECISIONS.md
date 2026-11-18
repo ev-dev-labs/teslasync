@@ -69,7 +69,15 @@
   not the startup shell. Keep their labels in the shell catalog. The shell
   reads the unread count once and passes it to both the bell and navigation
   badge. The appearance shortcut and control positions stay unchanged.
-- Capture dashboard overflow evidence from the measured widget rectangles
-  rather than waiting for Playwright's element screenshot action to find a
-  stable moment on the live grid. Keep all six configurations and twelve
-  captures. Compare edit-mode header geometry after the grid transition.
+- Capture dashboard overflow evidence from viewport-relative widget rectangles.
+  Chromium shard 13 timed out capturing the full live document even with a
+  widget clip. Require each widget to fit the capture viewport before taking
+  its image. Keep all six measurements, twelve captures, and the edit-mode
+  header comparison after the grid transition.
+- The Chromium traces on `af2c45ac1a` exhausted the overall budgets late in
+  the desktop command deck, motion lifecycle and ten-width dashboard fit
+  scenarios. Give those scenarios separate total budgets without relaxing
+  individual action timeouts, motion sampling, request verification, or
+  geometry tolerances. Sample both studios concurrently and check the widget
+  and grid in one browser layout read per width. The all-pack nav check
+  alternates width order to avoid redundant resizes.

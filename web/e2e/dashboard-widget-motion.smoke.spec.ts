@@ -119,7 +119,7 @@ for (const theme of ['dark', 'light'] as const) {
     });
 
     test(`verified activity, pause and inactive states at ${width}px in ${theme}`, async ({ page }) => {
-      test.setTimeout(120_000);
+      test.setTimeout(180_000);
       let mode: 'charging' | 'complete' | 'driving' | 'lights-off' | 'conditioning' | 'stale' = 'charging';
       let savedLayouts: DashboardLayoutsPayload | undefined;
       const failures: string[] = [];
@@ -285,28 +285,31 @@ for (const theme of ['dark', 'light'] as const) {
         await expect(studio.locator('[data-wheel-rotor].widget-wheel-motion')).toHaveCount(2);
       }
       const checkWheels = async (moving: boolean, variant: 'photo' | 'svg') => {
-        for (const studio of await studios.all()) {
-          const wheels = studio.locator(variant === 'photo' ? '[data-wheel-rotor]' : '[data-svg-wheel-rotor]');
+        const rotorSelector = variant === 'photo' ? '[data-wheel-rotor]' : '[data-svg-wheel-rotor]';
+        await expect(studios).toHaveCount(2);
+        // Both studios can use the same sampling window without shortening it.
+        await Promise.all((await studios.all()).map(async studio => {
+          const wheels = studio.locator(rotorSelector);
           await expect(wheels).toHaveCount(2);
           for (const wheel of await wheels.all()) {
             await expect(wheel).toHaveCSS('animation-name', moving ? 'widget-wheel-turn' : 'none');
           }
-          const frames = await studio.evaluate(async element => {
-            const rotors = [...element.querySelectorAll('[data-wheel-rotor], [data-svg-wheel-rotor]')];
+          const frames = await studio.evaluate(async (element, selector) => {
+            const rotors = [...element.querySelectorAll(selector)];
             const frames: string[][] = [];
             for (let frame = 0; frame < 6; frame++) {
               frames.push(rotors.map(rotor => getComputedStyle(rotor).transform));
               await new Promise(resolve => setTimeout(resolve, 150));
             }
             return frames;
-          });
+          }, rotorSelector);
           for (const index of [0, 1]) {
             const distinct = new Set(frames.map(frame => frame[index])).size;
             if (moving) expect(distinct, `${variant} wheel ${index} rotates`).toBeGreaterThan(1);
             else expect(distinct, `${variant} wheel ${index} stays still`).toBe(1);
           }
           await expect(studio.locator(':scope > [role="img"]')).toHaveCSS('transform', 'none');
-        }
+        }));
       };
       await checkWheels(true, 'photo');
       for (const [index, studio] of (await studios.all()).entries()) {

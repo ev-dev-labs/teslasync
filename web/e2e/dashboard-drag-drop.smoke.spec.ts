@@ -302,6 +302,8 @@ test('resize affordances are contained grips and a real resize persists', async 
 })
 
 test('new widgets fit their content across desktop, tablet, and phone widths', async ({ page }) => {
+  // Keep the per-assertion budgets while allowing all ten resizes and the late-content check.
+  test.setTimeout(60_000)
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
   await page.route('**/api/v1/vehicle-config/latest?vehicle_id=7', route =>
@@ -343,23 +345,21 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     if (width === 390) {
       await expect(page.getByRole('button', { name: 'Add widget', exact: true })).toBeVisible()
     }
-    await expect.poll(async () => widget.evaluate((element) => {
+    await expect.poll(() => widget.evaluate((element) => {
       const panel = element.querySelector<HTMLElement>('.widget-panel')
       const content = panel?.querySelector<HTMLElement>('[data-testid="widget-body"]')
-      if (!panel || !content) return Number.POSITIVE_INFINITY
-      return Math.max(panel.scrollHeight - panel.clientHeight, content.scrollHeight - content.clientHeight)
-    }), { message: `widget must fit without an inner scrollbar at ${width}px` }).toBeLessThanOrEqual(4)
-    await expect.poll(() => widget.evaluate((element) => {
+      const grid = element.closest('[data-tour="dashboard-grid"]')
       const rect = element.getBoundingClientRect()
-      return rect.left >= -1 && rect.right <= window.innerWidth + 1
-    }), { message: `widget extends beyond the ${width}px viewport` }).toBe(true)
-    // Edit-mode resize handles intentionally extend 4px past the last grid column.
-    await expect.poll(
-      async () => page.locator('[data-tour="dashboard-grid"]').evaluate(
-        (grid) => grid.scrollWidth - grid.clientWidth,
-      ),
-      { message: `dashboard must not overflow horizontally at ${width}px` },
-    ).toBeLessThanOrEqual(5)
+      return {
+        noInnerScrollbar: !!panel && !!content
+          && Math.max(panel.scrollHeight - panel.clientHeight, content.scrollHeight - content.clientHeight) <= 4,
+        widgetInViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+        // Edit-mode resize handles intentionally extend 4px past the final grid column.
+        gridInViewport: !!grid && grid.scrollWidth - grid.clientWidth <= 5,
+      }
+    }), { message: `widget and grid must fit at ${width}px` }).toEqual({
+      noInnerScrollbar: true, widgetInViewport: true, gridInViewport: true,
+    })
   }
 
   await page.setViewportSize({ width: 1440, height: 900 })

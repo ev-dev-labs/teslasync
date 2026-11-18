@@ -16,6 +16,8 @@ async function captureDeck(page: Page, testInfo: TestInfo, name: string) {
 
 for (const width of [390, 1440]) {
   test(`drives the command deck at ${width}px`, async ({ page }, testInfo) => {
+    // The desktop flow visits multiple routes and captures five navigation states.
+    if (width >= 1280) test.setTimeout(60_000)
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, 'dark', '/driving-dynamics')
     const mockApi = await installApiMocks(page)
@@ -133,7 +135,9 @@ for (const width of [390, 1440]) {
       expect(shownTooltips).toBe(0)
       await captureDeck(page, testInfo, 'deck-rail-hover')
 
-      await page.locator('[data-role="workspace-header"]').getByRole('button', { name: 'Open theme picker' }).click()
+      const appearance = page.locator('[data-role="workspace-header"]').getByRole('button', { name: 'Open theme picker' })
+      await appearance.click()
+      await expect(appearance).toHaveAttribute('aria-expanded', 'true')
       await expect(page.getByRole('dialog', { name: 'Open theme picker' })).toBeVisible()
       await page.getByRole('button', { name: 'Customize…' }).click()
       await expect(page).toHaveURL(/\/settings#appearance$/)
