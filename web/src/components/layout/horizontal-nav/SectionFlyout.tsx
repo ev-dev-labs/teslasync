@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import type { SidebarSectionInput } from '../sectionGroups'
+import { resolveSectionIcon } from '../sidebar/sidebarIcons'
 import { NavFilter } from './NavFilter'
 import { NavPages } from './NavPages'
 import { PINNED, useNavGroups, type NavModel } from './navGroups'
@@ -10,18 +11,22 @@ import { handleMenuVertical, inlineKeys, menuItems } from './navKeyboard'
 
 const HOVER_INTENT_MS = 140
 
-export function SectionFlyout({ id, section, model, onSelect }: {
+export function SectionFlyout({ id, section, model, onSelect, onClose }: {
   id: string
   section: SidebarSectionInput
   model: NavModel
   onSelect: () => void
+  onClose: () => void
 }) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
   const { groups, query, setQuery } = useNavGroups(section, model, editing)
   const [selected, setSelected] = useState<string>()
-  const group = groups.find(candidate => candidate.id === selected) ?? groups[0]
+  const group = groups.find(candidate => candidate.id === selected)
+    ?? groups.find(candidate => candidate.id !== PINNED && candidate.pages.some(page => page.to === model.pathname))
+    ?? groups[0]
   const label = section.titleKey ? t(section.titleKey, section.title) : section.title
+  const SectionIcon = resolveSectionIcon(section.title)
   const groupsRef = useRef<HTMLDivElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -30,8 +35,8 @@ export function SectionFlyout({ id, section, model, onSelect }: {
   const focusGroup = () => groupsRef.current?.querySelector<HTMLElement>('[aria-expanded="true"]')?.focus()
 
   useLayoutEffect(() => {
-    const first = menuItems(groupsRef.current)[0]
-    ;(first ?? panelRef.current?.querySelector('input'))?.focus()
+    const active = groupsRef.current?.querySelector<HTMLElement>('[aria-expanded="true"]')
+    ;(active ?? panelRef.current?.querySelector('input'))?.focus()
   }, [])
   useEffect(() => cancelHover, [])
   useLayoutEffect(() => {
@@ -39,8 +44,16 @@ export function SectionFlyout({ id, section, model, onSelect }: {
   }, [group?.id])
 
   return <div ref={panelRef} data-role="section-flyout" className="horizontal-nav-popup horizontal-nav-flyout">
+    <div className="horizontal-nav-section-header">
+      <h2 className="horizontal-nav-heading">
+        <SectionIcon className="size-5 shrink-0" aria-hidden />{label}
+      </h2>
+      <Button type="button" variant="ghost" className="horizontal-nav-icon"
+        aria-label={t('nav.sidenav.hidePanel', 'Hide panel')} onClick={onClose}>
+        <Icons.close className="size-4" aria-hidden />
+      </Button>
+    </div>
     <div className="horizontal-nav-groups">
-      <h2 className="horizontal-nav-heading">{label}</h2>
       <NavFilter label={label} query={query} setQuery={value => { cancelHover(); setQuery(value) }} onDown={focusGroup} />
       <div id={id} role="menu" tabIndex={-1} aria-label={t('nav.flyout.groups', { section: label, defaultValue: '{{section}} groups' })}
         aria-orientation="vertical" ref={groupsRef} className="horizontal-nav-group-list"
@@ -64,10 +77,12 @@ export function SectionFlyout({ id, section, model, onSelect }: {
             }, HOVER_INTENT_MS)
           }} onPointerLeave={cancelHover}
           onClick={() => { cancelHover(); setSelected(candidate.id); if (candidate.id === group?.id) menuItems(pagesRef.current)[0]?.focus() }}>
+          {candidate.id === group?.id
+            ? <Icons.expand className="size-4 shrink-0" aria-hidden />
+            : <Icons.next className="size-4 shrink-0 rtl:rotate-180" aria-hidden />}
           {candidate.id === PINNED && <Icons.pin className="size-4 shrink-0" aria-hidden />}
           <span>{candidate.label}</span>
           <span className="horizontal-nav-count">{candidate.pages.length}</span>
-          <Icons.next className="size-4 shrink-0 rtl:rotate-180" aria-hidden />
         </Button>)}
       </div>
     </div>

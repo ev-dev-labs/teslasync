@@ -27,6 +27,10 @@
   groups. The active application design still supplies the rail and Atlas
   panel styling through their existing tokens and design ownership. Do not
   bring back rail utility icons or empty pin groups from the reference.
+- Horizontal packs use the reference's icon and section title, close
+  control, filter, chevrons, and group counts in the shared top-bar flyout.
+  Keep the two panes and prefer the active page's group when the section
+  opens. The frame, heading, and selected rows use the active pack's tokens.
 - Below 1024px both primary orientations open `NavSheet`, with Back between
   sections, groups and pages. Rail quick tabs can open a section directly.
   At 1024–1279px the rail opens Atlas as a modal beside the rail; from 1280px

@@ -66,7 +66,7 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
     activate(next, event.currentTarget, false)
     if (next.kind === 'more') menuItems(moreMenu.current)[0]?.focus()
     else if (next.kind === 'section') {
-      header.current?.querySelector<HTMLElement>('[data-role="section-flyout"] [data-nav-choice]')?.focus()
+      header.current?.querySelector<HTMLElement>('[data-role="section-flyout"] [data-nav-choice][aria-expanded="true"]')?.focus()
     }
   }
 
@@ -166,7 +166,7 @@ export default function HorizontalHeader({ activeSectionTitle, appearance, ...da
       })}
     </div>}
     {desktopPopup && popup.kind === 'section' && section && <SectionFlyout key={section.title} id={id}
-      section={section} model={model} onSelect={() => close()} />}
+      section={section} model={model} onSelect={() => close()} onClose={() => close(true)} />}
     {compact && popup?.kind === 'sheet' && <NavSheet id={id} model={model} initialSection={popup.section} activeSectionTitle={activeSectionTitle}
       onClose={() => close()} getReturnFocusTarget={getReturnFocusTarget} />}
   </header>

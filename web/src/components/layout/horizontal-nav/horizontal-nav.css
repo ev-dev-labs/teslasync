@@ -91,21 +91,38 @@
 .horizontal-nav-flyout {
   display: grid;
   grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   inline-size: 50rem;
   block-size: 27rem;
   overflow: clip;
 }
-.horizontal-nav-flyout > div {
+.horizontal-nav-flyout > :is(.horizontal-nav-groups, .horizontal-nav-destinations) {
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
+  min-block-size: 0;
   gap: var(--hn-space);
   padding: var(--hn-space);
 }
-.horizontal-nav-groups {
-  border-inline-end: var(--hn-frame);
+.horizontal-nav-section-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hn-space);
+  padding: var(--hn-gap) var(--hn-space);
+  border-block-end: 1px solid var(--hn-rule);
   background: var(--hn-muted-surface);
+}
+.horizontal-nav-section-header .horizontal-nav-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--hn-space);
+  min-inline-size: 0;
+}
+.horizontal-nav-section-header .horizontal-nav-icon { flex: none; }
+.horizontal-nav-groups {
+  border-inline-end: 1px solid var(--hn-rule);
 }
 .horizontal-nav-heading {
   font-size: max(1rem, calc(1rem * var(--font-scale, 1)));
