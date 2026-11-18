@@ -1,11 +1,13 @@
 import type { Icons } from '@/lib/icons'
 
+export type NavBadge = 'drives-today' | 'drive-score' | 'unread' | 'vehicles' | 'stale'
+
 export interface SectionGroup {
   primary: string
   label: string
   labelKey: string
   includeSingleton?: boolean
-  pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string }[]
+  pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string; badge?: NavBadge }[]
 }
 
 /**
@@ -26,6 +28,7 @@ export type SidebarSectionInput = {
     color?: string
     dataTour?: string
     minVehicles?: number
+    badge?: NavBadge
   }>
 }
 

@@ -349,8 +349,8 @@ describe('application shell composition CSS contracts (not mounted browser geome
     expect(styles.toString()).not.toMatch(/contain:\s*(size|strict)|content-visibility|overflow:\s*hidden|!important/)
   })
 
-  it('changes desktop navigation only at the existing 1280px shell breakpoint and keeps the assistant dock alongside main', () => {
-    for (const mode of ['rail', 'sidebar', 'top', 'hybrid']) {
+  it('preserves the 1280px breakpoint for vertical navigation and keeps the assistant alongside main', () => {
+    for (const mode of ['rail', 'sidebar', 'hybrid']) {
       for (const rule of familyRules('data-app-navigation', mode)) {
         let parent: typeof rule.parent | Root['parent'] = rule.parent
         let desktop = false
@@ -366,6 +366,12 @@ describe('application shell composition CSS contracts (not mounted browser geome
       expect(familyRules('data-app-navigation', mode).some(rule =>
         rule.toString().includes('#helix-dock-slot > [data-role="helix-side-panel"]'))).toBe(true)
     }
+    const horizontal = familyRules('data-app-navigation', 'top')
+    for (const rule of horizontal) {
+      expect(rule.selector).toContain('[data-horizontal-shell][data-presentation-mode="standard"]')
+      expect(rule.parent?.type === 'atrule' && rule.parent.params).not.toContain('min-width')
+    }
+    expect(geometry(horizontal)).toContain('grid-template-rows:auto minmax(0, 1fr)')
   })
 
   it('keeps owner rows shrinkable/wrapping while leaving arbitrary page workflows and caller spacing overrides intact', () => {

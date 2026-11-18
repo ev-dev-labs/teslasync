@@ -29,6 +29,10 @@
     --app-card-radius: var(--panel-radius, var(--radius-lg));
     --app-card-shadow: none;
     --app-nav-radius: 0px;
+    --app-nav-bar: var(--surface-2);
+    --app-nav-flyout: var(--surface-1);
+    --app-nav-pane: var(--surface-2);
+    --app-nav-rule: var(--border-strong);
     --app-display-font: var(--font-sans);
     --app-display-weight: var(--font-weight-bold);
     --app-display-tracking: var(--tracking);

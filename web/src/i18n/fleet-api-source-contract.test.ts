@@ -16,7 +16,25 @@ describe('reviewed Fleet API and shared-control changes', () => {
     'web/src/components/layout/sidebar/CommandDeck.tsx',
   ])('preserves translation calls and their controls in %s', file => {
     const source = readFleetCurrentSource(file)
-    expect(producerProjection(file, source))
-      .toEqual(producerProjection(file, restoreVerifiedFleetSource(file, source)))
+    const projection = producerProjection(file, source)
+    const previous = producerProjection(file, restoreVerifiedFleetSource(file, source))
+    if (file === 'web/src/components/layout/Layout.tsx') {
+      // The three legacy chrome translations are still present, now gated to
+      // vertical/hybrid designs. Every other control and call stays exact.
+      const gates = new Map([
+        ["t('a11y.primaryNav', 'Primary')", "binary:&&:presentation.mode === 'standard'"],
+        ["t('a11y.primaryHeader', 'Site header')", "binary:&&:presentation.mode === 'standard' && !sidebarOpen"],
+        ["t('nav.openSidebar', 'Open sidebar')", "binary:&&:presentation.mode === 'standard' && !sidebarOpen"],
+      ])
+      for (const [call, gate] of gates) {
+        const matches = previous.calls.filter(entry => entry.call === call)
+        expect(matches).toHaveLength(1)
+        const entry = matches[0]
+        expect(entry.controls.filter(control => control === gate)).toHaveLength(1)
+        entry.controls = entry.controls.map(control => control === gate
+          ? gate.replace("'standard'", "'standard' && !horizontal") : control)
+      }
+    }
+    expect(projection).toEqual(previous)
   })
 })

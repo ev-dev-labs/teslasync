@@ -9,7 +9,7 @@ import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { ActionConfirmationRoot } from '../feedback/ActionConfirmationRoot'
 import { AnnouncerRegion } from '@/components/a11y'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
@@ -53,6 +53,7 @@ import {
 } from './BreadcrumbOverridesContext'
 import { CommandPaletteHost } from './CommandPaletteHost'
 import { NotificationBellPopover } from './NotificationBellPopover'
+import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
@@ -116,6 +117,7 @@ const LazyGotoIndicator = lazy(async () => {
 })
 
 const MobileWorkspaceControls = lazy(() => import('./MobileWorkspaceControls'))
+const HorizontalHeader = lazy(() => import('./horizontal-nav/HorizontalHeader'))
 const WorkspaceHeader = lazy(async () => {
   const module = await import('./WorkspaceHeader')
   return { default: module.WorkspaceHeader }
@@ -180,7 +182,7 @@ export const navSections = [
     title: 'Vehicles',
     titleKey: 'nav.groups.vehicles',
     items: [
-      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section' },
+      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section', badge: 'vehicles' as const },
       { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle management', labelKey: 'nav.items.vehicle-management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle live view', labelKey: 'nav.items.digital-twin', color: 'text-theme-accent' },
       { to: '/day-log', icon: Icons.fileText, label: 'Day log', labelKey: 'nav.items.day-log', color: 'text-theme-accent' },
@@ -198,7 +200,7 @@ export const navSections = [
     title: 'Driving',
     titleKey: 'nav.groups.driving',
     items: [
-      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
+      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400', badge: 'drives-today' as const },
       { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-theme-accent' },
       { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-theme-accent' },
       { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip planner', labelKey: 'nav.items.trip-planner', color: 'text-emerald-400' },
@@ -216,7 +218,7 @@ export const navSections = [
       { to: '/drive-calendar', icon: Icons.calendarClock, label: 'Drive calendar', labelKey: 'nav.items.drive-calendar', color: 'text-fuchsia-400' },
       { to: '/milestones', icon: Icons.trip, label: 'Milestones', labelKey: 'nav.items.milestones', color: 'text-yellow-400' },
       { to: '/lifetime-stats', icon: Icons.trends, label: 'Lifetime stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
-      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400' },
+      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400', badge: 'drive-score' as const },
       { to: '/fsd', icon: Icons.cpu, label: 'FSD insights', labelKey: 'nav.items.fsd', color: 'text-theme-accent' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed profile', labelKey: 'nav.items.speed-profile', color: 'text-rose-400' },
       { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving dynamics', labelKey: 'nav.items.driving-dynamics', color: 'text-red-400' },
@@ -346,7 +348,7 @@ export const navSections = [
     title: 'Notifications',
     titleKey: 'nav.groups.notifications',
     items: [
-      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400' },
+      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400', badge: 'unread' as const },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-theme-accent' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser notifications', labelKey: 'nav.items.notifications_browser', color: 'text-fuchsia-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet hours', labelKey: 'nav.items.notifications_quiet-hours', color: 'text-theme-accent' },
@@ -445,7 +447,7 @@ export const navSections = [
     items: [
       { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data export', labelKey: 'nav.items.data-export', color: 'text-lime-400' },
       { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & restore', labelKey: 'nav.items.backup', color: 'text-theme-accent' },
-      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400' },
+      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400', badge: 'stale' as const },
     ],
   },
   {
@@ -706,6 +708,7 @@ const MOBILE_BRAND_CONTAINMENT = 'min-w-0 max-w-full [&>span]:min-w-0 [&>span]:t
 
 export default function Layout() {
   const presentation = usePresentationMode()
+  const horizontal = useContext(ActiveAppNavigation) === 'top'
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
@@ -726,7 +729,7 @@ export default function Layout() {
       observer.disconnect()
       spacer.style.removeProperty('height')
     }
-  }, [sidebarOpen, presentation.mode])
+  }, [sidebarOpen, presentation.mode, horizontal])
   const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
     try {
       const stored = window.localStorage.getItem('teslasync-deck-panel-open')
@@ -1237,6 +1240,7 @@ export default function Layout() {
         data-app-part="shell"
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+        data-horizontal-shell={horizontal && presentation.mode === 'standard' ? '' : undefined}
         style={{ '--shell-sidebar-width': `${76 + (deckPanelOpen ? 272 : 0)}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
@@ -1244,7 +1248,25 @@ export default function Layout() {
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
 
-      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part="shell-sidebar navigation" data-role="sidebar" data-tour="sidebar" className="sidenav-host">
+      {presentation.mode === 'standard' && horizontal && (
+        <Suspense fallback={<div className="min-h-14 shrink-0" aria-hidden="true" />}>
+          <HorizontalHeader
+            sections={groupedSidebarSections}
+            collections={visibleCollections}
+            activeSectionTitle={activeSectionTitle}
+            pathname={location.pathname}
+            pinnedPaths={pinnedNavSet}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            pinSyncUnavailable={navigationPins.syncUnavailable}
+            vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+            appearance={<ThemeQuickSwitcher />}
+          />
+        </Suspense>
+      )}
+      {presentation.mode === 'standard' && !horizontal && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part="shell-sidebar navigation" data-role="sidebar" data-tour="sidebar" className="sidenav-host">
         {/* Width-matched placeholder (CLS guard): the loaded deck occupies the
             76px rail plus the 272px docked panel on desktop (see sidenav.css),
             the rail alone on tablet (panel is a modal overlay there), and zero
@@ -1281,7 +1303,7 @@ export default function Layout() {
       </nav>}
 
       {/* Mobile top bar */}
-      {presentation.mode === 'standard' && !sidebarOpen && (
+      {presentation.mode === 'standard' && !horizontal && !sidebarOpen && (
         <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] md:start-[76px] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
           <Button
             ref={sidebarTriggerRef}
@@ -1316,8 +1338,8 @@ export default function Layout() {
         presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
       )}>
         {/* Spacer for fixed mobile header */}
-        {presentation.mode === 'standard' && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
-        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
+        {presentation.mode === 'standard' && !horizontal && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
+        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}
             themeControl={<ThemeQuickSwitcher />}

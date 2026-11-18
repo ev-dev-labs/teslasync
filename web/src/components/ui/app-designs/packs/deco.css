@@ -32,6 +32,10 @@
     --app-conversation-surface: var(--surface-2);
     --app-conversation-radius: var(--radius-md);
     --app-nav-radius: 0.625rem;
+    --app-nav-bar: var(--surface-2);
+    --app-nav-flyout: var(--surface-2);
+    --app-nav-pane: var(--surface-1);
+    --app-nav-rule: var(--border-strong);
     --app-brief-column-min-width: 10rem;
     --app-brief-value-size: calc(1.25rem * var(--font-scale, 1));
   }

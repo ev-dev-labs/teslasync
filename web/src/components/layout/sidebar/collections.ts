@@ -1,10 +1,10 @@
 import { DIAGNOSTIC_GROUPS } from '../diagnosticGroups'
 import { REPORT_GROUPS } from '../reportGroups'
-import { sectionPrimaryPath, type SectionGroup } from '../sectionGroups'
+import { sectionPrimaryPath, type NavBadge, type SectionGroup } from '../sectionGroups'
 import type { Icons, LucideIcon } from '@/lib/icons'
 
 type Item = { to: string; label: string; labelKey: string }
-type IconItem = Item & { icon: typeof Icons.home; color?: string }
+type IconItem = Item & { icon: typeof Icons.home; color?: string; badge?: NavBadge }
 type Section<T extends Item> = { title: string; items: T[] }
 
 /**
@@ -23,6 +23,7 @@ export interface FlatSidebarEntry {
   icon: LucideIcon
   color?: string
   dataTour?: string
+  badge?: NavBadge
 }
 
 export interface SidebarEntryGroup {
@@ -32,7 +33,7 @@ export interface SidebarEntryGroup {
 }
 
 export function groupSidebarItems<
-  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },
+  T extends IconItem & { dataTour?: string },
 >(
   items: readonly T[],
   groups: readonly SectionGroup[],
@@ -56,7 +57,7 @@ export function groupSidebarItems<
  * and additionally appears under Saved.
  */
 export function flattenSidebarItems<
-  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },
+  T extends IconItem & { dataTour?: string },
 >(
   items: readonly T[],
   groups: readonly SectionGroup[],
@@ -71,6 +72,7 @@ export function flattenSidebarItems<
         icon: item.icon,
         color: item.color,
         dataTour: item.dataTour,
+        ...(item.badge && { badge: item.badge }),
       }]
     }
     return group.pages.map(page => ({
@@ -80,6 +82,7 @@ export function flattenSidebarItems<
       icon: page.icon ?? item.icon,
       color: page.color ?? item.color,
       dataTour: page.to === item.to ? item.dataTour : undefined,
+      ...(page.badge && { badge: page.badge }),
     }))
   })
 }
@@ -143,7 +146,7 @@ export function collectionGroups<T extends IconItem>(sections: readonly Section<
       ...group,
       pages: group.pages.flatMap(page => {
         const item = items.get(page.to)
-        return item ? [{ ...page, icon: item.icon, color: item.color }] : []
+        return item ? [{ ...page, icon: item.icon, color: item.color, ...(item.badge && { badge: item.badge }) }] : []
       }),
     }))
     .filter(group => (group.pages.length > 1 || group.includeSingleton) && group.pages[0]?.to === group.primary)

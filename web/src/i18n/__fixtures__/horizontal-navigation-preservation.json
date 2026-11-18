@@ -1,0 +1,285 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "9a8cb5547f43d5213b837d9b1ef1a9965442b97230f7c97b04cc4152a33bd838",
+    "after": "36819e4f06b194d37015c81bc31d3b547234c77200a7f9bb8d7fdb396fe8614b",
+    "hunks": [
+      {
+        "start": 11,
+        "old": [
+          "import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'"
+        ],
+        "new": [
+          "import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'"
+        ]
+      },
+      {
+        "start": 55,
+        "old": [],
+        "new": [
+          "import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'"
+        ]
+      },
+      {
+        "start": 119,
+        "old": [],
+        "new": [
+          "const HorizontalHeader = lazy(() => import('./horizontal-nav/HorizontalHeader'))"
+        ]
+      },
+      {
+        "start": 184,
+        "old": [
+          "      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section' },"
+        ],
+        "new": [
+          "      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section', badge: 'vehicles' as const },"
+        ]
+      },
+      {
+        "start": 202,
+        "old": [
+          "      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },"
+        ],
+        "new": [
+          "      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400', badge: 'drives-today' as const },"
+        ]
+      },
+      {
+        "start": 220,
+        "old": [
+          "      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400' },"
+        ],
+        "new": [
+          "      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400', badge: 'drive-score' as const },"
+        ]
+      },
+      {
+        "start": 350,
+        "old": [
+          "      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400' },"
+        ],
+        "new": [
+          "      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400', badge: 'unread' as const },"
+        ]
+      },
+      {
+        "start": 449,
+        "old": [
+          "      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400' },"
+        ],
+        "new": [
+          "      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400', badge: 'stale' as const },"
+        ]
+      },
+      {
+        "start": 710,
+        "old": [],
+        "new": [
+          "  const horizontal = useContext(ActiveAppNavigation) === 'top'"
+        ]
+      },
+      {
+        "start": 731,
+        "old": [
+          "  }, [sidebarOpen, presentation.mode])"
+        ],
+        "new": [
+          "  }, [sidebarOpen, presentation.mode, horizontal])"
+        ]
+      },
+      {
+        "start": 1242,
+        "old": [],
+        "new": [
+          "        data-horizontal-shell={horizontal && presentation.mode === 'standard' ? '' : undefined}"
+        ]
+      },
+      {
+        "start": 1250,
+        "old": [
+          "      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part=\"shell-sidebar navigation\" data-role=\"sidebar\" data-tour=\"sidebar\" className=\"sidenav-host\">"
+        ],
+        "new": [
+          "      {presentation.mode === 'standard' && horizontal && (",
+          "        <Suspense fallback={<div className=\"min-h-14 shrink-0\" aria-hidden=\"true\" />}>",
+          "          <HorizontalHeader",
+          "            sections={groupedSidebarSections}",
+          "            collections={visibleCollections}",
+          "            activeSectionTitle={activeSectionTitle}",
+          "            pathname={location.pathname}",
+          "            pinnedPaths={pinnedNavSet}",
+          "            onPin={pinNavPath}",
+          "            onUnpin={unpinNavPath}",
+          "            pinSyncUnavailable={navigationPins.syncUnavailable}",
+          "            vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}",
+          "            vehicleCount={vehicleCount}",
+          "            staleCount={staleCount}",
+          "            appearance={<ThemeQuickSwitcher />}",
+          "          />",
+          "        </Suspense>",
+          "      )}",
+          "      {presentation.mode === 'standard' && !horizontal && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part=\"shell-sidebar navigation\" data-role=\"sidebar\" data-tour=\"sidebar\" className=\"sidenav-host\">"
+        ]
+      },
+      {
+        "start": 1305,
+        "old": [
+          "      {presentation.mode === 'standard' && !sidebarOpen && ("
+        ],
+        "new": [
+          "      {presentation.mode === 'standard' && !horizontal && !sidebarOpen && ("
+        ]
+      },
+      {
+        "start": 1340,
+        "old": [
+          "        {presentation.mode === 'standard' && <div ref={mobileHeaderSpacerRef} data-role=\"appbar-spacer\" className=\"h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden\" />}",
+          "        {presentation.mode === 'standard' && <Suspense fallback={<div className=\"hidden h-workspace-header shrink-0 xl:block\" />}>"
+        ],
+        "new": [
+          "        {presentation.mode === 'standard' && !horizontal && <div ref={mobileHeaderSpacerRef} data-role=\"appbar-spacer\" className=\"h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden\" />}",
+          "        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className=\"hidden h-workspace-header shrink-0 xl:block\" />}>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/collections.ts",
+    "before": "9b0be56179bdd518d3976c20681cd8b8bdd7350018a243ef38b22b51dbb49eeb",
+    "after": "64e12fa053879b753fb297eaf0b90e5e46e33a1afacee283948da09de9993270",
+    "hunks": [
+      {
+        "start": 2,
+        "old": [
+          "import { sectionPrimaryPath, type SectionGroup } from '../sectionGroups'"
+        ],
+        "new": [
+          "import { sectionPrimaryPath, type NavBadge, type SectionGroup } from '../sectionGroups'"
+        ]
+      },
+      {
+        "start": 6,
+        "old": [
+          "type IconItem = Item & { icon: typeof Icons.home; color?: string }"
+        ],
+        "new": [
+          "type IconItem = Item & { icon: typeof Icons.home; color?: string; badge?: NavBadge }"
+        ]
+      },
+      {
+        "start": 25,
+        "old": [],
+        "new": [
+          "  badge?: NavBadge"
+        ]
+      },
+      {
+        "start": 35,
+        "old": [
+          "  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },"
+        ],
+        "new": [
+          "  T extends IconItem & { dataTour?: string },"
+        ]
+      },
+      {
+        "start": 59,
+        "old": [
+          "  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },"
+        ],
+        "new": [
+          "  T extends IconItem & { dataTour?: string },"
+        ]
+      },
+      {
+        "start": 74,
+        "old": [],
+        "new": [
+          "        ...(item.badge && { badge: item.badge }),"
+        ]
+      },
+      {
+        "start": 84,
+        "old": [],
+        "new": [
+          "      ...(page.badge && { badge: page.badge }),"
+        ]
+      },
+      {
+        "start": 148,
+        "old": [
+          "        return item ? [{ ...page, icon: item.icon, color: item.color }] : []"
+        ],
+        "new": [
+          "        return item ? [{ ...page, icon: item.icon, color: item.color, ...(item.badge && { badge: item.badge }) }] : []"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/ui/Modal.tsx",
+    "before": "bf9a4f2d3c8716c9b7452cc75081b5776506c561296eae049ab3dcc9f1d90f6c",
+    "after": "1d75065bdd58cde55844a3690e97d50089dea1b9b3fabce44fc7b9690ea06343",
+    "hunks": [
+      {
+        "start": 18,
+        "old": [],
+        "new": [
+          "  /** Keep a sheet at the bottom even above the default mobile breakpoint. */",
+          "  placement?: 'responsive' | 'bottom';"
+        ]
+      },
+      {
+        "start": 62,
+        "old": [
+          "  ({ open, onClose, title, size = 'md', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, originSnapshot, ...props }, ref) => {"
+        ],
+        "new": [
+          "  ({ open, onClose, title, size = 'md', placement = 'responsive', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, originSnapshot, ...props }, ref) => {"
+        ]
+      },
+      {
+        "start": 116,
+        "old": [
+          "          fullscreen ? 'items-stretch' : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',"
+        ],
+        "new": [
+          "          fullscreen ? 'items-stretch' : placement === 'bottom' ? 'items-end'",
+          "            : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sectionGroups.ts",
+    "before": "93d8e6d5659f7c45e5c15a85c12e3aefb60ecaa96db0a64df6aecc4708dedf3a",
+    "after": "6e38b9205b19e7eb8e90519f0dccf934997afd838176a35ce32cd27503653cdb",
+    "hunks": [
+      {
+        "start": 1,
+        "old": [],
+        "new": [
+          "",
+          "export type NavBadge = 'drives-today' | 'drive-score' | 'unread' | 'vehicles' | 'stale'"
+        ]
+      },
+      {
+        "start": 9,
+        "old": [
+          "  pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string }[]"
+        ],
+        "new": [
+          "  pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string; badge?: NavBadge }[]"
+        ]
+      },
+      {
+        "start": 30,
+        "old": [],
+        "new": [
+          "    badge?: NavBadge"
+        ]
+      }
+    ]
+  }
+]

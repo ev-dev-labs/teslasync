@@ -5506,6 +5506,14 @@
     },
     "workspaceContext": "Fleet operations",
     "workspaceHeader": "Workspace command bar",
+    "flyout": {
+      "browse": "Browse sections",
+      "done": "Done",
+      "editPins": "Edit pins",
+      "groups": "{{section}} groups",
+      "other": "Other pages",
+      "pages": "Pages"
+    },
     "quickAccess": "Quick access",
     "workspacePages": "Workspace",
     "dashboard": "Dashboard",

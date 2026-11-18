@@ -61,6 +61,11 @@
     --app-conversation-surface: var(--surface-2);
     --app-conversation-radius: 0px;
     --app-nav-radius: 0px;
+    --app-nav-bar: var(--surface-1);
+    --app-nav-flyout: var(--surface-1);
+    --app-nav-pane: var(--surface-2);
+    --app-nav-rule: var(--border-strong);
+    --app-nav-shadow: none;
   }
 
   :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-swiss"]) {
