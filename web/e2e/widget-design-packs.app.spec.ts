@@ -1483,7 +1483,7 @@ for (const theme of ['dark', 'light', 'custom'] as const) {
         });
       }
       const workspaceHeader = (pack: PackId) => page.getByRole('banner', {
-        name: width < 1280 || APPLICATION_DESIGNS[pack].navigation === 'top'
+        name: APPLICATION_DESIGNS[pack].navigation === 'top'
           ? 'Site header' : 'Workspace command bar',
         exact: true,
       });

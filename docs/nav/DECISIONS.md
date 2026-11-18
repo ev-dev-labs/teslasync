@@ -56,6 +56,8 @@
 - The workspace header owns the rail layout's search, notifications,
   appearance, and account shortcut at all widths. The alert list still
   drives suggestions; the inbox badge and bell use the unread-count query.
+  The compact rail layout still exposes the same Workspace command bar
+  landmark; browser checks no longer expect a second Site header on phones.
 - The shared phone sheet uses the selected pack's navigation frame, not its
   generic dialog frame. This preserves the Swiss Grid cap and other pack
   details without changing unrelated dialogs.
