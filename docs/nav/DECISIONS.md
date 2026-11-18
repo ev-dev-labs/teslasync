@@ -7,3 +7,4 @@
 - **Header**: Mount only one banner and one bell for top-nav packs. The notification route indicator and bell share `/notifications/unread-count` via the same query cache; the old alerts preview length is not used for these packs. Preserve the existing command palette, appearance, vehicle and View settings controls.
 - **Preservation checks**: Verify the exact navigation source and English catalog changes before reconstructing the older localization checkpoints. Keep the historical hashes, call counts, and translation assertions intact.
 - **Browser review**: Exercised Driving in all six packs at 1440px, 1024px, and 390px in both themes. Used synthetic data and captured before/after screenshots for Expressive Form, Editorial, and Swiss Grid.
+- **Search styling**: The shared search trigger uses the icon treatment only in horizontal navigation. The labeled trigger retains its regular weight and original forced-colors border so vertical and hybrid visuals do not change.

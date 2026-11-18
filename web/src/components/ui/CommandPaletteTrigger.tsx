@@ -3,6 +3,7 @@ import { Icons } from '@/lib/icons'
 import { captureAppDesignOrigin } from './appDesignOrigin'
 import { Button } from './Button'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 export function loadCommandPalette() {
   return import('./CommandPalette')
@@ -29,8 +30,10 @@ export function CommandPaletteTrigger({ compact = false }: { compact?: boolean }
       }}
       aria-label={t('palette.placeholder', 'Search pages, commands…')}
       aria-keyshortcuts="Control+K Meta+K"
-      className={cn(compact ? 'horizontal-nav-icon'
-        : 'flex h-auto w-full items-center gap-3 rounded-shape-md px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]')}
+      className={compact ? 'horizontal-nav-icon' : cn(
+        'flex h-auto w-full items-center gap-3 rounded-shape-md px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] forced-colors:border-[var(--control-border)]',
+        typography.weight.regular,
+      )}
     >
       <Icons.search className={compact ? 'size-5' : 'size-4'} aria-hidden="true" />
       {!compact && <><span className="min-w-0 flex-1 truncate text-left">
