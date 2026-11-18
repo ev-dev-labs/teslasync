@@ -30,6 +30,9 @@
     --app-border-width: 2px;
     --app-rule-style: solid;
     --app-nav-radius: 0px;
+    --app-nav-bar: var(--surface-2);
+    --app-nav-pane: var(--surface-1);
+    --app-nav-rule: var(--border-strong);
     --app-shadow: var(--elevation-1);
     --app-surface-canvas: var(--bg-app);
     --app-surface-panel: var(--panel-bg, var(--surface-1));

@@ -40,6 +40,7 @@ import {
   restoreSharedGridCompositionSource,
   sharedGridCompositionSources,
 } from './verified-widget-implementation-contract';
+import { restoreVerticalNavigationStyleSource } from './verified-horizontal-navigation-contract';
 
 describe('additive widget implementation preservation', () => {
   it('rejects source drift instead of silently projecting an unverified edit', () => {
@@ -1418,7 +1419,7 @@ describe('additive widget implementation preservation', () => {
         const predecessor = previewProducerPredecessor(producer.file, current);
         expect(hash(predecessor)).toBe(producer.sha256);
         if (![previewMapFrame.sources[0].file, tableNoMatch.sources[1].file, previewMapReset.sources[0].file].includes(producer.file)) {
-          expect(predecessor).toBe(restorePreviewChartQuerySource(producer.file, current));
+          expect(predecessor).toBe(restorePreviewChartQuerySource(producer.file, restoreVerticalNavigationStyleSource(producer.file, current)));
         }
         const changed = current + '\n// unrelated producer drift\n';
         expect(restorePreviewOverlayInvokerSource(producer.file, changed)).toBe(changed);
@@ -2513,7 +2514,7 @@ describe('additive widget implementation preservation', () => {
   describe('exact CommandDeck local modal-deferral successor before original app-design proof', () => {
     const file = 'web/src/components/layout/sidebar/CommandDeck.tsx';
     const patch = commandDeckModal.sources[0];
-    const current = source(file);
+    const current = historicalSource(file);
     const previous = () => restoreCommandDeckModalSource(file, current);
     const parse = (text: string) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = (text: string) => parse(text).statements.find(node =>
@@ -2557,14 +2558,14 @@ describe('additive widget implementation preservation', () => {
       expect(current.trimEnd().split('\n')).toHaveLength(158);
       expect(patch.originalLineCount).toBe(144);
       expect(patch.currentLineCount).toBe(158);
-      const oldest = restoreAppDesignSource(file, current);
+      const oldest = restoreAppDesignSource(file, source(file));
       expect(hash(oldest)).toBe('887a29202c7a33f1968832ce9bd7aa4ae02d4fb32c4ed0d67459bef6f0a71f64');
       expect(hash(oldest)).toBe(appDesign.sources.find(entry => entry.file === file)?.before);
       for (const changed of [original, oldest, current + '\n', current.slice(1)]) {
         expect(() => restoreCommandDeckModalSource(file, changed)).toThrow();
         expect(() => restoreAppDesignSource(file, changed)).toThrow();
       }
-      expect(source(file)).toBe(current);
+      expect(historicalSource(file)).toBe(current);
     });
 
     it('preserves the ordered original call/default/arity/options and full translator/control projection', () => {

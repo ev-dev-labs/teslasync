@@ -8,6 +8,7 @@ import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import { producerProjection, projectionDigest, type ProducerProjection } from './producer-projection'
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
+import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -1410,7 +1411,8 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
       expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
       if ('dependencies' in checkpoint) for (const dependency of checkpoint.dependencies ?? []) {
-        const bytes = readFileSync(resolve(process.cwd(), '..', dependency.file))
+        const bytes = restoreHorizontalNavigationSource(dependency.file,
+          readFileSync(resolve(process.cwd(), '..', dependency.file), 'utf8'))
         expect(createHash('sha256').update(bytes).digest('hex'), dependency.file).toBe(dependency.sha256)
       }
       return

@@ -509,12 +509,23 @@ test('widget bodies never overflow horizontally at min, default and large sizes 
       if (mode === 'view' && (size === 'min' || size === 'large')) {
         for (const widgetId of SHOT_WIDGETS) {
           const panel = page.locator(`[data-widget-id="${instanceId.get(widgetId)}"]`)
-          if (await panel.count() > 0) {
-            await panel.screenshot({
-              path: testInfo.outputPath(`row16-${widgetId}-${size}.png`),
-              animations: 'disabled',
-            })
-          }
+          // Rasterize the visible widget only, not the live grid's full document.
+          const clip = await panel.evaluate((element) => {
+            element.scrollIntoView({ block: 'center', behavior: 'instant' })
+            const { left, top, width, height } = element.getBoundingClientRect()
+            return { x: left, y: top, width, height }
+          })
+          const viewport = page.viewportSize()!
+          const name = `${widgetId} at ${size}`
+          expect(clip.x, name).toBeGreaterThanOrEqual(0)
+          expect(clip.y, name).toBeGreaterThanOrEqual(0)
+          expect(clip.x + clip.width, name).toBeLessThanOrEqual(viewport.width)
+          expect(clip.y + clip.height, name).toBeLessThanOrEqual(viewport.height)
+          await page.screenshot({
+            path: testInfo.outputPath(`row16-${widgetId}-${size}.png`),
+            animations: 'disabled',
+            clip,
+          })
         }
       }
     }

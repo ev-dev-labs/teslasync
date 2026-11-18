@@ -16,6 +16,8 @@ async function captureDeck(page: Page, testInfo: TestInfo, name: string) {
 
 for (const width of [390, 1440]) {
   test(`drives the command deck at ${width}px`, async ({ page }, testInfo) => {
+    // The desktop flow visits multiple routes and captures five navigation states.
+    if (width >= 1280) test.setTimeout(60_000)
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, 'dark', '/driving-dynamics')
     const mockApi = await installApiMocks(page)
@@ -27,13 +29,13 @@ for (const width of [390, 1440]) {
       const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
       const nav = page.getByRole('navigation', { name: 'Sidebar navigation' })
       await expect(rail).toHaveCSS('background-color', 'rgb(11, 13, 18)')
-      // Section rail with utilities; the context panel starts open on desktop.
+      // The context panel starts open on desktop; utilities live in the header.
       await expect(rail.getByRole('button', { name: 'Search' })).toHaveCount(0)
       await expect(page.locator('[data-role="workspace-header"]').getByRole('button', { name: 'Search pages, commands…' })).toBeVisible()
       await expect(rail.getByRole('button', { name: 'Driving' })).toBeVisible()
       await expect(rail.getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-expanded', 'true')
       await expect(rail.getByRole('link', { name: 'Cars' })).toHaveCount(0)
-      await expect(rail.getByRole('button', { name: 'Open theme picker' })).toBeVisible()
+      await expect(rail.getByRole('button', { name: 'Open theme picker' })).toHaveCount(0)
       await expect(page.getByTestId('command-deck-secondary')).toHaveCount(1)
       // Docked, not floating: the rail and panel columns sit side by side.
       await expect(page.getByTestId('command-deck-rail')).toHaveCSS('width', '76px')
@@ -100,17 +102,18 @@ for (const width of [390, 1440]) {
       await nav.getByRole('button', { name: 'Unpin Regen braking' }).first().click()
       await expect(nav.getByRole('link', { name: 'Quick access: Regen braking' })).toHaveCount(0)
 
-      // Suggested carries reason lines; Escape no longer closes the panel.
+      // Suggested carries reason lines; Escape closes the panel.
       await rail.getByRole('button', { name: 'Home' }).click()
       await expect(nav.getByRole('button', { name: /Suggested/ })).toBeVisible()
       await nav.getByRole('button', { name: /Suggested/ }).click()
       await expect(nav.getByText(/Related to /)).toHaveCount(4)
-      await page.keyboard.press('Escape')
-      await expect(page.getByTestId('command-deck-secondary')).toHaveCount(1)
       await captureDeck(page, testInfo, 'deck-suggested')
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('command-deck-secondary')).toHaveCount(0)
+      await expect(rail.getByRole('button', { name: 'Home' })).toBeFocused()
 
       // Saved lists pins from every section.
-      await nav.getByRole('button', { name: 'Home' }).click()
+      await rail.getByRole('button', { name: 'Home' }).click()
       await nav.getByRole('button', { name: /Saved/ }).click()
       await expect(nav.getByRole('link', { name: /^My vehicles/ }).first()).toBeVisible()
       await captureDeck(page, testInfo, 'deck-saved')
@@ -132,43 +135,40 @@ for (const width of [390, 1440]) {
       expect(shownTooltips).toBe(0)
       await captureDeck(page, testInfo, 'deck-rail-hover')
 
-      // The rail display control reaches appearance settings.
-      await rail.getByRole('button', { name: 'Open theme picker' }).click()
+      const appearance = page.locator('[data-role="workspace-header"]').getByRole('button', { name: 'Open theme picker' })
+      await appearance.click()
+      await expect(appearance).toHaveAttribute('aria-expanded', 'true')
       await expect(page.getByRole('dialog', { name: 'Open theme picker' })).toBeVisible()
       await page.getByRole('button', { name: 'Customize…' }).click()
       await expect(page).toHaveURL(/\/settings#appearance$/)
       await expect(page.locator('#appearance').getByRole('heading', { name: 'Appearance' })).toBeVisible()
       await expect(page.locator('#main-content nav[aria-label*="sections"]')).toHaveCount(0)
     } else {
-      // Mobile tabs open the section sheet; More opens the section grid.
+      // Mobile tabs go directly to the section's groups in the shared sheet.
       const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
-      await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Browse sections' })).toBeVisible()
       await expect(tabs.getByRole('button', { name: 'Driving' })).toBeVisible()
       await captureDeck(page, testInfo, 'deck-mobile-tabs')
       await tabs.getByRole('button', { name: 'Driving' }).click()
-      const sheet = page.locator('.sidenav-sheet')
-      const nav = sheet.getByRole('navigation', { name: 'Sidebar navigation' })
-      await expect(nav.getByRole('link', { name: 'Regen braking', exact: true })).toBeVisible()
-      await expect(nav.getByText('Driving performance')).toBeVisible()
-      await nav.getByRole('button', { name: 'Collapse all groups' }).click()
-      await expect(nav.getByRole('link', { name: 'Regen braking', exact: true })).toHaveCount(0)
-      await nav.getByRole('button', { name: 'Expand all groups' }).click()
-      await nav.getByRole('button', { name: 'Driving performance' }).click()
-      await expect(nav.getByRole('link', { name: 'Regen braking', exact: true })).toHaveCount(0)
-      await nav.getByRole('button', { name: 'Driving performance' }).click()
+      const sheet = page.getByRole('dialog', { name: 'Browse sections' })
+      const performance = sheet.getByRole('button', { name: /^Driving performance/ })
+      await expect(performance).toBeVisible()
+      await performance.click()
+      await expect(sheet.getByRole('link', { name: 'Regen braking', exact: true })).toBeVisible()
+      await sheet.getByRole('button', { name: 'Back' }).click()
+      await expect(performance).toBeFocused()
       await captureDeck(page, testInfo, 'deck-mobile-section')
       await page.keyboard.press('Escape')
       await expect(sheet).toHaveCount(0)
 
-      // The header browse button opens More, which lists only sections
-      // without a tab; tapping drills into the panel.
-      await page.getByRole('button', { name: 'Open sidebar' }).click()
-      await expect(sheet.getByRole('button', { name: 'Driving' })).toHaveCount(0)
+      // Browse lists every section, including quick tabs.
+      await page.getByRole('button', { name: 'Browse sections' }).click()
+      await expect(sheet.getByRole('button', { name: 'Driving' })).toBeVisible()
       await expect(sheet.getByRole('button', { name: 'Battery' })).toBeVisible()
       await captureDeck(page, testInfo, 'deck-mobile-more')
       await sheet.getByRole('button', { name: 'Battery' }).click()
-      await expect(sheet.getByRole('navigation', { name: 'Sidebar navigation' })).toBeVisible()
-      await expect(sheet.locator('button[aria-expanded]').first()).toBeVisible()
+      await expect(sheet.getByRole('heading', { name: 'Battery', exact: true })).toBeVisible()
+      await expect(sheet.getByRole('button', { name: /^Battery insights/ })).toBeVisible()
       await page.keyboard.press('Escape')
 
       // Mobile keeps one global command palette via the keyboard shortcut.
@@ -239,8 +239,8 @@ for (const width of [390, 1440]) {
       const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
       await expect(tabs.getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
       await tabs.getByRole('button', { name: 'Driving' }).click()
-      const panel = page.locator('.sidenav-sheet').getByRole('navigation', { name: 'Sidebar navigation' })
-      await expect(panel.getByRole('button', { name: 'Drive records' })).toHaveAttribute('aria-expanded', 'true')
+      const panel = page.getByRole('dialog', { name: 'Browse sections' })
+      await panel.getByRole('button', { name: /^Drive records/ }).click()
       await expect(panel.getByRole('link', { name: 'Drive calendar' })).toHaveAttribute('aria-current', 'page')
       await captureDeck(page, testInfo, `deck-drive-calendar-${width}`)
     }
@@ -274,9 +274,9 @@ for (const width of [390, 1440]) {
       await expect(tabs.getByRole('button', { name: 'Driving' })).toBeVisible()
       await captureDeck(page, testInfo, `deck-light-tabs-${width}`)
       await tabs.getByRole('button', { name: 'Driving' }).click()
-      const panel = page.locator('.sidenav-sheet').getByRole('navigation', { name: 'Sidebar navigation' })
-      await expect(panel).toHaveCSS('background-color', 'rgb(250, 251, 252)')
-      await expect(panel.getByRole('button', { name: 'Driving performance' })).toBeVisible()
+      const panel = page.getByRole('dialog', { name: 'Browse sections' })
+      await expect(panel).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await expect(panel.getByRole('button', { name: /^Driving performance/ })).toBeVisible()
       await captureDeck(page, testInfo, `deck-light-sheet-${width}`)
     }
   })

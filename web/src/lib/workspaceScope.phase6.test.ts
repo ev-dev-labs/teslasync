@@ -104,6 +104,7 @@ describe('phase6 audit workspace range registration', () => {
     expect(headerSource).toContain('const showRange = !workspaceScope.managed || workspaceScope.range');
     expect(headerSource).toContain('hidden={!showRange}');
     expect(headerSource).toContain('const showVehicle = !workspaceScope.managed || workspaceScope.vehicle');
-    expect(headerSource).toContain('{showVehicle && (');
+    expect(headerSource).toMatch(/\{!compact && showVehicle && \(\s*<VehiclePicker/);
+    expect(headerSource).toMatch(/\{compact && \(workspaceScope\.range \|\| workspaceScope\.vehicle\) && <MobileWorkspaceControls/);
   });
 });

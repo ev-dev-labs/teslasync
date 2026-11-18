@@ -39,18 +39,16 @@ test('installed mobile navigation opens and follows a shortcut in secondary engi
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await waitForHarnessReady(page, mockApi);
 
-  // The Home tab opens the Home-view sheet directly (polish keeps tabbed
-  // sections out of the More grid); the drawer-era data-sidebar-open hook
-  // is gone by design and unit tests pin its absence.
+  // The Home tab opens the Home groups directly in the shared sheet.
   await page.locator('.sidenav-phone-tabs').getByRole('button', { name: 'Home' }).click();
-  const sheet = page.getByRole('dialog');
+  const sheet = page.getByRole('dialog', { name: 'Browse sections' });
   await expect(sheet).toBeVisible();
-  // The section sheet hosts panel navigation with the All pages shortcut.
-  await expect(page.getByRole('navigation', { name: 'Sidebar navigation' })).toBeVisible();
-  await page.getByRole('link', { name: 'All pages' }).click();
+  await sheet.getByRole('searchbox').fill('Explore features');
+  await sheet.locator('[data-nav-choice]').first().click();
+  await sheet.getByRole('link', { name: 'Explore features', exact: true }).click();
   await expect(page).toHaveURL(/\/explore$/);
   await expect(sheet).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Browse sections' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Explore features', exact: true })).toBeVisible();
   await waitForHarnessReady(page, mockApi);
   await assertMockApiComplete(page, mockApi);

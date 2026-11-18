@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, act, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
 import { navSections } from '../Layout'
 import { BottomTabBar } from '../BottomTabBar'
 import { CommandDeck } from './CommandDeck'
-import { SectionRail } from './SectionRail'
 import { NAV_ICON_PARTS } from './navIconParts'
 import { NAV_SECTION_ICONS, NAV_UTILITY_ICONS } from './NavIcons'
 import { collectionGroups, collectionSidebarSections } from './collections'
@@ -31,7 +30,7 @@ beforeEach(() => { localStorage.clear(); preference.reduce = false; Object.defin
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('selection-only nav icon motion', () => {
-  it.each(navSections.map(section => section.title))('%s has a multipart animated variant and settles after one selection', title => {
+  it.each(sections.map(section => section.title))('%s has a multipart animated variant and settles after one selection', title => {
     expect(NAV_SECTION_ICONS[title]).toBeDefined()
     render(<Deck />)
     const item = rail().getByRole('button', { name: title, exact: true })
@@ -76,28 +75,8 @@ describe('selection-only nav icon motion', () => {
     expect(rail().getByRole('button', { name: 'Charging', exact: true })).toHaveAttribute('aria-current', 'true')
     expect(document.querySelector('.is-animating')).toBeNull()
   })
-  it.each(['Alerts', 'Display', 'Account'])('%s footer keeps its accessible control and has an animated variant', async name => {
-    render(<Deck />)
-    const item = name === 'Alerts' || name === 'Display' ? rail().getByRole('link', { name, exact: true }) : rail().getByText('', { selector: 'summary' })
-    expect(item.querySelector('svg')).toHaveAttribute('data-nav-icon', name === 'Alerts' ? 'alerts' : name === 'Display' ? 'display' : 'avatar')
-    await act(async () => { fireEvent.click(item) })
-    expect(target(item)).toHaveClass('is-animating')
-    endMotion(target(item))
-    expect(target(item)).not.toHaveClass('is-animating')
-    if (name === 'Alerts') expect(item.querySelector('.sidenav-alert-count')).toHaveTextContent('7')
-  })
-  it('animates the injected appearance trigger without animating its menu actions', () => {
-    function Appearance({ triggerIcon }: { triggerIcon?: React.ReactNode }) { return <><button data-nav-action>{triggerIcon}</button><button>Theme option</button></> }
-    render(<MemoryRouter><SectionRail sections={sections} selection={{ kind: 'section', title: 'Home' }} onSelect={() => undefined} navSectionTitle={s => s.title} alertCount={0} appearanceControl={<Appearance />} /></MemoryRouter>)
-    const trigger = document.querySelector<HTMLButtonElement>('.sidenav-utility button')!
-    fireEvent.click(trigger)
-    expect(target(trigger)).toHaveClass('is-animating')
-    endMotion(target(trigger))
-    fireEvent.click(screen.getByRole('button', { name: 'Theme option' }))
-    expect(target(trigger)).not.toHaveClass('is-animating')
-  })
   it.each(['Home', 'Vehicles', 'Driving', 'Charging', 'More'])('phone %s is animated on activation only', name => {
-    render(<BottomTabBar activeSection="Driving" />)
+    render(<BottomTabBar sections={sections} activeSection="Driving" />)
     const tab = screen.getByRole('button', { name, exact: true })
     expect(target(tab)).not.toHaveClass('is-animating')
     fireEvent.click(tab)
@@ -106,25 +85,25 @@ describe('selection-only nav icon motion', () => {
     expect(target(tab)).not.toHaveClass('is-animating')
   })
   it('does not add motion under either the app or OS reduced-motion preference, and clears it if preference changes', () => {
-    const view = render(<BottomTabBar />)
+    const view = render(<BottomTabBar sections={sections} />)
     const home = screen.getByRole('button', { name: 'Home', exact: true })
     fireEvent.click(home)
     expect(target(home)).toHaveClass('is-animating')
     preference.reduce = true
-    view.rerender(<BottomTabBar />)
+    view.rerender(<BottomTabBar sections={sections} />)
     expect(target(home)).not.toHaveClass('is-animating')
     fireEvent.click(home)
     expect(target(home)).not.toHaveClass('is-animating')
     preference.reduce = false
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
-    view.rerender(<BottomTabBar />)
+    view.rerender(<BottomTabBar sections={sections} />)
     fireEvent.click(home)
     expect(target(home)).not.toHaveClass('is-animating')
   })
   it('clears playback immediately when the OS cancels animation mid-flight', () => {
     const media = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }
     vi.stubGlobal('matchMedia', vi.fn(() => media))
-    const view = render(<BottomTabBar />)
+    const view = render(<BottomTabBar sections={sections} />)
     const home = screen.getByRole('button', { name: 'Home', exact: true })
     fireEvent.click(home)
     expect(target(home)).toHaveClass('is-animating')
@@ -147,7 +126,7 @@ describe('selection-only nav icon motion', () => {
     expect(item.querySelector('svg')!.innerHTML).toBe(icon)
     expect(item.querySelector('[data-nav-motion], .is-animating')).toBeNull()
     fireEvent.click(item)
-    expect(screen.getByTestId('atlas-panel-secondary').querySelector('svg')!.innerHTML).toBe(icon)
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: 'Notifications' })).toBeVisible()
     expect(screen.getByRole('dialog').querySelector('[data-nav-motion], .is-animating')).toBeNull()
   })
   it('has finite transforms/opacity-only keyframes, scoped behind reduced-motion, for every glyph', () => {

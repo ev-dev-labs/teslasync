@@ -35,9 +35,8 @@ for (const width of [375,768,1280,1920]) for (const theme of ['light','dark'] as
   for (const panel of await page.locator('[data-widget-id^="review-"]').all()) await panel.hover();
   expect(await measure()).toEqual(view);
   await page.getByRole('button',{name:'Customize',exact:true}).click();
-  const edit = await measure();
-  expect(edit.every(row=>row.valid), JSON.stringify(edit)).toBe(true);
-  expect(edit.map(row=>row.right)).toEqual(view.map(row=>row.right));
+  // Grid layout transitions can still be in flight after Customize resolves.
+  await expect.poll(measure).toEqual(view);
  });
 }
 for (const width of [375, 1440]) for (const theme of ['light', 'dark'] as const) {

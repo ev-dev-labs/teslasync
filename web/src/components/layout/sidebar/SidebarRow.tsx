@@ -77,6 +77,7 @@ export function SidebarRow({
       )}
       <PrefetchNavLink
         data-app-part="nav-item"
+        data-nav-choice
         to={to}
         onClick={onSelect}
         onDoubleClick={onDoubleClick}

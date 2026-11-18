@@ -16,6 +16,8 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    * viewport-contained and full-width regardless of this prop.
    */
   size?: 'sm' | 'md' | 'lg' | 'full' | 'fullscreen';
+  /** Keep a sheet at the bottom even above the default mobile breakpoint. */
+  placement?: 'responsive' | 'bottom';
   children: ReactNode;
   aboveNotifications?: boolean;
   /** Persistent actions outside the scrolling dialog body. */
@@ -58,7 +60,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, originSnapshot, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', placement = 'responsive', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, originSnapshot, ...props }, ref) => {
     const { t } = useTranslation();
     const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -112,7 +114,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         />
         <div className={cn(
           'relative flex min-h-full justify-center',
-          fullscreen ? 'items-stretch' : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',
+          fullscreen ? 'items-stretch' : placement === 'bottom' ? 'items-end'
+            : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',
         )}>
           <div
             ref={setDialogRef}

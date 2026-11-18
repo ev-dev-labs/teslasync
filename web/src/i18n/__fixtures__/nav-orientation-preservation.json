@@ -1,0 +1,1252 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "36819e4f06b194d37015c81bc31d3b547234c77200a7f9bb8d7fdb396fe8614b",
+    "after": "1ca36768a2e5a7db7a309b1d04abdf602fb68218e20f0cc5d77b3b69c62808bd",
+    "hunks": [
+      {
+        "start": 48,
+        "old": [
+          "  Logo,"
+        ],
+        "new": []
+      },
+      {
+        "start": 57,
+        "old": [
+          "import { useAlerts } from '@/api/hooks/useNotifications'"
+        ],
+        "new": [
+          "import { useAlerts, useUnreadCount } from '@/api/hooks/useNotifications'",
+          "import { useMediaQuery } from '@/hooks/useMediaQuery'"
+        ]
+      },
+      {
+        "start": 118,
+        "old": [
+          "const MobileWorkspaceControls = lazy(() => import('./MobileWorkspaceControls'))"
+        ],
+        "new": []
+      },
+      {
+        "start": 358,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 377,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 394,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 403,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 413,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 429,
+        "old": [],
+        "new": [
+          "    railPlacement: 'bottom' as const,"
+        ]
+      },
+      {
+        "start": 440,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 451,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 461,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 501,
+        "old": [],
+        "new": [
+          "    railPlacement: 'more' as const,"
+        ]
+      },
+      {
+        "start": 715,
+        "old": [
+          "const MOBILE_BRAND_CONTAINMENT = 'min-w-0 max-w-full [&>span]:min-w-0 [&>span]:truncate'",
+          ""
+        ],
+        "new": []
+      },
+      {
+        "start": 721,
+        "old": [
+          "  const mobileHeaderRef = useRef<HTMLElement>(null)",
+          "  const mobileHeaderSpacerRef = useRef<HTMLDivElement>(null)",
+          "  useEffect(() => {",
+          "    const header = mobileHeaderRef.current",
+          "    const spacer = mobileHeaderSpacerRef.current",
+          "    if (!header || !spacer || typeof ResizeObserver === 'undefined') return",
+          "    const reserveHeaderHeight = () => {",
+          "      const height = header.getBoundingClientRect().height",
+          "      if (height > 0) spacer.style.height = `${height}px`",
+          "    }",
+          "    reserveHeaderHeight()",
+          "    const observer = new ResizeObserver(reserveHeaderHeight)",
+          "    observer.observe(header)",
+          "    return () => {",
+          "      observer.disconnect()",
+          "      spacer.style.removeProperty('height')",
+          "    }",
+          "  }, [sidebarOpen, presentation.mode, horizontal])"
+        ],
+        "new": [
+          "  const compactNav = useMediaQuery('(max-width: 1023px)')",
+          "  const getBrowseTrigger = useCallback(() => sidebarTriggerRef.current, [])"
+        ]
+      },
+      {
+        "start": 735,
+        "old": [
+          "  // Viewport bracket read synchronously so the deck Suspense fallback below",
+          "  // reserves the exact in-flow width of the loaded deck. Same brackets as",
+          "  // CommandDeck's own viewport state (phone <768 < tablet <1280 <= desktop).",
+          "  const [deckViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')"
+        ],
+        "new": [
+          "  const dockedNav = useMediaQuery('(min-width: 1280px)')"
+        ]
+      },
+      {
+        "start": 972,
+        "old": [
+          "  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0"
+        ],
+        "new": [
+          "  const { data: unreadCount = 0 } = useUnreadCount()"
+        ]
+      },
+      {
+        "start": 1249,
+        "old": [],
+        "new": [
+          "            unreadCount={unreadCount}"
+        ]
+      },
+      {
+        "start": 1265,
+        "old": [
+          "        <Suspense fallback={deckViewport === 'phone' ? null : <div className=\"sidenav-loading\" data-panel-open={deckPanelOpen} style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >"
+        ],
+        "new": [
+          "        <Suspense fallback={compactNav ? null : <div className=\"sidenav-loading\" data-panel-open={deckPanelOpen} style={{ width: 76 + (dockedNav && deckPanelOpen ? 272 : 0) }} />} >"
+        ]
+      },
+      {
+        "start": 1277,
+        "old": [
+          "            alertCount={unreadAlerts}"
+        ],
+        "new": [
+          "            alertCount={unreadCount}"
+        ]
+      },
+      {
+        "start": 1284,
+        "old": [
+          "            appearanceControl={<ThemeQuickSwitcher placement=\"left\" onOpen={() => {",
+          "              if (window.innerWidth < 1280) { setDeckPanelOpen(false); setSidebarOpen(false) }",
+          "            }} />}"
+        ],
+        "new": []
+      },
+      {
+        "start": 1285,
+        "old": [],
+        "new": [
+          "            getBrowseTrigger={getBrowseTrigger}"
+        ]
+      },
+      {
+        "start": 1290,
+        "old": [
+          "",
+          "      {/* Mobile top bar */}",
+          "      {presentation.mode === 'standard' && !horizontal && !sidebarOpen && (",
+          "        <header ref={mobileHeaderRef} data-role=\"appbar\" role=\"banner\" aria-label={t('a11y.primaryHeader', 'Site header')} className=\"fixed inset-x-0 top-0 z-[60] md:start-[76px] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]\">",
+          "          <Button",
+          "            ref={sidebarTriggerRef}",
+          "            onClick={() => setSidebarOpen(true)}",
+          "            type=\"button\"",
+          "            variant=\"ghost\"",
+          "            size=\"sm\"",
+          "            aria-label={t('nav.openSidebar', 'Open sidebar')}",
+          "            aria-expanded={false}",
+          "            className=\"relative z-10 -ms-1 h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]\"",
+          "          >",
+          "            <Icons.menu className=\"h-6 w-6\" />",
+          "          </Button>",
+          "          <div className=\"flex min-w-0 flex-1 basis-16 justify-center\">",
+          "            <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />",
+          "          </div>",
+          "          <div data-role=\"mobile-header-actions\" className=\"ms-auto flex shrink-0 items-center gap-2\">",
+          "            <NotificationBellPopover className=\"max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11\" />",
+          "            <ThemeQuickSwitcher />",
+          "          </div>",
+          "          {deckViewport !== 'desktop' && (workspaceScope.range || workspaceScope.vehicle) && (",
+          "            <Suspense fallback={<div className=\"h-11 w-full basis-full\" aria-hidden=\"true\" />}>",
+          "              <MobileWorkspaceControls />",
+          "            </Suspense>",
+          "          )}",
+          "        </header>",
+          "      )}"
+        ],
+        "new": []
+      },
+      {
+        "start": 1296,
+        "old": [
+          "        {/* Spacer for fixed mobile header */}",
+          "        {presentation.mode === 'standard' && !horizontal && <div ref={mobileHeaderSpacerRef} data-role=\"appbar-spacer\" className=\"h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden\" />}",
+          "        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className=\"hidden h-workspace-header shrink-0 xl:block\" />}>"
+        ],
+        "new": [
+          "        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className=\"h-workspace-header shrink-0\" />}>"
+        ]
+      },
+      {
+        "start": 1298,
+        "old": [
+          "            notifications={<NotificationBellPopover />}"
+        ],
+        "new": [
+          "            notifications={<NotificationBellPopover className=\"max-lg:[&>button]:min-h-11 max-lg:[&>button]:min-w-11\" />}"
+        ]
+      },
+      {
+        "start": 1300,
+        "old": [],
+        "new": [
+          "            compact={!dockedNav}",
+          "            browseControl={compactNav && <Button ref={sidebarTriggerRef} variant=\"ghost\"",
+          "              aria-label={t('nav.flyout.browse', 'Browse sections')} aria-haspopup=\"dialog\" aria-expanded={sidebarOpen}",
+          "              className=\"min-h-11 min-w-11 p-0\" onClick={() => setSidebarOpen(true)}",
+          "              onKeyDown={event => {",
+          "                if (event.key === 'ArrowDown') { event.preventDefault(); setSidebarOpen(true) }",
+          "              }}><Icons.menu className=\"size-5\" aria-hidden /></Button>}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/collections.ts",
+    "before": "64e12fa053879b753fb297eaf0b90e5e46e33a1afacee283948da09de9993270",
+    "after": "c8deacc4123d4e1c83988a048a0c6b48812c73dd61778953745a842cb699efcf",
+    "hunks": [
+      {
+        "start": 2,
+        "old": [
+          "import { sectionPrimaryPath, type NavBadge, type SectionGroup } from '../sectionGroups'"
+        ],
+        "new": [
+          "import { sectionPrimaryPath, type NavBadge, type SectionGroup, type SidebarSectionInput } from '../sectionGroups'"
+        ]
+      },
+      {
+        "start": 7,
+        "old": [
+          "type Section<T extends Item> = { title: string; items: T[] }"
+        ],
+        "new": [
+          "type Section<T extends Item> = Omit<SidebarSectionInput, 'items'> & { items: T[] }"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sectionGroups.ts",
+    "before": "6e38b9205b19e7eb8e90519f0dccf934997afd838176a35ce32cd27503653cdb",
+    "after": "ff05619681551b2fcdeb0c08402f1d92a2f4e0f2e4020da4bd50588f82c57756",
+    "hunks": [
+      {
+        "start": 21,
+        "old": [],
+        "new": [
+          "  railPlacement?: 'more' | 'bottom'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/CommandDeck.tsx",
+    "before": "849f8d827da05395a6d7581735fcb5c40cbc72bc29b26d872cffc05d12a4be2e",
+    "after": "e1e1195e6298478bda8accd5c3d54cc7d068515b390a6457c25229d13311eeb2",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { useEffect, useRef, useState, type ReactNode } from 'react'"
+        ],
+        "new": [
+          "import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'"
+        ]
+      },
+      {
+        "start": 7,
+        "old": [
+          "import { resolveSectionIcon, PHONE_TAB_SECTIONS } from './sidebarIcons'"
+        ],
+        "new": [
+          "import { resolveSectionIcon } from './sidebarIcons'",
+          "import { NavSheet } from '../horizontal-nav/NavSheet'",
+          "import { handleMenuVertical, inlineKeys, menuItems } from '../horizontal-nav/navKeyboard'",
+          "import { Icons } from '@/lib/icons'"
+        ]
+      },
+      {
+        "start": 14,
+        "old": [],
+        "new": [
+          "type RailSelection = { kind: 'more' } | { kind: 'section'; title: string }"
+        ]
+      },
+      {
+        "start": 35,
+        "old": [
+          "  appearanceControl?: ReactNode"
+        ],
+        "new": []
+      },
+      {
+        "start": 36,
+        "old": [],
+        "new": [
+          "  getBrowseTrigger?: () => HTMLElement | null"
+        ]
+      },
+      {
+        "start": 57,
+        "old": [
+          "  const railItems = useRef(new Map<string, HTMLButtonElement>())"
+        ],
+        "new": [
+          "  const id = useId()",
+          "  const content = useRef<HTMLDivElement>(null)",
+          "  const invoker = useRef<HTMLElement | null>(null)",
+          "  const enterPanel = useRef(false)"
+        ]
+      },
+      {
+        "start": 66,
+        "old": [
+          "  const [phoneSheet, setPhoneSheet] = useState<'more' | 'section' | null>(null)",
+          "  const [viewport, setViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')"
+        ],
+        "new": [
+          "  const [moreOpen, setMoreOpen] = useState(false)",
+          "  const [phoneSheet, setPhoneSheet] = useState<{ section?: string } | null>(null)",
+          "  const [viewport, setViewport] = useState(() => window.innerWidth < 1024 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')"
+        ]
+      },
+      {
+        "start": 73,
+        "old": [
+          "  const previousBrowse = useRef(mobileBrowseOpen)"
+        ],
+        "new": [
+          "  const previousBrowse = useRef(false)"
+        ]
+      },
+      {
+        "start": 76,
+        "old": [
+          "      const next = window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop'"
+        ],
+        "new": [
+          "      const next = window.innerWidth < 1024 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop'"
+        ]
+      },
+      {
+        "start": 80,
+        "old": [
+          "          '[aria-modal=\"true\"]:not(.sidenav-tablet-panel):not(.sidenav-sheet)',"
+        ],
+        "new": [
+          "          '[aria-modal=\"true\"]:not(.sidenav-tablet-panel):not(.horizontal-nav-sheet)',"
+        ]
+      },
+      {
+        "start": 82,
+        "old": [],
+        "new": [
+          "        if (next !== 'phone' && currentViewport.current === 'phone') {",
+          "          setPhoneSheet(null)",
+          "          if (previousBrowse.current) onItemSelect?.()",
+          "        }"
+        ]
+      },
+      {
+        "start": 92,
+        "old": [
+          "  }, [])"
+        ],
+        "new": [
+          "  }, [onItemSelect])"
+        ]
+      },
+      {
+        "start": 95,
+        "old": [
+          "      if (viewport === 'phone') setPhoneSheet('more')",
+          "      else { setDeferTabletPanel(false); onPanelOpenChange(true) }"
+        ],
+        "new": [
+          "      if (viewport === 'phone') {",
+          "        invoker.current = props.getBrowseTrigger?.() ?? null",
+          "        setPhoneSheet({})",
+          "      }"
+        ]
+      },
+      {
+        "start": 100,
+        "old": [
+          "    previousBrowse.current = mobileBrowseOpen",
+          "  }, [mobileBrowseOpen, viewport, onPanelOpenChange])"
+        ],
+        "new": [
+          "    previousBrowse.current = !!mobileBrowseOpen",
+          "  }, [mobileBrowseOpen, viewport, props.getBrowseTrigger])"
+        ]
+      },
+      {
+        "start": 108,
+        "old": [],
+        "new": [
+          "    setMoreOpen(false)"
+        ]
+      },
+      {
+        "start": 117,
+        "old": [
+          "  useEffect(() => {",
+          "    if (viewport !== 'tablet' || !panelOpen) return",
+          "    // The rail stays interactive beside the drawer, so Escape must also work",
+          "    // when focus is on its selected section rather than inside the modal.",
+          "    const escape = (event: KeyboardEvent) => {",
+          "      const dialogs = document.querySelectorAll('[role=\"dialog\"], [role=\"alertdialog\"]')",
+          "      if (event.key !== 'Escape' || event.defaultPrevented || !dialogs[dialogs.length - 1]?.classList.contains('sidenav-tablet-panel')) return",
+          "      onPanelOpenChange(false)",
+          "      onItemSelect?.()",
+          "    }",
+          "    document.addEventListener('keydown', escape)",
+          "    return () => document.removeEventListener('keydown', escape)",
+          "  }, [viewport, panelOpen, onPanelOpenChange, onItemSelect])"
+        ],
+        "new": [
+          "  useLayoutEffect(() => {",
+          "    if (!panelVisible || !enterPanel.current || !content.current) return",
+          "    enterPanel.current = false",
+          "    ;(menuItems(content.current)[0] ?? content.current.querySelector('input'))?.focus()",
+          "  }, [panelVisible, title, moreOpen])",
+          "  const getReturnFocusTarget = () => invoker.current?.isConnected ? invoker.current : props.getBrowseTrigger?.() ?? null"
+        ]
+      },
+      {
+        "start": 124,
+        "old": [
+          "    onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.()",
+          "    if (viewport === 'desktop') requestAnimationFrame(() => railItems.current.get(title)?.focus())"
+        ],
+        "new": [
+          "    onPanelOpenChange(false); setPhoneSheet(null); setMoreOpen(false); onItemSelect?.()",
+          "    if (viewport === 'desktop') getReturnFocusTarget()?.focus()"
+        ]
+      },
+      {
+        "start": 127,
+        "old": [
+          "  const select = (selection: DeckSelection) => {",
+          "    if (selection.kind !== 'section') return"
+        ],
+        "new": [
+          "  const select = (selection: RailSelection, trigger: HTMLButtonElement, enter = false, fromMore = false) => {",
+          "    if (!fromMore) invoker.current = trigger"
+        ]
+      },
+      {
+        "start": 131,
+        "old": [],
+        "new": [
+          "    enterPanel.current = enter",
+          "    if (selection.kind === 'more') {",
+          "      if (!enter && moreOpen && panelVisible) { close(); return }",
+          "      if (moreOpen && panelVisible) menuItems(content.current)[0]?.focus()",
+          "      setMoreOpen(true)",
+          "      onPanelOpenChange(true)",
+          "      return",
+          "    }",
+          "    if (!enter && panelVisible && !moreOpen && title === selection.title) { close(); return }",
+          "    if (enter && panelVisible && !moreOpen && title === selection.title) menuItems(content.current)[0]?.focus()",
+          "    setMoreOpen(false)"
+        ]
+      },
+      {
+        "start": 144,
+        "old": [
+          "    if (viewport === 'phone') setPhoneSheet('section')",
+          "    else onPanelOpenChange(!(panelVisible && title === selection.title))"
+        ],
+        "new": [
+          "    onPanelOpenChange(true)"
+        ]
+      },
+      {
+        "start": 147,
+        "old": [
+          "  const panel = <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}"
+        ],
+        "new": [
+          "  const panel = <div ref={content} id={id} className=\"flex h-full min-h-0 w-full flex-col\" onKeyDown={event => {",
+          "    if (event.key === 'Escape' || event.key === inlineKeys(event.currentTarget).back && menuItems(content.current).includes(event.target as HTMLElement)) {",
+          "      event.preventDefault()",
+          "      event.stopPropagation()",
+          "      close()",
+          "    } else handleMenuVertical(event)",
+          "  }}>",
+          "    {moreOpen ? <div role=\"navigation\" data-testid=\"atlas-panel-secondary\" data-app-part=\"navigation\"",
+          "      aria-label={t('nav.mobileMore', 'More')} className=\"sidenav-panel min-h-0 flex-1 overflow-y-auto bg-[var(--nav-context-bg)] p-2\">",
+          "      {sections.filter(section => section.railPlacement === 'more').map(section => {",
+          "        const Icon = resolveSectionIcon(section.title)",
+          "        return <Button key={section.title} data-nav-choice variant=\"ghost\" className=\"min-h-11 w-full justify-start whitespace-normal text-start\"",
+          "          onKeyDown={event => {",
+          "            if (event.key !== inlineKeys(event.currentTarget).forward) return",
+          "            event.preventDefault()",
+          "            select({ kind: 'section', title: section.title }, event.currentTarget, true, true)",
+          "          }}",
+          "          onClick={event => select({ kind: 'section', title: section.title }, event.currentTarget, true, true)}>",
+          "          <Icon className=\"size-4 shrink-0\" aria-hidden />{sectionLabel(section)}<Icons.next className=\"ms-auto size-4 shrink-0 rtl:rotate-180\" aria-hidden />",
+          "        </Button>",
+          "      })}",
+          "    </div> : <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}"
+        ]
+      },
+      {
+        "start": 170,
+        "old": [
+          "    onItemSelect={() => { setPhoneSheet(null); if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />"
+        ],
+        "new": [
+          "    onItemSelect={() => { if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />}",
+          "  </div>"
+        ]
+      },
+      {
+        "start": 174,
+        "old": [
+          "      <div data-testid=\"command-deck-rail\" className=\"sidenav-rail-column\"><SectionRail {...props} sections={sections} navSectionTitle={sectionLabel} alertCount={props.alertCount ?? 0}",
+          "        onUtilityActivate={() => { if (viewport === 'tablet') { onPanelOpenChange(false); onItemSelect?.() } }}",
+          "        itemRef={(key, element) => { const name = key.replace(/^section:/, ''); if (element) railItems.current.set(name, element); else railItems.current.delete(name) }}",
+          "        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelVisible} /></div>"
+        ],
+        "new": [
+          "      <div data-testid=\"command-deck-rail\" className=\"sidenav-rail-column\" onKeyDown={event => {",
+          "        if (event.key === 'Escape' && panelVisible) { event.stopPropagation(); close() }",
+          "      }}><SectionRail sections={sections} navSectionTitle={sectionLabel}",
+          "        selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelVisible} panelId={id} moreOpen={moreOpen} pathname={pathname} /></div>"
+        ]
+      },
+      {
+        "start": 179,
+        "old": [
+          "      <Modal open={viewport === 'tablet' && panelVisible} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+        ],
+        "new": [
+          "      <Modal open={viewport === 'tablet' && panelVisible} onClose={close} getReturnFocusTarget={getReturnFocusTarget}",
+          "        ariaLabel={moreOpen ? t('nav.mobileMore', 'More') : sectionLabel(sections.find(s => s.title === title) ?? { title })}"
+        ]
+      },
+      {
+        "start": 184,
+        "old": [
+          "      <BottomTabBar activeSection={activeSectionTitle} onChoose={section => { if (section) select({ kind: 'section', title: section }); else setPhoneSheet('more') }} />",
+          "      <Modal open={phoneSheet !== null} onClose={() => { setPhoneSheet(null); onItemSelect?.() }}",
+          "        title={phoneSheet === 'more' ? t('nav.mobileMore', 'More') : undefined}",
+          "        ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })} className=\"sidenav-sheet\">",
+          "        {phoneSheet === 'more' ? <div className=\"sidenav-section-grid\">{sections.filter(section => !PHONE_TAB_SECTIONS.some(title => title === section.title)).map(section => {",
+          "          const Icon = resolveSectionIcon(section.title)",
+          "          return <Button data-app-part=\"nav-item\" key={section.title} type=\"button\" variant=\"ghost\" aria-current={section.title === activeSectionTitle ? 'true' : undefined} className={section.title === activeSectionTitle ? 'is-selected' : undefined} onClick={() => select({ kind: 'section', title: section.title })}>",
+          "            <Icon className=\"h-5 w-5\" aria-hidden /><span>{sectionLabel(section)}</span>",
+          "          </Button>",
+          "        })}</div> : panel}",
+          "      </Modal>"
+        ],
+        "new": [
+          "      <BottomTabBar sections={sections} activeSection={activeSectionTitle} openSection={phoneSheet && invoker.current !== props.getBrowseTrigger?.() ? phoneSheet.section ?? null : undefined}",
+          "        sheetId={id} onChoose={(section, element) => { invoker.current = element; setPhoneSheet(section ? { section } : {}) }} />",
+          "      {phoneSheet && <NavSheet id={id} initialSection={phoneSheet.section} activeSectionTitle={activeSectionTitle}",
+          "        model={{ sections, collections: props.collections ?? [], pathname, pinnedPaths: new Set(props.pinnedItems.map(item => item.to)),",
+          "          onPin: props.onPin, onUnpin: props.onUnpin, pinSyncUnavailable: props.pinSyncUnavailable, unreadCount: props.alertCount ?? 0,",
+          "          vehicleId: props.vehicleId, vehicleCount: props.vehicleCount ?? 0, staleCount: props.staleCount ?? 0 }}",
+          "        onClose={() => { setPhoneSheet(null); onItemSelect?.() }} getReturnFocusTarget={getReturnFocusTarget} />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+    "before": "a7662a6d0ec5229ff333e57fe66844b9b7b3e83bddbf4f966c0095b987d93fb6",
+    "after": "fdf61de51f0e417af9f0cb6f08677147666b8f437640940849b03accad0af52a",
+    "hunks": [
+      {
+        "start": 9,
+        "old": [
+          "import { groupSidebarItems, flattenSidebarItems, type FlatSidebarEntry } from './collections'",
+          "import { matchesSidebarTokens, searchSidebarSections, tokenizeSidebarQuery } from './sidebarSearch'"
+        ],
+        "new": [
+          "import { flattenSidebarItems, type FlatSidebarEntry } from './collections'"
+        ]
+      },
+      {
+        "start": 11,
+        "old": [
+          "import { SidebarCountChip, SidebarNotificationDot, SidebarRow } from './SidebarRow'",
+          "import { SidebarDriveBadge } from './SidebarDriveBadge'"
+        ],
+        "new": [
+          "import { SidebarRow } from './SidebarRow'",
+          "import { deriveNavGroups, PINNED } from '../horizontal-nav/navGroups'",
+          "import { NavPageBadge } from '../horizontal-nav/NavPageBadge'",
+          "import { inlineKeys } from '../horizontal-nav/navKeyboard'"
+        ]
+      },
+      {
+        "start": 49,
+        "old": [
+          "/** The same section content serves the desktop panel, tablet drawer and phone sheet. */"
+        ],
+        "new": [
+          "/** Vertical section content for the docked panel and tablet drawer. */"
+        ]
+      },
+      {
+        "start": 58,
+        "old": [
+          "  const section = view.kind === 'section' ? sections.find(candidate => candidate.title === view.title) : null"
+        ],
+        "new": [
+          "  const section = view.kind === 'section' ? sections.find(candidate => candidate.title === view.title) : undefined"
+        ]
+      },
+      {
+        "start": 64,
+        "old": [
+          "  const groups = section ? groupSidebarItems(section.items, collections) : []",
+          "  const sectionPaths = new Set(groups.flatMap(group => group.entries.map(item => item.to)))"
+        ],
+        "new": []
+      },
+      {
+        "start": 65,
+        "old": [
+          "  const matches = new Set(section && filtering ? searchSidebarSections([section], collections, query, navLabel, { matchSectionTitle: false }).flatMap(result => result.hits.map(item => item.to)) : [])",
+          "  const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)",
+          "  const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))",
+          "  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]"
+        ],
+        "new": [
+          "  const { groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)",
+          "  const activeGroup = groups.find(group => group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id",
+          "  const [activeGroupOverride, setActiveGroupOverride] = useState<{ route: string; closed: boolean }>()",
+          "  const activeClosed = activeGroupOverride?.route === pathname && activeGroupOverride.closed",
+          "  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : key === activeGroup ? !activeClosed : !collapsed[viewKey + ':' + key]"
+        ]
+      },
+      {
+        "start": 73,
+        "old": [
+          "    else setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: isOpen(key) }))"
+        ],
+        "new": [
+          "    else {",
+          "      if (key === activeGroup) setActiveGroupOverride({ route: pathname, closed: isOpen(key) })",
+          "      setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: isOpen(key) }))",
+          "    }"
+        ]
+      },
+      {
+        "start": 87,
+        "old": [
+          "    const trailing = vehicleId && item.to === '/drives' ? <SidebarDriveBadge kind=\"today\" vehicleId={vehicleId} />",
+          "      : vehicleId && item.to === '/drive-score' ? <SidebarDriveBadge kind=\"score\" vehicleId={vehicleId} />",
+          "      : item.to === '/notifications/inbox' && alertCount > 0 ? <SidebarNotificationDot />",
+          "      : item.to === '/vehicles' && vehicleCount > 0 ? <SidebarCountChip value={vehicleCount} label={t('nav.vehicleCount', { count: vehicleCount, defaultValue: '{{count}} vehicles' })} />",
+          "      : item.to === '/data-repair' && staleCount > 0 ? <SidebarCountChip value={staleCount} label={t('nav.staleCount', { count: staleCount, defaultValue: '{{count}} stale rows' })} /> : null"
+        ],
+        "new": [
+          "    const trailing = item.badge ? <NavPageBadge badge={item.badge} model={{ vehicleId, unreadCount: alertCount, vehicleCount, staleCount }} /> : null"
+        ]
+      },
+      {
+        "start": 96,
+        "old": [
+          "    aria-label={label} aria-expanded={isOpen(key)} aria-controls={`${id}-${key}`} onClick={() => toggle(key)}"
+        ],
+        "new": [
+          "    data-nav-choice aria-label={label} aria-expanded={isOpen(key)} aria-controls={`${id}-${key}`} onClick={() => toggle(key)}",
+          "    onKeyDown={event => {",
+          "      if (event.key !== inlineKeys(event.currentTarget).forward) return",
+          "      event.preventDefault()",
+          "      if (isOpen(key)) event.currentTarget.nextElementSibling?.querySelector<HTMLElement>('[data-nav-choice]')?.focus()",
+          "      else toggle(key)",
+          "    }}"
+        ]
+      },
+      {
+        "start": 108,
+        "old": [
+          "  const collectionKeys = groups.filter(group => group.label).map(group => group.entries[0].to)"
+        ],
+        "new": [
+          "  const collectionKeys = collectionIds"
+        ]
+      },
+      {
+        "start": 119,
+        "old": [
+          "          else setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))"
+        ],
+        "new": [
+          "          else {",
+          "            if (activeGroup) setActiveGroupOverride({ route: pathname, closed: !anyClosed })",
+          "            setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))",
+          "          }"
+        ]
+      },
+      {
+        "start": 150,
+        "old": [
+          "        {(!filtering || pins.length > 0) && <div>{groupHeader('pinned', t('nav.sidenav.pinned', 'Pinned'), pins.length)}",
+          "          <div id={`${id}-pinned`}>{isOpen('pinned') && (pins.length ? pins.map(item => row(item, `pinned-${item.to}`, true)) : <p className=\"px-2 py-2 text-xs text-[var(--text-muted)]\">{t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}</p>)}</div>",
+          "        </div>}",
+          "        {filtering && visibleGroups.length === 0 && pins.length === 0 && <p role=\"status\" className=\"px-2 py-4 text-sm text-[var(--text-muted)]\">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match \"{{query}}\".' })}</p>}",
+          "        {visibleGroups.map(group => {",
+          "          const key = group.groupKey",
+          "          return <div key={key}>",
+          "            {group.label && groupHeader(key, group.labelKey ? t(group.labelKey, group.label) : group.label, group.entries.length)}",
+          "            <div id={group.label ? `${id}-${key}` : undefined}>{(!group.label || isOpen(key)) && group.entries.map(item => row(item))}</div>"
+        ],
+        "new": [
+          "        {filtering && groups.length === 0 && <p role=\"status\" className=\"px-2 py-4 text-sm text-[var(--text-muted)]\">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match \"{{query}}\".' })}</p>}",
+          "        {groups.map(group => {",
+          "          const quickPin = group.id === PINNED",
+          "          const pages = quickPin ? group.pages.filter(item => !isActive(item.to)) : group.pages",
+          "          if (!pages.length) return null",
+          "          return <div key={group.id}>",
+          "            {!group.ungrouped && groupHeader(group.id, group.label, pages.length)}",
+          "            <div id={group.ungrouped ? undefined : `${id}-${group.id}`}>{(group.ungrouped || isOpen(group.id)) &&",
+          "              pages.map(item => row(item, quickPin ? `pinned-${item.to}` : item.to, quickPin))}</div>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+    "before": "c118f88f6e9735a09ea016df07db9021eb11f8ef4d77c60dd7f394bcd118b51f",
+    "after": "f41807a9728b02e3b91aaed850a24a996ecf449a62d64800e7854350bfd16fab",
+    "hunks": [
+      {
+        "start": 0,
+        "old": [
+          "import { cloneElement, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'"
+        ],
+        "new": [
+          "import { useEffect, useRef, useState } from 'react'"
+        ]
+      },
+      {
+        "start": 3,
+        "old": [
+          "import { Tooltip } from '@/components/ui/Tooltip'",
+          "import { NAV_UTILITY_ICONS } from './NavIcons'",
+          "import { useNavIconMotion } from './useNavIconMotion'"
+        ],
+        "new": []
+      },
+      {
+        "start": 5,
+        "old": [
+          "import { PrefetchNavLink } from '../PrefetchLink'",
+          "import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'"
+        ],
+        "new": [
+          "import { NAV_UTILITY_ICONS } from './NavIcons'",
+          "import type { SidebarSectionInput } from '../sectionGroups'",
+          "import { handleMenuVertical, inlineKeys, menuItems } from '../horizontal-nav/navKeyboard'",
+          "import { useNavIconMotion } from './useNavIconMotion'"
+        ]
+      },
+      {
+        "start": 10,
+        "old": [
+          "import { flattenSidebarItems } from './collections'"
+        ],
+        "new": []
+      },
+      {
+        "start": 12,
+        "old": [
+          "export interface SectionRailProps {",
+          "  sections: SidebarSectionInput[]"
+        ],
+        "new": [
+          "interface SectionRailProps {",
+          "  sections: readonly SidebarSectionInput[]"
+        ]
+      },
+      {
+        "start": 15,
+        "old": [
+          "  onSelect: (selection: DeckSelection) => void",
+          "  navLabel?: (item: { label: string; labelKey: string }) => string"
+        ],
+        "new": [
+          "  onSelect: (selection: { kind: 'more' } | { kind: 'section'; title: string }, trigger: HTMLButtonElement, enter?: boolean) => void"
+        ]
+      },
+      {
+        "start": 18,
+        "old": [],
+        "new": [
+          "  panelId?: string",
+          "  moreOpen?: boolean"
+        ]
+      },
+      {
+        "start": 21,
+        "old": [
+          "  alertCount: number",
+          "  appearanceControl?: ReactNode",
+          "  onItemSelect?: () => void",
+          "  onUtilityActivate?: () => void",
+          "  itemRef?: (key: string, el: HTMLButtonElement | null) => void",
+          "  // Retained for callers of the shared rail API.",
+          "  collapsed?: boolean",
+          "  onToggleCollapsed?: () => void",
+          "  showCollapseControl?: boolean",
+          "  collections?: readonly SectionGroup[]",
+          "  suggestedCount?: number",
+          "  favoritesCount?: number"
+        ],
+        "new": []
+      },
+      {
+        "start": 22,
+        "old": [
+          "export function selectionKey(selection: DeckSelection) {",
+          "  return selection.kind === 'section' ? `section:${selection.title}` : selection.kind",
+          "}",
+          "export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, pathname, alertCount, appearanceControl, onItemSelect, onUtilityActivate, itemRef, collections = [] }: SectionRailProps) {"
+        ],
+        "new": [
+          "",
+          "export function SectionRail({ sections, selection, onSelect, navSectionTitle, panelOpen, panelId, moreOpen, pathname }: SectionRailProps) {"
+        ]
+      },
+      {
+        "start": 26,
+        "old": [
+          "  const { alerts: AlertsIcon, display: DisplayIcon, avatar: AvatarIcon } = NAV_UTILITY_ICONS",
+          "  const displayIcon = <span data-nav-motion className=\"nav-motion-target\"><DisplayIcon className=\"h-5 w-5\" aria-hidden /></span>",
+          "  const shortLabels: Record<string, string> = {",
+          "    'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),",
+          "    'Ownership intelligence': t('nav.sidenav.shortOwnership', 'Ownership'),",
+          "    'Tesla physics': t('nav.sidenav.shortPhysics', 'Physics'),",
+          "    Notifications: t('nav.sidenav.shortInbox', 'Inbox'),",
+          "    Integrations: t('nav.sidenav.shortConnect', 'Connect'),",
+          "  }",
+          "  const scrollRef = useRef<HTMLDivElement>(null)",
+          "  const buttons = useRef<Array<HTMLButtonElement | null>>([])",
+          "  const selected = selection?.kind === 'section' ? selection.title : 'Home'",
+          "  const [focusTitle, setFocusTitle] = useState(selected)",
+          "  const [fades, setFades] = useState({ top: false, bottom: false })"
+        ],
+        "new": [
+          "  const rail = useRef<HTMLDivElement>(null)",
+          "  const [focusTitle, setFocusTitle] = useState<string>()",
+          "  const selected = selection?.kind === 'section' ? selection.title : undefined",
+          "  const more = sections.filter(section => section.railPlacement === 'more')",
+          "  const moreActive = more.some(section => section.title === selected)",
+          "  const current = moreActive ? 'more' : selected"
+        ]
+      },
+      {
+        "start": 33,
+        "old": [
+          "    setFocusTitle(selected)",
+          "    buttons.current[sections.findIndex(s => s.title === selected)]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })",
+          "  }, [selected, sections, pathname])",
+          "  useEffect(() => {",
+          "    const element = scrollRef.current",
+          "    if (!element) return",
+          "    const update = () => setFades({ top: element.scrollTop > 1, bottom: element.scrollTop + element.clientHeight < element.scrollHeight - 2 })",
+          "    update()",
+          "    element.addEventListener('scroll', update, { passive: true })",
+          "    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)",
+          "    observer?.observe(element)",
+          "    return () => { observer?.disconnect(); element.removeEventListener('scroll', update) }",
+          "  }, [sections])"
+        ],
+        "new": [
+          "    setFocusTitle(current)",
+          "    if (rail.current && rail.current.scrollHeight > rail.current.clientHeight) {",
+          "      rail.current.querySelector('[aria-current=\"true\"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })",
+          "    }",
+          "  }, [current, pathname])",
+          "  const asEntry = (section: SidebarSectionInput) => ({",
+          "    title: section.title, label: navSectionTitle(section), Icon: resolveSectionIcon(section.title),",
+          "    kind: 'section' as const, bottom: section.railPlacement === 'bottom',",
+          "  })",
+          "  const entries = [",
+          "    ...sections.filter(section => !section.railPlacement).map(asEntry),",
+          "    ...(more.length ? [{ title: 'more', label: t('nav.mobileMore', 'More'), Icon: NAV_UTILITY_ICONS.more, kind: 'more' as const, bottom: true }] : []),",
+          "    ...sections.filter(section => section.railPlacement === 'bottom').map(asEntry),",
+          "  ]",
+          "  const tabStop = entries.some(entry => entry.title === focusTitle) ? focusTitle",
+          "    : moreActive ? 'more' : entries.some(entry => entry.title === selected) ? selected : entries[0]?.title",
+          ""
+        ]
+      },
+      {
+        "start": 52,
+        "old": [
+          "    <div className=\"sidenav-scroll-wrap\">",
+          "      <div ref={scrollRef} data-testid=\"rail-scroll\" className=\"sidenav-rail-scroll\">",
+          "        {sections.map((section, index) => {",
+          "          const label = navSectionTitle(section)",
+          "          const short = shortLabels[section.title]",
+          "          const Icon = resolveSectionIcon(section.title)",
+          "          return <Button key={section.title} ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}",
+          "              data-nav-action data-app-part=\"nav-item\" type=\"button\" variant=\"ghost\" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}",
+          "              aria-expanded={selected === section.title && panelOpen} tabIndex={focusTitle === section.title ? 0 : -1}",
+          "              className={cn('sidenav-rail-item', selected === section.title && 'is-selected')}",
+          "              onFocus={() => setFocusTitle(section.title)}",
+          "              onKeyDown={event => {",
+          "                const scroll = scrollRef.current",
+          "                const horizontal = scroll && getComputedStyle(scroll).flexDirection === 'row'",
+          "                const rtl = scroll && getComputedStyle(scroll).direction === 'rtl'",
+          "                const forward = horizontal && event.key === (rtl ? 'ArrowLeft' : 'ArrowRight')",
+          "                const backward = horizontal && event.key === (rtl ? 'ArrowRight' : 'ArrowLeft')",
+          "                const next = event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1",
+          "                  : event.key === 'ArrowDown' || forward ? (index + 1) % sections.length",
+          "                  : event.key === 'ArrowUp' || backward ? (index - 1 + sections.length) % sections.length : -1",
+          "                if (next < 0) return",
+          "                event.preventDefault()",
+          "                buttons.current[next]?.focus()",
+          "                buttons.current[next]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })",
+          "              }} onClick={() => onSelect({ kind: 'section', title: section.title })}>",
+          "              <span data-nav-motion className=\"sidenav-icon nav-motion-target\"><Icon className=\"h-5 w-5\" aria-hidden /></span>",
+          "              <span className=\"sidenav-short-label\">{short ?? label}</span>",
+          "            </Button>",
+          "        })}",
+          "      </div>",
+          "      <div aria-hidden data-testid=\"rail-fade-top\" data-visible={fades.top} className=\"sidenav-fade sidenav-fade-top\" />",
+          "      <div aria-hidden data-testid=\"rail-fade-bottom\" data-visible={fades.bottom} className=\"sidenav-fade sidenav-fade-bottom\" />",
+          "    </div>",
+          "    <div className=\"sidenav-utilities\">",
+          "      <Tooltip content={t('nav.deck.alerts', 'Alerts')} side=\"right\">",
+          "        <PrefetchNavLink data-nav-action data-app-part=\"nav-item\" to=\"/notifications/inbox\" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} className=\"sidenav-utility\" aria-label={t('nav.deck.alerts', 'Alerts')}>",
+          "          <span data-nav-motion className=\"nav-motion-target\"><AlertsIcon className=\"h-5 w-5\" aria-hidden /></span>",
+          "          {alertCount > 0 && <span className=\"sidenav-alert-count\" aria-label={t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' })}>{alertCount > 99 ? '99+' : alertCount}</span>}",
+          "        </PrefetchNavLink>",
+          "      </Tooltip>",
+          "      <Tooltip content={t('nav.deck.display', 'Display')} side=\"right\">",
+          "        <div className=\"sidenav-utility\">{(isValidElement<{ triggerIcon?: ReactNode }>(appearanceControl) ? cloneElement(appearanceControl, { triggerIcon: displayIcon }) : appearanceControl) ?? <PrefetchNavLink data-nav-action data-app-part=\"nav-item\" to=\"/settings#appearance\" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} aria-label={t('nav.deck.display', 'Display')}>{displayIcon}</PrefetchNavLink>}</div>",
+          "      </Tooltip>",
+          "      <Tooltip content={t('nav.groups.account', 'Account')} side=\"right\"><details className=\"sidenav-account\" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>",
+          "        <summary data-nav-action data-app-part=\"nav-item\" className=\"sidenav-utility\" aria-label={t('nav.groups.account', 'Account')} onClick={onUtilityActivate} onKeyDown={event => {",
+          "          const account = event.currentTarget.closest('details')",
+          "          if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false }",
+          "        }}><span data-nav-motion className=\"nav-motion-target sidenav-avatar\"><AvatarIcon className=\"h-3.5 w-3.5\" aria-hidden /></span></summary>",
+          "        <div className=\"sidenav-account-menu\">",
+          "          {flattenSidebarItems(sections.find(section => section.title === 'Account')?.items ?? [], collections).map(item => <PrefetchNavLink data-app-part=\"nav-item\" key={item.to} to={item.to} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onItemSelect?.() }} onKeyDown={event => {",
+          "            const account = event.currentTarget.closest('details')",
+          "            if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false; account.querySelector('summary')?.focus() }",
+          "          }} className=\"sidenav-account-link\">{navLabel?.(item) ?? item.label}</PrefetchNavLink>)}",
+          "        </div>",
+          "      </details></Tooltip>"
+        ],
+        "new": [
+          "    <div ref={rail} data-testid=\"rail-scroll\" className=\"sidenav-rail-scroll\" onKeyDown={event => {",
+          "      if (event.defaultPrevented) return",
+          "      if (event.ctrlKey && event.key === 'ArrowDown') {",
+          "        const items = menuItems(event.currentTarget)",
+          "        const index = items.indexOf(event.target as HTMLElement)",
+          "        if (index >= 0) { event.preventDefault(); items[(index + 1) % items.length]?.focus() }",
+          "        return",
+          "      }",
+          "      handleMenuVertical(event)",
+          "    }}>",
+          "      {entries.map(({ title, label, Icon, kind, bottom }, index) => {",
+          "        const isCurrent = kind === 'more' ? moreActive : selected === title",
+          "        const expanded = !!panelOpen && (kind === 'more' ? moreOpen || moreActive : isCurrent && !moreOpen)",
+          "        const target = kind === 'more' ? { kind } : { kind, title }",
+          "        return <Button key={title} data-nav-choice data-nav-action data-app-part=\"nav-item\" type=\"button\" variant=\"ghost\"",
+          "          aria-label={label} aria-current={isCurrent ? 'true' : undefined} aria-expanded={expanded}",
+          "          aria-controls={expanded ? panelId : undefined} tabIndex={tabStop === title ? 0 : -1}",
+          "          className={cn('sidenav-rail-item', (expanded || isCurrent) && 'is-selected', bottom && !entries[index - 1]?.bottom && 'sidenav-rail-bottom')}",
+          "          onFocus={() => setFocusTitle(title)}",
+          "          onKeyDown={event => {",
+          "            if ((event.key === 'ArrowDown' && !event.ctrlKey) || event.key === inlineKeys(event.currentTarget).forward) {",
+          "              event.preventDefault()",
+          "              onSelect(target, event.currentTarget, true)",
+          "            }",
+          "          }} onClick={event => onSelect(target, event.currentTarget)}>",
+          "          <span data-nav-motion className=\"sidenav-icon nav-motion-target\"><Icon className=\"h-5 w-5\" aria-hidden /></span>",
+          "          <span className=\"sidenav-short-label\">{title === 'Notifications' ? t('nav.sidenav.shortInbox', 'Inbox') : label}</span>",
+          "        </Button>",
+          "      })}"
+        ]
+      },
+      {
+        "start": 84,
+        "old": [
+          "export default SectionRail"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/BottomTabBar.tsx",
+    "before": "3ccbab1591e788259f27bfac8ba23f80df284616a5f3a44d6fadfd934e56aa5e",
+    "after": "b000527faf461332c21821dde10089150fcd61ecc5b66a453e76879cb20e4d8f",
+    "hunks": [
+      {
+        "start": 4,
+        "old": [
+          "import { resolveSectionIcon } from './sidebar/sidebarIcons'"
+        ],
+        "new": [
+          "import { PHONE_TAB_SECTIONS, resolveSectionIcon } from './sidebar/sidebarIcons'",
+          "import type { SidebarSectionInput } from './sectionGroups'"
+        ]
+      },
+      {
+        "start": 7,
+        "old": [],
+        "new": [
+          "import { inlineKeys, menuItems } from './horizontal-nav/navKeyboard'"
+        ]
+      },
+      {
+        "start": 9,
+        "old": [
+          "export function BottomTabBar({ activeSection = 'Home', onChoose = () => undefined }: { activeSection?: string; onChoose?: (section: string | null) => void }) {"
+        ],
+        "new": [
+          "export function BottomTabBar({ sections = [], activeSection = 'Home', onChoose, openSection, sheetId }: {",
+          "  sections?: readonly SidebarSectionInput[]",
+          "  activeSection?: string",
+          "  onChoose?: (section: string | null, trigger: HTMLButtonElement) => void",
+          "  openSection?: string | null",
+          "  sheetId?: string",
+          "}) {"
+        ]
+      },
+      {
+        "start": 19,
+        "old": [
+          "    { section: 'Home', label: t('nav.mobileHome', 'Home'), icon: resolveSectionIcon('Home') },",
+          "    { section: 'Vehicles', label: t('nav.sidenav.mobileVehicles', 'Vehicles'), icon: resolveSectionIcon('Vehicles') },",
+          "    { section: 'Driving', label: t('nav.sidenav.mobileDriving', 'Driving'), icon: resolveSectionIcon('Driving') },",
+          "    { section: 'Charging', label: t('nav.mobileCharging', 'Charging'), icon: resolveSectionIcon('Charging') },"
+        ],
+        "new": [
+          "    ...PHONE_TAB_SECTIONS.flatMap(title => {",
+          "      const section = sections.find(candidate => candidate.title === title)",
+          "      return section ? [{ section: title, label: section.titleKey ? t(section.titleKey, title) : title, icon: resolveSectionIcon(title) }] : []",
+          "    }),"
+        ]
+      },
+      {
+        "start": 27,
+        "old": [
+          "    {tabs.map(({ section, label, icon: Icon }) => <Button data-nav-action data-app-part=\"nav-item\" key={label} variant=\"ghost\" type=\"button\" aria-label={label}"
+        ],
+        "new": [
+          "    {tabs.map(({ section, label, icon: Icon }) => <Button data-nav-action data-nav-choice data-app-part=\"nav-item\" key={label} variant=\"ghost\" type=\"button\" aria-label={label}"
+        ]
+      },
+      {
+        "start": 29,
+        "old": [],
+        "new": [
+          "      aria-haspopup=\"dialog\" aria-expanded={section === openSection} aria-controls={section === openSection ? sheetId : undefined}"
+        ]
+      },
+      {
+        "start": 31,
+        "old": [
+          "      onClick={() => onChoose(section)}><span data-nav-motion className=\"nav-motion-target nav-phone-icon\"><Icon className=\"h-[22px] w-[22px]\" aria-hidden /></span><span className=\"sidenav-tab-label\">{label}</span></Button>)}"
+        ],
+        "new": [
+          "      onClick={event => onChoose?.(section, event.currentTarget)}",
+          "      onKeyDown={event => {",
+          "        const trigger = event.currentTarget",
+          "        if (event.key === 'ArrowDown') {",
+          "          event.preventDefault()",
+          "          onChoose?.(section, trigger)",
+          "          return",
+          "        }",
+          "        const { forward, back } = inlineKeys(trigger)",
+          "        const delta = event.key === forward ? 1 : event.key === back ? -1 : 0",
+          "        if (!delta) return",
+          "        const items = menuItems(trigger.parentElement)",
+          "        const index = items.indexOf(trigger)",
+          "        if (index >= 0) { event.preventDefault(); items[(index + delta + items.length) % items.length]?.focus() }",
+          "      }}>",
+          "      <span data-nav-motion className=\"nav-motion-target nav-phone-icon\"><Icon className=\"h-[22px] w-[22px]\" aria-hidden /></span><span className=\"sidenav-tab-label\">{label}</span></Button>)}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/sidenav.css",
+    "before": "1ab13224ddefa59c8f6f273261ffcc279b2739ba2b0da3744a9d9d2c3f01b0c2",
+    "after": "1624fcd80c7af8371eea74713c717b7c831b6aee13f9aed30627ba389c1e2217",
+    "hunks": [
+      {
+        "start": 5,
+        "old": [
+          ".sidenav-brand { height: 60px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }",
+          ".sidenav-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-height: 0; }",
+          ".sidenav-rail-scroll { position: relative; z-index: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }",
+          ".sidenav-rail-scroll::-webkit-scrollbar { display: none; }",
+          ".sidenav-rail-item { position: relative; display: flex; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: 60px; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }"
+        ],
+        "new": [
+          ".sidenav-brand { height: 48px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }",
+          ".sidenav-rail-scroll { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: 0 4px 6px; }",
+          ".sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: auto; min-height: 44px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }",
+          ".sidenav-rail-bottom { margin-block-start: auto; }"
+        ]
+      },
+      {
+        "start": 11,
+        "old": [
+          ".sidenav-icon { display: grid; place-items: center; width: 36px; height: 30px; border-radius: 8px; }"
+        ],
+        "new": [
+          ".sidenav-icon { display: grid; place-items: center; width: 36px; height: 22px; border-radius: 8px; }"
+        ]
+      },
+      {
+        "start": 14,
+        "old": [
+          ".sidenav-rail-item:focus-visible, .sidenav-phone-tab:focus-visible, .sidenav-utility:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: -2px; }",
+          ".sidenav-fade { position: absolute; z-index: 1; inset-inline: 0; height: 48px; pointer-events: none; opacity: 0; }",
+          ".sidenav-fade[data-visible='true'] { opacity: 1; }",
+          ".sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg) 15%, transparent); }",
+          ".sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg) 85%); }",
+          ".sidenav-utilities { flex: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-top: 1px solid var(--border-default); }",
+          ".sidenav-utility { position: relative; display: grid; place-items: center; width: 48px; height: 44px; border-radius: 8px; color: var(--text-secondary); }",
+          ".sidenav-utility:hover { background: var(--surface-2); }",
+          ".sidenav-alert-count { position: absolute; top: 0; inset-inline-end: 0; font-size: 10px; padding: 0 4px; border-radius: 8px; background: var(--semantic-info); color: var(--surface-1); }",
+          ".sidenav-account { position: relative; }",
+          ".sidenav-account summary { list-style: none; cursor: pointer; }",
+          ".sidenav-account-menu { position: absolute; inset-inline-start: 52px; bottom: 0; width: 220px; padding: 8px; z-index: 70; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 12px; }",
+          ".sidenav-account-link { display: flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }"
+        ],
+        "new": [
+          ".sidenav-rail-item:focus-visible, .sidenav-phone-tab:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: -2px; }"
+        ]
+      },
+      {
+        "start": 19,
+        "old": [
+          ".sidenav-section-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px; overflow-y: auto; }",
+          ".sidenav-section-grid button { display: flex; height: auto; min-height: 76px; flex-direction: column; gap: 8px; padding: 8px 4px; white-space: normal; font-size: 11px; text-align: center; }",
+          ".sidenav-sheet { position: fixed; inset-inline: 0; bottom: 0; width: 100%; height: 82dvh; max-height: 90dvh; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }",
+          ".sidenav-sheet > [data-modal-scroll-body], .sidenav-tablet-panel > [data-modal-scroll-body] { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }",
+          ".sidenav-sheet > [data-modal-scroll-body] > [role='navigation'], .sidenav-tablet-panel > [data-modal-scroll-body] > [role='navigation'] { flex: 1; }",
+          ".sidenav-tablet-panel { position: fixed; inset-inline-start: 76px; top: 0; bottom: var(--shell-status-bar-height); width: 272px; max-width: calc(100vw - 76px); height: auto; max-height: none; border-radius: 0; }",
+          ".z-overlay:has(.sidenav-tablet-panel), .z-overlay:has(.sidenav-tablet-panel) > [aria-hidden='true'] { inset-inline-start: 76px; }",
+          ".z-overlay:has(.sidenav-tablet-panel) > .relative, .z-overlay:has(.sidenav-sheet) > .relative { pointer-events: none; }",
+          ".sidenav-tablet-panel, .sidenav-sheet { pointer-events: auto; }"
+        ],
+        "new": [
+          ".sidenav-tablet-panel > [data-modal-scroll-body] { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }",
+          ".sidenav-tablet-panel { position: fixed; inset-inline-start: var(--sidenav-rail-width, 76px); top: 0; bottom: var(--shell-status-bar-height); width: 272px; max-width: calc(100vw - var(--sidenav-rail-width, 76px)); height: auto; max-height: none; border-radius: 0; }",
+          ".z-overlay:has(.sidenav-tablet-panel), .z-overlay:has(.sidenav-tablet-panel) > [aria-hidden='true'] { inset-inline-start: var(--sidenav-rail-width, 76px); }",
+          ".z-overlay:has(.sidenav-tablet-panel) > .relative { pointer-events: none; }",
+          ".sidenav-tablet-panel { pointer-events: auto; }"
+        ]
+      },
+      {
+        "start": 25,
+        "old": [
+          "@media (min-width: 768px) { .sidenav-phone-tabs { display: none; } }",
+          "@media (prefers-reduced-motion: reduce) { .sidenav-deck *, .sidenav-sheet, .sidenav-tablet-panel { scroll-behavior: auto; animation: none; transition: none; } }"
+        ],
+        "new": [
+          "@media (min-width: 768px) and (max-width: 1023px) {",
+          "  :root:not([data-tab-bar='off']):not([data-app-navigation='top']) { --shell-tab-bar-height: calc(4rem + env(safe-area-inset-bottom, 0px)); }",
+          "}",
+          "@media (prefers-reduced-motion: reduce) { .sidenav-deck *, .sidenav-tablet-panel { scroll-behavior: auto; animation: none; transition: none; } }"
+        ]
+      },
+      {
+        "start": 37,
+        "old": [
+          ".sidenav-section-grid { padding-bottom: 16px; gap: 12px; }",
+          ".sidenav-section-grid button span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 16px; }",
+          ".sidenav-section-grid button.is-selected { background: var(--nav-active-bg); color: var(--text-primary); outline: 2px solid var(--theme-accent); outline-offset: -2px; }"
+        ],
+        "new": []
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SidebarRow.tsx",
+    "before": "481369a156f3759841e04dcfc6a0966b42049d0a3851cb5d8e403b3c4c2a8c82",
+    "after": "82839fcd760b201e9e90a9f7e427b1437f5517d2fbff185741f7a18e26f77a37",
+    "hunks": [
+      {
+        "start": 79,
+        "old": [],
+        "new": [
+          "        data-nav-choice"
+        ]
+      }
+    ]
+  }
+]

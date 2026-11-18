@@ -47,7 +47,6 @@ vi.mock('@/api/hooks/useNotifications', async () => {
   >('@/api/hooks/useNotifications')
   return {
     ...actual,
-    useUnreadCount: () => ({ data: unreadCountMock }),
     useUnreadNotifications: () => ({
       data: unreadLogsMock.length === 0 && (unreadIsLoadingMock || unreadErrorMock)
         ? undefined
@@ -158,7 +157,7 @@ function renderPopover(initialEntry = '/') {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <Wrapper>
-          <NotificationBellPopover />
+          <NotificationBellPopover count={unreadCountMock} label={unreadCountMock > 0 ? `${unreadCountMock} unread notifications` : 'Notifications'} />
           <LocationProbe />
         </Wrapper>
       </MemoryRouter>

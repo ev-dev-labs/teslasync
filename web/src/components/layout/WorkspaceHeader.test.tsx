@@ -7,6 +7,7 @@ import postcss, { type Root } from 'postcss'
 import tailwindcss from 'tailwindcss'
 import loadConfig from 'tailwindcss/loadConfig'
 import { cn } from '@/lib/cn'
+import { Button } from '@/components/ui/Button'
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope'
 import {
   getWorkspaceQuickRangePresets,
@@ -44,6 +45,14 @@ vi.mock('./VehiclePicker', () => ({
   ),
 }))
 
+vi.mock('./NotificationBellPopover', () => ({
+  NotificationBellPopover: ({ label }: { label: string }) => <Button type="button">{label}</Button>,
+}))
+
+vi.mock('./ThemeQuickSwitcher', () => ({
+  ThemeQuickSwitcher: () => <Button type="button">Theme</Button>,
+}))
+
 vi.mock('./WorkspaceContextControl', () => ({
   WorkspaceContextControl: ({ className, hidden }: { className?: string; hidden?: boolean }) => (
     <button type="button" className={className} hidden={hidden}>
@@ -52,12 +61,11 @@ vi.mock('./WorkspaceContextControl', () => ({
   ),
 }))
 
+const bellProps = { unreadCount: 0, notificationLabel: 'Notifications' }
+
 describe('WorkspaceHeader', () => {
   it('marks existing context, discovery and control owners without changing their DOM order', () => {
-    render(<WorkspaceHeader
-      notifications={<button type="button">Notifications</button>}
-      themeControl={<button type="button">Theme</button>}
-    />)
+    render(<WorkspaceHeader {...bellProps} />)
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     expect(header).toHaveAttribute('data-app-part', 'workspace-header')
     expect(Array.from(header.children).map(child => child.getAttribute('data-app-header-slot')))
@@ -68,17 +76,11 @@ describe('WorkspaceHeader', () => {
   })
 
   it('groups context, discovery, vehicle scope, and utilities in one desktop command plane', () => {
-    render(
-      <WorkspaceHeader
-        notifications={<button type="button">Notifications</button>}
-        themeControl={<button type="button">Theme</button>}
-      />,
-    )
+    render(<WorkspaceHeader {...bellProps} />)
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     expect(header).toHaveClass(
-      'hidden',
-      'xl:grid',
+      'grid',
       'grid-cols-workspace-header',
     )
     expect(header).toHaveAttribute('data-layout', 'balanced-three-track')
@@ -100,7 +102,7 @@ describe('WorkspaceHeader', () => {
   })
 
   it('lets the caption primitive own restrained context typography without changing header geometry', () => {
-    render(<WorkspaceHeader />)
+    render(<WorkspaceHeader {...bellProps} />)
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     const caption = within(header).getByText('Fleet operations')
@@ -120,8 +122,7 @@ describe('WorkspaceHeader', () => {
     render(
       <WorkspaceScopeProvider scope={scope}>
         <WorkspaceHeader
-          notifications={<button type="button">Notifications</button>}
-          themeControl={<button type="button">Theme</button>}
+          {...bellProps}
         />
       </WorkspaceScopeProvider>,
     )
@@ -156,7 +157,7 @@ describe('WorkspaceHeader route-specific scope corrections', () => {
     expect(scope).toEqual({ range, vehicle })
     render(
       <WorkspaceScopeProvider scope={scope}>
-        <WorkspaceHeader />
+        <WorkspaceHeader {...bellProps} />
       </WorkspaceScopeProvider>,
     )
 
@@ -256,8 +257,7 @@ describe('WorkspaceHeader exact geometry naming', () => {
 
   it('keeps native discovery and utility focus targets in their original order', () => {
     render(<WorkspaceHeader
-      notifications={<button type="button">Notifications</button>}
-      themeControl={<button type="button">Theme</button>}
+      {...bellProps}
     />)
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
     const buttons = within(header).getAllByRole('button')
@@ -349,8 +349,8 @@ describe('application shell composition CSS contracts (not mounted browser geome
     expect(styles.toString()).not.toMatch(/contain:\s*(size|strict)|content-visibility|overflow:\s*hidden|!important/)
   })
 
-  it('changes desktop navigation only at the existing 1280px shell breakpoint and keeps the assistant dock alongside main', () => {
-    for (const mode of ['rail', 'sidebar', 'top', 'hybrid']) {
+  it('preserves the 1280px breakpoint for vertical navigation and keeps the assistant alongside main', () => {
+    for (const mode of ['rail', 'sidebar', 'hybrid']) {
       for (const rule of familyRules('data-app-navigation', mode)) {
         let parent: typeof rule.parent | Root['parent'] = rule.parent
         let desktop = false
@@ -362,10 +362,16 @@ describe('application shell composition CSS contracts (not mounted browser geome
         expect(rule.selector).toContain('[data-presentation-mode="standard"]')
       }
     }
-    for (const mode of ['top', 'hybrid']) {
-      expect(familyRules('data-app-navigation', mode).some(rule =>
-        rule.toString().includes('#helix-dock-slot > [data-role="helix-side-panel"]'))).toBe(true)
+    const horizontal = familyRules('data-app-navigation', 'top')
+    expect(horizontal.some(rule => rule.toString().includes('#helix-dock-slot > [data-role="helix-side-panel"]'))).toBe(true)
+    const hybrid = familyRules('data-app-navigation', 'hybrid')
+    expect(geometry(hybrid)).not.toMatch(/grid-template|display:grid/)
+    expect(hybrid.some(rule => rule.selector.includes('.sidenav-context-column .sidenav-panel'))).toBe(true)
+    for (const rule of horizontal) {
+      expect(rule.selector).toContain('[data-horizontal-shell][data-presentation-mode="standard"]')
+      expect(rule.parent?.type === 'atrule' && rule.parent.params).not.toContain('min-width')
     }
+    expect(geometry(horizontal)).toContain('grid-template-rows:auto minmax(0, 1fr)')
   })
 
   it('keeps owner rows shrinkable/wrapping while leaving arbitrary page workflows and caller spacing overrides intact', () => {

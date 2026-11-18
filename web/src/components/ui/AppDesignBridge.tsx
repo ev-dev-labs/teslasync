@@ -5,7 +5,8 @@ import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 import { useWidgetDesignPack } from '@/hooks/useWidgetDesignPack';
 import { Button } from './Button';
 import { Text } from './Typography';
-import { getAppDesignAttributes, observeAppDesignScopes } from './app-designs/designs';
+import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from './app-designs/designs';
+import { ActiveAppNavigation } from './app-designs/ActiveAppNavigation';
 import './appDesignPacks.css';
 
 /** Layout routes only; the root attribute also reaches body-portaled overlays. */
@@ -55,7 +56,11 @@ export function AppDesignBridge({ children }: { children?: ReactNode }) {
     if (readyToShow) setReleased(true);
   }, [readyToShow]);
 
-  if (!children || released || readyToShow) return <>{children}</>;
+  if (!children || released || readyToShow) return (
+    <ActiveAppNavigation.Provider value={isReady && appWide ? APPLICATION_DESIGNS[packId].navigation : null}>
+      {children}
+    </ActiveAppNavigation.Provider>
+  );
   const failed = !!error || moduleError;
   return <main className="mx-auto w-full max-w-4xl space-y-4 p-4">
     {failed

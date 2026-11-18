@@ -1,23 +1,25 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { captureAppDesignOrigin } from './appDesignOrigin'
+import { Button } from './Button'
+import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 export function loadCommandPalette() {
   return import('./CommandPalette')
 }
 
 /** Lightweight command-palette trigger that preloads the full palette on intent. */
-export function CommandPaletteTrigger() {
+export function CommandPaletteTrigger({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation()
   const preload = () => {
     void loadCommandPalette()
   }
 
   return (
-    <button
+    <Button
       type="button"
-      data-app-part="button"
-      data-app-variant="secondary"
+      variant={compact ? 'ghost' : 'secondary'}
       onMouseEnter={preload}
       onFocus={preload}
       onClick={(event) => {
@@ -27,15 +29,19 @@ export function CommandPaletteTrigger() {
         window.dispatchEvent(new CustomEvent('toggle-command-palette', { detail: { origin, designOrigin } }))
       }}
       aria-label={t('palette.placeholder', 'Search pages, commands…')}
-      className="flex w-full items-center gap-3 rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 py-2 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+      aria-keyshortcuts="Control+K Meta+K"
+      className={compact ? 'horizontal-nav-icon' : cn(
+        'flex h-auto w-full items-center gap-3 rounded-shape-md px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] forced-colors:border-[var(--control-border)]',
+        typography.weight.regular,
+      )}
     >
-      <Icons.search className="h-4 w-4" aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate text-left">
+      <Icons.search className={compact ? 'size-5' : 'size-4'} aria-hidden="true" />
+      {!compact && <><span className="min-w-0 flex-1 truncate text-left">
         {t('palette.placeholder', 'Search pages, commands…')}
       </span>
       <kbd className="hidden items-center gap-0.5 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:flex">
         <Icons.keyboard className="h-2.5 w-2.5" aria-hidden="true" />K
-      </kbd>
-    </button>
+      </kbd></>}
+    </Button>
   )
 }

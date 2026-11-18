@@ -22,6 +22,10 @@
     --app-surface-raised: var(--surface-2);
     --app-surface-overlay: var(--surface-3);
     --app-card-radius: var(--radius-lg);
+    --app-nav-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl) var(--radius-sm);
+    --app-nav-bar: var(--surface-1);
+    --app-nav-pane: var(--app-surface-raised);
+    --app-nav-rule: var(--border-strong);
     --app-card-shadow: var(--elevation-1);
     --app-display-font: var(--font-sans);
     --app-display-weight: var(--font-weight-bold);

@@ -1,0 +1,230 @@
+[
+  {
+    "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+    "before": "fdf61de51f0e417af9f0cb6f08677147666b8f437640940849b03accad0af52a",
+    "after": "366e82705b07c5a75a8e6aa20d4e9f31abc6fab4870cd65cab4ae376b3339dfb",
+    "hunks": [
+      {
+        "start": 65,
+        "new": [
+          "  const { orderedGroups: groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)",
+          "  const activeGroup = groups.find(group => !group.ungrouped && group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id"
+        ],
+        "old": [
+          "  const { groups, collectionIds } = deriveNavGroups(section, { collections, pinnedPaths: pinned }, query, t)",
+          "  const activeGroup = groups.find(group => group.id !== PINNED && group.pages.some(item => isActive(item.to)))?.id"
+        ]
+      },
+      {
+        "start": 155,
+        "new": [
+          "          if (group.ungrouped) return pages.map(item => row(item))"
+        ],
+        "old": []
+      },
+      {
+        "start": 157,
+        "new": [
+          "            {groupHeader(group.id, group.label, pages.length)}",
+          "            <div id={`${id}-${group.id}`}>{isOpen(group.id) &&"
+        ],
+        "old": [
+          "            {!group.ungrouped && groupHeader(group.id, group.label, pages.length)}",
+          "            <div id={group.ungrouped ? undefined : `${id}-${group.id}`}>{(group.ungrouped || isOpen(group.id)) &&"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+    "before": "3739e170da09fa98edb745013e59eea213c4ea295166bf1333d6bab9c638b7e1",
+    "after": "5d265210c0a65ecc0e2ff8c0f7cb2fdab3ef5a006b4c6203ad2cd583105737b0",
+    "hunks": [
+      {
+        "start": 51,
+        "new": [
+          "    if (observer) for (const item of scroll.children) observer.observe(item)"
+        ],
+        "old": []
+      },
+      {
+        "start": 53,
+        "new": [
+          "  }, [sections])"
+        ],
+        "old": [
+          "  }, [sections.length])"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/sidebar/sidenav.css",
+    "before": "ff19a1b53b6e40a3922821980c8c72bed22666f5d43c33ab571304f0ee0e33d4",
+    "after": "0def88ba8790679e911115f68dce6905df8423bcdf2d97207aad7a9a9fe1155b",
+    "hunks": [
+      {
+        "start": 5,
+        "new": [
+          ".sidenav-brand { height: 60px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }"
+        ],
+        "old": [
+          ".sidenav-brand { height: 48px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }"
+        ]
+      },
+      {
+        "start": 7,
+        "new": [
+          ".sidenav-rail-scroll { position: relative; z-index: 0; display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }"
+        ],
+        "old": [
+          ".sidenav-rail-scroll { display: flex; height: 100%; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }"
+        ]
+      },
+      {
+        "start": 9,
+        "new": [
+          ".sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: var(--app-nav-radius, 8px); color: var(--text-secondary); }"
+        ],
+        "old": [
+          ".sidenav-rail-item { position: relative; display: flex; flex: none; flex-direction: column; gap: 2px; justify-content: center; width: 100%; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }"
+        ]
+      },
+      {
+        "start": 16,
+        "new": [
+          ".sidenav-icon { display: grid; place-items: center; width: 36px; height: 30px; border-radius: var(--app-nav-radius, 8px); }"
+        ],
+        "old": [
+          ".sidenav-icon { display: grid; place-items: center; width: 36px; height: 22px; border-radius: 8px; }"
+        ]
+      },
+      {
+        "start": 38,
+        "new": [
+          ".sidenav-panel .sidenav-page-row > a { min-height: var(--sidenav-row-height); padding-block: 6px; border-radius: var(--app-nav-radius, var(--radius-md)); font-size: 14px; outline-offset: -2px; }"
+        ],
+        "old": [
+          ".sidenav-panel .sidenav-page-row > a { min-height: var(--sidenav-row-height); padding-block: 6px; font-size: 14px; outline-offset: -2px; }"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "b4bc502c2ac86df83f60ee31b968db56a9a1dc3b1249487dd4f55b29d784edac",
+    "after": "086f3a5aa22a5265dd9b105670ee8a7013e255ccb4fdc306517fba36aa873492",
+    "hunks": [
+      {
+        "start": 55,
+        "new": [
+          "import { appNavigationOrientation } from '@/components/ui/app-designs/designs'"
+        ],
+        "old": []
+      },
+      {
+        "start": 708,
+        "new": [
+          "  const horizontal = appNavigationOrientation(useContext(ActiveAppNavigation)) === 'horizontal'"
+        ],
+        "old": [
+          "  const horizontal = useContext(ActiveAppNavigation) === 'top'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/WidgetDesignPackThumbnail.tsx",
+    "before": "cd9407b007d35e8a65146934084bfff06ea682ab9a244ff8c06579065b82cb84",
+    "after": "03d452548911aa68abc49732af2c3cb8e26f1a34a9c06319471c6c6b98d9b431",
+    "hunks": [
+      {
+        "start": 3,
+        "new": [
+          "import { appNavigationOrientation, getAppDesignAttributes } from '@/components/ui/app-designs/designs';"
+        ],
+        "old": [
+          "import { APPLICATION_DESIGNS, getAppDesignAttributes } from '@/components/ui/app-designs/designs';"
+        ]
+      },
+      {
+        "start": 11,
+        "new": [
+          "  const design = getAppDesignAttributes(packId);",
+          "  const verticalNavigation = appNavigationOrientation(design['data-app-navigation']) === 'vertical';"
+        ],
+        "old": [
+          "  const verticalNavigation = ['rail', 'sidebar'].includes(APPLICATION_DESIGNS[packId].navigation);"
+        ]
+      },
+      {
+        "start": 14,
+        "new": [
+          "    {...design}"
+        ],
+        "old": [
+          "    {...getAppDesignAttributes(packId)}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/AppDesignPackPreview.tsx",
+    "before": "d813de28dfb786b90fb9f80d8623b22b03d8b2eebec425c9dbf277654844c6f8",
+    "after": "b038e08280c4386135cd2e5c8fdc0686df9de267a925911c76ca1b15e4ed9acc",
+    "hunks": [
+      {
+        "start": 3,
+        "new": [
+          "import { appNavigationOrientation, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';"
+        ],
+        "old": [
+          "import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';"
+        ]
+      },
+      {
+        "start": 29,
+        "new": [
+          "  const design = getAppDesignAttributes(packId);",
+          "  const navigationMode = design['data-app-navigation'];",
+          "  const verticalNavigation = appNavigationOrientation(navigationMode) === 'vertical';"
+        ],
+        "old": [
+          "  const navigationMode = APPLICATION_DESIGNS[packId].navigation;"
+        ]
+      },
+      {
+        "start": 38,
+        "new": [
+          "    <div ref={previewRef} {...design} data-app-design-preview=\"\" data-preview-synthetic=\"true\""
+        ],
+        "old": [
+          "    <div ref={previewRef} {...getAppDesignAttributes(packId)} data-app-design-preview=\"\" data-preview-synthetic=\"true\""
+        ]
+      },
+      {
+        "start": 47,
+        "new": [
+          "        verticalNavigation && (navigationMode === 'sidebar'",
+          "          ? 'md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]'",
+          "          : 'md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)]'))}>"
+        ],
+        "old": [
+          "        navigationMode === 'rail' && 'md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)]',",
+          "        navigationMode === 'sidebar' && 'md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]')}>"
+        ]
+      },
+      {
+        "start": 52,
+        "new": [
+          "            className={cn('flex flex-wrap gap-2', verticalNavigation && 'md:flex-col')}>"
+        ],
+        "old": [
+          "            className={cn('flex flex-wrap gap-2',",
+          "              (navigationMode === 'rail' || navigationMode === 'sidebar') && 'md:flex-col',",
+          "              navigationMode === 'hybrid' && 'justify-between border-b border-[var(--border-default)] pb-3')}>"
+        ]
+      }
+    ]
+  }
+]

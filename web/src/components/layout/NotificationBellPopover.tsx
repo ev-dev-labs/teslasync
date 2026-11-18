@@ -6,21 +6,21 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
 import { typography } from '@/lib/tokens'
-import { useUnreadCount } from '@/api/hooks/useNotifications'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 
 const POPOVER_WIDTH_PX = 360
 const NotificationBellPanel = lazy(() => import('./NotificationBellPanel'))
 
 export interface NotificationBellPopoverProps {
+  count: number
+  label: string
   className?: string
 }
 
-export function NotificationBellPopover({ className }: NotificationBellPopoverProps) {
+export function NotificationBellPopover({ count, label, className }: NotificationBellPopoverProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
-  const { data: count = 0 } = useUnreadCount()
 
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -125,10 +125,6 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
   )
 
   const display = count > 99 ? '99+' : String(count)
-  const triggerLabel =
-    count > 0
-      ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
-      : t('notifications.bellPopover.title', 'Notifications')
 
   return (
     <div
@@ -144,7 +140,7 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? `${headingId}-panel` : undefined}
-        aria-label={triggerLabel}
+        aria-label={label}
         onClick={handleTriggerClick}
         className="relative h-9 w-9 p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]"
       >

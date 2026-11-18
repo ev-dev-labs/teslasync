@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Caption, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
-import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
+import { appNavigationOrientation, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 import '@/components/ui/appDesignPacks.css';
 import { cn } from '@/lib/cn';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
@@ -27,14 +27,16 @@ export default function AppDesignPackPreview({ packId, children }: AppDesignPack
     const host = previewRef.current;
     if (host) return observeAppDesignScopes(host);
   }, []);
-  const navigationMode = APPLICATION_DESIGNS[packId].navigation;
+  const design = getAppDesignAttributes(packId);
+  const navigationMode = design['data-app-navigation'];
+  const verticalNavigation = appNavigationOrientation(navigationMode) === 'vertical';
   const navigation = [
     { key: 'overview', label: t('theme.appDesignPreview.overview', 'Overview') },
     { key: 'activity', label: t('theme.appDesignPreview.activity', 'Activity') },
     { key: 'review', label: t('theme.appDesignPreview.review', 'Review') },
   ];
   return (
-    <div ref={previewRef} {...getAppDesignAttributes(packId)} data-app-design-preview="" data-preview-synthetic="true"
+    <div ref={previewRef} {...design} data-app-design-preview="" data-preview-synthetic="true"
       className="min-w-0 space-y-6">
       <header data-role="workspace-header" data-app-part="workspace-header" className="space-y-3 p-4">
         <PanelTitle>{t('theme.widgetDesignPacks.appPreview', 'Application preview')}</PanelTitle>
@@ -43,13 +45,12 @@ export default function AppDesignPackPreview({ packId, children }: AppDesignPack
         <Input label={t('theme.widgetDesignPacks.sampleVehicle', 'Sample vehicle')} value="Model Y" readOnly />
       </header>
       <div data-app-part="shell" className={cn('grid min-w-0 gap-4',
-        navigationMode === 'rail' && 'md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)]',
-        navigationMode === 'sidebar' && 'md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]')}>
+        verticalNavigation && (navigationMode === 'sidebar'
+          ? 'md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]'
+          : 'md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)]'))}>
         <aside data-app-part="shell-sidebar" className="min-w-0">
           <nav data-app-part="navigation" aria-label={t('theme.appDesignPreview.navigation', 'Sandbox navigation')}
-            className={cn('flex flex-wrap gap-2',
-              (navigationMode === 'rail' || navigationMode === 'sidebar') && 'md:flex-col',
-              navigationMode === 'hybrid' && 'justify-between border-b border-[var(--border-default)] pb-3')}>
+            className={cn('flex flex-wrap gap-2', verticalNavigation && 'md:flex-col')}>
             {navigation.map(item => (
               <Button key={item.key} data-app-part="nav-item" variant="secondary"
                 aria-current={section === item.key ? 'page' : undefined}

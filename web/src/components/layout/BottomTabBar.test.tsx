@@ -8,8 +8,7 @@
  * from the `activeSection` prop (exact section-title equality, with More as
  * the fallback for any section without a primary tab), and reports taps
  * through `onChoose` (a section title, or null for More). Phone-only display
- * is CSS-driven (`sidenav-phone-tabs` hides at >=768px) and the deck mounts
- * the bar only on phone viewports. The `BOTTOM_TAB_PATHS` export is the set
+ * is deck-owned below the shared navigation breakpoint. The `BOTTOM_TAB_PATHS` export is the set
  * of tab destinations so the sidebar can de-emphasise duplicates on mobile.
  *
  * These tests exercise multiple facets rather than a smoke render:
@@ -60,10 +59,10 @@ import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 // index-based assertions below are stable. `section: null` is the More tab,
 // which opens the deck sheet instead of selecting a section.
 const TABS = [
-  { section: 'Home', label: 'Home', key: 'nav.mobileHome' },
-  { section: 'Vehicles', label: 'Vehicles', key: 'nav.sidenav.mobileVehicles' },
-  { section: 'Driving', label: 'Driving', key: 'nav.sidenav.mobileDriving' },
-  { section: 'Charging', label: 'Charging', key: 'nav.mobileCharging' },
+  { section: 'Home', label: 'Home', key: 'nav.groups.home' },
+  { section: 'Vehicles', label: 'Vehicles', key: 'nav.groups.vehicles' },
+  { section: 'Driving', label: 'Driving', key: 'nav.groups.driving' },
+  { section: 'Charging', label: 'Charging', key: 'nav.groups.charging' },
   { section: null, label: 'More', key: 'nav.mobileMore' },
 ] as const
 
@@ -75,7 +74,7 @@ const TAB_PATHS = ['/', '/vehicles', '/drives', '/charging', '/explore'] as cons
 function renderBar(activeSection?: string) {
   const onChoose = vi.fn()
   const result = render(
-    <BottomTabBar activeSection={activeSection} onChoose={onChoose} />,
+    <BottomTabBar sections={navSections} activeSection={activeSection} onChoose={onChoose} />,
   )
   return { ...result, onChoose }
 }
@@ -268,10 +267,10 @@ describe('BottomTabBar', () => {
     expect(onChoose).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Charging' }))
     expect(onChoose).toHaveBeenCalledTimes(1)
-    expect(onChoose).toHaveBeenLastCalledWith('Charging')
+    expect(onChoose).toHaveBeenLastCalledWith('Charging', screen.getByRole('button', { name: 'Charging' }))
     fireEvent.click(screen.getByRole('button', { name: 'More' }))
     expect(onChoose).toHaveBeenCalledTimes(2)
-    expect(onChoose).toHaveBeenLastCalledWith(null)
+    expect(onChoose).toHaveBeenLastCalledWith(null, screen.getByRole('button', { name: 'More' }))
     // Tapping never navigates by itself: no link roles appear.
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
@@ -288,8 +287,7 @@ describe('BottomTabBar', () => {
   it('is a phone-only bar with iOS safe-area padding and 44px touch targets', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    // Phone-only display is CSS-driven: `sidenav-phone-tabs` hides at
-    // >=768px and the deck mounts the bar only on phone viewports.
+    // The deck mounts the bar only below the navigation breakpoint.
     expect(nav.className).toContain('sidenav-phone-tabs')
     expect(nav).toHaveClass('safe-bottom')
     // Fixed five-tab design: no scroll container by design.
@@ -304,7 +302,7 @@ describe('BottomTabBar', () => {
   it('retains full long translated captions without truncation for RTL', () => {
     const longLabel = 'Eine sehr lange übersetzte Navigationsbeschriftung'
     tSpy.mockImplementation((key: string, fallback?: string) =>
-      key === 'nav.mobileCharging' ? longLabel : fallback ?? key,
+      key === 'nav.groups.charging' ? longLabel : fallback ?? key,
     )
     const { container } = renderBar('Charging')
     container.setAttribute('dir', 'rtl')
@@ -324,7 +322,7 @@ describe('BottomTabBar', () => {
     expect(onChoose).not.toHaveBeenCalled()
     fireEvent.keyDown(charging, { key: 'Enter' })
     fireEvent.click(charging)
-    expect(onChoose).toHaveBeenCalledWith('Charging')
+    expect(onChoose).toHaveBeenCalledWith('Charging', charging)
     expect(charging.className).toContain('focus-visible:outline-[var(--focus-ring)]')
     expect(charging.className).toContain('forced-colors:focus-visible:outline-[Highlight]')
     expect(charging.className).toContain('motion-reduce:transition-none')
@@ -365,12 +363,12 @@ describe('BottomTabBar', () => {
       // Explicit activation chooses the focused tab.
       await user.keyboard('{Enter}')
       expect(onChoose).toHaveBeenCalledTimes(1)
-      expect(onChoose).toHaveBeenLastCalledWith('Charging')
+      expect(onChoose).toHaveBeenLastCalledWith('Charging', buttons[3])
     },
   )
 
   it('keeps focus and activation working without an onChoose handler (default noop)', () => {
-    render(<BottomTabBar activeSection="Battery" />)
+    render(<BottomTabBar sections={navSections} activeSection="Battery" />)
     const more = screen.getByRole('button', { name: 'More' })
 
     expect(() => more.focus()).not.toThrow()

@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
@@ -9,7 +9,7 @@ import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { ActionConfirmationRoot } from '../feedback/ActionConfirmationRoot'
 import { AnnouncerRegion } from '@/components/a11y'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
@@ -46,16 +46,17 @@ import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
-  Logo,
 } from '@/components/ui/runtime'
 import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
 import { CommandPaletteHost } from './CommandPaletteHost'
-import { NotificationBellPopover } from './NotificationBellPopover'
+import { ActiveAppNavigation } from '@/components/ui/app-designs/ActiveAppNavigation'
+import { appNavigationOrientation } from '@/components/ui/app-designs/designs'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
-import { useAlerts } from '@/api/hooks/useNotifications'
+import { useAlerts, useUnreadCount } from '@/api/hooks/useNotifications'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import { useNavigationPins } from '@/api/hooks/useNavigationPins'
@@ -115,7 +116,7 @@ const LazyGotoIndicator = lazy(async () => {
   return { default: module.GotoIndicator }
 })
 
-const MobileWorkspaceControls = lazy(() => import('./MobileWorkspaceControls'))
+const HorizontalHeader = lazy(() => import('./horizontal-nav/HorizontalHeader'))
 const WorkspaceHeader = lazy(async () => {
   const module = await import('./WorkspaceHeader')
   return { default: module.WorkspaceHeader }
@@ -135,11 +136,6 @@ const CommandDeck = lazy(async () => {
 const LazyKeyboardShortcutsModal = lazy(async () => {
   const module = await import('../feedback/KeyboardShortcutsModal')
   return { default: module.KeyboardShortcutsModal }
-})
-
-const ThemeQuickSwitcherPopover = lazy(async () => {
-  const module = await import('./ThemeQuickSwitcherPopover')
-  return { default: module.ThemeQuickSwitcherPopover }
 })
 
 // Sidebar nav labels resolve per-item: every entry in `navSections` carries a
@@ -180,7 +176,7 @@ export const navSections = [
     title: 'Vehicles',
     titleKey: 'nav.groups.vehicles',
     items: [
-      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section' },
+      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section', badge: 'vehicles' as const },
       { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle management', labelKey: 'nav.items.vehicle-management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle live view', labelKey: 'nav.items.digital-twin', color: 'text-theme-accent' },
       { to: '/day-log', icon: Icons.fileText, label: 'Day log', labelKey: 'nav.items.day-log', color: 'text-theme-accent' },
@@ -198,7 +194,7 @@ export const navSections = [
     title: 'Driving',
     titleKey: 'nav.groups.driving',
     items: [
-      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
+      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400', badge: 'drives-today' as const },
       { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-theme-accent' },
       { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-theme-accent' },
       { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip planner', labelKey: 'nav.items.trip-planner', color: 'text-emerald-400' },
@@ -216,7 +212,7 @@ export const navSections = [
       { to: '/drive-calendar', icon: Icons.calendarClock, label: 'Drive calendar', labelKey: 'nav.items.drive-calendar', color: 'text-fuchsia-400' },
       { to: '/milestones', icon: Icons.trip, label: 'Milestones', labelKey: 'nav.items.milestones', color: 'text-yellow-400' },
       { to: '/lifetime-stats', icon: Icons.trends, label: 'Lifetime stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
-      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400' },
+      { to: '/drive-score', icon: Icons.trophy, label: 'Drive score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400', badge: 'drive-score' as const },
       { to: '/fsd', icon: Icons.cpu, label: 'FSD insights', labelKey: 'nav.items.fsd', color: 'text-theme-accent' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed profile', labelKey: 'nav.items.speed-profile', color: 'text-rose-400' },
       { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving dynamics', labelKey: 'nav.items.driving-dynamics', color: 'text-red-400' },
@@ -346,7 +342,7 @@ export const navSections = [
     title: 'Notifications',
     titleKey: 'nav.groups.notifications',
     items: [
-      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400' },
+      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400', badge: 'unread' as const },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-theme-accent' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser notifications', labelKey: 'nav.items.notifications_browser', color: 'text-fuchsia-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet hours', labelKey: 'nav.items.notifications_quiet-hours', color: 'text-theme-accent' },
@@ -445,7 +441,7 @@ export const navSections = [
     items: [
       { to: '/data-export', icon: Icons.hardDriveDownload, label: 'Data export', labelKey: 'nav.items.data-export', color: 'text-lime-400' },
       { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & restore', labelKey: 'nav.items.backup', color: 'text-theme-accent' },
-      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400' },
+      { to: '/data-repair', icon: Icons.stethoscope, label: 'Data repair', labelKey: 'nav.items.data-repair', color: 'text-amber-400', badge: 'stale' as const },
     ],
   },
   {
@@ -548,185 +544,14 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
   return paths.filter(path => NAV_CATALOG_PATHS.has(path))
 }
 
-/**
- * Header bell trigger.
- *
- * Replaced the original NavLink-only bell with `NotificationBellPopover`,
- * which renders the same bell + badge but opens an in-place triage panel
- * on desktop click (latest 10 unread + Mark-all-read + View-all). On
- * mobile (viewport ≤ 640 px) the popover is bypassed and the trigger
- * navigates straight to /notifications/inbox, preserving the original UX
- * where popover positioning would clip on narrow viewports.
- */
-
-/**
- * Top-bar quick theme switcher.
- *
- * A small palette icon button that opens a popover containing a compact
- * `<ThemePicker>`. The popover hides the custom-color builder to keep it
- * small; users who want to build a custom theme follow the "Customize…"
- * link to /settings#appearance.
- *
- * Listens for `open-theme-popover` window events so other surfaces (the
- * command palette, the dashboard first-run banner) can open the popover
- * without prop drilling.
- */
-function ThemeQuickSwitcher({
-  className,
-  placement = 'right',
-  onOpen,
-  triggerIcon,
-}: {
-  className?: string
-  onOpen?: () => void
-  triggerIcon?: React.ReactNode
-  /**
-   * Which side of the trigger to anchor the popover to. The popover
-   * grows AWAY from the anchored side, so use 'left' when the trigger
-   * sits near the left edge of the viewport (sidebar header) and
-   * 'right' when it sits near the right edge (mobile header).
-   */
-  placement?: 'left' | 'right'
-}) {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
-  // Position is computed from the trigger's bbox so the popover can be
-  // portaled into <body>. Portaling is required because the sidebar
-  // (which contains the trigger) creates a stacking context via
-  // backdrop-filter, and the main content area (`relative z-10`) sits
-  // above it — without a portal the popover renders BEHIND dashboard
-  // content that overflows into its area.
-  const [coords, setCoords] = useState<{ top: number; bottom?: number; left?: number; right?: number } | null>(null)
-
-  // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
-  useEffect(() => {
-    if (!open) return
-    const onClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (containerRef.current?.contains(target)) return
-      if (popoverRef.current?.contains(target)) return
-      if (document.activeElement?.closest('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')) return
-      setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return
-      const owner = e.target instanceof Element
-        ? e.target.closest('[role="dialog"], [role="alertdialog"]')
-        : null
-      if (owner && owner !== popoverRef.current) return
-      e.stopPropagation()
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  // Cross-component opener — wired by the command palette + first-run banner.
-  useEffect(() => {
-    // The header owns global open requests; the footer picker is trigger-owned.
-    if (placement === 'left') return
-    const handler = () => setOpen(true)
-    window.addEventListener('open-theme-popover', handler)
-    return () => window.removeEventListener('open-theme-popover', handler)
-  }, [placement])
-
-  // Recompute popover coordinates whenever it opens or the viewport
-  // changes (resize, scroll). Uses capture-phase scroll so nested
-  // scroll containers also reposition the popover.
-  useEffect(() => {
-    if (!open) {
-      setCoords(null)
-      return
-    }
-    const update = () => {
-      const el = triggerRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const top = rect.bottom + 8 // matches the previous mt-2 spacing
-      const vertical = rect.top > window.innerHeight / 2
-        ? { bottom: window.innerHeight - rect.top + 8 }
-        : {}
-      if (placement === 'left') {
-        setCoords({ top, ...vertical, left: rect.left })
-      } else {
-        setCoords({ top, ...vertical, right: window.innerWidth - rect.right })
-      }
-    }
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [open, placement])
-
-  return (
-    <div ref={containerRef} className={`relative inline-block ${className ?? ''}`} data-role="theme-popover">
-      <Button
-        ref={triggerRef}
-        data-nav-action={triggerIcon ? true : undefined}
-        type="button"
-        variant="ghost"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label={t('theme.openPicker', 'Open theme picker')}
-        onClick={() => { if (!open) onOpen?.(); setOpen(v => !v) }}
-        className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
-      >
-        {triggerIcon ?? <Icons.palette className="h-5 w-5" aria-hidden="true" />}
-      </Button>
-      {open && coords && (
-        <Suspense fallback={null}>
-          <ThemeQuickSwitcherPopover
-            coords={coords}
-            popoverRef={popoverRef}
-            triggerRef={triggerRef}
-            onClose={() => setOpen(false)}
-            onCustomize={() => {
-              setOpen(false)
-              navigate('/settings#appearance')
-            }}
-          />
-        </Suspense>
-      )}
-    </div>
-  )
-}
-
-const MOBILE_BRAND_CONTAINMENT = 'min-w-0 max-w-full [&>span]:min-w-0 [&>span]:truncate'
-
 export default function Layout() {
   const presentation = usePresentationMode()
+  const horizontal = appNavigationOrientation(useContext(ActiveAppNavigation)) === 'horizontal'
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
-  const mobileHeaderRef = useRef<HTMLElement>(null)
-  const mobileHeaderSpacerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const header = mobileHeaderRef.current
-    const spacer = mobileHeaderSpacerRef.current
-    if (!header || !spacer || typeof ResizeObserver === 'undefined') return
-    const reserveHeaderHeight = () => {
-      const height = header.getBoundingClientRect().height
-      if (height > 0) spacer.style.height = `${height}px`
-    }
-    reserveHeaderHeight()
-    const observer = new ResizeObserver(reserveHeaderHeight)
-    observer.observe(header)
-    return () => {
-      observer.disconnect()
-      spacer.style.removeProperty('height')
-    }
-  }, [sidebarOpen, presentation.mode])
+  const compactNav = useMediaQuery('(max-width: 1023px)')
+  const getBrowseTrigger = useCallback(() => sidebarTriggerRef.current, [])
   const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
     try {
       const stored = window.localStorage.getItem('teslasync-deck-panel-open')
@@ -739,10 +564,7 @@ export default function Layout() {
       return false
     }
   })
-  // Viewport bracket read synchronously so the deck Suspense fallback below
-  // reserves the exact in-flow width of the loaded deck. Same brackets as
-  // CommandDeck's own viewport state (phone <768 < tablet <1280 <= desktop).
-  const [deckViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
+  const dockedNav = useMediaQuery('(min-width: 1280px)')
   useEffect(() => {
     try {
       window.localStorage.setItem('teslasync-deck-panel-open', deckPanelOpen ? '1' : '0')
@@ -979,7 +801,10 @@ export default function Layout() {
   // Live data for sidebar
   const { data: alerts } = useAlerts()
   const { data: vehicles } = useVehicles()
-  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
+  const { data: unreadCount = 0 } = useUnreadCount()
+  const notificationLabel = unreadCount > 0
+    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count: unreadCount })
+    : t('notifications.bellPopover.title', 'Notifications')
   const vehicleCount = vehicles?.length ?? 0
   // Focused vehicle for sidebar suggestions: the persisted selection when
   // it still exists, else the first vehicle. Router-free on purpose —
@@ -1237,6 +1062,7 @@ export default function Layout() {
         data-app-part="shell"
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+        data-horizontal-shell={horizontal && presentation.mode === 'standard' ? '' : undefined}
         style={{ '--shell-sidebar-width': `${76 + (deckPanelOpen ? 272 : 0)}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
@@ -1244,7 +1070,26 @@ export default function Layout() {
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
 
-      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part="shell-sidebar navigation" data-role="sidebar" data-tour="sidebar" className="sidenav-host">
+      {presentation.mode === 'standard' && horizontal && (
+        <Suspense fallback={<div className="min-h-14 shrink-0" aria-hidden="true" />}>
+          <HorizontalHeader
+            notificationLabel={notificationLabel}
+            sections={groupedSidebarSections}
+            collections={visibleCollections}
+            activeSectionTitle={activeSectionTitle}
+            pathname={location.pathname}
+            pinnedPaths={pinnedNavSet}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            pinSyncUnavailable={navigationPins.syncUnavailable}
+            unreadCount={unreadCount}
+            vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+          />
+        </Suspense>
+      )}
+      {presentation.mode === 'standard' && !horizontal && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-app-part="shell-sidebar navigation" data-role="sidebar" data-tour="sidebar" className="sidenav-host">
         {/* Width-matched placeholder (CLS guard): the loaded deck occupies the
             76px rail plus the 272px docked panel on desktop (see sidenav.css),
             the rail alone on tablet (panel is a modal overlay there), and zero
@@ -1252,7 +1097,7 @@ export default function Layout() {
             squeezes the content column when the deck resolves (Lighthouse CLS
             0.19 on every route). Both sides read the same deckPanelOpen state
             so they cannot disagree. */}
-        <Suspense fallback={deckViewport === 'phone' ? null : <div className="sidenav-loading" data-panel-open={deckPanelOpen} style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >
+        <Suspense fallback={compactNav ? null : <div className="sidenav-loading" data-panel-open={deckPanelOpen} style={{ width: 76 + (dockedNav && deckPanelOpen ? 272 : 0) }} />} >
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
@@ -1264,63 +1109,36 @@ export default function Layout() {
             onUnpin={unpinNavPath}
             pinSyncUnavailable={navigationPins.syncUnavailable}
             onItemSelect={() => setSidebarOpen(false)}
-            alertCount={unreadAlerts}
+            alertCount={unreadCount}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
             vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             collections={visibleCollections}
             panelOpen={deckPanelOpen}
             onPanelOpenChange={setDeckPanelOpen}
-            appearanceControl={<ThemeQuickSwitcher placement="left" onOpen={() => {
-              if (window.innerWidth < 1280) { setDeckPanelOpen(false); setSidebarOpen(false) }
-            }} />}
             mobileBrowseOpen={sidebarOpen}
+            getBrowseTrigger={getBrowseTrigger}
             activeSectionTitle={activeSectionTitle}
           />
         </Suspense>
       </nav>}
-
-      {/* Mobile top bar */}
-      {presentation.mode === 'standard' && !sidebarOpen && (
-        <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] md:start-[76px] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
-          <Button
-            ref={sidebarTriggerRef}
-            onClick={() => setSidebarOpen(true)}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={t('nav.openSidebar', 'Open sidebar')}
-            aria-expanded={false}
-            className="relative z-10 -ms-1 h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
-          >
-            <Icons.menu className="h-6 w-6" />
-          </Button>
-          <div className="flex min-w-0 flex-1 basis-16 justify-center">
-            <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />
-          </div>
-          <div data-role="mobile-header-actions" className="ms-auto flex shrink-0 items-center gap-2">
-            <NotificationBellPopover className="max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11" />
-            <ThemeQuickSwitcher />
-          </div>
-          {deckViewport !== 'desktop' && (workspaceScope.range || workspaceScope.vehicle) && (
-            <Suspense fallback={<div className="h-11 w-full basis-full" aria-hidden="true" />}>
-              <MobileWorkspaceControls />
-            </Suspense>
-          )}
-        </header>
-      )}
 
       {/* Main content */}
       <div data-app-part="shell-main" className={cn(
         'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip',
         presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
       )}>
-        {/* Spacer for fixed mobile header */}
-        {presentation.mode === 'standard' && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
-        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
+        {presentation.mode === 'standard' && !horizontal && <Suspense fallback={<div className="h-workspace-header shrink-0" />}>
           <WorkspaceHeader
-            notifications={<NotificationBellPopover />}
-            themeControl={<ThemeQuickSwitcher />}
+            unreadCount={unreadCount}
+            notificationLabel={notificationLabel}
+            compact={!dockedNav}
+            browseControl={compactNav && <Button ref={sidebarTriggerRef} variant="ghost"
+              aria-label={t('nav.flyout.browse', 'Browse sections')} aria-haspopup="dialog" aria-expanded={sidebarOpen}
+              className="min-h-11 min-w-11 p-0" onClick={() => setSidebarOpen(true)}
+              onKeyDown={event => {
+                if (event.key === 'ArrowDown') { event.preventDefault(); setSidebarOpen(true) }
+              }}><Icons.menu className="size-5" aria-hidden /></Button>}
             breadcrumbSections={groupedSidebarSections}
             breadcrumbCollections={visibleCollections}
           />

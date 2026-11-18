@@ -1,4 +1,6 @@
 [
   "date.preset.last7",
+  "notifications.bellPopover.loading",
+  "theme.openPicker",
   "workspace.analysis.trigger"
 ]

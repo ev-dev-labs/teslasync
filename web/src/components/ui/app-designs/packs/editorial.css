@@ -38,6 +38,11 @@
     --app-conversation-surface: var(--surface-2);
     --app-conversation-radius: var(--radius-xs);
     --app-nav-radius: var(--radius-xs);
+    --app-nav-bar: var(--surface-1);
+    --app-nav-pane: var(--surface-1);
+    --app-nav-rule: var(--border-strong);
+    --app-nav-cap: 3px solid var(--text-secondary);
+    --app-nav-shadow: var(--elevation-2);
   }
 
   :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] [data-app-part~="shell-main"]:where([data-app-design-owner~="pack-editorial"]) {

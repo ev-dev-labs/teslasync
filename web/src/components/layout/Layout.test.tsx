@@ -42,6 +42,7 @@ const H = vi.hoisted(() => {
 
   const defaultReq = (url: unknown, _options?: import('@/api/client').ApiRequestOptions) => {
     if (typeof url === 'string') {
+      if (url === '/notifications/unread-count') return Promise.resolve({ count: 7 })
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
       if (url === '/data-repair/cases/stats') return Promise.resolve(REPAIR_STATS)
@@ -448,13 +449,17 @@ function LocationProbe() {
   return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>
 }
 
-function renderLayout(route = '/', opts: { defaultPins?: boolean; probe?: React.ReactNode } = {}) {
+function renderLayout(route = '/', opts: { defaultPins?: boolean; probe?: React.ReactNode; compact?: boolean } = {}) {
   // The default pinned rail duplicates section links (e.g. "My Vehicles"),
   // which breaks unique-name queries. Seed an empty pinned list so section
   // links stay unique; tests that need the shipped defaults opt back in.
   if (!opts.defaultPins) {
     localStorage.setItem('teslasync-pinned-nav-paths', '[]')
   }
+  const match = window.matchMedia
+  window.matchMedia = query => ({ ...match(query), media: query,
+    matches: query === '(min-width: 1280px)' ? !opts.compact : query === '(max-width: 1023px)' ? !!opts.compact : match(query).matches,
+  })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -957,8 +962,6 @@ describe('Layout — global page chrome', () => {
     renderLayout('/')
     const pickers = screen.getAllByTestId('vehicle-picker').filter(node =>
       node.closest('[data-role="workspace-header"]'))
-    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
-    expect(within(mobile as HTMLElement).getAllByTestId('vehicle-picker')).toHaveLength(1)
     // Exactly one desktop picker and one mobile picker; neither lives in navigation.
     expect(pickers).toHaveLength(1)
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
@@ -966,15 +969,13 @@ describe('Layout — global page chrome', () => {
     expect(within(workspaceHeader as HTMLElement).getByTestId('vehicle-picker')).not.toHaveClass(
       'xl:hidden',
     )
-    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid')
+    expect(workspaceHeader).toHaveClass('grid')
   })
 
   it('renders a single analysis-window control in the command header on a range-owning route', () => {
     renderLayout('/drives')
     const controls = screen.getAllByTestId('workspace-context-control').filter(node =>
       node.closest('[data-role="workspace-header"]'))
-    const mobile = document.querySelector('[data-role="mobile-workspace-controls"]')!
-    expect(within(mobile as HTMLElement).getAllByTestId('workspace-context-control')).toHaveLength(1)
     // Desktop and mobile chrome each own one scope control; navigation owns none.
     expect(controls).toHaveLength(1)
 
@@ -1089,8 +1090,8 @@ describe('Layout — live nav badges', () => {
 
   it('passes the unread-alert count to the deck for the inbox badge', async () => {
     renderLayout('/notifications/inbox')
-    // ALERTS fixture has exactly one unread entry.
-    await waitFor(() => expect(deckCounts().alertCount).toBe(1))
+    // The authoritative count is independent of the alert list's unread entries.
+    await waitFor(() => expect(deckCounts().alertCount).toBe(7))
   })
 
   it('passes the durable-case count to the deck for the "Data Repair" badge', async () => {
@@ -1175,20 +1176,20 @@ describe('Layout — mobile drawer', () => {
         : H.defaultReq(url),
     )
     try {
-      renderLayout('/')
-      const header = screen.getByRole('banner', { name: 'Site header' })
+      renderLayout('/', { compact: true })
+      const header = screen.getByRole('banner', { name: 'Workspace command bar' })
       const bell = await within(header).findByRole('button', { name: '7 unread notifications' })
       const wrapper = bell.parentElement!
       // Verify actual descendant targeting; jsdom does not measure native hit areas.
       expect(wrapper).toHaveAttribute('data-role', 'notification-bell-popover')
-      expect(wrapper).toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
+      expect(wrapper).toHaveClass('max-lg:[&>button]:min-h-11', 'max-lg:[&>button]:min-w-11')
       expect(wrapper.querySelector(':scope > button')).toBe(bell)
       expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
       expect(bell).toHaveAttribute('aria-expanded', 'false')
       expect(bell).toHaveTextContent('7')
       expect(bell.querySelector('span')).toHaveAttribute('aria-hidden', 'true')
       expect(bell.querySelector('svg')).toHaveClass('h-5', 'w-5')
-      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
+      expect(within(header).getAllByRole('button', { name: /unread notifications/ })).toHaveLength(1)
       fireEvent.click(bell)
       await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/notifications/inbox'))
       expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
@@ -1198,6 +1199,7 @@ describe('Layout — mobile drawer', () => {
   })
 
   it('keeps the workspace notification bell compact and outside the mobile target override', async () => {
+    H.request.mockImplementation(url => url === '/notifications/unread-count' ? Promise.resolve({ count: 0 }) : H.defaultReq(url))
     const { container } = renderLayout('/')
     await waitFor(() => expect(
       container.querySelector('[data-role="workspace-header"] [data-role="notification-bell-popover"] > button'),
@@ -1205,93 +1207,27 @@ describe('Layout — mobile drawer', () => {
     const workspaceHeader = container.querySelector<HTMLElement>('[data-role="workspace-header"]')!
     const bell = within(workspaceHeader).getByRole('button', { name: 'Notifications' })
     expect(bell.parentElement).toHaveClass('relative', 'inline-block')
-    expect(bell.parentElement).not.toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
     expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
     expect(bell).not.toHaveClass('h-11', 'w-11', 'min-h-11', 'min-w-11')
     expect(bell).toHaveAttribute('aria-expanded', 'false')
     expect(bell.querySelector('span')).not.toBeInTheDocument()
-    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid', 'gap-4')
+    expect(workspaceHeader).toHaveClass('grid', 'gap-4')
   })
 
-  it.each([
-    ['ltr', 1], ['rtl', 1], ['ltr', 2], ['rtl', 2],
-  ])('contains the mobile wordmark without shrinking controls (%s, scale %s)', (direction, scale) => {
-    document.documentElement.setAttribute('dir', String(direction))
-    const previousFontSize = document.documentElement.style.fontSize
-    document.documentElement.style.fontSize = `${Number(scale) * 16}px`
-    try {
-      renderLayout('/')
-      const header = screen.getByRole('banner', { name: 'Site header' })
-      const menu = within(header).getByRole('button', { name: 'Open sidebar' })
-      const headerWordmark = within(header).getByText('TeslaSync')
-      const headerLogo = headerWordmark.parentElement!
-      expect(headerLogo).toHaveClass('min-w-0', 'max-w-full', '[&>span]:min-w-0', '[&>span]:truncate')
-      expect(headerWordmark).toBeVisible()
-      expect(headerWordmark).toHaveTextContent(/^TeslaSync$/)
-      expect(headerLogo.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
-      expect(headerLogo.parentElement).toHaveClass('min-w-0', 'flex-1', 'basis-16')
-      expect(headerLogo.parentElement).not.toHaveClass('-ml-10')
-      expect(header).toHaveClass('flex-wrap', 'gap-2')
-      expect(menu).toHaveClass('h-11', 'w-11', 'shrink-0', '-ms-1')
-      expect(header.querySelector('[data-role="mobile-header-actions"]')).toHaveClass('shrink-0', 'ms-auto')
-      expect(header).not.toHaveClass('overflow-hidden')
-      expect(headerLogo).not.toHaveClass('overflow-hidden')
-
-      fireEvent.click(menu)
-
-      // The drawer chrome is deck-owned now: Layout hands the open state to
-      // the deck and unmounts the appbar (drawer brand/close/wordmark are
-      // covered by the deck scope).
-      expect(deckProps().mobileBrowseOpen).toBe(true)
-      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
-      expect(screen.getByRole('navigation', { name: 'Primary' })).toHaveClass('sidenav-host')
-
-      act(() => {
-        deckProps().onItemSelect()
-      })
-      expect(deckProps().mobileBrowseOpen).toBe(false)
-      expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
-      expect(within(screen.getByRole('banner', { name: 'Site header' })).getByText('TeslaSync')).toBeVisible()
-    } finally {
-      document.documentElement.removeAttribute('dir')
-      document.documentElement.style.fontSize = previousFontSize
-    }
-  })
-
-  it('reserves the actual wrapped appbar height and disconnects on drawer entry', () => {
-    const callbacks: ResizeObserverCallback[] = []
-    const observe = vi.fn()
-    const disconnect = vi.fn()
-    vi.stubGlobal('ResizeObserver', class {
-      constructor(callback: ResizeObserverCallback) { callbacks.push(callback) }
-      observe = observe
-      disconnect = disconnect
-    })
-    try {
-      const { container } = renderLayout('/')
-      const header = screen.getByRole('banner', { name: 'Site header' })
-      const spacer = container.querySelector<HTMLElement>('[data-role="appbar-spacer"]')!
-      expect(observe).toHaveBeenCalledWith(header)
-      vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({
-        height: 196, width: 375, x: 0, y: 0, top: 0, left: 0, right: 375, bottom: 196, toJSON: () => ({}),
-      })
-      act(() => callbacks[0]([], {} as ResizeObserver))
-      expect(spacer.style.height).toBe('196px')
-      expect(spacer).toHaveClass('shrink-0', 'xl:hidden')
-      fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-      expect(deckProps().mobileBrowseOpen).toBe(true)
-      expect(disconnect).toHaveBeenCalledTimes(1)
-      expect(spacer.style.height).toBe('')
-      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
-      act(() => {
-        deckProps().onItemSelect()
-      })
-      expect(deckProps().mobileBrowseOpen).toBe(false)
-      expect(observe).toHaveBeenCalledTimes(2)
-      expect(observe).toHaveBeenLastCalledWith(screen.getByRole('banner', { name: 'Site header' }))
-    } finally {
-      vi.unstubAllGlobals()
-    }
+  it('keeps the compact header and its trigger mounted during the shared sheet lifecycle', () => {
+    const { container } = renderLayout('/drives', { compact: true })
+    const header = screen.getByRole('banner', { name: 'Workspace command bar' })
+    const trigger = within(header).getByRole('button', { name: 'Browse sections' })
+    const workspaceControls = header.querySelector<HTMLElement>('[data-role="mobile-workspace-controls"]')!
+    expect(within(workspaceControls).getAllByTestId('workspace-context-control')).toHaveLength(1)
+    expect(within(workspaceControls).getAllByTestId('vehicle-picker')).toHaveLength(1)
+    expect(container.querySelector('[data-role="appbar-spacer"]')).toBeNull()
+    fireEvent.click(trigger)
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('banner')).toEqual([header])
+    act(() => deckProps().onItemSelect())
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   it.each([false, true])('leaves drawer motion to the deck host CSS in either state (reduced motion: %s)', reduced => {
@@ -1305,9 +1241,9 @@ describe('Layout — mobile drawer', () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })) as unknown as typeof window.matchMedia
-    renderLayout('/')
+    renderLayout('/', { compact: true })
     const aside = screen.getByRole('navigation', { name: 'Primary' })
-    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
+    const trigger = screen.getByRole('button', { name: 'Browse sections' })
 
     // The sidebar host carries no motion classes of its own: slide/fade
     // motion (reduced-motion included) lives in sidenav.css + the deck
@@ -1327,7 +1263,7 @@ describe('Layout — mobile drawer', () => {
     expect(aside.className).not.toContain('transition')
     expect(aside.className).not.toContain('translate-')
     expect(aside.className).not.toContain('visible')
-    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
 
     act(() => {
       deckProps().onItemSelect()
@@ -1338,11 +1274,11 @@ describe('Layout — mobile drawer', () => {
   })
 
   it('moves no focus and schedules no frame on drawer open or close (focus is deck-owned)', () => {
-    renderLayout('/')
+    renderLayout('/', { compact: true })
     const frames = vi.fn((_callback: FrameRequestCallback) => 73)
     window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
     const callsBefore = frames.mock.calls.length
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
     // The appbar (and trigger) unmounts; Layout moves focus nowhere itself —
     // the deck Modal owns entry focus.
@@ -1354,17 +1290,17 @@ describe('Layout — mobile drawer', () => {
     expect(deckProps().mobileBrowseOpen).toBe(false)
     expect(document.body).toHaveFocus()
     expect(frames.mock.calls.length).toBe(callsBefore)
-    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Browse sections' })).toBeInTheDocument()
   })
 
   it('schedules no repair frame when the drawer closes immediately after opening', () => {
-    renderLayout('/')
+    renderLayout('/', { compact: true })
     const frames = vi.fn((_callback: FrameRequestCallback) => 74)
     const cancels = vi.fn()
     window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
     window.cancelAnimationFrame = cancels as unknown as typeof window.cancelAnimationFrame
     const callsBefore = frames.mock.calls.length
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
     act(() => {
       deckProps().onItemSelect()
@@ -1373,56 +1309,56 @@ describe('Layout — mobile drawer', () => {
     // No focus-repair machinery remains in Layout: no frames, no cancels.
     expect(frames.mock.calls.length).toBe(callsBefore)
     expect(cancels).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Browse sections' })).toBeInTheDocument()
   })
 
   it('delegates the overlay guard to the deck: Layout inerts nothing and renders no backdrop', async () => {
-    renderLayout('/')
+    renderLayout('/', { compact: true })
     const main = screen.getByRole('main')
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
     // Layout neither traps focus nor hides the background — the deck Modal
     // owns the guard (focus trap, inert background, backdrop → onItemSelect).
     expect(main.closest('[inert]')).toBeNull()
     expect(screen.getByRole('main')).toBe(main)
     expect(document.querySelector('[data-sidebar-backdrop]')).toBeNull()
-    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
 
     act(() => {
       deckProps().onItemSelect()
     })
     await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
-    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
     expect(main.closest('[inert]')).toBeNull()
   })
 
   it('closes the drawer when the route changes', async () => {
-    renderLayout('/trips', { probe: <GoToDrives /> })
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    renderLayout('/trips', { compact: true, probe: <GoToDrives /> })
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
 
     // Navigation supersedes the overlay even without deck cooperation.
     fireEvent.click(screen.getByRole('button', { name: 'go to drives' }))
     await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
     expect(screen.getByTestId('loc')).toHaveTextContent('/drives')
-    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Browse sections' })).toBeInTheDocument()
   })
 
   it('provides a 44px mobile drawer trigger target', () => {
-    renderLayout('/')
-    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
-    expect(trigger).toHaveClass('h-11', 'w-11')
+    renderLayout('/', { compact: true })
+    const trigger = screen.getByRole('button', { name: 'Browse sections' })
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11')
     fireEvent.click(trigger)
     expect(deckProps().mobileBrowseOpen).toBe(true)
     // The drawer's own close control (44px "Close" + "Hide panel") is
     // Modal/deck-owned; Layout hands off and unmounts the appbar.
-    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
   })
 
   it('does not move focus when the drawer closes over a newly focused portaled modal', async () => {
-    renderLayout('/')
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    renderLayout('/', { compact: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
     const dialog = document.createElement('div')
     dialog.setAttribute('role', 'dialog')
@@ -1445,16 +1381,15 @@ describe('Layout — mobile drawer', () => {
   })
 
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
-    renderLayout('/')
+    renderLayout('/', { compact: true })
     const aside = screen.getByRole('navigation', { name: 'Primary' })
     expect(deckProps().mobileBrowseOpen).toBe(false)
     expect(aside).not.toHaveAttribute('data-sidebar-open')
-    expect(screen.getByRole('banner', { name: 'Site header' }).className).toContain('safe-area-inset-top')
-    expect(document.querySelector('[data-role="appbar-spacer"]')?.className).toContain('safe-area-inset-top')
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' }).className).toContain('safe-area-inset-top')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
-    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+    expect(screen.getByRole('banner', { name: 'Workspace command bar' })).toBeInTheDocument()
 
     // Escape is deck-Modal-owned: Layout neither closes nor re-opens on it.
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -1464,12 +1399,12 @@ describe('Layout — mobile drawer', () => {
       deckProps().onItemSelect()
     })
     await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
-    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Browse sections' })).toBeInTheDocument()
   })
 
   it('returns the mobile trigger after deck close and after navigation', async () => {
-    renderLayout('/trips', { probe: <GoToDrives /> })
-    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
+    renderLayout('/trips', { compact: true, probe: <GoToDrives /> })
+    const trigger = () => screen.getByRole('button', { name: 'Browse sections' })
     // Deck-initiated close (item select, backdrop, sheet dismiss) funnels
     // through onItemSelect and restores the appbar trigger…
     fireEvent.click(trigger())
@@ -1490,8 +1425,8 @@ describe('Layout — mobile drawer', () => {
   })
 
   it('ignores Escape for drawer state in every consumption state (deck-owned)', async () => {
-    renderLayout('/')
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    renderLayout('/', { compact: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
 
     // A nested control consuming Escape…
@@ -1985,11 +1920,11 @@ describe('Layout — nav pins under a rejected write', () => {
 
 describe('Layout — restrained host chrome and shared offsets', () => {
   it('uses a neutral opaque mobile header and preserves safe-area clearance', () => {
-    const { container } = renderLayout('/')
-    const header = container.querySelector('[data-role="appbar"]')
-    expect(header).toHaveClass('bg-[var(--surface-1)]', 'xl:hidden')
+    const { container } = renderLayout('/', { compact: true })
+    const header = container.querySelector('[data-role="workspace-header"]')
+    expect(header).toHaveClass('bg-[var(--surface-1)]', 'pt-[calc(0.25rem+env(safe-area-inset-top,0px))]')
     expect(header).not.toHaveClass('backdrop-blur-md', 'bg-[var(--surface-1)]/95')
-    expect(header?.parentElement?.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toHaveClass('h-[calc(4.25rem+env(safe-area-inset-top,0px))]')
+    expect(container.querySelector('[data-role="appbar-spacer"]')).toBeNull()
     expect(within(header as HTMLElement).getByRole('button', { name: 'Open theme picker' })).toHaveClass(
       'h-11', 'w-11', 'md:h-9', 'md:w-9',
     )
@@ -2000,9 +1935,9 @@ describe('Layout — restrained host chrome and shared offsets', () => {
   })
 
   it('renders no Layout-owned drawer scrim: the overlay backdrop is deck-Modal-owned', () => {
-    const { container } = renderLayout('/')
+    const { container } = renderLayout('/', { compact: true })
     expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Browse sections' }))
     expect(deckProps().mobileBrowseOpen).toBe(true)
     // Still no Layout scrim while open — the deck Modal renders the
     // theme-neutral `bg-[var(--surface-overlay)]` backdrop (see Modal.tsx).
@@ -2012,13 +1947,13 @@ describe('Layout — restrained host chrome and shared offsets', () => {
     })
     expect(deckProps().mobileBrowseOpen).toBe(false)
     expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Browse sections' })).toBeInTheDocument()
   })
 
   it.each(['report', 'kiosk'] as const)('reserves no absent mobile header or bottom chrome in %s mode', mode => {
     H.presentation.mode = mode
-    const { container } = renderLayout('/')
-    expect(container.querySelector('[data-role="appbar"]')).not.toBeInTheDocument()
+    const { container } = renderLayout('/', { compact: true })
+    expect(container.querySelector('[data-role="workspace-header"]')).not.toBeInTheDocument()
     expect(container.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toBe(
       container.querySelector('[data-role="main-content"]'),
     )
