@@ -10272,6 +10272,7 @@
       "commands.alerts.locatePing",
       "commands.alerts.randomFart",
       "commands.board.access",
+      "commands.board.apply",
       "commands.board.care",
       "commands.board.chargeLimitDraft",
       "commands.board.chargeOptions",

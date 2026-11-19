@@ -6,6 +6,7 @@ import repair from './__fixtures__/native-source-repair-preservation.json';
 import mobilePresentation from './__fixtures__/mobile-presentation-preservation.json';
 import { producerProjection, projectionDigest } from './producer-projection';
 import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract';
+import { restoreCommandBoardSource } from './verified-command-board-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
@@ -238,6 +239,7 @@ export function restoreNativeSourceRepair(
   readDependency: (file: string) => string = actualRepairSource,
 ): string {
   expect(hash(JSON.stringify(repair)), 'pinned exact native source repair').toBe(fingerprint);
+  source = restoreCommandBoardSource(file, source);
   source = restoreHorizontalNavigationSource(file, source);
   source = restoreKeyIdentitySource(file, source);
   source = restoreAtlasFilterFragmentSource(file, source);

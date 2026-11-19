@@ -18,6 +18,7 @@
       "vehicle": "Vehicle settings",
       "security": "Security settings",
       "choose": "Choose a value",
+      "apply": "Apply",
       "chargeLimitDraft": "Charge limit draft",
       "lockDoors": "Lock doors",
       "unlockDoors": "Unlock doors",

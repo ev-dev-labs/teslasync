@@ -1,0 +1,402 @@
+{
+  "file": "web/src/features/system/components/command-center/CommandWorkspace.tsx",
+  "before": "048e9456df4486ee798be61453e71e6a238786ed4b3f51bdf1d87a691ca0c778",
+  "after": "4b93b3a4bbff370b768eccb20cb528e28ce0d4e5738241965d0611896ae3e0df",
+  "hunks": [
+    {
+      "start": 0,
+      "old": [
+        "import { useCallback, useEffect, useMemo, useState } from 'react';"
+      ],
+      "new": [
+        "import { useCallback, useMemo, useState } from 'react';"
+      ]
+    },
+    {
+      "start": 2,
+      "old": [
+        "import { SearchX } from 'lucide-react';",
+        "import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';"
+      ],
+      "new": [
+        "import { Icons } from '@/lib/icons';",
+        "import { cn } from '@/lib/cn';",
+        "import { Badge, Button, GlassPanel, Heading, Icon, Text } from '@/components/ui';"
+      ]
+    },
+    {
+      "start": 18,
+      "old": [
+        "import { CommandTile } from '../CommandTile';",
+        "import { FavoritesBar } from '../FavoritesBar';",
+        "import { InputCommandTile } from '../InputCommandTile';",
+        "import { ToggleCommandTile } from '../ToggleCommandTile';"
+      ],
+      "new": [
+        "import { CommandBoardControl } from './CommandBoardControl';"
+      ]
+    },
+    {
+      "start": 20,
+      "old": [
+        "import { CommandDomainBrowser } from './CommandDomainBrowser';",
+        "import type { CommandDomainId } from './commandDomains';"
+      ],
+      "new": [
+        "import { COMMAND_BOARD } from './commandBoard';"
+      ]
+    },
+    {
+      "start": 36,
+      "old": [
+        "export function CommandWorkspace({"
+      ],
+      "new": [
+        "export function CommandWorkspace(props: CommandWorkspaceProps) {",
+        "  // A new vehicle or read-only scope must never inherit an old draft or PIN dialog.",
+        "  return <CommandWorkspaceSession key={`${props.vehicle.id}:${!!props.disabled}`} {...props} />;",
+        "}",
+        "",
+        "function CommandWorkspaceSession({"
+      ]
+    },
+    {
+      "start": 54,
+      "old": [
+        "  const [activeDomainId, setActiveDomainId] = useState<CommandDomainId>('access');"
+      ],
+      "new": [
+        "  const [pinnedOnly, setPinnedOnly] = useState(false);",
+        "  const [editingPins, setEditingPins] = useState(false);"
+      ]
+    },
+    {
+      "start": 59,
+      "old": [
+        "  useEffect(() => {",
+        "    setActiveDialog(null);",
+        "  }, [disabled, vehicle.id]);",
+        ""
+      ],
+      "new": []
+    },
+    {
+      "start": 74,
+      "old": [
+        "  const filteredCommands = useMemo(() => {"
+      ],
+      "new": [
+        "  const matches = useMemo(() => {"
+      ]
+    },
+    {
+      "start": 76,
+      "old": [
+        "    if (!query) return null;",
+        "    return COMMANDS.filter((command) => {",
+        "      const category = CATEGORY_META[command.category];",
+        "      return (",
+        "        t(command.labelKey, command.labelFallback).toLowerCase().includes(query) ||",
+        "        t(category.labelKey, category.fallback).toLowerCase().includes(query) ||",
+        "        command.command.toLowerCase().includes(query)",
+        "      );",
+        "    });"
+      ],
+      "new": [
+        "    const result = new Set<string>();",
+        "    for (const group of COMMAND_BOARD) {",
+        "      for (const command of group.commands) {",
+        "        const category = CATEGORY_META[command.category];",
+        "        const text = [",
+        "          t(command.labelKey, command.labelFallback),",
+        "          command.sublabelKey && t(command.sublabelKey, command.sublabelFallback ?? ''),",
+        "          t(category.labelKey, category.fallback), t(group.labelKey, group.fallback),",
+        "          command.id, command.command, command.commandOff,",
+        "        ].filter(Boolean).join(' ').toLowerCase();",
+        "        if (query.split(/\\s+/).every(word => text.includes(word))) result.add(command.id);",
+        "      }",
+        "    }",
+        "    return result;"
+      ]
+    },
+    {
+      "start": 91,
+      "old": [],
+      "new": [
+        "  const visibleGroups = COMMAND_BOARD.map(group => ({",
+        "    ...group,",
+        "    commands: group.commands.filter(command => !pinnedOnly || favorites.includes(command.id)),",
+        "  })).filter(group => group.commands.some(command => matches.has(command.id)));"
+      ]
+    },
+    {
+      "start": 97,
+      "old": [],
+      "new": [
+        "    if (disabled || loading) return;"
+      ]
+    },
+    {
+      "start": 104,
+      "old": [
+        "  }, [vehicle.id]);"
+      ],
+      "new": [
+        "  }, [disabled, loading, vehicle.id]);"
+      ]
+    },
+    {
+      "start": 106,
+      "old": [
+        "  const renderTile = useCallback((definition: CommandDef) => {"
+      ],
+      "new": [
+        "  const renderControl = (definition: CommandDef) => {"
+      ]
+    },
+    {
+      "start": 108,
+      "old": [
+        "    const common = {",
+        "      loading,",
+        "      disabled,",
+        "      disabledReason,",
+        "      lastStatus: getLatestCommandStatus(latest),",
+        "      isFavorite: favorites.includes(definition.id),",
+        "      onToggleFavorite: () => toggleFavorite(definition.id),",
+        "      onRequestDialog: requestDialog,",
+        "    };",
+        "",
+        "    if (definition.type === 'toggle') {",
+        "      return (",
+        "        <ToggleCommandTile",
+        "          key={definition.id}",
+        "          {...common}",
+        "          def={definition}",
+        "          state={state}",
+        "          stateTrust={stateTrust}",
+        "          onExecute={onExecute}",
+        "        />",
+        "      );",
+        "    }",
+        "    if (definition.type === 'input') {",
+        "      return <InputCommandTile key={definition.id} {...common} def={definition} />;",
+        "    }"
+      ],
+      "new": []
+    },
+    {
+      "start": 109,
+      "old": [
+        "      <CommandTile"
+      ],
+      "new": [
+        "      <CommandBoardControl"
+      ]
+    },
+    {
+      "start": 111,
+      "old": [
+        "        {...common}",
+        "        def={definition}"
+      ],
+      "new": [
+        "        definition={definition}",
+        "        vehicle={vehicle}",
+        "        state={state}",
+        "        stateTrust={stateTrust}",
+        "        loading={loading}",
+        "        disabled={disabled}",
+        "        disabledReason={disabledReason}",
+        "        lastStatus={getLatestCommandStatus(latest)}",
+        "        favorite={favorites.includes(definition.id)}",
+        "        editingPins={editingPins}",
+        "        onToggleFavorite={() => toggleFavorite(definition.id)}",
+        "        matched={search.trim() !== '' && matches.has(definition.id)}",
+        "        onRequestDialog={requestDialog}"
+      ]
+    },
+    {
+      "start": 127,
+      "old": [
+        "  }, [",
+        "    favorites,",
+        "    disabled,",
+        "    disabledReason,",
+        "    latestByCommand,",
+        "    loading,",
+        "    onExecute,",
+        "    requestDialog,",
+        "    state,",
+        "    stateTrust,",
+        "    toggleFavorite,",
+        "  ]);"
+      ],
+      "new": [
+        "  };"
+      ]
+    },
+    {
+      "start": 131,
+      "old": [
+        "      <GlassPanel className=\"space-y-5 p-4 sm:p-5\" data-testid=\"command-workspace\">"
+      ],
+      "new": [
+        "      <div className=\"min-w-0 space-y-4\" data-testid=\"command-workspace\">"
+      ]
+    },
+    {
+      "start": 186,
+      "old": [
+        "                {t('commands.workspace.title', 'Command workspace')}"
+      ],
+      "new": [
+        "                {t('commands.board.title', 'Control board')}"
+      ]
+    },
+    {
+      "start": 196,
+      "old": [
+        "                'commands.workspace.description',",
+        "                'Find an action by domain or search the complete command catalogue.',"
+      ],
+      "new": [
+        "                'commands.board.description',",
+        "                'Apply sends a draft. Requests do not confirm a change in vehicle state.',"
+      ]
+    },
+    {
+      "start": 201,
+      "old": [
+        "          <div className=\"w-full lg:max-w-sm\">",
+        "            <CommandSearch value={search} onChange={setSearch} />"
+      ],
+      "new": [
+        "          <div className=\"flex w-full flex-wrap items-center gap-2 lg:max-w-md\">",
+        "            <div className=\"min-w-0 flex-1 basis-48\">",
+        "              <CommandSearch value={search} onChange={setSearch} />",
+        "            </div>",
+        "            <Button type=\"button\" variant=\"secondary\" wrapLabel className=\"min-h-11\"",
+        "              aria-pressed={pinnedOnly} onClick={() => setPinnedOnly(value => !value)}>",
+        "              <Icon icon={Icons.star} />",
+        "              {t('commands.board.pinnedOnly', 'Pinned only')}",
+        "            </Button>",
+        "            <Button type=\"button\" variant=\"ghost\" wrapLabel className=\"min-h-11\"",
+        "              aria-pressed={editingPins} onClick={() => setEditingPins(value => !value)}>",
+        "              {t('commands.board.editPins', 'Edit pins')}",
+        "            </Button>",
+        "            {search && <Button type=\"button\" variant=\"ghost\" className=\"min-h-11\" onClick={() => setSearch('')}>",
+        "              {t('commands.search.clear', 'Clear search')}",
+        "            </Button>}"
+      ]
+    },
+    {
+      "start": 220,
+      "old": [
+        "        {!filteredCommands && (",
+        "          <FavoritesBar",
+        "            favorites={favorites}",
+        "            commands={COMMANDS}",
+        "            renderTile={renderTile}"
+      ],
+      "new": [
+        "        {visibleGroups.length === 0 ? (",
+        "          <EmptyState",
+        "            icon={<Icon icon={Icons.search} size=\"xl\" />}",
+        "            title={t('commands.search.emptyTitle', 'No matching commands')}",
+        "            message={t('commands.board.empty', 'Clear the filters to see all controls and edit pins.')}",
+        "            action={{",
+        "              label: t('commands.board.clearFilters', 'Clear filters'),",
+        "              onClick: () => { setSearch(''); setPinnedOnly(false); },",
+        "            }}",
+        "            className=\"py-8\""
+      ]
+    },
+    {
+      "start": 231,
+      "old": [
+        "        )}",
+        "",
+        "        {filteredCommands ? (",
+        "          filteredCommands.length > 0 ? (",
+        "            <div",
+        "              className=\"grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4\"",
+        "              aria-label={t('commands.search.results', 'Command search results')}",
+        "            >",
+        "              {filteredCommands.map(renderTile)}",
+        "            </div>",
+        "          ) : (",
+        "            <EmptyState",
+        "              icon={<SearchX className=\"h-8 w-8\" aria-hidden=\"true\" />}",
+        "              title={t('commands.search.emptyTitle', 'No matching commands')}",
+        "              message={t(",
+        "                'commands.search.noResults',",
+        "                'No commands match your search',",
+        "              )}",
+        "              action={{",
+        "                label: t('commands.search.clear', 'Clear search'),",
+        "                onClick: () => setSearch(''),",
+        "              }}",
+        "              className=\"py-8\"",
+        "            />",
+        "          )"
+      ],
+      "new": []
+    },
+    {
+      "start": 232,
+      "old": [
+        "          <CommandDomainBrowser",
+        "            activeDomainId={activeDomainId}",
+        "            vehicleKey={vehicle.id}",
+        "            onDomainChange={setActiveDomainId}",
+        "            renderTile={renderTile}",
+        "          />"
+      ],
+      "new": [
+        "          <div className=\"space-y-3\">",
+        "            {[true, false].map(lead => (",
+        "              <div key={String(lead)} className={lead",
+        "                ? 'grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2 lg:grid-cols-3'",
+        "                : 'columns-1 gap-3 md:columns-2 lg:columns-3'}>",
+        "                {visibleGroups.filter(group => group.lead === lead).map(group => (",
+        "                  <GlassPanel key={group.id} role=\"region\" aria-label={t(group.labelKey, group.fallback)}",
+        "                    data-command-card={group.id}",
+        "                    className={cn('@container/controls min-w-0 space-y-3 p-3 sm:p-4',",
+        "                      group.id === 'access' && 'md:col-span-2 lg:col-span-1',",
+        "                      lead ? 'self-stretch bg-gradient-to-br from-[var(--surface-2)] to-[var(--surface-1)]'",
+        "                        : 'mb-3 inline-block w-full break-inside-avoid')}>",
+        "                    <div className=\"flex min-w-0 items-center gap-2\">",
+        "                      <span className={cn('rounded-shape-sm p-2',",
+        "                        group.tone === 'accent' && 'bg-[var(--surface-2)] text-[var(--theme-primary)]',",
+        "                        group.tone === 'info' && 'bg-[var(--semantic-info-bg)] text-[var(--semantic-info)]',",
+        "                        group.tone === 'success' && 'bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]',",
+        "                        group.tone === 'warning' && 'bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]')}>",
+        "                        <Icon icon={group.icon} size=\"lg\" />",
+        "                      </span>",
+        "                      <Heading level=\"panel\" as=\"h3\" className=\"min-w-0 flex-1 break-words\">",
+        "                        {t(group.labelKey, group.fallback)}",
+        "                      </Heading>",
+        "                      <Text variant=\"caption\" color=\"secondary\">{group.commands.length}</Text>",
+        "                    </div>",
+        "                    <div className=\"grid grid-cols-2 gap-2\">",
+        "                      {group.commands.map(renderControl)}",
+        "                    </div>",
+        "                  </GlassPanel>",
+        "                ))}",
+        "              </div>",
+        "            ))}",
+        "          </div>"
+      ]
+    },
+    {
+      "start": 266,
+      "old": [
+        "      </GlassPanel>"
+      ],
+      "new": [
+        "      </div>"
+      ]
+    }
+  ]
+}

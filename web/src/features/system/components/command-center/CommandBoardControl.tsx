@@ -38,8 +38,8 @@ export function CommandBoardControl({
   const current = known !== null && !!def.stateField
     && isVehicleStateFieldCurrent(stateTrust, def.stateField as VerifiedVehicleStateField);
   const observed = current ? known : null;
-  const onLabel = def.id === 'lock' ? t('commands.board.lockDoors', 'Lock doors') : t('commands.on', 'ON');
-  const offLabel = def.id === 'lock' ? t('commands.board.unlockDoors', 'Unlock doors') : t('commands.off', 'OFF');
+  const onLabel = def.id === 'lock' ? t('commands.board.lockDoors', 'Lock doors') : t('commands.on', 'On');
+  const offLabel = def.id === 'lock' ? t('commands.board.unlockDoors', 'Unlock doors') : t('commands.off', 'Off');
 
   function activate(on = true) {
     if (blocked) return;
@@ -91,10 +91,10 @@ export function CommandBoardControl({
         <div className="space-y-2">
           <Text as="p" variant="caption" color="secondary" data-testid="command-toggle-reading">
             {observed !== null
-              ? observed ? t('commands.on', 'ON') : t('commands.off', 'OFF')
+              ? observed ? t('commands.on', 'On') : t('commands.off', 'Off')
               : known !== null
                 ? t('commands.hero.lastKnownStatus', 'Last known: {{status}}', {
-                    status: known ? t('commands.on', 'ON') : t('commands.off', 'OFF'),
+                    status: known ? t('commands.on', 'On') : t('commands.off', 'Off'),
                   })
                 : t('commands.readiness.stateUnknown', 'State unknown')}
           </Text>

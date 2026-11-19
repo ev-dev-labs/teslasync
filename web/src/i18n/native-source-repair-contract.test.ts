@@ -46,6 +46,17 @@ const initializer = (text: string, name: string) => {
 const calls = (file: string, text: string) => producerProjection(file, text).calls.map(call => call.call);
 
 describe('exact e1fb native source repair successor (not native certification)', () => {
+  it('pins the actual command-board source before restoring the historical workspace', () => {
+    const file = 'web/src/features/system/components/command-center/CommandWorkspace.tsx';
+    const current = source(file);
+    const previous = restoreNativeSourceRepair(file, current);
+    expect(hash(previous)).toBe(appDesign.sources.find(entry => entry.file === file)?.after);
+    for (const altered of [previous, current + '\n', current.replace('Pinned only', 'Changed pins')]) {
+      expect(() => restoreNativeSourceRepair(file, altered)).toThrow();
+    }
+    expect(restoreNativeSourceRepair('unrelated.tsx', 'unchanged')).toBe('unchanged');
+  });
+
   it.each([
     {
       file: 'web/src/features/advanced-intelligence/pages/ComponentSurvivalPage.tsx',

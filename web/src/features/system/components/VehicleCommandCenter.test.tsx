@@ -422,7 +422,7 @@ describe('VehicleCommandCenter — command execution', () => {
     };
     renderCenter();
     const lock = control('lock');
-    await waitFor(() => expect(lock.getByTestId('command-toggle-reading')).toHaveTextContent('Last known: ON'));
+    await waitFor(() => expect(lock.getByTestId('command-toggle-reading')).toHaveTextContent('Last known: On'));
     expect(lock.getByRole('button', { name: 'Lock doors' })).not.toHaveAttribute('aria-pressed');
     expect(lock.getByRole('button', { name: 'Unlock doors' })).not.toHaveAttribute('aria-pressed');
     fireEvent.click(lock.getByText('Lock', { exact: true }));
@@ -431,7 +431,7 @@ describe('VehicleCommandCenter — command execution', () => {
     await waitFor(() => expect(postCalls()).toHaveLength(1));
     expect(lastPostBody()).toEqual({ command: 'lock' });
     await screen.findByText('Lock request sent to My Tesla.');
-    expect(lock.getByTestId('command-toggle-reading')).toHaveTextContent('Last known: ON');
+    expect(lock.getByTestId('command-toggle-reading')).toHaveTextContent('Last known: On');
   });
 
   it('uses the actual selected-vehicle charging capability through the mounted input dialog and unchanged POST body', async () => {
@@ -504,16 +504,16 @@ describe('VehicleCommandCenter — command execution', () => {
       commandResponse = () => new Promise(done => { resolve = done; });
       renderCenter();
       searchFor('guest_mode_on');
-      fireEvent.click(control('guest_mode').getByRole('button', { name: 'ON' }));
+      fireEvent.click(control('guest_mode').getByRole('button', { name: 'On' }));
       await waitFor(() => expect(postCalls()).toHaveLength(1));
       expect(lastPostBody()).toEqual({ command: 'guest_mode_on' });
       expect(control('guest_mode').getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
-      expect(control('guest_mode').getByRole('button', { name: 'OFF' })).toBeDisabled();
+      expect(control('guest_mode').getByRole('button', { name: 'Off' })).toBeDisabled();
       await act(async () => { resolve?.({ success: true }); });
       await screen.findByText('Guest Mode request sent to My Tesla.');
       expect(control('guest_mode').getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
       commandResponse = () => Promise.resolve({ success: true });
-      fireEvent.click(control('guest_mode').getByRole('button', { name: 'OFF' }));
+      fireEvent.click(control('guest_mode').getByRole('button', { name: 'Off' }));
       await waitFor(() => expect(postCalls()).toHaveLength(2));
       expect(lastPostBody()).toEqual({ command: 'guest_mode_off' });
     });
@@ -524,17 +524,17 @@ describe('VehicleCommandCenter — command execution', () => {
         : Promise.resolve(kind === 'soft' ? { success: false, error: 'not accepted' } : undefined);
       renderCenter();
       searchFor('guest_mode_on');
-      fireEvent.click(control('guest_mode').getByRole('button', { name: 'ON' }));
+      fireEvent.click(control('guest_mode').getByRole('button', { name: 'On' }));
       expect(await screen.findByTestId('command-result-feedback')).not.toHaveTextContent('request sent');
       expect(control('guest_mode').getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
-      expect(control('guest_mode').getByRole('button', { name: 'ON' })).not.toHaveAttribute('aria-pressed');
-      expect(control('guest_mode').getByRole('button', { name: 'OFF' })).not.toBeDisabled();
+      expect(control('guest_mode').getByRole('button', { name: 'On' })).not.toHaveAttribute('aria-pressed');
+      expect(control('guest_mode').getByRole('button', { name: 'Off' })).not.toBeDisabled();
     });
 
     it('reaches valet OFF after actual PIN acceptance without retaining or resending the PIN', async () => {
       renderCenter();
       searchFor('set_valet_mode');
-      fireEvent.click(control('valet_mode').getByRole('button', { name: 'ON' }));
+      fireEvent.click(control('valet_mode').getByRole('button', { name: 'On' }));
       const dialog = screen.getByRole('dialog');
       const pin = within(dialog).getByDisplayValue('');
       expect(pin).toHaveAttribute('type', 'password');
@@ -546,7 +546,7 @@ describe('VehicleCommandCenter — command execution', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(screen.getByTestId('vehicle-command-center')).not.toHaveTextContent('9182');
       expect(control('valet_mode').getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
-      fireEvent.click(control('valet_mode').getByRole('button', { name: 'OFF' }));
+      fireEvent.click(control('valet_mode').getByRole('button', { name: 'Off' }));
       await waitFor(() => expect(postCalls()).toHaveLength(2));
       expect(lastPostBody()).toEqual({ command: 'valet_off' });
     });
@@ -554,14 +554,14 @@ describe('VehicleCommandCenter — command execution', () => {
     it('cancels PIN intent without sending and rechecks readiness before explicit OFF', async () => {
       const { refreshMode } = renderCenter();
       searchFor('set_valet_mode');
-      fireEvent.click(control('valet_mode').getByRole('button', { name: 'ON' }));
+      fireEvent.click(control('valet_mode').getByRole('button', { name: 'On' }));
       fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
       expect(postCalls()).toHaveLength(0);
       operationalModeState.canWrite = false;
       refreshMode();
       searchFor('guest_mode_on');
-      expect(control('guest_mode').getByRole('button', { name: 'OFF' })).toBeDisabled();
-      await act(async () => { fireEvent.click(control('guest_mode').getByRole('button', { name: 'OFF' })); });
+      expect(control('guest_mode').getByRole('button', { name: 'Off' })).toBeDisabled();
+      await act(async () => { fireEvent.click(control('guest_mode').getByRole('button', { name: 'Off' })); });
       expect(postCalls()).toHaveLength(0);
     });
 
@@ -577,8 +577,8 @@ describe('VehicleCommandCenter — command execution', () => {
       searchFor('lock');
       await waitFor(() => expect(control('lock').getByRole('button', { name: 'Lock doors' })).toHaveAttribute('aria-pressed', 'true'));
       searchFor('climate_on');
-      expect(control('climate').getByRole('button', { name: 'ON' })).not.toHaveAttribute('aria-pressed');
-      expect(control('climate').getByTestId('command-toggle-reading')).toHaveTextContent('Last known: OFF');
+      expect(control('climate').getByRole('button', { name: 'On' })).not.toHaveAttribute('aria-pressed');
+      expect(control('climate').getByTestId('command-toggle-reading')).toHaveTextContent('Last known: Off');
     });
 
     it('exposes initial latest-command failure and targeted retry without hiding action controls', async () => {

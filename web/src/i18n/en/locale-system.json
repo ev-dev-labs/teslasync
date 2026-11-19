@@ -3144,6 +3144,7 @@
     },
     "board": {
       "access": "Access",
+      "apply": "Apply",
       "care": "Cabin care",
       "chargeLimitDraft": "Charge limit draft",
       "chargeOptions": "Charge preferences",

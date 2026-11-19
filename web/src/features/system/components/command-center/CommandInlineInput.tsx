@@ -72,7 +72,7 @@ export function CommandInlineInput({ definition, vehicle, blocked, onExecute }: 
         </div>
         <Button type="button" variant="secondary" wrapLabel className="min-h-11"
           disabled={blocked || !valid} onClick={apply}>
-          {t('common.apply', 'Apply')}
+          {t('commands.board.apply', 'Apply')}
         </Button>
       </div>
       {slider && (

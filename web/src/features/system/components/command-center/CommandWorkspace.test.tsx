@@ -104,7 +104,7 @@ describe('CommandWorkspace control board', () => {
     const onExecute = vi.fn();
     const { rerender } = renderWithQueryClient(<MemoryRouter><CommandWorkspace {...props} onExecute={onExecute} /></MemoryRouter>);
     fireEvent.change(home('set_charge_limit').getByLabelText('Set limit'), { target: { value: '94' } });
-    fireEvent.click(home('valet_mode').getByRole('button', { name: 'ON' }));
+    fireEvent.click(home('valet_mode').getByRole('button', { name: 'On' }));
     expect(screen.getByRole('dialog')).toBeVisible();
     rerender(<MemoryRouter><CommandWorkspace {...props} vehicle={{ ...vehicle, id: 43 }} onExecute={onExecute} /></MemoryRouter>);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -194,7 +194,7 @@ describe('CommandWorkspace — independent outcome source', () => {
     rerender(<MemoryRouter><CommandWorkspace vehicle={vehicle} state={{ is_locked: true }} latestCommands={[...entries].reverse()} loading={false} onExecute={vi.fn()} /></MemoryRouter>);
     for (const tile of screen.getAllByRole('group', { name: 'Lock', exact: true })) {
       expect(within(tile).getByText(new RegExp(`Last request: ${marker} `))).toBeInTheDocument();
-      expect(within(tile).getByTestId('command-toggle-reading')).toHaveTextContent('Last known: ON');
+      expect(within(tile).getByTestId('command-toggle-reading')).toHaveTextContent('Last known: On');
     }
   });
 
