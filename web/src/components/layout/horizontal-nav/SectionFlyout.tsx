@@ -8,15 +8,18 @@ import { NavFilter } from './NavFilter'
 import { NavPages } from './NavPages'
 import { PINNED, useNavGroups, type NavModel } from './navGroups'
 import { handleMenuVertical, inlineKeys, menuItems } from './navKeyboard'
+import { useFlyoutAnchor } from './useFlyoutAnchor'
 
 const HOVER_INTENT_MS = 140
 
-export function SectionFlyout({ id, section, model, onSelect, onClose }: {
+export function SectionFlyout({ id, section, model, onSelect, onClose, anchor, onDismiss }: {
   id: string
   section: SidebarSectionInput
   model: NavModel
   onSelect: () => void
   onClose: () => void
+  anchor: HTMLElement | null
+  onDismiss: () => void
 }) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
@@ -29,7 +32,7 @@ export function SectionFlyout({ id, section, model, onSelect, onClose }: {
   const SectionIcon = resolveSectionIcon(section.title)
   const groupsRef = useRef<HTMLDivElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const { panel: panelRef, position } = useFlyoutAnchor(anchor, onDismiss)
   const hover = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelHover = () => clearTimeout(hover.current)
   const focusGroup = () => groupsRef.current?.querySelector<HTMLElement>('[aria-expanded="true"]')?.focus()
@@ -43,7 +46,7 @@ export function SectionFlyout({ id, section, model, onSelect, onClose }: {
     if (pagesRef.current) pagesRef.current.scrollTop = 0
   }, [group?.id])
 
-  return <div ref={panelRef} data-role="section-flyout" className="horizontal-nav-popup horizontal-nav-flyout">
+  return <div ref={panelRef} style={position} data-role="section-flyout" className="horizontal-nav-popup horizontal-nav-flyout">
     <div className="horizontal-nav-section-header">
       <h2 className="horizontal-nav-heading">
         <SectionIcon className="size-5 shrink-0" aria-hidden />{label}

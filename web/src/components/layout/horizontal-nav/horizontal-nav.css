@@ -34,17 +34,29 @@
 .horizontal-nav-context { flex: 0 1 11rem; min-inline-size: 3rem; overflow: hidden; }
 
 .horizontal-nav-primary { flex: 1; min-inline-size: 0; }
-.horizontal-nav-lane { display: flex; align-items: center; gap: var(--hn-gap); }
-.horizontal-nav-ruler-clip {
-  position: absolute;
-  inset: 0 auto auto 0;
-  inline-size: 0;
-  block-size: 0;
-  visibility: hidden;
-  overflow: hidden;
-  pointer-events: none;
+.horizontal-nav-rail-wrap { position: relative; min-inline-size: 0; }
+.horizontal-nav-lane {
+  display: flex;
+  align-items: center;
+  gap: var(--hn-gap);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  scroll-padding-inline: 0.25rem;
+  padding: 0.25rem;
 }
-.horizontal-nav-ruler { inline-size: max-content; }
+.horizontal-nav-lane::-webkit-scrollbar { display: none; }
+.horizontal-nav-fade {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 1.25rem;
+  pointer-events: none;
+  opacity: 0;
+}
+.horizontal-nav-fade[data-visible="true"] { opacity: 1; }
+/* Physical overflow indicators correspond to measured screen edges, including RTL. */
+.horizontal-nav-fade-left { left: 0; background: linear-gradient(to right, var(--hn-bar), transparent); }
+.horizontal-nav-fade-right { right: 0; background: linear-gradient(to left, var(--hn-bar), transparent); }
 .horizontal-nav-scope,
 .horizontal-nav-tools { display: flex; align-items: center; gap: var(--hn-gap); flex: none; }
 .horizontal-nav-tools { margin-inline-start: auto; }
@@ -62,6 +74,15 @@
   padding-inline: var(--hn-space);
   white-space: nowrap;
 }
+.horizontal-header .horizontal-nav-rail-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  min-inline-size: 4.25rem;
+  min-block-size: 3.5rem;
+  font-size: calc(0.75rem * var(--font-scale, 1));
+}
 .horizontal-header .horizontal-nav-icon,
 .horizontal-nav-sheet .horizontal-nav-icon {
   inline-size: 2.75rem;
@@ -72,21 +93,13 @@
 
 .horizontal-nav-popup {
   position: absolute;
-  inset-block-start: calc(100% + 0.375rem);
-  inset-inline-start: clamp(0.5rem, 1.4vw, 1.5rem);
-  max-inline-size: calc(100% - 3rem);
-  max-block-size: calc(100dvh - 5.5rem - env(safe-area-inset-top, 0px));
+  z-index: 1;
+  max-inline-size: calc(100vw - 1rem);
   border: var(--hn-frame);
   border-block-start: var(--hn-cap);
   border-radius: var(--hn-panel-radius);
   background: var(--hn-surface);
   box-shadow: var(--hn-shadow);
-}
-.horizontal-nav-more {
-  inline-size: 21rem;
-  padding: var(--hn-space);
-  overflow: auto;
-  overscroll-behavior: contain;
 }
 .horizontal-nav-flyout {
   display: grid;
@@ -181,12 +194,17 @@
   font-variant-numeric: tabular-nums;
 }
 :is(.horizontal-nav-row, .horizontal-nav-trigger):hover { background: var(--control-bg-hover); }
-.horizontal-header :is(.horizontal-nav-row, .horizontal-nav-trigger)[aria-expanded="true"],
+.horizontal-header .horizontal-nav-row[aria-expanded="true"],
 .horizontal-header :is(.horizontal-nav-row, .horizontal-nav-trigger)[aria-current],
 .horizontal-nav-sheet .horizontal-nav-row[aria-current] {
   background: var(--control-bg-hover);
   box-shadow: inset 0 -2px var(--hn-accent);
   font-weight: var(--font-weight-semibold);
+}
+.horizontal-header .horizontal-nav-trigger[aria-expanded="true"] {
+  background: var(--control-bg-hover);
+  outline: 1px solid var(--hn-accent);
+  outline-offset: -1px;
 }
 /* Active weight must not change the measured width when a section opens. */
 .horizontal-header .horizontal-nav-trigger,
@@ -216,6 +234,23 @@
 .horizontal-nav-sheet [data-modal-scroll-body] { display: flex; flex-direction: column; overflow: hidden; }
 .horizontal-nav-sheet-body { flex: 1; overflow: auto; overscroll-behavior: contain; }
 .horizontal-nav-sheet-body .horizontal-nav-pages { overflow: visible; }
+.horizontal-nav-sheet-title,
+.horizontal-nav-sheet-footer { flex: none; }
+.horizontal-nav-sheet-body { min-block-size: 0; min-inline-size: 0; }
+.horizontal-nav-sheet-group { border-block-start: 1px solid var(--hn-rule); }
+.horizontal-nav-sheet-group > h3,
+.horizontal-nav-sheet-quick > h3 { padding: var(--hn-space) var(--hn-gap) var(--hn-gap); }
+.horizontal-nav-sheet-group > div { padding-inline-start: var(--hn-space); }
+.horizontal-nav-sheet-quick { padding-block-end: var(--hn-space); }
+.horizontal-nav-sheet-quick .horizontal-nav-pages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.horizontal-nav-sheet-quick .horizontal-nav-row {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding-inline: var(--hn-gap);
+  background: var(--hn-muted-surface);
+}
+.horizontal-nav-sheet-quick .horizontal-nav-row > span:first-of-type { flex: none; }
 .horizontal-nav-sheet-footer { border-block-start: 1px solid var(--hn-rule); padding-block-start: var(--hn-space); }
 .horizontal-nav-sheet :is(.horizontal-nav-row, .horizontal-nav-filter, .horizontal-nav-pin) {
   min-block-size: 44px;

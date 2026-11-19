@@ -35,6 +35,12 @@ export function NavPages({ group, model, editing, menu, id, paneRef, onKeyDown, 
             onClick={() => pinned ? model.onUnpin(page.to) : model.onPin(page.to)}>
             {text}<Icons.pin className={pinned ? 'size-4 shrink-0 fill-current' : 'size-4 shrink-0'} aria-hidden />
           </Button>
+        : model.onNavigate ? <Button key={page.to} data-nav-choice variant="ghost" role={menu ? 'menuitem' : undefined}
+            className="horizontal-nav-row" tabIndex={tabIndex}
+            aria-current={model.pathname === page.to ? 'page' : undefined}
+            onClick={() => { model.onNavigate?.(page.to); onSelect() }}>
+            {text}
+          </Button>
         : <PrefetchLink key={page.to} data-nav-choice role={menu ? 'menuitem' : undefined}
             className="horizontal-nav-row" to={page.to} tabIndex={tabIndex} data-tour={page.dataTour}
             aria-current={isExclusiveActivePath(model.pathname, page.to, paths) ? 'page' : undefined}

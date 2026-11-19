@@ -5,6 +5,7 @@ import orientation from './__fixtures__/nav-orientation-preservation.json'
 import fullRail from './__fixtures__/full-rail-preservation.json'
 import verticalStyle from './__fixtures__/vertical-style-preservation.json'
 import startup from './__fixtures__/navigation-startup-preservation.json'
+import previewHorizontalNavigation from './__fixtures__/preview-horizontal-navigation-preservation.json'
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex')
 
@@ -23,6 +24,7 @@ export function restoreNavOrientationSource(file: string, source: string): strin
 }
 
 export function restoreVerticalNavigationStyleSource(file: string, source: string): string {
+  source = restoreExactPatch(file, source, previewHorizontalNavigation, '2a5ec282c266d13ec7957ef842242a890950dc7ad0d30badc478c10446025a08')
   return restoreExactPatch(file, source, verticalStyle, 'eefc2e2bdc8ed2c1d41b873e933d24f7ecc9c63d8db92e6a6a0d7a0887cf01e5')
 }
 

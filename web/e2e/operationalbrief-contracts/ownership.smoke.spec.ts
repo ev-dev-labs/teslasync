@@ -688,7 +688,7 @@ for (const width of [320, 1440]) {
       await page.getByRole('button', { name: 'Browse sections', exact: true }).click();
       await scope.getByRole('button', { name: 'Ownership intelligence' }).click();
       await scope.getByRole('searchbox').fill('Utility tariff lab');
-      await scope.locator('[data-nav-choice]').first().click();
+      await expect(scope.locator('a[href="/ownership/tariff-lab"]')).toBeVisible();
     } else {
       // Clicking the already-selected section toggles the panel closed, so
       // only click when the panel is shut (collection-navigation).

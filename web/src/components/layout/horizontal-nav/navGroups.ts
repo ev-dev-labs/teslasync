@@ -23,6 +23,8 @@ export interface NavModel {
   vehicleId?: string
   vehicleCount: number
   staleCount: number
+  /** Isolated sandboxes use local actions instead of live links or route prefetching. */
+  onNavigate?: (path: string) => void
 }
 
 export const PINNED = 'pinned'

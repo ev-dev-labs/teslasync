@@ -17,6 +17,51 @@ function preview(packId: keyof typeof APPLICATION_DESIGNS = 'classic') {
 setupMeasuredChartContainers(800, 320);
 
 describe('isolated complete application preview', () => {
+  it('uses the shared top rail and local flyout actions without navigation, fetching or persistence', async () => {
+    const writes = vi.spyOn(Storage.prototype, 'setItem');
+    const request = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Preview must not fetch'));
+    const url = window.location.href;
+    const rootBefore = document.documentElement.outerHTML.split('>')[0];
+    // jsdom has no layout; browser smoke tests assert real anchor geometry.
+    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1440);
+    for (const [pack, design] of Object.entries(APPLICATION_DESIGNS)) {
+      if (design.navigation !== 'top') continue;
+      const view = preview(pack as keyof typeof APPLICATION_DESIGNS);
+      const nav = screen.getByRole('navigation', { name: 'Sandbox navigation' });
+      expect(within(nav).queryByRole('button', { name: 'More', exact: true })).not.toBeInTheDocument();
+      const commands = within(nav).getByRole('button', { name: 'Commands', exact: true });
+      const bounds = { x: 100, y: 100, width: 120, height: 56, left: 100, right: 220, top: 100, bottom: 156, toJSON: () => ({}) };
+      vi.spyOn(commands, 'getBoundingClientRect').mockReturnValue(bounds);
+      vi.spyOn(nav.querySelector('[data-horizontal-rail]') as HTMLElement, 'getBoundingClientRect').mockReturnValue(bounds);
+      expect(commands.querySelector('svg')).not.toBeNull();
+      expect(within(nav).queryByRole('button', { name: 'Account' })).not.toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Account', exact: true })).toHaveLength(1);
+      fireEvent.click(commands);
+      const panel = view.container.querySelector('[data-role="section-flyout"]') as HTMLElement;
+      expect(panel, pack).not.toBeNull();
+      expect(panel.closest('[data-horizontal-rail]')).toBeNull();
+      expect(within(panel).getByRole('searchbox', { name: 'Filter Commands pages' })).toBeVisible();
+      fireEvent.click(within(panel).getByRole('button', { name: 'Edit pins' }));
+      fireEvent.click(within(panel).getByRole('menuitemcheckbox', { name: 'Activity' }));
+      expect(within(panel).getByRole('menuitemcheckbox', { name: 'Activity' })).toHaveAttribute('aria-checked', 'true');
+      fireEvent.click(within(panel).getByRole('button', { name: 'Done' }));
+      fireEvent.keyDown(panel, { key: 'Escape' });
+      expect(commands).toHaveFocus();
+      expect(view.container.querySelector('[data-role="section-flyout"]')).toBeNull();
+      fireEvent.click(commands);
+      const reopened = view.container.querySelector('[data-role="section-flyout"]') as HTMLElement;
+      expect(within(reopened).getByRole('menuitem', { name: /^Pinned/ })).toBeVisible();
+      fireEvent.click(within(reopened).getByRole('menuitem', { name: 'Activity', exact: true }));
+      expect(commands).toHaveAttribute('aria-current', 'true');
+      expect(view.container.querySelector('[data-role="section-flyout"]')).toBeNull();
+      expect(window.location.href).toBe(url);
+      view.unmount();
+    }
+    expect(document.documentElement.outerHTML.split('>')[0]).toBe(rootBefore);
+    expect(writes).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it('scopes all 27 profiles locally without changing document attributes or saved preferences', () => {
     const rootBefore = document.documentElement.outerHTML.split('>')[0];
     const writes = vi.spyOn(Storage.prototype, 'setItem');

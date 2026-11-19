@@ -12,6 +12,7 @@ import PreviewChart from './app-design-preview/PreviewChart';
 import PreviewMap from './app-design-preview/PreviewMap';
 import PreviewFeedback from './app-design-preview/PreviewFeedback';
 import PreviewOverlays from './app-design-preview/PreviewOverlays';
+import PreviewHorizontalNavigation from './app-design-preview/PreviewHorizontalNavigation';
 
 interface AppDesignPackPreviewProps {
   packId: PackId;
@@ -49,14 +50,14 @@ export default function AppDesignPackPreview({ packId, children }: AppDesignPack
           ? 'md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]'
           : 'md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)]'))}>
         <aside data-app-part="shell-sidebar" className="min-w-0">
-          <nav data-app-part="navigation" aria-label={t('theme.appDesignPreview.navigation', 'Sandbox navigation')}
+          {!verticalNavigation ? <PreviewHorizontalNavigation key={packId} onSelect={setSection} /> : <nav data-app-part="navigation" aria-label={t('theme.appDesignPreview.navigation', 'Sandbox navigation')}
             className={cn('flex flex-wrap gap-2', verticalNavigation && 'md:flex-col')}>
             {navigation.map(item => (
               <Button key={item.key} data-app-part="nav-item" variant="secondary"
                 aria-current={section === item.key ? 'page' : undefined}
                 onClick={() => setSection(item.key)}>{item.label}</Button>
             ))}
-          </nav>
+          </nav>}
         </aside>
         <div data-app-part="shell-main page" className="min-w-0 space-y-6">
           <div data-app-part="page-header" className="flex flex-wrap items-start justify-between gap-3">
