@@ -25,6 +25,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { Modal } from '@/components/ui/Modal'
@@ -600,7 +601,7 @@ describe('CommandDeck', () => {
     expect(onUnpin).not.toHaveBeenCalled()
   })
 
-  it('opens phone tabs into the shared section and group drill-down, dismissed with Escape', () => {
+  it('opens phone tabs into inline groups without losing the section title or filter', () => {
     setViewportWidth(375)
     renderControlledDeck({ collections: [tripCollection] })
     const tabs = within(screen.getByRole('navigation', { name: 'Quick navigation' }))
@@ -613,12 +614,119 @@ describe('CommandDeck', () => {
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
     fireEvent.click(tabs.getByRole('button', { name: 'Driving' }))
     dialog = screen.getByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Trip Records/ }))
+    const records = within(dialog).getByRole('button', { name: /^Trip Records/ })
+    expect(records).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(records)
+    expect(records).toHaveAttribute('aria-expanded', 'true')
     expect(within(dialog).getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('heading', { name: 'Driving' })).toBeVisible()
+    expect(within(dialog).getByRole('searchbox', { name: 'Filter Driving pages' })).toBeVisible()
+    expect(within(dialog).queryByRole('button', { name: 'Back' })).toBeNull()
+    fireEvent.click(records)
+    expect(within(dialog).queryByRole('link', { name: 'Mileage Log' })).toBeNull()
 
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('navigation', { name: 'Quick navigation' })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['Drives', '/drives'],
+    ['Drive Calendar', '/drive-calendar'],
+    ['Explorer', '/explorer'],
+  ])('opens %s in two taps from the Driving tab', async (name, path) => {
+    setViewportWidth(390)
+    const user = userEvent.setup()
+    const onItemSelect = vi.fn()
+    renderControlledDeck({ collections: [{ ...driveCollection, pages: [...driveCollection.pages,
+      { to: '/explorer', label: 'Explorer', labelKey: 'nav.items.explorer' }] }], onItemSelect })
+    const trigger = screen.getByRole('button', { name: 'Driving', exact: true })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog')
+    await waitFor(() => expect(within(dialog).getByRole('heading', { name: 'Driving' })).toHaveFocus())
+    const quick = within(dialog).getByRole('region', { name: 'Quick access' })
+    const link = within(quick).getByRole('link', { name, exact: true })
+    expect(link).toHaveAttribute('href', path)
+    await user.click(link)
+    expect(onItemSelect).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it('searches current-section pages directly, deduplicates pins and restores inline expansion on clearing', async () => {
+    setViewportWidth(390)
+    const user = userEvent.setup()
+    renderControlledDeck({ collections: [driveCollection, tripCollection], pinnedItems: [drivesItem] })
+    await user.click(screen.getByRole('button', { name: 'Driving', exact: true }))
+    const dialog = within(screen.getByRole('dialog'))
+    await user.click(dialog.getByRole('button', { name: /^Trip Records/ }))
+    const filter = dialog.getByRole('searchbox')
+    await user.type(filter, 'Mileage')
+    expect(dialog.getByRole('heading', { name: 'Trip Records' })).toBeVisible()
+    expect(dialog.getByRole('link', { name: 'Mileage Log' })).toHaveAttribute('href', '/mileage')
+    expect(dialog.queryByRole('button', { name: /^Trip Records/ })).toBeNull()
+    await user.clear(filter)
+    expect(dialog.getByRole('button', { name: /^Trip Records/ })).toHaveAttribute('aria-expanded', 'true')
+    await user.type(filter, 'Drives')
+    expect(dialog.getAllByRole('link', { name: 'Drives', exact: true })).toHaveLength(1)
+    await user.clear(filter)
+    await user.type(filter, 'Dashboard')
+    expect(dialog.queryAllByRole('link')).toHaveLength(0)
+    expect(dialog.getByRole('status')).toHaveTextContent('No pages match "Dashboard".')
+    await user.clear(filter)
+    expect(dialog.getByRole('region', { name: 'Quick access' })).toBeVisible()
+    expect(dialog.getByRole('button', { name: /^Trip Records/ })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('edits existing and new pins from the section without drilling into a group', async () => {
+    setViewportWidth(390)
+    const user = userEvent.setup()
+    const onPin = vi.fn()
+    const onUnpin = vi.fn()
+    function PhoneDeck() {
+      const [pins, setPins] = useState([tripsItem])
+      return <MemoryRouter><CommandDeck {...baseProps({ collections: [driveCollection, tripCollection], pinSyncUnavailable: true })}
+        pinnedItems={pins} onPin={path => {
+          onPin(path); setPins(current => [...current, { ...drivesItem, to: path }])
+        }} onUnpin={path => { onUnpin(path); setPins(current => current.filter(item => item.to !== path)) }} /></MemoryRouter>
+    }
+    render(<PhoneDeck />)
+    await user.click(screen.getByRole('button', { name: 'Driving', exact: true }))
+    const dialog = within(screen.getByRole('dialog'))
+    expect(within(dialog.getByRole('region', { name: 'Quick access' })).getByRole('link', { name: 'Trips' })).toBeVisible()
+    await user.click(dialog.getByRole('button', { name: 'Edit pins' }))
+    expect(dialog.getByRole('status')).toHaveTextContent('Saved here until navigation pins can sync')
+    const tripPages = within(dialog.getByRole('region', { name: 'Trip Records' }))
+    expect(tripPages.getByRole('button', { name: 'Trips' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(tripPages.getByRole('button', { name: 'Trips' }))
+    expect(onUnpin).toHaveBeenCalledWith('/trips')
+    expect(tripPages.getByRole('button', { name: 'Trips' })).toHaveFocus()
+    const mileage = within(dialog.getByRole('region', { name: 'Trip Records' })).getByRole('button', { name: 'Mileage Log' })
+    await user.click(mileage)
+    expect(onPin).toHaveBeenCalledWith('/mileage')
+    expect(mileage).toHaveAttribute('aria-pressed', 'true')
+    await user.click(dialog.getByRole('button', { name: 'Done' }))
+    const quick = within(dialog.getByRole('region', { name: 'Quick access' }))
+    expect(quick.getByRole('link', { name: 'Mileage Log' })).toHaveAttribute('href', '/mileage')
+    expect(quick.queryByRole('link', { name: 'Trips' })).toBeNull()
+  })
+
+  it('keeps hidden shortcuts absent and returns Back to Browse sections with focus', async () => {
+    setViewportWidth(320)
+    const user = userEvent.setup()
+    renderControlledDeck({ collections: [{ ...driveCollection, pages: [driveCollection.pages[0]] }] })
+    const more = screen.getByRole('button', { name: 'More' })
+    await user.click(more)
+    const dialog = within(screen.getByRole('dialog'))
+    await user.click(dialog.getByRole('button', { name: 'Driving', exact: true }))
+    expect(dialog.getByRole('link', { name: 'Drives', exact: true })).toBeVisible()
+    expect(dialog.queryByRole('link', { name: 'Drive Calendar' })).toBeNull()
+    expect(dialog.queryByRole('link', { name: 'Explorer' })).toBeNull()
+    await user.click(dialog.getByRole('button', { name: /^Drive Records/ }))
+    await user.click(dialog.getByRole('button', { name: 'Back' }))
+    expect(dialog.getByRole('button', { name: 'Driving', exact: true })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(more).toHaveFocus())
   })
 
   it('notifies the host when the All pages shortcut is followed', async () => {
