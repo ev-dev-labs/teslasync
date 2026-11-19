@@ -10,7 +10,7 @@ import { PACK_IDS } from '../src/features/dashboard/widgets/designPacks/types';
 import { test as appDesignTest } from './app-design-test';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
-import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, prepareMockApiNavigation, resolveApiFixture, seedBrowserState, waitForHarnessReady, waitForNoVisibleActivity, type ApiRequestRecord, type MockApiController } from './mockApi';
+import { assertMockApiAfterNavigation, assertMockApiComplete, closeMockApiFixtures, installApiMocks, isSsePath, prepareMockApiNavigation, resolveApiFixture, retireMockedDocument, seedBrowserState, waitForHarnessReady, waitForNoVisibleActivity, type ApiRequestRecord, type MockApiController } from './mockApi';
 import {
   QUALITY_ROUTES,
 } from './routeRegistry';
@@ -551,6 +551,38 @@ test('harness distinguishes cancelled tracked reads from unreviewed API requests
     } finally {
       await closeMockApiFixtures();
     }
+  }
+});
+
+test('retiring a mocked document stops polling before its routes are removed', async ({ page }) => {
+  const escaped: string[] = [];
+  let releasePoll!: () => void;
+  const pollGate = new Promise<void>(resolve => { releasePoll = resolve; });
+  try {
+    await page.context().route('**/api/**', route => {
+      escaped.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
+      return route.abort('blockedbyclient');
+    });
+    await page.route('http://127.0.0.1:54321/', route =>
+      route.fulfill({ contentType: 'text/html', body: '<main>Ready</main>' }));
+    const controller = await installApiMocks(page);
+    if (!controller) throw new Error('Mock API is required');
+    await page.exposeBinding('__releaseHarnessPoll', () => pollGate);
+    await page.goto('http://127.0.0.1:54321/');
+    expect(await page.evaluate(async () => (await fetch('/api/v1/export/jobs')).status)).toBe(200);
+    await page.evaluate(() => {
+      const wait = (window as Window & { __releaseHarnessPoll: () => Promise<void> }).__releaseHarnessPoll;
+      void wait().then(() => fetch('/api/v1/export/jobs')).catch(() => undefined);
+    });
+
+    await retireMockedDocument(page, controller);
+    await page.unrouteAll({ behavior: 'wait' });
+    releasePoll();
+    await page.waitForTimeout(500);
+    expect(escaped, 'polling must not outlive the mocked document').toEqual([]);
+  } finally {
+    releasePoll();
+    await closeMockApiFixtures();
   }
 });
 

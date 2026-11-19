@@ -1554,7 +1554,7 @@ export async function readCapturedBeacons(page: Page): Promise<CapturedBeacon[]>
   ).__TESLASYNC_E2E_BEACONS__ ?? []);
 }
 
-export async function closeMockedPage(
+export async function retireMockedDocument(
   page: Page,
   controller: MockApiController | null,
 ): Promise<void> {
@@ -1563,6 +1563,13 @@ export async function closeMockedPage(
   await prepareMockApiNavigation(page);
   await page.goto('about:blank');
   await assertMockApiAfterNavigation(page, origin);
+}
+
+export async function closeMockedPage(
+  page: Page,
+  controller: MockApiController | null,
+): Promise<void> {
+  await retireMockedDocument(page, controller);
   await page.close();
 }
 

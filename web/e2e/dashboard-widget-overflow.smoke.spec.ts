@@ -187,10 +187,11 @@ function sizeFor(entry: WidgetSizeEntry, size: SizeName): [number, number] {
 // breakpoint). Only the lg breakpoint is measured (1440px viewport); the
 // others keep the seed valid if RGL falls back during hydration.
 const GRID_COLS: Record<string, number> = { lg: 4, md: 3, sm: 2, xs: 1 }
+const WIDGET_BATCH_SIZE = 31
 
-function buildSeed(size: SizeName) {
-  const widgets = WIDGET_SIZES.map((entry, index) => ({
-    id: `overflow-guard-${index}`,
+function buildSeed(size: SizeName, entries: WidgetSizeEntry[], offset: number) {
+  const widgets = entries.map((entry, index) => ({
+    id: `overflow-guard-${index + offset}`,
     widgetId: entry.id,
   }))
   const layouts: Record<string, unknown[]> = {}
@@ -199,7 +200,7 @@ function buildSeed(size: SizeName) {
     let y = 0
     let rowMaxH = 0
     const items: unknown[] = []
-    WIDGET_SIZES.forEach((entry, index) => {
+    entries.forEach((entry, index) => {
       const [w0, h0] = sizeFor(entry, size)
       const w = Math.min(w0, cols)
       const h = h0
@@ -209,7 +210,7 @@ function buildSeed(size: SizeName) {
         rowMaxH = 0
       }
       items.push({
-        i: `overflow-guard-${index}`,
+        i: `overflow-guard-${index + offset}`,
         x,
         y,
         w,
@@ -256,8 +257,8 @@ interface WidgetRecord {
   headerFailures: string[]
 }
 
-async function measureAll(page: Page): Promise<WidgetRecord[]> {
-  return page.evaluate((ids: string[]) => {
+async function measureAll(page: Page, entries: WidgetSizeEntry[], offset: number): Promise<WidgetRecord[]> {
+  return page.evaluate(({ ids, offset }: { ids: string[]; offset: number }) => {
     const hasAffordance = (el: HTMLElement, body: HTMLElement): boolean => {
       let node: HTMLElement | null = el
       while (node) {
@@ -301,7 +302,7 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
       return errors
     }
     return ids.map((id, index): WidgetRecord => {
-      const root = document.querySelector(`[data-widget-id="overflow-guard-${index}"]`)
+      const root = document.querySelector(`[data-widget-id="overflow-guard-${index + offset}"]`)
       if (!root) return { id, status: 'missing', bodyScroll: null, bodyClient: null, clipped: [], headerFailures: ['missing widget'] }
       const body = root.querySelector<HTMLElement>('[data-testid="widget-body"]')
       if (!body) {
@@ -386,7 +387,7 @@ async function measureAll(page: Page): Promise<WidgetRecord[]> {
       }
       return record
     })
-  }, WIDGET_SIZES.map((entry) => entry.id))
+  }, { ids: entries.map((entry) => entry.id), offset })
 }
 
 // Representative widgets for the small/large verification screenshots.
@@ -394,10 +395,8 @@ const SHOT_WIDGETS = ['fleet-posture', 'battery-gauge', 'location-map', 'vehicle
 
 type MockApi = Awaited<ReturnType<typeof installApiMocks>>
 
-// `waitForHarnessReady` needs 750ms without any mocked request completing,
-// which 121 live widgets never grant (their polls interleave). Geometry —
-// not API quiet — is what this guard asserts, so fall back to DOM
-// stability when the full harness settle times out.
+// Some live widget batches never grant the harness's API-quiet interval.
+// Geometry, not API quiet, is what this guard asserts.
 async function waitForGeometrySettled(page: Page, mockApi: MockApi): Promise<void> {
   try {
     await waitForHarnessReady(page, mockApi)
@@ -431,11 +430,11 @@ const STATUS_RANK: Record<WidgetRecord['status'], number> = {
   missing: 2,
 }
 
-async function measureSettled(page: Page): Promise<WidgetRecord[]> {
+async function measureSettled(page: Page, entries: WidgetSizeEntry[], offset: number): Promise<WidgetRecord[]> {
   const samples: WidgetRecord[][] = []
   for (let i = 0; i < 3; i++) {
-    samples.push(await measureAll(page))
-    await page.waitForTimeout(2000)
+    samples.push(await measureAll(page, entries, offset))
+    if (i < 2) await page.waitForTimeout(2000)
   }
   return samples[0].map((first, index) => {
     let worst = first
@@ -448,86 +447,105 @@ async function measureSettled(page: Page): Promise<WidgetRecord[]> {
 }
 
 test('widget bodies never overflow horizontally at min, default and large sizes in view and edit mode', async ({ page }, testInfo) => {
-  test.setTimeout(480_000)
+  // Each size now loads several bounded dashboards, with the same per-action limits.
+  test.setTimeout(900_000)
   await page.setViewportSize({ width: 1440, height: 900 })
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated', 'dark')
-  const instanceId = new Map(WIDGET_SIZES.map((entry, index) => [entry.id, `overflow-guard-${index}`]))
 
   const violations: string[] = []
   const records: Array<{ size: SizeName; mode: 'view' | 'edit'; rows: WidgetRecord[] }> = []
 
   for (const size of ['min', 'default', 'large'] as const) {
-    // Seed on the static same-origin shell without aborting an application mid-boot.
-    await navigateGeometryPage(page, '/offline.html')
-    await page.evaluate((seed) => {
-      localStorage.setItem('teslasync-dashboards', JSON.stringify(seed.dashboards))
-      localStorage.setItem('teslasync-active-dashboard', seed.active)
-      localStorage.setItem('teslasync-row-height-version', '2')
-      localStorage.removeItem('teslasync-dashboard-pending-save')
-    }, buildSeed(size))
-    await navigateGeometryPage(page, '/')
-    await waitForGeometrySettled(page, mockApi)
+    const sizeRecords: Record<'view' | 'edit', WidgetRecord[]> = { view: [], edit: [] }
+    const photographed = new Set<string>()
+    // Keep every widget/size/mode, without mounting 121 polling widgets at once.
+    for (let offset = 0; offset < WIDGET_SIZES.length; offset += WIDGET_BATCH_SIZE) {
+      const entries = WIDGET_SIZES.slice(offset, offset + WIDGET_BATCH_SIZE)
+      const instanceId = new Map(entries.map((entry, index) => [entry.id, `overflow-guard-${index + offset}`]))
 
+      // Seed on the static same-origin shell without aborting an application mid-boot.
+      await navigateGeometryPage(page, '/offline.html')
+      await page.evaluate((seed) => {
+        localStorage.setItem('teslasync-dashboards', JSON.stringify(seed.dashboards))
+        localStorage.setItem('teslasync-active-dashboard', seed.active)
+        localStorage.setItem('teslasync-row-height-version', '2')
+        localStorage.removeItem('teslasync-dashboard-pending-save')
+      }, buildSeed(size, entries, offset))
+      await navigateGeometryPage(page, '/')
+      await waitForGeometrySettled(page, mockApi)
+
+      for (const mode of ['view', 'edit'] as const) {
+        if (mode === 'edit') {
+          await page.getByRole('button', { name: 'Customize' }).click()
+          await waitForGeometrySettled(page, mockApi)
+        }
+        const rows = await measureSettled(page, entries, offset)
+        sizeRecords[mode].push(...rows)
+        for (const row of rows) {
+          for (const failure of row.headerFailures) {
+            violations.push(`${size}/${mode} ${row.id}: ${failure}`)
+            console.log(`[header-guard] VIOLATION ${size}/${mode} ${row.id}: ${failure}`)
+          }
+        }
+        // Incremental record: a later batch or config must not lose earlier ones.
+        await writeFile(
+          testInfo.outputPath(`records-${size}-${mode}.json`),
+          JSON.stringify(sizeRecords[mode], null, 1),
+        )
+        const bad = rows.filter((r) => r.status !== 'pass' && r.status !== 'not-rendered')
+        for (const row of bad) {
+          const detail = row.status === 'missing' || row.status === 'error-boundary'
+            ? row.status
+            : `body ${row.bodyScroll}/${row.bodyClient}px`
+              + (row.clipped.length > 0
+                ? ` clipped: ${row.clipped.map((c) => `<${c.tag}> "${c.text}" (${c.scroll}/${c.client}px)`).join('; ')}`
+                : '')
+          violations.push(`${size}/${mode} ${row.id}: ${detail}`)
+          console.log(`[overflow-guard] VIOLATION ${size}/${mode} ${row.id}: ${row.status} ${detail}`)
+          console.log(JSON.stringify(Reflect.get(row, 'bodyGeometry') ?? {}))
+          console.log(JSON.stringify(Reflect.get(row, 'overflowingElements') ?? []))
+        }
+        console.log(
+          `[overflow-guard] ${size}/${mode} batch ${offset + 1}-${offset + entries.length}: `
+          + `${rows.filter((r) => r.status === 'pass').length}/${rows.length} pass, `
+          + `${rows.filter((r) => r.status === 'not-rendered').length} not-rendered, `
+          + `${bad.length} violations`,
+        )
+        if (mode === 'view' && (size === 'min' || size === 'large')) {
+          for (const widgetId of SHOT_WIDGETS) {
+            const id = instanceId.get(widgetId)
+            if (!id) continue
+            const panel = page.locator(`[data-widget-id="${id}"]`)
+            // Rasterize the visible widget only, not the live grid's full document.
+            const clip = await panel.evaluate((element) => {
+              element.scrollIntoView({ block: 'center', behavior: 'instant' })
+              const { left, top, width, height } = element.getBoundingClientRect()
+              return { x: left, y: top, width, height }
+            })
+            const viewport = page.viewportSize()!
+            const name = `${widgetId} at ${size}`
+            expect(clip.x, name).toBeGreaterThanOrEqual(0)
+            expect(clip.y, name).toBeGreaterThanOrEqual(0)
+            expect(clip.x + clip.width, name).toBeLessThanOrEqual(viewport.width)
+            expect(clip.y + clip.height, name).toBeLessThanOrEqual(viewport.height)
+            await page.screenshot({
+              path: testInfo.outputPath(`row16-${widgetId}-${size}.png`),
+              animations: 'disabled',
+              clip,
+            })
+            photographed.add(widgetId)
+          }
+        }
+      }
+    }
+    if (size === 'min' || size === 'large') {
+      expect([...photographed].sort(), `${size} screenshot coverage`).toEqual([...SHOT_WIDGETS].sort())
+    }
     for (const mode of ['view', 'edit'] as const) {
-      if (mode === 'edit') {
-        await page.getByRole('button', { name: 'Customize' }).click()
-        await waitForGeometrySettled(page, mockApi)
-      }
-      const rows = await measureSettled(page)
-      records.push({ size, mode, rows })
-      for (const row of rows) {
-        for (const failure of row.headerFailures) {
-          violations.push(`${size}/${mode} ${row.id}: ${failure}`)
-          console.log(`[header-guard] VIOLATION ${size}/${mode} ${row.id}: ${failure}`)
-        }
-      }
-      // Incremental record: a later config must never lose an earlier one.
-      await writeFile(
-        testInfo.outputPath(`records-${size}-${mode}.json`),
-        JSON.stringify(rows, null, 1),
-      )
-      const bad = rows.filter((r) => r.status !== 'pass' && r.status !== 'not-rendered')
-      for (const row of bad) {
-        const detail = row.status === 'missing' || row.status === 'error-boundary'
-          ? row.status
-          : `body ${row.bodyScroll}/${row.bodyClient}px`
-            + (row.clipped.length > 0
-              ? ` clipped: ${row.clipped.map((c) => `<${c.tag}> "${c.text}" (${c.scroll}/${c.client}px)`).join('; ')}`
-              : '')
-        violations.push(`${size}/${mode} ${row.id}: ${detail}`)
-        console.log(`[overflow-guard] VIOLATION ${size}/${mode} ${row.id}: ${row.status} ${detail}`)
-        console.log(JSON.stringify(Reflect.get(row, 'bodyGeometry') ?? {}))
-        console.log(JSON.stringify(Reflect.get(row, 'overflowingElements') ?? []))
-      }
-      console.log(
-        `[overflow-guard] ${size}/${mode}: `
-        + `${rows.filter((r) => r.status === 'pass').length}/${rows.length} pass, `
-        + `${rows.filter((r) => r.status === 'not-rendered').length} not-rendered, `
-        + `${bad.length} violations`,
-      )
-      if (mode === 'view' && (size === 'min' || size === 'large')) {
-        for (const widgetId of SHOT_WIDGETS) {
-          const panel = page.locator(`[data-widget-id="${instanceId.get(widgetId)}"]`)
-          // Rasterize the visible widget only, not the live grid's full document.
-          const clip = await panel.evaluate((element) => {
-            element.scrollIntoView({ block: 'center', behavior: 'instant' })
-            const { left, top, width, height } = element.getBoundingClientRect()
-            return { x: left, y: top, width, height }
-          })
-          const viewport = page.viewportSize()!
-          const name = `${widgetId} at ${size}`
-          expect(clip.x, name).toBeGreaterThanOrEqual(0)
-          expect(clip.y, name).toBeGreaterThanOrEqual(0)
-          expect(clip.x + clip.width, name).toBeLessThanOrEqual(viewport.width)
-          expect(clip.y + clip.height, name).toBeLessThanOrEqual(viewport.height)
-          await page.screenshot({
-            path: testInfo.outputPath(`row16-${widgetId}-${size}.png`),
-            animations: 'disabled',
-            clip,
-          })
-        }
-      }
+      expect(sizeRecords[mode].map(row => row.id), `${size}/${mode} coverage`)
+        .toEqual(WIDGET_SIZES.map(entry => entry.id))
+      records.push({ size, mode, rows: sizeRecords[mode] })
     }
   }
 

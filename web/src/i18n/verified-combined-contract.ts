@@ -9,6 +9,7 @@ import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import { catalogBeforeAppDesign, catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
 import { catalogBeforeHorizontalNavigation } from './verified-horizontal-navigation-contract'
+import { catalogBeforeCommandBoard } from './verified-command-board-contract'
 import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -121,7 +122,7 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const beforeExternalAuth = catalogBeforeAppDesign(catalogBeforeHorizontalNavigation(catalog))
+  const beforeExternalAuth = catalogBeforeAppDesign(catalogBeforeHorizontalNavigation(catalogBeforeCommandBoard(catalog)))
   expect(beforeExternalAuth.ratelimit, 'ratelimit').toEqual({
     appTitle: 'TeslaSync request limit reached',
     teslaTitle: 'Tesla request limit reached',

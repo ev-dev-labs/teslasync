@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import {
@@ -24,6 +25,7 @@ interface CommandCenterHeroProps {
   error: unknown;
   onRetry: () => void;
   dataState?: DataState<unknown>;
+  children?: ReactNode;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,6 +44,7 @@ export function CommandCenterHero({
   error,
   onRetry,
   dataState,
+  children,
 }: CommandCenterHeroProps) {
   const { t } = useTranslation();
   // Legacy props cannot establish a query pause or provenance.
@@ -194,6 +197,7 @@ export function CommandCenterHero({
             className="py-6"
           />
         ) : null}
+        {children}
       </div>
     </GlassPanel>
   );

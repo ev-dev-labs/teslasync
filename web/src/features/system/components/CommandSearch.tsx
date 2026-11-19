@@ -18,7 +18,7 @@ export function CommandSearch({ value, onChange }: CommandSearchProps) {
       placeholder={t('commands.search.placeholder', 'Search commands...')}
       aria-label={t('commands.search.aria', 'Search commands')}
       icon={<Search className="h-4 w-4" aria-hidden="true" />}
-      className="bg-white/[0.03] border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+      className="min-h-11"
     />
   );
 }

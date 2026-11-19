@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { createInstance } from 'i18next'
+import ts from 'typescript'
 // @ts-expect-error - shared topology helpers authored as ESM JavaScript
 import {
   keysUnderPrefix,
@@ -10,10 +14,13 @@ import {
   validateManifest,
 } from './catalog-topology.mjs'
 import catalog from './en.json'
+import commandCatalog from './en/locale-detail-commands.json'
 import knownMissingBaseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import shell from './en/shell.json'
 import usageManifest from './en/usage-manifest.json'
+import { COMMAND_BOARD_GROUPS } from '../features/system/components/command-center/commandBoard'
+import { catalogBeforeCommandBoard } from './verified-command-board-contract'
 
 type Json = Record<string, unknown>
 
@@ -34,6 +41,62 @@ function nested(object: unknown, key: string): unknown {
 }
 
 describe('catalog splitter helpers', () => {
+  it('resolves the current command-board copy and retains the exact historical catalog', async () => {
+    expect(commandCatalog.commands.board).toEqual(catalog.commands.board)
+    const english = createInstance()
+    await english.init({ lng: 'en', resources: { en: { translation: commandCatalog } }, interpolation: { escapeValue: false } })
+    for (const [key, value] of Object.entries(catalog.commands.board)) {
+      expect(english.t(`commands.board.${key}`, { skipInterpolation: true })).toBe(value)
+    }
+    for (const group of COMMAND_BOARD_GROUPS) {
+      expect(english.t(group.labelKey)).toBe(group.fallback)
+    }
+    expect(english.t('commands.board.apply')).toBe('Apply')
+    expect(english.t('commands.on')).toBe('On')
+    expect(english.t('commands.off')).toBe('Off')
+    expect(english.t('commands.board.pin', { command: 'Lock doors' })).toBe('Pin Lock doors')
+    expect(english.t('commands.board.lastRequest', { status: 'failed' })).toBe('Last request: failed')
+    expect(catalogBeforeCommandBoard(catalog).commands).not.toHaveProperty('board')
+    expect(catalog.commands.board).toBeDefined()
+    for (const board of [
+      { ...catalog.commands.board, title: 'Changed' },
+      { ...catalog.commands.board, extra: 'Unexpected' },
+      Object.fromEntries(Object.entries(catalog.commands.board).filter(([key]) => key !== 'apply')),
+    ]) {
+      expect(() => catalogBeforeCommandBoard({ ...catalog, commands: { ...catalog.commands, board } })).toThrow()
+    }
+  })
+
+  it('matches actual board translation calls, defaults and interpolations to the catalog', () => {
+    const keys = new Set(COMMAND_BOARD_GROUPS.map(group => group.labelKey))
+    for (const name of ['CommandWorkspace.tsx', 'CommandBoardControl.tsx', 'CommandInlineInput.tsx']) {
+      const file = resolve(process.cwd(), 'src/features/system/components/command-center', name)
+      const tree = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+      function visit(node: ts.Node) {
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 't') {
+          const [key, fallback, options] = node.arguments
+          if (key && ts.isStringLiteralLike(key)
+            && (key.text.startsWith('commands.board.') || ['commands.on', 'commands.off'].includes(key.text))) {
+            expect(fallback && ts.isStringLiteralLike(fallback), key.text + ': literal fallback').toBe(true)
+            if (!fallback || !ts.isStringLiteralLike(fallback)) throw new Error('Missing fallback: ' + key.text)
+            expect(nested(catalog, key.text), key.text).toBe(fallback.text)
+            for (const [, variable] of fallback.text.matchAll(/{{(\w+)}}/g)) {
+              expect(options && ts.isObjectLiteralExpression(options), key.text + ': interpolation options').toBe(true)
+              if (!options || !ts.isObjectLiteralExpression(options)) throw new Error('Missing options: ' + key.text)
+              expect(options.properties.some(property =>
+                (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property))
+                && property.name.getText(tree) === variable), key.text + ': ' + variable).toBe(true)
+            }
+            if (key.text.startsWith('commands.board.')) keys.add(key.text)
+          }
+        }
+        ts.forEachChild(node, visit)
+      }
+      visit(tree)
+    }
+    expect(keys).toEqual(new Set(Object.keys(catalog.commands.board).map(key => 'commands.board.' + key)))
+  })
+
   it.each([
     ['widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.'],
     ['widget.chargingTelemetry.summaryScope', 'Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage.'],

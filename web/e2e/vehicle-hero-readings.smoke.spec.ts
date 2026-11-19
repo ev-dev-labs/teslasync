@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { VehicleState } from '../src/api/types';
 import {
-  assertMockApiComplete, fulfillApiFixture, installApiMocks,
-  seedBrowserState, waitForHarnessReady,
+  closeMockedPage, fulfillApiFixture, installApiMocks,
+  retireMockedDocument, seedBrowserState, waitForHarnessReady,
 } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { COMMANDS } from '../src/features/system/commands';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic vehicle-reading fixtures');
 
@@ -80,6 +81,166 @@ async function openDashboardHero(page: Page, theme: 'light' | 'dark', reading: R
   return mocks;
 }
 
+test('command center combines vehicle state and readiness without repeating connection status', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  for (const theme of ['light', 'dark'] as const) {
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await seedBrowserState(page, theme, '/commands');
+      const mocks = await installApiMocks(page, 'populated', theme);
+      const state = { ...fixture('regen'), state: 'charging', is_charging: true };
+      await page.route('**/api/v1/vehicles/7/commands/latest*', (route) =>
+        fulfillApiFixture(route, mocks, { json: [] }));
+      await page.route('**/api/v1/vehicles/7/state*', (route) => fulfillApiFixture(route, mocks, {
+        json: {
+          state, live: true, observed_at: new Date().toISOString(),
+          freshness: 'fresh', verified_fields: Object.keys(state),
+        },
+      }));
+      await page.goto('/commands');
+      await waitForHarnessReady(page, mocks);
+      const hero = page.getByTestId('command-center-hero');
+      const readiness = hero.getByRole('region', { name: 'Command readiness' });
+      await expect(hero.getByRole('region', { name: 'Vehicle state' })).toBeVisible();
+      await expect(readiness).toBeVisible();
+      await expect(hero.getByText('Charging', { exact: true })).toHaveCount(1);
+      await expect(readiness.getByText('Connection', { exact: true })).toHaveCount(0);
+      for (const value of ['Ready', 'No motion reported', 'Current']) {
+        await expect(readiness.getByText(value, { exact: true })).toBeVisible();
+      }
+      const feedback = hero.getByText('No command is currently running. Results will appear here.');
+      await expect(feedback).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await hero.screenshot({ path: testInfo.outputPath(`commands-summary-${width}-${theme}.png`) });
+      await feedback.scrollIntoViewIfNeeded();
+      await expect(feedback).toBeInViewport();
+      await page.screenshot({ path: testInfo.outputPath(`commands-summary-bottom-${width}-${theme}.png`) });
+      for (const title of ['Vehicle state', 'Command readiness']) {
+        const details = hero.getByRole('region', { name: title }).getByRole('button', { name: 'Review details' });
+        await details.click();
+        await expect(page.getByRole('dialog', { name: `${title} details` })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(details).toBeFocused();
+      }
+      await retireMockedDocument(page, mocks);
+      await page.unrouteAll({ behavior: 'wait' });
+    }
+  }
+});
+
+test('control board keeps all registry homes expanded and readable at supported widths', async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  for (const theme of ['light', 'dark'] as const) {
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await seedBrowserState(page, theme, '/commands');
+      const mocks = await installApiMocks(page, 'populated', theme);
+      await page.route('**/api/v1/vehicles/7/commands/latest*', route =>
+        fulfillApiFixture(route, mocks, { json: [] }));
+      await page.goto('/commands');
+      await waitForHarnessReady(page, mocks);
+      const board = page.getByTestId('command-workspace');
+      const homes = board.locator('[data-command-id]');
+      await expect(homes).toHaveCount(COMMANDS.length);
+      expect(await homes.evaluateAll(nodes => nodes.map(node => node.getAttribute('data-command-id')).sort()))
+        .toEqual(COMMANDS.map(def => def.id).sort());
+      await expect(board.locator('[data-command-card]')).toHaveCount(12);
+      for (const id of ['access', 'climate', 'charging', 'openings', 'navigation', 'driving', 'care', 'media', 'charge-options', 'schedules', 'vehicle', 'security']) {
+        const card = board.locator(`[data-command-card="${id}"]`);
+        await card.scrollIntoViewIfNeeded();
+        await expect(card).toBeVisible();
+        const violations = await card.evaluate(root => Array.from(root.querySelectorAll<HTMLElement>('*')).flatMap(element => {
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          const problems: string[] = [];
+          if (element.scrollWidth > element.clientWidth + 2 && element.clientWidth > 0
+            && !['INPUT', 'SELECT', 'SVG', 'path'].includes(element.tagName)) problems.push(`clipped: ${element.tagName} ${element.textContent?.slice(0, 60)}`);
+          if (['auto', 'scroll'].includes(style.overflowY) && element.scrollHeight > element.clientHeight + 2) problems.push(`nested scroll: ${element.tagName}`);
+          if (['BUTTON', 'INPUT', 'SELECT'].includes(element.tagName) && (rect.height < 44 || rect.width < 44)) problems.push(`small target: ${element.getAttribute('aria-label') ?? element.textContent}`);
+          return problems;
+        }));
+        expect(violations).toEqual([]);
+        await page.screenshot({ path: testInfo.outputPath(`controls-${width}-${theme}-${id}.png`) });
+      }
+      await board.getByRole('heading', { name: 'Control board' }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`controls-${width}-${theme}-top.png`) });
+      await expectNoHorizontalOverflow(page);
+      await retireMockedDocument(page, mocks);
+      await page.unrouteAll({ behavior: 'wait' });
+    }
+  }
+});
+
+test('control board sends only explicit intent and preserves confirmation and keyboard focus', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 900 });
+  await seedBrowserState(page, 'light', '/commands');
+  const mocks = await installApiMocks(page, 'populated', 'light');
+  const requests: unknown[] = [];
+  await page.route('**/api/v1/vehicles/7/commands/latest*', route =>
+    fulfillApiFixture(route, mocks, { json: [] }));
+  await page.route('**/api/v1/vehicles/7/command', route => {
+    requests.push(route.request().postDataJSON());
+    return fulfillApiFixture(route, mocks, { json: { success: true } });
+  });
+  await page.route('**/api/v1/signals/7/live*', route =>
+    fulfillApiFixture(route, mocks, { json: { vehicle_id: 7, signals: {} } }));
+  await page.goto('/commands');
+  await waitForHarnessReady(page, mocks);
+  const board = page.getByTestId('command-workspace');
+  const home = (id: string) => board.locator(`[data-command-id="${id}"]`);
+  const search = board.getByRole('searchbox', { name: 'Search commands' });
+  await search.fill('flash_lights');
+  await expect(home('flash_lights')).toHaveAttribute('data-command-match', 'true');
+  await expect(board.locator('[data-command-card]')).toHaveCount(1);
+  await board.getByRole('button', { name: 'Edit pins' }).click();
+  await home('flash_lights').getByRole('button', { name: 'Pin Flash lights' }).click();
+  await board.getByRole('button', { name: 'Edit pins' }).click();
+  await board.getByRole('button', { name: 'Clear search' }).click();
+  await board.getByRole('button', { name: 'Pinned only' }).click();
+  await expect(home('flash_lights')).toHaveCount(1);
+  await expect(home('navigation_request')).toHaveCount(0);
+  await board.getByRole('button', { name: 'Pinned only' }).click();
+  expect(requests).toEqual([]);
+  await home('flash_lights').getByRole('button', { name: 'Flash lights', exact: true }).click();
+  await expect.poll(() => requests).toEqual([{ command: 'flash_lights' }]);
+  const limit = home('set_charge_limit');
+  await limit.getByRole('textbox').fill('92');
+  await limit.getByRole('slider').focus();
+  await page.keyboard.press('ArrowLeft');
+  expect(requests).toHaveLength(1);
+  await limit.getByRole('button', { name: 'Apply' }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests[1]).toEqual({ command: 'set_charge_limit', params: { percent: '91' } });
+
+  const dangerous = home('erase_user_data').getByRole('button', { name: 'Erase data', exact: true });
+  await dangerous.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Erase data' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Confirm/ })).toBeDisabled();
+  await dialog.getByRole('textbox').fill('ERASE');
+  await page.keyboard.press('Enter');
+  expect(requests).toHaveLength(2);
+  await page.screenshot({ path: testInfo.outputPath('controls-confirmation-390-light.png') });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(dangerous).toBeFocused();
+  await expect(dangerous).toHaveCSS('outline-style', 'solid');
+  expect(requests).toHaveLength(2);
+
+  const amps = home('set_charging_amps').getByRole('button', { name: 'Set amps', exact: true });
+  await amps.click();
+  const ampDialog = page.getByRole('dialog', { name: 'Set amps' });
+  await ampDialog.getByRole('textbox').fill('16');
+  await expect(ampDialog.getByRole('button', { name: 'Send' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(amps).toBeFocused();
+  expect(requests).toHaveLength(2);
+  await closeMockedPage(page, mocks);
+});
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 1440]) {
     test(`vehicle streaming fields render at ${width}px in ${theme}`, async ({ page }) => {
@@ -126,7 +287,7 @@ for (const theme of ['light', 'dark'] as const) {
       await panel.screenshot({
         path: test.info().outputPath(`streaming-fields-${width}-${theme}.png`),
       });
-      await assertMockApiComplete(page, mocks);
+      await closeMockedPage(page, mocks);
     });
   }
 }
@@ -144,7 +305,7 @@ for (const reading of ['unknown', 'zero'] as const) {
       await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
         .toHaveAttribute('aria-valuenow', '0');
     }
-    await assertMockApiComplete(page, mocks);
+    await closeMockedPage(page, mocks);
   });
 }
 
@@ -206,7 +367,7 @@ for (const theme of ['light', 'dark'] as const) {
         await page.keyboard.press('Enter');
         await expect(page).toHaveURL(/\/vehicles\/7$/);
         await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
-        await assertMockApiComplete(page, mocks);
+        await closeMockedPage(page, mocks);
       });
     }
   }
@@ -295,7 +456,7 @@ for (const theme of ['light', 'dark'] as const) {
         await page.keyboard.press('Enter');
         await expect(page).toHaveURL(/\/vehicles\/7$/);
         await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
-        await assertMockApiComplete(page, mocks);
+        await closeMockedPage(page, mocks);
       });
     }
   }
