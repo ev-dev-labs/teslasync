@@ -44,8 +44,9 @@ test('installed mobile navigation opens and follows a shortcut in secondary engi
   const sheet = page.getByRole('dialog', { name: 'Browse sections' });
   await expect(sheet).toBeVisible();
   await sheet.getByRole('searchbox').fill('Explore features');
-  await sheet.locator('[data-nav-choice]').first().click();
-  await sheet.getByRole('link', { name: 'Explore features', exact: true }).click();
+  const result = sheet.getByRole('link', { name: 'Explore features', exact: true });
+  await expect(result).toBeVisible();
+  await result.click();
   await expect(page).toHaveURL(/\/explore$/);
   await expect(sheet).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Browse sections' })).toBeVisible();
