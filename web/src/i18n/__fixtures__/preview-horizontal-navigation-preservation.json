@@ -1,0 +1,34 @@
+[
+  {
+    "file": "web/src/features/settings/components/AppDesignPackPreview.tsx",
+    "before": "b038e08280c4386135cd2e5c8fdc0686df9de267a925911c76ca1b15e4ed9acc",
+    "after": "76d0ef33264ecd83a3e6556c70d0a1d75c82b19c080aee78e516f46d4684513c",
+    "hunks": [
+      {
+        "start": 14,
+        "old": [],
+        "new": [
+          "import PreviewHorizontalNavigation from './app-design-preview/PreviewHorizontalNavigation';"
+        ]
+      },
+      {
+        "start": 52,
+        "old": [
+          "          <nav data-app-part=\"navigation\" aria-label={t('theme.appDesignPreview.navigation', 'Sandbox navigation')}"
+        ],
+        "new": [
+          "          {!verticalNavigation ? <PreviewHorizontalNavigation key={packId} onSelect={setSection} /> : <nav data-app-part=\"navigation\" aria-label={t('theme.appDesignPreview.navigation', 'Sandbox navigation')}"
+        ]
+      },
+      {
+        "start": 59,
+        "old": [
+          "          </nav>"
+        ],
+        "new": [
+          "          </nav>}"
+        ]
+      }
+    ]
+  }
+]

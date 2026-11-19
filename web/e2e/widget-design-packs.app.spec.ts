@@ -1134,13 +1134,47 @@ async function inspectRetainedAndNativeControls(preview: Locator) {
   expect(quantitative.ratio).toBeCloseTo(0.72, 2);
   expect(quantitative.marker).toBeCloseTo(0.8, 2);
   const navigation = preview.getByRole('navigation', { name: 'Sandbox navigation' });
+  const horizontal = await preview.getAttribute('data-app-navigation') === 'top';
+  const compact = await navigation.getByRole('button', { name: 'Browse sections', exact: true }).count() > 0;
   for (const [label, text] of [
     ['Activity', 'Five sample journeys are complete; one has an unavailable energy reading. Unknown is never shown as zero.'],
     ['Review', 'Review the partial journey before comparing totals. These examples do not describe the health of your vehicle.'],
     ['Overview', 'A useful overview keeps totals, source quality and the next review step together.'],
   ]) {
-    await navigation.getByRole('button', { name: label, exact: true }).click();
-    await expect(navigation.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+    const groupLabel = label === 'Review' ? 'Other pages' : 'Overview';
+    if (!horizontal) {
+      const item = navigation.getByRole('button', { name: label, exact: true });
+      await item.click();
+      await expect(item).toHaveAttribute('aria-current', 'page');
+    } else if (compact) {
+      const browse = navigation.getByRole('button', { name: 'Browse sections', exact: true });
+      await browse.click();
+      const sheet = preview.page().getByRole('dialog', { name: 'Browse sections' });
+      await sheet.getByRole('button', { name: 'Home', exact: true }).click();
+      await sheet.getByRole('button', { name: new RegExp(`^${groupLabel}`) }).click();
+      await sheet.getByRole('button', { name: label, exact: true }).click();
+      await expect(preview.getByText(text, { exact: true })).toBeVisible();
+      await browse.click();
+      const reopenedSheet = preview.page().getByRole('dialog', { name: 'Browse sections' });
+      await reopenedSheet.getByRole('button', { name: 'Home', exact: true }).click();
+      await reopenedSheet.getByRole('button', { name: new RegExp(`^${groupLabel}`) }).click();
+      await expect(reopenedSheet.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+      await preview.page().keyboard.press('Escape');
+    } else {
+      const home = navigation.getByRole('button', { name: 'Home', exact: true });
+      const flyout = preview.locator('[data-role="section-flyout"]');
+      if (await home.getAttribute('aria-expanded') !== 'true') await home.click();
+      await expect(flyout).toBeVisible();
+      const groups = flyout.getByRole('menu').first();
+      const pages = flyout.getByRole('menu').nth(1);
+      await groups.getByRole('menuitem', { name: new RegExp(`^${groupLabel}`) }).click();
+      await pages.getByRole('menuitem', { name: label, exact: true }).click();
+      await expect(preview.getByText(text, { exact: true })).toBeVisible();
+      if (await home.getAttribute('aria-expanded') !== 'true') await home.click();
+      await expect(flyout).toBeVisible();
+      await expect(flyout.getByRole('menu').nth(1).getByRole('menuitem', { name: label, exact: true }))
+        .toHaveAttribute('aria-current', 'page');
+    }
     await expect(preview.getByText(text, { exact: true })).toBeVisible();
   }
   // The actual Leaflet vectors, not their data markers, must respond to zoom.
