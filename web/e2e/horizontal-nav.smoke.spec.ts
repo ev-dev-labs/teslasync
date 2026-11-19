@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page, type Request } from '@playwright/test'
 import { join } from 'node:path'
-import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi'
+import { assertMockApiComplete, closeMockApiFixtures, closeMockedPage, retireMockedDocument, waitForHarnessReady } from './mockApi'
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock'
 import { APPLICATION_DESIGNS } from '../src/components/ui/app-designs/designs'
 import { COLLECTION_DEFINITIONS } from '../src/components/layout/sidebar/collections'
@@ -136,7 +136,7 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
       })
     }
   }
-  await assertMockApiComplete(page, mocks)
+  await closeMockedPage(page, mocks)
 })
 
 test('horizontal sections scroll with edge fades and the flyout switches groups by keyboard and pointer', async ({ page, baseURL }) => {
@@ -205,7 +205,7 @@ test('horizontal sections scroll with edge fades and the flyout switches groups 
   await flyout.getByRole('button', { name: 'Hide panel', exact: true }).click()
   await expect(flyout).toHaveCount(0)
   await expect(driving).toBeFocused()
-  await assertMockApiComplete(page, mocks)
+  await closeMockedPage(page, mocks)
 })
 
 test('anchored geometry, dismissal, RTL and the isolated Appearance preview', async ({ page, baseURL }, testInfo) => {
@@ -290,7 +290,7 @@ test('anchored geometry, dismissal, RTL and the isolated Appearance preview', as
   await expect(page.getByTestId('horizontal-rail-fade-left')).toHaveAttribute('data-visible', 'false')
   await page.evaluate(() => { document.documentElement.dir = 'ltr' })
   await reviewAppearance(page, testInfo.outputPath('appearance-dark-open.png'))
-  await assertMockApiComplete(page, mocks)
+  await retireMockedDocument(page, mocks)
 
   // Reuse the same scenario in light mode, not another pack/viewport matrix.
   await page.unrouteAll({ behavior: 'wait' })
@@ -309,7 +309,7 @@ test('anchored geometry, dismissal, RTL and the isolated Appearance preview', as
   await assertMockApiComplete(page, lightMocks)
 
   await reviewAppearance(page, testInfo.outputPath('appearance-light-open.png'))
-  await assertMockApiComplete(page, lightMocks)
+  await closeMockedPage(page, lightMocks)
   console.log('Navigation screenshots:', join(testInfo.outputDir, '*.png'))
 })
 
@@ -459,7 +459,7 @@ test(`phone Driving shortcuts, inline groups, direct search and pins preserve bo
       await page.keyboard.press('Escape')
       await expect(browse).toBeFocused()
     }
-    await assertMockApiComplete(page, mocks)
+    await closeMockedPage(page, mocks)
   console.log('Mobile navigation screenshots:', join(testInfo.outputDir, 'mobile-*.png'))
 })
 }

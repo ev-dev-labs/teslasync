@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { VehicleState } from '../src/api/types';
 import {
-  assertMockApiComplete, fulfillApiFixture, installApiMocks,
-  seedBrowserState, waitForHarnessReady,
+  closeMockedPage, fulfillApiFixture, installApiMocks,
+  retireMockedDocument, seedBrowserState, waitForHarnessReady,
 } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { COMMANDS } from '../src/features/system/commands';
@@ -122,7 +122,7 @@ test('command center combines vehicle state and readiness without repeating conn
         await page.keyboard.press('Escape');
         await expect(details).toBeFocused();
       }
-      await assertMockApiComplete(page, mocks);
+      await retireMockedDocument(page, mocks);
       await page.unrouteAll({ behavior: 'wait' });
     }
   }
@@ -165,7 +165,7 @@ test('control board keeps all registry homes expanded and readable at supported 
       await board.getByRole('heading', { name: 'Control board' }).scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath(`controls-${width}-${theme}-top.png`) });
       await expectNoHorizontalOverflow(page);
-      await assertMockApiComplete(page, mocks);
+      await retireMockedDocument(page, mocks);
       await page.unrouteAll({ behavior: 'wait' });
     }
   }
@@ -238,7 +238,7 @@ test('control board sends only explicit intent and preserves confirmation and ke
   await page.keyboard.press('Escape');
   await expect(amps).toBeFocused();
   expect(requests).toHaveLength(2);
-  await assertMockApiComplete(page, mocks);
+  await closeMockedPage(page, mocks);
 });
 
 for (const theme of ['light', 'dark'] as const) {
@@ -287,7 +287,7 @@ for (const theme of ['light', 'dark'] as const) {
       await panel.screenshot({
         path: test.info().outputPath(`streaming-fields-${width}-${theme}.png`),
       });
-      await assertMockApiComplete(page, mocks);
+      await closeMockedPage(page, mocks);
     });
   }
 }
@@ -305,7 +305,7 @@ for (const reading of ['unknown', 'zero'] as const) {
       await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
         .toHaveAttribute('aria-valuenow', '0');
     }
-    await assertMockApiComplete(page, mocks);
+    await closeMockedPage(page, mocks);
   });
 }
 
@@ -367,7 +367,7 @@ for (const theme of ['light', 'dark'] as const) {
         await page.keyboard.press('Enter');
         await expect(page).toHaveURL(/\/vehicles\/7$/);
         await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
-        await assertMockApiComplete(page, mocks);
+        await closeMockedPage(page, mocks);
       });
     }
   }
@@ -456,7 +456,7 @@ for (const theme of ['light', 'dark'] as const) {
         await page.keyboard.press('Enter');
         await expect(page).toHaveURL(/\/vehicles\/7$/);
         await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
-        await assertMockApiComplete(page, mocks);
+        await closeMockedPage(page, mocks);
       });
     }
   }
