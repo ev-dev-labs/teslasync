@@ -11,6 +11,10 @@
 
 import type { LucideIcon } from '@/lib/icons';
 import { Icons } from '@/lib/icons';
+import {
+  frunk, trunk, windowVent, windowClose, roofVent, roofClose,
+  seatHeat, seatCool, steeringWheel, playback,
+} from '@/lib/commandGlyphs';
 import type { DataState } from '@/api/dataState';
 import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
@@ -61,6 +65,7 @@ export interface InputConfig {
   promptKey: string;
   promptFallback: string;
   paramName: string;
+  unit?: string;
   defaultValue?: string;
   validation?: 'pin' | 'number' | 'decimal' | 'text';
   min?: number;
@@ -205,6 +210,7 @@ export const COMMANDS: CommandDef[] = [
       promptKey: 'commands.security.enterSpeedLimit',
       promptFallback: 'Enter speed limit (50-90 MPH):',
       paramName: 'limit_mph', validation: 'number', min: 50, max: 90,
+      unit: 'mph',
     },
   },
   {
@@ -328,6 +334,7 @@ export const COMMANDS: CommandDef[] = [
       promptKey: 'commands.climate.enterTemp',
       promptFallback: 'Enter temperature in °c (e.g., 21):',
       paramName: 'driver_temp', validation: 'decimal', min: 15, max: 30,
+      unit: '°C',
       buildParams: (values) => ({ driver_temp: values.driver_temp, passenger_temp: values.driver_temp }),
     },
   },
@@ -335,21 +342,21 @@ export const COMMANDS: CommandDef[] = [
     id: 'seat_heater', command: 'seat_heater',
     labelKey: 'commands.climate.seatHeat', labelFallback: 'Seat heat',
     sublabelKey: 'commands.climate.driver', sublabelFallback: 'Driver',
-    icon: Icons.flame, category: 'climate', type: 'action',
+    icon: seatHeat, category: 'climate', type: 'action',
     params: { heater: '0', level: '3' },
   },
   {
     id: 'seat_cooler', command: 'seat_cooler',
     labelKey: 'commands.climate.seatCool', labelFallback: 'Seat cool',
     sublabelKey: 'commands.climate.driver', sublabelFallback: 'Driver',
-    icon: Icons.cooling, category: 'climate', type: 'action',
+    icon: seatCool, category: 'climate', type: 'action',
     params: { seat_position: '0', seat_cooler_level: '3' },
   },
   {
     id: 'steering_wheel_heat', command: 'steering_wheel_heat',
     labelKey: 'commands.climate.steeringHeat', labelFallback: 'Steering heat',
     sublabelKey: 'commands.climate.toggle', sublabelFallback: 'Toggle',
-    icon: Icons.tirePressure, category: 'climate', type: 'action',
+    icon: steeringWheel, category: 'climate', type: 'action',
     params: { on: 'true' },
   },
 
@@ -495,6 +502,7 @@ export const COMMANDS: CommandDef[] = [
       promptKey: 'commands.charging.enterLimit',
       promptFallback: 'Enter charge limit % (50–100):',
       paramName: 'percent', defaultValue: '80', validation: 'number', min: 50, max: 100,
+      unit: '%',
     },
   },
 
@@ -505,13 +513,13 @@ export const COMMANDS: CommandDef[] = [
     id: 'frunk_open', command: 'frunk_open',
     labelKey: 'commands.doors.frunk', labelFallback: 'Frunk',
     sublabelKey: 'commands.doors.open', sublabelFallback: 'Open',
-    icon: Icons.doorOpen, category: 'doors', type: 'action', defaultFavorite: true,
+    icon: frunk, category: 'doors', type: 'action', defaultFavorite: true,
   },
   {
     id: 'trunk_open', command: 'trunk_open',
     labelKey: 'commands.doors.trunk', labelFallback: 'Trunk',
     sublabelKey: 'commands.doors.open', sublabelFallback: 'Open',
-    icon: Icons.doorOpen, category: 'doors', type: 'action',
+    icon: trunk, category: 'doors', type: 'action',
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -534,12 +542,12 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'vent_windows', command: 'vent_windows',
     labelKey: 'commands.windows.vent', labelFallback: "Vent windows",
-    icon: Icons.wind, category: 'windows', type: 'action',
+    icon: windowVent, category: 'windows', type: 'action',
   },
   {
     id: 'close_windows', command: 'close_windows',
     labelKey: 'commands.windows.close', labelFallback: "Close windows",
-    icon: Icons.close, category: 'windows', type: 'action',
+    icon: windowClose, category: 'windows', type: 'action',
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -549,13 +557,13 @@ export const COMMANDS: CommandDef[] = [
     id: 'sunroof_vent', command: 'sunroof_vent',
     labelKey: 'commands.sunroof.vent', labelFallback: 'Sunroof',
     sublabelKey: 'commands.sunroof.ventMode', sublabelFallback: 'Vent',
-    icon: Icons.arrowUpFromDot, category: 'sunroof', type: 'action',
+    icon: roofVent, category: 'sunroof', type: 'action',
   },
   {
     id: 'sunroof_close', command: 'sunroof_close',
     labelKey: 'commands.sunroof.close', labelFallback: 'Sunroof',
     sublabelKey: 'commands.sunroof.closeMode', sublabelFallback: 'Close',
-    icon: Icons.arrowDownToDot, category: 'sunroof', type: 'action',
+    icon: roofClose, category: 'sunroof', type: 'action',
   },
   {
     id: 'sunroof_stop', command: 'sunroof_stop',
@@ -716,6 +724,7 @@ export const COMMANDS: CommandDef[] = [
       promptKey: 'commands.software.enterDelay',
       promptFallback: 'Install in how many minutes? (0 = now, 120 = 2 hours)',
       paramName: 'offset_sec', defaultValue: '0', validation: 'number', min: 0,
+      unit: 'min',
       // Minutes → seconds. Guard non-numeric input (the field stays free-text
       // until validation runs, and callers can invoke transform directly) so an
       // unparseable entry never posts the literal string "NaN".
@@ -755,7 +764,7 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'media_toggle_playback', command: 'media_toggle_playback',
     labelKey: 'commands.media.playPause', labelFallback: "Play / Pause",
-    icon: Icons.play, category: 'media', type: 'action',
+    icon: playback, category: 'media', type: 'action',
   },
   {
     id: 'media_prev_track', command: 'media_prev_track',

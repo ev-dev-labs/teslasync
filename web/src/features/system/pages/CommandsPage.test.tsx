@@ -165,6 +165,8 @@ describe('CommandsPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
     expect(screen.getByText('Command readiness')).toBeInTheDocument();
     expect(screen.getByText('Command workspace')).toBeInTheDocument();
+    expect(screen.getByText('Command readiness').closest('[data-surface-variant="standalone"]'))
+      .toBe(screen.getByText('Selected vehicle').closest('[data-surface-variant="standalone"]'));
     expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(2);
     expect(screen.queryByLabelText('Loading your fleet')).not.toBeInTheDocument();
     expect(screen.queryByText(/No vehicles found|Service unavailable|Paused offline/)).not.toBeInTheDocument();
@@ -223,6 +225,8 @@ describe('CommandsPage', () => {
     expect(screen.getByLabelText('Loading your fleet')).toBeInTheDocument();
     expect(screen.getByText('Command readiness')).toBeInTheDocument();
     expect(screen.getByText('Command workspace')).toBeInTheDocument();
+    expect(screen.getByText('Command readiness').closest('[data-surface-variant="standalone"]'))
+      .toBe(screen.getByText('Selected vehicle').closest('[data-surface-variant="standalone"]'));
     expect(screen.queryByText('Safety & execution')).not.toBeInTheDocument();
     expect(screen.queryByText('Recent command activity')).not.toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-command-center')).not.toBeInTheDocument();

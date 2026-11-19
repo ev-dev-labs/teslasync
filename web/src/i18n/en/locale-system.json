@@ -3142,6 +3142,32 @@
       "locatePing": "Locate ping",
       "randomFart": "Random fart"
     },
+    "board": {
+      "access": "Access",
+      "care": "Cabin care",
+      "chargeLimitDraft": "Charge limit draft",
+      "chargeOptions": "Charge preferences",
+      "charging": "Charging",
+      "choose": "Choose a value",
+      "clearFilters": "Clear filters",
+      "climate": "Climate",
+      "description": "Apply sends a draft. Requests do not confirm a change in vehicle state.",
+      "driving": "Driving & guests",
+      "editPins": "Edit pins",
+      "empty": "Clear the filters to see all controls and edit pins.",
+      "lastRequest": "Last request: {{status}}",
+      "lockDoors": "Lock doors",
+      "media": "Media",
+      "navigation": "Navigation & find my car",
+      "openings": "Windows & roof",
+      "pin": "Pin {{command}}",
+      "pinnedOnly": "Pinned only",
+      "schedules": "Daily schedules",
+      "security": "Security settings",
+      "title": "Control board",
+      "unlockDoors": "Unlock doors",
+      "vehicle": "Vehicle settings"
+    },
     "cat": {
       "alerts": "Alerts & location",
       "charging": "Charging",
@@ -3320,7 +3346,6 @@
       "asleepHelp": "The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.",
       "availability": "Command delivery",
       "checking": "Checking",
-      "connection": "Connection",
       "current": "Current",
       "deliveryUncertain": "Delivery uncertain",
       "description": "Connection, telemetry, and motion context before a remote request is sent.",
@@ -3355,9 +3380,7 @@
       "aria": "Search commands",
       "clear": "Clear search",
       "emptyTitle": "No matching commands",
-      "noResults": "No commands match your search",
-      "placeholder": "Search commands...",
-      "results": "Command search results"
+      "placeholder": "Search commands..."
     },
     "security": {
       "admin": "Admin",
@@ -3437,7 +3460,6 @@
     },
     "workspace": {
       "count": "{{count}} actions",
-      "description": "Find an action by domain or search the complete command catalogue.",
       "domainCount": "{{count}} actions",
       "title": "Command workspace"
     }

@@ -5,7 +5,7 @@ import {
   LoaderCircle,
   Radio,
 } from 'lucide-react';
-import { GlassPanel, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import { useIsStale } from '@/components/data-display';
 import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
 import { InlineCallout } from '@/components/feedback';
@@ -49,13 +49,6 @@ export function CommandReadinessStrip({
   const status = verifiedStatus ?? rawStatus;
   const asleep = status === 'asleep';
   const offline = status === 'offline';
-  const statusLabel = t(
-    `commands.status.${status}`,
-    status.replace(/_/g, ' ').replace(/^\w/, (value) => value.toUpperCase()),
-  );
-  const connection = verifiedStatus
-    ? statusLabel
-    : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: statusLabel });
   const availability = stateLoading
     ? t('commands.readiness.checking', 'Checking')
     : stateError
@@ -80,8 +73,8 @@ export function CommandReadinessStrip({
       : t('commands.readiness.outdated', 'Outdated');
 
   return (
-    <GlassPanel
-      className="space-y-4 p-4 sm:p-5"
+    <div
+      className="space-y-4"
       data-testid="command-readiness"
     >
       <SystemSummaryBrief
@@ -94,7 +87,6 @@ export function CommandReadinessStrip({
         freshness={observedAt != null ? ageLabel : t('commands.readiness.freshnessUnknown', 'Unknown')}
         metrics={[]}
         textMetrics={[
-          { key: 'connection', value: connection, label: t('commands.readiness.connection', 'Connection'), detail: verifiedStatus ? statusLabel : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: statusLabel }) },
           { key: 'delivery', value: availability, label: t('commands.readiness.availability', 'Command delivery'), detail: t('commands.readiness.description', 'Connection, telemetry, and motion context before a remote request is sent.') },
           { key: 'motion', value: motion, label: t('commands.readiness.motion', 'Motion context'), valueState: moving == null ? 'missing' : 'value', detail: motion },
           { key: 'telemetry', value: freshness, label: t('commands.readiness.telemetry', 'Telemetry'), valueState: signalFreshness === 'unknown' ? 'missing' : 'value', detail: observedAt != null ? ageLabel : '—' },
@@ -160,6 +152,6 @@ export function CommandReadinessStrip({
           </Text>
         )}
       </div>
-    </GlassPanel>
+    </div>
   );
 }

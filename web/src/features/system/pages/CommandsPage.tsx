@@ -128,33 +128,34 @@ export default function CommandsPage() {
             />
           ) : initialRefreshBlocked ? (
             <div className="space-y-4 sm:space-y-5" data-testid="command-center-paused">
-              {[
-                t('commands.hero.title', 'Selected vehicle'),
-                t('commands.readiness.title', 'Command readiness'),
-                t('commands.workspace.title', 'Command workspace'),
-              ].map((title, index) => (
-                <GlassPanel key={title} className="space-y-4 p-4 sm:p-5">
-                  <Heading level="section">{title}</Heading>
-                  <Text as="p" color="secondary" role={index === 0 ? 'status' : undefined}>
-                    {index === 0
-                      ? refreshPausedTitle
-                      : t(
-                          'dataSources.unavailableMessage',
-                          'No requested source has returned usable data yet.',
-                        )}
-                  </Text>
-                  {index === 0 && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="min-h-11"
-                      onClick={() => void vehiclesQuery.refetch()}
-                    >
-                      {t('error.retry', 'Retry')}
-                    </Button>
+              <GlassPanel className="space-y-4 p-4 sm:p-5">
+                <Heading level="section">{t('commands.hero.title', 'Selected vehicle')}</Heading>
+                <Text as="p" color="secondary" role="status">{refreshPausedTitle}</Text>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11"
+                  onClick={() => void vehiclesQuery.refetch()}
+                >
+                  {t('error.retry', 'Retry')}
+                </Button>
+                <Heading level="section">{t('commands.readiness.title', 'Command readiness')}</Heading>
+                <Text as="p" color="secondary">
+                  {t(
+                    'dataSources.unavailableMessage',
+                    'No requested source has returned usable data yet.',
                   )}
-                </GlassPanel>
-              ))}
+                </Text>
+              </GlassPanel>
+              <GlassPanel className="space-y-4 p-4 sm:p-5">
+                <Heading level="section">{t('commands.workspace.title', 'Command workspace')}</Heading>
+                <Text as="p" color="secondary">
+                  {t(
+                    'dataSources.unavailableMessage',
+                    'No requested source has returned usable data yet.',
+                  )}
+                </Text>
+              </GlassPanel>
             </div>
           ) : (
             <CommandCenterFallback

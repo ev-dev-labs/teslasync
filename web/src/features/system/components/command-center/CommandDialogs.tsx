@@ -9,6 +9,7 @@ import { getChargingCurrentMaximum, type CommandDef, type Vehicle } from '../../
 import { CommandConfirmDialog } from '../CommandConfirmDialog';
 import { CommandInputDialog } from '../CommandInputDialog';
 import { CommandSelectDialog } from '../CommandSelectDialog';
+import { buildCommandParams } from './commandInput';
 
 export interface ActiveCommandDialog {
   kind: 'input' | 'select' | 'confirm';
@@ -55,16 +56,7 @@ export function CommandDialogs({
         || !Number.isSafeInteger(Number(value)) || Number(value) > maximum) return;
     }
 
-    const params = config.buildParams
-      ? config.buildParams(values)
-      : {
-          ...definition.params,
-          [config.paramName]: config.transform
-            ? config.transform(values[config.paramName] ?? '')
-            : values[config.paramName] ?? '',
-        };
-
-    onExecute(definition.command, params);
+    onExecute(definition.command, buildCommandParams(definition, values));
     onClose();
   }, [active, chargingSource, loading, needsChargingMaximum, onClose, onExecute, vehicle.id]);
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, type FormEvent, type ReactNode } 
 import { useTranslation } from 'react-i18next';
 import { Modal, Input, Button, Heading, HelperText } from '@/components/ui';
 import type { CommandDef } from '../commands';
+import { normalizeCommandValues } from './command-center/commandInput';
 
 interface CommandInputDialogProps {
   open: boolean;
@@ -157,16 +158,7 @@ export function CommandInputDialog({
     setErrors(newErrors);
     setTouched(newTouched);
     if (valid) {
-      const submittedValues = { ...values };
-      for (const [name, value] of Object.entries(values)) {
-        const validation = fields ? fields.find(f => f.name === name)?.validation : ic.validation;
-        if (validation === 'number' || validation === 'decimal') {
-          submittedValues[name] = String(Number(value.trim()));
-        } else if (validation === 'pin') {
-          submittedValues[name] = value.trim();
-        }
-      }
-      onSubmit(submittedValues);
+      onSubmit(normalizeCommandValues(ic, values));
     }
   };
 

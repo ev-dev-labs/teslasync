@@ -166,17 +166,17 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         error={stateQuery.error}
         onRetry={() => void stateQuery.refetch()}
         dataState={stateData}
-      />
-
-      <CommandReadinessStrip
-        vehicle={vehicle}
-        state={state}
-        stateTrust={stateQuery.data}
-        stateLoading={stateQuery.isLoading}
-        stateError={stateQuery.error}
-        pendingLabel={pendingLabel}
-        feedback={feedback}
-      />
+      >
+        <CommandReadinessStrip
+          vehicle={vehicle}
+          state={state}
+          stateTrust={stateQuery.data}
+          stateLoading={stateQuery.isLoading}
+          stateError={stateQuery.error}
+          pendingLabel={pendingLabel}
+          feedback={feedback}
+        />
+      </CommandCenterHero>
 
       <CommandWorkspace
         vehicle={vehicle}

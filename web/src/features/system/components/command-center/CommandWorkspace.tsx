@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SearchX } from 'lucide-react';
-import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
+import { Icons } from '@/lib/icons';
+import { cn } from '@/lib/cn';
+import { Badge, Button, GlassPanel, Heading, Icon, Text } from '@/components/ui';
 import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FreshnessDot } from '@/components/data-display';
 import type { DataState } from '@/api/dataState';
@@ -15,13 +16,9 @@ import {
   type VehicleState,
 } from '../../commands';
 import { CommandSearch } from '../CommandSearch';
-import { CommandTile } from '../CommandTile';
-import { FavoritesBar } from '../FavoritesBar';
-import { InputCommandTile } from '../InputCommandTile';
-import { ToggleCommandTile } from '../ToggleCommandTile';
+import { CommandBoardControl } from './CommandBoardControl';
 import { CommandDialogs, type ActiveCommandDialog } from './CommandDialogs';
-import { CommandDomainBrowser } from './CommandDomainBrowser';
-import type { CommandDomainId } from './commandDomains';
+import { COMMAND_BOARD } from './commandBoard';
 import { getCommandDefinition, getLatestCommandStatus } from './commandLabels';
 import { useCommandFavorites } from './useCommandFavorites';
 
@@ -37,7 +34,12 @@ interface CommandWorkspaceProps {
   onExecute: (command: string, params?: Record<string, unknown>) => void;
 }
 
-export function CommandWorkspace({
+export function CommandWorkspace(props: CommandWorkspaceProps) {
+  // A new vehicle or read-only scope must never inherit an old draft or PIN dialog.
+  return <CommandWorkspaceSession key={`${props.vehicle.id}:${!!props.disabled}`} {...props} />;
+}
+
+function CommandWorkspaceSession({
   vehicle,
   state,
   stateTrust,
@@ -50,13 +52,10 @@ export function CommandWorkspace({
 }: CommandWorkspaceProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [activeDomainId, setActiveDomainId] = useState<CommandDomainId>('access');
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const [editingPins, setEditingPins] = useState(false);
   const [activeDialog, setActiveDialog] = useState<ActiveCommandDialog | null>(null);
   const { favorites, toggleFavorite } = useCommandFavorites(vehicle.id);
-
-  useEffect(() => {
-    setActiveDialog(null);
-  }, [disabled, vehicle.id]);
 
   const latestByCommand = useMemo(() => {
     const latest = new Map<string, CommandLogEntry>();
@@ -73,79 +72,64 @@ export function CommandWorkspace({
     return latest;
   }, [latestCommands]);
 
-  const filteredCommands = useMemo(() => {
+  const matches = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return null;
-    return COMMANDS.filter((command) => {
-      const category = CATEGORY_META[command.category];
-      return (
-        t(command.labelKey, command.labelFallback).toLowerCase().includes(query) ||
-        t(category.labelKey, category.fallback).toLowerCase().includes(query) ||
-        command.command.toLowerCase().includes(query)
-      );
-    });
+    const result = new Set<string>();
+    for (const group of COMMAND_BOARD) {
+      for (const command of group.commands) {
+        const category = CATEGORY_META[command.category];
+        const text = [
+          t(command.labelKey, command.labelFallback),
+          command.sublabelKey && t(command.sublabelKey, command.sublabelFallback ?? ''),
+          t(category.labelKey, category.fallback), t(group.labelKey, group.fallback),
+          command.id, command.command, command.commandOff,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (query.split(/\s+/).every(word => text.includes(word))) result.add(command.id);
+      }
+    }
+    return result;
   }, [search, t]);
+  const visibleGroups = COMMAND_BOARD.map(group => ({
+    ...group,
+    commands: group.commands.filter(command => !pinnedOnly || favorites.includes(command.id)),
+  })).filter(group => group.commands.some(command => matches.has(command.id)));
 
   const requestDialog = useCallback((definition: CommandDef) => {
+    if (disabled || loading) return;
     const kind = definition.selectConfig
       ? 'select'
       : definition.inputConfig
         ? 'input'
         : 'confirm';
     setActiveDialog({ kind, definition, vehicleId: vehicle.id });
-  }, [vehicle.id]);
+  }, [disabled, loading, vehicle.id]);
 
-  const renderTile = useCallback((definition: CommandDef) => {
+  const renderControl = (definition: CommandDef) => {
     const latest = latestByCommand.get(definition.command);
-    const common = {
-      loading,
-      disabled,
-      disabledReason,
-      lastStatus: getLatestCommandStatus(latest),
-      isFavorite: favorites.includes(definition.id),
-      onToggleFavorite: () => toggleFavorite(definition.id),
-      onRequestDialog: requestDialog,
-    };
-
-    if (definition.type === 'toggle') {
-      return (
-        <ToggleCommandTile
-          key={definition.id}
-          {...common}
-          def={definition}
-          state={state}
-          stateTrust={stateTrust}
-          onExecute={onExecute}
-        />
-      );
-    }
-    if (definition.type === 'input') {
-      return <InputCommandTile key={definition.id} {...common} def={definition} />;
-    }
     return (
-      <CommandTile
+      <CommandBoardControl
         key={definition.id}
-        {...common}
-        def={definition}
+        definition={definition}
+        vehicle={vehicle}
+        state={state}
+        stateTrust={stateTrust}
+        loading={loading}
+        disabled={disabled}
+        disabledReason={disabledReason}
+        lastStatus={getLatestCommandStatus(latest)}
+        favorite={favorites.includes(definition.id)}
+        editingPins={editingPins}
+        onToggleFavorite={() => toggleFavorite(definition.id)}
+        matched={search.trim() !== '' && matches.has(definition.id)}
+        onRequestDialog={requestDialog}
         onExecute={onExecute}
       />
     );
-  }, [
-    favorites,
-    disabled,
-    disabledReason,
-    latestByCommand,
-    loading,
-    onExecute,
-    requestDialog,
-    state,
-    stateTrust,
-    toggleFavorite,
-  ]);
+  };
 
   return (
     <>
-      <GlassPanel className="space-y-5 p-4 sm:p-5" data-testid="command-workspace">
+      <div className="min-w-0 space-y-4" data-testid="command-workspace">
         {latestState && (
           <div data-testid="command-outcome-source" className="space-y-2">
             {latestState.fatalError ? (
@@ -200,7 +184,7 @@ export function CommandWorkspace({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <Heading level="section">
-                {t('commands.workspace.title', 'Command workspace')}
+                {t('commands.board.title', 'Control board')}
               </Heading>
               <Badge variant="neutral">
                 {t('commands.workspace.count', '{{count}} actions', {
@@ -210,56 +194,77 @@ export function CommandWorkspace({
             </div>
             <Text as="p" variant="bodySm">
               {t(
-                'commands.workspace.description',
-                'Find an action by domain or search the complete command catalogue.',
+                'commands.board.description',
+                'Apply sends a draft. Requests do not confirm a change in vehicle state.',
               )}
             </Text>
           </div>
-          <div className="w-full lg:max-w-sm">
-            <CommandSearch value={search} onChange={setSearch} />
+          <div className="flex w-full flex-wrap items-center gap-2 lg:max-w-md">
+            <div className="min-w-0 flex-1 basis-48">
+              <CommandSearch value={search} onChange={setSearch} />
+            </div>
+            <Button type="button" variant="secondary" wrapLabel className="min-h-11"
+              aria-pressed={pinnedOnly} onClick={() => setPinnedOnly(value => !value)}>
+              <Icon icon={Icons.star} />
+              {t('commands.board.pinnedOnly', 'Pinned only')}
+            </Button>
+            <Button type="button" variant="ghost" wrapLabel className="min-h-11"
+              aria-pressed={editingPins} onClick={() => setEditingPins(value => !value)}>
+              {t('commands.board.editPins', 'Edit pins')}
+            </Button>
+            {search && <Button type="button" variant="ghost" className="min-h-11" onClick={() => setSearch('')}>
+              {t('commands.search.clear', 'Clear search')}
+            </Button>}
           </div>
         </div>
 
-        {!filteredCommands && (
-          <FavoritesBar
-            favorites={favorites}
-            commands={COMMANDS}
-            renderTile={renderTile}
+        {visibleGroups.length === 0 ? (
+          <EmptyState
+            icon={<Icon icon={Icons.search} size="xl" />}
+            title={t('commands.search.emptyTitle', 'No matching commands')}
+            message={t('commands.board.empty', 'Clear the filters to see all controls and edit pins.')}
+            action={{
+              label: t('commands.board.clearFilters', 'Clear filters'),
+              onClick: () => { setSearch(''); setPinnedOnly(false); },
+            }}
+            className="py-8"
           />
-        )}
-
-        {filteredCommands ? (
-          filteredCommands.length > 0 ? (
-            <div
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
-              aria-label={t('commands.search.results', 'Command search results')}
-            >
-              {filteredCommands.map(renderTile)}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<SearchX className="h-8 w-8" aria-hidden="true" />}
-              title={t('commands.search.emptyTitle', 'No matching commands')}
-              message={t(
-                'commands.search.noResults',
-                'No commands match your search',
-              )}
-              action={{
-                label: t('commands.search.clear', 'Clear search'),
-                onClick: () => setSearch(''),
-              }}
-              className="py-8"
-            />
-          )
         ) : (
-          <CommandDomainBrowser
-            activeDomainId={activeDomainId}
-            vehicleKey={vehicle.id}
-            onDomainChange={setActiveDomainId}
-            renderTile={renderTile}
-          />
+          <div className="space-y-3">
+            {[true, false].map(lead => (
+              <div key={String(lead)} className={lead
+                ? 'grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2 lg:grid-cols-3'
+                : 'columns-1 gap-3 md:columns-2 lg:columns-3'}>
+                {visibleGroups.filter(group => group.lead === lead).map(group => (
+                  <GlassPanel key={group.id} role="region" aria-label={t(group.labelKey, group.fallback)}
+                    data-command-card={group.id}
+                    className={cn('@container/controls min-w-0 space-y-3 p-3 sm:p-4',
+                      group.id === 'access' && 'md:col-span-2 lg:col-span-1',
+                      lead ? 'self-stretch bg-gradient-to-br from-[var(--surface-2)] to-[var(--surface-1)]'
+                        : 'mb-3 inline-block w-full break-inside-avoid')}>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={cn('rounded-shape-sm p-2',
+                        group.tone === 'accent' && 'bg-[var(--surface-2)] text-[var(--theme-primary)]',
+                        group.tone === 'info' && 'bg-[var(--semantic-info-bg)] text-[var(--semantic-info)]',
+                        group.tone === 'success' && 'bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]',
+                        group.tone === 'warning' && 'bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]')}>
+                        <Icon icon={group.icon} size="lg" />
+                      </span>
+                      <Heading level="panel" as="h3" className="min-w-0 flex-1 break-words">
+                        {t(group.labelKey, group.fallback)}
+                      </Heading>
+                      <Text variant="caption" color="secondary">{group.commands.length}</Text>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.commands.map(renderControl)}
+                    </div>
+                  </GlassPanel>
+                ))}
+              </div>
+            ))}
+          </div>
         )}
-      </GlassPanel>
+      </div>
 
       <CommandDialogs
         active={activeDialog}
