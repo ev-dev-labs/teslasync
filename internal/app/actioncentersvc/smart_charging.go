@@ -52,7 +52,21 @@ func (p smartChargingProvider) Recommendations(
 		var chargingPowerW *float64
 		var scheduledStartAt *time.Time
 		var scheduledPowerCeilingW *float64
-		if row.Decision.Kind == readiness.DecisionSlowCharging {
+		if overlap := row.Decision.DepartureOverlap; overlap != nil {
+			path = fmt.Sprintf("/settings/smart-charging?vehicle_id=%d", row.Plan.VehicleID)
+			title = "Service appointment overlaps your planned departure"
+			rationale = "The service window you entered includes the saved departure."
+			basis = []string{"User-entered service appointment and departure", "Fresh parked gear observation"}
+			if overlap.Kind == readiness.OverlapSoftware {
+				path = fmt.Sprintf("/software-updates?vehicle_id=%d", row.Plan.VehicleID)
+				title = "Scheduled software install overlaps your planned departure"
+				rationale = "The software install window you entered includes the saved departure."
+				basis = []string{"User-entered software install window and departure", "Fresh parked gear observation"}
+			}
+			summary = fmt.Sprintf("Review the window from %s to %s before the planned departure at %s.",
+				overlap.StartsAt.Format(time.RFC3339), overlap.EndsAt.Format(time.RFC3339), row.Plan.DepartureAt.Format(time.RFC3339))
+			limitations = []string{"The window is entered by you, not verified against a service or vehicle schedule. No schedule was changed."}
+		} else if row.Decision.Kind == readiness.DecisionSlowCharging {
 			evidenceKind = "charging_feasibility"
 			title = "Charging may not be ready before your trip"
 			path = fmt.Sprintf("/charging/schedule?vehicle_id=%d", row.Plan.VehicleID)
@@ -132,6 +146,27 @@ func (p smartChargingProvider) Recommendations(
 			basis = append(basis, "Fresh AC current request and maximum request observations")
 			limitations = append(limitations, "Review the current setting and site electrical limits; the reported maximum does not establish that increasing current is safe or will help.")
 		}
+		evidence := domain.EvidenceItem{
+			ID: sourceKey, Kind: evidenceKind, Summary: summary, ObservedAt: &observedAt,
+			Provenance: domain.EvidenceProvenance{Source: "live_signal_store", RecordID: sourceKey},
+		}
+		if overlap := row.Decision.DepartureOverlap; overlap != nil {
+			evidence.Kind = "departure_overlap"
+			evidence.Provenance.Source = "user_confirmed_charging_plan"
+			evidence.DepartureOverlap = &domain.DepartureOverlapEvidence{
+				PlanID: row.Plan.ID, DepartureAt: row.Plan.DepartureAt, DepartureOverlap: *overlap,
+			}
+		} else {
+			evidence.ChargingReadiness = &domain.ChargingReadinessEvidence{
+				PlanID: row.Plan.ID, Kind: string(row.Decision.Kind),
+				PlaceName: row.PlaceName, BatteryPct: row.Decision.BatteryPct,
+				ArrivalLowPct: row.Decision.ArrivalLowPct, ArrivalHighPct: row.Decision.ArrivalHighPct,
+				ReservePct: row.Plan.ReservePct, ChargingPowerW: chargingPowerW,
+				CurrentLimit: row.Decision.CurrentLimit, TripProjection: row.Decision.TripProjection,
+				DepartureAt: row.Plan.DepartureAt, ScheduledStartAt: scheduledStartAt,
+				ScheduledPowerCeilingW: scheduledPowerCeilingW,
+			}
+		}
 		items = append(items, domain.Candidate{
 			SourceFeature:   domain.SourceSmartCharging,
 			SourceKey:       sourceKey,
@@ -144,27 +179,14 @@ func (p smartChargingProvider) Recommendations(
 			Severity:        domain.SeverityWarning,
 			BaseConfidence:  0.8,
 			ConfidenceBasis: basis,
-			Evidence: []domain.EvidenceItem{{
-				ID: sourceKey, Kind: evidenceKind, Summary: summary,
-				Provenance: domain.EvidenceProvenance{Source: "live_signal_store", RecordID: sourceKey},
-				ObservedAt: &observedAt,
-				ChargingReadiness: &domain.ChargingReadinessEvidence{
-					PlanID: row.Plan.ID, Kind: string(row.Decision.Kind),
-					PlaceName: row.PlaceName, BatteryPct: row.Decision.BatteryPct,
-					ArrivalLowPct: row.Decision.ArrivalLowPct, ArrivalHighPct: row.Decision.ArrivalHighPct,
-					ReservePct: row.Plan.ReservePct, ChargingPowerW: chargingPowerW,
-					CurrentLimit: row.Decision.CurrentLimit, TripProjection: row.Decision.TripProjection,
-					DepartureAt: row.Plan.DepartureAt, ScheduledStartAt: scheduledStartAt,
-					ScheduledPowerCeilingW: scheduledPowerCeilingW,
-				},
-			}},
-			SafeActions:    []domain.ActionType{domain.ActionNavigate, domain.ActionSmartChargingSnooze},
-			NavigationPath: &path,
-			ObservedAt:     &observedAt,
-			FreshFor:       signal.LiveSignalFreshnessThreshold,
-			AgingFor:       signal.LiveSignalFreshnessThreshold,
-			ExpiresAt:      row.Decision.ExpiresAt,
-			Limitations:    limitations,
+			Evidence:        []domain.EvidenceItem{evidence},
+			SafeActions:     []domain.ActionType{domain.ActionNavigate, domain.ActionSmartChargingSnooze},
+			NavigationPath:  &path,
+			ObservedAt:      &observedAt,
+			FreshFor:        signal.LiveSignalFreshnessThreshold,
+			AgingFor:        signal.LiveSignalFreshnessThreshold,
+			ExpiresAt:       row.Decision.ExpiresAt,
+			Limitations:     limitations,
 		})
 	}
 	return items, nil

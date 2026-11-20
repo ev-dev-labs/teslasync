@@ -18,6 +18,7 @@ export function SmartChargingRecommendationActions({ recommendation, personalSco
   const vehicleId = recommendation.vehicle?.id ?? null
   const planId = recommendation.evidence.find((item) =>
     item.kind === 'charging_readiness' || item.kind === 'charging_feasibility')?.charging_readiness?.plan_id
+    ?? recommendation.evidence.find((item) => item.kind === 'departure_overlap')?.departure_overlap?.plan_id
   const validPlan = planId != null && Number.isSafeInteger(planId) && planId > 0
   const query = useSmartCharging(scope, vehicleId, validPlan)
   const state = useDataState(query)

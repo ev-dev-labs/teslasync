@@ -98,17 +98,20 @@ func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 }
 
 type planRequest struct {
-	VehicleID        int64                  `json:"vehicle_id"`
-	ChargingPlaceID  *int64                 `json:"charging_place_id"`
-	Enabled          *bool                  `json:"enabled"`
-	NotifyAt         *time.Time             `json:"notify_at"`
-	DepartureAt      *time.Time             `json:"departure_at"`
-	ScheduledStart   *domain.ScheduledStart `json:"scheduled_start"`
-	TripUseLowPct    *float64               `json:"trip_use_low_pct"`
-	TripUseHighPct   *float64               `json:"trip_use_high_pct"`
-	TripLegs         *tripLegsRequest       `json:"trip_legs"`
-	ReservePct       *float64               `json:"reserve_pct"`
-	CompareSiteRates *bool                  `json:"compare_site_rates"`
+	VehicleID            int64                   `json:"vehicle_id"`
+	ChargingPlaceID      *int64                  `json:"charging_place_id"`
+	Enabled              *bool                   `json:"enabled"`
+	NotifyAt             *time.Time              `json:"notify_at"`
+	DepartureAt          *time.Time              `json:"departure_at"`
+	ScheduledStart       *domain.ScheduledStart  `json:"scheduled_start"`
+	ServiceAppointment   *domain.DepartureWindow `json:"service_appointment"`
+	SoftwareInstall      *domain.DepartureWindow `json:"software_install"`
+	DepartureOverlapPush bool                    `json:"departure_overlap_push"`
+	TripUseLowPct        *float64                `json:"trip_use_low_pct"`
+	TripUseHighPct       *float64                `json:"trip_use_high_pct"`
+	TripLegs             *tripLegsRequest        `json:"trip_legs"`
+	ReservePct           *float64                `json:"reserve_pct"`
+	CompareSiteRates     *bool                   `json:"compare_site_rates"`
 }
 
 type tripLegsRequest struct {
@@ -141,8 +144,10 @@ func (request planRequest) plan(id int64) (domain.Plan, error) {
 	return domain.Plan{
 		ID: id, VehicleID: request.VehicleID, ChargingPlaceID: request.ChargingPlaceID,
 		Enabled: *request.Enabled, NotifyAt: *request.NotifyAt, DepartureAt: *request.DepartureAt,
-		ScheduledStart: request.ScheduledStart,
-		TripUseLowPct:  *request.TripUseLowPct, TripUseHighPct: *request.TripUseHighPct, TripLegs: legs,
+		ScheduledStart: request.ScheduledStart, ServiceAppointment: request.ServiceAppointment,
+		SoftwareInstall:      request.SoftwareInstall,
+		DepartureOverlapPush: request.DepartureOverlapPush,
+		TripUseLowPct:        *request.TripUseLowPct, TripUseHighPct: *request.TripUseHighPct, TripLegs: legs,
 		ReservePct: *request.ReservePct, CompareSiteRates: request.CompareSiteRates != nil && *request.CompareSiteRates,
 	}, nil
 }

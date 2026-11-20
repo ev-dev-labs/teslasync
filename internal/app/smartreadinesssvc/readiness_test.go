@@ -95,6 +95,50 @@ func TestEvaluateChargingFeasibilityUsesFreshOptimisticPower(t *testing.T) {
 	}
 }
 
+func TestEvaluateDepartureWindow(t *testing.T) {
+	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
+	departure := now.Add(2 * time.Hour)
+	for _, tt := range []struct {
+		name        string
+		windowKind  domain.OverlapKind
+		startOffset time.Duration
+		endOffset   time.Duration
+		gear        signal.Value
+		want        domain.OverlapKind
+	}{
+		{"service includes start", domain.OverlapService, 0, time.Hour, signal.Value{Raw: "P", Timestamp: now}, domain.OverlapService},
+		{"software window", domain.OverlapSoftware, -time.Hour, time.Hour, signal.Value{Raw: "P", Timestamp: now}, domain.OverlapSoftware},
+		{"appointment ends at departure", domain.OverlapService, -time.Hour, 0, signal.Value{Raw: "P", Timestamp: now}, ""},
+		{"moving", domain.OverlapService, 0, time.Hour, signal.Value{Raw: "D", Timestamp: now}, ""},
+		{"park observation is stale", domain.OverlapService, 0, time.Hour, signal.Value{Raw: "P", Timestamp: now.Add(-3 * time.Minute)}, ""},
+		{"no confirmed window", "", 0, time.Hour, signal.Value{Raw: "P", Timestamp: now}, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := Plan{Enabled: true, NotifyAt: now, DepartureAt: departure, ReservePct: 20}
+			window := &domain.DepartureWindow{StartsAt: departure.Add(tt.startOffset), EndsAt: departure.Add(tt.endOffset)}
+			switch tt.windowKind {
+			case domain.OverlapService:
+				plan.ServiceAppointment = window
+			case domain.OverlapSoftware:
+				plan.SoftwareInstall = window
+			}
+			decision := Evaluate(plan, map[string]*signal.Value{"Gear": &tt.gear}, now, nil)
+			if tt.want == "" {
+				if decision.Kind == domain.DecisionDepartureOverlap {
+					t.Fatalf("unexpected departure conflict: %+v", decision)
+				}
+				return
+			}
+			if decision.Reason != ReasonEligible || decision.Kind != domain.DecisionDepartureOverlap ||
+				decision.DepartureOverlap == nil || decision.DepartureOverlap.Kind != tt.want ||
+				!decision.DepartureOverlap.EndsAt.Equal(window.EndsAt) ||
+				!decision.ExpiresAt.Equal(now.Add(signal.LiveSignalFreshnessThreshold)) {
+				t.Fatalf("unexpected departure conflict: %+v", decision)
+			}
+		})
+	}
+}
+
 func TestEvaluateDatedScheduleConflict(t *testing.T) {
 	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
 	tests := []struct {

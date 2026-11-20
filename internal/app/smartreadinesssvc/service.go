@@ -170,6 +170,17 @@ func (s *Service) SavePlan(ctx context.Context, subject string, plan domain.Plan
 	}
 	plan.NotifyAt = plan.NotifyAt.UTC()
 	plan.DepartureAt = plan.DepartureAt.UTC()
+	for _, window := range [...]**domain.DepartureWindow{&plan.ServiceAppointment, &plan.SoftwareInstall} {
+		if entered := *window; entered != nil {
+			if !validDepartureWindow(entered, plan.DepartureAt) {
+				return nil, fmt.Errorf("%w: invalid departure conflict window", ErrInvalidInput)
+			}
+			*window = &domain.DepartureWindow{StartsAt: entered.StartsAt.UTC(), EndsAt: entered.EndsAt.UTC()}
+		}
+	}
+	if plan.ServiceAppointment == nil && plan.SoftwareInstall == nil {
+		plan.DepartureOverlapPush = false
+	}
 	if start := plan.ScheduledStart; start != nil {
 		if !validScheduledStart(start, plan) {
 			return nil, fmt.Errorf("%w: invalid dated charging start or time zone", ErrInvalidInput)

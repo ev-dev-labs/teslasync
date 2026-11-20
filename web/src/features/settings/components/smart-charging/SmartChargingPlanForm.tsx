@@ -5,7 +5,13 @@ import type { Geofence } from '@/api/types'
 import { Button, ErrorText, Input, PanelTitle, Select, Text, Toggle } from '@/components/ui'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { toZonedDatetimeStr, zonedWallTimeToUtc } from '@/lib/dateConvert'
-import type { SmartChargingPlan, SmartChargingPlanInput } from '@/types/smartCharging'
+import type { SmartChargingPlan, SmartChargingPlanInput, SmartDepartureWindow } from '@/types/smartCharging'
+
+const conflictWindowLimitMs = 7 * 24 * 60 * 60_000
+const formatWindow = (window: SmartDepartureWindow | undefined, tz: string) => ({
+  start: window ? toZonedDatetimeStr(new Date(window.starts_at), tz) : '',
+  end: window ? toZonedDatetimeStr(new Date(window.ends_at), tz) : '',
+})
 
 interface Props {
   vehicleId: number
@@ -22,11 +28,16 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
   const initialNotify = plan ? toZonedDatetimeStr(new Date(plan.notify_at), tz) : ''
   const initialDeparture = plan ? toZonedDatetimeStr(new Date(plan.departure_at), tz) : ''
   const initialStart = plan?.scheduled_start ? toZonedDatetimeStr(new Date(plan.scheduled_start.at), tz) : ''
+  const initialService = formatWindow(plan?.service_appointment, tz)
+  const initialInstall = formatWindow(plan?.software_install, tz)
   const [draft, setDraft] = useState({
     place: plan?.charging_place_id == null ? '' : String(plan.charging_place_id),
     notify: initialNotify,
     departure: initialDeparture,
     scheduledStart: initialStart,
+    service: initialService,
+    install: initialInstall,
+    overlapPush: plan?.departure_overlap_push ?? false,
     powerCeiling: plan?.scheduled_start?.power_ceiling_w == null ? '' : String(plan.scheduled_start.power_ceiling_w),
     low: plan ? String(plan.trip_use_low_pct) : '',
     high: plan ? String(plan.trip_use_high_pct) : '',
@@ -42,16 +53,34 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
     compareSiteRates: plan?.compare_site_rates ?? false,
   })
   const [invalid, setInvalid] = useState(false)
+  const [invalidConflict, setInvalidConflict] = useState(false)
 
   const resolveTime = (wall: string, initialWall: string, original?: string) => {
     const instant = original && wall === initialWall ? new Date(original) : zonedWallTimeToUtc(wall, tz)
     if (!instant || !Number.isFinite(instant.getTime()) || toZonedDatetimeStr(instant, tz) !== wall) return null
     return instant
   }
+  const resolveWindow = (window: ReturnType<typeof formatWindow>, initial: typeof window,
+    original: SmartDepartureWindow | undefined, departure: Date | null) => {
+    if (!window.start && !window.end) return undefined
+    const start = resolveTime(window.start, initial.start, original?.starts_at)
+    const end = resolveTime(window.end, initial.end, original?.ends_at)
+    if (!departure || !start || !end || start >= end ||
+      start.getTime() < departure.getTime() - conflictWindowLimitMs ||
+      end.getTime() > departure.getTime() + conflictWindowLimitMs) return null
+    return { starts_at: start.toISOString(), ends_at: end.toISOString() }
+  }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const notify = resolveTime(draft.notify, initialNotify, plan?.notify_at)
     const departure = resolveTime(draft.departure, initialDeparture, plan?.departure_at)
+    const service = resolveWindow(draft.service, initialService, plan?.service_appointment, departure)
+    const install = resolveWindow(draft.install, initialInstall, plan?.software_install, departure)
+    if (service === null || install === null) {
+      setInvalidConflict(true)
+      return
+    }
+    setInvalidConflict(false)
     const scheduledStart = draft.scheduledStart
       ? resolveTime(draft.scheduledStart, initialStart, plan?.scheduled_start?.at) : null
     const powerCeiling = scheduledStart && draft.powerCeiling.trim() ? Number(draft.powerCeiling) : null
@@ -91,6 +120,9 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
         time_zone: draft.scheduledStart === initialStart && plan?.scheduled_start ? plan.scheduled_start.time_zone : tz,
         ...(powerCeiling != null ? { power_ceiling_w: powerCeiling } : {}),
       } } : {}),
+      ...(service ? { service_appointment: service } : {}),
+      ...(install ? { software_install: install } : {}),
+      departure_overlap_push: Boolean((service || install) && draft.overlapPush),
       trip_use_low_pct: low, trip_use_high_pct: high, reserve_pct: reserve,
       compare_site_rates: draft.compareSiteRates,
       ...(draft.separateLegs ? { trip_legs: {
@@ -187,6 +219,42 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
         <Link to="/geofences" className="text-theme-accent underline underline-offset-2">
           {t('smartCharging.reviewPlacePrices', 'Review charging place prices')}
         </Link>
+      </div>
+      <div className="space-y-3">
+        <PanelTitle>{t('smartCharging.conflictWindows', 'Departure conflicts')}</PanelTitle>
+        <Text as="p" variant="bodySm">
+          {t('smartCharging.conflictWindowsHint', 'Record an appointment or install window you confirmed. Leave both times blank to remove a window. Update it here if plans change; TeslaSync does not update or verify the source schedule.')}
+        </Text>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            { key: 'service', start: t('smartCharging.serviceStartsAt', 'Service appointment starts'),
+              end: t('smartCharging.serviceEndsAt', 'Service appointment ends') },
+            { key: 'install', start: t('smartCharging.installStartsAt', 'Software install starts'),
+              end: t('smartCharging.installEndsAt', 'Software install ends') },
+          ] as const).map(({ key, start, end }) => (
+            <div key={key} className="space-y-3">
+              <Input type="datetime-local" label={start} value={draft[key].start}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setDraft((current) => ({ ...current, [key]: { ...current[key], start: value } }))
+                }} />
+              <Input type="datetime-local" label={end} value={draft[key].end}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setDraft((current) => ({ ...current, [key]: { ...current[key], end: value } }))
+                }} />
+            </div>
+          ))}
+        </div>
+        <Toggle label={t('smartCharging.overlapPush', 'Send a private push for a departure conflict')}
+          checked={draft.overlapPush} disabled={disabled || !(draft.service.start && draft.service.end || draft.install.start && draft.install.end)}
+          onChange={(overlapPush) => setDraft({ ...draft, overlapPush })} />
+        <Text as="p" variant="bodySm">
+          {t('smartCharging.overlapPushHint', 'Requires verified personal charging push. If both windows overlap departure, the card shows the service appointment first.')}
+        </Text>
+        {invalidConflict && <ErrorText role="alert">
+          {t('smartCharging.invalidConflictWindow', 'Enter both times in order and within seven days of departure, or leave both blank. Skipped daylight-saving times are not valid.')}
+        </ErrorText>}
       </div>
       {invalid && (
         <ErrorText role="alert">

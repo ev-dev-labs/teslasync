@@ -17,6 +17,33 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     ? recommendation.evidence.find((item) =>
         item.kind === 'charging_readiness' || item.kind === 'charging_feasibility')?.charging_readiness
     : undefined;
+  const overlap = recommendation.source_feature === 'smart_charging'
+    ? recommendation.evidence.find((item) => item.kind === 'departure_overlap')?.departure_overlap
+    : undefined;
+  if (overlap) {
+    const { kind, starts_at, ends_at } = overlap;
+    const service = kind === 'service';
+    const summary = t('smartCharging.overlapSummary', 'Review the window from {{start}} to {{end}} before your planned departure at {{departure}}.', {
+      start: formatDateTime(starts_at), end: formatDateTime(ends_at), departure: formatDateTime(overlap.departure_at),
+    });
+    return {
+      ...recommendation,
+      title: service
+        ? t('smartCharging.serviceOverlapTitle', 'Service appointment overlaps your planned departure')
+        : t('smartCharging.installOverlapTitle', 'Scheduled software install overlaps your planned departure'),
+      summary,
+      rationale: service
+        ? t('smartCharging.serviceOverlapRationale', 'The appointment window you entered includes the saved departure.')
+        : t('smartCharging.installOverlapRationale', 'The software install window you entered includes the saved departure.'),
+      confidence: { ...recommendation.confidence, basis: [
+        t('smartCharging.overlapBasisPlan', 'Window and departure entered by you'),
+        t('smartCharging.overlapBasisPark', 'Fresh parked gear observation'),
+      ] },
+      evidence: recommendation.evidence.map((item) =>
+        item.departure_overlap ? { ...item, summary } : item),
+      limitations: [t('smartCharging.overlapLimitation', 'The window is entered by you, not verified against a service or vehicle schedule. No schedule was changed.')],
+    };
+  }
   if (charging) {
     const projection = charging.trip_projection ? displayProjection(charging.trip_projection, charging.reserve_pct) : undefined;
     if (charging.kind === 'schedule_conflict' && charging.scheduled_start_at) {

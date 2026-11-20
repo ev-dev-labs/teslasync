@@ -24,7 +24,8 @@ const (
 		p.reserve_pct, p.compare_site_rates, p.snoozed_until, p.created_at, p.updated_at, p.version,
 		p.outbound_use_low_pct, p.outbound_use_high_pct, p.return_use_low_pct,
 		p.return_use_high_pct, p.destination_charge_pct, p.scheduled_start_at, p.scheduled_start_time_zone,
-		p.scheduled_power_ceiling_w`
+		p.scheduled_power_ceiling_w, p.service_starts_at, p.service_ends_at,
+		p.software_starts_at, p.software_ends_at, p.departure_overlap_push`
 )
 
 type Repository struct {
@@ -174,6 +175,13 @@ func (r *Repository) SavePlan(
 		if start := plan.ScheduledStart; start != nil {
 			scheduledAt, scheduledZone, powerCeilingW = &start.At, &start.TimeZone, start.PowerCeilingW
 		}
+		var serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt *time.Time
+		if appointment := plan.ServiceAppointment; appointment != nil {
+			serviceStartsAt, serviceEndsAt = &appointment.StartsAt, &appointment.EndsAt
+		}
+		if install := plan.SoftwareInstall; install != nil {
+			softwareStartsAt, softwareEndsAt = &install.StartsAt, &install.EndsAt
+		}
 		if plan.ID == 0 {
 			var count int
 			if err := tx.QueryRow(ctx, `
@@ -190,13 +198,15 @@ func (r *Repository) SavePlan(
 				   trip_use_low_pct, trip_use_high_pct, reserve_pct, compare_site_rates,
 				   outbound_use_low_pct, outbound_use_high_pct, return_use_low_pct, return_use_high_pct,
 				   destination_charge_pct, next_check_at, created_at, updated_at, scheduled_start_at, scheduled_start_time_zone,
-				   scheduled_power_ceiling_w)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$18,$19,$20)
+				   scheduled_power_ceiling_w, service_starts_at, service_ends_at, software_starts_at, software_ends_at,
+				   departure_overlap_push)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 				RETURNING `+planColumns,
 				subject, plan.VehicleID, plan.ChargingPlaceID, plan.Enabled, plan.NotifyAt,
 				plan.DepartureAt, plan.TripUseLowPct, plan.TripUseHighPct, plan.ReservePct,
 				plan.CompareSiteRates, outboundLow, outboundHigh, returnLow, returnHigh, destinationCharge, next, now,
-				scheduledAt, scheduledZone, powerCeilingW))
+				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
+				plan.DepartureOverlapPush))
 		} else {
 			saved, err = scanPlan(tx.QueryRow(ctx, `
 				UPDATE smart_charging_plans p
@@ -209,6 +219,7 @@ func (r *Repository) SavePlan(
 				    outbound_use_low_pct=$14, outbound_use_high_pct=$15, return_use_low_pct=$16,
 				    return_use_high_pct=$17, destination_charge_pct=$18,
 				    scheduled_start_at=$19, scheduled_start_time_zone=$20, scheduled_power_ceiling_w=$21,
+				    service_starts_at=$22, service_ends_at=$23, software_starts_at=$24, software_ends_at=$25, departure_overlap_push=$26,
 				    lease_token=NULL, lease_until=NULL,
 				    version=version+1, updated_at=$13
 				WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3
@@ -216,7 +227,8 @@ func (r *Repository) SavePlan(
 				plan.ID, subject, plan.VehicleID, plan.ChargingPlaceID, plan.Enabled, plan.NotifyAt,
 				plan.DepartureAt, plan.TripUseLowPct, plan.TripUseHighPct, plan.ReservePct,
 				plan.CompareSiteRates, next, now, outboundLow, outboundHigh, returnLow, returnHigh, destinationCharge,
-				scheduledAt, scheduledZone, powerCeilingW))
+				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
+				plan.DepartureOverlapPush))
 			if err == nil {
 				_, err = tx.Exec(ctx, `DELETE FROM smart_charging_decisions WHERE plan_id = $1`, plan.ID)
 			}
@@ -453,11 +465,13 @@ func scanPlanInto(row pgx.Row, plan *domain.Plan, extras ...any) error {
 	var scheduledAt *time.Time
 	var scheduledZone *string
 	var powerCeilingW *float64
+	var serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt *time.Time
 	dest := []any{
 		&plan.ID, &plan.Subject, &plan.VehicleID, &plan.ChargingPlaceID, &plan.Enabled,
 		&plan.NotifyAt, &plan.DepartureAt, &plan.TripUseLowPct, &plan.TripUseHighPct,
 		&plan.ReservePct, &plan.CompareSiteRates, &plan.SnoozedUntil, &plan.CreatedAt, &plan.UpdatedAt, &plan.Version,
 		&outboundLow, &outboundHigh, &returnLow, &returnHigh, &destinationCharge, &scheduledAt, &scheduledZone, &powerCeilingW,
+		&serviceStartsAt, &serviceEndsAt, &softwareStartsAt, &softwareEndsAt, &plan.DepartureOverlapPush,
 	}
 	if err := row.Scan(append(dest, extras...)...); err != nil {
 		return err
@@ -470,6 +484,12 @@ func scanPlanInto(row pgx.Row, plan *domain.Plan, extras ...any) error {
 	}
 	if scheduledAt != nil && scheduledZone != nil {
 		plan.ScheduledStart = &domain.ScheduledStart{At: *scheduledAt, TimeZone: *scheduledZone, PowerCeilingW: powerCeilingW}
+	}
+	if serviceStartsAt != nil && serviceEndsAt != nil {
+		plan.ServiceAppointment = &domain.DepartureWindow{StartsAt: *serviceStartsAt, EndsAt: *serviceEndsAt}
+	}
+	if softwareStartsAt != nil && softwareEndsAt != nil {
+		plan.SoftwareInstall = &domain.DepartureWindow{StartsAt: *softwareStartsAt, EndsAt: *softwareEndsAt}
 	}
 	return nil
 }

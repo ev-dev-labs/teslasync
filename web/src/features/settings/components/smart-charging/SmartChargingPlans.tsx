@@ -31,7 +31,10 @@ function planInput(plan: SmartChargingPlan): SmartChargingPlanInput {
     notify_at: plan.notify_at, departure_at: plan.departure_at, trip_use_low_pct: plan.trip_use_low_pct,
     trip_use_high_pct: plan.trip_use_high_pct, reserve_pct: plan.reserve_pct,
     compare_site_rates: plan.compare_site_rates ?? false,
+    departure_overlap_push: plan.departure_overlap_push ?? false,
     ...(plan.scheduled_start ? { scheduled_start: plan.scheduled_start } : {}),
+    ...(plan.service_appointment ? { service_appointment: plan.service_appointment } : {}),
+    ...(plan.software_install ? { software_install: plan.software_install } : {}),
     ...(plan.trip_legs ? { trip_legs: plan.trip_legs } : {}),
   }
 }
@@ -228,6 +231,20 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
               <Text as="p" variant="bodySm">
                 {t('smartCharging.planPowerCeiling', 'Maximum site power: {{power}} (entered by you).', {
                   power: formatPower(plan.scheduled_start.power_ceiling_w),
+                })}
+              </Text>
+            )}
+            {plan.service_appointment && (
+              <Text as="p" variant="bodySm">
+                {t('smartCharging.planServiceWindow', 'Service appointment: {{start}} to {{end}} (entered by you).', {
+                  start: formatDateTime(plan.service_appointment.starts_at), end: formatDateTime(plan.service_appointment.ends_at),
+                })}
+              </Text>
+            )}
+            {plan.software_install && (
+              <Text as="p" variant="bodySm">
+                {t('smartCharging.planInstallWindow', 'Software install: {{start}} to {{end}} (entered by you).', {
+                  start: formatDateTime(plan.software_install.starts_at), end: formatDateTime(plan.software_install.ends_at),
                 })}
               </Text>
             )}

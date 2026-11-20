@@ -36,6 +36,12 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   leaves too little time to charge before departure. The limit is not measured
   power. Pausing, snoozing, or deleting the plan stops its current advice.
   Nothing changes the vehicle schedule, charging current, or a place's prices.
+  In **Departure conflicts**, enter a service or software install window you
+  have confirmed. If it overlaps departure and the car is confirmed parked,
+  Action Center links to the plan or software page so you can review it.
+  TeslaSync does not read your calendar or verify these windows with Tesla;
+  update or remove the entry if the source schedule changes. Push requires
+  both the plan's departure-conflict switch and a verified charging device.
 
 ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
@@ -62,9 +68,10 @@ For a local synthetic check, run the real-handler browser journey against a
 disposable PostgreSQL database and a production web build. The
 `private-notifications` job in `frontend-quality.yml` shows the exact
 environment and command. It does not need a Tesla account or a live push
-provider. To roll back the dated charging-start feature, pause affected plans
-and stop the worker before applying migrations `000266` and `000265` down.
-They remove the recorded power limits and start times and invalidate affected
+provider. To roll back the departure-window or dated charging-start features,
+pause affected plans and stop the worker before applying the corresponding
+down migrations in reverse order (`000267`, `000266`, `000265`). They remove
+the recorded windows, limits, and start times and invalidate affected
 notifications. Leave the schema applied if you need to preserve those inputs.
 
 ## Notification history and health

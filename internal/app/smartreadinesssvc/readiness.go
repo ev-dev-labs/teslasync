@@ -53,6 +53,16 @@ func Evaluate(
 	if !now.Before(deadline) {
 		return Decision{Reason: ReasonExpired}
 	}
+	if overlap, observedAt, ok := departureOverlap(plan, values, now); ok {
+		expiresAt := observedAt.Add(signal.LiveSignalFreshnessThreshold)
+		if deadline.Before(expiresAt) {
+			expiresAt = deadline
+		}
+		if now.Before(expiresAt) {
+			return Decision{Reason: ReasonEligible, Kind: domain.DecisionDepartureOverlap,
+				DepartureOverlap: &overlap, ObservedAt: observedAt.UTC(), ExpiresAt: expiresAt.UTC()}
+		}
+	}
 
 	names := []string{"BatteryLevel", "DetailedChargeState", "Gear", "LocationLatitude", "LocationLongitude"}
 	observedAt := now

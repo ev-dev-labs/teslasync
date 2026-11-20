@@ -115,7 +115,7 @@ describe('private charging readiness settings', () => {
       vehicle_id: 42, charging_place_id: 9, enabled: false,
       notify_at: '2026-03-08T12:00:00.000Z', departure_at: '2026-03-08T18:00:00.000Z',
       trip_use_low_pct: 35, trip_use_high_pct: 45, reserve_pct: 20,
-      compare_site_rates: false,
+      compare_site_rates: false, departure_overlap_push: false,
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }))
@@ -150,6 +150,29 @@ describe('private charging readiness settings', () => {
     expect(await screen.findByText(/Status: Active/)).toBeInTheDocument()
     const resumed = requestMock.mock.calls.find(([path, options]) => path === '/smart-charging/plans/8' && options?.method === 'PUT')
     expect(JSON.parse(String(resumed?.[1].body))).toMatchObject({ enabled: true, scheduled_start: expectedStart })
+  })
+
+  it('requires a complete departure window and preserves explicit push consent when the plan resumes', async () => {
+    renderSettings()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add a trip plan' }))
+    fillPlan('2026-03-08T12:00', '2026-03-08T18:00')
+    const push = screen.getByRole('switch', { name: 'Send a private push for a departure conflict' })
+    expect(push).not.toBeChecked()
+    fireEvent.change(screen.getByLabelText('Software install starts'), { target: { value: '2026-03-08T17:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter both times in order')
+    expect(requestMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false)
+    fireEvent.change(screen.getByLabelText('Software install ends'), { target: { value: '2026-03-08T19:00' } })
+    fireEvent.click(push)
+    fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
+    expect(await screen.findByText(/Software install:.*entered by you/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }))
+    expect(await screen.findByText(/Status: Active/)).toBeVisible()
+    const resumed = requestMock.mock.calls.find(([path, options]) => path === '/smart-charging/plans/8' && options?.method === 'PUT')
+    expect(JSON.parse(String(resumed?.[1].body))).toMatchObject({
+      enabled: true, departure_overlap_push: true,
+      software_install: { starts_at: '2026-03-08T17:00:00.000Z', ends_at: '2026-03-08T19:00:00.000Z' },
+    })
   })
 
   it('records separate leg estimates and preserves them when the plan is resumed', async () => {

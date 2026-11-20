@@ -189,6 +189,12 @@ type ChargingReadinessEvidence struct {
 	ScheduledPowerCeilingW *float64                             `json:"scheduled_power_ceiling_w,omitempty"`
 }
 
+type DepartureOverlapEvidence struct {
+	PlanID      int64     `json:"plan_id"`
+	DepartureAt time.Time `json:"departure_at"`
+	smartreadiness.DepartureOverlap
+}
+
 type EvidenceItem struct {
 	ID                string                     `json:"id"`
 	Kind              string                     `json:"kind"`
@@ -197,6 +203,7 @@ type EvidenceItem struct {
 	ObservedAt        *time.Time                 `json:"observed_at"`
 	RecurringDrive    *RecurringDriveEvidence    `json:"recurring_drive,omitempty"`
 	ChargingReadiness *ChargingReadinessEvidence `json:"charging_readiness,omitempty"`
+	DepartureOverlap  *DepartureOverlapEvidence  `json:"departure_overlap,omitempty"`
 }
 
 type ImpactRiskLevel string

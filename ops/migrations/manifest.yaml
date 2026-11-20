@@ -665,8 +665,8 @@ migrations:
     rollback_notes: Stop readiness workers and pause plans with an intended start before running an older binary. Leave schema applied to preserve the user-entered start times.
     expected_duration: <1s
     duration_basis: estimate
-    lock_risk: medium
-    lock_details: Adds two nullable columns and replaces checks under brief ACCESS EXCLUSIVE locks; validation scans charging plans, decisions, and delivery attempts.
+    lock_risk: high
+    lock_details: Adds two nullable columns and replaces checks. The transactional migration can hold ACCESS EXCLUSIVE locks through validation scans of plans, decisions, and delivery attempts.
     reversible: false
     irreversible_justification: Explicit down deletes user-entered intended starts and invalidates derived schedule-conflict delivery tokens.
     # Automated implementation review only; not human approval.
@@ -681,10 +681,26 @@ migrations:
     rollback_notes: Leave the schema applied to preserve the user-entered site power ceilings.
     expected_duration: <1s
     duration_basis: estimate
-    lock_risk: medium
-    lock_details: Adds a nullable column under a brief ACCESS EXCLUSIVE lock and validates a plan check.
+    lock_risk: high
+    lock_details: Adds a nullable column and validates a plan check. The transactional migration can hold ACCESS EXCLUSIVE on plans through the validation scan.
     reversible: false
     irreversible_justification: Explicit down removes the optional power ceilings and invalidates derived pre-departure schedule conflict tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 267
+    name: smart_departure_overlap
+    forward_compatible: false
+    forward_compatibility_notes: Older APIs can overwrite plans without the conflict windows; older workers cannot evaluate the departure overlap kind.
+    requires_downtime: true
+    rollback_notes: Stop readiness workers and pause plans with departure windows before running older binaries. Preserve the applied schema if the entered windows are needed.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Adds window and opt-in columns and replaces checks. The transactional migration can hold ACCESS EXCLUSIVE locks through validation scans of plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered windows and their derived decisions and delivery tokens.
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-19"

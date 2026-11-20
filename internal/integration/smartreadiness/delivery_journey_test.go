@@ -322,6 +322,7 @@ func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 	var saved struct {
 		Data readiness.Plan `json:"data"`
 	}
+
 	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &saved) != nil ||
 		saved.Data.ScheduledStart == nil || !saved.Data.ScheduledStart.At.Equal(plan.ScheduledStart.At) ||
 		saved.Data.ScheduledStart.PowerCeilingW == nil || *saved.Data.ScheduledStart.PowerCeilingW != ceilingW {
@@ -362,6 +363,54 @@ func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 	}
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusNotFound {
 		t.Fatalf("pending state cleared but the push could still be claimed: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	j.enroll("subject-a", "https://push.example.invalid/device-a")
+	j.enroll("subject-b", "https://push.example.invalid/device-b")
+	plan := testPlan(j.now)
+	plan.SoftwareInstall = &readiness.DepartureWindow{StartsAt: plan.DepartureAt, EndsAt: plan.DepartureAt.Add(time.Hour)}
+	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
+	var saved struct {
+		Data readiness.Plan `json:"data"`
+	}
+	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &saved) != nil ||
+		saved.Data.SoftwareInstall == nil || !saved.Data.SoftwareInstall.EndsAt.Equal(plan.SoftwareInstall.EndsAt) ||
+		saved.Data.DepartureOverlapPush {
+		t.Fatalf("create software window: %d %s", rec.Code, rec.Body.String())
+	}
+	j.process()
+	rows, err := j.readiness.ListCandidates(j.ctx, "subject-a", nil, j.now, 10)
+	if err != nil || len(rows) != 1 || rows[0].Decision.DepartureOverlap == nil ||
+		rows[0].Decision.DepartureOverlap.Kind != readiness.OverlapSoftware {
+		t.Fatalf("in-app software decision: %+v, %v", rows, err)
+	}
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("push not opted in: recorded %d total messages", calls)
+	}
+	plan.DepartureOverlapPush = true
+	path := "/smart-charging/plans/" + strconv.FormatInt(saved.Data.ID, 10)
+	if rec = j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+		t.Fatalf("opt in: %d %s", rec.Code, rec.Body.String())
+	}
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	messages := j.sender.messages()
+	if len(messages) != 3 || messages[2].endpoint != "https://push.example.invalid/device-a" {
+		t.Fatalf("departure conflict sent %d messages or routed to the wrong recipient", len(messages))
+	}
+	token := j.claimToken()
+	if rec = j.claim("subject-b", token); rec.Code != http.StatusNotFound {
+		t.Fatalf("foreign subject claimed departure conflict: %d", rec.Code)
+	}
+	plan.SoftwareInstall = nil
+	if rec = j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+		t.Fatalf("clear window: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec = j.claim("subject-a", token); rec.Code != http.StatusNotFound {
+		t.Fatalf("removed window retained a claim: %d", rec.Code)
 	}
 }
 

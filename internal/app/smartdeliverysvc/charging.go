@@ -24,6 +24,9 @@ func (s *Service) NotifyCharging(ctx context.Context, candidate readinessport.Ca
 		candidate.Decision.Reason != readiness.ReasonEligible {
 		return ErrInvalidInput
 	}
+	if !allowsChargingDelivery(candidate) {
+		return nil
+	}
 	quiet, err := s.inQuietHours(ctx, candidate.Plan.Subject, s.now().UTC())
 	if err != nil {
 		return err
@@ -74,7 +77,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 		return fmt.Errorf("recheck personal charging evidence: %w", err)
 	}
 	now = s.now().UTC()
-	if current == nil || current.Plan.Version != attempt.PlanVersion ||
+	if current == nil || !allowsChargingDelivery(*current) || current.Plan.Version != attempt.PlanVersion ||
 		current.Decision.Kind != candidate.Decision.Kind || !current.PlaceUpdatedAt.Equal(attempt.PlaceUpdatedAt) ||
 		!now.Before(current.Decision.ExpiresAt) || !now.Before(attempt.ExpiresAt) {
 		s.record("suppressed")
@@ -162,7 +165,7 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 		return nil, fmt.Errorf("recheck claimed charging evidence: %w", err)
 	}
 	now = s.now().UTC()
-	if candidate == nil || candidate.Plan.Version != ref.PlanVersion ||
+	if candidate == nil || !allowsChargingDelivery(*candidate) || candidate.Plan.Version != ref.PlanVersion ||
 		string(candidate.Decision.Kind) != ref.DecisionKind ||
 		!candidate.PlaceUpdatedAt.Equal(ref.PlaceUpdatedAt) || !now.Before(candidate.Decision.ExpiresAt) {
 		return nil, port.ErrNotFound
@@ -179,6 +182,10 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 		s.record("claimed")
 	}
 	return result, err
+}
+
+func allowsChargingDelivery(candidate readinessport.Candidate) bool {
+	return candidate.Decision.Kind != readiness.DecisionDepartureOverlap || candidate.Plan.DepartureOverlapPush
 }
 
 func (s *Service) inQuietHours(ctx context.Context, subject string, now time.Time) (bool, error) {

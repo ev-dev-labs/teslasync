@@ -1,4 +1,4 @@
-import type { SmartChargingTripProjection } from './smartCharging';
+import type { SmartChargingTripProjection, SmartDepartureWindow } from './smartCharging';
 
 export type ActionCenterSourceFeature =
   | 'active_alerts'
@@ -91,6 +91,7 @@ export interface ActionCenterEvidence {
   observed_at: string | null;
   recurring_drive?: ActionCenterRecurringDriveEvidence;
   charging_readiness?: ActionCenterChargingReadinessEvidence;
+  departure_overlap?: SmartDepartureWindow & { plan_id: number; departure_at: string; kind: 'service' | 'software' };
 }
 
 export interface ActionCenterProjectedImpact {

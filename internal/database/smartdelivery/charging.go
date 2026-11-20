@@ -54,6 +54,7 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		  AND p.notify_at <= $7 AND p.departure_at > $7::timestamptz + INTERVAL '30 minutes'
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $7)
 		  AND decision.expires_at > $7 AND g.updated_at=$8 AND decision.kind=$9
+		  AND ($9 <> 'departure_overlap' OR p.departure_overlap_push)
 		  AND (($9 = 'slow_charging') = EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
@@ -160,6 +161,7 @@ func (r *Repository) FindDelivery(
 		  AND d.status IN ('dispatching','accepted','unknown') AND d.expires_at > $3
 		  AND decision.expires_at > $3 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 		  AND g.updated_at=d.place_updated_at AND decision.kind=d.decision_kind
+		  AND (d.decision_kind <> 'departure_overlap' OR p.departure_overlap_push)
 		  AND ((d.decision_kind = 'slow_charging') = EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
@@ -201,6 +203,7 @@ func (r *Repository) ConsumeDelivery(
 			  AND decision.expires_at > $6 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 			  AND g.updated_at=$7 AND d.place_updated_at=$7 AND d.decision_kind=$8
 			  AND decision.kind=$8
+			  AND ($8 <> 'departure_overlap' OR p.departure_overlap_push)
 			  AND (($8 = 'slow_charging') = EXISTS (
 			    SELECT 1 FROM smart_charging_slow_samples s
 			    WHERE s.plan_id=p.id AND s.plan_version=p.version

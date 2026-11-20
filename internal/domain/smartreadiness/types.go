@@ -4,29 +4,50 @@ package smartreadiness
 import "time"
 
 type Plan struct {
-	ID               int64           `json:"id"`
-	VehicleID        int64           `json:"vehicle_id"`
-	ChargingPlaceID  *int64          `json:"charging_place_id"`
-	Enabled          bool            `json:"enabled"`
-	NotifyAt         time.Time       `json:"notify_at"`
-	DepartureAt      time.Time       `json:"departure_at"`
-	ScheduledStart   *ScheduledStart `json:"scheduled_start,omitempty"`
-	TripUseLowPct    float64         `json:"trip_use_low_pct"`
-	TripUseHighPct   float64         `json:"trip_use_high_pct"`
-	TripLegs         *TripLegs       `json:"trip_legs,omitempty"`
-	ReservePct       float64         `json:"reserve_pct"`
-	CompareSiteRates bool            `json:"compare_site_rates"`
-	SnoozedUntil     *time.Time      `json:"snoozed_until"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        time.Time       `json:"updated_at"`
-	Subject          string          `json:"-"`
-	Version          int64           `json:"version,omitempty"`
+	ID                   int64            `json:"id"`
+	VehicleID            int64            `json:"vehicle_id"`
+	ChargingPlaceID      *int64           `json:"charging_place_id"`
+	Enabled              bool             `json:"enabled"`
+	NotifyAt             time.Time        `json:"notify_at"`
+	DepartureAt          time.Time        `json:"departure_at"`
+	ScheduledStart       *ScheduledStart  `json:"scheduled_start,omitempty"`
+	ServiceAppointment   *DepartureWindow `json:"service_appointment,omitempty"`
+	SoftwareInstall      *DepartureWindow `json:"software_install,omitempty"`
+	DepartureOverlapPush bool             `json:"departure_overlap_push"`
+	TripUseLowPct        float64          `json:"trip_use_low_pct"`
+	TripUseHighPct       float64          `json:"trip_use_high_pct"`
+	TripLegs             *TripLegs        `json:"trip_legs,omitempty"`
+	ReservePct           float64          `json:"reserve_pct"`
+	CompareSiteRates     bool             `json:"compare_site_rates"`
+	SnoozedUntil         *time.Time       `json:"snoozed_until"`
+	CreatedAt            time.Time        `json:"created_at"`
+	UpdatedAt            time.Time        `json:"updated_at"`
+	Subject              string           `json:"-"`
+	Version              int64            `json:"version,omitempty"`
 }
 
 type ScheduledStart struct {
 	At            time.Time `json:"at"`
 	TimeZone      string    `json:"time_zone"`
 	PowerCeilingW *float64  `json:"power_ceiling_w,omitempty"`
+}
+
+type DepartureWindow struct {
+	StartsAt time.Time `json:"starts_at"`
+	EndsAt   time.Time `json:"ends_at"`
+}
+
+type OverlapKind string
+
+const (
+	OverlapService  OverlapKind = "service"
+	OverlapSoftware OverlapKind = "software"
+)
+
+type DepartureOverlap struct {
+	Kind     OverlapKind `json:"kind"`
+	StartsAt time.Time   `json:"starts_at"`
+	EndsAt   time.Time   `json:"ends_at"`
 }
 
 type TripLegs struct {
@@ -76,17 +97,19 @@ const (
 	DecisionSlowCharging     DecisionKind = "slow_charging"
 	DecisionTripReview       DecisionKind = "trip_review"
 	DecisionScheduleConflict DecisionKind = "schedule_conflict"
+	DecisionDepartureOverlap DecisionKind = "departure_overlap"
 )
 
 type Decision struct {
-	Reason         Reason
-	Kind           DecisionKind
-	BatteryPct     float64
-	ArrivalLowPct  float64
-	ArrivalHighPct float64
-	ChargingPowerW float64
-	CurrentLimit   *ChargingCurrentLimit
-	TripProjection *TripProjection
-	ObservedAt     time.Time
-	ExpiresAt      time.Time
+	Reason           Reason
+	Kind             DecisionKind
+	BatteryPct       float64
+	ArrivalLowPct    float64
+	ArrivalHighPct   float64
+	ChargingPowerW   float64
+	CurrentLimit     *ChargingCurrentLimit
+	TripProjection   *TripProjection
+	DepartureOverlap *DepartureOverlap
+	ObservedAt       time.Time
+	ExpiresAt        time.Time
 }

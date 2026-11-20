@@ -24,11 +24,19 @@ export interface SmartChargingPlanInput {
   notify_at: string
   departure_at: string
   scheduled_start?: { at: string; time_zone: string; power_ceiling_w?: number }
+  service_appointment?: SmartDepartureWindow
+  software_install?: SmartDepartureWindow
+  departure_overlap_push?: boolean
   trip_use_low_pct: number
   trip_use_high_pct: number
   trip_legs?: SmartChargingTripLegs
   reserve_pct: number
   compare_site_rates?: boolean
+}
+
+export interface SmartDepartureWindow {
+  starts_at: string
+  ends_at: string
 }
 
 export interface SmartChargingPlan extends SmartChargingPlanInput {
