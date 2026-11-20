@@ -256,14 +256,26 @@ for (const variant of [
     await expect(page.getByText(/Status: Snoozed/)).toBeVisible()
     await page.getByRole('button', { name: 'Check now' }).click()
     await expect(page.getByText(/Status: Active/)).toBeVisible()
-    const fixture = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
-      data: { state: 'NoPower', advance_seconds: 60, schedule_clock: intendedStart.slice(11) },
-    })
-    expect(fixture.status()).toBe(204)
-    await page.goto('/action-center?vehicle_id=7')
-    await waitForHarnessReady(page, api)
-    await expect(schedule).toBeVisible()
-    await expect(schedule.getByText(/If charging starts at the time you entered/)).toBeVisible()
+    if (realBackend) {
+      const fixture = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
+        data: { state: 'NoPower', advance_seconds: 60, schedule_clock: intendedStart.slice(11) },
+      })
+      expect(fixture.status()).toBe(204)
+      await page.goto('/action-center?vehicle_id=7')
+      await waitForHarnessReady(page, api)
+      await expect(schedule).toBeVisible()
+      await expect(schedule.getByText(/If charging starts at the time you entered/)).toBeVisible()
+
+      const cleared = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, { data: { state: 'NoPower' } })
+      expect(cleared.status()).toBe(204)
+      await page.reload()
+      await waitForHarnessReady(page, api)
+      await expect(schedule).toHaveCount(0)
+      const disconnected = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
+        data: { state: 'Disconnected', advance_seconds: 60 },
+      })
+      expect(disconnected.status()).toBe(204)
+    }
     await page.goto('/action-center?vehicle_id=7')
     await waitForHarnessReady(page, api)
     await expect.poll(async () => {
@@ -275,7 +287,7 @@ for (const variant of [
       const feasibility = page.getByRole('article', { name: 'Charging may not be ready before your trip' })
       for (let minute = 1; minute <= 6; minute++) {
         const fixture = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
-          data: { state: 'Charging', advance_seconds: 60 },
+          data: { state: 'Charging', advance_seconds: 60, power_w: 500 },
         })
         expect(fixture.status()).toBe(204)
         await page.reload()
@@ -308,11 +320,6 @@ for (const variant of [
     openMode = variant.open
     subject = primarySubject
     if (realBackend) {
-      const cleared = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, { data: { state: 'NoPower' } })
-      expect(cleared.status()).toBe(204)
-      await page.goto('/action-center?vehicle_id=7')
-      await waitForHarnessReady(page, api)
-      await expect(schedule).toHaveCount(0)
       const fixture = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
         data: { state: 'Disconnected', advance_seconds: 60 },
       })

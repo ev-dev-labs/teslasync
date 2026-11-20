@@ -15,6 +15,57 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 | Quiet Hours | `/notifications/quiet-hours` | Mute non-critical alerts during set times. | Renders an empty state when no data is available — the page is not hidden. |
 | Notification Health | `/notifications/health` | One page with alert-fatigue scores and hourly noise, delivery SLO burn rates with 1h/24h windows and severity breakdowns, and latency percentiles, Apdex, cohorts, and slow records. Fatigue uses recorded inbox events (including archived ones); reliability and latency use channel-delivery attempts, not trigger-only rows. | Each section keeps its own loading, error, and empty states; the other sections remain available if one query fails. |
 
+## Smart notifications
+
+Open **Notifications → Smart notifications** in the sidebar. On a phone, open
+**More** or **Browse sections** first.
+
+- **Smart Commute** (`/settings/smart-commute`): Enable local drive analysis for a
+  selected vehicle, then confirm or decline suggestions in Action Center. You
+  can also enter a routine without enabling history analysis. Pause or disable
+  checks, or delete derived commute data without deleting the original drives.
+  Live traffic comparisons, commute push, and sending destinations are not
+  available in this implementation.
+- **Charging readiness** (`/settings/smart-charging`): Choose a known charging
+  place, enter a planned departure and reserve, and enable the plan. Review
+  actionable plug-in, slow-charging, and schedule warnings in Action Center.
+  An intended charging start is a date and time you enter, not a command.
+  TeslaSync compares its clock time with the vehicle's fresh pending-schedule
+  signal; the vehicle signal does not identify a date. Pausing, snoozing, or
+  deleting the plan stops its current advice. Nothing changes the vehicle
+  schedule, charging current, or a place's prices.
+
+ForwardAuth is optional. With verified sign-in, derived plans, routines, and
+devices are separate by account. Without sign-in, people who can access that
+installation share its plans, routines, and device settings.
+
+### Optional personal browser push
+
+In-app recommendations work without push credentials. For charging push, set
+`TESLASYNC_VAPID_PUBLIC_KEY`, `TESLASYNC_VAPID_PRIVATE_KEY`, `TESLASYNC_VAPID_SUBJECT`,
+and the same `ENCRYPTION_KEY` on the API and notification worker. In Helm, use the
+chart's `webPush` and `encryption` values. Keep private keys in the deployment's
+secret configuration. Use a supported browser on a secure, same-origin
+connection, then choose **Connect this browser** under **Charging readiness**.
+After the device is verified, turn on charging push for that device separately.
+
+The browser push service receives an encrypted, short-lived token, not trip
+details. TeslaSync checks scope, device consent, and current evidence before
+showing a generic notification. Device disconnect invalidates its pending
+personal deliveries but leaves the charging plan and ordinary alert channels
+unchanged. If push is unavailable, check Action Center; TeslaSync does not fall
+back to broadcasting advice to an existing channel.
+
+For a local synthetic check, run the real-handler browser journey against a
+disposable PostgreSQL database and a production web build. The
+`private-notifications` job in `frontend-quality.yml` shows the exact
+environment and command. It does not need a Tesla account or a live push
+provider. To roll back the dated charging-start feature, pause affected plans
+and stop the worker before applying migration `000265` down; it removes recorded
+start times and invalidates their associated notifications.
+
+## Notification history and health
+
 The header's **View settings** owns the date range for inbox history and its
 Notification activity report. Use **All time** to include older Alert Studio
 notifications rather than adding a second date picker inside the page.
