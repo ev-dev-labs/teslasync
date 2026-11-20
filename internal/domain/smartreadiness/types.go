@@ -24,8 +24,9 @@ type Plan struct {
 }
 
 type ScheduledStart struct {
-	At       time.Time `json:"at"`
-	TimeZone string    `json:"time_zone"`
+	At            time.Time `json:"at"`
+	TimeZone      string    `json:"time_zone"`
+	PowerCeilingW *float64  `json:"power_ceiling_w,omitempty"`
 }
 
 type TripLegs struct {

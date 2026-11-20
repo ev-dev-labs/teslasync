@@ -174,18 +174,19 @@ type RecurringDriveEvidence struct {
 }
 
 type ChargingReadinessEvidence struct {
-	PlanID           int64                                `json:"plan_id"`
-	Kind             string                               `json:"kind"`
-	PlaceName        string                               `json:"place_name"`
-	BatteryPct       float64                              `json:"battery_pct"`
-	ArrivalLowPct    float64                              `json:"arrival_low_pct"`
-	ArrivalHighPct   float64                              `json:"arrival_high_pct"`
-	ReservePct       float64                              `json:"reserve_pct"`
-	ChargingPowerW   *float64                             `json:"charging_power_w,omitempty"`
-	CurrentLimit     *smartreadiness.ChargingCurrentLimit `json:"current_limit,omitempty"`
-	TripProjection   *smartreadiness.TripProjection       `json:"trip_projection,omitempty"`
-	DepartureAt      time.Time                            `json:"departure_at"`
-	ScheduledStartAt *time.Time                           `json:"scheduled_start_at,omitempty"`
+	PlanID                 int64                                `json:"plan_id"`
+	Kind                   string                               `json:"kind"`
+	PlaceName              string                               `json:"place_name"`
+	BatteryPct             float64                              `json:"battery_pct"`
+	ArrivalLowPct          float64                              `json:"arrival_low_pct"`
+	ArrivalHighPct         float64                              `json:"arrival_high_pct"`
+	ReservePct             float64                              `json:"reserve_pct"`
+	ChargingPowerW         *float64                             `json:"charging_power_w,omitempty"`
+	CurrentLimit           *smartreadiness.ChargingCurrentLimit `json:"current_limit,omitempty"`
+	TripProjection         *smartreadiness.TripProjection       `json:"trip_projection,omitempty"`
+	DepartureAt            time.Time                            `json:"departure_at"`
+	ScheduledStartAt       *time.Time                           `json:"scheduled_start_at,omitempty"`
+	ScheduledPowerCeilingW *float64                             `json:"scheduled_power_ceiling_w,omitempty"`
 }
 
 type EvidenceItem struct {

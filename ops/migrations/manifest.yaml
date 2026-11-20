@@ -672,3 +672,19 @@ migrations:
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-19"
+
+  - version: 266
+    name: smart_charging_schedule_power_ceiling
+    forward_compatible: false
+    forward_compatibility_notes: An older API can drop the ceiling when replacing a plan; stop readiness workers and pause affected plans before running older binaries.
+    requires_downtime: true
+    rollback_notes: Leave the schema applied to preserve the user-entered site power ceilings.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Adds a nullable column under a brief ACCESS EXCLUSIVE lock and validates a plan check.
+    reversible: false
+    irreversible_justification: Explicit down removes the optional power ceilings and invalidates derived pre-departure schedule conflict tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"

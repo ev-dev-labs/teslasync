@@ -224,6 +224,13 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
                 })}
               </Text>
             )}
+            {plan.scheduled_start?.power_ceiling_w != null && (
+              <Text as="p" variant="bodySm">
+                {t('smartCharging.planPowerCeiling', 'Maximum site power: {{power}} (entered by you).', {
+                  power: formatPower(plan.scheduled_start.power_ceiling_w),
+                })}
+              </Text>
+            )}
             <Text as="p" variant="bodySm">
               {plan.trip_legs
                 ? t('smartCharging.planLegEstimates', 'Outbound use: {{outLow}}-{{outHigh}}%; return use: {{returnLow}}-{{returnHigh}}%; reserve: {{reserve}}%.', {

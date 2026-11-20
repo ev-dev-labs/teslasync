@@ -80,6 +80,7 @@ export interface ActionCenterChargingReadinessEvidence {
   trip_projection?: SmartChargingTripProjection;
   departure_at: string;
   scheduled_start_at?: string;
+  scheduled_power_ceiling_w?: number;
 }
 
 export interface ActionCenterEvidence {

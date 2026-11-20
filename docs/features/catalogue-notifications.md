@@ -31,9 +31,11 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   actionable plug-in, slow-charging, and schedule warnings in Action Center.
   An intended charging start is a date and time you enter, not a command.
   TeslaSync compares its clock time with the vehicle's fresh pending-schedule
-  signal; the vehicle signal does not identify a date. Pausing, snoozing, or
-  deleting the plan stops its current advice. Nothing changes the vehicle
-  schedule, charging current, or a place's prices.
+  signal; the vehicle signal does not identify a date. If you also enter a
+  known site power limit, TeslaSync can warn that even a best-case estimate
+  leaves too little time to charge before departure. The limit is not measured
+  power. Pausing, snoozing, or deleting the plan stops its current advice.
+  Nothing changes the vehicle schedule, charging current, or a place's prices.
 
 ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
@@ -61,8 +63,9 @@ disposable PostgreSQL database and a production web build. The
 `private-notifications` job in `frontend-quality.yml` shows the exact
 environment and command. It does not need a Tesla account or a live push
 provider. To roll back the dated charging-start feature, pause affected plans
-and stop the worker before applying migration `000265` down; it removes recorded
-start times and invalidates their associated notifications.
+and stop the worker before applying migrations `000266` and `000265` down.
+They remove the recorded power limits and start times and invalidate affected
+notifications. Leave the schema applied if you need to preserve those inputs.
 
 ## Notification history and health
 

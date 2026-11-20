@@ -84,7 +84,12 @@ func testRepository(t *testing.T) (*readinessdb.Repository, *database.DB) {
 
 func applyMigration(t *testing.T, db *database.DB, direction string) {
 	t.Helper()
-	names := []string{"000260_smart_charging_readiness", "000261_smart_charging_slow_samples", "000262_smart_charging_site_rate_consent", "000263_smart_personal_push", "000264_smart_charging_trip_legs", "000265_smart_charging_scheduled_start"}
+	names := []string{
+		"000260_smart_charging_readiness", "000261_smart_charging_slow_samples",
+		"000262_smart_charging_site_rate_consent", "000263_smart_personal_push",
+		"000264_smart_charging_trip_legs", "000265_smart_charging_scheduled_start",
+		"000266_smart_charging_schedule_power_ceiling",
+	}
 	if direction == "down" {
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {
 			names[i], names[j] = names[j], names[i]

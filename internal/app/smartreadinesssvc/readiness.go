@@ -103,11 +103,12 @@ func Evaluate(
 	var powerW float64
 	_, _, lowPossible, _ := departureRequirements(plan)
 	if pendingState {
-		scheduleAt, matches := latePendingStart(plan, values, now)
+		projection, scheduleAt, matches := pendingStartProjection(plan, values, now, battery)
 		if !lowPossible || !matches {
 			return Decision{Reason: ReasonPlugged}
 		}
 		kind = domain.DecisionScheduleConflict
+		projectedBattery = projection
 		if scheduleAt.Before(observedAt) {
 			observedAt = scheduleAt
 		}

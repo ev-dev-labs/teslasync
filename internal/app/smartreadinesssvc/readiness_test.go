@@ -158,6 +158,51 @@ func TestEvaluateDatedScheduleConflict(t *testing.T) {
 	}
 }
 
+func TestEvaluateScheduleBeforeDepartureUsesKnownSiteLimit(t *testing.T) {
+	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name        string
+		limitW      float64
+		capacityAge time.Duration
+		want        Reason
+	}{
+		{"even best-case power misses reserve", 3200, 45 * time.Second, ReasonEligible},
+		{"no known power limit", 0, 0, ReasonPlugged},
+		{"maximum power could meet reserve", 24000, 0, ReasonEnoughCharge},
+		{"stale pack energy", 3200, 3 * time.Minute, ReasonPlugged},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := Plan{
+				Enabled: true, NotifyAt: now, DepartureAt: now.Add(5 * time.Hour),
+				ScheduledStart: &domain.ScheduledStart{At: now.Add(4 * time.Hour), TimeZone: "UTC"},
+				TripUseLowPct:  35, TripUseHighPct: 45, ReservePct: 20,
+			}
+			if tt.limitW > 0 {
+				plan.ScheduledStart.PowerCeilingW = &tt.limitW
+			}
+			values := map[string]*signal.Value{
+				"BatteryLevel":               {Raw: 40.0, Timestamp: now},
+				"DetailedChargeState":        {Raw: "NoPower", Timestamp: now},
+				"Gear":                       {Raw: "P", Timestamp: now},
+				"LocationLatitude":           {Raw: 47.1, Timestamp: now},
+				"LocationLongitude":          {Raw: -122.1, Timestamp: now},
+				"ScheduledChargingPending":   {Raw: true, Timestamp: now},
+				"ScheduledChargingStartTime": {Raw: plan.ScheduledStart.At.AddDate(0, 0, -1), Timestamp: now},
+				"ChargePortLatch":            {Raw: "Engaged", Timestamp: now},
+				"NominalFullPackEnergyKwh":   {Raw: 80000.0, Timestamp: now.Add(-tt.capacityAge)},
+			}
+			got := Evaluate(plan, values, now, func(_, _ float64) bool { return true })
+			if got.Reason != tt.want {
+				t.Fatalf("decision = %+v, want %s", got, tt.want)
+			}
+			if tt.want == ReasonEligible && (got.Kind != domain.DecisionScheduleConflict || got.ArrivalHighPct != 9 ||
+				!got.ExpiresAt.Equal(now.Add(signal.LiveSignalFreshnessThreshold-tt.capacityAge))) {
+				t.Fatalf("schedule conflict evidence = %+v", got)
+			}
+		})
+	}
+}
 func TestEvaluateChargingFeasibilityCurrentLimitEvidence(t *testing.T) {
 	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
 	plan := Plan{

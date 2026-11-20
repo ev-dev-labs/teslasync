@@ -23,7 +23,7 @@ export interface SmartChargingPlanInput {
   enabled: boolean
   notify_at: string
   departure_at: string
-  scheduled_start?: { at: string; time_zone: string }
+  scheduled_start?: { at: string; time_zone: string; power_ceiling_w?: number }
   trip_use_low_pct: number
   trip_use_high_pct: number
   trip_legs?: SmartChargingTripLegs

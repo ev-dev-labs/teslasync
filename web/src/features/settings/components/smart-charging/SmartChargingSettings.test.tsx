@@ -137,11 +137,13 @@ describe('private charging readiness settings', () => {
     renderSettings()
     fireEvent.click(await screen.findByRole('button', { name: 'Add a trip plan' }))
     fillPlan('2026-03-08T12:00', '2026-03-08T18:00')
-    fireEvent.change(screen.getByLabelText('Intended charging start (optional)'), { target: { value: '2026-03-08T20:00' } })
+    fireEvent.change(screen.getByLabelText('Intended charging start (optional)'), { target: { value: '2026-03-08T17:00' } })
+    fireEvent.change(screen.getByLabelText('Maximum site power (W, optional)'), { target: { value: '1800' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save plan' }))
     expect(await screen.findByText(/Status: Paused/)).toBeInTheDocument()
-    const expectedStart = { at: '2026-03-08T20:00:00.000Z', time_zone: 'UTC' }
+    const expectedStart = { at: '2026-03-08T17:00:00.000Z', time_zone: 'UTC', power_ceiling_w: 1800 }
     expect(screen.getByText(/Intended charging start:.*entered by you/)).toBeVisible()
+    expect(screen.getByText(/Maximum site power:.*entered by you/)).toBeVisible()
     const created = requestMock.mock.calls.find(([path, options]) => path === '/smart-charging/plans' && options?.method === 'POST')
     expect(JSON.parse(String(created?.[1].body))).toMatchObject({ enabled: false, scheduled_start: expectedStart })
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }))

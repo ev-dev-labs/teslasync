@@ -316,19 +316,22 @@ func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 	j.enroll("subject-a", "https://push.example.invalid/device-a")
 	j.enroll("subject-b", "https://push.example.invalid/device-b")
 	plan := testPlan(j.now)
-	plan.ScheduledStart = &readiness.ScheduledStart{At: plan.DepartureAt.Add(time.Hour), TimeZone: "UTC"}
+	ceilingW := 3200.0
+	plan.ScheduledStart = &readiness.ScheduledStart{At: plan.DepartureAt.Add(-time.Hour), TimeZone: "UTC", PowerCeilingW: &ceilingW}
 	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
 	var saved struct {
 		Data readiness.Plan `json:"data"`
 	}
 	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &saved) != nil ||
-		saved.Data.ScheduledStart == nil || !saved.Data.ScheduledStart.At.Equal(plan.ScheduledStart.At) {
+		saved.Data.ScheduledStart == nil || !saved.Data.ScheduledStart.At.Equal(plan.ScheduledStart.At) ||
+		saved.Data.ScheduledStart.PowerCeilingW == nil || *saved.Data.ScheduledStart.PowerCeilingW != ceilingW {
 		t.Fatalf("create dated plan: %d %s", rec.Code, rec.Body.String())
 	}
 	j.live.setChargeState("NoPower")
 	j.live.values["ScheduledChargingPending"] = &signal.Value{Raw: true}
 	j.live.values["ScheduledChargingStartTime"] = &signal.Value{Raw: plan.ScheduledStart.At.AddDate(0, 0, -1)}
 	j.live.values["ChargePortLatch"] = &signal.Value{Raw: "Engaged"}
+	j.live.values["NominalFullPackEnergyKwh"] = &signal.Value{Raw: 80000.0}
 	j.advance(j.now)
 	j.process()
 	messages := j.sender.messages()

@@ -174,7 +174,9 @@ func (s *Service) SavePlan(ctx context.Context, subject string, plan domain.Plan
 		if !validScheduledStart(start, plan) {
 			return nil, fmt.Errorf("%w: invalid dated charging start or time zone", ErrInvalidInput)
 		}
-		plan.ScheduledStart = &domain.ScheduledStart{At: start.At.UTC(), TimeZone: start.TimeZone}
+		normalized := *start
+		normalized.At = start.At.UTC()
+		plan.ScheduledStart = &normalized
 	}
 	return s.repository.SavePlan(ctx, subject, plan, now)
 }

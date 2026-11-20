@@ -20,16 +20,24 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   if (charging) {
     const projection = charging.trip_projection ? displayProjection(charging.trip_projection, charging.reserve_pct) : undefined;
     if (charging.kind === 'schedule_conflict' && charging.scheduled_start_at) {
+      const { scheduled_power_ceiling_w: powerCeiling } = charging;
+      const context = {
+        battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+        start: formatDateTime(charging.scheduled_start_at), departure: formatDateTime(charging.departure_at),
+      };
       const summary = [
-        t('smartCharging.scheduleActionSummary', 'Battery {{battery}}% at {{place}}. If charging starts at the time you entered ({{start}}), it will not add charge before departure ({{departure}}).', {
-          battery: fmtNumber(charging.battery_pct), place: charging.place_name,
-          start: formatDateTime(charging.scheduled_start_at), departure: formatDateTime(charging.departure_at),
-        }),
+        powerCeiling == null
+          ? t('smartCharging.scheduleActionSummary', 'Battery {{battery}}% at {{place}}. If charging starts at the time you entered ({{start}}), it will not add charge before departure ({{departure}}).', context)
+          : t('smartCharging.schedulePowerActionSummary', 'Battery {{battery}}% at {{place}}. If charging starts at {{start}}, even the {{power}} limit you entered may not leave enough charge for your {{departure}} departure.', {
+            ...context, power: formatPower(powerCeiling),
+          }),
         projection?.summary,
       ].filter(Boolean).join(' ');
       return {
         ...recommendation,
-        title: t('smartCharging.scheduleActionTitle', 'Review charging scheduled for departure or later'),
+        title: powerCeiling == null
+          ? t('smartCharging.scheduleActionTitle', 'Review charging scheduled for departure or later')
+          : t('smartCharging.schedulePowerActionTitle', 'Scheduled charging may finish too late for your trip'),
         summary,
         rationale: t('smartCharging.scheduleActionRationale', 'The vehicle is plugged in and reports a pending schedule matching the clock time you entered.'),
         confidence: {
@@ -37,12 +45,18 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
           basis: [
             t('smartCharging.scheduleActionBasis', 'Fresh charging-port latch and pending schedule observations'),
             t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you'),
+            ...(powerCeiling == null ? [] : [
+              t('smartCharging.schedulePowerActionBasis', 'Fresh nominal pack energy and the site power limit you entered'),
+            ]),
           ],
         },
         evidence: recommendation.evidence.map((item) =>
           item.charging_readiness ? { ...item, summary } : item),
         limitations: [
           t('smartCharging.scheduleActionLimitation', 'The vehicle reports a clock time, not the date of the next start. No schedule was changed.'),
+          ...(powerCeiling == null ? [] : [
+            t('smartCharging.schedulePowerActionLimitation', 'The estimate assumes uninterrupted charging at the entered limit without losses. The limit is not measured power.'),
+          ]),
           ...(projection?.assumptions ?? []),
         ],
       };

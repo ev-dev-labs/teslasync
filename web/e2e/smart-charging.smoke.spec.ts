@@ -232,6 +232,7 @@ for (const variant of [
     await waitForHarnessReady(page, api)
     const card = page.getByRole('article', { name: 'Plug in before your planned trip' })
     const schedule = page.getByRole('article', { name: 'Review charging scheduled for departure or later' })
+    const shortWindow = page.getByRole('article', { name: 'Scheduled charging may finish too late for your trip' })
     await expect(card).toHaveCount(0)
     await page.goto('/settings?vehicle_id=7#smart-charging')
     await waitForHarnessReady(page, api)
@@ -266,11 +267,29 @@ for (const variant of [
       await expect(schedule).toBeVisible()
       await expect(schedule.getByText(/If charging starts at the time you entered/)).toBeVisible()
 
+      await page.goto('/settings/smart-charging?vehicle_id=7')
+      await waitForHarnessReady(page, api)
+      await page.getByRole('button', { name: 'Edit', exact: true }).click()
+      const earlierStart = inputTime(Date.parse(`${intendedStart}Z`) - 2 * 60 * 60_000)
+      await page.getByLabel('Intended charging start (optional)').fill(earlierStart)
+      await page.getByLabel('Maximum site power (W, optional)').fill('2000')
+      await page.getByRole('button', { name: 'Save plan' }).click()
+      await expect(page.getByText(/Maximum site power:.*entered by you/)).toBeVisible()
+      const pendingEarlier = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
+        data: { state: 'NoPower', advance_seconds: 60, schedule_clock: earlierStart.slice(11) },
+      })
+      expect(pendingEarlier.status()).toBe(204)
+      await page.goto('/action-center?vehicle_id=7')
+      await waitForHarnessReady(page, api)
+      await expect(shortWindow).toBeVisible()
+      await expect(shortWindow.getByText(/limit you entered may not leave enough charge/)).toBeVisible()
+
       const cleared = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, { data: { state: 'NoPower' } })
       expect(cleared.status()).toBe(204)
       await page.reload()
       await waitForHarnessReady(page, api)
       await expect(schedule).toHaveCount(0)
+      await expect(shortWindow).toHaveCount(0)
       const disconnected = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
         data: { state: 'Disconnected', advance_seconds: 60 },
       })
@@ -314,6 +333,7 @@ for (const variant of [
     await expect(card).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Charging may not be ready before your trip' })).toHaveCount(0)
     await expect(schedule).toHaveCount(0)
+    await expect(shortWindow).toHaveCount(0)
     await page.goto('/settings?vehicle_id=7#smart-charging')
     await waitForHarnessReady(page, api)
     await expect(page.getByText(/No trip plan is saved/)).toBeVisible()

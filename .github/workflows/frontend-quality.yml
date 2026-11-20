@@ -49,6 +49,7 @@ on:
       - 'migrations/000263_smart_personal_push.*.sql'
       - 'migrations/000264_smart_charging_trip_legs.*.sql'
       - 'migrations/000265_smart_charging_scheduled_start.*.sql'
+      - 'migrations/000266_smart_charging_schedule_power_ceiling.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'

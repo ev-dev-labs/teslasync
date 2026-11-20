@@ -51,6 +51,7 @@ func (p smartChargingProvider) Recommendations(
 		)
 		var chargingPowerW *float64
 		var scheduledStartAt *time.Time
+		var scheduledPowerCeilingW *float64
 		if row.Decision.Kind == readiness.DecisionSlowCharging {
 			evidenceKind = "charging_feasibility"
 			title = "Charging may not be ready before your trip"
@@ -79,6 +80,14 @@ func (p smartChargingProvider) Recommendations(
 				row.Decision.BatteryPct, row.PlaceName)
 			basis = append(basis, "Fresh charging-port latch and pending schedule observations")
 			limitations = append(limitations, "The vehicle reports a clock time, not the date of the next start. No schedule was changed.")
+			if scheduledStartAt.Before(row.Plan.DepartureAt) && row.Plan.ScheduledStart.PowerCeilingW != nil {
+				scheduledPowerCeilingW = row.Plan.ScheduledStart.PowerCeilingW
+				title = "Scheduled charging may finish too late for your trip"
+				summary = fmt.Sprintf("Battery %.0f%% at %s. Even at the %.0f W site limit you entered, the estimated reserve would fall short.",
+					row.Decision.BatteryPct, row.PlaceName, *scheduledPowerCeilingW)
+				basis = append(basis, "Fresh nominal pack energy and the entered site power limit")
+				limitations = append(limitations, "The estimate assumes uninterrupted charging at the entered limit without losses. The limit is not measured power.")
+			}
 		} else if row.Decision.Kind == readiness.DecisionTripReview {
 			title = "Review a charging stop before your trip"
 			rationale = "Even the lower entered trip-use estimates cannot meet the reserve by charging only at the selected place."
@@ -146,6 +155,7 @@ func (p smartChargingProvider) Recommendations(
 					ReservePct: row.Plan.ReservePct, ChargingPowerW: chargingPowerW,
 					CurrentLimit: row.Decision.CurrentLimit, TripProjection: row.Decision.TripProjection,
 					DepartureAt: row.Plan.DepartureAt, ScheduledStartAt: scheduledStartAt,
+					ScheduledPowerCeilingW: scheduledPowerCeilingW,
 				},
 			}},
 			SafeActions:    []domain.ActionType{domain.ActionNavigate, domain.ActionSmartChargingSnooze},

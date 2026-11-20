@@ -27,6 +27,7 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
     notify: initialNotify,
     departure: initialDeparture,
     scheduledStart: initialStart,
+    powerCeiling: plan?.scheduled_start?.power_ceiling_w == null ? '' : String(plan.scheduled_start.power_ceiling_w),
     low: plan ? String(plan.trip_use_low_pct) : '',
     high: plan ? String(plan.trip_use_high_pct) : '',
     reserve: plan ? String(plan.reserve_pct) : '',
@@ -53,6 +54,7 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
     const departure = resolveTime(draft.departure, initialDeparture, plan?.departure_at)
     const scheduledStart = draft.scheduledStart
       ? resolveTime(draft.scheduledStart, initialStart, plan?.scheduled_start?.at) : null
+    const powerCeiling = scheduledStart && draft.powerCeiling.trim() ? Number(draft.powerCeiling) : null
     const numbers = draft.separateLegs
       ? [draft.outboundLow, draft.outboundHigh, draft.returnLow, draft.returnHigh, draft.reserve]
       : [draft.low, draft.high, draft.reserve]
@@ -70,6 +72,7 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
       departure.getTime() <= now + 30 * 60_000 || departure.getTime() > latest.getTime() ||
       (draft.scheduledStart && (!scheduledStart || scheduledStart < notify ||
         scheduledStart.getTime() > departure.getTime() + 24 * 60 * 60_000)) ||
+      (powerCeiling != null && (!Number.isFinite(powerCeiling) || powerCeiling < 1 || powerCeiling > 500000)) ||
       numbers.some((value) => !value.trim() || !Number.isFinite(Number(value))) ||
       low < 0 || high < low || high > 100 || reserve < 0 || reserve > 100 ||
       (draft.separateLegs && (outboundLow < 0 || outboundHigh < outboundLow || outboundHigh > 100 ||
@@ -83,8 +86,11 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
     const saved = await onSave({
       vehicle_id: vehicleId, charging_place_id: place, enabled: draft.enabled,
       notify_at: notify.toISOString(), departure_at: departure.toISOString(),
-      ...(scheduledStart ? { scheduled_start: draft.scheduledStart === initialStart && plan?.scheduled_start
-        ? plan.scheduled_start : { at: scheduledStart.toISOString(), time_zone: tz } } : {}),
+      ...(scheduledStart ? { scheduled_start: {
+        at: scheduledStart.toISOString(),
+        time_zone: draft.scheduledStart === initialStart && plan?.scheduled_start ? plan.scheduled_start.time_zone : tz,
+        ...(powerCeiling != null ? { power_ceiling_w: powerCeiling } : {}),
+      } } : {}),
       trip_use_low_pct: low, trip_use_high_pct: high, reserve_pct: reserve,
       compare_site_rates: draft.compareSiteRates,
       ...(draft.separateLegs ? { trip_legs: {
@@ -111,7 +117,7 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
         <Select label={t('smartCharging.place', 'Known charging place')} required
           placeholder={t('smartCharging.selectPlace', 'Select a charging place')}
           value={draft.place} options={places.map((place) => ({ value: String(place.id), label: place.name }))}
-          onChange={(event) => setDraft({ ...draft, place: event.target.value, compareSiteRates: false })} />
+          onChange={(event) => setDraft({ ...draft, place: event.target.value, compareSiteRates: false, powerCeiling: '' })} />
         <Input type="datetime-local" required label={t('smartCharging.notifyAt', 'Check from')}
           value={draft.notify} onChange={(event) => setDraft({ ...draft, notify: event.target.value })} />
         <Input type="datetime-local" required label={t('smartCharging.departureAt', 'Planned departure')}
@@ -122,6 +128,12 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
         <Input type="datetime-local" label={t('smartCharging.scheduledStart', 'Intended charging start (optional)')}
           hint={t('smartCharging.scheduledStartHint', 'Enter the date and time you expect charging to start, between “Check from” and one day after departure. This does not set a vehicle schedule.')}
           value={draft.scheduledStart} onChange={(event) => setDraft({ ...draft, scheduledStart: event.target.value })} />
+        {draft.scheduledStart && (
+          <Input type="number" min={1} max={500000} step="any"
+            label={t('smartCharging.schedulePowerCeiling', 'Maximum site power (W, optional)')}
+            hint={t('smartCharging.schedulePowerCeilingHint', 'Enter a known upper limit for this charging place. Leave blank if you do not know it. This does not change charging power.')}
+            value={draft.powerCeiling} onChange={(event) => setDraft({ ...draft, powerCeiling: event.target.value })} />
+        )}
       </div>
       <div className="space-y-3">
         <Toggle label={t('smartCharging.separateLegs', 'Estimate outbound and return separately')}
