@@ -33,7 +33,13 @@ export interface SmartCommuteRoutine {
   snoozed_until: string | null
   created_at: string
   updated_at: string
-  traffic_consent?: { lead_s: number; min_savings_s: number; can_skip_today: boolean; arrival_deadline_s?: number }
+  traffic_consent?: {
+    lead_s: number
+    min_savings_s: number
+    can_skip_today: boolean
+    arrival_deadline_s?: number
+    compare_route_energy?: boolean
+  }
 }
 
 export interface SmartCommuteRoutineInput {
@@ -67,6 +73,23 @@ export interface SmartCommuteTrafficDecision {
   expires_at: string
   arrival_deadline_at?: string
   latest_departure_at?: string
+  route_energy?: SmartCommuteRouteEnergy
+  route_energy_only?: boolean
+}
+
+export interface SmartCommuteRouteEnergy {
+  fastest: SmartCommuteRouteEnergyBand
+  saving: SmartCommuteRouteEnergyBand
+  outside_c: number
+  expires_at: string
+}
+
+export interface SmartCommuteRouteEnergyBand {
+  eta_s: number
+  drive_count: number
+  low_wh: number
+  median_wh: number
+  high_wh: number
 }
 
 export interface SmartCommuteTrafficPreview {
@@ -82,4 +105,5 @@ export interface SmartCommuteTrafficInput {
   lead_s: number
   min_savings_s: number
   arrival_deadline_s?: number
+  compare_route_energy?: boolean
 }

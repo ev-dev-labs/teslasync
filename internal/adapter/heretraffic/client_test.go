@@ -97,6 +97,7 @@ func TestCompareHEREWireContract(t *testing.T) {
 				t.Fatalf("compare error = %v, calls = %d; want %v, %d", err, calls.Load(), tt.want, tt.wantCalls)
 			}
 			if tt.want == nil && (comparison.Usual.DurationS != 2580 || comparison.Alternative.DurationS != 1740 ||
+				len(comparison.OfferedRoutes) != 0 ||
 				!comparison.Usual.FlowUpdatedAt.Equal(now.Add(-time.Minute)) ||
 				!comparison.Alternative.FlowUpdatedAt.Equal(now.Add(-time.Minute))) {
 				t.Fatalf("unexpected fresh comparison: %+v", comparison)
@@ -162,9 +163,18 @@ func TestDeadlineEvidenceRequiresEveryOfferedRoute(t *testing.T) {
 			t.Cleanup(server.Close)
 			query := fixtureQuery(now)
 			query.RequireOfferedCoverage = true
+			query.IncludeRouteGeometry = true
 			result, err := fixtureClient(t, server.URL, now).Compare(t.Context(), query, func(context.Context) error { return nil })
 			if err != nil || result.Alternative.DurationS != 2760 || result.AlternativesQualified != tt.want {
 				t.Fatalf("unexpected deadline evidence: %+v, %v", result, err)
+			}
+			if tt.want {
+				if len(result.OfferedRoutes) != 3 || len(result.OfferedRoutes[0].Geometry) < 3 ||
+					result.OfferedRoutes[2].DurationS != 3000 {
+					t.Fatal("covered offered routes were not returned with their geometry and ETA")
+				}
+			} else if len(result.OfferedRoutes) != 0 {
+				t.Fatal("incomplete coverage must not expose route geometry for comparison")
 			}
 		})
 	}

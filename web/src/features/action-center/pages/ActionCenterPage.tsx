@@ -277,8 +277,12 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.12}>
         <RecommendationList
           key={scopeKey}
-          items={(query.data?.items ?? []).filter((item) => item.source_feature !== 'charging_site_performance' ||
-            (actionCenterState.status === 'ok' && Date.parse(item.expires_at) > Date.now()))}
+          items={(query.data?.items ?? []).filter((item) => {
+            const energyOnly = item.source_feature === 'smart_commute' &&
+              item.evidence.some((evidence) => evidence.commute_traffic?.route_energy_only)
+            return (item.source_feature !== 'charging_site_performance' && !energyOnly) ||
+              (actionCenterState.status === 'ok' && Date.parse(item.expires_at) > Date.now())
+          })}
           loading={!actionCenterState.hasData && query.isLoading}
           error={actionCenterState.fatalError}
           onRetry={() => void query.refetch()}

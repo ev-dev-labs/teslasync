@@ -44,6 +44,16 @@ type TrafficCheck struct {
 
 type NextTrafficCheck func(check TrafficCheck) (checkAt, departureAt time.Time, ok bool)
 
+type RouteEnergyDrive struct {
+	ID        int64
+	StartedAt time.Time
+	EndedAt   time.Time
+}
+
+type RouteEnergyHistory interface {
+	RouteEnergyDrives(ctx context.Context, check TrafficCheck, from, until time.Time, limit int) ([]RouteEnergyDrive, error)
+}
+
 type TrafficSource interface {
 	// Compare invokes authorize immediately before every outbound request.
 	Compare(ctx context.Context, query domain.TrafficQuery, authorize func(context.Context) error) (domain.TrafficComparison, error)

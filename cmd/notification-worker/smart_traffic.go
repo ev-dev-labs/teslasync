@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -33,7 +34,9 @@ func startSmartTraffic(ctx context.Context, cfg *config.Config, db *database.DB,
 		return func() {}
 	}
 	quietRepo := quiethoursdb.NewQuietHoursRepo(db)
-	service := smartcommutesvc.New(commutedb.NewRepository(db), smartcommutesvc.WithTrafficLiveReader(live),
+	commuteRepo := commutedb.NewRepository(db)
+	service := smartcommutesvc.New(commuteRepo, smartcommutesvc.WithTrafficLiveReader(live),
+		smartcommutesvc.WithRouteEnergyHistory(commuteRepo, signal.NewLogStateReader(db.Pool, log.Logger)),
 		smartcommutesvc.WithTrafficSharedOpenMode(tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader)),
 		smartcommutesvc.WithTrafficNotifier(notify),
 		smartcommutesvc.WithTrafficEvaluator(source, func(ctx context.Context, subject string, now time.Time) (bool, error) {

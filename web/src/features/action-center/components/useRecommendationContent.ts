@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { formatCommuteClock, useCommuteWeekdays } from '@/lib/smartCommuteDisplay';
+import { formatCommuteClock, useCommuteRouteEnergyDisplay, useCommuteWeekdays } from '@/lib/smartCommuteDisplay';
 import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay';
 import { useSitePerformanceDisplay } from '@/lib/sitePerformanceDisplay';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -10,6 +10,7 @@ import type { ActionCenterRecommendation } from '@/types/actionCenter';
 export function useRecommendationContent(recommendation: ActionCenterRecommendation): ActionCenterRecommendation {
   const { t } = useTranslation();
   const weekdays = useCommuteWeekdays();
+  const displayEnergy = useCommuteRouteEnergyDisplay();
   const { formatDateTime } = useDateFormat('user');
   const { fmtNumber } = useNumberFormatting();
   const { formatPower } = useUnits();
@@ -223,29 +224,34 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     ? recommendation.evidence.find((item) => item.kind === 'commute_traffic')?.commute_traffic
     : undefined;
   if (traffic) {
+    const energy = displayEnergy(traffic.route_energy);
+    if (traffic.route_energy_only && !energy) return recommendation;
+    const energyOnly = traffic.route_energy_only ? energy : null;
     const deadline = traffic.arrival_deadline_at && traffic.latest_departure_at
       ? t('smartCommute.traffic.deadline.recommendation', 'Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.', {
         latest: formatDateTime(traffic.latest_departure_at, { tz: traffic.time_zone }),
         deadline: formatDateTime(traffic.arrival_deadline_at, { tz: traffic.time_zone }),
       })
       : null;
-    const summary = t('smartCommute.traffic.actionSummary', 'HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.', {
+    const timing = t('smartCommute.traffic.actionSummary', 'HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.', {
       usual: fmtNumber(Math.round(traffic.usual_s / 60)), alternative: fmtNumber(Math.round(traffic.alternative_s / 60)),
     });
+    const summary = [energyOnly ? null : timing, energy?.fastest, energy?.saving].filter(Boolean).join(' ');
     const coverage = t('smartCommute.traffic.coverage', 'Both routes had fresh directional HERE Traffic Flow coverage');
     return {
       ...recommendation,
-      title: deadline
+      title: energyOnly ? energyOnly.title : deadline
         ? t('smartCommute.traffic.deadline.title', 'Leave earlier to make your arrival deadline')
         : t('smartCommute.traffic.actionTitle', 'A faster route is available before your departure'),
       summary: deadline ? `${deadline} ${summary}` : summary,
-      rationale: deadline
+      rationale: energyOnly ? energyOnly.rationale : deadline
         ? t('smartCommute.traffic.deadline.rationale', 'Even the fastest qualifying estimate misses your deadline at the planned departure time.')
         : t('smartCommute.traffic.rationale', 'Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.'),
-      confidence: { ...recommendation.confidence, basis: [coverage] },
+      confidence: { ...recommendation.confidence, basis: energy ? [coverage, energy.conditions] : [coverage] },
       evidence: recommendation.evidence.map((item) => item.commute_traffic ? { ...item, summary } : item),
       limitations: [
         t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.'),
+        ...(energy ? [energy.limits] : []),
         ...(deadline ? [t('smartCommute.traffic.deadline.limitations', 'TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.')] : []),
       ],
     };

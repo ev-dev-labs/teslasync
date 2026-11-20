@@ -114,6 +114,7 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 	for _, file := range []string{
 		"000223_action_center_state.up.sql", "000259_smart_commute.up.sql",
 		"000268_smart_commute_traffic_consent.up.sql", "000270_smart_commute_arrival_deadline.up.sql",
+		"000272_smart_commute_route_energy.up.sql",
 	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
 		if err != nil {
@@ -192,10 +193,13 @@ func newFixture(t *testing.T, options ...smartcommutesvc.Option) *fixture {
 	}
 	f := &fixture{db: db, spy: spy, now: now}
 	clock := func() time.Time { return f.now }
+	repo := commutedb.NewRepository(db)
+	stateReader := signal.NewLogStateReader(db.Pool, zerolog.Nop())
 	baseOptions := []smartcommutesvc.Option{smartcommutesvc.WithClock(clock),
 		smartcommutesvc.WithTrafficConnector(true),
-		smartcommutesvc.WithTrafficTraceReader(signal.NewLogStateReader(db.Pool, zerolog.Nop()))}
-	service := smartcommutesvc.New(commutedb.NewRepository(db), append(baseOptions, options...)...)
+		smartcommutesvc.WithTrafficTraceReader(stateReader),
+		smartcommutesvc.WithRouteEnergyHistory(repo, stateReader)}
+	service := smartcommutesvc.New(repo, append(baseOptions, options...)...)
 	f.commute = service
 	commuteHTTP := commutehandler.NewHandler(service, "X-Test-Subject")
 	actionService := actioncentersvc.New(

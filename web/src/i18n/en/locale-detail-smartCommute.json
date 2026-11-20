@@ -45,6 +45,16 @@
       "coverage": "Both routes had fresh directional HERE Traffic Flow coverage",
       "actionTitle": "A faster route is available before your departure",
       "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+      "energy": {
+        "allow": "Compare routes using local driving energy history",
+        "consent": "Off by default. TeslaSync checks comparable completed drives locally. It never sends their routes, temperatures, or energy use to HERE. Energy comparisons do not send push notifications.",
+        "title": "Compare a lower-energy route before departure",
+        "fastest": "Fastest offered route: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "saving": "Lower-energy alternative: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "rationale": "Comparable completed drives used less energy on the slower route under similar conditions.",
+        "conditions": "Matched routes, travel times, and outside temperature near {{temp}}.",
+        "limits": "The recorded ranges suggest a lower-energy option; they do not measure or guarantee energy use on your next trip."
+      },
       "deadline": {
         "input": "Arrival deadline (optional)",
         "help": "Set a time within six hours after departure in {{zone}}, or leave it blank. This stays in TeslaSync and does not require calendar access.",

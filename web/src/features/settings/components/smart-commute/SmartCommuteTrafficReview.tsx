@@ -38,6 +38,7 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
     return saved == null ? '' : formatCommuteClock(saved)
   })
   const [allow, setAllow] = useState(false)
+  const [compareEnergy, setCompareEnergy] = useState(routine.traffic_consent?.compare_route_energy ?? false)
   const options = (history.data ?? []).filter((row) => row.vehicleId === routine.vehicle_id && row.endTs)
     .map((row) => ({
       value: String(row.id),
@@ -119,6 +120,13 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
           </div>
           <Toggle label={t('smartCommute.traffic.allow', 'Allow sharing this trace with HERE for this routine')}
             checked={allow} disabled={disabled} onChange={setAllow} />
+          <div className="space-y-2">
+            <Toggle label={t('smartCommute.traffic.energy.allow', 'Compare routes using local driving energy history')}
+              checked={compareEnergy} disabled={disabled} onChange={setCompareEnergy} />
+            <Text as="p" variant="bodySm">
+              {t('smartCommute.traffic.energy.consent', 'Off by default. TeslaSync checks comparable completed drives locally. It never sends their routes, temperatures, or energy use to HERE. Energy comparisons do not send push notifications.')}
+            </Text>
+          </div>
         </div>
       )}
       <div className="flex flex-wrap gap-2">
@@ -129,6 +137,7 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
               drive_id: reviewed.drive_id, fingerprint: reviewed.fingerprint,
               lead_s: leadMinutes * 60, min_savings_s: minimumMinutes * 60, share_with_here: true,
               ...(deadlineS != null ? { arrival_deadline_s: deadlineS } : {}),
+              ...(compareEnergy ? { compare_route_energy: true } : {}),
             } }).then((saved) => { if (saved) onClose() })
           }}>
           {t('smartCommute.traffic.enable', 'Enable traffic checks')}

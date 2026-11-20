@@ -84,7 +84,7 @@ func revokeCommuteDeliveries(ctx context.Context, tx pgx.Tx, id int64, now time.
 
 const commuteDeliveryScope = `
 	FROM smart_commute_traffic_decisions d
-	JOIN smart_commute_traffic_consent c ON c.id=d.consent_id
+	JOIN smart_commute_traffic_consent c ON c.id=d.consent_id AND NOT d.route_energy_only
 	JOIN smart_commute_routines r ON r.id=c.routine_id AND r.status='confirmed'
 	JOIN smart_commute_settings s ON s.subject=r.subject AND s.vehicle_id=r.vehicle_id
 	  AND s.updated_at=d.settings_updated_at AND s.enabled AND s.local_analysis_enabled AND NOT s.paused

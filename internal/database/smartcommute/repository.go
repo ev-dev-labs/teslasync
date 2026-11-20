@@ -61,7 +61,7 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 		return nil, fmt.Errorf("read smart commute settings: %w", err)
 	}
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT `+routineColumns+`, c.lead_s, c.min_savings_s, c.arrival_deadline_s,
+		SELECT `+routineColumns+`, c.lead_s, c.min_savings_s, c.arrival_deadline_s, COALESCE(c.compare_route_energy, false),
 		       coalesce(s.enabled AND NOT s.paused AND planned.departure_at > $3
 		         AND (planned.departure_at AT TIME ZONE r.time_zone)::date =
 		             ($3::timestamptz AT TIME ZONE r.time_zone)::date
@@ -89,8 +89,8 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 		var leadS *int
 		var minSavingsS *int64
 		var deadlineS *int
-		var canSkip bool
-		item, scanErr := scanRoutineWithExtras(rows, &leadS, &minSavingsS, &deadlineS, &canSkip)
+		var canSkip, compareRouteEnergy bool
+		item, scanErr := scanRoutineWithExtras(rows, &leadS, &minSavingsS, &deadlineS, &compareRouteEnergy, &canSkip)
 		if scanErr != nil {
 			return nil, fmt.Errorf("scan smart commute routine: %w", scanErr)
 		}
@@ -100,6 +100,7 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 		if leadS != nil && minSavingsS != nil {
 			item.TrafficConsent = &domain.TrafficConsentSummary{
 				LeadS: *leadS, MinSavingsS: *minSavingsS, CanSkip: canSkip, ArrivalDeadlineS: deadlineS,
+				CompareRouteEnergy: compareRouteEnergy,
 			}
 		}
 		result.Routines = append(result.Routines, *item)

@@ -855,6 +855,14 @@
         "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.",
         "title": "Leave earlier to make your arrival deadline"
       },
+      "energy": {
+        "conditions": "Matched routes, travel times, and outside temperature near {{temp}}.",
+        "fastest": "Fastest offered route: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "limits": "The recorded ranges suggest a lower-energy option; they do not measure or guarantee energy use on your next trip.",
+        "rationale": "Comparable completed drives used less energy on the slower route under similar conditions.",
+        "saving": "Lower-energy alternative: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "title": "Compare a lower-energy route before departure"
+      },
       "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
       "teslaRoute": "These are estimates, not measured trip times. Tesla calculates its own route."
     },

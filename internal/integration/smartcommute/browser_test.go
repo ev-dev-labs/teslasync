@@ -46,21 +46,30 @@ func TestPrivateCommuteBrowserJourney(t *testing.T) {
 
 func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 	requireCommuteBrowser(t)
-	t.Run("compare", func(t *testing.T) { runTrafficBrowserJourney(t, false) })
-	t.Run("arrival_deadline", func(t *testing.T) { runTrafficBrowserJourney(t, true) })
+	t.Run("compare", func(t *testing.T) { runTrafficBrowserJourney(t, "compare") })
+	t.Run("arrival_deadline", func(t *testing.T) { runTrafficBrowserJourney(t, "arrival_deadline") })
+	t.Run("route_energy", func(t *testing.T) { runTrafficBrowserJourney(t, "route_energy") })
 }
 
-func runTrafficBrowserJourney(t *testing.T, withDeadline bool) {
+func runTrafficBrowserJourney(t *testing.T, mode string) {
 	t.Helper()
-	live := &trafficLiveFixture{gear: "P"}
+	withDeadline, withEnergy := mode == "arrival_deadline", mode == "route_energy"
+	live := &energyLiveFixture{trafficLiveFixture: trafficLiveFixture{gear: "P"}}
 	var outbound atomic.Int64
 	var personalDelivery *smartdeliverysvc.Service
+	var offered []domain.TrafficRoute
 	source := trafficSourceFixture(func(ctx context.Context, query domain.TrafficQuery, authorize func(context.Context) error) (domain.TrafficComparison, error) {
 		if err := authorize(ctx); err != nil {
 			return domain.TrafficComparison{}, err
 		}
-		if len(query.Trace) < 3 || len(query.Trace) >= 21 {
+		if len(query.Trace) < 3 || (!withEnergy && len(query.Trace) >= 21) || query.IncludeRouteGeometry != withEnergy {
 			return domain.TrafficComparison{}, errors.New("unreviewed trace or departure")
+		}
+		if withEnergy {
+			outbound.Add(1)
+			return domain.TrafficComparison{
+				Usual: offered[0].TrafficEstimate, Alternative: offered[1].TrafficEstimate, OfferedRoutes: offered,
+			}, nil
 		}
 		usualS, alternativeS := int64(43*60), int64(29*60)
 		switch {
@@ -87,20 +96,29 @@ func runTrafficBrowserJourney(t *testing.T, withDeadline bool) {
 		}))
 	live.now = f.now
 	sender := &capturedPush{}
-	personalDelivery = attachCommuteDelivery(t, f, live, sender)
+	personalDelivery = attachCommuteDelivery(t, f, &live.trafficLiveFixture, sender)
 	var drive struct {
 		ID      int64     `json:"id"`
 		Start   time.Time `json:"start_ts"`
 		End     time.Time `json:"end_ts"`
 		Vehicle int64     `json:"vehicle_id"`
 	}
-	if err := f.db.Pool.QueryRow(context.Background(), `
+	var representativeID int64
+	if withEnergy {
+		offered, representativeID = seedRouteEnergyHistory(t, f, domain.Routine{
+			Origin:      domain.Point{Latitude: 47.1, Longitude: -122.1},
+			Destination: domain.Point{Latitude: 47.2, Longitude: -122.2},
+		}, false)
+	}
+	if err := f.db.Pool.QueryRow(t.Context(), `
 		SELECT id, started_at, ended_at, vehicle_id FROM drives
-		WHERE vehicle_id = 42 ORDER BY started_at DESC LIMIT 1`,
+		WHERE vehicle_id = 42 AND ($1 = 0 OR id = $1) ORDER BY started_at DESC LIMIT 1`, representativeID,
 	).Scan(&drive.ID, &drive.Start, &drive.End, &drive.Vehicle); err != nil {
 		t.Fatal(err)
 	}
-	seedObservedTrafficTrace(t, f, drive.Start)
+	if !withEnergy {
+		seedObservedTrafficTrace(t, f, drive.Start)
+	}
 	fixture := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/sw.js":
@@ -113,7 +131,7 @@ func runTrafficBrowserJourney(t *testing.T, withDeadline bool) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"drive": drive, "now": f.now, "outbound": outbound.Load(), "pushes": count, "latest_push": payload,
-				"with_deadline": withDeadline,
+				"mode": mode,
 			})
 		case r.URL.Path == "/__fixture/traffic" && r.Method == http.MethodPost:
 			if _, err := f.commute.ProcessTrafficChecks(r.Context(), 5); err != nil {

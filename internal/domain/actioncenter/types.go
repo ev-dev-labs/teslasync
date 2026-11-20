@@ -4,6 +4,7 @@ package actioncenter
 import (
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 )
 
@@ -197,11 +198,13 @@ type DepartureOverlapEvidence struct {
 }
 
 type CommuteTrafficEvidence struct {
-	UsualS            int64      `json:"usual_s"`
-	AlternativeS      int64      `json:"alternative_s"`
-	ArrivalDeadlineAt *time.Time `json:"arrival_deadline_at,omitempty"`
-	LatestDepartureAt *time.Time `json:"latest_departure_at,omitempty"`
-	TimeZone          string     `json:"time_zone,omitempty"`
+	UsualS            int64                               `json:"usual_s"`
+	AlternativeS      int64                               `json:"alternative_s"`
+	ArrivalDeadlineAt *time.Time                          `json:"arrival_deadline_at,omitempty"`
+	LatestDepartureAt *time.Time                          `json:"latest_departure_at,omitempty"`
+	TimeZone          string                              `json:"time_zone,omitempty"`
+	RouteEnergy       *smartcommute.TrafficEnergyEvidence `json:"route_energy,omitempty"`
+	RouteEnergyOnly   bool                                `json:"route_energy_only,omitempty"`
 }
 
 type EvidenceItem struct {

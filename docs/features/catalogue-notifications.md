@@ -92,6 +92,21 @@ When both types of advice apply they share one comparison and at most one
 personal push. To roll back this optional deadline feature, stop the worker
 and roll down `000270` before starting older binaries.
 
+For a pre-drive energy comparison, separately enable **Compare routes using
+local driving energy history** in the routine's traffic review. TeslaSync
+matches completed drives for that vehicle against the routes offered by HERE.
+Each compared route needs at least four distinct days with comparable travel
+times and outdoor temperatures, complete paired battery-power observations,
+and substantially different recorded energy ranges. The comparison separates
+HERE's estimated travel times from previously measured net battery energy;
+neither is a measurement of the upcoming trip. History stays on this
+installation. Missing coverage or inconclusive evidence produces no energy
+recommendation. An energy comparison alone never sends a push or operates
+the vehicle. Disconnect HERE to remove consent immediately; to keep timing
+checks without energy comparisons, review the trace again with energy
+comparison turned off. Migration `000272` down removes only the energy
+option and evidence, preserving existing timing and deadline decisions.
+
 **Skip today** suppresses the current occurrence. **Pause** suspends checks
 without deleting the approved trace. **Disconnect HERE**, turning off local
 analysis or Smart Commute, and editing or deleting the routine revoke the

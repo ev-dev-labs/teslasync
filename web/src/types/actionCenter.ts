@@ -1,4 +1,5 @@
 import type { SmartChargingSitePerformanceReview, SmartChargingTripProjection, SmartDepartureWindow } from './smartCharging';
+import type { SmartCommuteRouteEnergy } from './smartCommute';
 
 export type ActionCenterSourceFeature =
   | 'active_alerts'
@@ -99,6 +100,8 @@ export interface ActionCenterEvidence {
     arrival_deadline_at?: string;
     latest_departure_at?: string;
     time_zone?: string;
+    route_energy?: SmartCommuteRouteEnergy;
+    route_energy_only?: boolean;
   };
   site_performance?: SmartChargingSitePerformanceReview;
 }

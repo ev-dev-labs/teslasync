@@ -56,7 +56,7 @@ func (s *Service) SaveTrafficConsent(ctx context.Context, subject string, input 
 	}
 	return s.repository.SaveTrafficConsent(ctx, subject, drive.Routine, domain.TrafficConsent{
 		Trace: preview.Trace, LeadS: input.LeadS, MinSavingsS: input.MinSavingsS, ArrivalDeadlineS: input.ArrivalDeadlineS,
-		CheckAt: window.checkAt, DepartureAt: window.departureAt,
+		CompareRouteEnergy: input.CompareRouteEnergy, CheckAt: window.checkAt, DepartureAt: window.departureAt,
 	}, now)
 }
 
@@ -103,7 +103,7 @@ func (s *Service) previewTrafficTrace(ctx context.Context, subject string, vehic
 	}
 	rows, err := s.traceReader.Timeline(ctx, vehicleID, []signal.FieldMapping{
 		{Signal: "LocationLatitude", Field: "latitude"}, {Signal: "LocationLongitude", Field: "longitude"},
-	}, drive.StartedAt, drive.EndedAt, signal.TimelineOptions{MaxEvents: maxTrafficTraceRows})
+	}, drive.StartedAt.Add(-time.Microsecond), drive.EndedAt, signal.TimelineOptions{MaxEvents: maxTrafficTraceRows})
 	if errors.Is(err, signal.ErrTimelineEventLimit) {
 		return nil, nil, port.ErrTrafficTraceUnavailable
 	}

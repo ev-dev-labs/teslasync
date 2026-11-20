@@ -27,14 +27,15 @@ func (r *Repository) ClaimTrafficCheck(ctx context.Context, now time.Time, share
 		var latitudes, longitudes []float64
 		routine, err := scanRoutineWithExtras(tx.QueryRow(ctx, `
 			SELECT `+routineColumns+`, c.id, r.subject, s.time_zone, s.updated_at,
-			       c.latitudes, c.longitudes, c.lead_s, c.min_savings_s, c.check_at, c.departure_at, c.arrival_deadline_s
+			       c.latitudes, c.longitudes, c.lead_s, c.min_savings_s, c.check_at, c.departure_at,
+			       c.arrival_deadline_s, c.compare_route_energy
 			`+trafficScope+`
 			WHERE c.check_at <= $1 AND (r.subject = $2) = $3
 			ORDER BY c.check_at, c.id
 			LIMIT 1 FOR UPDATE OF c SKIP LOCKED`, now, personal.OpenSubject, sharedOpenMode),
 			&check.ConsentID, &check.Subject, &check.Settings.TimeZone, &check.SettingsUpdatedAt,
 			&latitudes, &longitudes, &check.Consent.LeadS, &check.Consent.MinSavingsS,
-			&check.Consent.CheckAt, &check.Consent.DepartureAt, &check.Consent.ArrivalDeadlineS)
+			&check.Consent.CheckAt, &check.Consent.DepartureAt, &check.Consent.ArrivalDeadlineS, &check.Consent.CompareRouteEnergy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -147,19 +148,20 @@ func (r *Repository) RecordTrafficDecision(
 	tag, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO smart_commute_traffic_decisions
 		  (consent_id, departure_at, settings_updated_at, usual_s, alternative_s, observed_at, expires_at,
-		   arrival_deadline_at, latest_departure_at)
-		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13
-		`+claimedTrafficScope+` AND $10::timestamptz > $11
+		   arrival_deadline_at, latest_departure_at, route_energy, route_energy_only)
+		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14, $15
+		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($14::jsonb IS NULL OR c.compare_route_energy)
 		ON CONFLICT (consent_id) DO UPDATE SET
 		    departure_at = EXCLUDED.departure_at, settings_updated_at = EXCLUDED.settings_updated_at,
 		    usual_s = EXCLUDED.usual_s, alternative_s = EXCLUDED.alternative_s,
 		    observed_at = EXCLUDED.observed_at, expires_at = EXCLUDED.expires_at,
-		    arrival_deadline_at = EXCLUDED.arrival_deadline_at, latest_departure_at = EXCLUDED.latest_departure_at
+		    arrival_deadline_at = EXCLUDED.arrival_deadline_at, latest_departure_at = EXCLUDED.latest_departure_at,
+		    route_energy = EXCLUDED.route_energy, route_energy_only = EXCLUDED.route_energy_only
 		WHERE smart_commute_traffic_decisions.departure_at < EXCLUDED.departure_at`,
 		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
 		check.SettingsUpdatedAt, check.Consent.DepartureAt, decision.UsualS,
 		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now,
-		decision.ArrivalDeadlineAt, decision.LatestDepartureAt)
+		decision.ArrivalDeadlineAt, decision.LatestDepartureAt, decision.RouteEnergy, decision.RouteEnergyOnly)
 	if err != nil {
 		return false, fmt.Errorf("persist claimed commute comparison: %w", err)
 	}
@@ -172,7 +174,7 @@ func (r *Repository) ListTrafficDecisions(
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT r.id, r.vehicle_id, r.name, v.display_name, r.time_zone, d.departure_at,
 		       d.usual_s, d.alternative_s, d.observed_at, d.expires_at, r.origin_latitude, r.origin_longitude,
-		       d.arrival_deadline_at, d.latest_departure_at
+		       d.arrival_deadline_at, d.latest_departure_at, d.route_energy, d.route_energy_only
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
@@ -186,7 +188,7 @@ func (r *Repository) ListTrafficDecisions(
 		var item domain.TrafficDecision
 		err := row.Scan(&item.RoutineID, &item.VehicleID, &item.RoutineName, &item.VehicleName, &item.TimeZone, &item.DepartureAt,
 			&item.UsualS, &item.AlternativeS, &item.ObservedAt, &item.ExpiresAt, &item.Origin.Latitude, &item.Origin.Longitude,
-			&item.ArrivalDeadlineAt, &item.LatestDepartureAt)
+			&item.ArrivalDeadlineAt, &item.LatestDepartureAt, &item.RouteEnergy, &item.RouteEnergyOnly)
 		return item, err
 	})
 	if err != nil {

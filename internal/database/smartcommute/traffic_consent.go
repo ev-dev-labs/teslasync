@@ -76,10 +76,10 @@ func (r *Repository) SaveTrafficConsent(
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO smart_commute_traffic_consent
-			  (routine_id, latitudes, longitudes, lead_s, min_savings_s, check_at, departure_at, consented_at, arrival_deadline_s)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			  (routine_id, latitudes, longitudes, lead_s, min_savings_s, check_at, departure_at, consented_at, arrival_deadline_s, compare_route_energy)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			routine.ID, latitudes, longitudes, consent.LeadS, consent.MinSavingsS,
-			consent.CheckAt, consent.DepartureAt, now, consent.ArrivalDeadlineS)
+			consent.CheckAt, consent.DepartureAt, now, consent.ArrivalDeadlineS, consent.CompareRouteEnergy)
 		if err != nil {
 			return fmt.Errorf("save reviewed traffic consent: %w", err)
 		}

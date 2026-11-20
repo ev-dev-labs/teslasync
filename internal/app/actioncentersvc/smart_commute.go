@@ -102,6 +102,18 @@ func trafficCandidate(row commute.TrafficDecision) domain.Candidate {
 		(row.UsualS+30)/60, (row.AlternativeS+30)/60)
 	title := "A faster route is available before your departure"
 	rationale := "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold."
+	basis := []string{"Both routes had fresh directional HERE Traffic Flow coverage"}
+	limitations := []string{"These are provider estimates, not measured trip times.", "Tesla calculates its own route."}
+	if row.RouteEnergy != nil {
+		basis = append(basis, "Locally measured battery draw and recovery on completed, comparable drives")
+		limitations = append(limitations, "Recorded energy ranges are not measurements of the upcoming trip.")
+	}
+	if row.RouteEnergyOnly && row.RouteEnergy != nil {
+		title = "Compare a lower-energy route before departure"
+		summary = fmt.Sprintf("The fastest offered route is estimated at %d minutes; the lower-energy alternative at %d minutes.",
+			(row.UsualS+30)/60, (row.AlternativeS+30)/60)
+		rationale = "Comparable completed drives used less energy on the slower route under similar conditions."
+	}
 	if row.LatestDepartureAt != nil {
 		title = "Leave earlier to make your arrival deadline"
 		rationale = "Even the fastest qualifying estimate misses your deadline at the planned departure time."
@@ -112,19 +124,20 @@ func trafficCandidate(row commute.TrafficDecision) domain.Candidate {
 		Title:   title, Summary: summary,
 		Rationale: rationale,
 		Priority:  domain.PriorityMedium, Severity: domain.SeverityInfo, BaseConfidence: 0.8,
-		ConfidenceBasis: []string{"Both routes had fresh directional HERE Traffic Flow coverage"},
+		ConfidenceBasis: basis,
 		Evidence: []domain.EvidenceItem{{
 			ID: key, Kind: "commute_traffic", Summary: summary, ObservedAt: &row.ObservedAt,
 			Provenance: domain.EvidenceProvenance{Source: "here_routing_traffic", RecordID: key},
 			CommuteTraffic: &domain.CommuteTrafficEvidence{
 				UsualS: row.UsualS, AlternativeS: row.AlternativeS,
 				ArrivalDeadlineAt: row.ArrivalDeadlineAt, LatestDepartureAt: row.LatestDepartureAt,
-				TimeZone: row.TimeZone,
+				TimeZone:    row.TimeZone,
+				RouteEnergy: row.RouteEnergy, RouteEnergyOnly: row.RouteEnergyOnly,
 			},
 		}},
 		SafeActions: []domain.ActionType{domain.ActionNavigate}, NavigationPath: &path,
 		ObservedAt: &row.ObservedAt, FreshFor: 5 * time.Minute, AgingFor: 5 * time.Minute, ExpiresAt: row.ExpiresAt,
-		Limitations: []string{"These are provider estimates, not measured trip times.", "Tesla calculates its own route."},
+		Limitations: limitations,
 	}
 }
 

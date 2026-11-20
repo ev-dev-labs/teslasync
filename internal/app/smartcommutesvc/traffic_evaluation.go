@@ -34,6 +34,7 @@ type trafficEvaluation struct {
 	isQuiet        TrafficQuietCheck
 	observe        func(reason string)
 	notify         TrafficNotifier
+	energy         *routeEnergySource
 	sharedOpenMode bool
 }
 
@@ -121,6 +122,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 	comparison, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
 		Trace: check.Consent.Trace, DepartureAt: check.Consent.DepartureAt,
 		RequireOfferedCoverage: check.Consent.ArrivalDeadlineS != nil,
+		IncludeRouteGeometry:   check.Consent.CompareRouteEnergy && s.traffic.energy != nil,
 	}, guarded)
 	if authErr != nil {
 		return s.observeTrafficSuppression(authErr)
@@ -160,6 +162,15 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 			decision.ExpiresAt = expiresAt
 		}
 	}
+	energy, energyObserved, energyExpires := s.compareTrafficEnergy(ctx, check, comparison.OfferedRoutes, authorize)
+	if energy != nil {
+		decision.RouteEnergy = energy
+		if decision.ExpiresAt.IsZero() {
+			decision.RouteEnergyOnly = true
+			decision.UsualS, decision.AlternativeS = energy.Fastest.ETAS, energy.Saving.ETAS
+			decision.ObservedAt, decision.ExpiresAt = energyObserved, energyExpires
+		}
+	}
 	if decision.ExpiresAt.IsZero() {
 		s.recordTraffic("not_material_or_stale")
 		return nil
@@ -173,7 +184,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 	}
 	if saved {
 		s.recordTraffic("eligible")
-		if s.traffic.notify != nil {
+		if s.traffic.notify != nil && !decision.RouteEnergyOnly {
 			return s.traffic.notify(ctx, check.Subject, check.ConsentID, check.Routine.ID, check.Consent.DepartureAt)
 		}
 	}
@@ -228,6 +239,9 @@ func (s *Service) ListTrafficDecisions(
 			return nil, err
 		}
 		if parked && row.ExpiresAt.After(s.now()) {
+			if row.RouteEnergy != nil && !row.RouteEnergy.ExpiresAt.After(s.now()) {
+				row.RouteEnergy = nil
+			}
 			row.OccurrenceID = domain.TrafficOccurrenceID(row.RoutineID, row.DepartureAt)
 			result = append(result, row)
 		}

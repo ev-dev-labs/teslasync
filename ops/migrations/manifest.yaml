@@ -763,3 +763,18 @@ migrations:
     irreversible_justification: Explicit down deletes site-specific analysis consent.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 272
+    name: smart_commute_route_energy
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries cannot interpret energy-only comparisons and could mislabel a slower route as faster.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and roll down before starting older API or worker binaries. Users can re-enable local route-energy comparison after reapplying; ordinary traffic consent and decisions are preserved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes acquire exclusive locks and validate the replacement constraint against the short-lived decisions table.
+    reversible: false
+    irreversible_justification: Explicit down removes route-energy consent and derived comparison evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

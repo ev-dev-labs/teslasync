@@ -108,14 +108,14 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 	var best routeEstimate
 	var bestSimilarS int64
 	var offered []routeEstimate
-	allQualified := query.RequireOfferedCoverage
+	allQualified := query.RequireOfferedCoverage || query.IncludeRouteGeometry
 	for _, raw := range routes.Routes {
 		candidate, valid := qualifyRoute(raw)
 		if !valid {
 			allQualified = false
 			continue
 		}
-		if query.RequireOfferedCoverage {
+		if query.RequireOfferedCoverage || query.IncludeRouteGeometry {
 			offered = append(offered, candidate)
 		}
 		if !differsFrom(usual, candidate) {
@@ -141,11 +141,15 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 	for _, covered := range coverage[2:] {
 		allQualified = allQualified && covered
 	}
-	return domain.TrafficComparison{
+	result := domain.TrafficComparison{
 		Usual:                 domain.TrafficEstimate{DurationS: usual.durationS, FlowUpdatedAt: observedAt},
 		Alternative:           domain.TrafficEstimate{DurationS: best.durationS, FlowUpdatedAt: observedAt},
 		AlternativesQualified: allQualified && (bestSimilarS == 0 || bestSimilarS >= min(usual.durationS, best.durationS)),
-	}, nil
+	}
+	if query.IncludeRouteGeometry && allQualified {
+		result.OfferedRoutes = coveredRouteGeometry(routes.Routes, offered, observedAt)
+	}
+	return result, nil
 }
 
 type waypoint struct {

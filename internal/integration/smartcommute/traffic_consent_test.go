@@ -112,7 +112,7 @@ func TestRepresentativeTraceRequiresOwnerReviewAndCanBeRevoked(t *testing.T) {
 	assertRevoked()
 	expectStatus(t, f.request(t, http.MethodPost, route+"/traffic-preview", owner, previewBody), http.StatusNotFound)
 
-	for _, migration := range []string{"000270_smart_commute_arrival_deadline", "000268_smart_commute_traffic_consent"} {
+	for _, migration := range []string{"000272_smart_commute_route_energy", "000270_smart_commute_arrival_deadline", "000268_smart_commute_traffic_consent"} {
 		down, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", migration+".down.sql"))
 		if err != nil {
 			t.Fatal(err)

@@ -8,14 +8,16 @@ import { clearNotifications, dispatchPush, installSyntheticSubscription, notific
 test.use({ serviceWorkers: 'allow' })
 test.afterAll(async () => { await closeMockApiFixtures() })
 
-test('reviewed traffic check delivers one opted-in push after closing the browser tab', async ({ context, page, request }) => {
+test('reviewed commute checks deliver only the intended private decision', async ({ context, page, request }) => {
   test.setTimeout(120_000)
   test.skip(process.env.SMART_COMMUTE_REAL_BACKEND !== '1', 'Covered by the real-handler private notifications job')
   const fixture = await request.get('/__fixture/traffic')
   expect(fixture.ok()).toBe(true)
-  const { drive, now, with_deadline: withDeadline } = await fixture.json() as {
-    drive: { id: number }; now: string; with_deadline: boolean;
+  const { drive, now, mode } = await fixture.json() as {
+    drive: { id: number }; now: string; mode: 'compare' | 'arrival_deadline' | 'route_energy';
   }
+  const withDeadline = mode === 'arrival_deadline'
+  const withEnergy = mode === 'route_energy'
   const owner = 'synthetic-traffic-owner'
   const foreignSubject = 'other-synthetic-user'
   const origin = process.env.E2E_BASE_URL
@@ -100,6 +102,12 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   await expect(consent).toBeDisabled()
   expect((await getTraffic()).outbound).toBe(0)
   await page.getByRole('switch', { name: /Allow sharing this trace with HERE/ }).click()
+  const energyConsent = page.getByRole('switch', { name: 'Compare routes using local driving energy history' })
+  await expect(energyConsent).not.toBeChecked()
+  if (withEnergy) {
+    await energyConsent.click()
+    await expect(page.getByText(/never sends their routes, temperatures, or energy use to HERE/)).toBeVisible()
+  }
   if (withDeadline) {
     const deadline = page.getByLabel('Arrival deadline (optional)')
     await deadline.fill('08:00')
@@ -116,30 +124,38 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   expect((await request.post('/__fixture/traffic')).status()).toBe(204)
   const result = await getTraffic()
   expect(result.outbound).toBe(withDeadline ? 2 : 1)
-  expect(result.pushes).toBe(2)
-  expect(result.latest_push?.kind).toBe('commute')
-  expect(Object.keys(result.latest_push ?? {}).sort()).toEqual(['kind', 'token'])
-  await setSession(foreignSubject)
-  expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 404, notification: 'not-called' })
-  expect(await notifications(worker)).toEqual([])
-  await setSession(owner)
-  expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 200, notification: 'shown' })
-  await expect.poll(() => notifications(worker)).toEqual([
-    { title: 'Smart Commute', data: { url: expect.stringMatching(/^\/settings\/smart-commute\?vehicle_id=42&traffic_occurrence_id=[a-f0-9]{32}$/) } },
-  ])
-  expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 404, notification: 'not-called' })
+  expect(result.pushes).toBe(withEnergy ? 1 : 2)
+  if (!withEnergy) {
+    expect(result.latest_push?.kind).toBe('commute')
+    expect(Object.keys(result.latest_push ?? {}).sort()).toEqual(['kind', 'token'])
+    await setSession(foreignSubject)
+    expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 404, notification: 'not-called' })
+    expect(await notifications(worker)).toEqual([])
+    await setSession(owner)
+    expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 200, notification: 'shown' })
+    await expect.poll(() => notifications(worker)).toEqual([
+      { title: 'Smart Commute', data: { url: expect.stringMatching(/^\/settings\/smart-commute\?vehicle_id=42&traffic_occurrence_id=[a-f0-9]{32}$/) } },
+    ])
+    expect(await dispatchPush(worker, result.latest_push)).toEqual({ status: 404, notification: 'not-called' })
+  }
   const following = await context.newPage()
   const followingAPI = await prepare(following, owner)
   await following.goto('/action-center?vehicle_id=42')
   const before = writes.length
   await expect(following.getByText(withDeadline
     ? 'Leave earlier to make your arrival deadline'
+    : withEnergy ? 'Compare a lower-energy route before departure'
     : 'A faster route is available before your departure', { exact: true })).toBeVisible()
   await following.getByRole('button', { name: 'Compare routes', exact: true }).click()
   if (withDeadline) {
     await expect(following.getByText('Alternative route: 46 min', { exact: true })).toBeVisible()
     await expect(following.getByText(/Faster alternative|Estimated saving/)).toHaveCount(0)
     await expect(following.getByText(/Estimated latest departure:.*7:52.*Your arrival deadline:.*8:38/i)).toBeVisible()
+  } else if (withEnergy) {
+    await expect(following.getByText(/Fastest offered route: 30 min estimated by HERE; 4 comparable drives used/)).toBeVisible()
+    await expect(following.getByText(/Lower-energy alternative: 36 min estimated by HERE; 4 comparable drives used/)).toBeVisible()
+    await expect(following.getByText(/do not measure or guarantee energy use on your next trip/)).toBeVisible()
+    await expect(following.getByText(/Faster alternative|Estimated saving/)).toHaveCount(0)
   } else {
     await expect(following.getByText('Faster alternative: 29 min', { exact: true })).toBeVisible()
     await expect(following.getByText('Estimated saving: 14 min', { exact: true })).toBeVisible()
@@ -148,7 +164,7 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   expect(writes.length).toBe(before)
   const link = following.url()
   expect(new URL(link).searchParams.get('traffic_occurrence_id')).toMatch(/^[a-f0-9]{32}$/)
-  expect(await notifications(worker)).toEqual([{ title: 'Smart Commute', data: { url: link.slice(origin.length) } }])
+  expect(await notifications(worker)).toEqual(withEnergy ? [] : [{ title: 'Smart Commute', data: { url: link.slice(origin.length) } }])
   await assertMockApiComplete(following, followingAPI, { preserveServiceWorkers: true })
   expect(followingAPI.requests.filter(item => /\/commands?(?:\/|$)/.test(item.path))).toEqual([])
 
@@ -156,7 +172,7 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   const foreignAPI = await prepare(foreign, foreignSubject)
   await foreign.goto(link)
   await expect(foreign.getByText(/This comparison is no longer available/)).toBeVisible()
-  await expect(foreign.getByText(/Faster alternative|Estimated latest departure/)).toHaveCount(0)
+  await expect(foreign.getByText(/Faster alternative|Estimated latest departure|Lower-energy alternative/)).toHaveCount(0)
   await assertMockApiComplete(foreign, foreignAPI, { preserveServiceWorkers: true })
   await foreign.close()
 
