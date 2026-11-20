@@ -56,6 +56,7 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
     },
     { value: 'signal_health', label: t('actionCenter.source.signal_health', 'Signal health') },
     { value: 'smart_charging', label: t('actionCenter.source.smart_charging', 'Charging readiness') },
+    { value: 'charging_site_performance', label: t('actionCenter.source.charging_site_performance', 'Charging site performance') },
     { value: 'smart_commute', label: t('actionCenter.source.smart_commute', 'Smart Commute') },
     { value: 'system_health', label: t('actionCenter.source.system_health', 'System health') },
     {

@@ -10,6 +10,7 @@ import { ErrorText, GlassPanel, Select, Text } from '@/components/ui'
 import { useDataState } from '@/hooks/useDataState'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { SmartChargingPlans } from './SmartChargingPlans'
+import { SmartChargingSitePerformance } from './SmartChargingSitePerformance'
 
 interface Props {
   active: boolean
@@ -123,6 +124,9 @@ export function SmartChargingSettings({ active }: Props) {
               )}
               <SmartChargingPlans scope={scope} vehicleId={vehicleId} plans={state.data ?? []} places={places}
                 disabled={disabled} formDisabled={formDisabled} onChange={apply} />
+              <SmartChargingSitePerformance scope={scope} vehicleId={vehicleId} places={places}
+                disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
+                placesUnavailable={formDisabled} />
             </div>
           )}
         </>

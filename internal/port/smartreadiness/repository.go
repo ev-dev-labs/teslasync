@@ -28,6 +28,12 @@ type Candidate struct {
 	PlaceUpdatedAt time.Time
 }
 
+type SitePerformanceRepository interface {
+	ListSitePerformanceScopes(context.Context, string, *int64, int) ([]domain.SitePerformanceScope, error)
+	SaveSitePerformanceScope(context.Context, string, int64, *int64, time.Time) error
+	ListSitePerformanceSessions(context.Context, string, domain.SitePerformanceScope, time.Time) ([]domain.SitePerformanceSession, error)
+}
+
 type Repository interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	ListActivePlans(context.Context, string, int64, time.Time, int) ([]domain.Plan, error)

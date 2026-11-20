@@ -10,24 +10,25 @@ import (
 type SourceFeature string
 
 const (
-	SourceActiveAlerts         SourceFeature = "active_alerts"
-	SourceAdvancedIntelligence SourceFeature = "advanced_intelligence"
-	SourceBatteryHealth        SourceFeature = "battery_health"
-	SourceChargingReliability  SourceFeature = "charging_reliability"
-	SourceDriveEfficiency      SourceFeature = "drive_efficiency"
-	SourceFleetMaintenance     SourceFeature = "fleet_maintenance"
-	SourceSignalHealth         SourceFeature = "signal_health"
-	SourceSmartCharging        SourceFeature = "smart_charging"
-	SourceSmartCommute         SourceFeature = "smart_commute"
-	SourceSystemHealth         SourceFeature = "system_health"
-	SourceVehicleReadiness     SourceFeature = "vehicle_readiness"
+	SourceActiveAlerts            SourceFeature = "active_alerts"
+	SourceAdvancedIntelligence    SourceFeature = "advanced_intelligence"
+	SourceBatteryHealth           SourceFeature = "battery_health"
+	SourceChargingReliability     SourceFeature = "charging_reliability"
+	SourceDriveEfficiency         SourceFeature = "drive_efficiency"
+	SourceFleetMaintenance        SourceFeature = "fleet_maintenance"
+	SourceSignalHealth            SourceFeature = "signal_health"
+	SourceSmartCharging           SourceFeature = "smart_charging"
+	SourceChargingSitePerformance SourceFeature = "charging_site_performance"
+	SourceSmartCommute            SourceFeature = "smart_commute"
+	SourceSystemHealth            SourceFeature = "system_health"
+	SourceVehicleReadiness        SourceFeature = "vehicle_readiness"
 )
 
 func (v SourceFeature) Valid() bool {
 	switch v {
 	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceBatteryHealth,
 		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
-		SourceSignalHealth, SourceSmartCharging, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness:
+		SourceSignalHealth, SourceSmartCharging, SourceChargingSitePerformance, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness:
 		return true
 	default:
 		return false
@@ -35,7 +36,7 @@ func (v SourceFeature) Valid() bool {
 }
 
 func (v SourceFeature) Private() bool {
-	return v == SourceSmartCharging || v == SourceSmartCommute
+	return v == SourceSmartCharging || v == SourceChargingSitePerformance || v == SourceSmartCommute
 }
 
 type Priority string
@@ -204,15 +205,16 @@ type CommuteTrafficEvidence struct {
 }
 
 type EvidenceItem struct {
-	ID                string                     `json:"id"`
-	Kind              string                     `json:"kind"`
-	Summary           string                     `json:"summary"`
-	Provenance        EvidenceProvenance         `json:"provenance"`
-	ObservedAt        *time.Time                 `json:"observed_at"`
-	RecurringDrive    *RecurringDriveEvidence    `json:"recurring_drive,omitempty"`
-	ChargingReadiness *ChargingReadinessEvidence `json:"charging_readiness,omitempty"`
-	DepartureOverlap  *DepartureOverlapEvidence  `json:"departure_overlap,omitempty"`
-	CommuteTraffic    *CommuteTrafficEvidence    `json:"commute_traffic,omitempty"`
+	ID                string                                `json:"id"`
+	Kind              string                                `json:"kind"`
+	Summary           string                                `json:"summary"`
+	Provenance        EvidenceProvenance                    `json:"provenance"`
+	ObservedAt        *time.Time                            `json:"observed_at"`
+	RecurringDrive    *RecurringDriveEvidence               `json:"recurring_drive,omitempty"`
+	ChargingReadiness *ChargingReadinessEvidence            `json:"charging_readiness,omitempty"`
+	DepartureOverlap  *DepartureOverlapEvidence             `json:"departure_overlap,omitempty"`
+	CommuteTraffic    *CommuteTrafficEvidence               `json:"commute_traffic,omitempty"`
+	SitePerformance   *smartreadiness.SitePerformanceReview `json:"site_performance,omitempty"`
 }
 
 type ImpactRiskLevel string

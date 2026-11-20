@@ -92,6 +92,7 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000267_smart_departure_overlap",
 		"000268_smart_commute_traffic_consent", "000269_smart_commute_personal_push",
 		"000270_smart_commute_arrival_deadline",
+		"000271_smart_charging_site_performance",
 	}
 	if direction == "down" {
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {

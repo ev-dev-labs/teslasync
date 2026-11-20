@@ -44,6 +44,13 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   TeslaSync does not read your calendar or verify these windows with Tesla;
   update or remove the entry if the source schedule changes. Push requires
   both the plan's departure-conflict switch and a verified charging device.
+  **Charging at a saved place** optionally compares one vehicle's measured
+  charging sessions at a reviewed place. It needs two recent slower
+  sessions and at least four comparable baseline sessions with similar
+  charge levels and connector type. Energy per elapsed hour can include
+  pauses; the Action Center card is not a diagnosis. Review the vehicle's
+  current limit, schedule or charging place without changing them. This is
+  separate from a trip plan, and never enables push or shares data externally.
 
 ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that

@@ -7,6 +7,7 @@ import type {
   SmartChargingLatestStart,
   SmartChargingPlan,
   SmartChargingPlanInput,
+  SmartChargingSitePerformanceSettings,
 } from '@/types/smartCharging'
 
 const requestMock = vi.hoisted(() => vi.fn())
@@ -35,6 +36,7 @@ let places: Geofence[]
 let identityMode: 'forward_auth' | 'open'
 let failure: ApiError | null
 let timeZone: string
+let sitePerformance: SmartChargingSitePerformanceSettings
 
 function renderSettings(url = '/settings/smart-charging?vehicle_id=42') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -61,11 +63,26 @@ beforeEach(() => {
   places = [place]
   identityMode = 'forward_auth'
   failure = null
+  sitePerformance = { scope: null, review: null }
   requestMock.mockReset()
   requestMock.mockImplementation(async (path: string, options?: RequestInit) => {
     if (path === '/system/auth-mode') return { mode: identityMode, subject: 'synthetic-a' }
     if (path === '/vehicles') return [{ id: 42, display_name: 'Synthetic A' }, { id: 43, display_name: 'Synthetic B' }]
     if (path === '/geofences') return places
+    if (path === '/smart-charging/site-performance?vehicle_id=42') return { data: sitePerformance }
+    if (path === '/smart-charging/site-performance?vehicle_id=43') return { data: { scope: null, review: null } }
+    if (path === '/smart-charging/site-performance' && options?.method === 'PUT') {
+      const input = JSON.parse(String(options.body)) as { enabled: boolean }
+      sitePerformance = input.enabled ? {
+        scope: { vehicle_id: 42, charging_place_id: 9, place_name: place.name },
+        review: {
+          vehicle_id: 42, charging_place_id: 9, place_name: place.name, recent_count: 2, baseline_count: 4, latest_session_id: 1,
+          recent_w: 3_900, baseline_w: 8_100, baseline_from_at: '2026-03-01T10:00:00Z',
+          observed_at: '2026-03-06T09:00:00Z', expires_at: '2026-03-20T09:00:00Z',
+        },
+      } : { scope: null, review: null }
+      return undefined
+    }
     if (path === '/smart-charging/plans?vehicle_id=42&limit=100&offset=0') {
       if (failure) throw failure
       return { data: plans }
@@ -98,6 +115,31 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('private charging readiness settings', () => {
+  it('shows measured site evidence only after explicit consent and removes it on revoke', async () => {
+    renderSettings('/settings/smart-charging?vehicle_id=42#site-performance')
+    const region = within(await screen.findByRole('region', { name: 'Charging at a saved place' }))
+    const allow = await region.findByRole('button', { name: 'Allow this comparison' })
+    expect(allow).toBeDisabled()
+    await waitFor(() => expect(region.getByLabelText('Place to compare')).toBeEnabled())
+    fireEvent.change(region.getByLabelText('Place to compare'), { target: { value: '9' } })
+    expect(requestMock.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false)
+    fireEvent.click(allow)
+    expect(await region.findByText(/2 recent sessions averaged.*4 comparable sessions/)).toBeVisible()
+    expect(region.getByText(/not a charger diagnosis/)).toBeVisible()
+    expect(region.getByRole('link', { name: 'Review charging settings' })).toHaveAttribute('href', '/charging/schedule?vehicle_id=42')
+    const revoke = region.getByRole('button', { name: 'Turn off this comparison' })
+    await waitFor(() => expect(revoke).toBeEnabled())
+    fireEvent.click(revoke)
+    await waitFor(() => expect(region.queryByText(/2 recent sessions averaged/)).not.toBeInTheDocument())
+    const writes = requestMock.mock.calls.filter(([path, options]) =>
+      path === '/smart-charging/site-performance' && options?.method === 'PUT')
+    expect(writes.map(([, options]) => JSON.parse(String(options.body)))).toEqual([
+      { enabled: true, vehicle_id: 42, charging_place_id: 9 },
+      { enabled: false, vehicle_id: 42, charging_place_id: null },
+    ])
+    expect(writes.every(([, options]) => options.headers['X-TeslaSync-Expected-Principal'] === 'subject:synthetic-a')).toBe(true)
+  })
+
   it('creates an off-by-default plan, then enables, snoozes, pauses and deletes it explicitly', async () => {
     renderSettings()
     fireEvent.click(await screen.findByRole('button', { name: 'Add a trip plan' }))

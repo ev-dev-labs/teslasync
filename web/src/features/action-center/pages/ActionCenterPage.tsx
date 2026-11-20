@@ -53,7 +53,7 @@ export default function ActionCenterPage() {
   const [source] = useUrlEnum('source_feature', [
     '', 'active_alerts', 'advanced_intelligence', 'battery_health',
     'charging_reliability', 'drive_efficiency', 'fleet_maintenance',
-    'signal_health', 'smart_charging', 'smart_commute', 'system_health', 'vehicle_readiness',
+    'signal_health', 'smart_charging', 'charging_site_performance', 'smart_commute', 'system_health', 'vehicle_readiness',
   ], '');
   const [state] = useUrlEnum('state', ['all', 'open', 'acknowledged', 'snoozed', 'dismissed'], 'open');
   const [limit] = useUrlState({
@@ -277,7 +277,8 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.12}>
         <RecommendationList
           key={scopeKey}
-          items={query.data?.items ?? []}
+          items={(query.data?.items ?? []).filter((item) => item.source_feature !== 'charging_site_performance' ||
+            (actionCenterState.status === 'ok' && Date.parse(item.expires_at) > Date.now()))}
           loading={!actionCenterState.hasData && query.isLoading}
           error={actionCenterState.fatalError}
           onRetry={() => void query.refetch()}

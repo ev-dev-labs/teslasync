@@ -70,3 +70,21 @@ export interface SmartChargingLatestStart {
     currency: string
   }
 }
+export interface SmartChargingSitePerformanceReview {
+  charging_place_id: number
+  place_name: string
+  vehicle_id: number
+  latest_session_id: number
+  baseline_from_at: string
+  observed_at: string
+  expires_at: string
+  recent_count: number
+  baseline_count: number
+  recent_w: number
+  baseline_w: number
+}
+
+export interface SmartChargingSitePerformanceSettings {
+  scope: { charging_place_id: number; place_name: string; vehicle_id: number } | null
+  review: SmartChargingSitePerformanceReview | null
+}

@@ -6,6 +6,7 @@ import type {
   SmartChargingLatestStart,
   SmartChargingPlan,
   SmartChargingPlanInput,
+  SmartChargingSitePerformanceSettings,
 } from '@/types/smartCharging'
 
 export const smartChargingKeys = {
@@ -14,6 +15,8 @@ export const smartChargingKeys = {
     ['smart-charging', 'plans', scope, vehicleId] as const,
   latestStarts: (scope: PersonalScope | null, vehicleId: number | null) =>
     ['smart-charging', 'latest-starts', scope, vehicleId] as const,
+  sitePerformance: (scope: PersonalScope | null, vehicleId: number | null) =>
+    ['smart-charging', 'site-performance', scope, vehicleId] as const,
 }
 
 export function useSmartCharging(scope: PersonalScope | null, vehicleId: number | null, enabled: boolean) {
@@ -58,6 +61,23 @@ export type SmartChargingChange =
   | { kind: 'update'; id: number; plan: SmartChargingPlanInput }
   | { kind: 'snooze'; id: number; durationS: number }
   | { kind: 'delete'; id: number }
+  | { kind: 'sitePerformance'; placeId: number | null }
+
+export function useSitePerformance(scope: PersonalScope, vehicleId: number) {
+  return useQuery({
+    queryKey: smartChargingKeys.sitePerformance(scope, vehicleId),
+    queryFn: async ({ signal }) => {
+      const { data } = await request<{ data: SmartChargingSitePerformanceSettings }>(
+        `/smart-charging/site-performance?vehicle_id=${vehicleId}`,
+        { signal, cache: 'no-store', headers: expectedPrincipalHeader(scope) },
+      )
+      return data
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
+  })
+}
 
 export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: number | null) {
   const queryClient = useQueryClient()
@@ -86,6 +106,11 @@ export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: n
         case 'delete':
           return request<void>(`/smart-charging/plans/${change.id}?vehicle_id=${vehicleId}`, {
             ...options, method: 'DELETE',
+          })
+        case 'sitePerformance':
+          return request<void>('/smart-charging/site-performance', {
+            ...options, method: 'PUT',
+            body: JSON.stringify({ vehicle_id: vehicleId, charging_place_id: change.placeId, enabled: change.placeId != null }),
           })
       }
     },

@@ -50,6 +50,7 @@ const optionGroups = [
       ['fleet_maintenance', 'Fleet maintenance'],
       ['signal_health', 'Signal health'],
       ['smart_charging', 'Charging readiness'],
+      ['charging_site_performance', 'Charging site performance'],
       ['smart_commute', 'Smart Commute'],
       ['system_health', 'System health'],
       ['vehicle_readiness', 'Vehicle readiness'],

@@ -749,3 +749,17 @@ migrations:
     irreversible_justification: Explicit down deletes the optional deadlines and their derived decisions.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 271
+    name: smart_charging_site_performance
+    forward_compatible: true
+    forward_compatibility_notes: The opt-in table is additive. Site changes invalidate the opt-in by updating the stored place revision.
+    rollback_notes: Leave applied for an application rollback. Down clears these opt-ins without deleting charging history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the empty table briefly lock the referenced vehicle and place tables.
+    reversible: false
+    irreversible_justification: Explicit down deletes site-specific analysis consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

@@ -23,13 +23,14 @@ type ChargingSites interface {
 }
 
 type Service struct {
-	repository     port.Repository
-	live           LiveSignals
-	sites          ChargingSites
-	now            func() time.Time
-	observe        func(domain.Reason)
-	notify         func(context.Context, port.Candidate) error
-	sharedOpenMode bool
+	repository      port.Repository
+	live            LiveSignals
+	sites           ChargingSites
+	sitePerformance port.SitePerformanceRepository
+	now             func() time.Time
+	observe         func(domain.Reason)
+	notify          func(context.Context, port.Candidate) error
+	sharedOpenMode  bool
 }
 
 type Option func(*Service)

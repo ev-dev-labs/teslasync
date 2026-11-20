@@ -70,6 +70,7 @@
       "fleet_maintenance": "Fleet maintenance",
       "signal_health": "Signal health",
       "smart_charging": "Charging readiness",
+      "charging_site_performance": "Charging site performance",
       "smart_commute": "Smart Commute",
       "system_health": "System health",
       "vehicle_readiness": "Vehicle readiness"
@@ -782,6 +783,15 @@
     "serviceOverlapRationale": "The appointment window you entered includes the saved departure.",
     "serviceOverlapTitle": "Service appointment overlaps your planned departure",
     "signalSource": "Fresh shared live signals",
+    "sitePerformance": {
+      "actionTitle": "Charging has been slower at this place",
+      "basis": "Timestamped charging meter readings and similar charge levels and connector type",
+      "dates": "Evidence from {{from}} to {{through}}.",
+      "limitation": "Elapsed rates can include pauses. Review the current limit, schedule and site conditions; this is not a charger diagnosis.",
+      "meterSource": "Charging meter history",
+      "rationale": "Two recent sessions delivered materially less energy per elapsed hour than comparable sessions for the same vehicle and location.",
+      "summary": "{{recentCount}} recent sessions averaged {{recent}} at {{place}}; the median across {{baselineCount}} comparable sessions was {{baseline}}."
+    },
     "slowActionBasis": "Fresh parked, charging, battery, pack-energy and charging-power observations",
     "slowActionLimitationEstimate": "The estimate assumes constant power and nominal pack energy; actual power, taper and efficiency can change.",
     "slowActionLimitationWrites": "This recommendation does not change a schedule, charging limit or vehicle setting.",

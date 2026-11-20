@@ -134,6 +134,9 @@ for (const variant of [
         const request = route.request()
         const path = new URL(request.url()).pathname
         expect(request.headers()['x-teslasync-expected-principal']).toBe(expectedPrincipal())
+        if (request.method() === 'GET' && path.endsWith('/site-performance')) {
+          return fulfillApiFixture(route, api, { json: { data: { scope: null, review: null } } })
+        }
         if (request.method() === 'GET') return fulfillApiFixture(route, api, { json: { data: plans.get(scopeKey()) ?? [] } })
         writes.push(`${request.method()} ${path}`)
         if (request.method() === 'POST' && path.endsWith('/plans')) {
@@ -433,6 +436,31 @@ for (const variant of [
     await page.getByRole('button', { name: 'Delete plan' }).click()
     await page.getByRole('dialog', { name: 'Delete this plan?' }).getByRole('button', { name: 'Delete plan' }).click()
     await expect(page.getByText(/No trip plan is saved/)).toBeVisible()
+    if (realBackend && variant.width === 1440 && !variant.open) {
+      const settings = page.getByRole('region', { name: 'Charging at a saved place' })
+      const notice = page.getByRole('article', { name: 'Charging has been slower at this place' })
+      const enable = settings.getByRole('button', { name: 'Allow this comparison' })
+      await expect(enable).toBeDisabled()
+      await expect(settings.getByText(/Charging has been slower/)).toHaveCount(0)
+      await settings.getByLabel('Place to compare').selectOption('9')
+      await enable.click()
+      await expect(settings.getByText(/2 recent sessions averaged.*4 comparable sessions/)).toBeVisible()
+      await page.goto('/action-center?vehicle_id=7')
+      await waitForHarnessReady(page, api)
+      await expect(notice).toBeVisible()
+      const before = writes.length
+      await notice.getByRole('button', { name: 'Open source' }).click()
+      await expect(page).toHaveURL(/\/settings\/smart-charging\?vehicle_id=7#site-performance$/)
+      await expect(settings.getByRole('heading', { name: 'Charging at a saved place' })).toBeInViewport()
+      await expect(settings.getByRole('link', { name: 'Review charging settings' })).toBeVisible()
+      expect(writes).toHaveLength(before)
+      await settings.getByRole('button', { name: 'Turn off this comparison' }).click()
+      await expect(settings.getByText(/Charging has been slower/)).toHaveCount(0)
+      await page.goto('/action-center?vehicle_id=7')
+      await waitForHarnessReady(page, api)
+      await expect(notice).toHaveCount(0)
+      expect(writes.filter(path => path.endsWith('/site-performance'))).toHaveLength(2)
+    }
     const geometry = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth,
     }))

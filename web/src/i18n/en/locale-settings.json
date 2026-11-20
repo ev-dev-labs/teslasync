@@ -3420,6 +3420,22 @@
     "serviceEndsAt": "Service appointment ends",
     "serviceStartsAt": "Service appointment starts",
     "showNow": "Check now",
+    "sitePerformance": {
+      "actionTitle": "Charging has been slower at this place",
+      "basis": "Timestamped charging meter readings and similar charge levels and connector type",
+      "dates": "Evidence from {{from}} to {{through}}.",
+      "empty": "No repeated slowdown is supported by comparable sessions for this place.",
+      "enable": "Allow this comparison",
+      "limitation": "Elapsed rates can include pauses. Review the current limit, schedule and site conditions; this is not a charger diagnosis.",
+      "locations": "Review charging places",
+      "place": "Place to compare",
+      "privacy": "Off by default. Allow TeslaSync to compare this vehicle’s completed sessions at one reviewed charging place. Nothing is sent outside TeslaSync and this does not enable push.",
+      "rationale": "Two recent sessions delivered materially less energy per elapsed hour than comparable sessions for the same vehicle and location.",
+      "revoke": "Turn off this comparison",
+      "schedule": "Review charging settings",
+      "summary": "{{recentCount}} recent sessions averaged {{recent}} at {{place}}; the median across {{baselineCount}} comparable sessions was {{baseline}}.",
+      "title": "Charging at a saved place"
+    },
     "snooze": "Snooze for 1 hour",
     "snoozedUntil": "Snoozed until {{until}}.",
     "states": {

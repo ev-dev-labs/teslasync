@@ -41,6 +41,7 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
+	seedSitePerformance(t, db, now)
 	if _, err := db.Pool.Exec(context.Background(), `
 		INSERT INTO geofence_rates (geofence_id, rate_per_wh, currency, effective_from, effective_to)
 		VALUES (9, 0.0004, 'USD', $1, $2), (9, 0.0001, 'USD', $2, NULL)`,
@@ -68,13 +69,14 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 			value.Timestamp = clock()
 		}
 	}
-	authService := smartreadinesssvc.New(repo, live, controlledSite{}, smartreadinesssvc.WithClock(clock))
+	authService := smartreadinesssvc.New(repo, live, controlledSite{},
+		smartreadinesssvc.WithSitePerformance(repo), smartreadinesssvc.WithClock(clock))
 	openService := smartreadinesssvc.New(repo, live, controlledSite{},
-		smartreadinesssvc.WithSharedOpenMode(true), smartreadinesssvc.WithClock(clock))
+		smartreadinesssvc.WithSharedOpenMode(true), smartreadinesssvc.WithSitePerformance(repo), smartreadinesssvc.WithClock(clock))
 	buildRouter := func(service *smartreadinesssvc.Service, header string) http.Handler {
 		actionService := actioncentersvc.New(
 			emptySources{}, actiondb.NewStateRepository(db), actioncentersvc.WithSmartCharging(service),
-			actioncentersvc.WithClock(clock),
+			actioncentersvc.WithChargingSitePerformance(service), actioncentersvc.WithClock(clock),
 		)
 		router := chi.NewRouter()
 		router.Route("/api/v1", func(r chi.Router) {
@@ -198,11 +200,13 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 	}))
 	defer server.Close()
 
-	runCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Each of the four real-handler browser variants has a two-minute deadline.
+	runCtx, cancel := context.WithTimeout(context.Background(), 9*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, "node",
 		filepath.Join("node_modules", "@playwright", "test", "cli.js"), "test",
 		filepath.Join("e2e", "smart-charging.smoke.spec.ts"),
+		"--grep=charging readiness is consented and scoped:",
 		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line",
 		"--output="+filepath.Join(os.TempDir(), "teslasync-smart-charging-browser-results"),
 	)

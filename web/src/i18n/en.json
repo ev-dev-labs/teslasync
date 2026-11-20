@@ -36210,6 +36210,23 @@
   "smartCharging": {
     "title": "Charging readiness",
     "pageSubtitle": "Trip plans and charging decisions",
+    "sitePerformance": {
+      "title": "Charging at a saved place",
+      "place": "Place to compare",
+      "privacy": "Off by default. Allow TeslaSync to compare this vehicle’s completed sessions at one reviewed charging place. Nothing is sent outside TeslaSync and this does not enable push.",
+      "enable": "Allow this comparison",
+      "revoke": "Turn off this comparison",
+      "empty": "No repeated slowdown is supported by comparable sessions for this place.",
+      "actionTitle": "Charging has been slower at this place",
+      "summary": "{{recentCount}} recent sessions averaged {{recent}} at {{place}}; the median across {{baselineCount}} comparable sessions was {{baseline}}.",
+      "rationale": "Two recent sessions delivered materially less energy per elapsed hour than comparable sessions for the same vehicle and location.",
+      "basis": "Timestamped charging meter readings and similar charge levels and connector type",
+      "dates": "Evidence from {{from}} to {{through}}.",
+      "limitation": "Elapsed rates can include pauses. Review the current limit, schedule and site conditions; this is not a charger diagnosis.",
+      "schedule": "Review charging settings",
+      "meterSource": "Charging meter history",
+      "locations": "Review charging places"
+    },
     "vehicle": "Vehicle",
     "selectVehicle": "Select a vehicle",
     "vehicleUnavailable": "That vehicle is unavailable. Select a vehicle explicitly; no other vehicle was selected.",
@@ -36603,6 +36620,7 @@
       "fleet_maintenance": "Fleet maintenance",
       "signal_health": "Signal health",
       "smart_charging": "Charging readiness",
+      "charging_site_performance": "Charging site performance",
       "smart_commute": "Smart Commute",
       "system_health": "System health",
       "vehicle_readiness": "Vehicle readiness"

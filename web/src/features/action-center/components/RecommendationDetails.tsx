@@ -46,9 +46,10 @@ export function RecommendationDetails({
   const { fmtInt } = useNumberFormatting();
   const [paging, setPaging] = useState({ id: recommendation.id, offset: 0 });
   const offset = paging.id === recommendation.id ? paging.offset : 0;
+  const sitePerformance = recommendation.source_feature === 'charging_site_performance';
   if (paging.id !== recommendation.id) setPaging({ id: recommendation.id, offset: 0 });
   const history = useActionCenterHistory(
-    recommendation.id, open && recommendation.source_feature !== 'smart_charging', { limit: 25, offset },
+    recommendation.id, open && recommendation.source_feature !== 'smart_charging' && !sitePerformance, { limit: 25, offset },
     ...(personalScope ? [personalScope] as const : []),
   );
   const [retained, setRetained] = useState<{
@@ -92,6 +93,7 @@ export function RecommendationDetails({
       'actionCenter.provenance.charging_sessions',
       'Charging history',
     ),
+    charging_telemetry: t('smartCharging.sitePerformance.meterSource', 'Charging meter history'),
     command_logs: t(
       'actionCenter.provenance.command_logs',
       'Vehicle command history',
@@ -214,7 +216,7 @@ export function RecommendationDetails({
         <Text as="p" variant="bodySm" className="mt-5">
           {t('smartCharging.privateHistory', 'Charging-plan actions are managed in Settings, not the general action history.')}
         </Text>
-      ) : (
+      ) : sitePerformance ? null : (
       <section className="mt-5 border-t border-[var(--border-subtle)] pt-4" aria-label={t('actionCenter.history.title', 'Action history')}>
         <PanelTitle>
           {t('actionCenter.history.title', 'Action history')}

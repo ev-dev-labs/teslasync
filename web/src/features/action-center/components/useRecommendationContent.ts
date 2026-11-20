@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { formatCommuteClock, useCommuteWeekdays } from '@/lib/smartCommuteDisplay';
 import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay';
+import { useSitePerformanceDisplay } from '@/lib/sitePerformanceDisplay';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,6 +14,9 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const { fmtNumber } = useNumberFormatting();
   const { formatPower } = useUnits();
   const displayProjection = useTripProjectionDisplay();
+  const performance = useSitePerformanceDisplay(recommendation.source_feature === 'charging_site_performance'
+    ? recommendation.evidence.find((item) => item.kind === 'site_performance')?.site_performance
+    : undefined);
   const charging = recommendation.source_feature === 'smart_charging'
     ? recommendation.evidence.find((item) =>
         item.kind === 'charging_readiness' || item.kind === 'charging_feasibility')?.charging_readiness
@@ -20,6 +24,19 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const overlap = recommendation.source_feature === 'smart_charging'
     ? recommendation.evidence.find((item) => item.kind === 'departure_overlap')?.departure_overlap
     : undefined;
+  if (performance) {
+    return {
+      ...recommendation,
+      title: performance.title,
+      summary: performance.summary,
+      rationale: performance.rationale,
+      confidence: { ...recommendation.confidence, basis: [performance.basis] },
+      evidence: recommendation.evidence.map((item) => item.site_performance
+        ? { ...item, summary: `${performance.summary} ${performance.dates}` }
+        : item),
+      limitations: [performance.limitation],
+    };
+  }
   if (overlap) {
     const { kind, starts_at, ends_at } = overlap;
     const service = kind === 'service';

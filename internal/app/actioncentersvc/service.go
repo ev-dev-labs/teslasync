@@ -102,6 +102,12 @@ func WithSmartCharging(reader SmartChargingReader) Option {
 	}
 }
 
+func WithChargingSitePerformance(reader SitePerformanceReader) Option {
+	return func(service *Service) {
+		service.providers = append(service.providers, sitePerformanceProvider{reader: reader})
+	}
+}
+
 func New(source port.SourceReader, states port.StateRepository, options ...Option) *Service {
 	if source == nil || states == nil {
 		panic("actioncentersvc.New: dependencies must not be nil")

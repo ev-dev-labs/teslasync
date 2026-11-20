@@ -1,10 +1,11 @@
-import type { SmartChargingTripProjection, SmartDepartureWindow } from './smartCharging';
+import type { SmartChargingSitePerformanceReview, SmartChargingTripProjection, SmartDepartureWindow } from './smartCharging';
 
 export type ActionCenterSourceFeature =
   | 'active_alerts'
   | 'advanced_intelligence'
   | 'battery_health'
   | 'charging_reliability'
+  | 'charging_site_performance'
   | 'drive_efficiency'
   | 'fleet_maintenance'
   | 'signal_health'
@@ -99,6 +100,7 @@ export interface ActionCenterEvidence {
     latest_departure_at?: string;
     time_zone?: string;
   };
+  site_performance?: SmartChargingSitePerformanceReview;
 }
 
 export interface ActionCenterProjectedImpact {

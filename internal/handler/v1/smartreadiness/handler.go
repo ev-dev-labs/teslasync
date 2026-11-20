@@ -26,6 +26,8 @@ import (
 type service interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	LatestStarts(context.Context, string, int64) ([]domain.LatestStart, error)
+	SitePerformanceSettings(context.Context, string, int64) (domain.SitePerformanceSettings, error)
+	SetSitePerformance(context.Context, string, int64, *int64) error
 	SavePlan(context.Context, string, domain.Plan) (*domain.Plan, error)
 	DeletePlan(context.Context, string, int64, int64) error
 	SnoozePlan(context.Context, string, int64, int64, int64) error
@@ -48,6 +50,8 @@ func (h *Handler) MountRoutes(r chi.Router) {
 	r.Route("/smart-charging", func(r chi.Router) {
 		r.Get("/plans", h.ListPlans)
 		r.Get("/latest-start", h.LatestStarts)
+		r.Get("/site-performance", h.SitePerformance)
+		r.With(writeLimit).Put("/site-performance", h.SaveSitePerformance)
 		r.With(writeLimit).Post("/plans", h.CreatePlan)
 		r.With(writeLimit).Put("/plans/{planID}", h.UpdatePlan)
 		r.With(writeLimit).Delete("/plans/{planID}", h.DeletePlan)
@@ -251,6 +255,8 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, err error)
 		httputil.RespondError(w, http.StatusNotFound, "NOT_FOUND", "charging readiness resource not found")
 	case errors.Is(err, port.ErrLimit):
 		httputil.RespondError(w, http.StatusConflict, "PLAN_LIMIT", "too many charging readiness plans")
+	case errors.Is(err, smartreadinesssvc.ErrSitePerformanceUnavailable):
+		httputil.RespondError(w, http.StatusServiceUnavailable, "SITE_PERFORMANCE_UNAVAILABLE", "charging site performance analysis is unavailable")
 	default:
 		span.RecordError(errors.New("charging readiness request failed"))
 		span.SetStatus(codes.Error, "charging readiness request failed")
