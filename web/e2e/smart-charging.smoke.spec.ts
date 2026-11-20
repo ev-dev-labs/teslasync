@@ -137,6 +137,9 @@ for (const variant of [
         if (request.method() === 'GET' && path.endsWith('/site-performance')) {
           return fulfillApiFixture(route, api, { json: { data: { scope: null, review: null } } })
         }
+        if (request.method() === 'GET' && path.endsWith('/solar')) {
+          return fulfillApiFixture(route, api, { json: { data: { available: false, plan: null, decision: null } } })
+        }
         if (request.method() === 'GET') return fulfillApiFixture(route, api, { json: { data: plans.get(scopeKey()) ?? [] } })
         writes.push(`${request.method()} ${path}`)
         if (request.method() === 'POST' && path.endsWith('/plans')) {

@@ -117,3 +117,15 @@ export interface SmartPublicFeeDecision {
   observed_at: string
   expires_at: string
 }
+
+export interface SmartSolarDecision {
+  minimum_export_w: number
+  charge_limit_pct: number
+  battery_pct: number
+  backup_pct: number
+  reserve_pct: number
+  sample_count: number
+  sample_start: string
+  observed_at: string
+  expires_at: string
+}

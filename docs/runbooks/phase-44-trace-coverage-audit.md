@@ -67,6 +67,15 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `cmd/notification-worker/smart_charging.go`
   - `internal/database/database.go`
 
+## Notification worker samples explicitly authorized solar surplus — `smart_solar_charging`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/handler/v1/smartreadiness/solar_charging.go`
+  - `internal/tesla/auth_energy.go`
+
 ## Notification worker evaluates private, consented commute traffic — `smart_commute_traffic`
 
 - Status: **OK**

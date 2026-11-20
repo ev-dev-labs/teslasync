@@ -96,6 +96,7 @@ const LIVE_ONLY_MUTATIONS = {
   'hooks/usePersonalDelivery.ts': ['usePersonalDeliveryChange'],
   'hooks/useSmartCommute.ts': ['useSmartCommuteChange', 'useSmartCommuteTrafficPreview'],
   'hooks/useSmartCharging.ts': ['useSmartChargingChange'],
+  'hooks/useSmartSolar.ts': ['useSmartSolarChange'],
   'hooks/useVehicleCommand.ts': ['useVehicleCommand'],
   'hooks/useVehicles.ts': [
     'useRefreshVehicle',

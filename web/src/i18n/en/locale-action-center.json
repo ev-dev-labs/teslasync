@@ -803,6 +803,14 @@
     "slowCurrentSafety": "Review the current setting and site electrical limits; the reported maximum does not establish that increasing current is safe or will help.",
     "slowTripActionContext": "Battery {{battery}}% at {{place}}; measured charging power is {{power}}. Departure: {{departure}}.",
     "snooze": "Snooze for 1 hour",
+    "solar": {
+      "basis": "Timestamped Tesla Energy readings and fresh shared vehicle signals",
+      "evidence": "At least {{export}} was exported across {{samples}} readings since {{start}}. Your home battery was at {{backup}}% with a {{reserve}}% reserve. The plugged-in vehicle was at {{battery}}%, below its {{target}}% limit.",
+      "opportunity": "There may be surplus solar available to charge",
+      "rationale": "Repeated export readings show the home battery remains above its configured reserve.",
+      "source": "Tesla Energy live measurements",
+      "timing": "Evidence as of {{observed}}; advice expires at {{expires}}. Export can change. If you have not already started, review charging on the car while parked."
+    },
     "title": "Charging readiness",
     "tripActionContext": "Battery {{battery}}% at {{place}}. Departure: {{departure}}.",
     "tripProjectionLimitation": "These are estimates, not measurements. A 0% bound may mean a leg cannot be completed.",

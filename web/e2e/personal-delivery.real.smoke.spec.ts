@@ -35,11 +35,82 @@ async function installFixtures(page: Page, subject: string, theme: 'dark' | 'lig
   await page.route(url => url.pathname.startsWith('/api/v1/smart-delivery') ||
     url.pathname.startsWith('/api/v1/smart-charging') || url.pathname === '/api/v1/action-center',
   async route => {
-    expect(route.request().headers()['x-teslasync-expected-principal']).toBe(`subject:${subject}`)
-    await forwardLocalApiFixture(route, api, route.request().headers())
+    const headers = await route.request().allHeaders()
+    if (new URL(route.request().url()).pathname === '/api/v1/smart-charging/solar/connection/callback') {
+      expect(route.request().isNavigationRequest()).toBe(true)
+      await forwardLocalApiFixture(route, api, headers)
+      return
+    }
+    expect(headers['x-teslasync-expected-principal']).toBe(`subject:${subject}`)
+    await forwardLocalApiFixture(route, api, headers)
   })
   return api
 }
+
+test('solar consent produces a private read-only charging opportunity', async ({ page, context }) => {
+  test.skip(process.env.SMART_PERSONAL_REAL_BACKEND !== '1', 'Requires the isolated real-handler fixture')
+  test.setTimeout(120_000)
+  const origin = process.env.E2E_BASE_URL
+  if (!origin) throw new Error('A local fixture server is required')
+  const subject = 'synthetic-personal-a-solar'
+  const foreign = 'synthetic-personal-b-solar'
+  const title = 'There may be surplus solar available to charge'
+  const writes: string[] = []
+  context.on('request', request => {
+    const url = new URL(request.url())
+    if (url.pathname.startsWith('/api/v1/') && request.method() !== 'GET') writes.push(`${request.method()} ${url.pathname}`)
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await context.addCookies([{ name: 'personal_test_subject', value: subject, url: origin }])
+  await seedBrowserState(page, 'light', '/settings', { allowServiceWorkers: true })
+  const api = await installFixtures(page, subject, 'light')
+  expect((await page.request.post(`${origin}/__fixture/solar-clock`)).status()).toBe(204)
+  await page.goto('/settings/smart-charging?vehicle_id=7#solar-charging')
+  await waitForHarnessReady(page, api)
+  const settings = page.getByRole('region', { name: 'Solar charging opportunities' })
+  await expect(settings.getByText(/^Off by default/)).toBeVisible()
+  await expect(settings.getByText(title)).toHaveCount(0)
+  await settings.getByLabel('Tesla Energy site ID').fill('44')
+  await settings.getByRole('button', { name: 'Connect read-only Tesla Energy' }).click()
+  await page.getByRole('link', { name: 'Allow read-only access' }).click()
+  await expect(page).toHaveURL(/vehicle_id=7&solar=connected#solar-charging$/)
+  await expect(settings.getByText('Solar checks are off for this vehicle.')).toBeVisible()
+  await settings.getByLabel('Home charger').selectOption('9')
+  await settings.getByRole('button', { name: 'Enable solar checks for this vehicle' }).click()
+  await expect(settings.getByText(/^No current opportunity/)).toBeVisible()
+  expect((await page.request.post(`${origin}/__fixture/process-solar`)).status()).toBe(204)
+  await page.goto('/action-center?vehicle_id=7')
+  const card = page.getByRole('article', { name: title })
+  await expect(card).toBeVisible()
+  await expect(card.getByText(/across 4 readings/)).toBeVisible()
+  await card.getByRole('button', { name: 'Open source' }).click()
+  await expect(page).toHaveURL(/vehicle_id=7#solar-charging$/)
+  await expect(settings.getByText(title)).toBeVisible()
+  await expect(settings.getByRole('link', { name: 'Review charging activity' })).toBeVisible()
+
+  await assertMockApiComplete(page, api, { preserveServiceWorkers: true })
+  const foreignPage = await context.newPage()
+  await context.addCookies([{ name: 'personal_test_subject', value: foreign, url: origin }])
+  const foreignApi = await installFixtures(foreignPage, foreign, 'light')
+  await foreignPage.goto('/action-center?vehicle_id=7')
+  await waitForHarnessReady(foreignPage, foreignApi)
+  await expect(foreignPage.getByRole('article', { name: title })).toHaveCount(0)
+  await foreignPage.close()
+  await context.addCookies([{ name: 'personal_test_subject', value: subject, url: origin }])
+  await page.reload()
+  await expect(settings.getByText(title)).toBeVisible()
+  await settings.getByRole('button', { name: 'Disconnect Tesla Energy and remove all solar plans' }).click()
+  await expect(settings.getByLabel('Tesla Energy site ID')).toBeVisible()
+  await expect(settings.getByText(title)).toHaveCount(0)
+  await page.goto('/action-center?vehicle_id=7')
+  await waitForHarnessReady(page, api)
+  await expect(page.getByRole('article', { name: title })).toHaveCount(0)
+  await assertMockApiComplete(page, api, { preserveServiceWorkers: true })
+  expect(writes.filter(path => /smart-charging\/solar|commands/.test(path))).toEqual([
+    'POST /api/v1/smart-charging/solar/connection', 'PUT /api/v1/smart-charging/solar',
+    'DELETE /api/v1/smart-charging/solar/connection',
+  ])
+})
 
 for (const variant of [
   { name: 'desktop', width: 1440, height: 900, theme: 'light' },

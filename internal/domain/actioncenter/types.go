@@ -218,6 +218,7 @@ type EvidenceItem struct {
 	DepartureOverlap  *DepartureOverlapEvidence             `json:"departure_overlap,omitempty"`
 	CommuteTraffic    *CommuteTrafficEvidence               `json:"commute_traffic,omitempty"`
 	SitePerformance   *smartreadiness.SitePerformanceReview `json:"site_performance,omitempty"`
+	SolarSurplus      *smartreadiness.SolarSurplusDecision  `json:"solar_surplus,omitempty"`
 }
 
 type ImpactRiskLevel string

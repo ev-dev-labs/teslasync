@@ -211,6 +211,31 @@ func TestPersonalRecommendationBodiesAreNeverCaptured(t *testing.T) {
 	}
 }
 
+func TestSolarCallbackCredentialsAreNeverCaptured(t *testing.T) {
+	const callback = "/api/v1/smart-charging/solar/connection/callback"
+	store := &fakeAPILogStore{}
+	handler := APICallLogMiddleware(store, true, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("code") != "synthetic-code" || r.URL.Query().Get("state") != "synthetic-state" {
+			t.Fatal("callback credentials were stripped from the request")
+		}
+		http.Redirect(w, r, "/settings/smart-charging?solar=connected", http.StatusSeeOther)
+	}))
+	req := httptest.NewRequest(http.MethodGet, callback+"?code=synthetic-code&state=synthetic-state&error_description=private-data", nil)
+	req.Header.Set("Cookie", "teslasync_solar_state=synthetic-state.7")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	entries := store.Entries()
+	if rec.Code != http.StatusSeeOther || len(entries) != 1 {
+		t.Fatalf("status=%d, entries=%d; want one logged redirect", rec.Code, len(entries))
+	}
+	entry := entries[0]
+	if entry.Endpoint != callback || entry.RequestHeaders["Cookie"] != "REDACTED" ||
+		entry.RequestBody != nil || entry.ResponseBody != nil {
+		t.Fatalf("expected a credential-free callback record: %+v", entry)
+	}
+}
+
 // T01: happy path GET /api/v1/vehicles → exactly one entry, service tag
 // "teslasync-api", correct method/endpoint/status, body fields nil when
 // capture is OFF.

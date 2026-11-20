@@ -44,6 +44,18 @@ type PublicFeeRepository interface {
 	PrunePublicFeeDeliveries(context.Context, time.Time) error
 }
 
+type SolarChargingRepository interface {
+	SaveSolarChargingPlan(context.Context, domain.SolarChargingPlan) error
+	DeleteSolarChargingPlan(context.Context, string, int64) error
+	FindSolarChargingPlan(context.Context, string, int64) (*domain.SolarChargingPlan, error)
+	ListSolarChargingScopes(ctx context.Context, subject string, vehicleID *int64, now time.Time, limit int) ([]domain.SolarChargingScope, error)
+	ClaimDueSolarChargingPlans(ctx context.Context, now, next time.Time, limit int, sharedOpenMode bool) ([]domain.SolarChargingPlan, error)
+	SaveSolarChargingObservation(context.Context, domain.SolarChargingPlan, *domain.SolarBackupReserve, domain.SolarSurplusObservation, time.Time) error
+	InvalidateSolarChargingEvidence(context.Context, domain.SolarChargingPlan, time.Time) error
+	ListSolarChargingObservations(context.Context, domain.SolarChargingPlan, time.Time, time.Time) ([]domain.SolarSurplusObservation, error)
+	PruneSolarChargingObservations(context.Context, time.Time) error
+}
+
 type Repository interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	ListActivePlans(context.Context, string, int64, time.Time, int) ([]domain.Plan, error)

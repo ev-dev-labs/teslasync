@@ -40,13 +40,21 @@ type service interface {
 type Handler struct {
 	service    service
 	headerName string
+	solar      solarCharging
+	energy     solarConnections
 }
 
-func NewHandler(service service, forwardAuthHeader string) *Handler {
+type Option func(*Handler)
+
+func NewHandler(service service, forwardAuthHeader string, options ...Option) *Handler {
 	if service == nil {
 		panic("smartreadiness.NewHandler: service must not be nil")
 	}
-	return &Handler{service: service, headerName: strings.TrimSpace(forwardAuthHeader)}
+	handler := &Handler{service: service, headerName: strings.TrimSpace(forwardAuthHeader)}
+	for _, option := range options {
+		option(handler)
+	}
+	return handler
 }
 
 func (h *Handler) MountRoutes(r chi.Router) {
@@ -64,6 +72,12 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Put("/plans/{planID}", h.UpdatePlan)
 		r.With(writeLimit).Delete("/plans/{planID}", h.DeletePlan)
 		r.With(writeLimit).Post("/plans/{planID}/snooze", h.SnoozePlan)
+		r.Get("/solar", h.SolarSettings)
+		r.With(writeLimit).Put("/solar", h.SaveSolarConsent)
+		r.With(writeLimit).Delete("/solar", h.RevokeSolarConsent)
+		r.With(writeLimit).Post("/solar/connection", h.StartEnergyConnection)
+		r.With(writeLimit).Delete("/solar/connection", h.DisconnectEnergy)
+		r.With(writeLimit).Get("/solar/connection/callback", h.EnergyConnectionCallback)
 	})
 }
 
@@ -267,6 +281,8 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, err error)
 		httputil.RespondError(w, http.StatusServiceUnavailable, "SITE_PERFORMANCE_UNAVAILABLE", "charging site performance analysis is unavailable")
 	case errors.Is(err, smartreadinesssvc.ErrPublicFeeUnavailable):
 		httputil.RespondError(w, http.StatusServiceUnavailable, "PUBLIC_FEE_UNAVAILABLE", "public charging fee review is unavailable")
+	case errors.Is(err, smartreadinesssvc.ErrSolarChargingUnavailable):
+		httputil.RespondError(w, http.StatusServiceUnavailable, "SOLAR_CHARGING_UNAVAILABLE", "solar charging recommendations are unavailable")
 	default:
 		span.RecordError(errors.New("charging readiness request failed"))
 		span.SetStatus(codes.Error, "charging readiness request failed")

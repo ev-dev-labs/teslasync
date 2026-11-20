@@ -806,3 +806,17 @@ migrations:
     irreversible_justification: Explicit down deletes site-specific terms and consent.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 275
+    name: smart_solar_charging
+    forward_compatible: true
+    forward_compatibility_notes: Older binaries ignore the additive private solar grants, charging consent and samples.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes the private read-only energy grants, solar consent and derived samples.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock the referenced places and vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes encrypted energy grants, solar charging opt-ins and transient observations.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

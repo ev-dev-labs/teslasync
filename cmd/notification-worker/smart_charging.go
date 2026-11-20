@@ -24,13 +24,16 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
+	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	readinessport "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 type smartChargingProcessor interface {
@@ -52,15 +55,14 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 	}
 	var delivery *smartdeliverysvc.Service
 	readinessRepo := readinessdb.NewRepository(db)
-	service := smartreadinesssvc.New(
-		readinessRepo, live, smartadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
+	readinessOptions := []smartreadinesssvc.Option{
 		smartreadinesssvc.WithPublicFees(readinessRepo),
 		smartreadinesssvc.WithDecisionObserver(recordSmartChargingDecision),
 		smartreadinesssvc.WithSharedOpenMode(tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader)),
 		smartreadinesssvc.WithCandidateNotifier(func(ctx context.Context, candidate readinessport.Candidate) error {
 			return delivery.NotifyCharging(ctx, candidate)
 		}),
-	)
+	}
 	var encryptor *crypto.Encryptor
 	if key := os.Getenv("ENCRYPTION_KEY"); key != "" {
 		encryptor, err = crypto.New(key)
@@ -68,6 +70,23 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 			log.Warn().Msg("personal delivery disabled: encryption setup failed")
 		}
 	}
+	var solarConnections *smartreadinesssvc.SolarEnergyConnections
+	if encryptor != nil && cfg.Tesla.ClientID != "" {
+		readConfig := config.TeslaConfig{
+			ClientID: cfg.Tesla.ClientID, BaseURL: cfg.Tesla.BaseURL, Timeout: cfg.Tesla.Timeout,
+			DailyBudgetUSD: cfg.Tesla.DailyBudgetUSD, CommandReserveUSD: cfg.Tesla.CommandReserveUSD,
+		}
+		energyClient := tesla.NewClient(readConfig)
+		energyClient.SetEndpointControlsReader(settingsdb.NewSettingsRepo(db))
+		if policy := tesla.NewBudgetPolicy(readConfig.DailyBudgetUSD, readConfig.CommandReserveUSD); policy.Enabled() {
+			energyClient.SetRequestBudget(teslabudgetdb.New(db.Pool, policy))
+		}
+		solarConnections = smartreadinesssvc.NewSolarEnergyConnections(
+			readinessdb.NewSolarEnergyConnectionRepository(db, encryptor), smartadapter.NewTeslaSolarAuthorization(energyClient))
+		readinessOptions = append(readinessOptions,
+			smartreadinesssvc.WithSolarCharging(readinessRepo, smartadapter.NewSolarEnergy(energyClient, solarConnections)))
+	}
+	service := smartreadinesssvc.New(readinessRepo, live, smartadapter.NewSites(geofencedb.NewGeofenceRepo(db)), readinessOptions...)
 	deliveryRepo := deliverydb.NewRepository(db)
 	delivery = smartdeliverysvc.New(
 		deliveryRepo, encryptor,
@@ -82,6 +101,23 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 	)
 	workerCtx, cancel := context.WithCancel(ctx)
 	stopTraffic := startSmartTraffic(workerCtx, cfg, db, live, delivery.NotifyCommute)
+	solarDone := make(chan struct{})
+	go func() {
+		defer close(solarDone)
+		if solarConnections == nil {
+			return
+		}
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+		for workerCtx.Err() == nil {
+			runSolarChargingTick(workerCtx, service, solarConnections)
+			select {
+			case <-workerCtx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -102,8 +138,24 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 	return func() {
 		cancel()
 		<-done
+		<-solarDone
 		stopTraffic()
 		sharedCache.Close()
+	}
+}
+
+func runSolarChargingTick(ctx context.Context, service *smartreadinesssvc.Service, connections *smartreadinesssvc.SolarEnergyConnections) {
+	ctx, span := workerTracer().Start(ctx, "notification.solar_charging_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	processed, err := service.ProcessSolarCharging(ctx, 4)
+	err = errors.Join(err, connections.Prune(ctx))
+	span.SetAttributes(attribute.Int("notification.solar_charging.processed", processed))
+	if err != nil {
+		span.RecordError(errors.New("solar charging check failed"))
+		span.SetStatus(codes.Error, "solar charging check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("solar charging check failed")
 	}
 }
 

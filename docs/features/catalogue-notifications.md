@@ -74,6 +74,37 @@ ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
 installation share its plans, routines, and device settings.
 
+### Optional solar charging opportunities
+
+In **Charging readiness → Solar charging opportunities**, connect one Tesla
+Energy site by its `energy_site_id` from the Tesla Fleet API Products endpoint.
+Register `https://<your-teslasync-host>/api/v1/smart-charging/solar/connection/callback`
+as an extra Tesla OAuth redirect URI on the same origin as the configured
+`TESLA_REDIRECT_URI`. Use HTTPS, the same `ENCRYPTION_KEY` on the API and
+worker, and distributed Redis live reads. If you run your own ingress, omit
+the callback query string from its request logs; the code and state are
+short-lived credentials. The vehicle account stays separate. This grant
+requests `energy_device_data`, never `energy_cmds`. Confirm that your Tesla
+account can read the selected site and review your API limits first.
+
+After connecting, explicitly select a reviewed home charger for the selected
+vehicle and enable checks. Linking alone does not start polling. An eligible
+parked, plugged-in vehicle can trigger one site status request per minute
+per plan, plus a reserve lookup when needed, subject to the worker's bounded
+batch and the Fleet API request budget. The worker sends the selected site
+ID and its Tesla credential, not vehicle locations or driving history. It
+needs at least three timestamped readings over at least three minutes with
+1,400 W or more of solar export, no meaningful battery discharge, and the
+backup battery at least five percentage points above its reserve. Advice
+expires quickly and appears only in Action Center and Charging readiness.
+No push, wake, vehicle operation, or home settings change is performed.
+
+Turn off checks for one vehicle or choose **Disconnect Tesla Energy and remove
+all solar plans** to delete this scope's grant, plans, and evidence. This
+disconnects TeslaSync locally; you can also revoke account access in Tesla.
+Stop the worker before explicitly rolling down `000275`; down removes the
+separate Energy grants and solar data, not the existing Tesla vehicle login.
+
 ### Optional HERE traffic checks
 
 The connector is off by default. You need a HERE agreement permitting
@@ -183,7 +214,7 @@ does not confirm coverage, entitlement, or a successful live connection.
 | Timely rain forecast | [Open-Meteo's forecast API](https://open-meteo.com/en/docs) accepts coordinates and lists hourly precipitation probability and rain. Review its terms for the installation's use. | Not wired to smart notifications. A forecast alone would not prove outdoor parking or an open window. No coordinates are sent for this purpose. |
 | Calendar deadlines | [Google Calendar scopes](https://developers.google.com/workspace/calendar/api/auth) distinguish availability-only access, read-only event access, and event edits. An availability window does not give a trip's deadline or destination. | Enter a confirmed arrival deadline, service window or software install window manually. No calendar connector or calendar writes. |
 | Tariffs, station status and fees | [OpenEI's U.S. Utility Rate Database](https://apps.openei.org/services/doc/rest/util_rates/?version=7) publishes rate structures and effective dates. [HERE EV Charge Points](https://docs.here.com/ev-products/reference/here-ev-charge-points-api-v3) documents provider-dependent connector status and tariffs. [Tesla congestion fees](https://www.tesla.com/support/charging/supercharger/fees) depend on conditions such as site occupancy. [Electrify America](https://www.electrifyamerica.com/pricing/) directs drivers to the app or charger for current site pricing and fees. | Use configured tariffs and separately reviewed, unconditional fee terms. No provider tariff import, live stall claim, or occupancy-dependent fee prediction. The traffic license does not establish access to a station feed. |
-| Household energy and backup | [Tesla energy endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/energy) document site status and reserve settings. [Tesla OAuth scopes](https://developer.tesla.com/docs/fleet-api/authentication/overview) separate energy data reads (`energy_device_data`) from settings changes (`energy_cmds`). | Not wired to smart notifications. Existing vehicle authorization does not grant energy reads. No claim of backup coverage or vehicle-to-home support and no energy settings updates. |
+| Household energy and backup | [Tesla energy endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/energy) document site status and reserve. [Tesla OAuth scopes](https://developer.tesla.com/docs/fleet-api/authentication/overview) separate energy data reads (`energy_device_data`) from settings changes (`energy_cmds`). | Optional solar export advice uses a separate read-only grant. It does not infer that an EV caused backup draw during an outage, establish vehicle-to-home support, or change energy settings. Live Tesla verification has not been run. |
 | Recall applicability | [NHTSA's public API](https://www.nhtsa.gov/nhtsa-datasets-and-apis) returns recalls by model year, make and model. Its [VIN lookup](https://www.nhtsa.gov/recalls) checks for open recalls for a particular vehicle. | No smart recall delivery. A model-level match would only justify a verification card, not an open-VIN claim or urgent push. |
 | Spotify matching, save and playback | [Spotify Web API](https://developer.spotify.com/documentation/web-api) supports metadata search, playlists and playback. [Private playlist writes and playback control](https://developer.spotify.com/documentation/web-api/concepts/scopes) are separate permissions. [Start or resume playback](https://developer.spotify.com/documentation/web-api/reference/start-a-users-playback) requires Premium and a supported player. | No smart Spotify adapter. Track metadata does not prove a listen, and an external link does not confirm playback or episode progress. |
 | YouTube Music matching, save and playback | [YouTube Data API playlists](https://developers.google.com/youtube/data/guides/implementation/playlists) manage YouTube video playlists with authorization. That is not a documented YouTube Music catalog, listening-history or playback-control contract. | No YouTube Music connector. Do not use personal browser credentials, private endpoints or video playlists as a substitute for one. |

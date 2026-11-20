@@ -28,6 +28,8 @@ type Service struct {
 	sites           ChargingSites
 	sitePerformance port.SitePerformanceRepository
 	publicFees      port.PublicFeeRepository
+	solarPlans      port.SolarChargingRepository
+	solarEnergy     SolarEnergyReader
 	now             func() time.Time
 	observe         func(domain.Reason)
 	notify          func(context.Context, port.Candidate) error

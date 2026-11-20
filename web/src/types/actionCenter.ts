@@ -1,4 +1,4 @@
-import type { SmartChargingSitePerformanceReview, SmartChargingTripProjection, SmartDepartureWindow } from './smartCharging';
+import type { SmartChargingSitePerformanceReview, SmartChargingTripProjection, SmartDepartureWindow, SmartSolarDecision } from './smartCharging';
 import type { SmartCommuteRouteEnergy } from './smartCommute';
 
 export type ActionCenterSourceFeature =
@@ -104,6 +104,7 @@ export interface ActionCenterEvidence {
     route_energy_only?: boolean;
   };
   site_performance?: SmartChargingSitePerformanceReview;
+  solar_surplus?: SmartSolarDecision;
 }
 
 export interface ActionCenterProjectedImpact {

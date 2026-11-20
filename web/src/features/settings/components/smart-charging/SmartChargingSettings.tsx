@@ -12,6 +12,7 @@ import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { SmartChargingPlans } from './SmartChargingPlans'
 import { SmartChargingSitePerformance } from './SmartChargingSitePerformance'
 import { SmartChargingPublicFee } from './SmartChargingPublicFee'
+import { SmartChargingSolar } from './SmartChargingSolar'
 
 interface Props {
   active: boolean
@@ -50,6 +51,7 @@ export function SmartChargingSettings({ active }: Props) {
     if (value) next.set('vehicle_id', value)
     else next.delete('vehicle_id')
     next.delete('fee_session_id')
+    next.delete('solar')
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
   }
   const apply = async (input: SmartChargingChange) => {
@@ -130,6 +132,9 @@ export function SmartChargingSettings({ active }: Props) {
                 disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
                 placesUnavailable={formDisabled} />
               <SmartChargingPublicFee scope={scope} vehicleId={vehicleId} places={places}
+                disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
+                placesUnavailable={formDisabled} />
+              <SmartChargingSolar scope={scope} vehicleId={vehicleId} places={places}
                 disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
                 placesUnavailable={formDisabled} />
             </div>

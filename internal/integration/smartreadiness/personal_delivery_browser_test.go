@@ -2,8 +2,11 @@ package smartreadiness_test
 
 import (
 	"context"
+	"html"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -14,10 +17,16 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	actiondb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
+	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
+	readinessport "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
 )
@@ -32,6 +41,18 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	j.ctx = ctx
 	j.advance(time.Now().UTC())
 	createPublicFeeEvidenceTables(t, j.db)
+	applySolarMigration(t, j.db, "up")
+	enc, err := crypto.New("synthetic-solar-browser-encryption-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	solarConnections := smartreadinesssvc.NewSolarEnergyConnections(
+		readinessdb.NewSolarEnergyConnectionRepository(j.db, enc), solarBrowserAuthorization{},
+	)
+	solarRepo := readinessdb.NewRepository(j.db)
+	solarProvider := &solarTestProvider{now: func() time.Time { return j.now }}
+	solarReadiness := smartreadinesssvc.New(solarRepo, j.live, controlledSite{}, smartreadinesssvc.WithSolarCharging(solarRepo, solarProvider),
+		smartreadinesssvc.WithClock(func() time.Time { return j.now }))
 	if _, err := j.db.Pool.Exec(ctx, `UPDATE geofences SET updated_at = '2026-01-01T00:00:00Z' WHERE id = 9`); err != nil {
 		t.Fatal(err)
 	}
@@ -44,11 +65,13 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	}
 	actionService := actioncentersvc.New(
 		emptySources{}, actiondb.NewStateRepository(j.db), actioncentersvc.WithSmartCharging(j.readiness),
+		actioncentersvc.WithSolarCharging(solarReadiness),
 		actioncentersvc.WithClock(func() time.Time { return j.now }),
 	)
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		readinesshandler.NewHandler(j.readiness, "X-Test-Subject").MountRoutes(r)
+		readinesshandler.NewHandler(j.readiness, "X-Test-Subject",
+			readinesshandler.WithSolarCharging(solarReadiness, solarConnections)).MountRoutes(r)
 		deliveryhandler.NewHandler(j.delivery, "X-Test-Subject").MountRoutes(r)
 		r.Get("/action-center", actionhandler.NewHandler(actionService, "X-Test-Subject").List)
 	})
@@ -67,6 +90,7 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	}
 	static := http.FileServer(http.Dir(distRoot))
 	var fixtureMu sync.Mutex
+	var solarStart time.Time
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/sw.js":
@@ -88,6 +112,7 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 			fixtureMu.Lock()
 			defer fixtureMu.Unlock()
 			j.advance(time.Now().UTC())
+			j.live.setChargeState("Disconnected")
 			if _, err := j.readiness.ProcessDue(r.Context(), 50); err != nil {
 				http.Error(w, "fixture processing failed", http.StatusInternalServerError)
 				return
@@ -125,6 +150,37 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusNoContent)
 			return
+		case r.URL.Path == "/__fixture/solar-authorize" && r.Method == http.MethodGet:
+			query := url.Values{"state": {r.URL.Query().Get("state")}, "code": {"synthetic-solar-code"}}
+			callback := html.EscapeString(tesla.EnergyReadOAuthCallback + "?" + query.Encode())
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Cache-Control", "no-store")
+			_, _ = io.WriteString(w, `<!doctype html><title>Synthetic Tesla Energy consent</title><a href="`+
+				callback+`">Allow read-only access</a>`)
+			return
+		case r.URL.Path == "/__fixture/solar-clock" && r.Method == http.MethodPost:
+			fixtureMu.Lock()
+			defer fixtureMu.Unlock()
+			solarStart = time.Now().UTC().Add(-3*time.Minute - time.Second)
+			j.advance(solarStart)
+			j.live.setChargeState("Stopped")
+			j.live.mu.Lock()
+			j.live.values["ChargeLimitSoc"] = &signal.Value{Raw: 80.0, Timestamp: j.now}
+			j.live.mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+			return
+		case r.URL.Path == "/__fixture/process-solar" && r.Method == http.MethodPost:
+			fixtureMu.Lock()
+			defer fixtureMu.Unlock()
+			for i := range 4 {
+				j.advance(solarStart.Add(time.Duration(i) * time.Minute))
+				if count, err := solarReadiness.ProcessSolarCharging(r.Context(), 4); err != nil || count != 1 {
+					http.Error(w, "fixture solar processing failed", http.StatusInternalServerError)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			fixtureMu.Lock()
 			defer fixtureMu.Unlock()
@@ -135,7 +191,9 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 				"synthetic-personal-a-desktop": "192.0.2.10:12345", "synthetic-personal-b-desktop": "192.0.2.10:12345",
 				"synthetic-personal-a-mobile": "192.0.2.11:12345", "synthetic-personal-b-mobile": "192.0.2.11:12345",
 				"synthetic-personal-a-public-fee": "192.0.2.12:12345", "synthetic-personal-b-public-fee": "192.0.2.12:12345",
+				"synthetic-personal-a-solar": "192.0.2.13:12345", "synthetic-personal-b-solar": "192.0.2.13:12345",
 			}
+
 			if cookieErr != nil || clientAddresses[cookie.Value] == "" {
 				http.Error(w, "missing synthetic identity", http.StatusUnauthorized)
 				return
@@ -173,4 +231,28 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 		t.Fatalf("personal delivery browser journey failed: %v\n%s", err, output)
 	}
 	t.Logf("personal delivery browser journey:\n%s", output)
+}
+
+type solarBrowserAuthorization struct{}
+
+func (solarBrowserAuthorization) EnergyReadAuthURL(state string) (string, error) {
+	return "/__fixture/solar-authorize?state=" + url.QueryEscape(state), nil
+}
+
+func (solarBrowserAuthorization) ExchangeEnergyAuthorization(_ context.Context, code string) (readinessport.SolarEnergyTokens, error) {
+	if code != "synthetic-solar-code" {
+		return readinessport.SolarEnergyTokens{}, readinessport.ErrNotFound
+	}
+	return testEnergyTokens(time.Now().Add(time.Hour)), nil
+}
+
+func (solarBrowserAuthorization) RefreshEnergyAuthorization(context.Context, string) (readinessport.SolarEnergyTokens, error) {
+	return readinessport.SolarEnergyTokens{}, readinessport.ErrNotFound
+}
+
+func (solarBrowserAuthorization) CheckEnergySiteAccess(_ context.Context, siteID int64, token string) error {
+	if siteID != 44 || token != "synthetic-energy-access" {
+		return readinessport.ErrNotFound
+	}
+	return nil
 }

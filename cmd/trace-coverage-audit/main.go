@@ -151,6 +151,20 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_solar_charging",
+		Description: "Notification worker samples explicitly authorized solar surplus",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/solar_charging.go",
+			"internal/tesla/auth_energy.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/solar_charging.go",
+		},
+	},
+	{
 		Name:        "smart_commute_traffic",
 		Description: "Notification worker evaluates private, consented commute traffic",
 		GlobPatterns: []string{

@@ -11,6 +11,28 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+type privateEnergyRequestError struct{ cause error }
+
+func (e *privateEnergyRequestError) Error() string { return "private Tesla energy request failed" }
+func (e *privateEnergyRequestError) Unwrap() error { return e.cause }
+
+func (c *Client) ReadPrivateEnergyLiveStatus(ctx context.Context, siteID int64, accessToken string) ([]byte, int, error) {
+	return c.readPrivateEnergy(ctx, siteID, "live_status", accessToken)
+}
+
+func (c *Client) ReadPrivateEnergySiteInfo(ctx context.Context, siteID int64, accessToken string) ([]byte, int, error) {
+	return c.readPrivateEnergy(ctx, siteID, "site_info", accessToken)
+}
+
+func (c *Client) readPrivateEnergy(ctx context.Context, siteID int64, endpoint, accessToken string) ([]byte, int, error) {
+	if accessToken == "" {
+		return nil, http.StatusUnauthorized, ErrUnauthorized
+	}
+	telemetryPath := "/api/1/energy_sites/{site_id}/" + endpoint
+	path := fmt.Sprintf("/api/1/energy_sites/%d/%s", siteID, endpoint)
+	return c.doFleetRequest(ctx, http.MethodGet, path, nil, telemetryPath, accessToken)
+}
+
 // GetChargingHistory calls GET /api/1/dx/charging/history with pagination.
 // Returns raw response bytes, HTTP status code, and error.
 func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, endTime string, pageNo, pageSize int) (respBody []byte, statusCode int, err error) {

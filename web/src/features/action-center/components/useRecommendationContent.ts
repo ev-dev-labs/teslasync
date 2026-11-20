@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { formatCommuteClock, useCommuteRouteEnergyDisplay, useCommuteWeekdays } from '@/lib/smartCommuteDisplay';
 import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay';
 import { useSitePerformanceDisplay } from '@/lib/sitePerformanceDisplay';
+import { useSolarChargingDisplay } from '@/lib/solarChargingDisplay';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -25,6 +26,20 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const overlap = recommendation.source_feature === 'smart_charging'
     ? recommendation.evidence.find((item) => item.kind === 'departure_overlap')?.departure_overlap
     : undefined;
+  const solar = useSolarChargingDisplay(recommendation.source_feature === 'smart_charging'
+    ? recommendation.evidence.find((item) => item.kind === 'solar_surplus')?.solar_surplus
+    : undefined);
+  if (solar) {
+    return {
+      ...recommendation,
+      title: solar.title,
+      summary: solar.summary,
+      rationale: solar.rationale,
+      confidence: { ...recommendation.confidence, basis: [solar.basis] },
+      evidence: recommendation.evidence.map((item) => item.solar_surplus ? { ...item, summary: solar.summary } : item),
+      limitations: [solar.timing],
+    };
+  }
   if (performance) {
     return {
       ...recommendation,

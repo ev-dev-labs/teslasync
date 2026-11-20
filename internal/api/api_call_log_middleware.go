@@ -275,6 +275,9 @@ func privateRecommendationPath(path string) bool {
 // request is not mutated.
 func redactURLAndHeaders(req *http.Request) (string, map[string]string) {
 	u := *req.URL
+	if strings.TrimSuffix(u.Path, "/") == "/api/v1/smart-charging/solar/connection/callback" {
+		u.RawQuery, u.ForceQuery = "", false
+	}
 	q := u.Query()
 	for k := range q {
 		if redactKeyPattern.MatchString(k) {

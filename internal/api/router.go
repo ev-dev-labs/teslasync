@@ -1160,13 +1160,30 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)
 	smartChargingRepo := smartreadinessdb.NewRepository(db)
-	smartChargingService := smartreadinesssvc.New(
-		smartChargingRepo, liveSignalStore,
-		smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
+	smartChargingOptions := []smartreadinesssvc.Option{
 		smartreadinesssvc.WithSitePerformance(smartChargingRepo),
 		smartreadinesssvc.WithPublicFees(smartChargingRepo),
+	}
+	var solarAuthorization smartreadinesssvc.SolarEnergyAuthorizationClient
+	if opt.Encryptor != nil && teslaClient != nil && cfg.Redis.Enabled &&
+		!strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local") {
+		if _, err := teslaClient.EnergyReadAuthURL("setup-check"); err == nil {
+			solarAuthorization = smartreadinessadapter.NewTeslaSolarAuthorization(teslaClient)
+		}
+	}
+	solarConnections := smartreadinesssvc.NewSolarEnergyConnections(
+		smartreadinessdb.NewSolarEnergyConnectionRepository(db, opt.Encryptor), solarAuthorization)
+	var solarEnergy smartreadinesssvc.SolarEnergyReader
+	if solarConnections.CanConnect() {
+		solarEnergy = smartreadinessadapter.NewSolarEnergy(teslaClient, solarConnections)
+	}
+	smartChargingOptions = append(smartChargingOptions, smartreadinesssvc.WithSolarCharging(smartChargingRepo, solarEnergy))
+	smartChargingService := smartreadinesssvc.New(
+		smartChargingRepo, liveSignalStore,
+		smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db)), smartChargingOptions...,
 	)
-	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader)
+	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader,
+		smartreadinesshandler.WithSolarCharging(smartChargingService, solarConnections))
 	deliveryRepo := smartdeliverydb.NewRepository(db)
 	var commuteOriginCheck smartdeliverysvc.CommuteOriginCheck
 	if smartCommuteTraffic {
@@ -1189,6 +1206,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		actioncentersvc.WithSmartCommute(smartCommuteService),
 		actioncentersvc.WithSmartCharging(smartChargingService),
 		actioncentersvc.WithChargingSitePerformance(smartChargingService),
+	}
+	if solarConnections.CanConnect() {
+		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
 	}
 	actionCenterService := actioncentersvc.New(
 		actioncenterdb.NewSourceRepository(db),

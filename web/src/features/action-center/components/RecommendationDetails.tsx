@@ -94,6 +94,7 @@ export function RecommendationDetails({
       'Charging history',
     ),
     charging_telemetry: t('smartCharging.sitePerformance.meterSource', 'Charging meter history'),
+    tesla_energy: t('smartCharging.solar.source', 'Tesla Energy live measurements'),
     command_logs: t(
       'actionCenter.provenance.command_logs',
       'Vehicle command history',
