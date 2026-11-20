@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -161,33 +160,5 @@ func TestPublicDialRejectsPrivateAndRebindingAddresses(t *testing.T) {
 	}
 	if _, err := publicDialContext(resolver, dialer)(context.Background(), "tcp", "push.example.invalid:8443"); err == nil {
 		t.Fatal("nonstandard port was accepted")
-	}
-}
-
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
-	return f(request)
-}
-
-func TestPushInstrumentationCannotSeeEndpointToken(t *testing.T) {
-	var instrumented, forwarded string
-	base := roundTripFunc(func(request *http.Request) (*http.Response, error) {
-		forwarded = request.URL.String()
-		return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(bytes.NewReader(nil))}, nil
-	})
-	middle := roundTripFunc(func(request *http.Request) (*http.Response, error) {
-		instrumented = request.URL.String()
-		return (restoringTransport{base}).RoundTrip(request)
-	})
-	endpoint, _ := url.Parse("https://push.example.invalid/private-token?secret=value")
-	request := &http.Request{Method: http.MethodPost, URL: endpoint, Header: make(http.Header)}
-	response, err := (redactingTransport{middle}).RoundTrip(request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = response.Body.Close()
-	if instrumented != "https://push.example.invalid/" || forwarded != endpoint.String() {
-		t.Fatalf("instrumented=%q forwarded=%q", instrumented, forwarded)
 	}
 }

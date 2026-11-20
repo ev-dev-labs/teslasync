@@ -76,6 +76,10 @@ beforeEach(() => {
       return { data: snapshot }
     }
     if (path === '/smart-commute?vehicle_id=43' && !options?.method) return { data: fresh(43) }
+    if (path.startsWith('/drives?')) return [
+      { id: 33, vehicleId: 42, startTs: '2026-04-02T15:00:00Z', endTs: '2026-04-02T15:30:00Z' },
+      { id: 34, vehicleId: 43, startTs: '2026-04-02T15:00:00Z', endTs: '2026-04-02T15:30:00Z' },
+    ]
     if (path === '/smart-commute' && options?.method === 'PUT') {
       const settings = JSON.parse(String(options.body)) as Settings
       snapshot = {
@@ -103,11 +107,73 @@ beforeEach(() => {
       snapshot = { ...snapshot, routines: [{ ...suggestion, snoozed_until: input.duration_s ? '2099-01-01T00:00:00Z' : null }] }
       return undefined
     }
+    if (path === '/smart-commute/routines/8/traffic-preview' && options?.method === 'POST') {
+      return { data: {
+        drive_id: 33, fingerprint: 'a'.repeat(64),
+        trace: [suggestion.origin, { latitude: 47.15, longitude: -122.15 }, suggestion.destination],
+      } }
+    }
+    if (path === '/smart-commute/routines/8/traffic-consent' && options?.method === 'PUT') {
+      snapshot = { ...snapshot, routines: (snapshot.routines ?? []).map((routine) => ({
+        ...routine, traffic_consent: { lead_s: 900, min_savings_s: 480, can_skip_today: true },
+      })) }
+      return undefined
+    }
     throw new Error(`Unexpected request: ${path}`)
   })
 })
 
 describe('Smart Commute settings', () => {
+  it('only reads history after setup and requires review and explicit traffic consent', async () => {
+    snapshot = {
+      settings: { ...fresh(42).settings, enabled: true, local_analysis_enabled: true, time_zone: 'UTC' },
+      traffic_available: true,
+      routines: [{ ...suggestion, status: 'confirmed', name: 'Studio', evidence: null }],
+    }
+    renderSettings()
+    const setup = await screen.findByRole('button', { name: 'Set up traffic checks' })
+    expect(requestMock.mock.calls.some(([path]) => String(path).startsWith('/drives?'))).toBe(false)
+    fireEvent.click(setup)
+    const drive = await screen.findByLabelText('Representative drive')
+    expect(screen.queryByRole('option', { name: /drive 34/ })).not.toBeInTheDocument()
+    fireEvent.change(drive, { target: { value: '33' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview points locally' }))
+    const allow = await screen.findByRole('switch', { name: 'Allow sharing this trace with HERE for this routine' })
+    const enable = screen.getByRole('button', { name: 'Enable traffic checks' })
+    expect(screen.getByLabelText('Coordinates that can be shared with HERE')).toHaveTextContent('47.15, -122.15')
+    expect(enable).toBeDisabled()
+    expect(requestMock.mock.calls.some(([path]) => String(path).endsWith('/traffic-consent'))).toBe(false)
+    fireEvent.click(allow)
+    fireEvent.click(enable)
+    await screen.findByRole('button', { name: 'Disconnect HERE' })
+    const save = requestMock.mock.calls.find(([path]) => String(path).endsWith('/traffic-consent'))
+    expect(JSON.parse(String(save?.[1].body))).toEqual({
+      vehicle_id: 42, drive_id: 33, fingerprint: 'a'.repeat(64),
+      share_with_here: true, lead_s: 900, min_savings_s: 480,
+    })
+  })
+
+  it('opens the comparison read-only and shows no other routine for an expired link', async () => {
+    snapshot = {
+      settings: { ...fresh(42).settings, enabled: true, local_analysis_enabled: true, time_zone: 'UTC' },
+      traffic_available: true,
+      routines: [{ ...suggestion, status: 'confirmed', name: 'Studio', evidence: null }],
+      traffic_decisions: [{
+        routine_id: 8, vehicle_id: 42, routine_name: 'Studio', vehicle_name: 'Synthetic A',
+        departure_at: '2099-12-01T10:00:00Z', observed_at: '2099-12-01T09:45:00Z',
+        expires_at: '2099-12-01T09:50:00Z', usual_s: 2580, alternative_s: 1740,
+      }],
+    }
+    const current = renderSettings('/settings/smart-commute?vehicle_id=42&traffic_routine_id=8')
+    expect(await screen.findByText('Faster alternative: 29 min')).toBeInTheDocument()
+    expect(screen.getByText('Estimated saving: 14 min')).toBeInTheDocument()
+    current.unmount()
+    renderSettings('/settings/smart-commute?vehicle_id=42&traffic_routine_id=9')
+    expect(await screen.findByText(/This comparison is no longer available/)).toBeInTheDocument()
+    expect(screen.queryByText('Faster alternative: 29 min')).not.toBeInTheDocument()
+    expect(requestMock.mock.calls.some(([, options]) => options?.method)).toBe(false)
+  })
+
   it('starts off, asks for separate local consent, and saves an explicitly named suggestion', async () => {
     renderSettings()
     const feature = await screen.findByRole('switch', { name: /Enable Smart Commute/ })

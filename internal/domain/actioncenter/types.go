@@ -195,6 +195,11 @@ type DepartureOverlapEvidence struct {
 	smartreadiness.DepartureOverlap
 }
 
+type CommuteTrafficEvidence struct {
+	UsualS       int64 `json:"usual_s"`
+	AlternativeS int64 `json:"alternative_s"`
+}
+
 type EvidenceItem struct {
 	ID                string                     `json:"id"`
 	Kind              string                     `json:"kind"`
@@ -204,6 +209,7 @@ type EvidenceItem struct {
 	RecurringDrive    *RecurringDriveEvidence    `json:"recurring_drive,omitempty"`
 	ChargingReadiness *ChargingReadinessEvidence `json:"charging_readiness,omitempty"`
 	DepartureOverlap  *DepartureOverlapEvidence  `json:"departure_overlap,omitempty"`
+	CommuteTraffic    *CommuteTrafficEvidence    `json:"commute_traffic,omitempty"`
 }
 
 type ImpactRiskLevel string

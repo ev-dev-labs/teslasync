@@ -30,6 +30,7 @@ type Analysis struct {
 type Learner func([]domain.DriveObservation, []domain.Routine, time.Time, *time.Location) Analysis
 
 type Repository interface {
+	TrafficRepository
 	Read(ctx context.Context, subject string, vehicleID int64, now time.Time) (*domain.Snapshot, error)
 	SaveSettings(ctx context.Context, subject string, settings domain.Settings, now time.Time, learner Learner) error
 	Analyze(ctx context.Context, subject string, vehicleID int64, now time.Time, learner Learner) error

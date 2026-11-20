@@ -33,6 +33,7 @@ export interface SmartCommuteRoutine {
   snoozed_until: string | null
   created_at: string
   updated_at: string
+  traffic_consent?: { lead_s: number; min_savings_s: number; can_skip_today: boolean }
 }
 
 export interface SmartCommuteRoutineInput {
@@ -48,4 +49,32 @@ export interface SmartCommuteRoutineInput {
 export interface SmartCommuteSnapshot {
   settings: SmartCommuteSettings
   routines: SmartCommuteRoutine[] | null
+  traffic_available?: boolean
+  traffic_decisions?: SmartCommuteTrafficDecision[] | null
+}
+
+export interface SmartCommuteTrafficDecision {
+  routine_id: number
+  vehicle_id: number
+  routine_name: string
+  vehicle_name: string
+  departure_at: string
+  usual_s: number
+  alternative_s: number
+  observed_at: string
+  expires_at: string
+}
+
+export interface SmartCommuteTrafficPreview {
+  drive_id: number
+  trace: SmartCommutePoint[]
+  fingerprint: string
+}
+
+export interface SmartCommuteTrafficInput {
+  drive_id: number
+  fingerprint: string
+  share_with_here: true
+  lead_s: number
+  min_savings_s: number
 }

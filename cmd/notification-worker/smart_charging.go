@@ -72,6 +72,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
 	)
 	workerCtx, cancel := context.WithCancel(ctx)
+	stopTraffic := startSmartTraffic(workerCtx, cfg, db, live)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -89,6 +90,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 	return func() {
 		cancel()
 		<-done
+		stopTraffic()
 		sharedCache.Close()
 	}
 }

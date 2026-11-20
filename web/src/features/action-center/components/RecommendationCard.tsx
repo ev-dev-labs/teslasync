@@ -177,7 +177,9 @@ export function RecommendationCard({
               icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
               onClick={() => onAction(recommendation, 'navigate')}
             >
-              {t('actionCenter.action.navigate', 'Open source')}
+              {recommendation.evidence.some((item) => item.commute_traffic)
+                ? t('smartCommute.traffic.comparison', 'Compare routes')
+                : t('actionCenter.action.navigate', 'Open source')}
             </Button>
           )}
         </div>

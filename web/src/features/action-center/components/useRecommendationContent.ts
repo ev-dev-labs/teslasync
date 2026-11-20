@@ -202,6 +202,24 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
       ],
     };
   }
+  const traffic = recommendation.source_feature === 'smart_commute'
+    ? recommendation.evidence.find((item) => item.kind === 'commute_traffic')?.commute_traffic
+    : undefined;
+  if (traffic) {
+    const summary = t('smartCommute.traffic.actionSummary', 'HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.', {
+      usual: fmtNumber(Math.round(traffic.usual_s / 60)), alternative: fmtNumber(Math.round(traffic.alternative_s / 60)),
+    });
+    const coverage = t('smartCommute.traffic.coverage', 'Both routes had fresh directional HERE Traffic Flow coverage');
+    return {
+      ...recommendation,
+      title: t('smartCommute.traffic.actionTitle', 'A faster route is available before your departure'),
+      summary,
+      rationale: t('smartCommute.traffic.rationale', 'Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.'),
+      confidence: { ...recommendation.confidence, basis: [coverage] },
+      evidence: recommendation.evidence.map((item) => item.commute_traffic ? { ...item, summary } : item),
+      limitations: [t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.')],
+    };
+  }
   const drive = recommendation.source_feature === 'smart_commute'
     ? recommendation.evidence.find((item) => item.kind === 'recurring_drive')?.recurring_drive
     : undefined;

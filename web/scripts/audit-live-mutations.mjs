@@ -94,7 +94,7 @@ const LIVE_ONLY_MUTATIONS = {
   'hooks/useSettingsBackup.ts': ['useApplyImport'],
   'hooks/useSettingsReset.ts': ['useResetSection', 'useResetAllSettings'],
   'hooks/usePersonalDelivery.ts': ['usePersonalDeliveryChange'],
-  'hooks/useSmartCommute.ts': ['useSmartCommuteChange'],
+  'hooks/useSmartCommute.ts': ['useSmartCommuteChange', 'useSmartCommuteTrafficPreview'],
   'hooks/useSmartCharging.ts': ['useSmartChargingChange'],
   'hooks/useVehicleCommand.ts': ['useVehicleCommand'],
   'hooks/useVehicles.ts': [

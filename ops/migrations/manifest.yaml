@@ -704,3 +704,18 @@ migrations:
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-19"
+
+  - version: 268
+    name: smart_commute_traffic_consent
+    forward_compatible: false
+    forward_compatibility_notes: Older API versions cannot revoke the reviewed traces when Smart Commute settings or routines are edited.
+    requires_downtime: true
+    rollback_notes: Stop commute processing before using older API versions. If settings were modified with an older API, roll down this migration and require fresh explicit consent before restoring traffic processing.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Creates an empty table and an index on it. Foreign key creation takes a short lock on the referenced routine table.
+    reversible: false
+    irreversible_justification: Explicit down deletes approved representative traces and their consent state; the source drives are not affected.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

@@ -1047,6 +1047,13 @@ webPush:
   # Must be a `mailto:` URL or an https:// URL.
   subject: ""
 
+smartCommute:
+  # Confirm that your HERE agreement permits background Routing and Traffic Flow
+  # comparisons for this use and short-lived retention of the resulting ETAs.
+  hereLicenseConfirmed: false
+  # Server-only HERE key for the licensed Routing v8 and Traffic Flow v7 APIs.
+  hereApiKey: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Service mode banner override (Phase 46 / Prompt 04)
 #

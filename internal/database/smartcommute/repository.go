@@ -61,10 +61,20 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 		return nil, fmt.Errorf("read smart commute settings: %w", err)
 	}
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT `+routineColumns+`
+		SELECT `+routineColumns+`, c.lead_s, c.min_savings_s,
+		       coalesce(s.enabled AND NOT s.paused AND planned.departure_at > $3
+		         AND (planned.departure_at AT TIME ZONE r.time_zone)::date =
+		             ($3::timestamptz AT TIME ZONE r.time_zone)::date
+		         AND NOT coalesce(o.skipped AND o.departure_at = planned.departure_at, false), false)
 		FROM smart_commute_routines r
 		JOIN smart_commute_settings s ON s.subject = r.subject AND s.vehicle_id = r.vehicle_id
 		JOIN vehicles v ON v.id = r.vehicle_id AND v.archived_at IS NULL
+		LEFT JOIN smart_commute_traffic_consent c ON c.routine_id = r.id
+		LEFT JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND c.id IS NOT NULL
+		CROSS JOIN LATERAL (
+		  SELECT CASE WHEN o.departure_at > $3 AND o.departure_at < c.departure_at
+		              THEN o.departure_at ELSE c.departure_at END AS departure_at
+		) planned
 		WHERE r.subject = $1 AND r.vehicle_id = $2
 		  AND (r.status = 'confirmed' OR (
 		    r.status = 'suggested' AND s.enabled AND s.local_analysis_enabled AND NOT s.paused
@@ -76,12 +86,18 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 	}
 	defer rows.Close()
 	for rows.Next() {
-		item, scanErr := scanRoutine(rows)
+		var leadS *int
+		var minSavingsS *int64
+		var canSkip bool
+		item, scanErr := scanRoutineWithExtras(rows, &leadS, &minSavingsS, &canSkip)
 		if scanErr != nil {
 			return nil, fmt.Errorf("scan smart commute routine: %w", scanErr)
 		}
 		if item.SnoozedUntil != nil && !item.SnoozedUntil.After(now) {
 			item.SnoozedUntil = nil
+		}
+		if leadS != nil && minSavingsS != nil {
+			item.TrafficConsent = &domain.TrafficConsentSummary{LeadS: *leadS, MinSavingsS: *minSavingsS, CanSkip: canSkip}
 		}
 		result.Routines = append(result.Routines, *item)
 	}
@@ -118,6 +134,14 @@ func (r *Repository) SaveSettings(
 			settings.Paused, settings.TimeZone, now)
 		if err != nil {
 			return fmt.Errorf("save smart commute settings: %w", err)
+		}
+		if !settings.Enabled || !settings.LocalAnalysisEnabled {
+			if _, err := tx.Exec(ctx, `
+				DELETE FROM smart_commute_traffic_consent c USING smart_commute_routines r
+				WHERE c.routine_id = r.id AND r.subject = $1 AND r.vehicle_id = $2`,
+				subject, settings.VehicleID); err != nil {
+				return fmt.Errorf("revoke traffic consent for disabled analysis: %w", err)
+			}
 		}
 		if !settings.Enabled || !settings.LocalAnalysisEnabled || previous.TimeZone != settings.TimeZone {
 			if _, err := tx.Exec(ctx, `

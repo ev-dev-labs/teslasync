@@ -138,6 +138,18 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_commute_traffic",
+		Description: "Notification worker evaluates private, consented commute traffic",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_traffic.go",
+			"internal/platform/httputil/private_transport.go",
+		},
+		MinSpanFiles: 1,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_traffic.go",
+		},
+	},
+	{
 		Name:        "export_job",
 		Description: "Export publish → MQTT envelope → process → SSE status",
 		GlobPatterns: []string{

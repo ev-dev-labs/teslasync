@@ -1147,7 +1147,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		ownershipIntelService,
 		cfg.Auth.ForwardAuthHeader,
 	)
-	smartCommuteService := smartcommutesvc.New(smartcommutedb.NewRepository(db))
+	smartCommuteTraffic := cfg.SmartCommute.HasLicensedTraffic() && cfg.Redis.Enabled &&
+		!strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local")
+	var commuteTrafficLive smartcommutesvc.TrafficLiveReader
+	if smartCommuteTraffic {
+		commuteTrafficLive = liveSignalStore
+	}
+	smartCommuteService := smartcommutesvc.New(
+		smartcommutedb.NewRepository(db), smartcommutesvc.WithTrafficTraceReader(stateReader),
+		smartcommutesvc.WithTrafficConnector(smartCommuteTraffic), smartcommutesvc.WithTrafficLiveReader(commuteTrafficLive),
+	)
 	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)
 	smartChargingService := smartreadinesssvc.New(
 		smartreadinessdb.NewRepository(db), liveSignalStore,

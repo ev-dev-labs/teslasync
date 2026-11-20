@@ -11,6 +11,7 @@ import (
 
 type SmartCommuteReader interface {
 	ListSuggestions(context.Context, string, *int64, time.Time, int) ([]commute.SuggestedRoutine, error)
+	ListTrafficDecisions(context.Context, string, *int64, time.Time, int) ([]commute.TrafficDecision, error)
 }
 
 type smartCommuteProvider struct{ reader SmartCommuteReader }
@@ -84,7 +85,37 @@ func (p smartCommuteProvider) Recommendations(
 			},
 		})
 	}
+	comparisons, err := p.reader.ListTrafficDecisions(ctx, filter.subject, filter.VehicleID, now, providerLimit)
+	if err != nil {
+		return items, err
+	}
+	for _, row := range comparisons {
+		items = append(items, trafficCandidate(row))
+	}
 	return items, nil
+}
+
+func trafficCandidate(row commute.TrafficDecision) domain.Candidate {
+	key := fmt.Sprintf("traffic:%d:%d", row.RoutineID, row.DepartureAt.Unix())
+	path := fmt.Sprintf("/settings/smart-commute?vehicle_id=%d&traffic_routine_id=%d", row.VehicleID, row.RoutineID)
+	summary := fmt.Sprintf("HERE estimates %d minutes on the usual route and %d minutes on an alternative.",
+		(row.UsualS+30)/60, (row.AlternativeS+30)/60)
+	return domain.Candidate{
+		SourceFeature: domain.SourceSmartCommute, SourceKey: key, DedupKey: key,
+		Vehicle: &domain.VehicleRef{ID: row.VehicleID, DisplayName: row.VehicleName},
+		Title:   "A faster route is available before your departure", Summary: summary,
+		Rationale: "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+		Priority:  domain.PriorityMedium, Severity: domain.SeverityInfo, BaseConfidence: 0.8,
+		ConfidenceBasis: []string{"Both routes had fresh directional HERE Traffic Flow coverage"},
+		Evidence: []domain.EvidenceItem{{
+			ID: key, Kind: "commute_traffic", Summary: summary, ObservedAt: &row.ObservedAt,
+			Provenance:     domain.EvidenceProvenance{Source: "here_routing_traffic", RecordID: key},
+			CommuteTraffic: &domain.CommuteTrafficEvidence{UsualS: row.UsualS, AlternativeS: row.AlternativeS},
+		}},
+		SafeActions: []domain.ActionType{domain.ActionNavigate}, NavigationPath: &path,
+		ObservedAt: &row.ObservedAt, FreshFor: 5 * time.Minute, AgingFor: 5 * time.Minute, ExpiresAt: row.ExpiresAt,
+		Limitations: []string{"These are provider estimates, not measured trip times.", "Tesla calculates its own route."},
+	}
 }
 
 func localClock(seconds int) string {

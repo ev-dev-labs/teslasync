@@ -33,6 +33,10 @@ type service interface {
 	SnoozeRoutine(context.Context, string, int64, int64, int64) error
 	DeleteRoutine(context.Context, string, int64, int64) error
 	DeleteAll(context.Context, string, int64) error
+	PreviewTrafficTrace(context.Context, string, int64, int64, int64) (*domain.TrafficPreview, error)
+	SaveTrafficConsent(context.Context, string, domain.TrafficConsentInput) error
+	DeleteTrafficConsent(context.Context, string, int64, int64) error
+	SkipTrafficToday(context.Context, string, int64, int64) error
 }
 
 type Handler struct {
@@ -59,6 +63,10 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Post("/routines/{routineID}/decline", h.DeclineRoutine)
 		r.With(writeLimit).Post("/routines/{routineID}/snooze", h.SnoozeRoutine)
 		r.With(writeLimit).Delete("/routines/{routineID}", h.DeleteRoutine)
+		r.With(writeLimit).Post("/routines/{routineID}/traffic-preview", h.PreviewTrafficTrace)
+		r.With(writeLimit).Put("/routines/{routineID}/traffic-consent", h.SaveTrafficConsent)
+		r.With(writeLimit).Delete("/routines/{routineID}/traffic-consent", h.DeleteTrafficConsent)
+		r.With(writeLimit).Post("/routines/{routineID}/traffic-skip", h.SkipTrafficToday)
 	})
 }
 
@@ -331,6 +339,11 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, err error)
 	case errors.Is(err, port.ErrTooManyDrives):
 		httputil.RespondError(w, http.StatusUnprocessableEntity, "HISTORY_LIMIT",
 			"too many drives for a bounded local analysis")
+	case errors.Is(err, port.ErrTrafficTraceUnavailable):
+		httputil.RespondError(w, http.StatusUnprocessableEntity, "TRACE_UNAVAILABLE",
+			"the selected drive has no suitable observed route trace")
+	case errors.Is(err, port.ErrTrafficPreviewChanged):
+		httputil.RespondError(w, http.StatusConflict, "TRACE_CHANGED", "review the updated representative trace before consenting")
 	default:
 		span.RecordError(errors.New("smart commute request failed"))
 		span.SetStatus(codes.Error, "smart commute request failed")

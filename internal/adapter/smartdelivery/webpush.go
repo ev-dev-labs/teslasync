@@ -7,12 +7,11 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"time"
 
 	gowebpush "github.com/SherClockHolmes/webpush-go"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 type WebPush struct {
@@ -30,10 +29,9 @@ func NewWebPush(publicKey, privateKey, subject string) *WebPush {
 		TLSHandshakeTimeout: 5 * time.Second,
 		IdleConnTimeout:     30 * time.Second,
 	}
-	instrumented := otelhttp.NewTransport(restoringTransport{transport})
 	return NewWebPushWithClient(publicKey, privateKey, subject, &http.Client{
 		Timeout:       10 * time.Second,
-		Transport:     redactingTransport{instrumented},
+		Transport:     httputil.NewPrivateTransport(transport),
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	})
 }
@@ -135,35 +133,4 @@ func publicIP(address netip.Addr) bool {
 		}
 	}
 	return true
-}
-
-type originalURLKey struct{}
-
-// Instrumentation receives only the origin; subscription paths and queries are secrets.
-type redactingTransport struct{ next http.RoundTripper }
-
-func (t redactingTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	original := *request.URL
-	redacted := *request.URL
-	redacted.Path, redacted.RawPath, redacted.RawQuery, redacted.Fragment = "/", "", "", ""
-	redacted.ForceQuery = false
-	clone := request.Clone(context.WithValue(request.Context(), originalURLKey{}, &original))
-	clone.URL = &redacted
-	return t.next.RoundTrip(clone)
-}
-
-type restoringTransport struct{ next http.RoundTripper }
-
-func (t restoringTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	original, ok := request.Context().Value(originalURLKey{}).(*url.URL)
-	if !ok {
-		return nil, errors.New("personal push destination unavailable")
-	}
-	clone := request.Clone(request.Context())
-	clone.URL = original
-	response, err := t.next.RoundTrip(clone)
-	if err != nil {
-		return nil, errors.New("personal push transport failed")
-	}
-	return response, nil
 }

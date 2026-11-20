@@ -11,10 +11,11 @@ interface Props {
   stateLabel: string
   disabled: boolean
   busy: boolean
+  trafficAvailable: boolean
   onChange: (change: SmartCommuteChange) => Promise<boolean>
 }
 
-export function SmartCommuteControls({ settings, stateLabel, disabled, busy, onChange }: Props) {
+export function SmartCommuteControls({ settings, stateLabel, disabled, busy, trafficAvailable, onChange }: Props) {
   const { t } = useTranslation()
   const [zoneDraft, setZoneDraft] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -40,7 +41,9 @@ export function SmartCommuteControls({ settings, stateLabel, disabled, busy, onC
         {t('smartCommute.localOnly', 'Local analysis examines up to eight weeks of this vehicle’s completed drives on this server. It does not identify the driver.')}
       </Text>
       <Text as="p" variant="bodySm">
-        {t('smartCommute.notAvailable', 'Live traffic, personal push delivery and destination commands are not available here yet. Nothing is sent to a traffic provider or vehicle.')}
+        {trafficAvailable
+          ? t('smartCommute.traffic.optional', 'Traffic checks are optional for each confirmed routine. A check never wakes or operates your vehicle.')
+          : t('smartCommute.traffic.notConfigured', 'HERE traffic checks are not configured on this server. Your routines still work locally.')}
       </Text>
       <Input label={t('smartCommute.analysisTimeZone', 'Time zone for local analysis')} maxLength={128}
         value={timeZone} onChange={(event) => setZoneDraft(event.target.value)} disabled={disabled}

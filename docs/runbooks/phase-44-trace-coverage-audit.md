@@ -59,6 +59,14 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `cmd/notification-worker/smart_charging.go`
   - `internal/database/database.go`
 
+## Notification worker evaluates private, consented commute traffic — `smart_commute_traffic`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 1)
+- Matched files:
+  - `cmd/notification-worker/smart_traffic.go`
+  - `internal/platform/httputil/private_transport.go`
+
 ## Export publish → MQTT envelope → process → SSE status — `export_job`
 
 - Status: **OK**

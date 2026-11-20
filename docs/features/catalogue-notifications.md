@@ -24,8 +24,9 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   selected vehicle, then confirm or decline suggestions in Action Center. You
   can also enter a routine without enabling history analysis. Pause or disable
   checks, or delete derived commute data without deleting the original drives.
-  Live traffic comparisons, commute push, and sending destinations are not
-  available in this implementation.
+  Installations with a licensed HERE connection can opt into traffic checks
+  for individual confirmed routines. Current comparisons appear in Action
+  Center; commute push and sending destinations are not part of this increment.
 - **Charging readiness** (`/settings/smart-charging`): Choose a known charging
   place, enter a planned departure and reserve, and enable the plan. Review
   actionable plug-in, slow-charging, and schedule warnings in Action Center.
@@ -46,6 +47,39 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
 ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
 installation share its plans, routines, and device settings.
+
+### Optional HERE traffic checks
+
+The connector is off by default. You need a HERE agreement permitting
+background calls to Routing v8 and Traffic Flow v7 and short-lived retention
+and display of the resulting ETAs. Check your account's coverage, limits,
+and costs first; do not assume these calls are free or allowed under a
+generic API key. Set `SMART_COMMUTE_HERE_LICENSE_CONFIRMED=true` and
+provide `SMART_COMMUTE_HERE_API_KEY` via the API and notification-worker
+environment. In Helm, use `smartCommute.hereLicenseConfirmed`. Supply the
+key in the existing or external Secret, or use `smartCommute.hereApiKey`
+when the chart manages the Secret. The worker also requires Redis
+distributed live reads. Do not copy the key into web configuration.
+
+Confirm a routine, choose **Set up traffic checks**, and review one recent
+representative drive. Previewing reads the trace on this server. Only after
+you separately allow sharing do scheduled requests send the reviewed
+coordinates (at most 200), the planned departure time, and HERE route
+segment references. No drive history, VIN, or person or routine name is
+shared. One eligible departure can use a route import, an alternatives
+request, and several batched traffic-flow requests. No check wakes the car.
+Missing or stale live state, different origin, quiet hours, unavailable or
+stale traffic, and a saving below the configured minimum suppress the
+comparison. Treat all displayed durations as estimates.
+
+**Skip today** suppresses the current occurrence. **Pause** suspends checks
+without deleting the approved trace. **Disconnect HERE**, turning off local
+analysis or Smart Commute, and editing or deleting the routine revoke the
+trace and active comparisons. A subsequent setup requires reviewing the
+route again. To roll back, stop the notification worker first; migration
+`000268` down removes traffic consent and decision data without deleting
+source drives. Require fresh consent after rollback to an older API that
+does not track traffic settings.
 
 ### Optional personal browser push
 

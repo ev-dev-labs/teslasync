@@ -68,12 +68,22 @@ type Config struct {
 	AzureMaps                    AzureMapsConfig
 	APILogs                      APILogsConfig
 	WebPush                      WebPushConfig
+	SmartCommute                 SmartCommuteConfig
 	System                       SystemConfig
 	GitHub                       GitHubConfig
 	Physics                      PhysicsConfig
 
 	// Operator-toggled behaviors that should not require a code change.
 	Features FeaturesConfig
+}
+
+type SmartCommuteConfig struct {
+	HERELicenseConfirmed bool
+	HEREAPIKey           string `json:"-"`
+}
+
+func (s SmartCommuteConfig) HasLicensedTraffic() bool {
+	return s.HERELicenseConfirmed && strings.TrimSpace(s.HEREAPIKey) != ""
 }
 
 // FeaturesConfig holds operator-toggled behaviors that we don't want
@@ -631,6 +641,10 @@ func Load() (*Config, error) {
 			PublicKey:  envStr("TESLASYNC_VAPID_PUBLIC_KEY", ""),
 			PrivateKey: envStr("TESLASYNC_VAPID_PRIVATE_KEY", ""),
 			Subject:    envStr("TESLASYNC_VAPID_SUBJECT", ""),
+		},
+		SmartCommute: SmartCommuteConfig{
+			HERELicenseConfirmed: envBool("SMART_COMMUTE_HERE_LICENSE_CONFIRMED", false),
+			HEREAPIKey:           envStr("SMART_COMMUTE_HERE_API_KEY", ""),
 		},
 
 		System: SystemConfig{

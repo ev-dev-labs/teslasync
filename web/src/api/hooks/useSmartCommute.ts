@@ -6,6 +6,8 @@ import type {
   SmartCommuteRoutineInput,
   SmartCommuteSettings,
   SmartCommuteSnapshot,
+  SmartCommuteTrafficInput,
+  SmartCommuteTrafficPreview,
 } from '@/types/smartCommute'
 
 export const smartCommuteKeys = {
@@ -31,6 +33,27 @@ export function useSmartCommute(
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: 'always',
+    refetchInterval: (query) => query.state.data?.data.traffic_decisions?.length ? 15_000 : false,
+  })
+}
+
+export function useSmartCommuteTrafficPreview(scope: PersonalScope, vehicleId: number, routineId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (driveId: number) => request<{ data: SmartCommuteTrafficPreview }>(
+      `/smart-commute/routines/${routineId}/traffic-preview`, {
+        method: 'POST', requiresLiveMode: true, cache: 'no-store', headers: expectedPrincipalHeader(scope),
+        body: JSON.stringify({ vehicle_id: vehicleId, drive_id: driveId }),
+      },
+    ),
+    gcTime: 0,
+    networkMode: 'always',
+    retry: false,
+    onError: (error) => {
+      if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: personalIdentityKey })
+      }
+    },
   })
 }
 
@@ -43,6 +66,9 @@ export type SmartCommuteChange =
   | { kind: 'snooze'; id: number; durationS: number }
   | { kind: 'deleteRoutine'; id: number }
   | { kind: 'deleteAll' }
+  | { kind: 'trafficConsent'; id: number; traffic: SmartCommuteTrafficInput }
+  | { kind: 'trafficDisconnect'; id: number }
+  | { kind: 'trafficSkip'; id: number }
 
 export function useSmartCommuteChange(scope: PersonalScope | null, vehicleId: number | null) {
   const queryClient = useQueryClient()
@@ -87,6 +113,18 @@ export function useSmartCommuteChange(scope: PersonalScope | null, vehicleId: nu
         case 'deleteAll':
           return request<void>(`/smart-commute?vehicle_id=${vehicleId}`, {
             ...options, method: 'DELETE',
+          })
+        case 'trafficConsent':
+          return request<void>(`/smart-commute/routines/${change.id}/traffic-consent`, {
+            ...options, method: 'PUT', body: JSON.stringify({ vehicle_id: vehicleId, ...change.traffic }),
+          })
+        case 'trafficDisconnect':
+          return request<void>(`/smart-commute/routines/${change.id}/traffic-consent?vehicle_id=${vehicleId}`, {
+            ...options, method: 'DELETE',
+          })
+        case 'trafficSkip':
+          return request<void>(`/smart-commute/routines/${change.id}/traffic-skip`, {
+            ...options, method: 'POST', body: JSON.stringify({ vehicle_id: vehicleId }),
           })
       }
     },

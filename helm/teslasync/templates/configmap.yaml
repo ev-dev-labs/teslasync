@@ -191,6 +191,7 @@ data:
   {{- if and .Values.webPush .Values.webPush.publicKey }}
   TESLASYNC_VAPID_PUBLIC_KEY: {{ .Values.webPush.publicKey | quote }}
   {{- end }}
+  SMART_COMMUTE_HERE_LICENSE_CONFIRMED: {{ default false (and .Values.smartCommute .Values.smartCommute.hereLicenseConfirmed) | quote }}
   # Service-mode banner override (Phase 46 / Prompt 04). Always rendered
   # so the API picks up the env knob deterministically; empty values
   # mean "fall through to the system_state DB row + admin POST API".

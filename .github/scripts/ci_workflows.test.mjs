@@ -124,7 +124,7 @@ test('private notification browser gate uses real handlers and a disposable data
   assert.equal(job.needs, 'browser-build');
   assert.ok(job.services.postgres);
   assert.ok(job.steps.some(step => step.with?.name === 'e2e-app' && step.with?.path === 'web/dist'));
-  const run = job.steps.find(step => step.run?.includes('TestPrivate(Commute|Charging|PersonalDelivery)BrowserJourney'));
+  const run = job.steps.find(step => step.run?.includes('TestPrivate(Commute|CommuteTraffic|Charging|PersonalDelivery)BrowserJourney'));
   assert.ok(run);
   assert.equal(run.env.TESLASYNC_SMART_COMMUTE_BROWSER, '1');
   assert.equal(run.env.TESLASYNC_SMART_CHARGING_BROWSER, '1');
@@ -133,14 +133,18 @@ test('private notification browser gate uses real handlers and a disposable data
   assert.match(run.run, /\.\/internal\/integration\/smartreadiness/);
   const paths = browser.on.push.paths;
   for (const path of [
+    'internal/adapter/heretraffic/**',
     'internal/app/smartdeliverysvc/**',
     'internal/database/smartdelivery/**',
     'internal/handler/v1/smartdelivery/**',
+    'internal/domain/smartcommute/**',
+    'internal/port/smartcommute/**',
     'migrations/000263_smart_personal_push.*.sql',
     'migrations/000264_smart_charging_trip_legs.*.sql',
     'migrations/000265_smart_charging_scheduled_start.*.sql',
     'migrations/000266_smart_charging_schedule_power_ceiling.*.sql',
     'migrations/000267_smart_departure_overlap.*.sql',
+    'migrations/000268_smart_commute_traffic_consent.*.sql',
   ]) assert.ok(paths.includes(path), `private delivery changes must trigger the browser gate: ${path}`);
 });
 

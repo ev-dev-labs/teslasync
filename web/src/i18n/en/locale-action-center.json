@@ -834,6 +834,14 @@
     "timeZone": "IANA time zone",
     "timeZoneHint": "For example, America/Los_Angeles.",
     "title": "Smart Commute",
+    "traffic": {
+      "actionSummary": "HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.",
+      "actionTitle": "A faster route is available before your departure",
+      "comparison": "Compare routes",
+      "coverage": "Both routes had fresh directional HERE Traffic Flow coverage",
+      "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+      "teslaRoute": "These are estimates, not measured trip times. Tesla calculates its own route."
+    },
     "unknownDay": "unknown day",
     "useRoutine": "Use routine",
     "weekday": "Local weekday",

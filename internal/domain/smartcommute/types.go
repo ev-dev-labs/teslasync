@@ -48,24 +48,27 @@ const (
 )
 
 type Routine struct {
-	ID           int64         `json:"id"`
-	VehicleID    int64         `json:"vehicle_id"`
-	Status       RoutineStatus `json:"status"`
-	Name         string        `json:"name"`
-	Weekday      time.Weekday  `json:"weekday"`
-	DepartureS   int           `json:"departure_s"`
-	TimeZone     string        `json:"time_zone"`
-	Origin       Point         `json:"origin"`
-	Destination  Point         `json:"destination"`
-	Evidence     *Evidence     `json:"evidence"`
-	SnoozedUntil *time.Time    `json:"snoozed_until"`
-	CreatedAt    time.Time     `json:"created_at"`
-	UpdatedAt    time.Time     `json:"updated_at"`
+	ID             int64                  `json:"id"`
+	VehicleID      int64                  `json:"vehicle_id"`
+	Status         RoutineStatus          `json:"status"`
+	Name           string                 `json:"name"`
+	Weekday        time.Weekday           `json:"weekday"`
+	DepartureS     int                    `json:"departure_s"`
+	TimeZone       string                 `json:"time_zone"`
+	Origin         Point                  `json:"origin"`
+	Destination    Point                  `json:"destination"`
+	Evidence       *Evidence              `json:"evidence"`
+	SnoozedUntil   *time.Time             `json:"snoozed_until"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+	TrafficConsent *TrafficConsentSummary `json:"traffic_consent,omitempty"`
 }
 
 type Snapshot struct {
-	Settings Settings  `json:"settings"`
-	Routines []Routine `json:"routines"`
+	Settings         Settings          `json:"settings"`
+	Routines         []Routine         `json:"routines"`
+	TrafficAvailable bool              `json:"traffic_available"`
+	TrafficDecisions []TrafficDecision `json:"traffic_decisions"`
 }
 
 type RoutineInput struct {

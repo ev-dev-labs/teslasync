@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
@@ -28,6 +29,7 @@ import (
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	commutehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 type driveQueryTracer struct {
@@ -100,10 +102,16 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		  start_lat double precision, start_lng double precision,
 		  end_lat double precision, end_lng double precision
 		);
-		CREATE INDEX drives_vehicle_started ON drives(vehicle_id, started_at DESC);`); err != nil {
+		CREATE INDEX drives_vehicle_started ON drives(vehicle_id, started_at DESC);
+		CREATE TABLE signal_log (
+		  vehicle_id bigint NOT NULL, ts timestamptz NOT NULL, field text NOT NULL,
+		  value_kind smallint NOT NULL, str_value text, bool_value boolean, int_value bigint,
+		  float_value double precision, time_value timestamptz, received_at timestamptz NOT NULL,
+		  PRIMARY KEY (vehicle_id, field, ts)
+		);`); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"000223_action_center_state.up.sql", "000259_smart_commute.up.sql"} {
+	for _, file := range []string{"000223_action_center_state.up.sql", "000259_smart_commute.up.sql", "000268_smart_commute_traffic_consent.up.sql"} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
 		if err != nil {
 			t.Fatal(err)
@@ -146,13 +154,14 @@ func (emptyActionSources) ListOpenSystemIncidents(context.Context, int) ([]actio
 }
 
 type fixture struct {
-	router http.Handler
-	db     *database.DB
-	spy    *driveQueryTracer
-	now    time.Time
+	router  http.Handler
+	db      *database.DB
+	spy     *driveQueryTracer
+	now     time.Time
+	commute *smartcommutesvc.Service
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixture(t *testing.T, options ...smartcommutesvc.Option) *fixture {
 	t.Helper()
 	spy := &driveQueryTracer{}
 	db := testDatabase(t, spy)
@@ -180,7 +189,11 @@ func newFixture(t *testing.T) *fixture {
 	}
 	f := &fixture{db: db, spy: spy, now: now}
 	clock := func() time.Time { return f.now }
-	service := smartcommutesvc.New(commutedb.NewRepository(db), smartcommutesvc.WithClock(clock))
+	baseOptions := []smartcommutesvc.Option{smartcommutesvc.WithClock(clock),
+		smartcommutesvc.WithTrafficConnector(true),
+		smartcommutesvc.WithTrafficTraceReader(signal.NewLogStateReader(db.Pool, zerolog.Nop()))}
+	service := smartcommutesvc.New(commutedb.NewRepository(db), append(baseOptions, options...)...)
+	f.commute = service
 	commuteHTTP := commutehandler.NewHandler(service, "X-Test-Subject")
 	actionService := actioncentersvc.New(
 		emptyActionSources{}, actiondb.NewStateRepository(db),

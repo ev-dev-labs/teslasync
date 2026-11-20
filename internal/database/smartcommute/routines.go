@@ -82,6 +82,9 @@ func (r *Repository) ConfirmRoutine(
 		if err != nil {
 			return fmt.Errorf("confirm smart commute routine: %w", err)
 		}
+		if _, err := tx.Exec(ctx, `DELETE FROM smart_commute_traffic_consent WHERE routine_id = $1`, routineID); err != nil {
+			return fmt.Errorf("revoke traffic consent for edited routine: %w", err)
+		}
 		result = item
 		return nil
 	})
