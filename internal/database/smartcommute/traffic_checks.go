@@ -145,23 +145,42 @@ func (r *Repository) VerifyTrafficCheck(ctx context.Context, check port.TrafficC
 func (r *Repository) RecordTrafficDecision(
 	ctx context.Context, check port.TrafficCheck, decision domain.TrafficDecision, now time.Time,
 ) (bool, error) {
+	var energy [12]any
+	if evidence := decision.RouteEnergy; evidence != nil {
+		fast, saving := evidence.Fastest, evidence.Saving
+		energy = [12]any{evidence.ExpiresAt, evidence.OutsideC,
+			fast.ETAS, fast.DriveCount, fast.LowWh, fast.MedianWh, fast.HighWh,
+			saving.ETAS, saving.DriveCount, saving.LowWh, saving.MedianWh, saving.HighWh}
+	}
+	args := append([]any{
+		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
+		check.SettingsUpdatedAt, check.Consent.DepartureAt, decision.UsualS,
+		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now,
+		decision.ArrivalDeadlineAt, decision.LatestDepartureAt, decision.RouteEnergyOnly,
+	}, energy[:]...)
 	tag, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO smart_commute_traffic_decisions
 		  (consent_id, departure_at, settings_updated_at, usual_s, alternative_s, observed_at, expires_at,
-		   arrival_deadline_at, latest_departure_at, route_energy, route_energy_only)
-		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14, $15
-		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($14::jsonb IS NULL OR c.compare_route_energy)
+		   arrival_deadline_at, latest_departure_at, route_energy_only, energy_expires_at, energy_outside_c,
+		   energy_fast_eta_s, energy_fast_count, energy_fast_low_wh, energy_fast_median_wh, energy_fast_high_wh,
+		   energy_saving_eta_s, energy_saving_count, energy_saving_low_wh, energy_saving_median_wh, energy_saving_high_wh)
+		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14,
+		       $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($15::timestamptz IS NULL OR c.compare_route_energy)
 		ON CONFLICT (consent_id) DO UPDATE SET
 		    departure_at = EXCLUDED.departure_at, settings_updated_at = EXCLUDED.settings_updated_at,
 		    usual_s = EXCLUDED.usual_s, alternative_s = EXCLUDED.alternative_s,
 		    observed_at = EXCLUDED.observed_at, expires_at = EXCLUDED.expires_at,
 		    arrival_deadline_at = EXCLUDED.arrival_deadline_at, latest_departure_at = EXCLUDED.latest_departure_at,
-		    route_energy = EXCLUDED.route_energy, route_energy_only = EXCLUDED.route_energy_only
-		WHERE smart_commute_traffic_decisions.departure_at < EXCLUDED.departure_at`,
-		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
-		check.SettingsUpdatedAt, check.Consent.DepartureAt, decision.UsualS,
-		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now,
-		decision.ArrivalDeadlineAt, decision.LatestDepartureAt, decision.RouteEnergy, decision.RouteEnergyOnly)
+		    route_energy_only = EXCLUDED.route_energy_only, energy_expires_at = EXCLUDED.energy_expires_at,
+		    energy_outside_c = EXCLUDED.energy_outside_c,
+		    energy_fast_eta_s = EXCLUDED.energy_fast_eta_s, energy_fast_count = EXCLUDED.energy_fast_count,
+		    energy_fast_low_wh = EXCLUDED.energy_fast_low_wh, energy_fast_median_wh = EXCLUDED.energy_fast_median_wh,
+		    energy_fast_high_wh = EXCLUDED.energy_fast_high_wh,
+		    energy_saving_eta_s = EXCLUDED.energy_saving_eta_s, energy_saving_count = EXCLUDED.energy_saving_count,
+		    energy_saving_low_wh = EXCLUDED.energy_saving_low_wh, energy_saving_median_wh = EXCLUDED.energy_saving_median_wh,
+		    energy_saving_high_wh = EXCLUDED.energy_saving_high_wh
+		WHERE smart_commute_traffic_decisions.departure_at < EXCLUDED.departure_at`, args...)
 	if err != nil {
 		return false, fmt.Errorf("persist claimed commute comparison: %w", err)
 	}
@@ -174,7 +193,11 @@ func (r *Repository) ListTrafficDecisions(
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT r.id, r.vehicle_id, r.name, v.display_name, r.time_zone, d.departure_at,
 		       d.usual_s, d.alternative_s, d.observed_at, d.expires_at, r.origin_latitude, r.origin_longitude,
-		       d.arrival_deadline_at, d.latest_departure_at, d.route_energy, d.route_energy_only
+		       d.arrival_deadline_at, d.latest_departure_at, d.route_energy_only, d.energy_expires_at,
+		       COALESCE(d.energy_outside_c, 0), COALESCE(d.energy_fast_eta_s, 0), COALESCE(d.energy_fast_count, 0),
+		       COALESCE(d.energy_fast_low_wh, 0), COALESCE(d.energy_fast_median_wh, 0), COALESCE(d.energy_fast_high_wh, 0),
+		       COALESCE(d.energy_saving_eta_s, 0), COALESCE(d.energy_saving_count, 0), COALESCE(d.energy_saving_low_wh, 0),
+		       COALESCE(d.energy_saving_median_wh, 0), COALESCE(d.energy_saving_high_wh, 0)
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
@@ -186,9 +209,17 @@ func (r *Repository) ListTrafficDecisions(
 	}
 	result, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.TrafficDecision, error) {
 		var item domain.TrafficDecision
+		var energy domain.TrafficEnergyEvidence
+		var energyExpiry *time.Time
 		err := row.Scan(&item.RoutineID, &item.VehicleID, &item.RoutineName, &item.VehicleName, &item.TimeZone, &item.DepartureAt,
 			&item.UsualS, &item.AlternativeS, &item.ObservedAt, &item.ExpiresAt, &item.Origin.Latitude, &item.Origin.Longitude,
-			&item.ArrivalDeadlineAt, &item.LatestDepartureAt, &item.RouteEnergy, &item.RouteEnergyOnly)
+			&item.ArrivalDeadlineAt, &item.LatestDepartureAt, &item.RouteEnergyOnly, &energyExpiry, &energy.OutsideC,
+			&energy.Fastest.ETAS, &energy.Fastest.DriveCount, &energy.Fastest.LowWh, &energy.Fastest.MedianWh, &energy.Fastest.HighWh,
+			&energy.Saving.ETAS, &energy.Saving.DriveCount, &energy.Saving.LowWh, &energy.Saving.MedianWh, &energy.Saving.HighWh)
+		if err == nil && energyExpiry != nil {
+			energy.ExpiresAt = *energyExpiry
+			item.RouteEnergy = &energy
+		}
 		return item, err
 	})
 	if err != nil {

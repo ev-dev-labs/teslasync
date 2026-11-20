@@ -104,7 +104,9 @@ installation. Missing coverage or inconclusive evidence produces no energy
 recommendation. An energy comparison alone never sends a push or operates
 the vehicle. Disconnect HERE to remove consent immediately; to keep timing
 checks without energy comparisons, review the trace again with energy
-comparison turned off. Migration `000272` down removes only the energy
+comparison turned off. Stop the notification worker before rolling back.
+Rolling down `000273` restores the previous evidence storage format without
+discarding comparisons. Rolling down `000272` then removes only the energy
 option and evidence, preserving existing timing and deadline decisions.
 
 **Skip today** suppresses the current occurrence. **Pause** suspends checks

@@ -778,3 +778,17 @@ migrations:
     irreversible_justification: Explicit down removes route-energy consent and derived comparison evidence.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 273
+    name: type_commute_route_energy_evidence
+    forward_compatible: false
+    forward_compatibility_notes: The previous application queries the removed JSONB column. Upgrade the worker and API together with the schema.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and apply down before starting the previous version. Down reconstructs the evidence without deleting comparisons.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes convert short-lived decisions and validate constraints while holding an exclusive lock.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -125,6 +127,7 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 				rows[0].RouteEnergy.Fastest.MedianWh < 8_900 || rows[0].RouteEnergy.Saving.MedianWh > 6_000 {
 				t.Fatalf("expected one materially lower-energy comparison, got %+v", rows)
 			}
+			assertRouteEnergyMigrationRoundTrip(t, f, worker, owner, *rows[0].RouteEnergy)
 			const center = "/api/v1/action-center?vehicle_id=42"
 			assertCard := func(subject string, want bool) {
 				t.Helper()
@@ -139,6 +142,34 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 			expectStatus(t, f.request(t, http.MethodDelete, route+"/traffic-consent?vehicle_id=42", owner, nil), http.StatusNoContent)
 			assertCard(owner, false)
 		})
+	}
+}
+
+func assertRouteEnergyMigrationRoundTrip(t *testing.T, f *fixture, worker *smartcommutesvc.Service, owner string, want domain.TrafficEnergyEvidence) {
+	t.Helper()
+	for _, direction := range []string{"down", "up"} {
+		file := "000273_type_commute_route_energy_evidence." + direction + ".sql"
+		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.db.Pool.Exec(t.Context(), string(content)); err != nil {
+			t.Fatalf("apply %s: %v", file, err)
+		}
+		if direction == "down" {
+			var encoded domain.TrafficEnergyEvidence
+			if err := f.db.Pool.QueryRow(t.Context(), `SELECT route_energy FROM smart_commute_traffic_decisions`).
+				Scan(&encoded); err != nil || !encoded.ExpiresAt.Equal(want.ExpiresAt) ||
+				encoded.Fastest != want.Fastest || encoded.Saving != want.Saving || encoded.OutsideC != want.OutsideC {
+				t.Fatalf("old evidence was not reconstructed: %+v, %v", encoded, err)
+			}
+		}
+	}
+	rows, err := worker.ListTrafficDecisions(t.Context(), owner, nil, f.now, 10)
+	if err != nil || len(rows) != 1 || rows[0].RouteEnergy == nil ||
+		!rows[0].RouteEnergy.ExpiresAt.Equal(want.ExpiresAt) || rows[0].RouteEnergy.Fastest != want.Fastest ||
+		rows[0].RouteEnergy.Saving != want.Saving || rows[0].RouteEnergy.OutsideC != want.OutsideC {
+		t.Fatalf("typed conversion did not preserve the evidence: %+v, %v", rows, err)
 	}
 }
 
