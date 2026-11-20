@@ -192,6 +192,7 @@ func (s *Service) ListTrafficDecisions(
 			return nil, err
 		}
 		if parked && row.ExpiresAt.After(s.now()) {
+			row.OccurrenceID = domain.TrafficOccurrenceID(row.RoutineID, row.DepartureAt)
 			result = append(result, row)
 		}
 	}

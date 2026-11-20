@@ -1,6 +1,11 @@
 package smartcommute
 
-import "time"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"strconv"
+	"time"
+)
 
 const MaxTrafficTracePoints = 200
 
@@ -51,6 +56,7 @@ type TrafficComparison struct {
 }
 
 type TrafficDecision struct {
+	OccurrenceID string    `json:"occurrence_id"`
 	RoutineID    int64     `json:"routine_id"`
 	VehicleID    int64     `json:"vehicle_id"`
 	RoutineName  string    `json:"routine_name"`
@@ -61,4 +67,10 @@ type TrafficDecision struct {
 	ObservedAt   time.Time `json:"observed_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	Origin       Point     `json:"-"`
+}
+
+func TrafficOccurrenceID(routineID int64, departureAt time.Time) string {
+	key := strconv.FormatInt(routineID, 10) + ":" + strconv.FormatInt(departureAt.Unix(), 10)
+	digest := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(digest[:16])
 }

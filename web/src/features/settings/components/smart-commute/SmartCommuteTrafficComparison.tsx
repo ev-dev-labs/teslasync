@@ -5,18 +5,18 @@ import type { SmartCommuteTrafficDecision } from '@/types/smartCommute'
 
 interface Props {
   decisions: SmartCommuteTrafficDecision[]
-  requestedRoutine: number | null
+  requestedOccurrence: string | null
 }
 
-export function SmartCommuteTrafficComparison({ decisions, requestedRoutine }: Props) {
+export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence }: Props) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
   const available = decisions.filter((decision) =>
-    (requestedRoutine == null || decision.routine_id === requestedRoutine) &&
+    (requestedOccurrence == null || decision.occurrence_id === requestedOccurrence) &&
     Date.parse(decision.expires_at) > Date.now(),
   )
 
-  if (requestedRoutine == null && available.length === 0) return null
+  if (requestedOccurrence == null && available.length === 0) return null
 
   return (
     <section className="space-y-3" aria-label={t('smartCommute.traffic.comparison', 'Compare routes')}>
@@ -27,7 +27,7 @@ export function SmartCommuteTrafficComparison({ decisions, requestedRoutine }: P
         </Text>
       )}
       {available.map((decision) => (
-        <article className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-4" key={`${decision.routine_id}:${decision.departure_at}`}>
+        <article className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-4" key={decision.occurrence_id}>
           <Text as="p" weight="semibold">{t('smartCommute.traffic.forVehicle', '{{routine}} · {{vehicle}}', {
             routine: decision.routine_name, vehicle: decision.vehicle_name,
           })}</Text>

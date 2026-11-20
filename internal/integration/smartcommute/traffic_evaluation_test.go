@@ -162,6 +162,10 @@ func TestTrafficWorkerOnlyPublishesAnEligiblePrivateOccurrence(t *testing.T) {
 			if rows[0].UsualS != 43*60 || rows[0].AlternativeS != 29*60 || rows[0].VehicleID != 42 {
 				t.Fatalf("unexpected persisted comparison: %+v", rows[0])
 			}
+			firstOccurrence := rows[0].OccurrenceID
+			if firstOccurrence == "" {
+				t.Fatal("eligible comparison is missing its occurrence ID")
+			}
 			other, err := f.commute.ListTrafficDecisions(ctx, "other", nil, f.now, 10)
 			if err != nil || len(other) != 0 {
 				t.Fatalf("foreign subject received %d comparisons, err=%v", len(other), err)
@@ -170,6 +174,19 @@ func TestTrafficWorkerOnlyPublishesAnEligiblePrivateOccurrence(t *testing.T) {
 			expired, err := f.commute.ListTrafficDecisions(ctx, subject, nil, f.now, 10)
 			if err != nil || len(expired) != 0 {
 				t.Fatalf("departed driver received %d comparisons, err=%v", len(expired), err)
+			}
+			live.gear = "P"
+			f.now = f.now.AddDate(0, 0, 7)
+			live.now = f.now
+			if _, err := f.commute.ProcessTrafficChecks(ctx, 10); err != nil {
+				t.Fatal(err)
+			}
+			following, err := f.commute.ListTrafficDecisions(ctx, subject, nil, f.now, 10)
+			if err != nil || len(following) != 1 {
+				t.Fatalf("expected the next occurrence, got %d comparisons, err=%v", len(following), err)
+			}
+			if following[0].RoutineID != routine.ID || following[0].OccurrenceID == firstOccurrence {
+				t.Fatalf("the next departure reused the previous occurrence link: %+v", following[0])
 			}
 		})
 	}

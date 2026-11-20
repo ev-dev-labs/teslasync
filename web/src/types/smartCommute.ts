@@ -54,6 +54,7 @@ export interface SmartCommuteSnapshot {
 }
 
 export interface SmartCommuteTrafficDecision {
+  occurrence_id: string
   routine_id: number
   vehicle_id: number
   routine_name: string

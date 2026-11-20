@@ -153,22 +153,24 @@ describe('Smart Commute settings', () => {
     })
   })
 
-  it('opens the comparison read-only and shows no other routine for an expired link', async () => {
+  it('opens the comparison read-only and does not replace an expired occurrence with the next one', async () => {
+    const occurrence = 'a'.repeat(32)
+    const previousOccurrence = 'b'.repeat(32)
     snapshot = {
       settings: { ...fresh(42).settings, enabled: true, local_analysis_enabled: true, time_zone: 'UTC' },
       traffic_available: true,
       routines: [{ ...suggestion, status: 'confirmed', name: 'Studio', evidence: null }],
       traffic_decisions: [{
-        routine_id: 8, vehicle_id: 42, routine_name: 'Studio', vehicle_name: 'Synthetic A',
+        occurrence_id: occurrence, routine_id: 8, vehicle_id: 42, routine_name: 'Studio', vehicle_name: 'Synthetic A',
         departure_at: '2099-12-01T10:00:00Z', observed_at: '2099-12-01T09:45:00Z',
         expires_at: '2099-12-01T09:50:00Z', usual_s: 2580, alternative_s: 1740,
       }],
     }
-    const current = renderSettings('/settings/smart-commute?vehicle_id=42&traffic_routine_id=8')
+    const current = renderSettings(`/settings/smart-commute?vehicle_id=42&traffic_occurrence_id=${occurrence}`)
     expect(await screen.findByText('Faster alternative: 29 min')).toBeInTheDocument()
     expect(screen.getByText('Estimated saving: 14 min')).toBeInTheDocument()
     current.unmount()
-    renderSettings('/settings/smart-commute?vehicle_id=42&traffic_routine_id=9')
+    renderSettings(`/settings/smart-commute?vehicle_id=42&traffic_occurrence_id=${previousOccurrence}`)
     expect(await screen.findByText(/This comparison is no longer available/)).toBeInTheDocument()
     expect(screen.queryByText('Faster alternative: 29 min')).not.toBeInTheDocument()
     expect(requestMock.mock.calls.some(([, options]) => options?.method)).toBe(false)

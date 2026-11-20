@@ -86,6 +86,7 @@ test('reviewed traffic check surfaces a private, read-only comparison after the 
   await expect(following.getByText('Synthetic office · Synthetic vehicle A', { exact: true })).toBeVisible()
   expect(writes.length).toBe(before)
   const link = following.url()
+  expect(new URL(link).searchParams.get('traffic_occurrence_id')).toMatch(/^[a-f0-9]{32}$/)
   await assertMockApiComplete(following, followingAPI)
   expect(followingAPI.requests.filter(item => /\/commands?(?:\/|$)/.test(item.path))).toEqual([])
 

@@ -28,7 +28,7 @@ export function SmartCommuteSettings({ active }: Props) {
   const vehicleState = useDataState(vehicles)
   const params = new URLSearchParams(location.search)
   const requested = params.get('vehicle_id')
-  const requestedRoutine = Number(params.get('traffic_routine_id'))
+  const requestedOccurrence = params.get('traffic_occurrence_id')
   const number = requested && /^\d+$/.test(requested) ? Number(requested) : null
   const requestedId = number != null && Number.isSafeInteger(number) && number > 0 ? number : null
   const vehicle = (vehicles.data ?? []).find((item) => item.id === requestedId)
@@ -46,7 +46,7 @@ export function SmartCommuteSettings({ active }: Props) {
     const next = new URLSearchParams(location.search)
     if (value) next.set('vehicle_id', value)
     else next.delete('vehicle_id')
-    next.delete('traffic_routine_id')
+    next.delete('traffic_occurrence_id')
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
   }
   const apply = async (input: SmartCommuteChange) => {
@@ -117,7 +117,7 @@ export function SmartCommuteSettings({ active }: Props) {
               <SmartCommuteControls settings={settings} stateLabel={status} disabled={disabled}
                 busy={change.isPending} trafficAvailable={state.data?.traffic_available === true} onChange={apply} />
               <SmartCommuteTrafficComparison decisions={state.data?.traffic_decisions ?? []}
-                requestedRoutine={Number.isSafeInteger(requestedRoutine) && requestedRoutine > 0 ? requestedRoutine : null} />
+                requestedOccurrence={requestedOccurrence} />
               <SmartCommuteRoutines vehicleId={vehicleId} timeZone={settings.time_zone || browserTimeZone()}
                 scope={scope} canSetUpTraffic={Boolean(state.data?.traffic_available && settings.enabled && settings.local_analysis_enabled && !settings.paused)}
                 enabled={settings.enabled} disabled={disabled} routines={routines} onChange={apply} />

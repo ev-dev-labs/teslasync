@@ -97,7 +97,7 @@ func (p smartCommuteProvider) Recommendations(
 
 func trafficCandidate(row commute.TrafficDecision) domain.Candidate {
 	key := fmt.Sprintf("traffic:%d:%d", row.RoutineID, row.DepartureAt.Unix())
-	path := fmt.Sprintf("/settings/smart-commute?vehicle_id=%d&traffic_routine_id=%d", row.VehicleID, row.RoutineID)
+	path := fmt.Sprintf("/settings/smart-commute?vehicle_id=%d&traffic_occurrence_id=%s", row.VehicleID, row.OccurrenceID)
 	summary := fmt.Sprintf("HERE estimates %d minutes on the usual route and %d minutes on an alternative.",
 		(row.UsualS+30)/60, (row.AlternativeS+30)/60)
 	return domain.Candidate{
