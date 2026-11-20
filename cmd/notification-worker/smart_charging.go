@@ -14,6 +14,7 @@ import (
 
 	deliveryadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartdelivery"
 	smartadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
@@ -25,6 +26,7 @@ import (
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
+	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	readinessport "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
@@ -64,15 +66,19 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 			log.Warn().Msg("personal delivery disabled: encryption setup failed")
 		}
 	}
+	deliveryRepo := deliverydb.NewRepository(db)
 	delivery = smartdeliverysvc.New(
-		deliverydb.NewRepository(db), encryptor,
+		deliveryRepo, encryptor,
 		deliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(service),
+		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, func(ctx context.Context, vehicleID int64, origin commute.Point, now time.Time) (bool, error) {
+			return smartcommutesvc.ParkedAtTrafficOrigin(ctx, live, vehicleID, origin, now)
+		}),
 		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
 		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
 	)
 	workerCtx, cancel := context.WithCancel(ctx)
-	stopTraffic := startSmartTraffic(workerCtx, cfg, db, live)
+	stopTraffic := startSmartTraffic(workerCtx, cfg, db, live, delivery.NotifyCommute)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)

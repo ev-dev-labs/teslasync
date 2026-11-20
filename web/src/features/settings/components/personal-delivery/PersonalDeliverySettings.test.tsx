@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getSubscription: vi.fn(),
   subscribe: vi.fn(),
   clear: vi.fn(),
+  refreshWorker: vi.fn(),
 }))
 vi.mock('@/api/client', async () => ({
   ...await vi.importActual<typeof import('@/api/client')>('@/api/client'),
@@ -19,6 +20,7 @@ vi.mock('@/lib/personalPush', () => ({
   getPersonalSubscription: mocks.getSubscription,
   subscribePersonalBrowser: mocks.subscribe,
   clearPersonalBrowser: mocks.clear,
+  refreshPersonalDeliveryWorker: mocks.refreshWorker,
 }))
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatDateTime: (value: string) => value }),
@@ -44,16 +46,16 @@ let holdLookup: Promise<void> | null
 function stored(id: number, verified: boolean, pushEndpoint = endpoint): StoredDevice {
   return {
     endpoint: pushEndpoint,
-    device: { id, verified, charging_enabled: false,
+    device: { id, verified, charging_enabled: false, commute_enabled: false,
       created_at: '2026-03-07T12:00:00Z', updated_at: '2026-03-07T12:00:00Z' },
   }
 }
 
-function renderSettings() {
+function renderSettings(family: 'charging' | 'commute' = 'charging') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return {
     client,
-    ...render(<QueryClientProvider client={client}><PersonalDeliverySettings active /></QueryClientProvider>),
+    ...render(<QueryClientProvider client={client}><PersonalDeliverySettings active family={family} /></QueryClientProvider>),
   }
 }
 
@@ -71,12 +73,13 @@ beforeEach(() => {
     return subscription
   })
   mocks.clear.mockReset().mockImplementation(async () => { browserSubscription = null })
+  mocks.refreshWorker.mockReset().mockResolvedValue(undefined)
   mocks.request.mockImplementation(async (path: string, options?: RequestInit) => {
     if (path === '/system/auth-mode') return { mode: 'forward_auth', subject }
     const header = (options?.headers as Record<string, string> | undefined)?.['X-TeslaSync-Expected-Principal']
     if (header !== `subject:${subject}`) throw new ApiError('Identity changed', 409, 'IDENTITY_CHANGED')
     if (path === '/smart-delivery/devices' && !options?.method) {
-      return { data: { available: true, public_key: 'vapid-key', devices: devices[subject].map((item) => item.device) } }
+      return { data: { available: true, commute_available: true, public_key: 'vapid-key', devices: devices[subject].map((item) => item.device) } }
     }
     if (path === '/smart-delivery/devices/lookup') {
       const requestSubject = subject
@@ -91,12 +94,13 @@ beforeEach(() => {
       devices[subject] = [stored(1, false, input.subscription.endpoint)]
       return { data: devices[subject][0].device }
     }
-    const charging = path.match(/^\/smart-delivery\/devices\/(\d+)\/charging$/)
-    if (charging && options?.method === 'PUT') {
+    const preference = path.match(/^\/smart-delivery\/devices\/(\d+)\/(charging|commute)$/)
+    if (preference && options?.method === 'PUT') {
       const input = JSON.parse(String(options.body)) as { enabled: boolean }
-      const target = devices[subject].find((item) => item.device.id === Number(charging[1]))
+      const target = devices[subject].find((item) => item.device.id === Number(preference[1]))
       if (!target) throw new ApiError('Not found', 404)
-      target.device.charging_enabled = input.enabled
+      if (preference[2] === 'commute') target.device.commute_enabled = input.enabled
+      else target.device.charging_enabled = input.enabled
       return undefined
     }
     const deletion = path.match(/^\/smart-delivery\/devices\/(\d+)$/)
@@ -112,6 +116,39 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('personal delivery settings', () => {
+  it('opts into commute traffic separately on a verified browser', async () => {
+    browserSubscription = subscription
+    devices[subject] = [stored(1, true)]
+    renderSettings('commute')
+    const toggle = await screen.findByRole('switch', { name: 'Allow commute traffic notifications on This browser' })
+    await waitFor(() => expect(toggle).toBeEnabled())
+    expect(toggle).not.toBeChecked()
+    expect(mocks.refreshWorker).not.toHaveBeenCalled()
+    fireEvent.click(toggle)
+    await waitFor(() => expect(toggle).toBeChecked())
+    expect(mocks.refreshWorker).toHaveBeenCalledOnce()
+    expect(mocks.request).toHaveBeenCalledWith('/smart-delivery/devices/1/commute', expect.objectContaining({
+      method: 'PUT', requiresLiveMode: true,
+      body: JSON.stringify({ enabled: true, copy: { title: 'Smart Commute', body: 'Open TeslaSync to review a route comparison.' } }),
+      headers: { 'X-TeslaSync-Expected-Principal': 'subject:synthetic-a' },
+    }))
+    expect(devices[subject][0].device.charging_enabled).toBe(false)
+  })
+
+  it('does not enable commute delivery if the browser worker cannot update', async () => {
+    browserSubscription = subscription
+    devices[subject] = [stored(1, true), stored(2, true, 'https://push.example.test/other-browser')]
+    mocks.refreshWorker.mockRejectedValueOnce(new Error('Update unavailable'))
+    renderSettings('commute')
+    const toggle = await screen.findByRole('switch', { name: 'Allow commute traffic notifications on This browser' })
+    expect(screen.getByRole('switch', { name: 'Allow commute traffic notifications on Device 2' })).toBeDisabled()
+    await waitFor(() => expect(toggle).toBeEnabled())
+    fireEvent.click(toggle)
+    expect(await screen.findByRole('alert')).toHaveTextContent('delivery preference was not saved')
+    expect(toggle).not.toBeChecked()
+    expect(mocks.request.mock.calls.some(([path]) => String(path).endsWith('/commute'))).toBe(false)
+  })
+
   it('requires explicit enrollment, proof of possession, and separate charging consent', async () => {
     const { client } = renderSettings()
     const connect = await screen.findByRole('button', { name: 'Connect this browser' })

@@ -3450,6 +3450,14 @@
     "deleteRoutineDescription": "The saved routine will be removed. Your original drives are not deleted.",
     "deleteRoutineTitle": "Delete this routine?",
     "deleteTitle": "Delete your Smart Commute data?",
+    "delivery": {
+      "empty": "No personal devices are connected.",
+      "help": "Commute push starts off and only applies to routines with approved traffic checks. Enable it from the browser that should receive it. This replaces the previous commute recipient without changing charging notifications.",
+      "pushBody": "Open TeslaSync to review a route comparison.",
+      "pushTitle": "Smart Commute",
+      "toggle": "Allow commute traffic notifications on {{device}}",
+      "unavailable": "Commute push requires configured HERE traffic checks and shared live signals."
+    },
     "departure": "Local departure time",
     "destinationLatitude": "Destination latitude",
     "destinationLongitude": "Destination longitude",

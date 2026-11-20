@@ -24,13 +24,16 @@ import (
 
 type service interface {
 	Available() bool
+	CommuteAvailable() bool
 	PublicKey() string
 	ListDevices(context.Context, string, int, int) ([]domain.Device, error)
 	FindDevice(context.Context, string, string) (*domain.Device, error)
 	Enroll(context.Context, string, domain.Subscription, domain.Texts) (*domain.Device, error)
 	Verify(context.Context, string, int64, string) (*domain.Notification, error)
 	ClaimCharging(context.Context, string, string) (*domain.Notification, error)
+	ClaimCommute(context.Context, string, string) (*domain.Notification, error)
 	SetChargingEnabled(context.Context, string, int64, bool) error
+	SetCommuteEnabled(context.Context, string, int64, bool, domain.Copy) error
 	DeleteDevice(context.Context, string, int64) error
 }
 
@@ -53,14 +56,15 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Post("/devices/lookup", h.FindDevice)
 		r.With(writeLimit).Post("/devices", h.Enroll)
 		r.With(writeLimit).Post("/devices/{deviceID}/verify", h.Verify)
-		r.With(writeLimit).Post("/deliveries/claim", h.ClaimCharging)
+		r.With(writeLimit).Post("/deliveries/claim", h.Claim)
 		r.With(writeLimit).Put("/devices/{deviceID}/charging", h.SetCharging)
+		r.With(writeLimit).Put("/devices/{deviceID}/commute", h.SetCommute)
 		r.With(writeLimit).Delete("/devices/{deviceID}", h.DeleteDevice)
 	})
 }
 
-func (h *Handler) ClaimCharging(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("api").Start(r.Context(), "smart_delivery.claim_charging")
+func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "smart_delivery.claim")
 	defer span.End()
 	subject, ok := personal.Subject(w, r, h.headerName, "personal delivery")
 	if !ok {
@@ -68,12 +72,21 @@ func (h *Handler) ClaimCharging(w http.ResponseWriter, r *http.Request) {
 	}
 	request, err := decode[struct {
 		Token string `json:"token"`
+		Kind  string `json:"kind"`
 	}](w, r)
 	if err != nil {
 		h.handleError(w, span, smartdeliverysvc.ErrInvalidInput)
 		return
 	}
-	notification, err := h.service.ClaimCharging(ctx, subject, request.Token)
+	var notification *domain.Notification
+	switch request.Kind {
+	case "", "charging":
+		notification, err = h.service.ClaimCharging(ctx, subject, request.Token)
+	case "commute":
+		notification, err = h.service.ClaimCommute(ctx, subject, request.Token)
+	default:
+		err = smartdeliverysvc.ErrInvalidInput
+	}
 	if err != nil {
 		h.handleError(w, span, err)
 		return
@@ -94,10 +107,14 @@ func (h *Handler) ListDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.Respond(w, http.StatusOK, struct {
-		Available bool            `json:"available"`
-		PublicKey string          `json:"public_key"`
-		Devices   []domain.Device `json:"devices"`
-	}{Available: h.service.Available(), PublicKey: h.service.PublicKey(), Devices: devices})
+		Available        bool            `json:"available"`
+		CommuteAvailable bool            `json:"commute_available"`
+		PublicKey        string          `json:"public_key"`
+		Devices          []domain.Device `json:"devices"`
+	}{
+		Available: h.service.Available(), CommuteAvailable: h.service.CommuteAvailable(),
+		PublicKey: h.service.PublicKey(), Devices: devices,
+	})
 }
 
 func (h *Handler) FindDevice(w http.ResponseWriter, r *http.Request) {
@@ -184,6 +201,29 @@ func (h *Handler) SetCharging(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.SetChargingEnabled(ctx, subject, id, *request.Enabled); err != nil {
+		h.handleError(w, span, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) SetCommute(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "smart_delivery.set_commute")
+	defer span.End()
+	subject, ok := personal.Subject(w, r, h.headerName, "personal delivery")
+	if !ok {
+		return
+	}
+	id, err := positiveID(chi.URLParam(r, "deviceID"))
+	request, decodeErr := decode[struct {
+		Enabled *bool       `json:"enabled"`
+		Copy    domain.Copy `json:"copy"`
+	}](w, r)
+	if err != nil || decodeErr != nil || request.Enabled == nil {
+		h.handleError(w, span, smartdeliverysvc.ErrInvalidInput)
+		return
+	}
+	if err := h.service.SetCommuteEnabled(ctx, subject, id, *request.Enabled, request.Copy); err != nil {
 		h.handleError(w, span, err)
 		return
 	}

@@ -64,6 +64,12 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	var fixtureMu sync.Mutex
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/sw.js":
+			// Prevent the root PWA worker from intercepting mocked app reads.
+			// The separate personal-delivery worker is served unchanged.
+			w.Header().Set("Content-Type", "application/javascript")
+			w.WriteHeader(http.StatusOK)
+			return
 		case r.URL.Path == "/__fixture/latest-push" && r.Method == http.MethodGet:
 			_, payload := j.sender.last()
 			if len(payload) == 0 {

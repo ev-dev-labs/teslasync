@@ -1,65 +1,13 @@
-import { expect, test, type Page, type Worker } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import {
   assertMockApiComplete, closeMockApiFixtures, forwardLocalApiFixture, fulfillApiFixture, installApiMocks,
   seedBrowserState, waitForHarnessReady,
 } from './mockApi'
+import { clearNotifications, dispatchPush, installSyntheticSubscription, notifications } from './personalDeliveryFixture'
 
 test.use({ serviceWorkers: 'allow' })
 test.afterAll(async () => { await closeMockApiFixtures() })
-
-async function dispatchPush(worker: Worker, payload: unknown) {
-  return worker.evaluate(async (data) => {
-    let pending: Promise<unknown> | undefined
-    let status: number | 'network-error' | null = null
-    let notification = 'not-called'
-    const originalFetch = globalThis.fetch
-    const registration = (globalThis as unknown as { registration: ServiceWorkerRegistration }).registration
-    const originalShowNotification = registration.showNotification
-    globalThis.fetch = async (...args) => {
-      try {
-        const response = await originalFetch(...args)
-        status = response.status
-        return response
-      } catch (error) {
-        status = 'network-error'
-        throw error
-      }
-    }
-    registration.showNotification = async (title, options) => {
-      try {
-        await originalShowNotification.call(registration, title, options)
-        notification = 'shown'
-      } catch (error) {
-        notification = error instanceof Error ? error.message : String(error)
-        throw error
-      }
-    }
-    const event = new Event('push') as Event & {
-      data: { json: () => unknown }
-      waitUntil: (promise: Promise<unknown>) => void
-    }
-    Object.defineProperty(event, 'data', { value: { json: () => data } })
-    event.waitUntil = (promise) => { pending = promise }
-    try {
-      globalThis.dispatchEvent(event)
-      await pending
-      return { status, notification }
-    } finally {
-      globalThis.fetch = originalFetch
-      registration.showNotification = originalShowNotification
-    }
-  }, payload)
-}
-
-async function notifications(worker: Worker) {
-  return worker.evaluate(async () => {
-    const registration = (globalThis as unknown as {
-      registration: { getNotifications: () => Promise<Array<{ title: string; data: unknown }>> }
-    }).registration
-    return (await registration.getNotifications()).map(({ title, data }) => ({ title, data }))
-  })
-}
 
 async function installFixtures(page: Page, subject: string, theme: 'dark' | 'light') {
   const api = await installApiMocks(page, 'populated', theme)
@@ -108,24 +56,7 @@ for (const variant of [
     await context.grantPermissions(['notifications'], { origin })
     await context.addCookies([{ name: 'personal_test_subject', value: subject, url: origin }])
     await seedBrowserState(page, variant.theme, '/settings', { allowServiceWorkers: true })
-    await page.addInitScript((name) => {
-      if (!('PushManager' in window)) return
-      const endpoint = `https://push.example.invalid/device-${name}`
-      const key = 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM'
-      const makeSubscription = () => ({
-        endpoint,
-        toJSON: () => ({ endpoint, keys: { p256dh: key, auth: 'tBHItJI5svbpez7KI4CCXg' } }),
-        unsubscribe: async () => { sessionStorage.removeItem('synthetic-personal-push'); return true },
-      })
-      Object.defineProperty(PushManager.prototype, 'getSubscription', {
-        configurable: true,
-        value: async () => sessionStorage.getItem('synthetic-personal-push') ? makeSubscription() : null,
-      })
-      Object.defineProperty(PushManager.prototype, 'subscribe', {
-        configurable: true,
-        value: async () => { sessionStorage.setItem('synthetic-personal-push', '1'); return makeSubscription() },
-      })
-    }, variant.name)
+    await installSyntheticSubscription(page, variant.name)
     const api = await installFixtures(page, subject, variant.theme)
     await page.goto('/settings/smart-charging?vehicle_id=7')
     await waitForHarnessReady(page, api)
@@ -148,12 +79,7 @@ for (const variant of [
     await expect.poll(() => notifications(worker)).toEqual([
       { title: 'TeslaSync device confirmation', data: { url: '/settings/smart-charging' } },
     ])
-    await worker.evaluate(async () => {
-      const registration = (globalThis as unknown as {
-        registration: { getNotifications: () => Promise<Array<{ close: () => void }>> }
-      }).registration
-      for (const notification of await registration.getNotifications()) notification.close()
-    })
+    await clearNotifications(worker)
     const consent = page.getByRole('switch', { name: 'Allow charging readiness notifications on This browser' })
     await expect(consent).toBeEnabled()
     await expect(consent).not.toBeChecked()

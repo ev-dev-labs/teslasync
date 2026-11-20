@@ -34,3 +34,18 @@ type DispatchLease interface {
 	Finish(context.Context, []byte, domain.DeliveryStatus) error
 	Close(context.Context) error
 }
+
+type CommuteRepository interface {
+	SetCommuteEnabled(context.Context, string, int64, bool, domain.Copy, time.Time) error
+	LockCommute(context.Context, string, domain.CommuteOccurrence, time.Time) (CommuteLease, error)
+	FindCommuteDelivery(context.Context, string, []byte, time.Time) (*domain.CommuteDelivery, error)
+	ConsumeCommuteDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+}
+
+type CommuteLease interface {
+	Candidate() domain.CommuteDelivery
+	Ciphertext() string
+	Reserve(context.Context, []byte, time.Time) (bool, error)
+	Finish(context.Context, []byte, domain.DeliveryStatus) error
+	Close(context.Context) error
+}

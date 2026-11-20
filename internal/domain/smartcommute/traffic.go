@@ -74,3 +74,8 @@ func TrafficOccurrenceID(routineID int64, departureAt time.Time) string {
 	digest := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(digest[:16])
 }
+
+func TrafficComparisonPath(vehicleID int64, occurrenceID string) string {
+	return "/settings/smart-commute?vehicle_id=" + strconv.FormatInt(vehicleID, 10) +
+		"&traffic_occurrence_id=" + occurrenceID
+}

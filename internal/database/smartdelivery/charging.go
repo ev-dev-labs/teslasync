@@ -85,23 +85,12 @@ func (l *dispatchLease) Ciphertext() string { return l.ciphertext }
 func (l *dispatchLease) Reserve(ctx context.Context, attempt domain.ChargingAttempt) (bool, error) {
 	reserved := false
 	err := l.repository.db.WithTx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			SELECT pg_advisory_xact_lock(hashtextextended('smart-push:' || ($1::bigint)::text, 263))`, attempt.DeviceID); err != nil {
-			return fmt.Errorf("lock personal charging budget: %w", err)
-		}
-		var recentCount int
-		var mostRecent *time.Time
-		if err := tx.QueryRow(ctx, `
-			SELECT count(*), max(created_at) FROM smart_push_deliveries
-			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'`,
-			attempt.DeviceID, attempt.CreatedAt).Scan(&recentCount, &mostRecent); err != nil {
-			return fmt.Errorf("read personal charging budget: %w", err)
-		}
-		if recentCount >= 4 || (mostRecent != nil && mostRecent.After(attempt.CreatedAt.Add(-time.Hour))) {
-			return nil
+		allowed, err := reserveBudget(ctx, tx, attempt.DeviceID, attempt.CreatedAt)
+		if err != nil || !allowed {
+			return err
 		}
 		var id int64
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			INSERT INTO smart_push_deliveries
 			  (device_id, plan_id, plan_version, departure_at, place_updated_at, decision_kind,
 			   token_hash, status, created_at, expires_at)
@@ -135,7 +124,7 @@ func (l *dispatchLease) Finish(ctx context.Context, tokenHash []byte, status dom
 
 func (l *dispatchLease) Close(ctx context.Context) error {
 	if err := l.tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-		return fmt.Errorf("release personal charging dispatch: %w", err)
+		return fmt.Errorf("release personal dispatch: %w", err)
 	}
 	return nil
 }

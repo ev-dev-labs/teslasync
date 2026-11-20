@@ -26,11 +26,14 @@ type TrafficLiveReader interface {
 
 type TrafficQuietCheck func(context.Context, string, time.Time) (bool, error)
 
+type TrafficNotifier func(ctx context.Context, subject string, consentID, routineID int64, departureAt time.Time) error
+
 type trafficEvaluation struct {
 	live           TrafficLiveReader
 	source         port.TrafficSource
 	isQuiet        TrafficQuietCheck
 	observe        func(reason string)
+	notify         TrafficNotifier
 	sharedOpenMode bool
 }
 
@@ -46,6 +49,10 @@ func WithTrafficEvaluator(source port.TrafficSource, quiet TrafficQuietCheck, ob
 	return func(s *Service) {
 		s.traffic.source, s.traffic.isQuiet, s.traffic.observe = source, quiet, observe
 	}
+}
+
+func WithTrafficNotifier(notify TrafficNotifier) Option {
+	return func(s *Service) { s.traffic.notify = notify }
 }
 
 func (s *Service) ProcessTrafficChecks(ctx context.Context, limit int) (int, error) {
@@ -140,6 +147,9 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 	}
 	if saved {
 		s.recordTraffic("eligible")
+		if s.traffic.notify != nil {
+			return s.traffic.notify(ctx, check.Subject, check.ConsentID, check.Routine.ID, check.Consent.DepartureAt)
+		}
 	}
 	return nil
 }
@@ -200,7 +210,14 @@ func (s *Service) ListTrafficDecisions(
 }
 
 func (s *Service) parkedAtOrigin(ctx context.Context, vehicleID int64, origin domain.Point, now time.Time) (bool, error) {
-	values, err := s.traffic.live.GetAll(ctx, vehicleID, signal.LiveSignalReadDistributed)
+	return ParkedAtTrafficOrigin(ctx, s.traffic.live, vehicleID, origin, now)
+}
+
+func ParkedAtTrafficOrigin(ctx context.Context, live TrafficLiveReader, vehicleID int64, origin domain.Point, now time.Time) (bool, error) {
+	if live == nil {
+		return false, nil
+	}
+	values, err := live.GetAll(ctx, vehicleID, signal.LiveSignalReadDistributed)
 	if err != nil {
 		return false, fmt.Errorf("read traffic eligibility from live signals: %w", err)
 	}

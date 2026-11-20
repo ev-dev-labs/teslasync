@@ -414,6 +414,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/widgetdesignsvc"
+	smartcommutedomain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
@@ -1163,10 +1164,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
 	)
 	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader)
+	deliveryRepo := smartdeliverydb.NewRepository(db)
+	var commuteOriginCheck smartdeliverysvc.CommuteOriginCheck
+	if smartCommuteTraffic {
+		commuteOriginCheck = func(ctx context.Context, vehicleID int64, origin smartcommutedomain.Point, now time.Time) (bool, error) {
+			return smartcommutesvc.ParkedAtTrafficOrigin(ctx, commuteTrafficLive, vehicleID, origin, now)
+		}
+	}
 	smartDeliveryService := smartdeliverysvc.New(
-		smartdeliverydb.NewRepository(db), opt.Encryptor,
+		deliveryRepo, opt.Encryptor,
 		smartdeliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(smartChargingService),
+		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, commuteOriginCheck),
 		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
 		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
 	)

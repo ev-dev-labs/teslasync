@@ -101,6 +101,24 @@ describe('personal delivery worker', () => {
     expect(showNotification).not.toHaveBeenCalled()
   })
 
+  it('claims a commute token and opens only its occurrence-specific destination', async () => {
+    const destination = `/settings/smart-commute?vehicle_id=7&traffic_occurrence_id=${'b'.repeat(32)}`
+    fetchMock.mockResolvedValueOnce({
+      ok: true, json: async () => ({ data: { title: 'Smart Commute', body: 'Open TeslaSync', url: destination } }),
+    })
+    await push({ kind: 'commute', token })
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/v1/smart-delivery/deliveries/claim', {
+      method: 'POST', credentials: 'same-origin', redirect: 'error', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, kind: 'commute' }),
+    })
+    expect(showNotification).toHaveBeenCalledExactlyOnceWith('Smart Commute', {
+      body: 'Open TeslaSync', badge: '/icons/badge-72.png', data: { url: destination },
+    })
+    await click('/settings/smart-commute?vehicle_id=7')
+    await click(destination)
+    expect(openWindow).toHaveBeenCalledExactlyOnceWith(destination)
+  })
+
   it('opens only approved same-origin notification destinations', async () => {
     await click('/settings/smart-charging?vehicle_id=7')
     await click('https://other.example/action-center')

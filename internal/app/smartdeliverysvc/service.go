@@ -48,6 +48,8 @@ type Service struct {
 	sender     Sender
 	now        func() time.Time
 	candidates ChargingCandidates
+	commute    port.CommuteRepository
+	atOrigin   CommuteOriginCheck
 	quietHours QuietHours
 	observe    func(string)
 }
@@ -219,13 +221,20 @@ func validTexts(texts domain.Texts) bool {
 	for _, text := range []string{
 		texts.VerificationTitle, texts.VerificationBody, texts.ChargingTitle, texts.ChargingBody,
 	} {
-		if !utf8.ValidString(text) || strings.TrimSpace(text) == "" || utf8.RuneCountInString(text) > 160 {
+		if !validText(text) {
 			return false
 		}
-		for _, character := range text {
-			if unicode.IsControl(character) {
-				return false
-			}
+	}
+	return true
+}
+
+func validText(text string) bool {
+	if !utf8.ValidString(text) || strings.TrimSpace(text) == "" || utf8.RuneCountInString(text) > 160 {
+		return false
+	}
+	for _, character := range text {
+		if unicode.IsControl(character) {
+			return false
 		}
 	}
 	return true

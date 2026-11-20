@@ -28,9 +28,9 @@ export async function getPersonalSubscription(): Promise<PushSubscription | null
 }
 
 async function waitForActivation(registration: ServiceWorkerRegistration): Promise<void> {
-  if (registration.active?.state === 'activated') return
   const worker = registration.installing ?? registration.waiting ?? registration.active
   if (!worker) throw new Error('Personal delivery worker is unavailable')
+  if (worker.state === 'activated') return
   await new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => finish(new Error('Personal delivery worker activation timed out')), 15000)
     const finish = (error?: Error) => {
@@ -46,6 +46,13 @@ async function waitForActivation(registration: ServiceWorkerRegistration): Promi
     worker.addEventListener('statechange', check)
     check()
   })
+}
+
+export async function refreshPersonalDeliveryWorker(): Promise<void> {
+  if (!personalPushSupported()) throw new Error('Personal browser delivery is unavailable')
+  const registration = await personalRegistration()
+  if (!registration) throw new Error('Personal delivery worker is unavailable')
+  await waitForActivation(await registration.update())
 }
 
 export async function subscribePersonalBrowser(publicKey: string): Promise<PushSubscription> {

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 )
 
@@ -40,13 +41,14 @@ func TestPrivateCommuteBrowserJourney(t *testing.T) {
 		FROM drives WHERE vehicle_id = 42`); err != nil {
 		t.Fatalf("seed browser fixture: %v", err)
 	}
-	runCommuteBrowserSpec(t, f, nil, "smart-commute.smoke.spec.ts")
+	runCommuteBrowserSpec(t, f, nil, "smart-commute.smoke.spec.ts", false)
 }
 
 func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 	requireCommuteBrowser(t)
 	live := &trafficLiveFixture{gear: "P"}
 	var outbound atomic.Int64
+	var personalDelivery *smartdeliverysvc.Service
 	source := trafficSourceFixture(func(ctx context.Context, query domain.TrafficQuery, authorize func(context.Context) error) (domain.TrafficComparison, error) {
 		if err := authorize(ctx); err != nil {
 			return domain.TrafficComparison{}, err
@@ -61,8 +63,13 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 		}, nil
 	})
 	f := newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
-		smartcommutesvc.WithTrafficEvaluator(source, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil))
+		smartcommutesvc.WithTrafficEvaluator(source, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil),
+		smartcommutesvc.WithTrafficNotifier(func(ctx context.Context, subject string, consentID, routineID int64, departure time.Time) error {
+			return personalDelivery.NotifyCommute(ctx, subject, consentID, routineID, departure)
+		}))
 	live.now = f.now
+	sender := &capturedPush{}
+	personalDelivery = attachCommuteDelivery(t, f, live, sender)
 	var drive struct {
 		ID      int64     `json:"id"`
 		Start   time.Time `json:"start_ts"`
@@ -78,9 +85,17 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 	seedObservedTrafficTrace(t, f, drive.Start)
 	fixture := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/sw.js":
+			// Leave the dedicated delivery worker intact; the root PWA worker
+			// would intercept fixture routes such as the Playwright drives list.
+			w.Header().Set("Content-Type", "application/javascript")
+			w.WriteHeader(http.StatusOK)
 		case r.URL.Path == "/__fixture/traffic" && r.Method == http.MethodGet:
+			count, payload := sender.latest()
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"drive": drive, "now": f.now, "outbound": outbound.Load()})
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"drive": drive, "now": f.now, "outbound": outbound.Load(), "pushes": count, "latest_push": payload,
+			})
 		case r.URL.Path == "/__fixture/traffic" && r.Method == http.MethodPost:
 			if _, err := f.commute.ProcessTrafficChecks(r.Context(), 5); err != nil {
 				t.Error(err)
@@ -92,10 +107,10 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 			http.NotFound(w, r)
 		}
 	})
-	runCommuteBrowserSpec(t, f, fixture, "smart-commute-traffic.smoke.spec.ts")
+	runCommuteBrowserSpec(t, f, fixture, "smart-commute-traffic.smoke.spec.ts", true)
 }
 
-func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, name string) {
+func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, name string, headed bool) {
 	t.Helper()
 	webRoot, err := filepath.Abs(filepath.Join("..", "..", "..", "web"))
 	if err != nil {
@@ -109,7 +124,7 @@ func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, nam
 	static := http.FileServer(http.Dir(distRoot))
 	sharedRouter := f.sharedRouter()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if synthetic != nil && strings.HasPrefix(r.URL.Path, "/__fixture/") {
+		if synthetic != nil && (strings.HasPrefix(r.URL.Path, "/__fixture/") || r.URL.Path == "/sw.js") {
 			synthetic.ServeHTTP(w, r)
 			return
 		}
@@ -133,12 +148,16 @@ func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, nam
 
 	runCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(runCtx, "node",
+	args := []string{
 		filepath.Join("node_modules", "@playwright", "test", "cli.js"), "test",
 		filepath.Join("e2e", name),
 		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line",
-		"--output="+filepath.Join(os.TempDir(), "teslasync-"+name+"-results"),
-	)
+		"--output=" + filepath.Join(os.TempDir(), "teslasync-"+name+"-results"),
+	}
+	if headed {
+		args = append(args, "--headed")
+	}
+	cmd := exec.CommandContext(runCtx, "node", args...)
 	cmd.Dir = webRoot
 	cmd.Env = append(os.Environ(),
 		"E2E_BASE_URL="+server.URL,

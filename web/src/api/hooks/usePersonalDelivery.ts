@@ -59,6 +59,7 @@ export function useCurrentPersonalDevice(
 export type PersonalDeliveryChange =
   | { kind: 'enroll'; subscription: PersonalDeliverySubscription; texts: PersonalDeliveryTexts }
   | { kind: 'charging'; id: number; enabled: boolean }
+  | { kind: 'commute'; id: number; enabled: boolean; copy: { title: string; body: string } }
   | { kind: 'delete'; id: number }
 
 export function usePersonalDeliveryChange(scope: PersonalScope | null) {
@@ -80,6 +81,10 @@ export function usePersonalDeliveryChange(scope: PersonalScope | null) {
         case 'charging':
           return request<void>(`/smart-delivery/devices/${change.id}/charging`, {
             ...options, method: 'PUT', body: JSON.stringify({ enabled: change.enabled }),
+          })
+        case 'commute':
+          return request<void>(`/smart-delivery/devices/${change.id}/commute`, {
+            ...options, method: 'PUT', body: JSON.stringify({ enabled: change.enabled, copy: change.copy }),
           })
         case 'delete':
           return request<void>(`/smart-delivery/devices/${change.id}`, { ...options, method: 'DELETE' })

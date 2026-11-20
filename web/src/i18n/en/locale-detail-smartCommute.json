@@ -46,6 +46,14 @@
       "actionTitle": "A faster route is available before your departure",
       "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold."
     },
+    "delivery": {
+      "toggle": "Allow commute traffic notifications on {{device}}",
+      "pushTitle": "Smart Commute",
+      "pushBody": "Open TeslaSync to review a route comparison.",
+      "help": "Commute push starts off and only applies to routines with approved traffic checks. Enable it from the browser that should receive it. This replaces the previous commute recipient without changing charging notifications.",
+      "unavailable": "Commute push requires configured HERE traffic checks and shared live signals.",
+      "empty": "No personal devices are connected."
+    },
     "analysisTimeZone": "Time zone for local analysis",
     "timeZone": "IANA time zone",
     "timeZoneHint": "For example, America/Los_Angeles.",

@@ -11,15 +11,16 @@ import { DataStateNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/co
 import { Button, ConfirmDialog, ErrorText, GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { useDataState } from '@/hooks/useDataState'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
-import { personalPushSupported } from '@/lib/personalPush'
+import { personalPushSupported, refreshPersonalDeliveryWorker } from '@/lib/personalPush'
 import { PersonalDeliveryDeviceRow } from './PersonalDeliveryDeviceRow'
 import { usePersonalBrowser } from './usePersonalBrowser'
 
 interface Props {
   active: boolean
+  family: 'charging' | 'commute'
 }
 
-export function PersonalDeliverySettings({ active }: Props) {
+export function PersonalDeliverySettings({ active, family }: Props) {
   const { t } = useTranslation()
   const identity = usePersonalIdentity(active)
   const scope = personalScope(identity.data)
@@ -40,11 +41,12 @@ export function PersonalDeliverySettings({ active }: Props) {
   const lookupKnown = browser.status === 'unsupported' || (browser.status === 'ready' &&
     (browser.subscription == null || (current.isSuccess && !current.isFetching)))
   const currentDevice = browser.subscription && current.isSuccess ? current.data : null
+  const available = family === 'commute' ? state.data?.commute_available : state.data?.available
   const rows = (state.data?.devices ?? []).map((device) =>
     currentDevice?.id === device.id ? currentDevice : device)
 
   const connect = async () => {
-    if (blocked || !state.data?.available || !state.data.public_key || !personalPushSupported()) return
+    if (blocked || !available || !state.data?.public_key || !personalPushSupported()) return
     setBusy(true)
     setError(null)
     try {
@@ -72,13 +74,25 @@ export function PersonalDeliverySettings({ active }: Props) {
     }
   }
 
-  const updateCharging = async (id: number, enabled: boolean) => {
-    if (blocked) return
+  const updatePreference = async (id: number, enabled: boolean) => {
+    const needsRefresh = family === 'commute' && enabled
+    if (blocked || (needsRefresh && currentDevice?.id !== id)) return
+    if (needsRefresh) setBusy(true)
     setError(null)
     try {
-      await change.mutateAsync({ kind: 'charging', id, enabled })
+      if (needsRefresh) await refreshPersonalDeliveryWorker()
+      await change.mutateAsync(family === 'commute'
+        ? {
+          kind: 'commute', id, enabled, copy: {
+            title: t('smartCommute.delivery.pushTitle', 'Smart Commute'),
+            body: t('smartCommute.delivery.pushBody', 'Open TeslaSync to review a route comparison.'),
+          },
+        }
+        : { kind: 'charging', id, enabled })
     } catch {
       setError(t('smartCharging.delivery.changeFailed', 'The delivery preference was not saved. Refresh and retry.'))
+    } finally {
+      if (needsRefresh) setBusy(false)
     }
   }
 
@@ -116,6 +130,11 @@ export function PersonalDeliverySettings({ active }: Props) {
       <Text as="p" variant="bodySm">
         {t('smartCharging.delivery.privacy', 'Your browser’s push service receives an encrypted, short-lived token, not trip details. TeslaSync checks the same account and current consent before showing a generic notification.')}
       </Text>
+      {family === 'commute' && (
+        <Text as="p" variant="bodySm">
+          {t('smartCommute.delivery.help', 'Commute push starts off and only applies to routines with approved traffic checks. Enable it from the browser that should receive it. This replaces the previous commute recipient without changing charging notifications.')}
+        </Text>
+      )}
       {identity.isFetching || identity.isLoading ? <Skeleton lines={2} /> : identity.error ? (
         <QueryError error={identity.error} onRetry={() => void identity.refetch()} />
       ) : !scope ? (
@@ -136,6 +155,11 @@ export function PersonalDeliverySettings({ active }: Props) {
               {t('smartCharging.delivery.serverUnavailable', 'Personal delivery needs VAPID credentials and the same encryption key on the API and notification worker. Existing alert channels are separate.')}
             </Text>
           )}
+          {family === 'commute' && state.data?.available && !available && (
+            <Text as="p" variant="bodySm">
+              {t('smartCommute.delivery.unavailable', 'Commute push requires configured HERE traffic checks and shared live signals.')}
+            </Text>
+          )}
           {browser.status === 'unsupported' && (
             <Text as="p" variant="bodySm">
               {t('smartCharging.delivery.browserUnavailable', 'Personal browser delivery needs a supported browser and a secure, same-origin connection.')}
@@ -149,7 +173,7 @@ export function PersonalDeliverySettings({ active }: Props) {
           {current.isError && <QueryError error={current.error} onRetry={() => void current.refetch()} />}
           {error && removing == null && <ErrorText role="alert">{error}</ErrorText>}
           {browser.status === 'ready' && !currentDevice?.verified && (
-            <Button wrapLabel variant="primary" disabled={blocked || !lookupKnown || !state.data?.available}
+            <Button wrapLabel variant="primary" disabled={blocked || !lookupKnown || !available}
               onClick={() => void connect()}>
               {currentDevice
                 ? t('smartCharging.delivery.retryConfirmation', 'Retry confirmation')
@@ -162,12 +186,16 @@ export function PersonalDeliverySettings({ active }: Props) {
             </Button>
           )}
           {rows.length === 0 ? (
-            <Text as="p" variant="bodySm">{t('smartCharging.delivery.empty', 'No personal devices are connected. Charging push is off by default.')}</Text>
+            <Text as="p" variant="bodySm">
+              {family === 'commute'
+                ? t('smartCommute.delivery.empty', 'No personal devices are connected.')
+                : t('smartCharging.delivery.empty', 'No personal devices are connected. Charging push is off by default.')}
+            </Text>
           ) : rows.map((device, index) => (
             <PersonalDeliveryDeviceRow key={device.id} device={device} index={index}
               current={currentDevice?.id === device.id} disabled={blocked || !lookupKnown}
-              available={state.data?.available ?? false}
-              onCharging={(id, enabled) => void updateCharging(id, enabled)} onRemove={setRemoving} />
+              available={available ?? false} family={family}
+              onChange={(id, enabled) => void updatePreference(id, enabled)} onRemove={setRemoving} />
           ))}
           <ConfirmDialog open={removing != null} variant="danger" confirmDisabled={blocked} loading={busy}
             title={t('smartCharging.delivery.disconnectTitle', 'Disconnect this device?')}

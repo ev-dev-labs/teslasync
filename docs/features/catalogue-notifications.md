@@ -26,7 +26,8 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   checks, or delete derived commute data without deleting the original drives.
   Installations with a licensed HERE connection can opt into traffic checks
   for individual confirmed routines. Current comparisons appear in Action
-  Center; commute push and sending destinations are not part of this increment.
+  Center and can also trigger a separately opted-in browser notification.
+  Comparisons do not send destinations to the vehicle.
 - **Charging readiness** (`/settings/smart-charging`): Choose a known charging
   place, enter a planned departure and reserve, and enable the plan. Review
   actionable plug-in, slow-charging, and schedule warnings in Action Center.
@@ -83,18 +84,24 @@ does not track traffic settings.
 
 ### Optional personal browser push
 
-In-app recommendations work without push credentials. For charging push, set
+In-app recommendations work without push credentials. For personal push, set
 `TESLASYNC_VAPID_PUBLIC_KEY`, `TESLASYNC_VAPID_PRIVATE_KEY`, `TESLASYNC_VAPID_SUBJECT`,
 and the same `ENCRYPTION_KEY` on the API and notification worker. In Helm, use the
 chart's `webPush` and `encryption` values. Keep private keys in the deployment's
 secret configuration. Use a supported browser on a secure, same-origin
-connection, then choose **Connect this browser** under **Charging readiness**.
-After the device is verified, turn on charging push for that device separately.
+connection, then choose **Connect this browser** under **Smart Commute** or
+**Charging readiness**. After verification, enable only the notification family
+you want. Enable commute push on the browser that should receive it. Commute
+accepts one browser per account (or per open installation). Selecting another
+browser invalidates pending commute deliveries for the previous browser without
+changing its charging preferences.
 
 The browser push service receives an encrypted, short-lived token, not trip
 details. TeslaSync checks scope, device consent, and current evidence before
-showing a generic notification. Device disconnect invalidates its pending
-personal deliveries but leaves the charging plan and ordinary alert channels
+showing a generic notification. Commute notifications open the specific
+comparison that triggered them. If you have already left or the comparison has
+expired, it is no longer available. Device disconnect invalidates its pending
+personal deliveries but leaves routines, plans, and ordinary alert channels
 unchanged. If push is unavailable, check Action Center; TeslaSync does not fall
 back to broadcasting advice to an existing channel.
 
@@ -107,6 +114,9 @@ pause affected plans and stop the worker before applying the corresponding
 down migrations in reverse order (`000267`, `000266`, `000265`). They remove
 the recorded windows, limits, and start times and invalidate affected
 notifications. Leave the schema applied if you need to preserve those inputs.
+Before reverting to a release without commute push, stop the worker and roll
+down `000269`. That removes commute device preferences and attempts, not the
+verified devices, charging preferences, or approved traffic traces.
 
 ## Notification history and health
 

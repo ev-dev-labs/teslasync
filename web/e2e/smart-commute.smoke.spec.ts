@@ -87,6 +87,9 @@ test(`commute journey stays within its selected ownership scope: ${variant.name}
   await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
     json: { mode: openMode ? 'open' : 'forward_auth', subject_header: 'X-Test-Subject', subject, capabilities: {} },
   }))
+  await page.route('**/api/v1/smart-delivery/devices', route => fulfillApiFixture(route, api, {
+    json: { data: { available: false, commute_available: false, public_key: '', devices: [] } },
+  }))
   if (realBackend) {
     await page.route(url => url.pathname.startsWith('/api/v1/smart-commute') ||
       url.pathname === '/api/v1/action-center' ||

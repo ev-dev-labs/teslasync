@@ -21,7 +21,9 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func startSmartTraffic(ctx context.Context, cfg *config.Config, db *database.DB, live smartcommutesvc.TrafficLiveReader) func() {
+func startSmartTraffic(ctx context.Context, cfg *config.Config, db *database.DB,
+	live smartcommutesvc.TrafficLiveReader, notify smartcommutesvc.TrafficNotifier,
+) func() {
 	if !cfg.SmartCommute.HasLicensedTraffic() {
 		return func() {}
 	}
@@ -33,6 +35,7 @@ func startSmartTraffic(ctx context.Context, cfg *config.Config, db *database.DB,
 	quietRepo := quiethoursdb.NewQuietHoursRepo(db)
 	service := smartcommutesvc.New(commutedb.NewRepository(db), smartcommutesvc.WithTrafficLiveReader(live),
 		smartcommutesvc.WithTrafficSharedOpenMode(tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader)),
+		smartcommutesvc.WithTrafficNotifier(notify),
 		smartcommutesvc.WithTrafficEvaluator(source, func(ctx context.Context, subject string, now time.Time) (bool, error) {
 			if subject == personal.OpenSubject {
 				subject = ""

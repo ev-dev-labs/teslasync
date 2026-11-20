@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const deviceColumns = `id, verified_at IS NOT NULL, charging_enabled, created_at, updated_at`
+const deviceColumns = `id, verified_at IS NOT NULL, charging_enabled, commute_enabled, created_at, updated_at`
 
 type Repository struct {
 	db *database.DB
@@ -103,10 +103,14 @@ func (r *Repository) SavePending(
 			if err := revokeDeviceDeliveries(ctx, tx, id, now); err != nil {
 				return err
 			}
+			if err := revokeCommuteDeliveries(ctx, tx, id, now); err != nil {
+				return err
+			}
 			saved, err = scanDevice(tx.QueryRow(ctx, `
 				UPDATE smart_push_devices
 				SET subscription_ciphertext=$3, verification_hash=$4, verification_expires_at=$5,
-				    verified_at=NULL, charging_enabled=false,
+				    verified_at=NULL, charging_enabled=false, commute_enabled=false,
+				    commute_title=NULL, commute_body=NULL,
 				    verification_title=$6, verification_body=$7, charging_title=$8, charging_body=$9, updated_at=$10
 				WHERE id=$1 AND subject=$2 RETURNING `+deviceColumns,
 				id, subject, ciphertext, verificationHash, expiresAt,
@@ -185,7 +189,7 @@ func (r *Repository) DeleteDevice(ctx context.Context, subject string, id int64)
 
 func scanDevice(row pgx.Row) (*domain.Device, error) {
 	var device domain.Device
-	if err := row.Scan(&device.ID, &device.Verified, &device.ChargingEnabled, &device.CreatedAt, &device.UpdatedAt); err != nil {
+	if err := row.Scan(&device.ID, &device.Verified, &device.ChargingEnabled, &device.CommuteEnabled, &device.CreatedAt, &device.UpdatedAt); err != nil {
 		return nil, err
 	}
 	return &device, nil

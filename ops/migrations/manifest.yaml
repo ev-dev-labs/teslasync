@@ -719,3 +719,18 @@ migrations:
     irreversible_justification: Explicit down deletes approved representative traces and their consent state; the source drives are not affected.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 269
+    name: smart_commute_personal_push
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries do not revoke commute delivery on re-enrollment or count commute attempts in the shared push budget.
+    requires_downtime: true
+    rollback_notes: Stop notification workers and roll down before starting older API or worker binaries. Commute delivery must be separately opted into again after reapplying.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: The transactional ALTER and unique index can hold write-blocking locks while scanning the existing device registry. The attempts table is new and empty.
+    reversible: false
+    irreversible_justification: Explicit down deletes commute browser preferences and attempt history; it retains charging preferences and traffic consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

@@ -55,6 +55,7 @@ on:
       - 'migrations/000266_smart_charging_schedule_power_ceiling.*.sql'
       - 'migrations/000267_smart_departure_overlap.*.sql'
       - 'migrations/000268_smart_commute_traffic_consent.*.sql'
+      - 'migrations/000269_smart_commute_personal_push.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'

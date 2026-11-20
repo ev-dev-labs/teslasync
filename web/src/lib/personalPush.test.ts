@@ -3,6 +3,7 @@ import {
   clearPersonalBrowser,
   getPersonalSubscription,
   personalPushSupported,
+  refreshPersonalDeliveryWorker,
   subscribePersonalBrowser,
 } from './personalPush'
 
@@ -102,6 +103,23 @@ describe('personal browser push', () => {
     installServiceWorkers({ getRegistration: vi.fn(), register })
     await expect(subscribePersonalBrowser('AQ')).rejects.toThrow('permission')
     expect(register).not.toHaveBeenCalled()
+  })
+
+  it('waits for the updated worker rather than the previous active worker', async () => {
+    const personal = registration('/personal-delivery/')
+    const installing = Object.assign(new EventTarget(), { state: 'installing' })
+    const listening = vi.spyOn(installing, 'addEventListener')
+    const update = vi.fn().mockResolvedValue({ ...personal, installing })
+    installServiceWorkers({ getRegistration: vi.fn().mockResolvedValue({ ...personal, update }) })
+    const ready = vi.fn()
+    const result = refreshPersonalDeliveryWorker().then(ready)
+    await vi.waitFor(() => expect(listening).toHaveBeenCalledWith('statechange', expect.any(Function)))
+    expect(ready).not.toHaveBeenCalled()
+    installing.state = 'activated'
+    installing.dispatchEvent(new Event('statechange'))
+    await result
+    expect(update).toHaveBeenCalledOnce()
+    expect(ready).toHaveBeenCalledOnce()
   })
 
   it('unsubscribes and unregisters only the dedicated worker, reporting failures', async () => {

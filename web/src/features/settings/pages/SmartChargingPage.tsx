@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { PersonalDeliverySettings } from '../components/smart-charging/PersonalDeliverySettings'
+import { PersonalDeliverySettings } from '../components/personal-delivery/PersonalDeliverySettings'
 import { SmartChargingSettings } from '../components/smart-charging/SmartChargingSettings'
 
 export default function SmartChargingPage() {
@@ -15,7 +15,7 @@ export default function SmartChargingPage() {
       <FadeIn>
         <div className="space-y-5">
           <SmartChargingSettings active />
-          <PersonalDeliverySettings active />
+          <PersonalDeliverySettings active family="charging" />
         </div>
       </FadeIn>
     </PageLayout>

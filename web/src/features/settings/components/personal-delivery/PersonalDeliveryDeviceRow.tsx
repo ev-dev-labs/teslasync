@@ -9,18 +9,20 @@ interface Props {
   current: boolean
   disabled: boolean
   available: boolean
-  onCharging: (id: number, enabled: boolean) => void
+  family: 'charging' | 'commute'
+  onChange: (id: number, enabled: boolean) => void
   onRemove: (id: number) => void
 }
 
 export function PersonalDeliveryDeviceRow({
-  device, index, current, disabled, available, onCharging, onRemove,
+  device, index, current, disabled, available, family, onChange, onRemove,
 }: Props) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat('user')
   const name = current
     ? t('smartCharging.delivery.thisDevice', 'This browser')
     : t('smartCharging.delivery.deviceNumber', 'Device {{number}}', { number: index + 1 })
+  const enabled = family === 'commute' ? device.commute_enabled : device.charging_enabled
 
   return (
     <article className="space-y-3 border-t border-[var(--border-subtle)] pt-4">
@@ -34,10 +36,12 @@ export function PersonalDeliveryDeviceRow({
       </Text>
       <div>
         <Toggle
-          label={t('smartCharging.delivery.chargingToggle', 'Allow charging readiness notifications on {{device}}', { device: name })}
-          checked={device.charging_enabled}
-          disabled={disabled || !device.verified || (!available && !device.charging_enabled)}
-          onChange={(enabled) => onCharging(device.id, enabled)}
+          label={family === 'commute'
+            ? t('smartCommute.delivery.toggle', 'Allow commute traffic notifications on {{device}}', { device: name })
+            : t('smartCharging.delivery.chargingToggle', 'Allow charging readiness notifications on {{device}}', { device: name })}
+          checked={enabled ?? false}
+          disabled={disabled || !device.verified || (!enabled && (!available || (family === 'commute' && !current)))}
+          onChange={(checked) => onChange(device.id, checked)}
         />
       </div>
       <Button wrapLabel variant="secondary" size="sm" disabled={disabled}

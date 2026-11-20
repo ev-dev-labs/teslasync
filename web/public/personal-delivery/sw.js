@@ -1,3 +1,13 @@
+function isCommuteComparison(url) {
+  return url.pathname === '/settings/smart-commute' &&
+    /^[1-9]\d*$/.test(url.searchParams.get('vehicle_id') ?? '') &&
+    /^[a-f0-9]{32}$/.test(url.searchParams.get('traffic_occurrence_id') ?? '')
+}
+
+function isChargingDestination(url) {
+  return ['/action-center', '/settings/smart-charging'].includes(url.pathname)
+}
+
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     let payload
@@ -11,7 +21,7 @@ self.addEventListener('push', (event) => {
     let path
     if (payload.kind === 'verify' && Number.isSafeInteger(payload.device_id) && payload.device_id > 0) {
       path = `/api/v1/smart-delivery/devices/${payload.device_id}/verify`
-    } else if (payload.kind === 'charging') {
+    } else if (payload.kind === 'charging' || payload.kind === 'commute') {
       path = '/api/v1/smart-delivery/deliveries/claim'
     } else {
       return
@@ -24,7 +34,9 @@ self.addEventListener('push', (event) => {
         redirect: 'error',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: payload.token }),
+        body: JSON.stringify(payload.kind === 'commute'
+          ? { token: payload.token, kind: 'commute' }
+          : { token: payload.token }),
       })
       if (!response.ok) return
       const result = await response.json()
@@ -33,7 +45,7 @@ self.addEventListener('push', (event) => {
         typeof notification?.url !== 'string') return
       const url = new URL(notification.url, self.location.origin)
       if (url.origin !== self.location.origin ||
-        !['/action-center', '/settings/smart-charging'].includes(url.pathname)) return
+        !(payload.kind === 'commute' ? isCommuteComparison(url) : isChargingDestination(url))) return
       await self.registration.showNotification(notification.title, {
         body: notification.body,
         badge: '/icons/badge-72.png',
@@ -50,8 +62,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     try {
       const url = new URL(event.notification.data?.url, self.location.origin)
-      if (url.origin === self.location.origin &&
-        ['/action-center', '/settings/smart-charging'].includes(url.pathname)) {
+      if (url.origin === self.location.origin && (isChargingDestination(url) || isCommuteComparison(url))) {
         await self.clients.openWindow(`${url.pathname}${url.search}`)
       }
     } catch {

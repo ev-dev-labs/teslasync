@@ -27,7 +27,7 @@ func (s *Service) NotifyCharging(ctx context.Context, candidate readinessport.Ca
 	if !allowsChargingDelivery(candidate) {
 		return nil
 	}
-	quiet, err := s.inQuietHours(ctx, candidate.Plan.Subject, s.now().UTC())
+	quiet, err := s.inQuietHours(ctx, candidate.Plan.Subject, "warn", s.now().UTC())
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 		s.record("suppressed")
 		return nil
 	}
-	quiet, err := s.inQuietHours(ctx, attempt.Subject, now)
+	quiet, err := s.inQuietHours(ctx, attempt.Subject, "warn", now)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 	if err != nil || !reserved {
 		return err
 	}
-	status := s.sendCharging(ctx, lease.Ciphertext(), token, attempt.ExpiresAt)
+	status := s.sendPersonal(ctx, "charging", lease.Ciphertext(), token, attempt.ExpiresAt)
 	s.record(string(status))
 	if err := lease.Finish(ctx, tokenHash[:], status); err != nil {
 		return fmt.Errorf("record personal charging delivery: %w", err)
@@ -110,7 +110,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 	return nil
 }
 
-func (s *Service) sendCharging(ctx context.Context, ciphertext, token string, expiresAt time.Time) domain.DeliveryStatus {
+func (s *Service) sendPersonal(ctx context.Context, kind, ciphertext, token string, expiresAt time.Time) domain.DeliveryStatus {
 	plaintext, err := s.encryptor.Decrypt(ciphertext)
 	if err != nil {
 		return domain.DeliveryFailed
@@ -122,7 +122,7 @@ func (s *Service) sendCharging(ctx context.Context, ciphertext, token string, ex
 	payload, err := json.Marshal(struct {
 		Kind  string `json:"kind"`
 		Token string `json:"token"`
-	}{Kind: "charging", Token: token})
+	}{Kind: kind, Token: token})
 	if err != nil {
 		return domain.DeliveryFailed
 	}
@@ -148,7 +148,7 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 		return nil, port.ErrNotFound
 	}
 	now := s.now().UTC()
-	quiet, err := s.inQuietHours(ctx, subject, now)
+	quiet, err := s.inQuietHours(ctx, subject, "warn", now)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 		!candidate.PlaceUpdatedAt.Equal(ref.PlaceUpdatedAt) || !now.Before(candidate.Decision.ExpiresAt) {
 		return nil, port.ErrNotFound
 	}
-	quiet, err = s.inQuietHours(ctx, subject, now)
+	quiet, err = s.inQuietHours(ctx, subject, "warn", now)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func allowsChargingDelivery(candidate readinessport.Candidate) bool {
 	return candidate.Decision.Kind != readiness.DecisionDepartureOverlap || candidate.Plan.DepartureOverlapPush
 }
 
-func (s *Service) inQuietHours(ctx context.Context, subject string, now time.Time) (bool, error) {
+func (s *Service) inQuietHours(ctx context.Context, subject, severity string, now time.Time) (bool, error) {
 	if s.quietHours == nil {
 		return true, errors.New("personal quiet hours are unavailable")
 	}
@@ -202,7 +202,7 @@ func (s *Service) inQuietHours(ctx context.Context, subject string, now time.Tim
 		}
 		return true, errors.New("read personal quiet hours")
 	}
-	_, quiet := notification.MatchActiveWindow(windows, "warn", now)
+	_, quiet := notification.MatchActiveWindow(windows, severity, now)
 	return quiet, nil
 }
 
