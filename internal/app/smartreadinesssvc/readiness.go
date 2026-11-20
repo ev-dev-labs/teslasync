@@ -94,6 +94,15 @@ func Evaluate(
 	if err != nil || chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateUnknown {
 		return Decision{Reason: ReasonUnknownState}
 	}
+	if chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateDisconnected {
+		if latch := values["ChargePortLatch"]; freshObservation(latch, now) {
+			raw, _ := latch.Raw.(string)
+			if latched, err := protomodel.ParseChargePortLatchValue(raw); err == nil &&
+				latched == protomodel.ChargePortLatchValue_ChargePortLatchEngaged {
+				return Decision{Reason: ReasonPlugged}
+			}
+		}
+	}
 	pendingState := chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateNoPower ||
 		chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateStopped
 	if chargeState != protomodel.DetailedChargeStateValue_DetailedChargeStateDisconnected &&
@@ -122,12 +131,12 @@ func Evaluate(
 		if scheduleAt.Before(observedAt) {
 			observedAt = scheduleAt
 		}
-	} else if plan.TripLegs != nil && !lowPossible {
-		kind = domain.DecisionTripReview
-	} else if chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateCharging {
-		if !lowPossible {
+	} else if !lowPossible {
+		if plan.TripLegs == nil {
 			return Decision{Reason: ReasonUnachievable}
 		}
+		kind = domain.DecisionTripReview
+	} else if chargeState == protomodel.DetailedChargeStateValue_DetailedChargeStateCharging {
 		capacity := values["NominalFullPackEnergyKwh"]
 		if !freshObservation(capacity, now) {
 			return Decision{Reason: ReasonUnknownState}

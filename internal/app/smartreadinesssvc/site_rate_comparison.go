@@ -112,12 +112,14 @@ func validCurrency(currency string) bool {
 }
 
 func possibleRateStarts(now, latest time.Time, duration time.Duration, rates []pricedWindow) []time.Time {
-	candidates := make([]time.Time, 0, len(rates)*4+1)
+	earliest := now.Add(minimumRateDelay)
+	candidates := make([]time.Time, 0, len(rates)*4+2)
 	appendIfFeasible := func(start time.Time) {
-		if !start.Before(now.Add(minimumRateDelay)) && !start.After(latest) {
+		if !start.Before(earliest) && !start.After(latest) {
 			candidates = append(candidates, start)
 		}
 	}
+	appendIfFeasible(earliest)
 	appendIfFeasible(latest)
 	for _, rate := range rates {
 		appendIfFeasible(rate.from)

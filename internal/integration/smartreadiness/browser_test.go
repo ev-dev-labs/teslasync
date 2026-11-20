@@ -166,7 +166,11 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 			live.values["DetailedChargeState"].Raw = body.State
 			live.values["ScheduledChargingPending"] = &signal.Value{Raw: !scheduleClock.IsZero()}
 			live.values["ScheduledChargingStartTime"] = &signal.Value{Raw: scheduleClock}
-			live.values["ChargePortLatch"] = &signal.Value{Raw: "Engaged"}
+			latch := "Engaged"
+			if body.State == "Disconnected" {
+				latch = "Disengaged"
+			}
+			live.values["ChargePortLatch"] = &signal.Value{Raw: latch}
 			if body.PowerW != nil {
 				live.values["ACChargingPower"].Raw = *body.PowerW
 			} else if body.State == "NoPower" {

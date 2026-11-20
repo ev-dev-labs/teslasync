@@ -43,6 +43,24 @@ func TestSiteRateComparisonUsesVerifiedWindowsAndConservativeFeasibility(t *test
 	}
 }
 
+func TestSiteRateComparisonChecksTheEarliestActionableStartWithinACheapWindow(t *testing.T) {
+	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
+	plan, values, _ := rateComparisonFixture(now)
+	cheapStart, cheapEnd := now.Add(4*time.Minute), now.Add(124*time.Minute)
+	windows := []domain.SiteRateWindow{
+		{PlaceID: 9, RatePerWh: "0.0030000000", Currency: "USD", EffectiveFrom: now.Add(-time.Hour), EffectiveTo: &cheapStart},
+		{PlaceID: 9, RatePerWh: "0.0000000000", Currency: "USD", EffectiveFrom: cheapStart, EffectiveTo: &cheapEnd},
+		{PlaceID: 9, RatePerWh: "0.0030000000", Currency: "USD", EffectiveFrom: cheapEnd},
+	}
+	estimate := EstimateLatestStart(plan, values, now, func(float64, float64) bool { return true })
+	comparison := estimateSiteRateComparison(plan, estimate, 80000, windows, now)
+	if comparison == nil || !comparison.LowerRateStartAt.Equal(now.Add(5*time.Minute)) ||
+		comparison.CostNowDecimal != "2.000000" || comparison.CostLaterDecimal != "0.500000" ||
+		comparison.SavingDecimal != "1.500000" {
+		t.Fatalf("comparison at the earliest actionable time = %+v", comparison)
+	}
+}
+
 func TestSiteRateComparisonSuppressesUnreliableOrImmaterialAdvice(t *testing.T) {
 	now := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
 	tests := []struct {

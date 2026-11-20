@@ -53,6 +53,12 @@ func (s *controlledLive) setChargeState(value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.values["DetailedChargeState"].Raw = value
+	if latch := s.values["ChargePortLatch"]; latch != nil {
+		latch.Raw = "Engaged"
+		if value == "Disconnected" {
+			latch.Raw = "Disengaged"
+		}
+	}
 }
 
 func (s *controlledLive) readCount() int {
@@ -376,6 +382,27 @@ func TestPrivateChargingPriceComparisonThroughHandlers(t *testing.T) {
 	}
 	if _, err := db.Pool.Exec(ctx, `UPDATE geofence_rates SET currency='USD' WHERE id=$1`, secondID); err != nil {
 		t.Fatal(err)
+	}
+	cheapStart, cheapEnd := now.Add(4*time.Minute), now.Add(124*time.Minute)
+	if _, err := db.Pool.Exec(ctx, `
+		UPDATE geofence_rates SET effective_to=$2, rate_per_wh=0.003 WHERE id=$1`,
+		firstID, cheapStart); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `
+		UPDATE geofence_rates SET effective_from=$2, effective_to=$3, rate_per_wh=0 WHERE id=$1`,
+		secondID, cheapStart, cheapEnd); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `
+		INSERT INTO geofence_rates (geofence_id, rate_per_wh, currency, effective_from)
+		VALUES (9, 0.003, 'USD', $1)`, cheapEnd); err != nil {
+		t.Fatal(err)
+	}
+	if got := read("subject-a"); len(got) != 1 || got[0].CostComparison == nil ||
+		got[0].CostComparison.SavingDecimal != "1.500000" ||
+		!got[0].CostComparison.LowerRateStartAt.Equal(now.Add(5*time.Minute)) {
+		t.Fatalf("first actionable start during a brief price window = %+v", got)
 	}
 	input["compare_site_rates"] = false
 	request(http.MethodPut, path, "subject-a", input, http.StatusOK)

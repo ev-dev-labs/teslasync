@@ -341,7 +341,16 @@ func TestEvaluatePlugInRecommendation(t *testing.T) {
 		{"nonfinite range", func(p *Plan, _ map[string]*signal.Value, _ *time.Time) { p.ReservePct = math.NaN() }, ReasonInvalidPlan},
 		{"sufficient charge", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["BatteryLevel"].Raw = 75.0 }, ReasonEnoughCharge},
 		{"below material shortfall", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["BatteryLevel"].Raw = 50.0 }, ReasonEnoughCharge},
+		{"plugging in cannot meet even the lower trip target", func(p *Plan, _ map[string]*signal.Value, _ *time.Time) {
+			p.TripUseLowPct, p.TripUseHighPct = 85, 95
+		}, ReasonUnachievable},
 		{"connected but stopped", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["DetailedChargeState"].Raw = "Stopped" }, ReasonPlugged},
+		{"fresh engaged latch conflicts with disconnected state", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) {
+			v["ChargePortLatch"] = &signal.Value{Raw: "Engaged", Timestamp: now}
+		}, ReasonPlugged},
+		{"stale engaged latch cannot override fresh disconnected state", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) {
+			v["ChargePortLatch"] = &signal.Value{Raw: "Engaged", Timestamp: now.Add(-3 * time.Minute)}
+		}, ReasonEligible},
 		{"unknown charge state", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["DetailedChargeState"].Raw = "Unknown" }, ReasonUnknownState},
 		{"moving", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["Gear"].Raw = "D" }, ReasonNotParked},
 		{"outside charging place", func(_ *Plan, v map[string]*signal.Value, _ *time.Time) { v["LocationLatitude"].Raw = 48.0 }, ReasonOutsideSite},

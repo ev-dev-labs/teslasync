@@ -114,7 +114,7 @@ func newChargingDeliveryJourney(t *testing.T, wrap func(*controlledPushSender) s
 	j.live = &controlledLive{values: map[string]*signal.Value{
 		"BatteryLevel":        {Raw: 45.0},
 		"DetailedChargeState": {Raw: "Disconnected"},
-		"ChargePortLatch":     {Raw: "Engaged"},
+		"ChargePortLatch":     {Raw: "Disengaged"},
 		"Gear":                {Raw: "P"},
 		"LocationLatitude":    {Raw: 47.1},
 		"LocationLongitude":   {Raw: -122.1},
@@ -312,6 +312,32 @@ func TestPersonalChargingDeliveryJourney(t *testing.T) {
 	j.process()
 	if calls, _ := j.sender.last(); calls != 3 {
 		t.Fatalf("restart/re-evaluation duplicated the notification: %d pushes", calls)
+	}
+}
+
+func TestEngagedLatchSuppressesReminderDuringChargeStateLag(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	j.enroll("subject-a", "https://push.example.invalid/device-a")
+	plan := j.savePlan()
+	j.live.values["ChargePortLatch"].Raw = "Engaged"
+	j.process()
+	if calls, _ := j.sender.last(); calls != 1 {
+		t.Fatalf("push went out even though the plug was latched: %d messages", calls)
+	}
+	if card, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID); err != nil || card != nil {
+		t.Fatalf("engaged latch produced an unplugged card: %+v, %v", card, err)
+	}
+
+	j.advance(j.now.Add(time.Minute))
+	j.live.setChargeState("Disconnected")
+	j.process()
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("verified unplugged shortfall did not send exactly one push: %d messages", calls)
+	}
+	token := j.claimToken()
+	j.live.values["ChargePortLatch"].Raw = "Engaged"
+	if rec := j.claim("subject-a", token); rec.Code != http.StatusNotFound {
+		t.Fatalf("already plugged-in vehicle retained the claim: %d", rec.Code)
 	}
 }
 
