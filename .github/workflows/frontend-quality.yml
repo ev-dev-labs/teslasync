@@ -19,7 +19,36 @@ on:
       - 'web/**'
       - 'scripts/screenshots.js'
       - 'cmd/routetemplategen/**'
+      - 'cmd/notification-worker/**'
       - 'internal/api/webvitals/routetemplates_gen.go'
+      - 'internal/adapter/smartdelivery/**'
+      - 'internal/app/actioncentersvc/**'
+      - 'internal/app/smartcommutesvc/**'
+      - 'internal/app/smartdeliverysvc/**'
+      - 'internal/app/smartreadinesssvc/**'
+      - 'internal/database/smartcommute/**'
+      - 'internal/database/smartdelivery/**'
+      - 'internal/database/smartreadiness/**'
+      - 'internal/domain/personal/**'
+      - 'internal/domain/smartdelivery/**'
+      - 'internal/domain/smartreadiness/**'
+      - 'internal/handler/v1/actioncenter/**'
+      - 'internal/handler/v1/personal/**'
+      - 'internal/handler/v1/smartcommute/**'
+      - 'internal/handler/v1/smartdelivery/**'
+      - 'internal/handler/v1/smartreadiness/**'
+      - 'internal/integration/smartcommute/**'
+      - 'internal/integration/smartreadiness/**'
+      - 'internal/port/smartdelivery/**'
+      - 'internal/port/smartreadiness/**'
+      - 'migrations/000223_action_center_state.*.sql'
+      - 'migrations/000259_smart_commute.*.sql'
+      - 'migrations/000260_smart_charging_readiness.*.sql'
+      - 'migrations/000261_smart_charging_slow_samples.*.sql'
+      - 'migrations/000262_smart_charging_site_rate_consent.*.sql'
+      - 'migrations/000263_smart_personal_push.*.sql'
+      - 'migrations/000264_smart_charging_trip_legs.*.sql'
+      - 'migrations/000265_smart_charging_scheduled_start.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'
@@ -119,6 +148,58 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+  private-notifications:
+    name: Private notifications real-handler journey
+    runs-on: ubuntu-latest
+    needs: browser-build
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: teslasync_smart_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d teslasync_smart_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - *node
+      - *host-dependencies
+      - *npm-install
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - *playwright-version
+      - uses: actions/cache@v5
+        id: browsers
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: browsers-v1-${{ runner.os }}-${{ runner.arch }}-host-chromium-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium system dependencies
+        run: npx playwright install-deps chromium
+      - name: Install Chromium
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-app
+          path: web/dist
+      - name: Exercise private actions against real handlers and PostgreSQL
+        working-directory: .
+        env:
+          TESLASYNC_SMART_COMMUTE_BROWSER: '1'
+          TESLASYNC_SMART_CHARGING_BROWSER: '1'
+          TESLASYNC_SMART_COMMUTE_TEST_DSN: postgres://test:test@127.0.0.1:5432/teslasync_smart_test?sslmode=disable
+        run: xvfb-run -a go test -race -p=1 -count=1 -run '^TestPrivate(Commute|Charging|PersonalDelivery)BrowserJourney$' -v ./internal/integration/smartcommute ./internal/integration/smartreadiness
 
   chromium-tests:
     name: Chromium ${{ matrix.name }}
@@ -222,7 +303,7 @@ jobs:
   chromium-quality:
     name: Chromium responsive, a11y, keyboard, and performance
     if: always()
-    needs: [contract, browser-build, chromium-tests]
+    needs: [contract, browser-build, private-notifications, chromium-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

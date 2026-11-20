@@ -1,7 +1,11 @@
 // Package actioncenter defines the provider-neutral decision-inbox contract.
 package actioncenter
 
-import "time"
+import (
+	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+)
 
 type SourceFeature string
 
@@ -13,6 +17,8 @@ const (
 	SourceDriveEfficiency      SourceFeature = "drive_efficiency"
 	SourceFleetMaintenance     SourceFeature = "fleet_maintenance"
 	SourceSignalHealth         SourceFeature = "signal_health"
+	SourceSmartCharging        SourceFeature = "smart_charging"
+	SourceSmartCommute         SourceFeature = "smart_commute"
 	SourceSystemHealth         SourceFeature = "system_health"
 	SourceVehicleReadiness     SourceFeature = "vehicle_readiness"
 )
@@ -21,11 +27,15 @@ func (v SourceFeature) Valid() bool {
 	switch v {
 	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceBatteryHealth,
 		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
-		SourceSignalHealth, SourceSystemHealth, SourceVehicleReadiness:
+		SourceSignalHealth, SourceSmartCharging, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness:
 		return true
 	default:
 		return false
 	}
+}
+
+func (v SourceFeature) Private() bool {
+	return v == SourceSmartCharging || v == SourceSmartCommute
 }
 
 type Priority string
@@ -83,11 +93,16 @@ const (
 type ActionType string
 
 const (
-	ActionAcknowledge ActionType = "acknowledge"
-	ActionSnooze      ActionType = "snooze"
-	ActionDismiss     ActionType = "dismiss"
-	ActionRestore     ActionType = "restore"
-	ActionNavigate    ActionType = "navigate"
+	ActionAcknowledge         ActionType = "acknowledge"
+	ActionSnooze              ActionType = "snooze"
+	ActionDismiss             ActionType = "dismiss"
+	ActionRestore             ActionType = "restore"
+	ActionNavigate            ActionType = "navigate"
+	ActionSmartChargingSnooze ActionType = "smart_charging_snooze"
+	ActionSmartCommuteUse     ActionType = "smart_commute_use"
+	ActionSmartCommuteEdit    ActionType = "smart_commute_edit"
+	ActionSmartCommuteDecline ActionType = "smart_commute_decline"
+	ActionSmartCommuteSnooze  ActionType = "smart_commute_snooze"
 )
 
 func (v ActionType) ValidStateAction() bool {
@@ -147,12 +162,40 @@ type EvidenceProvenance struct {
 	SourceURL *string `json:"source_url"`
 }
 
+type RecurringDriveEvidence struct {
+	RoutineID            int64   `json:"routine_id"`
+	Weekday              int     `json:"weekday"`
+	MatchingDays         int     `json:"matching_days"`
+	WindowStartS         int     `json:"window_start_s"`
+	WindowEndS           int     `json:"window_end_s"`
+	TimeZone             string  `json:"time_zone"`
+	DestinationLatitude  float64 `json:"destination_latitude"`
+	DestinationLongitude float64 `json:"destination_longitude"`
+}
+
+type ChargingReadinessEvidence struct {
+	PlanID           int64                                `json:"plan_id"`
+	Kind             string                               `json:"kind"`
+	PlaceName        string                               `json:"place_name"`
+	BatteryPct       float64                              `json:"battery_pct"`
+	ArrivalLowPct    float64                              `json:"arrival_low_pct"`
+	ArrivalHighPct   float64                              `json:"arrival_high_pct"`
+	ReservePct       float64                              `json:"reserve_pct"`
+	ChargingPowerW   *float64                             `json:"charging_power_w,omitempty"`
+	CurrentLimit     *smartreadiness.ChargingCurrentLimit `json:"current_limit,omitempty"`
+	TripProjection   *smartreadiness.TripProjection       `json:"trip_projection,omitempty"`
+	DepartureAt      time.Time                            `json:"departure_at"`
+	ScheduledStartAt *time.Time                           `json:"scheduled_start_at,omitempty"`
+}
+
 type EvidenceItem struct {
-	ID         string             `json:"id"`
-	Kind       string             `json:"kind"`
-	Summary    string             `json:"summary"`
-	Provenance EvidenceProvenance `json:"provenance"`
-	ObservedAt *time.Time         `json:"observed_at"`
+	ID                string                     `json:"id"`
+	Kind              string                     `json:"kind"`
+	Summary           string                     `json:"summary"`
+	Provenance        EvidenceProvenance         `json:"provenance"`
+	ObservedAt        *time.Time                 `json:"observed_at"`
+	RecurringDrive    *RecurringDriveEvidence    `json:"recurring_drive,omitempty"`
+	ChargingReadiness *ChargingReadinessEvidence `json:"charging_readiness,omitempty"`
 }
 
 type ImpactRiskLevel string

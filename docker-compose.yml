@@ -140,6 +140,7 @@ services:
       - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
       - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
       - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       # Service-mode banner override — Phase 46 / Prompt 04.
       # When TESLASYNC_SYSTEM_MODE is set ("ok", "degraded",
       # "maintenance"), it overrides the system_state DB row so an
@@ -272,6 +273,7 @@ services:
     container_name: teslasync-notification-worker
     restart: unless-stopped
     environment:
+      - FORWARD_AUTH_HEADER=${FORWARD_AUTH_HEADER:-}
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
@@ -285,6 +287,10 @@ services:
       - DATABASE_HEALTH_CHECK_PERIOD=30s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_ENABLED=true
+      - LIVE_SIGNAL_STORE_MODE=${LIVE_SIGNAL_STORE_MODE:-hybrid}
       - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8081
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
@@ -300,6 +306,7 @@ services:
       - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
       - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
       - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
     depends_on:
       teslasync-api:
         condition: service_healthy

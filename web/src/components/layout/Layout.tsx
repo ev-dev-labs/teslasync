@@ -342,6 +342,8 @@ export const navSections = [
     title: 'Notifications',
     titleKey: 'nav.groups.notifications',
     items: [
+      { to: '/settings/smart-commute', icon: Icons.navigationAlt, label: 'Smart Commute', labelKey: 'nav.items.settings_smart-commute', color: 'text-theme-accent' },
+      { to: '/settings/smart-charging', icon: Icons.batteryCharging, label: 'Charging readiness', labelKey: 'nav.items.settings_smart-charging', color: 'text-emerald-400' },
       { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400', badge: 'unread' as const },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-theme-accent' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser notifications', labelKey: 'nav.items.notifications_browser', color: 'text-fuchsia-400' },

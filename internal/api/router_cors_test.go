@@ -22,7 +22,7 @@ func TestNativeAppCORSPreflightAllowsSudoReplayWithoutOpeningOrigins(t *testing.
 		req := httptest.NewRequest(http.MethodOptions, "/api/v1/api-keys/42", nil)
 		req.Header.Set("Origin", origin)
 		req.Header.Set("Access-Control-Request-Method", http.MethodDelete)
-		req.Header.Set("Access-Control-Request-Headers", "authorization,x-sudo-token,x-teslasync-app")
+		req.Header.Set("Access-Control-Request-Headers", "authorization,x-sudo-token,x-teslasync-app,x-teslasync-expected-principal")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 		allowed := rec.Header().Get("Access-Control-Allow-Origin")
@@ -36,7 +36,7 @@ func TestNativeAppCORSPreflightAllowsSudoReplayWithoutOpeningOrigins(t *testing.
 			t.Errorf("native origin=%q, want %q", allowed, origin)
 		}
 		headers := strings.ToLower(rec.Header().Get("Access-Control-Allow-Headers"))
-		for _, name := range []string{"authorization", "x-sudo-token", "x-teslasync-app"} {
+		for _, name := range []string{"authorization", "x-sudo-token", "x-teslasync-app", "x-teslasync-expected-principal"} {
 			if !strings.Contains(headers, name) {
 				t.Errorf("native preflight omitted %q: %q", name, headers)
 			}

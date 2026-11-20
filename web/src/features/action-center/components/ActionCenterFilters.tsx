@@ -55,6 +55,8 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
       label: t('actionCenter.source.fleet_maintenance', 'Fleet maintenance'),
     },
     { value: 'signal_health', label: t('actionCenter.source.signal_health', 'Signal health') },
+    { value: 'smart_charging', label: t('actionCenter.source.smart_charging', 'Charging readiness') },
+    { value: 'smart_commute', label: t('actionCenter.source.smart_commute', 'Smart Commute') },
     { value: 'system_health', label: t('actionCenter.source.system_health', 'System health') },
     {
       value: 'vehicle_readiness',

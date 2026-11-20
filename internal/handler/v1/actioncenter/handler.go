@@ -20,6 +20,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
+	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	port "github.com/ev-dev-labs/teslasync/internal/port/actioncenter"
 )
 
@@ -62,6 +63,8 @@ func (h *ActionCenterHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
+	filter.ExcludePrivate = tsauth.IsImpersonating(ctx)
+	filter.SharedOpenMode = tsauth.IsOpenMode(h.headerName)
 	if filter.VehicleID != nil {
 		span.SetAttributes(attribute.Int64("vehicle_id", *filter.VehicleID))
 	}
@@ -107,6 +110,8 @@ func (h *ActionCenterHandler) ApplyAction(w http.ResponseWriter, r *http.Request
 		ExpectedVersion:  body.ExpectedVersion,
 		Confirmed:        body.Confirmed,
 		SnoozedUntil:     body.SnoozedUntil,
+		ExcludePrivate:   tsauth.IsImpersonating(ctx),
+		SharedOpenMode:   tsauth.IsOpenMode(h.headerName),
 	})
 	if err != nil {
 		h.handleError(w, span, "apply action center action", err)
@@ -144,11 +149,22 @@ func (h *ActionCenterHandler) History(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ActionCenterHandler) subject(w http.ResponseWriter, r *http.Request) (string, bool) {
+	w.Header().Set("Cache-Control", "no-store")
 	subject, ok := tsauth.SubjectFromRequest(r, h.headerName)
-	if ok {
+	if ok && subject != personaldomain.OpenSubject {
+		if !tsauth.MatchesExpectedPrincipal(r, h.headerName, subject) {
+			writeError(w, http.StatusConflict, "IDENTITY_CHANGED",
+				"authenticated identity changed; refresh before continuing")
+			return "", false
+		}
 		return subject, true
 	}
 	if tsauth.IsOpenMode(h.headerName) {
+		if !tsauth.MatchesExpectedPrincipal(r, h.headerName, openModeSubject) {
+			writeError(w, http.StatusConflict, "IDENTITY_CHANGED",
+				"authenticated identity changed; refresh before continuing")
+			return "", false
+		}
 		return openModeSubject, true
 	} else {
 		writeError(w, http.StatusUnauthorized, tsauth.MissingIdentityCode,

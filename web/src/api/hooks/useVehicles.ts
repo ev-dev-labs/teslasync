@@ -70,10 +70,11 @@ function withAsOf(path: string, asOf: string | null): string {
   return `${path}${sep}${AS_OF_QUERY_PARAM}=${encodeURIComponent(asOf)}`
 }
 
-export function useVehicles() {
+export function useVehicles(enabled = true) {
   return useQuery({
     queryKey: vehicleKeys.all,
     queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),
+    enabled,
     staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });

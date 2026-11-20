@@ -15,6 +15,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
+	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	port "github.com/ev-dev-labs/teslasync/internal/port/actioncenter"
 )
 
@@ -31,12 +32,17 @@ const (
 )
 
 type ListFilter struct {
-	VehicleID     *int64
-	Priority      *domain.Priority
-	SourceFeature *domain.SourceFeature
-	State         *domain.State
-	Limit         int
-	Offset        int
+	VehicleID      *int64
+	Priority       *domain.Priority
+	SourceFeature  *domain.SourceFeature
+	State          *domain.State
+	Limit          int
+	Offset         int
+	ExcludePrivate bool
+	SharedOpenMode bool
+
+	// Set only by generate; callers cannot select another recipient.
+	subject string
 }
 
 type ActionRequest struct {
@@ -46,6 +52,8 @@ type ActionRequest struct {
 	ExpectedVersion  int
 	Confirmed        bool
 	SnoozedUntil     *time.Time
+	ExcludePrivate   bool
+	SharedOpenMode   bool
 }
 
 type Service struct {
@@ -57,6 +65,13 @@ type Service struct {
 
 type Option func(*Service)
 
+func WithClock(now func() time.Time) Option {
+	if now == nil {
+		panic("actioncentersvc.WithClock: clock must not be nil")
+	}
+	return func(service *Service) { service.now = now }
+}
+
 func WithAdvancedIntelligence(reader AdvancedIntelligenceReader) Option {
 	if reader == nil {
 		panic("actioncentersvc.WithAdvancedIntelligence: reader must not be nil")
@@ -66,6 +81,24 @@ func WithAdvancedIntelligence(reader AdvancedIntelligenceReader) Option {
 			source:   service.source,
 			advanced: reader,
 		})
+	}
+}
+
+func WithSmartCommute(reader SmartCommuteReader) Option {
+	if reader == nil {
+		panic("actioncentersvc.WithSmartCommute: reader must not be nil")
+	}
+	return func(service *Service) {
+		service.providers = append(service.providers, smartCommuteProvider{reader: reader})
+	}
+}
+
+func WithSmartCharging(reader SmartChargingReader) Option {
+	if reader == nil {
+		panic("actioncentersvc.WithSmartCharging: reader must not be nil")
+	}
+	return func(service *Service) {
+		service.providers = append(service.providers, smartChargingProvider{reader: reader})
 	}
 }
 
@@ -104,7 +137,7 @@ func (s *Service) List(
 	}
 	normalizeFilter(&filter)
 	now := s.now().UTC()
-	recommendations, statuses := s.generate(ctx, filter, now)
+	recommendations, statuses := s.generate(ctx, subject, filter, now)
 
 	ids := make([]string, 0, len(recommendations))
 	for i := range recommendations {
@@ -163,7 +196,9 @@ func (s *Service) ApplyAction(
 	if err := validateAction(subject, request, now); err != nil {
 		return nil, err
 	}
-	items, _ := s.generate(ctx, ListFilter{Limit: maxLimit}, now)
+	items, _ := s.generate(ctx, subject, ListFilter{
+		Limit: maxLimit, ExcludePrivate: request.ExcludePrivate, SharedOpenMode: request.SharedOpenMode,
+	}, now)
 	var recommendation *domain.Recommendation
 	for i := range items {
 		if items[i].ID == request.RecommendationID {
@@ -176,6 +211,9 @@ func (s *Service) ApplyAction(
 	}
 	if recommendation.Fingerprint != request.Fingerprint {
 		return nil, ErrStaleFingerprint
+	}
+	if !containsAction(recommendation.SafeActions, request.Action) {
+		return nil, fmt.Errorf("%w: action is not available for this recommendation", ErrInvalidInput)
 	}
 	allowed, toState := transitionFor(request.Action)
 	snoozedUntil := request.SnoozedUntil
@@ -199,6 +237,15 @@ func (s *Service) ApplyAction(
 	recommendation.CurrentState = *state
 	recommendation.ActionHistory = []domain.ActionEvent{*event}
 	return &domain.ActionResult{Recommendation: *recommendation, Event: *event}, nil
+}
+
+func containsAction(actions []domain.ActionType, action domain.ActionType) bool {
+	for _, available := range actions {
+		if available == action {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) History(
@@ -228,9 +275,14 @@ func (s *Service) History(
 
 func (s *Service) generate(
 	ctx context.Context,
+	subject string,
 	filter ListFilter,
 	now time.Time,
 ) ([]domain.Recommendation, []domain.ProviderStatus) {
+	filter.subject = subject
+	if filter.SharedOpenMode {
+		filter.subject = personaldomain.OpenSubject
+	}
 	candidates := make([]domain.Candidate, 0, providerLimit*len(s.providers))
 	statuses := make([]domain.ProviderStatus, 0, len(s.providers))
 	type providerResult struct {
@@ -244,6 +296,9 @@ func (s *Service) generate(
 	for index, candidateProvider := range s.providers {
 		go func() {
 			defer providersFinished.Done()
+			if filter.ExcludePrivate && candidateProvider.SourceFeature().Private() {
+				return
+			}
 			select {
 			case limit <- struct{}{}:
 				defer func() { <-limit }()
@@ -261,6 +316,9 @@ func (s *Service) generate(
 	providersFinished.Wait()
 
 	for index, candidateProvider := range s.providers {
+		if filter.ExcludePrivate && candidateProvider.SourceFeature().Private() {
+			continue
+		}
 		result := results[index]
 		status := domain.ProviderStatus{
 			SourceFeature: candidateProvider.SourceFeature(),

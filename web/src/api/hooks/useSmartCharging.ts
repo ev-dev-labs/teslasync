@@ -1,0 +1,106 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isApiError, request } from '../client'
+import { actionCenterKeys } from './useActionCenter'
+import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity'
+import type {
+  SmartChargingLatestStart,
+  SmartChargingPlan,
+  SmartChargingPlanInput,
+} from '@/types/smartCharging'
+
+export const smartChargingKeys = {
+  all: ['smart-charging'] as const,
+  plans: (scope: PersonalScope | null, vehicleId: number | null) =>
+    ['smart-charging', 'plans', scope, vehicleId] as const,
+  latestStarts: (scope: PersonalScope | null, vehicleId: number | null) =>
+    ['smart-charging', 'latest-starts', scope, vehicleId] as const,
+}
+
+export function useSmartCharging(scope: PersonalScope | null, vehicleId: number | null, enabled: boolean) {
+  return useQuery({
+    queryKey: smartChargingKeys.plans(scope, vehicleId),
+    queryFn: ({ signal }) =>
+      request<{ data: SmartChargingPlan[] }>(
+        `/smart-charging/plans?vehicle_id=${vehicleId}&limit=100&offset=0`,
+        { signal, cache: 'no-store', headers: expectedPrincipalHeader(scope!) },
+      ),
+    select: (response) => response.data ?? [],
+    enabled: enabled && scope != null && vehicleId != null,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
+  })
+}
+
+export function useSmartChargingLatestStarts(
+  scope: PersonalScope | null,
+  vehicleId: number | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: smartChargingKeys.latestStarts(scope, vehicleId),
+    queryFn: async ({ signal }) => {
+      const response = await request<{ data: SmartChargingLatestStart[] }>(
+        `/smart-charging/latest-start?vehicle_id=${vehicleId}`,
+        { signal, cache: 'no-store', headers: expectedPrincipalHeader(scope!) },
+      )
+      return response.data ?? []
+    },
+    enabled: enabled && scope != null && vehicleId != null,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
+  })
+}
+
+export type SmartChargingChange =
+  | { kind: 'create'; plan: SmartChargingPlanInput }
+  | { kind: 'update'; id: number; plan: SmartChargingPlanInput }
+  | { kind: 'snooze'; id: number; durationS: number }
+  | { kind: 'delete'; id: number }
+
+export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: number | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (change: SmartChargingChange) => {
+      if (scope == null || vehicleId == null) throw new Error('Missing charging readiness scope')
+      const options = {
+        requiresLiveMode: true,
+        cache: 'no-store' as const,
+        headers: expectedPrincipalHeader(scope),
+      }
+      switch (change.kind) {
+        case 'create':
+          return request<void>('/smart-charging/plans', {
+            ...options, method: 'POST', body: JSON.stringify(change.plan),
+          })
+        case 'update':
+          return request<void>(`/smart-charging/plans/${change.id}`, {
+            ...options, method: 'PUT', body: JSON.stringify(change.plan),
+          })
+        case 'snooze':
+          return request<void>(`/smart-charging/plans/${change.id}/snooze`, {
+            ...options, method: 'POST',
+            body: JSON.stringify({ vehicle_id: vehicleId, duration_s: change.durationS }),
+          })
+        case 'delete':
+          return request<void>(`/smart-charging/plans/${change.id}?vehicle_id=${vehicleId}`, {
+            ...options, method: 'DELETE',
+          })
+      }
+    },
+    networkMode: 'always',
+    retry: false,
+    onError: (error) => {
+      if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: personalIdentityKey })
+      }
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: smartChargingKeys.all }),
+        queryClient.invalidateQueries({ queryKey: actionCenterKeys.lists }),
+      ])
+    },
+  })
+}

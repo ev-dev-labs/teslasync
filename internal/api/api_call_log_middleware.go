@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -174,6 +175,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 			}
 
 			start := time.Now()
+			captureRequestBodies := captureBodies && !privateRecommendationPath(r.URL.Path)
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
 			key := &verifiedAppKey{}
 			r = r.WithContext(context.WithValue(r.Context(), verifiedAppKeyContextKey{}, key))
@@ -182,11 +184,11 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 				reqBuf  *cappedBuffer
 				respBuf *cappedBuffer
 			)
-			if captureBodies && r.Body != nil {
+			if captureRequestBodies && r.Body != nil {
 				reqBuf = newCappedBuffer(MaxAPILogBodyBytes)
 				r.Body = teeReadCloser(r.Body, reqBuf)
 			}
-			if captureBodies {
+			if captureRequestBodies {
 				respBuf = newCappedBuffer(MaxAPILogBodyBytes)
 				ww.Tee(respBuf)
 			}
@@ -236,7 +238,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 					entry.StatusCode = http.StatusOK
 				}
 
-				if captureBodies {
+				if captureRequestBodies {
 					if reqBuf != nil && reqBuf.Len() > 0 {
 						body := redactBodyBytes(reqBuf.Bytes(), reqBuf.truncated, contentType(r.Header.Get("Content-Type")))
 						entry.RequestBody = &body
@@ -253,6 +255,17 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 			next.ServeHTTP(ww, r)
 		})
 	}
+}
+
+// Personal routine names and recommendation summaries can contain locations
+// even when their JSON keys are not sensitive.
+func privateRecommendationPath(path string) bool {
+	for _, root := range []string{"/api/v1/smart-commute", "/api/v1/smart-charging", "/api/v1/smart-delivery", "/api/v1/action-center"} {
+		if path == root || strings.HasPrefix(path, root+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // redactURLAndHeaders parses the request URL and headers, replacing query

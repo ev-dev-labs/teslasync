@@ -1,0 +1,208 @@
+import { useTranslation } from 'react-i18next';
+import { formatCommuteClock, useCommuteWeekdays } from '@/lib/smartCommuteDisplay';
+import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useUnits } from '@/hooks/useUnits';
+import type { ActionCenterRecommendation } from '@/types/actionCenter';
+
+export function useRecommendationContent(recommendation: ActionCenterRecommendation): ActionCenterRecommendation {
+  const { t } = useTranslation();
+  const weekdays = useCommuteWeekdays();
+  const { formatDateTime } = useDateFormat('user');
+  const { fmtNumber } = useNumberFormatting();
+  const { formatPower } = useUnits();
+  const displayProjection = useTripProjectionDisplay();
+  const charging = recommendation.source_feature === 'smart_charging'
+    ? recommendation.evidence.find((item) =>
+        item.kind === 'charging_readiness' || item.kind === 'charging_feasibility')?.charging_readiness
+    : undefined;
+  if (charging) {
+    const projection = charging.trip_projection ? displayProjection(charging.trip_projection, charging.reserve_pct) : undefined;
+    if (charging.kind === 'schedule_conflict' && charging.scheduled_start_at) {
+      const summary = [
+        t('smartCharging.scheduleActionSummary', 'Battery {{battery}}% at {{place}}. If charging starts at the time you entered ({{start}}), it will not add charge before departure ({{departure}}).', {
+          battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+          start: formatDateTime(charging.scheduled_start_at), departure: formatDateTime(charging.departure_at),
+        }),
+        projection?.summary,
+      ].filter(Boolean).join(' ');
+      return {
+        ...recommendation,
+        title: t('smartCharging.scheduleActionTitle', 'Review charging scheduled for departure or later'),
+        summary,
+        rationale: t('smartCharging.scheduleActionRationale', 'The vehicle is plugged in and reports a pending schedule matching the clock time you entered.'),
+        confidence: {
+          ...recommendation.confidence,
+          basis: [
+            t('smartCharging.scheduleActionBasis', 'Fresh charging-port latch and pending schedule observations'),
+            t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you'),
+          ],
+        },
+        evidence: recommendation.evidence.map((item) =>
+          item.charging_readiness ? { ...item, summary } : item),
+        limitations: [
+          t('smartCharging.scheduleActionLimitation', 'The vehicle reports a clock time, not the date of the next start. No schedule was changed.'),
+          ...(projection?.assumptions ?? []),
+        ],
+      };
+    }
+    if (charging.kind === 'trip_review') {
+      const summary = [
+        t('smartCharging.tripReviewSummary', 'Battery {{battery}}% at {{place}}. Review a charging stop or record planned destination charging. Departure: {{departure}}.', {
+          battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+          departure: formatDateTime(charging.departure_at),
+        }),
+        projection?.summary,
+      ].filter(Boolean).join(' ');
+      return {
+        ...recommendation,
+        title: t('smartCharging.tripReviewTitle', 'Review a charging stop before your trip'),
+        summary,
+        rationale: t('smartCharging.tripReviewRationale', 'Even the lower entered trip-use estimates cannot meet the reserve by charging only at the selected place.'),
+        confidence: {
+          ...recommendation.confidence,
+          basis: [
+            t('smartCharging.actionBasisSignals', 'Fresh battery, gear, plug state and location observations'),
+            t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you'),
+          ],
+        },
+        evidence: recommendation.evidence.map((item) =>
+          item.charging_readiness ? { ...item, summary } : item),
+        limitations: [
+          t('smartCharging.actionLimitationWrites', 'This recommendation cannot start charging or operate the vehicle.'),
+          ...(projection?.assumptions ?? []),
+        ],
+      };
+    }
+    if (charging.kind === 'slow_charging') {
+      if (charging.charging_power_w == null) return recommendation;
+      const wholeTripSummary = t(
+        'smartCharging.slowActionSummary',
+        'Battery {{battery}}% at {{place}}. At the measured {{power}}, the estimated return is {{low}}-{{high}}% versus a {{reserve}}% reserve. Departure: {{departure}}.',
+        {
+          battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+          power: formatPower(charging.charging_power_w), low: fmtNumber(charging.arrival_low_pct),
+          high: fmtNumber(charging.arrival_high_pct), reserve: fmtNumber(charging.reserve_pct),
+          departure: formatDateTime(charging.departure_at),
+        },
+      );
+      let summary = projection
+        ? `${t('smartCharging.slowTripActionContext', 'Battery {{battery}}% at {{place}}; measured charging power is {{power}}. Departure: {{departure}}.', {
+            battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+            power: formatPower(charging.charging_power_w), departure: formatDateTime(charging.departure_at),
+          })} ${projection.summary}`
+        : wholeTripSummary;
+      const current = charging.current_limit;
+      const currentSafety = current
+        ? t('smartCharging.slowCurrentSafety', 'Review the current setting and site electrical limits; the reported maximum does not establish that increasing current is safe or will help.')
+        : undefined;
+      if (current) {
+        summary += ` ${t('smartCharging.slowCurrentEvidence', 'The vehicle reports an AC current request of {{requested}} A and maximum request of {{maximum}} A.', {
+          requested: fmtNumber(current.requested_a), maximum: fmtNumber(current.maximum_a),
+        })} ${currentSafety}`;
+      }
+      return {
+        ...recommendation,
+        title: t('smartCharging.slowActionTitle', 'Charging may not be ready before your trip'),
+        summary,
+        rationale: t('smartCharging.slowActionRationale', 'Fresh samples over at least five minutes indicate the current charging rate may not meet the trip reserve.'),
+        confidence: {
+          ...recommendation.confidence,
+          basis: [
+            t('smartCharging.slowActionBasis', 'Fresh parked, charging, battery, pack-energy and charging-power observations'),
+            t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you'),
+            ...(current ? [t('smartCharging.slowCurrentBasis', 'Fresh AC current request and maximum request observations')] : []),
+          ],
+        },
+        evidence: recommendation.evidence.map((item) =>
+          item.charging_readiness ? { ...item, summary } : item),
+        limitations: [
+          t('smartCharging.slowActionLimitationEstimate', 'The estimate assumes constant power and nominal pack energy; actual power, taper and efficiency can change.'),
+          t('smartCharging.slowActionLimitationWrites', 'This recommendation does not change a schedule, charging limit or vehicle setting.'),
+          ...(currentSafety ? [currentSafety] : []),
+          ...(projection?.assumptions ?? []),
+        ],
+      };
+    }
+    const wholeTripSummary = t(
+      'smartCharging.actionSummary',
+      'Battery {{battery}}% at {{place}}; the trip estimate suggests {{low}}-{{high}}% on return versus a {{reserve}}% reserve. Departure: {{departure}}.',
+      {
+        battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+        low: fmtNumber(charging.arrival_low_pct), high: fmtNumber(charging.arrival_high_pct),
+        reserve: fmtNumber(charging.reserve_pct), departure: formatDateTime(charging.departure_at),
+      },
+    );
+    const summary = projection
+      ? `${t('smartCharging.tripActionContext', 'Battery {{battery}}% at {{place}}. Departure: {{departure}}.', {
+          battery: fmtNumber(charging.battery_pct), place: charging.place_name,
+          departure: formatDateTime(charging.departure_at),
+        })} ${projection.summary}`
+      : wholeTripSummary;
+    return {
+      ...recommendation,
+      title: t('smartCharging.actionTitle', 'Plug in before your planned trip'),
+      summary,
+      rationale: t('smartCharging.actionRationale', 'Fresh parked and disconnected signals place the vehicle inside the selected charging location.'),
+      confidence: {
+        ...recommendation.confidence,
+        basis: [
+          t('smartCharging.actionBasisSignals', 'Fresh battery, gear, plug state and location observations'),
+          t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you'),
+        ],
+      },
+      evidence: recommendation.evidence.map((item) =>
+        item.charging_readiness ? { ...item, summary } : item),
+      limitations: [
+        t('smartCharging.actionLimitationEstimate', 'Return charge is an estimate based on the range you entered, not a measurement.'),
+        t('smartCharging.actionLimitationWrites', 'This recommendation cannot start charging or operate the vehicle.'),
+        ...(projection?.assumptions ?? []),
+      ],
+    };
+  }
+  const drive = recommendation.source_feature === 'smart_commute'
+    ? recommendation.evidence.find((item) => item.kind === 'recurring_drive')?.recurring_drive
+    : undefined;
+  if (!drive) return recommendation;
+
+  const summary = t(
+    'smartCommute.actionSummary',
+    '{{count}} matching departure days between {{start}} and {{end}} ({{zone}}). Candidate destination: {{destination}}.',
+    {
+      count: drive.matching_days,
+      start: formatCommuteClock(drive.window_start_s),
+      end: formatCommuteClock(drive.window_end_s),
+      zone: drive.time_zone,
+      destination: `${drive.destination_latitude.toFixed(5)}, ${drive.destination_longitude.toFixed(5)}`,
+    },
+  );
+  const freshnessBasis = {
+    fresh: t('smartCommute.actionFreshness.fresh', "Evidence is within the provider's fresh window"),
+    aging: t('smartCommute.actionFreshness.aging', 'Aging evidence reduces confidence by 0.12'),
+    stale: t('smartCommute.actionFreshness.stale', 'Stale evidence reduces confidence by 0.28'),
+    unknown: t('smartCommute.actionFreshness.unknown', 'Unknown observation age reduces confidence by 0.22'),
+  };
+  return {
+    ...recommendation,
+    title: t('smartCommute.question', 'Is this your regular {{day}} drive?', {
+      day: weekdays[drive.weekday] ?? t('smartCommute.unknownDay', 'unknown day'),
+    }),
+    summary,
+    rationale: t('smartCommute.actionRationale', 'Locally analyzed completed drives have similar departure times and endpoints.'),
+    confidence: {
+      ...recommendation.confidence,
+      basis: [
+        t('smartCommute.actionBasisSample', 'At least seven distinct local days within a bounded eight-week window'),
+        t('smartCommute.actionBasisDriver', 'Similar endpoints and departure times do not identify the driver'),
+        freshnessBasis[recommendation.freshness.status],
+      ],
+    },
+    evidence: recommendation.evidence.map((item) =>
+      item.recurring_drive ? { ...item, summary } : item),
+    limitations: [
+      t('smartCommute.actionLimitationIdentity', 'The driver and destination name are not inferred.'),
+      t('smartCommute.actionLimitationWrites', 'This suggestion does not send notifications or operate the vehicle.'),
+    ],
+  };
+}

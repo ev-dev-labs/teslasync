@@ -51,6 +51,14 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `internal/mqtt/propagation.go`
   - `internal/notification/worker.go`
 
+## Notification worker evaluates private charging readiness — `smart_charging_readiness`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+
 ## Export publish → MQTT envelope → process → SSE status — `export_job`
 
 - Status: **OK**

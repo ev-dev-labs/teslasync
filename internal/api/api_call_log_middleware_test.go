@@ -178,6 +178,39 @@ func newTestRouterWithLogger(t *testing.T, store APICallLogger, captureBodies bo
 	return r
 }
 
+func TestPersonalRecommendationBodiesAreNeverCaptured(t *testing.T) {
+	for _, path := range []string{
+		"/api/v1/smart-commute",
+		"/api/v1/smart-commute/routines/123",
+		"/api/v1/smart-charging/plans",
+		"/api/v1/smart-charging/plans/123/snooze",
+		"/api/v1/smart-delivery/devices",
+		"/api/v1/smart-delivery/devices/123/verify",
+		"/api/v1/action-center",
+		"/api/v1/action-center/ac_example/history",
+	} {
+		t.Run(path, func(t *testing.T) {
+			store := &fakeAPILogStore{}
+			handler := APICallLogMiddleware(store, true, nil)(http.HandlerFunc(echoBody))
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"summary":"synthetic private address"}`))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-TeslaSync-Expected-Principal", "subject:synthetic-owner")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "synthetic private address") {
+				t.Fatalf("request was not processed normally: %d %q", rec.Code, rec.Body.String())
+			}
+			entries := store.Entries()
+			if len(entries) != 1 || entries[0].RequestBody != nil || entries[0].ResponseBody != nil {
+				t.Fatalf("personal payload was captured: %+v", entries)
+			}
+			if entries[0].RequestHeaders["X-Teslasync-Expected-Principal"] != "REDACTED" {
+				t.Fatalf("identity race guard was not redacted: %+v", entries[0].RequestHeaders)
+			}
+		})
+	}
+}
+
 // T01: happy path GET /api/v1/vehicles → exactly one entry, service tag
 // "teslasync-api", correct method/endpoint/status, body fields nil when
 // capture is OFF.

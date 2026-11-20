@@ -39,7 +39,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { createInstance, type i18n } from 'i18next'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
@@ -216,6 +216,11 @@ function setFont(overrides: Partial<FontPrefs> = {}) {
 
 let scrollSpy: ReturnType<typeof vi.fn>
 
+function CommuteDestination() {
+  const { pathname, search, hash } = useLocation()
+  return <div data-testid="commute-page">{pathname}{search}{hash}</div>
+}
+
 function renderPage(initialEntries: string[] = ['/settings'], translationInstance?: i18n) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -226,6 +231,8 @@ function renderPage(initialEntries: string[] = ['/settings'], translationInstanc
         <ToastProvider>
           <Routes>
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/smart-commute" element={<CommuteDestination />} />
+            <Route path="/settings/smart-charging" element={<CommuteDestination />} />
             <Route
               path="/integrations/helix"
               element={<div data-testid="helix-page">helix</div>}
@@ -637,6 +644,18 @@ describe('SettingsPage — deep-link effects', () => {
     })
     // The settings body is gone — the redirect replaced the route.
     expect(screen.queryByLabelText('Current preferences overview')).toBeNull()
+  })
+
+  it('redirects the legacy Smart Commute link while preserving its vehicle', async () => {
+    renderPage(['/settings?vehicle_id=42#smart-commute'])
+    expect(await screen.findByTestId('commute-page')).toHaveTextContent('/settings/smart-commute?vehicle_id=42')
+    expect(screen.queryByLabelText('Current preferences overview')).toBeNull()
+  })
+
+  it('redirects the legacy charging link while preserving its vehicle', async () => {
+    renderPage(['/settings?vehicle_id=42#smart-charging'])
+    expect(await screen.findByTestId('commute-page'))
+      .toHaveTextContent('/settings/smart-charging?vehicle_id=42')
   })
 
   it('smooth-scrolls the targeted #section into view', async () => {

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppSettings } from '@/api/types';
 import english from '@/i18n/en.json';
+import { setGlobalLocale } from '@/lib/numberFormat';
 import { typography } from '@/lib/tokens';
 import postcss from 'postcss';
 import { readFileSync } from 'node:fs';
@@ -39,6 +40,7 @@ vi.mock('@/hooks/useSettings', () => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
 }));
+const historyMock = vi.hoisted(() => vi.fn());
 vi.mock('@/api/hooks/useActionCenter', () => {
   const history = {
     data: { items: [], total: 0, limit: 25, offset: 0 },
@@ -52,7 +54,7 @@ vi.mock('@/api/hooks/useActionCenter', () => {
     dataUpdatedAt: Date.parse('2026-10-12T15:31:00Z'),
     refetch: vi.fn(),
   };
-  return { useActionCenterHistory: () => history };
+  return { useActionCenterHistory: (...args: unknown[]) => { historyMock(...args); return history; } };
 });
 
 import { RecommendationCard } from './RecommendationCard';
@@ -104,6 +106,7 @@ function card(
 
 beforeEach(async () => {
   onAction.mockReset();
+  historyMock.mockReset();
   preferences.locale = 'en-US';
   preferences.tz_display_default = 'user';
   preferences.timezone_user = 'UTC';
@@ -128,6 +131,185 @@ afterEach(() => {
 });
 
 describe('RecommendationCard expiry preferences', () => {
+  it('localizes private charging evidence without requesting shared history', async () => {
+    i18n.addResourceBundle('de', 'translation', {
+      smartCharging: {
+        actionTitle: 'Vor der Fahrt laden',
+        actionSummary: 'Akku {{battery}}%; Rückkehr {{low}}-{{high}}%; Reserve {{reserve}}%; {{place}}.',
+        actionRationale: 'Aktuelle Signale.',
+        actionBasisSignals: 'Aktuelle Daten',
+        actionBasisEstimate: 'Eigene Schätzung',
+        actionLimitationEstimate: 'Nur eine Schätzung.',
+        actionLimitationWrites: 'Keine Befehle.',
+        privateHistory: 'Private Aktionen stehen in den Einstellungen.',
+      },
+    }, true, true);
+    await i18n.changeLanguage('de');
+    const item: ActionCenterRecommendation = {
+      ...recommendation, source_feature: 'smart_charging', related_sources: ['smart_charging'],
+      safe_actions: ['navigate'], navigation_path: '/settings?vehicle_id=7#smart-charging',
+      evidence: [{
+        id: 'charging_plan:8', kind: 'charging_readiness', summary: 'English server evidence',
+        provenance: { source: 'live_signal_store', record_id: 'charging_plan:8', source_url: null },
+        observed_at: '2026-10-12T15:00:00Z',
+        charging_readiness: {
+          plan_id: 8, place_name: 'Synthetic charger', battery_pct: 45, arrival_low_pct: 0,
+          arrival_high_pct: 10, reserve_pct: 20, departure_at: '2026-10-20T00:00:00Z',
+        },
+      }],
+    };
+    const original = structuredClone(item);
+    render(card(item));
+    expect(screen.getByText('Vor der Fahrt laden')).toBeVisible();
+    expect(screen.getByText(/Akku .*Rückkehr .*Reserve .*Synthetic charger/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
+    await waitFor(() => expect(screen.getByText('Private Aktionen stehen in den Einstellungen.')).toBeVisible());
+    expect(historyMock).toHaveBeenLastCalledWith(item.id, false, { limit: 25, offset: 0 });
+    expect(item).toEqual(original);
+  });
+
+  it('explains an unreachable outbound leg without inventing a return projection', async () => {
+    const item: ActionCenterRecommendation = {
+      ...recommendation, source_feature: 'smart_charging', related_sources: ['smart_charging'],
+      safe_actions: ['navigate'], navigation_path: '/settings/smart-charging?vehicle_id=7',
+      evidence: [{
+        id: 'charging_plan:8', kind: 'charging_readiness', summary: 'Synthetic trip review',
+        provenance: { source: 'live_signal_store', record_id: 'charging_plan:8', source_url: null },
+        observed_at: '2026-10-12T15:00:00Z',
+        charging_readiness: {
+          plan_id: 8, kind: 'trip_review', place_name: 'Synthetic charger', battery_pct: 45,
+          arrival_low_pct: 0, arrival_high_pct: 0, reserve_pct: 20, departure_at: '2026-10-20T00:00:00Z',
+          trip_projection: {
+            starting_battery_pct: 45, destination_low_pct: 0, destination_high_pct: 0,
+            destination_reachability: 'unreachable', return_low_pct: null, return_high_pct: null,
+            return_reachability: 'unknown', destination_charge_pct: 90,
+          },
+        },
+      }],
+    };
+    render(card(item));
+    expect(screen.getByText('Review a charging stop before your trip')).toBeVisible();
+    expect(screen.getByText(/even the lower outbound estimate exceeds the available charge/)).toBeVisible();
+    expect(screen.queryByText(/estimated return charge is/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
+    expect((await screen.findAllByText(/destination charge; it is not confirmed or guaranteed/))[0]).toBeVisible();
+  });
+
+  it('localizes sampled charging feasibility without describing the car as unplugged', async () => {
+    preferences.locale = 'de-DE';
+    setGlobalLocale('de-DE');
+    i18n.addResourceBundle('de', 'translation', {
+      smartCharging: {
+        slowActionTitle: 'Laden reicht möglicherweise nicht aus',
+        slowActionSummary: 'Bei {{power}}: {{low}}-{{high}}% bei Rückkehr, Reserve {{reserve}}%.',
+        slowActionRationale: 'Aktuelle Ladeproben.',
+        slowActionBasis: 'Gemessene Ladeleistung',
+        actionBasisEstimate: 'Eigene Schätzung',
+        slowActionLimitationEstimate: 'Die Leistung kann sich ändern.',
+        slowActionLimitationWrites: 'Keine Einstellungen geändert.',
+        slowCurrentEvidence: 'Angeforderter Strom {{requested}} A; gemeldetes Maximum {{maximum}} A.',
+        slowCurrentBasis: 'Aktuelle Stromwerte',
+        slowCurrentSafety: 'Prüfen Sie die Einstellungen und elektrischen Grenzen; das Maximum garantiert keine sichere oder hilfreiche Erhöhung.',
+        privateHistory: 'Private Aktionen stehen in den Einstellungen.',
+      },
+    }, true, true);
+    await i18n.changeLanguage('de');
+    const item: ActionCenterRecommendation = {
+      ...recommendation, source_feature: 'smart_charging', related_sources: ['smart_charging'],
+      safe_actions: ['navigate'], navigation_path: '/charging/schedule?vehicle_id=7',
+      evidence: [{
+        id: 'charging_plan:8', kind: 'charging_feasibility', summary: 'English server evidence',
+        provenance: { source: 'live_signal_store', record_id: 'charging_plan:8', source_url: null },
+        observed_at: '2026-10-12T15:00:00Z',
+        charging_readiness: {
+          plan_id: 8, kind: 'slow_charging', place_name: 'Synthetic charger', battery_pct: 40,
+          arrival_low_pct: 0, arrival_high_pct: 8, reserve_pct: 20,
+          charging_power_w: 1200, current_limit: { requested_a: 12, maximum_a: 32 },
+          departure_at: '2026-10-20T00:00:00Z',
+        },
+      }],
+    };
+    const original = structuredClone(item);
+    render(card(item));
+    expect(screen.getByText('Laden reicht möglicherweise nicht aus')).toBeVisible();
+    expect(screen.getByText(/Bei 1,20 kW:.*Reserve 20/)).toBeVisible();
+    expect(screen.getByText(/Angeforderter Strom 12,00 A; gemeldetes Maximum 32,00 A/)).toBeVisible();
+    expect(screen.getByText(/Prüfen Sie die Einstellungen und elektrischen Grenzen/)).toBeVisible();
+    expect(screen.getByText('Aktuelle Ladeproben.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
+    expect((await screen.findAllByText('Die Leistung kann sich ändern.'))[0]).toBeVisible();
+    expect(screen.getAllByText('Prüfen Sie die Einstellungen und elektrischen Grenzen; das Maximum garantiert keine sichere oder hilfreiche Erhöhung.')[0]).toBeVisible();
+    expect(item).toEqual(original);
+  });
+
+  it('distinguishes an entered charging start from the reported vehicle clock time', async () => {
+    const item: ActionCenterRecommendation = {
+      ...recommendation, source_feature: 'smart_charging', related_sources: ['smart_charging'],
+      safe_actions: ['navigate'], navigation_path: '/charging/schedule?vehicle_id=7',
+      evidence: [{
+        id: 'charging_plan:8', kind: 'charging_readiness', summary: 'Synthetic server evidence',
+        provenance: { source: 'live_signal_store', record_id: 'charging_plan:8', source_url: null },
+        observed_at: '2026-10-12T15:00:00Z',
+        charging_readiness: {
+          plan_id: 8, kind: 'schedule_conflict', place_name: 'Synthetic charger', battery_pct: 40,
+          arrival_low_pct: 0, arrival_high_pct: 5, reserve_pct: 20,
+          scheduled_start_at: '2026-10-20T01:00:00Z', departure_at: '2026-10-20T00:00:00Z',
+        },
+      }],
+    };
+    render(card(item));
+    expect(screen.getByText('Review charging scheduled for departure or later')).toBeVisible();
+    expect(screen.getByText(/If charging starts at the time you entered.*it will not add charge before departure/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
+    expect((await screen.findAllByText(/reports a clock time, not the date of the next start/))[0]).toBeVisible();
+  });
+
+  it('localizes private recurring-drive evidence without changing the action payload', async () => {
+    i18n.addResourceBundle('de', 'translation', {
+      smartCommute: {
+        weekdays: { tuesday: 'Dienstag' },
+        question: 'Regelmäßige Fahrt am {{day}}?',
+        actionSummary_other: '{{count}} Fahrten von {{start}} bis {{end}} ({{zone}}); Ziel {{destination}}.',
+        actionRationale: 'Ähnliche lokale Fahrten.',
+        actionBasisSample: 'Sieben Tage',
+        actionBasisDriver: 'Fahrer unbekannt',
+        actionLimitationIdentity: 'Kein Name abgeleitet.',
+        actionLimitationWrites: 'Keine Befehle.',
+        actionFreshness: { fresh: 'Aktuelle Grundlage' },
+      },
+    }, true, true);
+    await i18n.changeLanguage('de');
+    const item: ActionCenterRecommendation = {
+      ...recommendation,
+      source_feature: 'smart_commute',
+      related_sources: ['smart_commute'],
+      safe_actions: ['navigate'],
+      navigation_path: '/settings?vehicle_id=7#smart-commute',
+      freshness: { status: 'fresh', observed_at: '2026-10-12T15:00:00Z', age_s: 30 },
+      evidence: [{
+        id: 'routine:8', kind: 'recurring_drive', summary: 'English server evidence',
+        provenance: { source: 'local_drive_analysis', record_id: 'routine:8', source_url: null },
+        observed_at: '2026-10-12T15:00:00Z',
+        recurring_drive: {
+          routine_id: 8, weekday: 2, matching_days: 7, window_start_s: 28500, window_end_s: 29100,
+          time_zone: 'America/Los_Angeles', destination_latitude: 47.2, destination_longitude: -122.2,
+        },
+      }],
+    };
+    const original = structuredClone(item);
+    render(card(item));
+    expect(screen.getByText('Regelmäßige Fahrt am Dienstag?')).toBeVisible();
+    expect(screen.getByText('7 Fahrten von 07:55:00 bis 08:05:00 (America/Los_Angeles); Ziel 47.20000, -122.20000.')).toBeVisible();
+    expect(screen.getByText('Ähnliche lokale Fahrten.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
+    expect((await screen.findAllByText('Kein Name abgeleitet.'))[0]).toBeVisible();
+    expect(screen.getAllByText('Keine Befehle.')[0]).toBeVisible();
+    expect(screen.getAllByText('7 Fahrten von 07:55:00 bis 08:05:00 (America/Los_Angeles); Ziel 47.20000, -122.20000.').length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Open source' }));
+    expect(onAction).toHaveBeenCalledExactlyOnceWith(item, 'navigate');
+    expect(item).toEqual(original);
+  });
+
   it('renders locale-selected 12-hour and 24-hour expiry in user vehicle and UTC display modes', () => {
     preferences.timezone_user = 'America/Los_Angeles';
     const original = structuredClone(recommendation);

@@ -4,7 +4,8 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import { request } from '../client';
+import { isApiError, request } from '../client';
+import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity';
 import type {
   ActionCenterActionResult,
   ActionCenterFilter,
@@ -17,13 +18,18 @@ import type {
 export const actionCenterKeys = {
   all: ['action-center'] as const,
   lists: ['action-center', 'list'] as const,
-  list: (filter: ActionCenterFilter = {}) => ['action-center', 'list', filter] as const,
+  list: (filter: ActionCenterFilter = {}, scope?: PersonalScope | null) =>
+    scope === undefined ? ['action-center', 'list', filter] as const
+      : ['action-center', 'list', filter, scope] as const,
   history: (recommendationId: string | undefined) =>
     ['action-center', 'history', recommendationId ?? null] as const,
   historyPage: (
     recommendationId: string | undefined,
     paging: Pick<ActionCenterFilter, 'limit' | 'offset'> = {},
-  ) => [...actionCenterKeys.history(recommendationId), boundedHistoryPaging(paging)] as const,
+    scope?: PersonalScope,
+  ) => scope === undefined
+    ? [...actionCenterKeys.history(recommendationId), boundedHistoryPaging(paging)] as const
+    : [...actionCenterKeys.history(recommendationId), boundedHistoryPaging(paging), scope] as const,
 };
 
 function boundedHistoryPaging(paging: Pick<ActionCenterFilter, 'limit' | 'offset'>) {
@@ -47,11 +53,16 @@ function actionCenterQueryString(filter: ActionCenterFilter): string {
   return query ? `?${query}` : '';
 }
 
-export function useActionCenter(filter: ActionCenterFilter = {}) {
+export function useActionCenter(filter: ActionCenterFilter = {}, scope?: PersonalScope | null, enabled = true) {
   return useQuery({
-    queryKey: actionCenterKeys.list(filter),
+    queryKey: actionCenterKeys.list(filter, scope),
     queryFn: ({ signal }) =>
-      request<ActionCenterResponse>(`/action-center${actionCenterQueryString(filter)}`, { signal }),
+      request<ActionCenterResponse>(`/action-center${actionCenterQueryString(filter)}`, {
+        signal, cache: 'no-store', ...(scope ? { headers: expectedPrincipalHeader(scope) } : {}),
+      }),
+    enabled: enabled && scope !== null,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
   });
 }
 
@@ -59,19 +70,21 @@ export function useActionCenterHistory(
   recommendationId: string | undefined,
   enabled = true,
   paging: Pick<ActionCenterFilter, 'limit' | 'offset'> = {},
+  scope?: PersonalScope,
 ) {
   const { limit, offset } = boundedHistoryPaging(paging);
   return useQuery({
-    queryKey: actionCenterKeys.historyPage(recommendationId, { limit, offset }),
+    queryKey: actionCenterKeys.historyPage(recommendationId, { limit, offset }, scope),
     queryFn: ({ signal }) =>
       request<ActionCenterHistoryPage>(
         `/action-center/${encodeURIComponent(recommendationId ?? '')}/history?limit=${limit}&offset=${offset}`,
-        { signal },
+        { signal, cache: 'no-store', ...(scope ? { headers: expectedPrincipalHeader(scope) } : {}) },
       ),
     enabled: enabled && !!recommendationId,
     // Retain only another page of this recommendation, never another ID.
     placeholderData: (previousData, previousQuery) =>
-      previousQuery?.queryKey[2] === recommendationId ? previousData : undefined,
+      previousQuery != null && previousQuery.queryKey[2] === recommendationId &&
+      JSON.stringify(previousQuery.queryKey[4]) === JSON.stringify(scope) ? previousData : undefined,
   });
 }
 
@@ -92,8 +105,13 @@ function stateForAction(
   }
 }
 
-export function useApplyActionCenterAction() {
+export function useApplyActionCenterAction(scope?: PersonalScope | null) {
   const queryClient = useQueryClient();
+  const listsForScope = {
+    queryKey: actionCenterKeys.lists,
+    predicate: (query: { queryKey: QueryKey }) =>
+      scope === undefined || JSON.stringify(query.queryKey[3]) === JSON.stringify(scope),
+  };
   return useMutation({
     mutationFn: (input: ApplyActionCenterActionInput) =>
       request<ActionCenterActionResult>(
@@ -101,6 +119,7 @@ export function useApplyActionCenterAction() {
         {
           method: 'POST',
           requiresLiveMode: true,
+          ...(scope ? { headers: expectedPrincipalHeader(scope) } : {}),
           body: JSON.stringify({
             fingerprint: input.fingerprint,
             action: input.action,
@@ -112,12 +131,10 @@ export function useApplyActionCenterAction() {
       ),
     networkMode: 'always',
     onMutate: async (input) => {
-      await queryClient.cancelQueries({ queryKey: actionCenterKeys.lists });
-      const snapshots = queryClient.getQueriesData<ActionCenterResponse>({
-        queryKey: actionCenterKeys.lists,
-      }) as ActionCenterSnapshot[];
+      await queryClient.cancelQueries(listsForScope);
+      const snapshots = queryClient.getQueriesData<ActionCenterResponse>(listsForScope) as ActionCenterSnapshot[];
       queryClient.setQueriesData<ActionCenterResponse>(
-        { queryKey: actionCenterKeys.lists },
+        listsForScope,
         (current) => {
           if (!current) return current;
           return {
@@ -140,12 +157,15 @@ export function useApplyActionCenterAction() {
       );
       return { snapshots };
     },
-    onError: (_error, _input, context) => {
+    onError: (error, _input, context) => {
       context?.snapshots.forEach(([key, value]) => queryClient.setQueryData(key, value));
+      if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: personalIdentityKey });
+      }
     },
     onSuccess: (result) => {
       queryClient.setQueriesData<ActionCenterResponse>(
-        { queryKey: actionCenterKeys.lists },
+        listsForScope,
         (current) => {
           if (!current) return current;
           return {

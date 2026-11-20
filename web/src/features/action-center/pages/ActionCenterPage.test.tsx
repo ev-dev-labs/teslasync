@@ -23,13 +23,25 @@ const operationalModeState = vi.hoisted(() => ({
 const displayPreferences = vi.hoisted(() => ({ locale: 'en-US' }));
 
 vi.mock('@/api/hooks/useActionCenter', () => ({
-  useActionCenter: (...args: unknown[]) => useActionCenterMock(...args),
+  useActionCenter: (filter: unknown) => useActionCenterMock(filter),
   useActionCenterHistory: (...args: unknown[]) => useHistoryMock(...args),
   useApplyActionCenterAction: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,
   }),
 }));
+vi.mock('@/api/hooks/usePersonalIdentity', async () => {
+  const actual = await vi.importActual<typeof import('@/api/hooks/usePersonalIdentity')>(
+    '@/api/hooks/usePersonalIdentity',
+  );
+  return {
+    ...actual,
+    usePersonalIdentity: () => ({
+      data: { mode: 'forward_auth', subject: 'synthetic-user' },
+      isLoading: false, isFetching: false, isError: false, error: null, refetch: vi.fn(),
+    }),
+  };
+});
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({ data: fleet }),
 }));
@@ -381,7 +393,7 @@ describe('ActionCenterPage URL scope roundtrip', () => {
 });
 
 describe('ActionCenterPage', () => {
-  it('preserves recommendation actions and provider evidence on a failed background refresh', async () => {
+  it('keeps stale evidence readable but disables state changes after a failed refresh', async () => {
     useActionCenterMock.mockReturnValue(queryResult({
       isError: true, error: new Error('Refresh offline'),
     }));
@@ -396,8 +408,9 @@ describe('ActionCenterPage', () => {
     expect(within(details).getByText('Retained summary')).toBeInTheDocument();
     fireEvent.click(within(details).getByText('Close'));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /acknowledge/i }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /acknowledge/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Open source' })).toBeEnabled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 

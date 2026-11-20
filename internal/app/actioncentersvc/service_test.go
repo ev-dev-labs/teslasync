@@ -232,6 +232,51 @@ func (f *fakeStates) ListHistory(
 	}, nil
 }
 
+type subjectScopedProvider struct{}
+
+func (subjectScopedProvider) SourceFeature() domain.SourceFeature {
+	return domain.SourceActiveAlerts
+}
+
+func (subjectScopedProvider) Recommendations(
+	_ context.Context, filter ListFilter, now time.Time,
+) ([]domain.Candidate, error) {
+	if filter.subject != "user-a" {
+		return nil, nil
+	}
+	return []domain.Candidate{testCandidate(now)}, nil
+}
+
+func TestSubjectScopedProviderRechecksRecipientForReadsAndActions(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	service := New(&fakeSource{}, newFakeStates())
+	service.providers = []provider{subjectScopedProvider{}}
+	service.now = func() time.Time { return now }
+
+	owner, err := service.List(context.Background(), "user-a", ListFilter{})
+	if err != nil || len(owner.Items) != 1 {
+		t.Fatalf("owner list = %+v, error = %v; want one recommendation", owner, err)
+	}
+	other, err := service.List(context.Background(), "user-b", ListFilter{subject: "user-a"})
+	if err != nil || len(other.Items) != 0 {
+		t.Fatalf("other list = %+v, error = %v; want no recommendations", other, err)
+	}
+	item := owner.Items[0]
+	request := ActionRequest{
+		RecommendationID: item.ID,
+		Fingerprint:      item.Fingerprint,
+		Action:           domain.ActionAcknowledge,
+		ExpectedVersion:  0,
+		Confirmed:        true,
+	}
+	if _, err := service.ApplyAction(context.Background(), "user-b", request); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("other user's action error = %v, want not found", err)
+	}
+	if _, err := service.ApplyAction(context.Background(), "user-a", request); err != nil {
+		t.Fatalf("owner action error = %v", err)
+	}
+}
+
 func TestListRanksAndDeduplicatesDeterministically(t *testing.T) {
 	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
 	vehicle := domain.VehicleRef{ID: 7, DisplayName: "Orion"}

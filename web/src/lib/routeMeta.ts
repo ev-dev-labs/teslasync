@@ -137,6 +137,8 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/account/sessions': '/settings',
   '/settings/safety': '/settings',
   '/settings/fleet-setup': '/settings',
+  '/settings/smart-charging': '/settings',
+  '/settings/smart-commute': '/settings',
   '/integrations/helix': '/settings',
   '/vehicle-systems/software': '/software-updates',
 

@@ -99,6 +99,30 @@ describe('Action Center queries', () => {
     expect(result.current.fetchStatus).toBe('idle');
     expect(requestMock).not.toHaveBeenCalled();
   });
+
+  it('does not reuse another principal’s private recommendations when the identity changes', async () => {
+    let resolveSecond: (value: ActionCenterResponse) => void = () => undefined;
+    requestMock.mockResolvedValueOnce(response).mockImplementationOnce(
+      () => new Promise<ActionCenterResponse>((resolve) => { resolveSecond = resolve; }),
+    );
+    const { Wrapper } = wrapper();
+    const { result, rerender } = renderHook(
+      ({ subject }) => useActionCenter({}, { mode: 'forward_auth', subject }),
+      { wrapper: Wrapper, initialProps: { subject: 'synthetic-a' } },
+    );
+    await waitFor(() => expect(result.current.data?.items).toHaveLength(1));
+    expect(requestMock.mock.calls[0]?.[1].headers).toEqual({
+      'X-TeslaSync-Expected-Principal': 'subject:synthetic-a',
+    });
+    rerender({ subject: 'synthetic-b' });
+    expect(result.current.data).toBeUndefined();
+    await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(2));
+    await act(async () => { resolveSecond({ ...response, items: [], total: 0 }); });
+    await waitFor(() => expect(result.current.data?.items).toEqual([]));
+    expect(requestMock.mock.calls[1]?.[1].headers).toEqual({
+      'X-TeslaSync-Expected-Principal': 'subject:synthetic-b',
+    });
+  });
 });
 
 describe('Action Center actions', () => {

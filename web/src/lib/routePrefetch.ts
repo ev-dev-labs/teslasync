@@ -126,6 +126,8 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/settings': routeLoaders.Settings,
   '/settings/fleet-setup': routeLoaders.FleetSetupPage,
   '/settings/safety': routeLoaders.SafetySettingsPage,
+  '/settings/smart-charging': routeLoaders.SmartChargingPage,
+  '/settings/smart-commute': routeLoaders.SmartCommutePage,
   '/share-card': routeLoaders.ShareCard,
   '/signal-diff': routeLoaders.SignalDiff,
   '/signal-explorer': routeLoaders.SignalExplorer,

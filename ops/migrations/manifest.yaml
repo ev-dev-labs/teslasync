@@ -566,3 +566,109 @@ migrations:
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-10"
+
+  - version: 259
+    name: smart_commute
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated, default-off subject-scoped tables; previous binaries ignore them.
+    rollback_notes: Leave applied on application rollback. Explicit down deletes private routines and consent; export only with the owner's authorization before dropping them.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; foreign-key creation briefly locks the existing vehicles table.
+    reversible: false
+    irreversible_justification: Explicit down removes user-confirmed routines and decisions that cannot be reconstructed from source drives.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 260
+    name: smart_charging_readiness
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated per-subject charging plans and short-lived decisions. Previous binaries ignore both tables.
+    rollback_notes: Leave applied on application rollback. Explicit down deletes private plans and decisions; export only with the owner's authorization before dropping them.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; foreign-key creation briefly locks the existing vehicles and geofences tables.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered trip estimates and decisions that cannot be reconstructed from source telemetry.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 261
+    name: smart_charging_slow_samples
+    forward_compatible: true
+    forward_compatibility_notes: Adds an isolated sampling table; previous binaries ignore it and continue evaluating existing readiness decisions.
+    rollback_notes: Leave applied on application rollback. Explicit down removes only short-lived sampling state; it does not delete plans or source telemetry.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates an empty table and primary key index; foreign-key creation briefly locks the existing charging plans table.
+    reversible: true
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 262
+    name: smart_charging_site_rate_consent
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore the new default-off comparison consent and preserve it on plan updates.
+    rollback_notes: Leave applied on application rollback. Explicit down removes only the per-plan price-comparison consent.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: A brief ACCESS EXCLUSIVE metadata lock adds a boolean with a constant default without rewriting existing rows.
+    reversible: false
+    irreversible_justification: Explicit down deletes price-comparison opt-ins, which must be obtained again rather than inferred.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 263
+    name: smart_personal_push
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated personal-device and dispatch-attempt tables ignored by earlier binaries.
+    rollback_notes: Leave applied on application rollback. Explicit down removes verified devices and delivery deduplication state; users must enroll again.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; a foreign key briefly locks the existing charging plans table.
+    reversible: false
+    irreversible_justification: Explicit down removes user-enrolled device bindings and delivery history that cannot safely be reconstructed.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 264
+    name: smart_charging_trip_legs
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries ignore leg details and cannot correctly evaluate destination charging or trip-review decisions; pause affected plans before running an older binary.
+    requires_downtime: true
+    rollback_notes: Pause affected plans before rolling back application binaries. Explicit down removes leg estimates and invalidates trip-review delivery tokens without deleting source telemetry.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Adds columns and replaces checks under brief ACCESS EXCLUSIVE locks; validation scans charging plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered leg estimates, destination-charging assumptions, and derived trip-review delivery tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 265
+    name: smart_charging_scheduled_start
+    forward_compatible: false
+    forward_compatibility_notes: Earlier workers cannot evaluate the schedule-conflict kind; stop them before enabling the new behavior.
+    requires_downtime: true
+    rollback_notes: Stop readiness workers and pause plans with an intended start before running an older binary. Leave schema applied to preserve the user-entered start times.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Adds two nullable columns and replaces checks under brief ACCESS EXCLUSIVE locks; validation scans charging plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down deletes user-entered intended starts and invalidates derived schedule-conflict delivery tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"

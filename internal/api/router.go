@@ -239,6 +239,9 @@ import (
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	smartcommutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
+	smartdeliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
+	smartreadinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -386,12 +389,15 @@ import (
 	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/yir"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
 	// Hexagonal adapters used by legacy route composition.
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	smartdeliveryadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartdelivery"
+	smartreadinessadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
@@ -403,6 +409,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/widgetdesignsvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
@@ -414,6 +423,9 @@ import (
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
+	smartcommutehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
+	smartdeliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
+	smartreadinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
 	widgetdesignhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/widgetdesign"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
@@ -515,7 +527,7 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes) {
 }
 
 // Older native clients may send X-Sudo-Token; accepting the header grants no authority.
-var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App"}
+var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App", tsauth.ExpectedPrincipalHeader}
 
 // routerLiveSignalStore prefers the explicit reader dependency. Existing
 // telemetry-owning callers may still supply that same boundary via the handler.
@@ -1135,10 +1147,30 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		ownershipIntelService,
 		cfg.Auth.ForwardAuthHeader,
 	)
+	smartCommuteService := smartcommutesvc.New(smartcommutedb.NewRepository(db))
+	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)
+	smartChargingService := smartreadinesssvc.New(
+		smartreadinessdb.NewRepository(db), liveSignalStore,
+		smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
+	)
+	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader)
+	smartDeliveryService := smartdeliverysvc.New(
+		smartdeliverydb.NewRepository(db), opt.Encryptor,
+		smartdeliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
+		smartdeliverysvc.WithChargingCandidates(smartChargingService),
+		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
+		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
+	)
+	smartDeliveryHandler := smartdeliveryhandler.NewHandler(smartDeliveryService, cfg.Auth.ForwardAuthHeader)
+	actionCenterOptions := []actioncentersvc.Option{
+		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
+		actioncentersvc.WithSmartCommute(smartCommuteService),
+		actioncentersvc.WithSmartCharging(smartChargingService),
+	}
 	actionCenterService := actioncentersvc.New(
 		actioncenterdb.NewSourceRepository(db),
 		actioncenterdb.NewStateRepository(db),
-		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
+		actionCenterOptions...,
 	)
 	actionCenterHandler := actioncenterhandler.NewHandler(
 		actionCenterService,
@@ -3855,6 +3887,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// open-mode installs use one local subject because no identity exists.
 		advancedIntelligenceHandler.MountRoutes(r)
 		ownershipIntelHandler.MountRoutes(r)
+		smartCommuteHandler.MountRoutes(r)
+		smartDeliveryHandler.MountRoutes(r)
+		smartChargingHandler.MountRoutes(r)
 		r.Get("/action-center", actionCenterHandler.List)
 		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
 		r.With(ratemw.LimitByIP(30, time.Minute)).

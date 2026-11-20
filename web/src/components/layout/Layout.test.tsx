@@ -556,6 +556,12 @@ describe('navSections (data export)', () => {
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
+  it('exposes Smart Commute and Charging readiness in Notifications', () => {
+    const notifications = navSections.find((section) => section.title === 'Notifications')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-commute')?.label).toBe('Smart Commute')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-charging')?.label).toBe('Charging readiness')
+  })
+
   it('places Vehicle Management in the Vehicles group', () => {
     const vehiclesSection = navSections.find((section) => section.title === 'Vehicles')
     const management = vehiclesSection?.items.find(

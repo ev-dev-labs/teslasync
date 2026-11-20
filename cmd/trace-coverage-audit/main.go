@@ -125,6 +125,19 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_charging_readiness",
+		Description: "Notification worker evaluates private charging readiness",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/database/database.go",
+		},
+	},
+	{
 		Name:        "export_job",
 		Description: "Export publish → MQTT envelope → process → SSE status",
 		GlobPatterns: []string{

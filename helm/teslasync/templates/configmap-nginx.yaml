@@ -107,6 +107,17 @@ data:
             expires 0;
         }
 
+        location = /personal-delivery/sw.js {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-FIovQhOTtj2FHehVALt/xHCTeEzxD7mm+59GFKEVPcs='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-uhiBBW69xWgLHSA26rM05p5tRhaB0Aezw/Je5MfRXUE='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()" always;
+            expires 0;
+        }
+
         # Hashed static assets (Vite bundles) can be cached long-term
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;

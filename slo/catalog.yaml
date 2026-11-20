@@ -14,6 +14,36 @@
 version: 1
 
 slos:
+  - name: smart_delivery_availability
+    description: "Subject-scoped personal delivery setup and verification must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_charging_availability
+    description: "Private charging readiness setup and plan decisions must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_commute_availability
+    description: "Private smart commute setup and routine decisions must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
   - name: widget_design_preference_availability
     description: "Durable subject-scoped widget design reads and writes must avoid server errors."
     sli:
