@@ -50,6 +50,8 @@ type Service struct {
 	candidates ChargingCandidates
 	commute    port.CommuteRepository
 	atOrigin   CommuteOriginCheck
+	publicFees port.PublicFeeRepository
+	feeSource  PublicFeeCandidates
 	quietHours QuietHours
 	observe    func(string)
 }

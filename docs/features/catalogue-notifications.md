@@ -52,6 +52,24 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   current limit, schedule or charging place without changing them. This is
   separate from a trip plan, and never enables push or shares data externally.
 
+  **Public charging fee reminders** are off by default. Review one saved
+  public charging place and enter an operator HTTPS source, currency, fixed
+  per-minute fee, grace period, and review validity. Confirm the terms apply
+  after completion while the car remains plugged in, with no occupancy or
+  other unresolved condition. TeslaSync does not fetch station terms or
+  infer that a Tesla congestion fee applies. A receipt is not a forecast.
+  The worker requires one matched completed session and fresh parked,
+  connected telemetry at the reviewed site. It uses the earliest plausible
+  fee start and stays silent if there is less than a minute to act. Advice
+  does not prove a fee was charged and never sends vehicle commands.
+  Optionally select the current verified browser when saving the review.
+  It receives at most one token-only push attempt per session, subject to
+  personal quiet hours and the shared push budget. Open the notification to
+  review that session's timing and source. Turning reminders off, editing
+  the place, changing the review or re-verifying the browser invalidates
+  old claims. Migration `000274` can stay applied on application rollback;
+  its explicit down removes only fee reviews and their delivery records.
+
 ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
 installation share its plans, routines, and device settings.

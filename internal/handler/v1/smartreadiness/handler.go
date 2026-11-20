@@ -28,6 +28,10 @@ type service interface {
 	LatestStarts(context.Context, string, int64) ([]domain.LatestStart, error)
 	SitePerformanceSettings(context.Context, string, int64) (domain.SitePerformanceSettings, error)
 	SetSitePerformance(context.Context, string, int64, *int64) error
+	PublicFeeSettings(context.Context, string, int64) (domain.PublicFeeSettings, error)
+	FindPublicFeeDecision(context.Context, string, int64) (*domain.PublicFeeDecision, error)
+	SetPublicFeeTerms(context.Context, string, domain.PublicFeeTerms) error
+	RevokePublicFeeTerms(context.Context, string, int64) error
 	SavePlan(context.Context, string, domain.Plan) (*domain.Plan, error)
 	DeletePlan(context.Context, string, int64, int64) error
 	SnoozePlan(context.Context, string, int64, int64, int64) error
@@ -52,6 +56,10 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.Get("/latest-start", h.LatestStarts)
 		r.Get("/site-performance", h.SitePerformance)
 		r.With(writeLimit).Put("/site-performance", h.SaveSitePerformance)
+		r.Get("/public-fee-terms", h.PublicFeeTerms)
+		r.Get("/public-fee", h.PublicFeeDecision)
+		r.With(writeLimit).Put("/public-fee-terms", h.SavePublicFeeTerms)
+		r.With(writeLimit).Delete("/public-fee-terms", h.RevokePublicFeeTerms)
 		r.With(writeLimit).Post("/plans", h.CreatePlan)
 		r.With(writeLimit).Put("/plans/{planID}", h.UpdatePlan)
 		r.With(writeLimit).Delete("/plans/{planID}", h.DeletePlan)
@@ -257,6 +265,8 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, err error)
 		httputil.RespondError(w, http.StatusConflict, "PLAN_LIMIT", "too many charging readiness plans")
 	case errors.Is(err, smartreadinesssvc.ErrSitePerformanceUnavailable):
 		httputil.RespondError(w, http.StatusServiceUnavailable, "SITE_PERFORMANCE_UNAVAILABLE", "charging site performance analysis is unavailable")
+	case errors.Is(err, smartreadinesssvc.ErrPublicFeeUnavailable):
+		httputil.RespondError(w, http.StatusServiceUnavailable, "PUBLIC_FEE_UNAVAILABLE", "public charging fee review is unavailable")
 	default:
 		span.RecordError(errors.New("charging readiness request failed"))
 		span.SetStatus(codes.Error, "charging readiness request failed")

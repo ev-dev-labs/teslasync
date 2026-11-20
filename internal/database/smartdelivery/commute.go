@@ -26,6 +26,9 @@ func reserveBudget(ctx context.Context, tx pgx.Tx, deviceID int64, now time.Time
 			UNION ALL
 			SELECT created_at FROM smart_push_commute_deliveries
 			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_public_fee_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
 		) attempts`, deviceID, now).Scan(&count, &latest); err != nil {
 		return false, fmt.Errorf("read personal push budget: %w", err)
 	}

@@ -18,6 +18,7 @@ import (
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -30,6 +31,10 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	defer cancel()
 	j.ctx = ctx
 	j.advance(time.Now().UTC())
+	createPublicFeeEvidenceTables(t, j.db)
+	if _, err := j.db.Pool.Exec(ctx, `UPDATE geofences SET updated_at = '2026-01-01T00:00:00Z' WHERE id = 9`); err != nil {
+		t.Fatal(err)
+	}
 	migration, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000223_action_center_state.up.sql"))
 	if err != nil {
 		t.Fatal(err)
@@ -89,18 +94,53 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusNoContent)
 			return
+		case r.URL.Path == "/__fixture/process-public-fee" && r.Method == http.MethodPost:
+			fixtureMu.Lock()
+			defer fixtureMu.Unlock()
+			completed := time.Now().UTC().Truncate(time.Microsecond)
+			if _, err := j.db.Pool.Exec(r.Context(), `
+				INSERT INTO charging_sessions
+				SELECT 51, 7, 9, confirmed_at + INTERVAL '1 microsecond',
+				  GREATEST($1::timestamptz, confirmed_at + INTERVAL '2 milliseconds')
+				FROM smart_public_charging_fee_terms WHERE subject = 'synthetic-personal-a-public-fee'`,
+				completed); err != nil {
+				http.Error(w, "fixture session failed", http.StatusInternalServerError)
+				return
+			}
+			if _, err := j.db.Pool.Exec(r.Context(), `
+				INSERT INTO signal_log (ts, vehicle_id, field, value_kind, int_value)
+				SELECT started_at, 7, 'DetailedChargeState', $1::smallint, $2::bigint FROM charging_sessions WHERE id = 51
+				UNION ALL
+				SELECT ended_at, 7, 'DetailedChargeState', $1::smallint, $3::bigint FROM charging_sessions WHERE id = 51`,
+				protomodel.ValueKindEnum, protomodel.DetailedChargeStateValue_DetailedChargeStateCharging,
+				protomodel.DetailedChargeStateValue_DetailedChargeStateComplete); err != nil {
+				http.Error(w, "fixture transition failed", http.StatusInternalServerError)
+				return
+			}
+			j.advance(completed.Add(10 * time.Millisecond))
+			j.live.setChargeState("Complete")
+			if count, err := j.readiness.ProcessPublicFees(r.Context(), 25, j.delivery.NotifyPublicFee); err != nil || count != 1 {
+				http.Error(w, "fixture fee processing failed", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			fixtureMu.Lock()
 			defer fixtureMu.Unlock()
 			cookie, cookieErr := r.Cookie("personal_test_subject")
-			allowed := map[string]bool{
-				"synthetic-personal-a-desktop": true, "synthetic-personal-b-desktop": true,
-				"synthetic-personal-a-mobile": true, "synthetic-personal-b-mobile": true,
+			// Each independent browser journey has its own client address.
+			// Its owner and foreign-subject attempts still share one rate limit.
+			clientAddresses := map[string]string{
+				"synthetic-personal-a-desktop": "192.0.2.10:12345", "synthetic-personal-b-desktop": "192.0.2.10:12345",
+				"synthetic-personal-a-mobile": "192.0.2.11:12345", "synthetic-personal-b-mobile": "192.0.2.11:12345",
+				"synthetic-personal-a-public-fee": "192.0.2.12:12345", "synthetic-personal-b-public-fee": "192.0.2.12:12345",
 			}
-			if cookieErr != nil || !allowed[cookie.Value] {
+			if cookieErr != nil || clientAddresses[cookie.Value] == "" {
 				http.Error(w, "missing synthetic identity", http.StatusUnauthorized)
 				return
 			}
+			r.RemoteAddr = clientAddresses[cookie.Value]
 			r.Header.Set("X-Test-Subject", cookie.Value)
 			router.ServeHTTP(w, r)
 			return

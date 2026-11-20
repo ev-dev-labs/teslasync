@@ -1164,6 +1164,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartChargingRepo, liveSignalStore,
 		smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
 		smartreadinesssvc.WithSitePerformance(smartChargingRepo),
+		smartreadinesssvc.WithPublicFees(smartChargingRepo),
 	)
 	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader)
 	deliveryRepo := smartdeliverydb.NewRepository(db)
@@ -1178,6 +1179,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartdeliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(smartChargingService),
 		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, commuteOriginCheck),
+		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, smartChargingService),
 		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
 		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
 	)

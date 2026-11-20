@@ -138,6 +138,19 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_public_charging_fee",
+		Description: "Notification worker evaluates reviewed public charging fee terms",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/database/database.go",
+		},
+	},
+	{
 		Name:        "smart_commute_traffic",
 		Description: "Notification worker evaluates private, consented commute traffic",
 		GlobPatterns: []string{

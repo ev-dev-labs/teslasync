@@ -7,6 +7,9 @@ import type {
   SmartChargingPlan,
   SmartChargingPlanInput,
   SmartChargingSitePerformanceSettings,
+  SmartPublicFeeDecision,
+  SmartPublicFeeTerms,
+  SmartPublicFeeTermsInput,
 } from '@/types/smartCharging'
 
 export const smartChargingKeys = {
@@ -17,6 +20,10 @@ export const smartChargingKeys = {
     ['smart-charging', 'latest-starts', scope, vehicleId] as const,
   sitePerformance: (scope: PersonalScope | null, vehicleId: number | null) =>
     ['smart-charging', 'site-performance', scope, vehicleId] as const,
+  publicFeeTerms: (scope: PersonalScope, vehicleId: number) =>
+    ['smart-charging', 'public-fee-terms', scope, vehicleId] as const,
+  publicFeeDecision: (scope: PersonalScope, vehicleId: number, sessionId: string | null) =>
+    ['smart-charging', 'public-fee', scope, vehicleId, sessionId] as const,
 }
 
 export function useSmartCharging(scope: PersonalScope | null, vehicleId: number | null, enabled: boolean) {
@@ -62,6 +69,41 @@ export type SmartChargingChange =
   | { kind: 'snooze'; id: number; durationS: number }
   | { kind: 'delete'; id: number }
   | { kind: 'sitePerformance'; placeId: number | null }
+  | { kind: 'publicFeeTerms'; terms: SmartPublicFeeTermsInput | null }
+
+export function usePublicFeeTerms(scope: PersonalScope, vehicleId: number) {
+  return useQuery({
+    queryKey: smartChargingKeys.publicFeeTerms(scope, vehicleId),
+    queryFn: async ({ signal }) => {
+      const { data } = await request<{ data: { terms: SmartPublicFeeTerms | null; needs_review: boolean } }>(
+        `/smart-charging/public-fee-terms?vehicle_id=${vehicleId}`,
+        { signal, cache: 'no-store', headers: expectedPrincipalHeader(scope) },
+      )
+      return data
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
+  })
+}
+
+export function usePublicFeeDecision(scope: PersonalScope, vehicleId: number, sessionId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: smartChargingKeys.publicFeeDecision(scope, vehicleId, sessionId),
+    queryFn: async ({ signal }) => {
+      const { data } = await request<{ data: { decision: SmartPublicFeeDecision | null } }>(
+        `/smart-charging/public-fee?vehicle_id=${vehicleId}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ''}`,
+        { signal, cache: 'no-store', headers: expectedPrincipalHeader(scope) },
+      )
+      return data
+    },
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: 'always',
+    refetchInterval: 15_000,
+  })
+}
 
 export function useSitePerformance(scope: PersonalScope, vehicleId: number) {
   return useQuery({
@@ -112,6 +154,12 @@ export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: n
             ...options, method: 'PUT',
             body: JSON.stringify({ vehicle_id: vehicleId, charging_place_id: change.placeId, enabled: change.placeId != null }),
           })
+        case 'publicFeeTerms':
+          return change.terms == null
+            ? request<void>(`/smart-charging/public-fee-terms?vehicle_id=${vehicleId}`, { ...options, method: 'DELETE' })
+            : request<void>('/smart-charging/public-fee-terms', {
+              ...options, method: 'PUT', body: JSON.stringify({ ...change.terms, vehicle_id: vehicleId }),
+            })
       }
     },
     networkMode: 'always',

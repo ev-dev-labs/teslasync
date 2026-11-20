@@ -88,3 +88,32 @@ export interface SmartChargingSitePerformanceSettings {
   scope: { charging_place_id: number; place_name: string; vehicle_id: number } | null
   review: SmartChargingSitePerformanceReview | null
 }
+
+export interface SmartPublicFeeTerms {
+  vehicle_id: number
+  place_id: number
+  place_updated_at: string
+  confirmed_unconditional: boolean
+  currency: string
+  fee_per_minute_minor: number
+  grace_s: number
+  source_url: string
+  confirmed_at: string
+  valid_until: string
+  push_device_id?: number
+}
+
+export interface SmartPublicFeeTermsInput extends Omit<SmartPublicFeeTerms, 'confirmed_at'> {
+  confirmed_public_site: boolean
+  push_title?: string
+  push_body?: string
+}
+
+export interface SmartPublicFeeDecision {
+  terms: SmartPublicFeeTerms
+  session_id: number
+  completion_observed_at: string
+  earliest_fee_starts_at: string
+  observed_at: string
+  expires_at: string
+}

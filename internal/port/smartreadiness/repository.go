@@ -34,6 +34,16 @@ type SitePerformanceRepository interface {
 	ListSitePerformanceSessions(context.Context, string, domain.SitePerformanceScope, time.Time) ([]domain.SitePerformanceSession, error)
 }
 
+type PublicFeeRepository interface {
+	SavePublicFeeTerms(context.Context, domain.PublicFeeTerms) error
+	DeletePublicFeeTerms(context.Context, string, int64) error
+	HasPublicFeeTerms(context.Context, string, int64) (bool, error)
+	FindPublicFeeTerms(context.Context, string, int64, time.Time) (*domain.PublicFeeTerms, error)
+	FindPublicChargeCompletion(context.Context, domain.PublicFeeTerms, time.Time) (*domain.PublicChargeCompletion, error)
+	ListDuePublicFeeRecipients(context.Context, time.Time, int) ([]domain.PublicFeeRecipient, error)
+	PrunePublicFeeDeliveries(context.Context, time.Time) error
+}
+
 type Repository interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	ListActivePlans(context.Context, string, int64, time.Time, int) ([]domain.Plan, error)

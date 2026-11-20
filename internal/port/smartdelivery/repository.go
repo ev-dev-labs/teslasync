@@ -49,3 +49,16 @@ type CommuteLease interface {
 	Finish(context.Context, []byte, domain.DeliveryStatus) error
 	Close(context.Context) error
 }
+
+type PublicFeeRepository interface {
+	LockPublicFee(context.Context, domain.PublicFeeRef, time.Time) (PublicFeeLease, error)
+	FindPublicFeeDelivery(context.Context, string, []byte, time.Time) (*domain.PublicFeeRef, error)
+	ConsumePublicFeeDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+}
+
+type PublicFeeLease interface {
+	Ciphertext() string
+	Reserve(context.Context, []byte, time.Time, time.Time) (bool, error)
+	Finish(context.Context, []byte, domain.DeliveryStatus) error
+	Close(context.Context) error
+}

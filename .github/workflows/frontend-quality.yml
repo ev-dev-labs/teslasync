@@ -60,6 +60,7 @@ on:
       - 'migrations/000271_smart_charging_site_performance.*.sql'
       - 'migrations/000272_smart_commute_route_energy.*.sql'
       - 'migrations/000273_type_commute_route_energy_evidence.*.sql'
+      - 'migrations/000274_smart_public_charging_fee_terms.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'

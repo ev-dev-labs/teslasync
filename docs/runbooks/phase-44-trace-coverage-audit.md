@@ -59,6 +59,14 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `cmd/notification-worker/smart_charging.go`
   - `internal/database/database.go`
 
+## Notification worker evaluates reviewed public charging fee terms — `smart_public_charging_fee`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+
 ## Notification worker evaluates private, consented commute traffic — `smart_commute_traffic`
 
 - Status: **OK**

@@ -77,6 +77,17 @@ type CommuteDelivery struct {
 	ExpiresAt  time.Time
 }
 
+type PublicFeeRef struct {
+	Subject        string
+	DeviceID       int64
+	VehicleID      int64
+	PlaceID        int64
+	SessionID      int64
+	PlaceUpdatedAt time.Time
+	ConfirmedAt    time.Time
+	ExpiresAt      time.Time
+}
+
 type Copy struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`

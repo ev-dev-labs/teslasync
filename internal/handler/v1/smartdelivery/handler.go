@@ -32,6 +32,7 @@ type service interface {
 	Verify(context.Context, string, int64, string) (*domain.Notification, error)
 	ClaimCharging(context.Context, string, string) (*domain.Notification, error)
 	ClaimCommute(context.Context, string, string) (*domain.Notification, error)
+	ClaimPublicFee(context.Context, string, string) (*domain.Notification, error)
 	SetChargingEnabled(context.Context, string, int64, bool) error
 	SetCommuteEnabled(context.Context, string, int64, bool, domain.Copy) error
 	DeleteDevice(context.Context, string, int64) error
@@ -84,6 +85,8 @@ func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {
 		notification, err = h.service.ClaimCharging(ctx, subject, request.Token)
 	case "commute":
 		notification, err = h.service.ClaimCommute(ctx, subject, request.Token)
+	case "public-fee":
+		notification, err = h.service.ClaimPublicFee(ctx, subject, request.Token)
 	default:
 		err = smartdeliverysvc.ErrInvalidInput
 	}

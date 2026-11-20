@@ -67,7 +67,7 @@ func attachCommuteDelivery(t *testing.T, f *fixture, live *trafficLiveFixture, s
 	}
 	for _, file := range []string{
 		"000170_quiet_hours", "000260_smart_charging_readiness", "000263_smart_personal_push",
-		"000269_smart_commute_personal_push",
+		"000269_smart_commute_personal_push", "000274_smart_public_charging_fee_terms",
 	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file+".up.sql"))
 		if err != nil {

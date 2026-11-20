@@ -27,6 +27,7 @@ type Service struct {
 	live            LiveSignals
 	sites           ChargingSites
 	sitePerformance port.SitePerformanceRepository
+	publicFees      port.PublicFeeRepository
 	now             func() time.Time
 	observe         func(domain.Reason)
 	notify          func(context.Context, port.Candidate) error

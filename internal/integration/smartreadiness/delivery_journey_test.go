@@ -114,6 +114,7 @@ func newChargingDeliveryJourney(t *testing.T, wrap func(*controlledPushSender) s
 	j.live = &controlledLive{values: map[string]*signal.Value{
 		"BatteryLevel":        {Raw: 45.0},
 		"DetailedChargeState": {Raw: "Disconnected"},
+		"ChargePortLatch":     {Raw: "Engaged"},
 		"Gear":                {Raw: "P"},
 		"LocationLatitude":    {Raw: 47.1},
 		"LocationLongitude":   {Raw: -122.1},
@@ -121,6 +122,7 @@ func newChargingDeliveryJourney(t *testing.T, wrap func(*controlledPushSender) s
 	j.advance(j.now)
 	var delivery *smartdeliverysvc.Service
 	j.readiness = smartreadinesssvc.New(repo, j.live, controlledSite{},
+		smartreadinesssvc.WithPublicFees(repo),
 		smartreadinesssvc.WithClock(func() time.Time { return j.now }),
 		smartreadinesssvc.WithCandidateNotifier(func(ctx context.Context, candidate readinessport.Candidate) error {
 			return delivery.NotifyCharging(ctx, candidate)
@@ -129,9 +131,11 @@ func newChargingDeliveryJourney(t *testing.T, wrap func(*controlledPushSender) s
 	if wrap != nil {
 		sender = wrap(j.sender)
 	}
-	delivery = smartdeliverysvc.New(deliverydb.NewRepository(db), enc, sender,
+	deliveryRepo := deliverydb.NewRepository(db)
+	delivery = smartdeliverysvc.New(deliveryRepo, enc, sender,
 		smartdeliverysvc.WithClock(func() time.Time { return j.now }),
 		smartdeliverysvc.WithChargingCandidates(j.readiness),
+		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, j.readiness),
 		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)))
 	j.delivery = delivery
 	j.router = chi.NewRouter()

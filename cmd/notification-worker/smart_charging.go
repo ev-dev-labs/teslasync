@@ -51,8 +51,10 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		return func() {}
 	}
 	var delivery *smartdeliverysvc.Service
+	readinessRepo := readinessdb.NewRepository(db)
 	service := smartreadinesssvc.New(
-		readinessdb.NewRepository(db), live, smartadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
+		readinessRepo, live, smartadapter.NewSites(geofencedb.NewGeofenceRepo(db)),
+		smartreadinesssvc.WithPublicFees(readinessRepo),
 		smartreadinesssvc.WithDecisionObserver(recordSmartChargingDecision),
 		smartreadinesssvc.WithSharedOpenMode(tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader)),
 		smartreadinesssvc.WithCandidateNotifier(func(ctx context.Context, candidate readinessport.Candidate) error {
@@ -71,6 +73,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		deliveryRepo, encryptor,
 		deliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(service),
+		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, service),
 		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, func(ctx context.Context, vehicleID int64, origin commute.Point, now time.Time) (bool, error) {
 			return smartcommutesvc.ParkedAtTrafficOrigin(ctx, live, vehicleID, origin, now)
 		}),
@@ -85,6 +88,9 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for workerCtx.Err() == nil {
+			if delivery.PublicFeeAvailable() {
+				runPublicFeeTick(workerCtx, service, delivery)
+			}
 			runSmartChargingTick(workerCtx, service)
 			select {
 			case <-workerCtx.Done():
@@ -98,6 +104,21 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		<-done
 		stopTraffic()
 		sharedCache.Close()
+	}
+}
+
+func runPublicFeeTick(ctx context.Context, service *smartreadinesssvc.Service, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.public_charging_fee_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	eligible, err := service.ProcessPublicFees(ctx, 25, delivery.NotifyPublicFee)
+	span.SetAttributes(attribute.Int("notification.public_charging_fee.eligible", eligible))
+	if err != nil {
+		span.RecordError(errors.New("public charging fee evaluation failed"))
+		span.SetStatus(codes.Error, "public charging fee evaluation failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("public charging fee evaluation failed")
 	}
 }
 

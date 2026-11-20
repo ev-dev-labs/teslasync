@@ -8,6 +8,8 @@ import type {
   SmartChargingPlan,
   SmartChargingPlanInput,
   SmartChargingSitePerformanceSettings,
+  SmartPublicFeeTerms,
+  SmartPublicFeeTermsInput,
 } from '@/types/smartCharging'
 
 const requestMock = vi.hoisted(() => vi.fn())
@@ -16,7 +18,7 @@ vi.mock('@/api/client', async () => ({
   request: (...args: unknown[]) => requestMock(...args),
 }))
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ tz: timeZone, formatDateTime: (value: string) => value }),
+  useDateFormat: () => ({ tz: timeZone, locale: 'en-US', formatDateTime: (value: string) => value }),
 }))
 
 import { ApiError } from '@/api/client'
@@ -37,6 +39,7 @@ let identityMode: 'forward_auth' | 'open'
 let failure: ApiError | null
 let timeZone: string
 let sitePerformance: SmartChargingSitePerformanceSettings
+let publicFee: SmartPublicFeeTerms | null
 
 function renderSettings(url = '/settings/smart-charging?vehicle_id=42') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -64,11 +67,32 @@ beforeEach(() => {
   identityMode = 'forward_auth'
   failure = null
   sitePerformance = { scope: null, review: null }
+  publicFee = null
   requestMock.mockReset()
   requestMock.mockImplementation(async (path: string, options?: RequestInit) => {
     if (path === '/system/auth-mode') return { mode: identityMode, subject: 'synthetic-a' }
     if (path === '/vehicles') return [{ id: 42, display_name: 'Synthetic A' }, { id: 43, display_name: 'Synthetic B' }]
     if (path === '/geofences') return places
+    if (path === '/smart-charging/public-fee-terms?vehicle_id=42') {
+      if (options?.method === 'DELETE') {
+        publicFee = null
+        return undefined
+      }
+      return { data: { terms: publicFee } }
+    }
+    if (path === '/smart-charging/public-fee-terms?vehicle_id=43') return { data: { terms: null } }
+    if (path === '/smart-charging/public-fee-terms' && options?.method === 'PUT') {
+      const input = JSON.parse(String(options.body)) as SmartPublicFeeTermsInput
+      publicFee = { ...input, confirmed_at: '2026-03-07T12:00:00Z' }
+      return undefined
+    }
+    if (path === '/smart-charging/public-fee?vehicle_id=42&session_id=51') {
+      return { data: { decision: publicFee ? {
+        terms: publicFee, session_id: 51, completion_observed_at: '2026-03-07T11:59:30Z',
+        earliest_fee_starts_at: '2026-03-07T12:05:00Z', observed_at: '2026-03-07T12:00:00Z',
+        expires_at: '2026-03-07T12:02:00Z',
+      } : null } }
+    }
     if (path === '/smart-charging/site-performance?vehicle_id=42') return { data: sitePerformance }
     if (path === '/smart-charging/site-performance?vehicle_id=43') return { data: { scope: null, review: null } }
     if (path === '/smart-charging/site-performance' && options?.method === 'PUT') {
@@ -115,6 +139,43 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('private charging readiness settings', () => {
+  it('only enables a reviewed public fee after two explicit confirmations and removes the decision when revoked', async () => {
+    renderSettings('/settings/smart-charging?vehicle_id=42&fee_session_id=51#public-fee')
+    const region = within(await screen.findByRole('region', { name: 'Public charging fee reminders' }))
+    const edit = await region.findByRole('button', { name: 'Review public fee terms' })
+    expect(await region.findByText(/No active public-site fee review/)).toBeVisible()
+    expect(requestMock.mock.calls.some(([path]) => String(path).startsWith('/smart-charging/public-fee?'))).toBe(false)
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    fireEvent.change(region.getByLabelText('Reviewed public charging place'), { target: { value: '9' } })
+    fireEvent.change(region.getByLabelText(/public terms URL/), { target: { value: 'https://example.test/fee-policy' } })
+    fireEvent.change(region.getByLabelText(/Currency code/), { target: { value: 'USD' } })
+    fireEvent.change(region.getByLabelText(/Fee amount per minute/), { target: { value: '0.55' } })
+    fireEvent.change(region.getByLabelText(/Grace period after completion/), { target: { value: '5' } })
+    const save = region.getByRole('button', { name: 'Save reviewed terms' })
+    fireEvent.click(region.getByRole('switch', { name: /verified this location/ }))
+    fireEvent.click(save)
+    expect(region.getByRole('alert')).toHaveTextContent('Both reviews are required')
+    expect(requestMock.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false)
+    fireEvent.click(region.getByRole('switch', { name: /I reviewed fixed terms/ }))
+    expect(region.getByRole('switch', { name: /Send fee reminders/ })).not.toBeChecked()
+    fireEvent.click(save)
+    expect(await region.findByText(/The reviewed fee is \$0.55 per minute/)).toBeVisible()
+    expect(region.getByRole('link', { name: /Read the operator/ })).toHaveAttribute('href', 'https://example.test/fee-policy')
+    const submitted = requestMock.mock.calls.find(([path, options]) =>
+      path === '/smart-charging/public-fee-terms' && options?.method === 'PUT')
+    expect(JSON.parse(String(submitted?.[1].body))).toEqual({
+      confirmed_public_site: true, confirmed_unconditional: true, currency: 'USD', fee_per_minute_minor: 55,
+      grace_s: 300, place_id: 9, place_updated_at: place.updated_at, source_url: 'https://example.test/fee-policy',
+      valid_until: '2026-03-08T12:00:00.000Z', vehicle_id: 42,
+    })
+    const revoke = region.getByRole('button', { name: 'Turn off fee reminders' })
+    await waitFor(() => expect(revoke).toBeEnabled())
+    fireEvent.click(revoke)
+    expect(await region.findByText(/No active public-site fee review/)).toBeVisible()
+    expect(region.queryByRole('link', { name: /Read the operator/ })).not.toBeInTheDocument()
+  })
+
   it('shows measured site evidence only after explicit consent and removes it on revoke', async () => {
     renderSettings('/settings/smart-charging?vehicle_id=42#site-performance')
     const region = within(await screen.findByRole('region', { name: 'Charging at a saved place' }))

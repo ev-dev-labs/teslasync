@@ -5,7 +5,18 @@ function isCommuteComparison(url) {
 }
 
 function isChargingDestination(url) {
-  return ['/action-center', '/settings/smart-charging'].includes(url.pathname)
+  return ['/action-center', '/settings/smart-charging'].includes(url.pathname) &&
+    !url.searchParams.has('fee_session_id')
+}
+
+function isPublicFeeReview(url) {
+  return url.pathname === '/settings/smart-charging' && url.hash === '#public-fee' &&
+    /^[1-9]\d*$/.test(url.searchParams.get('vehicle_id') ?? '') &&
+    /^[1-9]\d*$/.test(url.searchParams.get('fee_session_id') ?? '')
+}
+
+function pathForNotification(url) {
+  return `${url.pathname}${url.search}${isPublicFeeReview(url) ? url.hash : ''}`
 }
 
 self.addEventListener('push', (event) => {
@@ -21,7 +32,7 @@ self.addEventListener('push', (event) => {
     let path
     if (payload.kind === 'verify' && Number.isSafeInteger(payload.device_id) && payload.device_id > 0) {
       path = `/api/v1/smart-delivery/devices/${payload.device_id}/verify`
-    } else if (payload.kind === 'charging' || payload.kind === 'commute') {
+    } else if (['charging', 'commute', 'public-fee'].includes(payload.kind)) {
       path = '/api/v1/smart-delivery/deliveries/claim'
     } else {
       return
@@ -34,8 +45,8 @@ self.addEventListener('push', (event) => {
         redirect: 'error',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload.kind === 'commute'
-          ? { token: payload.token, kind: 'commute' }
+        body: JSON.stringify(payload.kind === 'commute' || payload.kind === 'public-fee'
+          ? { token: payload.token, kind: payload.kind }
           : { token: payload.token }),
       })
       if (!response.ok) return
@@ -44,12 +55,13 @@ self.addEventListener('push', (event) => {
       if (typeof notification?.title !== 'string' || typeof notification?.body !== 'string' ||
         typeof notification?.url !== 'string') return
       const url = new URL(notification.url, self.location.origin)
-      if (url.origin !== self.location.origin ||
-        !(payload.kind === 'commute' ? isCommuteComparison(url) : isChargingDestination(url))) return
+      const allowed = payload.kind === 'commute' ? isCommuteComparison(url)
+        : payload.kind === 'public-fee' ? isPublicFeeReview(url) : isChargingDestination(url)
+      if (url.origin !== self.location.origin || !allowed) return
       await self.registration.showNotification(notification.title, {
         body: notification.body,
         badge: '/icons/badge-72.png',
-        data: { url: `${url.pathname}${url.search}` },
+        data: { url: pathForNotification(url) },
       })
     } catch {
       // An expired session or revoked consent must not reveal recommendation details.
@@ -62,8 +74,9 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     try {
       const url = new URL(event.notification.data?.url, self.location.origin)
-      if (url.origin === self.location.origin && (isChargingDestination(url) || isCommuteComparison(url))) {
-        await self.clients.openWindow(`${url.pathname}${url.search}`)
+      if (url.origin === self.location.origin &&
+        (isChargingDestination(url) || isCommuteComparison(url) || isPublicFeeReview(url))) {
+        await self.clients.openWindow(pathForNotification(url))
       }
     } catch {
       // Old or malformed notification data is not a navigation target.
