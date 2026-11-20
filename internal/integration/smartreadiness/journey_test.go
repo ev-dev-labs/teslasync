@@ -468,6 +468,7 @@ func TestTripLegsThroughWorkerAndPrivateHandlers(t *testing.T) {
 	}
 	got := items("subject-a")
 	if len(got) != 1 || got[0].Evidence[0].ChargingReadiness == nil ||
+		got[0].NavigationPath == nil || *got[0].NavigationPath != "/settings/smart-charging?vehicle_id=7" ||
 		got[0].Evidence[0].ChargingReadiness.TripProjection == nil ||
 		got[0].Evidence[0].ChargingReadiness.TripProjection.DestinationLowPct != 20 ||
 		got[0].Evidence[0].ChargingReadiness.TripProjection.ReturnHighPct == nil ||

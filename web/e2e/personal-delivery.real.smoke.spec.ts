@@ -162,8 +162,16 @@ for (const variant of [
     const inputTime = (ms: number) => new Date(ms).toISOString().slice(0, 16)
     await page.getByLabel(/Check from/).fill(inputTime(Date.now() - 10 * 60_000))
     await page.getByLabel(/Planned departure/).fill(inputTime(Date.now() + 6 * 60 * 60_000))
-    await page.getByLabel(/Estimated round-trip use, low/).fill('35')
-    await page.getByLabel(/Estimated round-trip use, high/).fill('45')
+    if (variant.name === 'desktop') {
+      await page.getByRole('switch', { name: 'Estimate outbound and return separately' }).click()
+      await page.getByLabel(/Outbound use, low/).fill('20')
+      await page.getByLabel(/Outbound use, high/).fill('25')
+      await page.getByLabel(/Return use, low/).fill('20')
+      await page.getByLabel(/Return use, high/).fill('30')
+    } else {
+      await page.getByLabel(/Estimated round-trip use, low/).fill('35')
+      await page.getByLabel(/Estimated round-trip use, high/).fill('45')
+    }
     await page.getByLabel(/Desired return reserve/).fill('20')
     await page.getByRole('switch', { name: 'Enable readiness checks for this plan' }).click()
     await page.getByRole('button', { name: 'Save plan' }).click()
@@ -192,8 +200,24 @@ for (const variant of [
     await waitForHarnessReady(next, nextApi, { initialRenderTimeoutMs: 30_000 })
     const card = next.getByRole('article', { name: 'Plug in before your planned trip' })
     await expect(card).toBeVisible()
-    await card.getByRole('button', { name: 'Snooze for 1 hour' }).click()
-    await expect(card).toHaveCount(0)
+    if (variant.name === 'desktop') {
+      await expect(card).toContainText(/estimated charge at the destination is 20(?:\.0+)?-25(?:\.0+)?%/)
+      await expect(card).toContainText(/estimated return charge is 0(?:\.0+)?-5(?:\.0+)?%/)
+      await card.getByRole('button', { name: 'Open source' }).click()
+      await expect(next).toHaveURL(/\/settings\/smart-charging\?vehicle_id=7$/)
+      await next.getByRole('button', { name: 'Record or update destination charging' }).click()
+      await next.getByLabel(/Planned charge added at destination/).fill('35')
+      await next.getByRole('button', { name: 'Save plan' }).click()
+      await expect(next.getByText(/Planned destination charge: 35(?:\.0+)?% added; not confirmed/)).toBeVisible()
+      expect((await next.request.post(`${origin}/__fixture/process`)).status()).toBe(204)
+      expect(await (await next.request.get(`${origin}/__fixture/latest-push`)).json()).toEqual(push)
+      await next.goto('/action-center?vehicle_id=7')
+      await waitForHarnessReady(next, nextApi)
+      await expect(card).toHaveCount(0)
+    } else {
+      await card.getByRole('button', { name: 'Snooze for 1 hour' }).click()
+      await expect(card).toHaveCount(0)
+    }
     await assertMockApiComplete(next, nextApi)
   })
 }

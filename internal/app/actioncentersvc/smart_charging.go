@@ -32,7 +32,7 @@ func (p smartChargingProvider) Recommendations(
 	for _, row := range rows {
 		observedAt := row.Decision.ObservedAt.UTC()
 		sourceKey := fmt.Sprintf("charging_plan:%d", row.Plan.ID)
-		path := fmt.Sprintf("/settings?vehicle_id=%d#smart-charging", row.Plan.VehicleID)
+		path := fmt.Sprintf("/settings/smart-charging?vehicle_id=%d", row.Plan.VehicleID)
 		evidenceKind := "charging_readiness"
 		title := "Plug in before your planned trip"
 		rationale := "Fresh parked and disconnected signals place the vehicle inside the selected charging location."
@@ -53,7 +53,6 @@ func (p smartChargingProvider) Recommendations(
 		var scheduledStartAt *time.Time
 		var scheduledPowerCeilingW *float64
 		if overlap := row.Decision.DepartureOverlap; overlap != nil {
-			path = fmt.Sprintf("/settings/smart-charging?vehicle_id=%d", row.Plan.VehicleID)
 			title = "Service appointment overlaps your planned departure"
 			rationale = "The service window you entered includes the saved departure."
 			basis = []string{"User-entered service appointment and departure", "Fresh parked gear observation"}

@@ -418,7 +418,7 @@ func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
 	}
 }
 
-func TestTripReviewUsesVerifiedPrivateDelivery(t *testing.T) {
+func TestTripReviewStaysInAppUntilThereIsAnActionAtTheChosenCharger(t *testing.T) {
 	j := newChargingDeliveryJourney(t, nil)
 	j.enroll("subject-a", "https://push.example.invalid/device-a")
 	j.enroll("subject-b", "https://push.example.invalid/device-b")
@@ -429,23 +429,42 @@ func TestTripReviewUsesVerifiedPrivateDelivery(t *testing.T) {
 		ReturnUseLowPct: 90, ReturnUseHighPct: 95, DestinationChargePct: &plannedCharge,
 	}
 	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
-	if rec.Code != http.StatusCreated {
+	var created struct {
+		Data readiness.Plan `json:"data"`
+	}
+	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &created) != nil {
 		t.Fatalf("create trip review plan: %d %s", rec.Code, rec.Body.String())
+	}
+	j.process()
+	cards, err := j.readiness.ListCandidates(j.ctx, "subject-a", nil, j.now, 10)
+	if err != nil || len(cards) != 1 || cards[0].Decision.Kind != readiness.DecisionTripReview {
+		t.Fatalf("unverified stop should remain available for private review: %+v, %v", cards, err)
+	}
+	if messages := j.sender.messages(); len(messages) != 2 {
+		t.Fatalf("unverified stop sent a push beyond enrollment: %d messages", len(messages))
+	}
+
+	plan.TripLegs.ReturnUseLowPct = 20
+	plan.TripLegs.ReturnUseHighPct = 30
+	plan.TripLegs.DestinationChargePct = nil
+	path := "/smart-charging/plans/" + strconv.FormatInt(created.Data.ID, 10)
+	if rec := j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+		t.Fatalf("save trip that can benefit from plugging in: %d %s", rec.Code, rec.Body.String())
 	}
 	j.process()
 	messages := j.sender.messages()
 	if len(messages) != 3 || messages[2].endpoint != "https://push.example.invalid/device-a" {
-		t.Fatalf("trip review sent %d messages to the wrong recipient", len(messages))
+		t.Fatalf("actionable shortfall sent %d messages or routed to the wrong recipient", len(messages))
 	}
 	token := j.claimToken()
 	if rec := j.claim("subject-b", token); rec.Code != http.StatusNotFound {
-		t.Fatalf("foreign subject claimed a trip review: %d", rec.Code)
+		t.Fatalf("foreign subject claimed a trip shortfall: %d", rec.Code)
 	}
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusOK {
-		t.Fatalf("owner could not claim a trip review: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("owner could not claim a trip shortfall: %d %s", rec.Code, rec.Body.String())
 	}
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusNotFound {
-		t.Fatalf("trip review token was replayed: %d", rec.Code)
+		t.Fatalf("trip shortfall token was replayed: %d", rec.Code)
 	}
 }
 

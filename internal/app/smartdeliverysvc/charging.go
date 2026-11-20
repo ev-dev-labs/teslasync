@@ -185,7 +185,15 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 }
 
 func allowsChargingDelivery(candidate readinessport.Candidate) bool {
-	return candidate.Decision.Kind != readiness.DecisionDepartureOverlap || candidate.Plan.DepartureOverlapPush
+	switch candidate.Decision.Kind {
+	case readiness.DecisionTripReview:
+		// The estimate calls for another stop, but we have not verified one the driver can use.
+		return false
+	case readiness.DecisionDepartureOverlap:
+		return candidate.Plan.DepartureOverlapPush
+	default:
+		return true
+	}
 }
 
 func (s *Service) inQuietHours(ctx context.Context, subject, severity string, now time.Time) (bool, error) {

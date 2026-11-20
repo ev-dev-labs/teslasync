@@ -38,6 +38,10 @@ Open **Notifications → Smart notifications** in the sidebar. On a phone, open
   leaves too little time to charge before departure. The limit is not measured
   power. Pausing, snoozing, or deleting the plan stops its current advice.
   Nothing changes the vehicle schedule, charging current, or a place's prices.
+  Select **Estimate outbound and return separately** to see a range for each
+  leg and record planned destination charging. This is an assumption, not a
+  confirmed charge. Advice that depends on finding another stop stays in
+  Action Center; it does not push an unverified stop to your browser.
   In **Departure conflicts**, enter a service or software install window you
   have confirmed. If it overlaps departure and the car is confirmed parked,
   Action Center links to the plan or software page so you can review it.
