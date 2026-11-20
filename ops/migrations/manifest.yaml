@@ -734,3 +734,18 @@ migrations:
     irreversible_justification: Explicit down deletes commute browser preferences and attempt history; it retains charging preferences and traffic consent.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 270
+    name: smart_commute_arrival_deadline
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries cannot display deadline decisions and could mislabel a slower alternative as faster.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and roll down before starting older API or worker binaries. Users can re-enter deadlines after reapplying; traffic consent and regular comparisons are preserved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes acquire exclusive locks and validate the replacement constraint against the short-lived decisions table.
+    reversible: false
+    irreversible_justification: Explicit down deletes the optional deadlines and their derived decisions.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

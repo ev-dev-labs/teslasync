@@ -56,6 +56,7 @@ on:
       - 'migrations/000267_smart_departure_overlap.*.sql'
       - 'migrations/000268_smart_commute_traffic_consent.*.sql'
       - 'migrations/000269_smart_commute_personal_push.*.sql'
+      - 'migrations/000270_smart_commute_arrival_deadline.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'

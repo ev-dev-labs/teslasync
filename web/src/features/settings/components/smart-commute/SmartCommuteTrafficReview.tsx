@@ -7,6 +7,7 @@ import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback
 import { Button, Input, Select, Text, Toggle } from '@/components/ui'
 import { useDataState } from '@/hooks/useDataState'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { formatCommuteClock, parseCommuteClock } from '@/lib/smartCommuteDisplay'
 import type { SmartCommuteRoutine } from '@/types/smartCommute'
 
 interface Props {
@@ -32,6 +33,10 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
   const [driveId, setDriveId] = useState('')
   const [lead, setLead] = useState(String((routine.traffic_consent?.lead_s ?? 900) / 60))
   const [minimum, setMinimum] = useState(String((routine.traffic_consent?.min_savings_s ?? 480) / 60))
+  const [deadline, setDeadline] = useState(() => {
+    const saved = routine.traffic_consent?.arrival_deadline_s
+    return saved == null ? '' : formatCommuteClock(saved)
+  })
   const [allow, setAllow] = useState(false)
   const options = (history.data ?? []).filter((row) => row.vehicleId === routine.vehicle_id && row.endTs)
     .map((row) => ({
@@ -43,8 +48,11 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
   const reviewed = preview.data?.data
   const leadMinutes = Number(lead)
   const minimumMinutes = Number(minimum)
+  const deadlineS = parseCommuteClock(deadline)
+  const nextArrivalS = deadlineS == null ? null : (deadlineS - routine.departure_s + 86_400) % 86_400
+  const validDeadline = deadline === '' || (nextArrivalS != null && nextArrivalS > 0 && nextArrivalS <= 21_600)
   const validTiming = Number.isInteger(leadMinutes) && leadMinutes >= 5 && leadMinutes <= 60 &&
-    Number.isInteger(minimumMinutes) && minimumMinutes >= 1 && minimumMinutes <= 60
+    Number.isInteger(minimumMinutes) && minimumMinutes >= 1 && minimumMinutes <= 60 && validDeadline
   const trace = reviewed?.trace ?? []
 
   return (
@@ -98,6 +106,17 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
             <Input type="number" label={t('smartCommute.traffic.minimum', 'Minimum time saving in minutes')}
               min={1} max={60} step={1} value={minimum} disabled={disabled} onChange={(event) => setMinimum(event.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Input type="time" label={t('smartCommute.traffic.deadline.input', 'Arrival deadline (optional)')}
+              value={deadline} disabled={disabled} aria-invalid={!validDeadline}
+              onChange={(event) => setDeadline(event.target.value)} />
+            <Text as="p" variant="bodySm">
+              {t('smartCommute.traffic.deadline.help', 'Set a time within six hours after departure in {{zone}}, or leave it blank. This stays in TeslaSync and does not require calendar access.', { zone: routine.time_zone })}
+            </Text>
+            <Text as="p" variant="bodySm">
+              {t('smartCommute.traffic.deadline.disclosure', 'If an earlier departure may help, TeslaSync also asks HERE for an estimate at that departure time. The deadline itself is not sent.')}
+            </Text>
+          </div>
           <Toggle label={t('smartCommute.traffic.allow', 'Allow sharing this trace with HERE for this routine')}
             checked={allow} disabled={disabled} onChange={setAllow} />
         </div>
@@ -109,6 +128,7 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
             void onChange({ kind: 'trafficConsent', id: routine.id, traffic: {
               drive_id: reviewed.drive_id, fingerprint: reviewed.fingerprint,
               lead_s: leadMinutes * 60, min_savings_s: minimumMinutes * 60, share_with_here: true,
+              ...(deadlineS != null ? { arrival_deadline_s: deadlineS } : {}),
             } }).then((saved) => { if (saved) onClose() })
           }}>
           {t('smartCommute.traffic.enable', 'Enable traffic checks')}

@@ -73,17 +73,21 @@ func TestRepresentativeTraceRequiresOwnerReviewAndCanBeRevoked(t *testing.T) {
 	expectStatus(t, f.request(t, http.MethodPut, route+"/traffic-consent", owner, consent), http.StatusConflict)
 	consent["fingerprint"] = review.Fingerprint
 	expectStatus(t, f.request(t, http.MethodPut, route+"/traffic-consent", "other-subject", consent), http.StatusNotFound)
+	consent["arrival_deadline_s"] = 8 * 3600
+	expectStatus(t, f.request(t, http.MethodPut, route+"/traffic-consent", owner, consent), http.StatusBadRequest)
+	consent["arrival_deadline_s"] = 8*3600 + 38*60
 	expectStatus(t, f.request(t, http.MethodPut, route+"/traffic-consent", owner, consent), http.StatusNoContent)
 	var checkAt, departAt time.Time
-	var persistedPoints int
+	var persistedPoints, persistedDeadline int
 	if err := f.db.Pool.QueryRow(ctx, `
-		SELECT check_at, departure_at, cardinality(latitudes)
+		SELECT check_at, departure_at, cardinality(latitudes), arrival_deadline_s
 		FROM smart_commute_traffic_consent WHERE routine_id = $1`, routineID).
-		Scan(&checkAt, &departAt, &persistedPoints); err != nil {
+		Scan(&checkAt, &departAt, &persistedPoints, &persistedDeadline); err != nil {
 		t.Fatal(err)
 	}
-	if !checkAt.Equal(f.now) || departAt.Sub(checkAt) != 15*time.Minute || persistedPoints != len(review.Trace) {
-		t.Fatalf("incorrect saved check or disclosure: %s %s, %d points", checkAt, departAt, persistedPoints)
+	if !checkAt.Equal(f.now) || departAt.Sub(checkAt) != 15*time.Minute || persistedPoints != len(review.Trace) ||
+		persistedDeadline != consent["arrival_deadline_s"] {
+		t.Fatalf("incorrect saved check or disclosure: %s %s, %d points, deadline %d", checkAt, departAt, persistedPoints, persistedDeadline)
 	}
 	expectStatus(t, f.request(t, http.MethodDelete, route+"/traffic-consent?vehicle_id=42", "other-subject", nil), http.StatusNotFound)
 	expectStatus(t, f.request(t, http.MethodDelete, route+"/traffic-consent?vehicle_id=42", owner, nil), http.StatusNoContent)
@@ -108,12 +112,14 @@ func TestRepresentativeTraceRequiresOwnerReviewAndCanBeRevoked(t *testing.T) {
 	assertRevoked()
 	expectStatus(t, f.request(t, http.MethodPost, route+"/traffic-preview", owner, previewBody), http.StatusNotFound)
 
-	down, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000268_smart_commute_traffic_consent.down.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.db.Pool.Exec(ctx, string(down)); err != nil {
-		t.Fatalf("roll back consent migration: %v", err)
+	for _, migration := range []string{"000270_smart_commute_arrival_deadline", "000268_smart_commute_traffic_consent"} {
+		down, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", migration+".down.sql"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.db.Pool.Exec(ctx, string(down)); err != nil {
+			t.Fatalf("roll back %s: %v", migration, err)
+		}
 	}
 	var sourceRetained bool
 	if err := f.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM drives WHERE id = $1)`, driveID).

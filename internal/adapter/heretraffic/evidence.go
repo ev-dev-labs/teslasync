@@ -178,10 +178,10 @@ func (flow flowQuality) usable() bool {
 	return !flow.closed() && inRange(flow.Confidence, minLiveConfidence, 1) && inRange(flow.SpeedMps, 0.01, 100)
 }
 
-func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Context) error, usual, alternative routeEstimate) (time.Time, error) {
+func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Context) error, routes []routeEstimate) (time.Time, []bool, error) {
 	known := make(map[string]bool)
 	var requested []flowSegment
-	for _, route := range []routeEstimate{usual, alternative} {
+	for _, route := range routes {
 		for _, span := range route.spans {
 			if w := span.ref.wire; w != "" && !known[w] {
 				known[w] = true
@@ -197,11 +197,11 @@ func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Contex
 		request.In.Type, request.In.Segments = "segmentRef", refs
 		var response flowResponse
 		if err := c.call(ctx, authorize, http.MethodPost, c.trafficURL+"/flow", nil, request, &response); err != nil {
-			return time.Time{}, err
+			return time.Time{}, nil, err
 		}
 		now := c.now().UTC()
 		if response.SourceUpdated.After(now) || !response.SourceUpdated.After(now.Add(-flowFreshness)) {
-			return time.Time{}, ErrInsufficientEvidence
+			return time.Time{}, nil, ErrInsufficientEvidence
 		}
 		if observedAt.IsZero() || response.SourceUpdated.Before(observedAt) {
 			observedAt = response.SourceUpdated.UTC()
@@ -225,11 +225,14 @@ func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Contex
 			}
 		}
 	}
-	if !observedAt.After(c.now().UTC().Add(-flowFreshness)) ||
-		!routeCovers(usual, live, closed) || !routeCovers(alternative, live, closed) {
-		return time.Time{}, ErrInsufficientEvidence
+	if !observedAt.After(c.now().UTC().Add(-flowFreshness)) {
+		return time.Time{}, nil, ErrInsufficientEvidence
 	}
-	return observedAt, nil
+	covered := make([]bool, len(routes))
+	for i, route := range routes {
+		covered[i] = routeCovers(route, live, closed)
+	}
+	return observedAt, covered, nil
 }
 
 func routeCovers(route routeEstimate, live, closed map[string][]segmentRef) bool {

@@ -46,6 +46,12 @@ func TestPrivateCommuteBrowserJourney(t *testing.T) {
 
 func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 	requireCommuteBrowser(t)
+	t.Run("compare", func(t *testing.T) { runTrafficBrowserJourney(t, false) })
+	t.Run("arrival_deadline", func(t *testing.T) { runTrafficBrowserJourney(t, true) })
+}
+
+func runTrafficBrowserJourney(t *testing.T, withDeadline bool) {
+	t.Helper()
 	live := &trafficLiveFixture{gear: "P"}
 	var outbound atomic.Int64
 	var personalDelivery *smartdeliverysvc.Service
@@ -53,13 +59,25 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 		if err := authorize(ctx); err != nil {
 			return domain.TrafficComparison{}, err
 		}
-		if len(query.Trace) < 3 || len(query.Trace) >= 21 || query.DepartureAt.Sub(live.now) != 15*time.Minute {
+		if len(query.Trace) < 3 || len(query.Trace) >= 21 {
 			return domain.TrafficComparison{}, errors.New("unreviewed trace or departure")
+		}
+		usualS, alternativeS := int64(43*60), int64(29*60)
+		switch {
+		case query.DepartureAt.Sub(live.now) == 15*time.Minute && query.RequireOfferedCoverage == withDeadline:
+			if withDeadline {
+				alternativeS = 46 * 60
+			}
+		case withDeadline && query.DepartureAt.Sub(live.now) == 7*time.Minute && !query.RequireOfferedCoverage:
+			usualS, alternativeS = 41*60, 44*60
+		default:
+			return domain.TrafficComparison{}, errors.New("unexpected forecast departure")
 		}
 		outbound.Add(1)
 		return domain.TrafficComparison{
-			Usual:       domain.TrafficEstimate{DurationS: 43 * 60, FlowUpdatedAt: live.now.Add(-time.Minute)},
-			Alternative: domain.TrafficEstimate{DurationS: 29 * 60, FlowUpdatedAt: live.now.Add(-time.Minute)},
+			Usual:                 domain.TrafficEstimate{DurationS: usualS, FlowUpdatedAt: live.now.Add(-time.Minute)},
+			Alternative:           domain.TrafficEstimate{DurationS: alternativeS, FlowUpdatedAt: live.now.Add(-time.Minute)},
+			AlternativesQualified: query.RequireOfferedCoverage,
 		}, nil
 	})
 	f := newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
@@ -95,6 +113,7 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"drive": drive, "now": f.now, "outbound": outbound.Load(), "pushes": count, "latest_push": payload,
+				"with_deadline": withDeadline,
 			})
 		case r.URL.Path == "/__fixture/traffic" && r.Method == http.MethodPost:
 			if _, err := f.commute.ProcessTrafficChecks(r.Context(), 5); err != nil {

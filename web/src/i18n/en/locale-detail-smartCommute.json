@@ -44,7 +44,17 @@
       "actionSummary": "HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.",
       "coverage": "Both routes had fresh directional HERE Traffic Flow coverage",
       "actionTitle": "A faster route is available before your departure",
-      "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold."
+      "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+      "deadline": {
+        "input": "Arrival deadline (optional)",
+        "help": "Set a time within six hours after departure in {{zone}}, or leave it blank. This stays in TeslaSync and does not require calendar access.",
+        "disclosure": "If an earlier departure may help, TeslaSync also asks HERE for an estimate at that departure time. The deadline itself is not sent.",
+        "alternativeEta": "Alternative route: {{minutes}} min",
+        "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.",
+        "limitations": "TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.",
+        "title": "Leave earlier to make your arrival deadline",
+        "rationale": "Even the fastest qualifying estimate misses your deadline at the planned departure time."
+      }
     },
     "delivery": {
       "toggle": "Allow commute traffic notifications on {{device}}",

@@ -16,33 +16,37 @@ type TrafficPreview struct {
 }
 
 type TrafficConsentInput struct {
-	VehicleID     int64
-	RoutineID     int64
-	DriveID       int64
-	Fingerprint   string
-	ShareWithHERE bool
-	LeadS         int
-	MinSavingsS   int64
+	VehicleID        int64
+	RoutineID        int64
+	DriveID          int64
+	Fingerprint      string
+	ShareWithHERE    bool
+	LeadS            int
+	MinSavingsS      int64
+	ArrivalDeadlineS *int
 }
 
 type TrafficConsent struct {
-	Trace       []Point
-	LeadS       int
-	MinSavingsS int64
-	CheckAt     time.Time
-	DepartureAt time.Time
+	Trace            []Point
+	LeadS            int
+	MinSavingsS      int64
+	ArrivalDeadlineS *int
+	CheckAt          time.Time
+	DepartureAt      time.Time
 }
 
 type TrafficConsentSummary struct {
-	LeadS       int   `json:"lead_s"`
-	MinSavingsS int64 `json:"min_savings_s"`
-	CanSkip     bool  `json:"can_skip_today"`
+	LeadS            int   `json:"lead_s"`
+	MinSavingsS      int64 `json:"min_savings_s"`
+	CanSkip          bool  `json:"can_skip_today"`
+	ArrivalDeadlineS *int  `json:"arrival_deadline_s,omitempty"`
 }
 
 type TrafficQuery struct {
 	// Trace is the user-approved representative route, not automatically selected drive history.
-	Trace       []Point
-	DepartureAt time.Time
+	Trace                  []Point
+	DepartureAt            time.Time
+	RequireOfferedCoverage bool
 }
 
 type TrafficEstimate struct {
@@ -51,22 +55,26 @@ type TrafficEstimate struct {
 }
 
 type TrafficComparison struct {
-	Usual       TrafficEstimate
-	Alternative TrafficEstimate
+	Usual                 TrafficEstimate
+	Alternative           TrafficEstimate
+	AlternativesQualified bool
 }
 
 type TrafficDecision struct {
-	OccurrenceID string    `json:"occurrence_id"`
-	RoutineID    int64     `json:"routine_id"`
-	VehicleID    int64     `json:"vehicle_id"`
-	RoutineName  string    `json:"routine_name"`
-	VehicleName  string    `json:"vehicle_name"`
-	DepartureAt  time.Time `json:"departure_at"`
-	UsualS       int64     `json:"usual_s"`
-	AlternativeS int64     `json:"alternative_s"`
-	ObservedAt   time.Time `json:"observed_at"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	Origin       Point     `json:"-"`
+	OccurrenceID      string     `json:"occurrence_id"`
+	RoutineID         int64      `json:"routine_id"`
+	VehicleID         int64      `json:"vehicle_id"`
+	RoutineName       string     `json:"routine_name"`
+	VehicleName       string     `json:"vehicle_name"`
+	TimeZone          string     `json:"time_zone"`
+	DepartureAt       time.Time  `json:"departure_at"`
+	UsualS            int64      `json:"usual_s"`
+	AlternativeS      int64      `json:"alternative_s"`
+	ObservedAt        time.Time  `json:"observed_at"`
+	ExpiresAt         time.Time  `json:"expires_at"`
+	ArrivalDeadlineAt *time.Time `json:"arrival_deadline_at,omitempty"`
+	LatestDepartureAt *time.Time `json:"latest_departure_at,omitempty"`
+	Origin            Point      `json:"-"`
 }
 
 func TrafficOccurrenceID(routineID int64, departureAt time.Time) string {

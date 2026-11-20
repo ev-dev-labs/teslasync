@@ -206,18 +206,31 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     ? recommendation.evidence.find((item) => item.kind === 'commute_traffic')?.commute_traffic
     : undefined;
   if (traffic) {
+    const deadline = traffic.arrival_deadline_at && traffic.latest_departure_at
+      ? t('smartCommute.traffic.deadline.recommendation', 'Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.', {
+        latest: formatDateTime(traffic.latest_departure_at, { tz: traffic.time_zone }),
+        deadline: formatDateTime(traffic.arrival_deadline_at, { tz: traffic.time_zone }),
+      })
+      : null;
     const summary = t('smartCommute.traffic.actionSummary', 'HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.', {
       usual: fmtNumber(Math.round(traffic.usual_s / 60)), alternative: fmtNumber(Math.round(traffic.alternative_s / 60)),
     });
     const coverage = t('smartCommute.traffic.coverage', 'Both routes had fresh directional HERE Traffic Flow coverage');
     return {
       ...recommendation,
-      title: t('smartCommute.traffic.actionTitle', 'A faster route is available before your departure'),
-      summary,
-      rationale: t('smartCommute.traffic.rationale', 'Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.'),
+      title: deadline
+        ? t('smartCommute.traffic.deadline.title', 'Leave earlier to make your arrival deadline')
+        : t('smartCommute.traffic.actionTitle', 'A faster route is available before your departure'),
+      summary: deadline ? `${deadline} ${summary}` : summary,
+      rationale: deadline
+        ? t('smartCommute.traffic.deadline.rationale', 'Even the fastest qualifying estimate misses your deadline at the planned departure time.')
+        : t('smartCommute.traffic.rationale', 'Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.'),
       confidence: { ...recommendation.confidence, basis: [coverage] },
       evidence: recommendation.evidence.map((item) => item.commute_traffic ? { ...item, summary } : item),
-      limitations: [t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.')],
+      limitations: [
+        t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.'),
+        ...(deadline ? [t('smartCommute.traffic.deadline.limitations', 'TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.')] : []),
+      ],
     };
   }
   const drive = recommendation.source_feature === 'smart_commute'

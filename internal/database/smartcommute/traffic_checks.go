@@ -27,14 +27,14 @@ func (r *Repository) ClaimTrafficCheck(ctx context.Context, now time.Time, share
 		var latitudes, longitudes []float64
 		routine, err := scanRoutineWithExtras(tx.QueryRow(ctx, `
 			SELECT `+routineColumns+`, c.id, r.subject, s.time_zone, s.updated_at,
-			       c.latitudes, c.longitudes, c.lead_s, c.min_savings_s, c.check_at, c.departure_at
+			       c.latitudes, c.longitudes, c.lead_s, c.min_savings_s, c.check_at, c.departure_at, c.arrival_deadline_s
 			`+trafficScope+`
 			WHERE c.check_at <= $1 AND (r.subject = $2) = $3
 			ORDER BY c.check_at, c.id
 			LIMIT 1 FOR UPDATE OF c SKIP LOCKED`, now, personal.OpenSubject, sharedOpenMode),
 			&check.ConsentID, &check.Subject, &check.Settings.TimeZone, &check.SettingsUpdatedAt,
 			&latitudes, &longitudes, &check.Consent.LeadS, &check.Consent.MinSavingsS,
-			&check.Consent.CheckAt, &check.Consent.DepartureAt)
+			&check.Consent.CheckAt, &check.Consent.DepartureAt, &check.Consent.ArrivalDeadlineS)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -146,17 +146,20 @@ func (r *Repository) RecordTrafficDecision(
 ) (bool, error) {
 	tag, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO smart_commute_traffic_decisions
-		  (consent_id, departure_at, settings_updated_at, usual_s, alternative_s, observed_at, expires_at)
-		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10
+		  (consent_id, departure_at, settings_updated_at, usual_s, alternative_s, observed_at, expires_at,
+		   arrival_deadline_at, latest_departure_at)
+		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13
 		`+claimedTrafficScope+` AND $10::timestamptz > $11
 		ON CONFLICT (consent_id) DO UPDATE SET
 		    departure_at = EXCLUDED.departure_at, settings_updated_at = EXCLUDED.settings_updated_at,
 		    usual_s = EXCLUDED.usual_s, alternative_s = EXCLUDED.alternative_s,
-		    observed_at = EXCLUDED.observed_at, expires_at = EXCLUDED.expires_at
+		    observed_at = EXCLUDED.observed_at, expires_at = EXCLUDED.expires_at,
+		    arrival_deadline_at = EXCLUDED.arrival_deadline_at, latest_departure_at = EXCLUDED.latest_departure_at
 		WHERE smart_commute_traffic_decisions.departure_at < EXCLUDED.departure_at`,
 		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
 		check.SettingsUpdatedAt, check.Consent.DepartureAt, decision.UsualS,
-		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now)
+		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now,
+		decision.ArrivalDeadlineAt, decision.LatestDepartureAt)
 	if err != nil {
 		return false, fmt.Errorf("persist claimed commute comparison: %w", err)
 	}
@@ -167,8 +170,9 @@ func (r *Repository) ListTrafficDecisions(
 	ctx context.Context, subject string, vehicleID *int64, now time.Time, limit int,
 ) ([]domain.TrafficDecision, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT r.id, r.vehicle_id, r.name, v.display_name, d.departure_at,
-		       d.usual_s, d.alternative_s, d.observed_at, d.expires_at, r.origin_latitude, r.origin_longitude
+		SELECT r.id, r.vehicle_id, r.name, v.display_name, r.time_zone, d.departure_at,
+		       d.usual_s, d.alternative_s, d.observed_at, d.expires_at, r.origin_latitude, r.origin_longitude,
+		       d.arrival_deadline_at, d.latest_departure_at
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
@@ -180,8 +184,9 @@ func (r *Repository) ListTrafficDecisions(
 	}
 	result, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.TrafficDecision, error) {
 		var item domain.TrafficDecision
-		err := row.Scan(&item.RoutineID, &item.VehicleID, &item.RoutineName, &item.VehicleName, &item.DepartureAt,
-			&item.UsualS, &item.AlternativeS, &item.ObservedAt, &item.ExpiresAt, &item.Origin.Latitude, &item.Origin.Longitude)
+		err := row.Scan(&item.RoutineID, &item.VehicleID, &item.RoutineName, &item.VehicleName, &item.TimeZone, &item.DepartureAt,
+			&item.UsualS, &item.AlternativeS, &item.ObservedAt, &item.ExpiresAt, &item.Origin.Latitude, &item.Origin.Longitude,
+			&item.ArrivalDeadlineAt, &item.LatestDepartureAt)
 		return item, err
 	})
 	if err != nil {

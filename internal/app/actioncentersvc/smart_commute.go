@@ -100,17 +100,27 @@ func trafficCandidate(row commute.TrafficDecision) domain.Candidate {
 	path := commute.TrafficComparisonPath(row.VehicleID, row.OccurrenceID)
 	summary := fmt.Sprintf("HERE estimates %d minutes on the usual route and %d minutes on an alternative.",
 		(row.UsualS+30)/60, (row.AlternativeS+30)/60)
+	title := "A faster route is available before your departure"
+	rationale := "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold."
+	if row.LatestDepartureAt != nil {
+		title = "Leave earlier to make your arrival deadline"
+		rationale = "Even the fastest qualifying estimate misses your deadline at the planned departure time."
+	}
 	return domain.Candidate{
 		SourceFeature: domain.SourceSmartCommute, SourceKey: key, DedupKey: key,
 		Vehicle: &domain.VehicleRef{ID: row.VehicleID, DisplayName: row.VehicleName},
-		Title:   "A faster route is available before your departure", Summary: summary,
-		Rationale: "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+		Title:   title, Summary: summary,
+		Rationale: rationale,
 		Priority:  domain.PriorityMedium, Severity: domain.SeverityInfo, BaseConfidence: 0.8,
 		ConfidenceBasis: []string{"Both routes had fresh directional HERE Traffic Flow coverage"},
 		Evidence: []domain.EvidenceItem{{
 			ID: key, Kind: "commute_traffic", Summary: summary, ObservedAt: &row.ObservedAt,
-			Provenance:     domain.EvidenceProvenance{Source: "here_routing_traffic", RecordID: key},
-			CommuteTraffic: &domain.CommuteTrafficEvidence{UsualS: row.UsualS, AlternativeS: row.AlternativeS},
+			Provenance: domain.EvidenceProvenance{Source: "here_routing_traffic", RecordID: key},
+			CommuteTraffic: &domain.CommuteTrafficEvidence{
+				UsualS: row.UsualS, AlternativeS: row.AlternativeS,
+				ArrivalDeadlineAt: row.ArrivalDeadlineAt, LatestDepartureAt: row.LatestDepartureAt,
+				TimeZone: row.TimeZone,
+			},
 		}},
 		SafeActions: []domain.ActionType{domain.ActionNavigate}, NavigationPath: &path,
 		ObservedAt: &row.ObservedAt, FreshFor: 5 * time.Minute, AgingFor: 5 * time.Minute, ExpiresAt: row.ExpiresAt,

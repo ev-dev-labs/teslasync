@@ -73,6 +73,18 @@ Missing or stale live state, different origin, quiet hours, unavailable or
 stale traffic, and a saving below the configured minimum suppress the
 comparison. Treat all displayed durations as estimates.
 
+For a confirmed routine, you can also enter an optional **Arrival deadline**
+in its local time zone, without connecting a calendar. If the usual route
+and all qualifying routes offered by HERE would miss it at the planned
+departure, TeslaSync estimates an earlier departure with a three-minute
+buffer. It asks HERE to check that earlier departure time using the same
+approved trace, not the deadline itself. Advice is suppressed if the earlier
+estimate cannot meet the deadline, route coverage is incomplete, or there
+is too little time left to leave. This is a forecast, not an arrival guarantee.
+When both types of advice apply they share one comparison and at most one
+personal push. To roll back this optional deadline feature, stop the worker
+and roll down `000270` before starting older binaries.
+
 **Skip today** suppresses the current occurrence. **Pause** suspends checks
 without deleting the approved trace. **Disconnect HERE**, turning off local
 analysis or Smart Commute, and editing or deleting the routine revoke the
@@ -114,8 +126,8 @@ pause affected plans and stop the worker before applying the corresponding
 down migrations in reverse order (`000267`, `000266`, `000265`). They remove
 the recorded windows, limits, and start times and invalidate affected
 notifications. Leave the schema applied if you need to preserve those inputs.
-Before reverting to a release without commute push, stop the worker and roll
-down `000269`. That removes commute device preferences and attempts, not the
+Before reverting to a release without commute push, stop the worker, roll
+down later migrations first, then roll down `000269`. That removes commute device preferences and attempts, not the
 verified devices, charging preferences, or approved traffic traces.
 
 ## Notification history and health

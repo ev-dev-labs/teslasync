@@ -13,7 +13,9 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   test.skip(process.env.SMART_COMMUTE_REAL_BACKEND !== '1', 'Covered by the real-handler private notifications job')
   const fixture = await request.get('/__fixture/traffic')
   expect(fixture.ok()).toBe(true)
-  const { drive, now } = await fixture.json() as { drive: { id: number }; now: string }
+  const { drive, now, with_deadline: withDeadline } = await fixture.json() as {
+    drive: { id: number }; now: string; with_deadline: boolean;
+  }
   const owner = 'synthetic-traffic-owner'
   const foreignSubject = 'other-synthetic-user'
   const origin = process.env.E2E_BASE_URL
@@ -98,6 +100,13 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   await expect(consent).toBeDisabled()
   expect((await getTraffic()).outbound).toBe(0)
   await page.getByRole('switch', { name: /Allow sharing this trace with HERE/ }).click()
+  if (withDeadline) {
+    const deadline = page.getByLabel('Arrival deadline (optional)')
+    await deadline.fill('08:00')
+    await expect(consent).toBeDisabled()
+    await deadline.fill('08:38')
+    await expect(page.getByText(/does not require calendar access/)).toBeVisible()
+  }
   await consent.click()
   await expect(page.getByRole('button', { name: 'Disconnect HERE' })).toBeVisible()
   await assertMockApiComplete(page, ownerAPI, { preserveServiceWorkers: true })
@@ -106,7 +115,7 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   expect((await request.post('/__fixture/traffic')).status()).toBe(204)
   expect((await request.post('/__fixture/traffic')).status()).toBe(204)
   const result = await getTraffic()
-  expect(result.outbound).toBe(1)
+  expect(result.outbound).toBe(withDeadline ? 2 : 1)
   expect(result.pushes).toBe(2)
   expect(result.latest_push?.kind).toBe('commute')
   expect(Object.keys(result.latest_push ?? {}).sort()).toEqual(['kind', 'token'])
@@ -123,9 +132,18 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   const followingAPI = await prepare(following, owner)
   await following.goto('/action-center?vehicle_id=42')
   const before = writes.length
+  await expect(following.getByText(withDeadline
+    ? 'Leave earlier to make your arrival deadline'
+    : 'A faster route is available before your departure', { exact: true })).toBeVisible()
   await following.getByRole('button', { name: 'Compare routes', exact: true }).click()
-  await expect(following.getByText('Faster alternative: 29 min', { exact: true })).toBeVisible()
-  await expect(following.getByText('Estimated saving: 14 min', { exact: true })).toBeVisible()
+  if (withDeadline) {
+    await expect(following.getByText('Alternative route: 46 min', { exact: true })).toBeVisible()
+    await expect(following.getByText(/Faster alternative|Estimated saving/)).toHaveCount(0)
+    await expect(following.getByText(/Estimated latest departure:.*7:52.*Your arrival deadline:.*8:38/i)).toBeVisible()
+  } else {
+    await expect(following.getByText('Faster alternative: 29 min', { exact: true })).toBeVisible()
+    await expect(following.getByText('Estimated saving: 14 min', { exact: true })).toBeVisible()
+  }
   await expect(following.getByText('Synthetic office · Synthetic vehicle A', { exact: true })).toBeVisible()
   expect(writes.length).toBe(before)
   const link = following.url()
@@ -138,7 +156,7 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   const foreignAPI = await prepare(foreign, foreignSubject)
   await foreign.goto(link)
   await expect(foreign.getByText(/This comparison is no longer available/)).toBeVisible()
-  await expect(foreign.getByText('Faster alternative: 29 min')).toHaveCount(0)
+  await expect(foreign.getByText(/Faster alternative|Estimated latest departure/)).toHaveCount(0)
   await assertMockApiComplete(foreign, foreignAPI, { preserveServiceWorkers: true })
   await foreign.close()
 
@@ -147,6 +165,6 @@ test('reviewed traffic check delivers one opted-in push after closing the browse
   await following.getByRole('button', { name: 'Disconnect HERE', exact: true }).click()
   await expect(following.getByRole('button', { name: 'Set up traffic checks' })).toBeVisible()
   expect((await request.post('/__fixture/traffic')).status()).toBe(204)
-  expect((await getTraffic()).outbound).toBe(1)
+  expect((await getTraffic()).outbound).toBe(withDeadline ? 2 : 1)
   await assertMockApiComplete(following, followingAPI)
 })

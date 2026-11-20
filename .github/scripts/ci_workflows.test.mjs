@@ -146,6 +146,7 @@ test('private notification browser gate uses real handlers and a disposable data
     'migrations/000267_smart_departure_overlap.*.sql',
     'migrations/000268_smart_commute_traffic_consent.*.sql',
     'migrations/000269_smart_commute_personal_push.*.sql',
+    'migrations/000270_smart_commute_arrival_deadline.*.sql',
   ]) assert.ok(paths.includes(path), `private delivery changes must trigger the browser gate: ${path}`);
 });
 

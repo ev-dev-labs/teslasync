@@ -92,7 +92,13 @@ export interface ActionCenterEvidence {
   recurring_drive?: ActionCenterRecurringDriveEvidence;
   charging_readiness?: ActionCenterChargingReadinessEvidence;
   departure_overlap?: SmartDepartureWindow & { plan_id: number; departure_at: string; kind: 'service' | 'software' };
-  commute_traffic?: { usual_s: number; alternative_s: number };
+  commute_traffic?: {
+    usual_s: number;
+    alternative_s: number;
+    arrival_deadline_at?: string;
+    latest_departure_at?: string;
+    time_zone?: string;
+  };
 }
 
 export interface ActionCenterProjectedImpact {

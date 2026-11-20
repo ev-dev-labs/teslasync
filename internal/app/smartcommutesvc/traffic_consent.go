@@ -45,12 +45,17 @@ func (s *Service) SaveTrafficConsent(ctx context.Context, subject string, input 
 	if preview.Fingerprint != input.Fingerprint {
 		return port.ErrTrafficPreviewChanged
 	}
+	if input.ArrivalDeadlineS != nil {
+		if _, ok := deadlineOffset(drive.Routine.DepartureS, *input.ArrivalDeadlineS); !ok {
+			return ErrInvalidInput
+		}
+	}
 	window, ok := nextTrafficWindow(drive.Settings, drive.Routine, input.LeadS, now)
 	if !ok {
 		return port.ErrDisabled
 	}
 	return s.repository.SaveTrafficConsent(ctx, subject, drive.Routine, domain.TrafficConsent{
-		Trace: preview.Trace, LeadS: input.LeadS, MinSavingsS: input.MinSavingsS,
+		Trace: preview.Trace, LeadS: input.LeadS, MinSavingsS: input.MinSavingsS, ArrivalDeadlineS: input.ArrivalDeadlineS,
 		CheckAt: window.checkAt, DepartureAt: window.departureAt,
 	}, now)
 }

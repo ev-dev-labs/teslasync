@@ -34,12 +34,23 @@ export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence }
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.usualEta', 'Usual route: {{minutes}} min', {
             minutes: Math.round(decision.usual_s / 60),
           })}</Text>
-          <Text as="p" variant="bodySm">{t('smartCommute.traffic.alternativeEta', 'Faster alternative: {{minutes}} min', {
-            minutes: Math.round(decision.alternative_s / 60),
-          })}</Text>
-          <Text as="p" variant="bodySm">{t('smartCommute.traffic.saving', 'Estimated saving: {{minutes}} min', {
-            minutes: Math.round((decision.usual_s - decision.alternative_s) / 60),
-          })}</Text>
+          <Text as="p" variant="bodySm">{decision.alternative_s < decision.usual_s
+            ? t('smartCommute.traffic.alternativeEta', 'Faster alternative: {{minutes}} min', { minutes: Math.round(decision.alternative_s / 60) })
+            : t('smartCommute.traffic.deadline.alternativeEta', 'Alternative route: {{minutes}} min', { minutes: Math.round(decision.alternative_s / 60) })}</Text>
+          {decision.alternative_s < decision.usual_s && (
+            <Text as="p" variant="bodySm">{t('smartCommute.traffic.saving', 'Estimated saving: {{minutes}} min', {
+              minutes: Math.round((decision.usual_s - decision.alternative_s) / 60),
+            })}</Text>
+          )}
+          {decision.arrival_deadline_at && decision.latest_departure_at && (
+            <>
+              <Text as="p" weight="semibold">{t('smartCommute.traffic.deadline.recommendation', 'Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.', {
+                latest: formatDateTime(decision.latest_departure_at, { tz: decision.time_zone }),
+                deadline: formatDateTime(decision.arrival_deadline_at, { tz: decision.time_zone }),
+              })}</Text>
+              <Text as="p" variant="bodySm">{t('smartCommute.traffic.deadline.limitations', 'TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.')}</Text>
+            </>
+          )}
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.evidence', 'HERE traffic observed {{observed}} for departure at {{departure}}.', {
             observed: formatDateTime(decision.observed_at), departure: formatDateTime(decision.departure_at),
           })}</Text>

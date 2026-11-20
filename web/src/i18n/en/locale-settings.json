@@ -3510,6 +3510,14 @@
       "alternativeEta": "Faster alternative: {{minutes}} min",
       "chooseDrive": "Choose a completed drive",
       "comparison": "Compare routes",
+      "deadline": {
+        "alternativeEta": "Alternative route: {{minutes}} min",
+        "disclosure": "If an earlier departure may help, TeslaSync also asks HERE for an estimate at that departure time. The deadline itself is not sent.",
+        "help": "Set a time within six hours after departure in {{zone}}, or leave it blank. This stays in TeslaSync and does not require calendar access.",
+        "input": "Arrival deadline (optional)",
+        "limitations": "TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.",
+        "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}."
+      },
       "disclosure": "When a check is due, HERE receives these exact coordinates and the planned departure time. It does not get the routine name, VIN, or other drives.",
       "disconnect": "Disconnect HERE",
       "driveOption": "{{time}} (drive {{id}})",

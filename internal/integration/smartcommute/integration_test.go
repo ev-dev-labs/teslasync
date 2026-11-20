@@ -111,7 +111,10 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		);`); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"000223_action_center_state.up.sql", "000259_smart_commute.up.sql", "000268_smart_commute_traffic_consent.up.sql"} {
+	for _, file := range []string{
+		"000223_action_center_state.up.sql", "000259_smart_commute.up.sql",
+		"000268_smart_commute_traffic_consent.up.sql", "000270_smart_commute_arrival_deadline.up.sql",
+	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
 		if err != nil {
 			t.Fatal(err)

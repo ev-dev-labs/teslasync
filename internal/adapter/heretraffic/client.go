@@ -106,22 +106,45 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 		return domain.TrafficComparison{}, ErrInsufficientEvidence
 	}
 	var best routeEstimate
+	var bestSimilarS int64
+	var offered []routeEstimate
+	allQualified := query.RequireOfferedCoverage
 	for _, raw := range routes.Routes {
 		candidate, valid := qualifyRoute(raw)
-		if valid && differsFrom(usual, candidate) && (best.durationS == 0 || candidate.durationS < best.durationS) {
+		if !valid {
+			allQualified = false
+			continue
+		}
+		if query.RequireOfferedCoverage {
+			offered = append(offered, candidate)
+		}
+		if !differsFrom(usual, candidate) {
+			if bestSimilarS == 0 || candidate.durationS < bestSimilarS {
+				bestSimilarS = candidate.durationS
+			}
+			continue
+		}
+		if best.durationS == 0 || candidate.durationS < best.durationS {
 			best = candidate
 		}
 	}
 	if best.durationS == 0 {
 		return domain.TrafficComparison{}, ErrInsufficientEvidence
 	}
-	observedAt, err := c.liveCoverage(ctx, authorize, usual, best)
+	observedAt, coverage, err := c.liveCoverage(ctx, authorize, append([]routeEstimate{usual, best}, offered...))
 	if err != nil {
 		return domain.TrafficComparison{}, err
 	}
+	if !coverage[0] || !coverage[1] {
+		return domain.TrafficComparison{}, ErrInsufficientEvidence
+	}
+	for _, covered := range coverage[2:] {
+		allQualified = allQualified && covered
+	}
 	return domain.TrafficComparison{
-		Usual:       domain.TrafficEstimate{DurationS: usual.durationS, FlowUpdatedAt: observedAt},
-		Alternative: domain.TrafficEstimate{DurationS: best.durationS, FlowUpdatedAt: observedAt},
+		Usual:                 domain.TrafficEstimate{DurationS: usual.durationS, FlowUpdatedAt: observedAt},
+		Alternative:           domain.TrafficEstimate{DurationS: best.durationS, FlowUpdatedAt: observedAt},
+		AlternativesQualified: allQualified && (bestSimilarS == 0 || bestSimilarS >= min(usual.durationS, best.durationS)),
 	}, nil
 }
 

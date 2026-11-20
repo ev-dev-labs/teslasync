@@ -114,12 +114,14 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		return s.observeTrafficSuppression(err)
 	}
 	var authErr error
-	comparison, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
-		Trace: check.Consent.Trace, DepartureAt: check.Consent.DepartureAt,
-	}, func(ctx context.Context) error {
+	guarded := func(ctx context.Context) error {
 		authErr = authorize(ctx)
 		return authErr
-	})
+	}
+	comparison, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
+		Trace: check.Consent.Trace, DepartureAt: check.Consent.DepartureAt,
+		RequireOfferedCoverage: check.Consent.ArrivalDeadlineS != nil,
+	}, guarded)
 	if authErr != nil {
 		return s.observeTrafficSuppression(authErr)
 	}
@@ -129,19 +131,43 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 	}
 	now := s.now()
 	window := trafficWindow{departureAt: check.Consent.DepartureAt, checkAt: check.Consent.CheckAt}
-	expiresAt, ok := trafficOpportunity(window, comparison, check.Consent.MinSavingsS, now)
-	if !ok {
+	decision := domain.TrafficDecision{
+		UsualS: comparison.Usual.DurationS, AlternativeS: comparison.Alternative.DurationS,
+		ObservedAt: minInstant(comparison.Usual.FlowUpdatedAt, comparison.Alternative.FlowUpdatedAt),
+	}
+	if check.Consent.ArrivalDeadlineS != nil && comparison.AlternativesQualified {
+		deadlineAt := arrivalDeadlineAt(window.departureAt, check.Routine, *check.Consent.ArrivalDeadlineS)
+		if deadline, ok := evaluateArrivalDeadline(window, deadlineAt, comparison, now); ok {
+			earlier, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
+				Trace: check.Consent.Trace, DepartureAt: deadline.latestAt,
+			}, guarded)
+			if authErr != nil {
+				return s.observeTrafficSuppression(authErr)
+			}
+			now = s.now()
+			if err == nil {
+				if observedAt, expiresAt, feasible := confirmEarlierDeparture(deadline, earlier, now); feasible {
+					decision.ArrivalDeadlineAt, decision.LatestDepartureAt = &deadline.deadlineAt, &deadline.latestAt
+					decision.ObservedAt = minInstant(decision.ObservedAt, observedAt)
+					decision.ExpiresAt = expiresAt
+				}
+			}
+		}
+	}
+	if decision.ArrivalDeadlineAt == nil {
+		expiresAt, ok := trafficOpportunity(window, comparison, check.Consent.MinSavingsS, now)
+		if ok {
+			decision.ExpiresAt = expiresAt
+		}
+	}
+	if decision.ExpiresAt.IsZero() {
 		s.recordTraffic("not_material_or_stale")
 		return nil
 	}
 	if err := authorize(ctx); err != nil {
 		return s.observeTrafficSuppression(err)
 	}
-	saved, err := s.repository.RecordTrafficDecision(ctx, check, domain.TrafficDecision{
-		UsualS: comparison.Usual.DurationS, AlternativeS: comparison.Alternative.DurationS,
-		ObservedAt: minInstant(comparison.Usual.FlowUpdatedAt, comparison.Alternative.FlowUpdatedAt),
-		ExpiresAt:  expiresAt,
-	}, s.now())
+	saved, err := s.repository.RecordTrafficDecision(ctx, check, decision, s.now())
 	if err != nil {
 		return err
 	}

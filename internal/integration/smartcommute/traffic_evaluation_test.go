@@ -40,6 +40,97 @@ func (f trafficSourceFixture) Compare(ctx context.Context, query domain.TrafficQ
 	return f(ctx, query, authorize)
 }
 
+func TestTrafficDeadlineSuppressesUnqualifiedForecasts(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		allCovered bool
+		earlierS   int64
+		calls      int
+		revoke     bool
+		want       bool
+	}{
+		{name: "both forecasts qualify", allCovered: true, earlierS: 41 * 60, calls: 2, want: true},
+		{name: "an offered route lacks live coverage", allCovered: false, calls: 1},
+		{name: "earlier departure would still miss", allCovered: true, earlierS: 44 * 60, calls: 2},
+		{name: "consent revoked before the earlier check", allCovered: true, revoke: true, calls: 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			live := &trafficLiveFixture{gear: "P"}
+			var revoke func() error
+			calls, pushes := 0, 0
+			provider := trafficSourceFixture(func(ctx context.Context, query domain.TrafficQuery, authorize func(context.Context) error) (domain.TrafficComparison, error) {
+				if err := authorize(ctx); err != nil {
+					return domain.TrafficComparison{}, err
+				}
+				calls++
+				usualS := int64(43 * 60)
+				switch calls {
+				case 1:
+					if !query.RequireOfferedCoverage || query.DepartureAt.Sub(live.now) != 15*time.Minute {
+						t.Errorf("incorrect scheduled request: %+v", query)
+					}
+					if tt.revoke {
+						if err := revoke(); err != nil {
+							return domain.TrafficComparison{}, err
+						}
+					}
+				case 2:
+					if query.DepartureAt.Sub(live.now) != 7*time.Minute {
+						t.Errorf("incorrect earlier departure: %v", query.DepartureAt)
+					}
+					usualS = tt.earlierS
+				default:
+					t.Error("duplicate forecast")
+				}
+				return domain.TrafficComparison{
+					Usual:                 domain.TrafficEstimate{DurationS: usualS, FlowUpdatedAt: live.now.Add(-time.Minute)},
+					Alternative:           domain.TrafficEstimate{DurationS: 46 * 60, FlowUpdatedAt: live.now.Add(-time.Minute)},
+					AlternativesQualified: tt.allCovered,
+				}, nil
+			})
+			f := newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
+				smartcommutesvc.WithTrafficEvaluator(provider, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil),
+				smartcommutesvc.WithTrafficNotifier(func(context.Context, string, int64, int64, time.Time) error { pushes++; return nil }))
+			live.now = f.now
+			const root, owner = "/api/v1/smart-commute", "deadline-owner"
+			expectStatus(t, f.request(t, http.MethodPut, root, owner, settings(42, true, true, false)), http.StatusNoContent)
+			expectStatus(t, f.request(t, http.MethodPost, root+"/routines", owner, manualRoutine(42)), http.StatusCreated)
+			var routine domain.Routine
+			for _, row := range snapshot(t, f.request(t, http.MethodGet, root+"?vehicle_id=42", owner, nil)).Routines {
+				if row.Status == domain.RoutineConfirmed {
+					routine = row
+				}
+			}
+			repo := commutedb.NewRepository(f.db)
+			revoke = func() error { return repo.DeleteTrafficConsent(ctx, owner, 42, routine.ID) }
+			deadlineS := 8*3600 + 38*60
+			if err := repo.SaveTrafficConsent(ctx, owner, routine, domain.TrafficConsent{
+				Trace: []domain.Point{routine.Origin, {Latitude: 47.15, Longitude: -122.15}, routine.Destination},
+				LeadS: 900, MinSavingsS: 480, ArrivalDeadlineS: &deadlineS, CheckAt: f.now, DepartureAt: f.now.Add(15 * time.Minute),
+			}, f.now); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.commute.ProcessTrafficChecks(ctx, 10); err != nil {
+				t.Fatal(err)
+			}
+			rows, err := f.commute.ListTrafficDecisions(ctx, owner, nil, f.now, 10)
+			if err != nil || calls != tt.calls {
+				t.Fatalf("read decisions error = %v; forecast calls = %d, want %d", err, calls, tt.calls)
+			}
+			if !tt.want {
+				if pushes != 0 || len(rows) != 0 {
+					t.Fatalf("unexpected deadline push or card: %d, %+v", pushes, rows)
+				}
+				return
+			}
+			if pushes != 1 || len(rows) != 1 || rows[0].ArrivalDeadlineAt == nil || rows[0].LatestDepartureAt == nil ||
+				rows[0].LatestDepartureAt.Sub(f.now) != 7*time.Minute || rows[0].AlternativeS != 46*60 {
+				t.Fatalf("expected one actionable deadline push and card: %d, %+v", pushes, rows)
+			}
+		})
+	}
+}
 func TestTrafficWorkerOnlyPublishesAnEligiblePrivateOccurrence(t *testing.T) {
 	tests := []struct {
 		name        string

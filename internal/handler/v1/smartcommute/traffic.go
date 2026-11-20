@@ -41,10 +41,11 @@ func (h *Handler) PreviewTrafficTrace(w http.ResponseWriter, r *http.Request) {
 
 type trafficConsentRequest struct {
 	trafficDriveRequest
-	Fingerprint   string `json:"fingerprint"`
-	ShareWithHERE bool   `json:"share_with_here"`
-	LeadS         int    `json:"lead_s"`
-	MinSavingsS   int64  `json:"min_savings_s"`
+	Fingerprint      string `json:"fingerprint"`
+	ShareWithHERE    bool   `json:"share_with_here"`
+	LeadS            int    `json:"lead_s"`
+	MinSavingsS      int64  `json:"min_savings_s"`
+	ArrivalDeadlineS *int   `json:"arrival_deadline_s"`
 }
 
 func (h *Handler) SaveTrafficConsent(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +69,7 @@ func (h *Handler) SaveTrafficConsent(w http.ResponseWriter, r *http.Request) {
 		VehicleID: request.VehicleID, RoutineID: routineID, DriveID: request.DriveID,
 		Fingerprint: request.Fingerprint, ShareWithHERE: request.ShareWithHERE,
 		LeadS: request.LeadS, MinSavingsS: request.MinSavingsS,
+		ArrivalDeadlineS: request.ArrivalDeadlineS,
 	})
 	if err != nil {
 		h.handleError(w, span, err)

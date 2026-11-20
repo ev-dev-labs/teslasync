@@ -121,6 +121,60 @@ func TestCompareDoesNotFollowProviderRedirect(t *testing.T) {
 	}
 }
 
+func TestDeadlineEvidenceRequiresEveryOfferedRoute(t *testing.T) {
+	now := time.Date(2026, 4, 7, 11, 45, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		name        string
+		includeFlow bool
+		want        bool
+	}{
+		{name: "all offered routes covered", includeFlow: true, want: true},
+		{name: "only the compared pair covered"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/v8/import":
+					assertRoutingRequest(t, r)
+					fmt.Fprintf(w, `{"routes":[%s]}`, routeFixture(1001, 2580))
+				case "/v8/routes":
+					assertRoutingRequest(t, r)
+					fmt.Fprintf(w, `{"routes":[%s,%s,%s]}`, routeFixture(1001, 2580), routeFixture(1002, 2760), routeFixture(1003, 3000))
+				case "/v7/flow":
+					var body flowRequest
+					if json.NewDecoder(r.Body).Decode(&body) != nil || len(body.In.Segments) != 3 ||
+						body.In.Segments[2].Ref != fromRef+"1003#+0..1" {
+						t.Errorf("third offered route was not requested: %+v", body)
+					}
+					results := []string{
+						flowRouteFixture(fromRef + "1001#+0..1"), flowRouteFixture(fromRef + "1002#+0..1"),
+					}
+					if tt.includeFlow {
+						results = append(results, flowRouteFixture(fromRef+"1003#+0..1"))
+					}
+					fmt.Fprintf(w, `{"sourceUpdated":%q,"results":[%s]}`, now.Add(-time.Minute).Format(time.RFC3339), strings.Join(results, ","))
+				default:
+					t.Errorf("unexpected provider path %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			t.Cleanup(server.Close)
+			query := fixtureQuery(now)
+			query.RequireOfferedCoverage = true
+			result, err := fixtureClient(t, server.URL, now).Compare(t.Context(), query, func(context.Context) error { return nil })
+			if err != nil || result.Alternative.DurationS != 2760 || result.AlternativesQualified != tt.want {
+				t.Fatalf("unexpected deadline evidence: %+v, %v", result, err)
+			}
+		})
+	}
+}
+
+func flowRouteFixture(ref string) string {
+	return fmt.Sprintf(`{"location":{"segmentRef":{"segments":[{"ref":%q,"length":10000}]}},
+		"currentFlow":{"speed":10,"confidence":0.97,"traversability":"open"}}`, ref)
+}
+
 func fixtureClient(t *testing.T, base string, now time.Time) *Client {
 	t.Helper()
 	client, err := New(testKey)

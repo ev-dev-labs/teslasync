@@ -839,6 +839,12 @@
       "actionTitle": "A faster route is available before your departure",
       "comparison": "Compare routes",
       "coverage": "Both routes had fresh directional HERE Traffic Flow coverage",
+      "deadline": {
+        "limitations": "TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.",
+        "rationale": "Even the fastest qualifying estimate misses your deadline at the planned departure time.",
+        "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.",
+        "title": "Leave earlier to make your arrival deadline"
+      },
       "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
       "teslaRoute": "These are estimates, not measured trip times. Tesla calculates its own route."
     },
