@@ -29,14 +29,14 @@ beforeEach(() => {
 });
 
 describe('Action Center bounded history paging', () => {
-  it('preserves default two argument requests raw UTC payload and cancellation', async () => {
+  it('keeps private history uncached and preserves the raw UTC payload and cancellation', async () => {
     requestMock.mockResolvedValue(firstPage);
     const { wrapper, client } = harness();
     const { result, unmount } = renderHook(() => useActionCenterHistory('ac_history', true), { wrapper });
     await waitFor(() => expect(result.current.data).toEqual(firstPage));
     expect(requestMock).toHaveBeenCalledWith(
       '/action-center/ac_history/history?limit=25&offset=0',
-      { signal: expect.any(AbortSignal) },
+      { signal: expect.any(AbortSignal), cache: 'no-store' },
     );
     expect(result.current.data?.items[0]).toEqual(firstPage.items[0]);
     expect(client.getQueryData(actionCenterKeys.historyPage('ac_history'))).toEqual(firstPage);
@@ -65,7 +65,7 @@ describe('Action Center bounded history paging', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(requestMock).toHaveBeenCalledWith(
       `/action-center/ac%2Fid%20%3F%23/history?limit=${expectedLimit}&offset=${expectedOffset}`,
-      { signal: expect.any(AbortSignal) },
+      { signal: expect.any(AbortSignal), cache: 'no-store' },
     );
     expect(actionCenterKeys.historyPage('ac/id ?#', { limit, offset })).toEqual(
       ['action-center', 'history', 'ac/id ?#', { limit: expectedLimit, offset: expectedOffset }],
