@@ -1155,7 +1155,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		commuteTrafficLive = liveSignalStore
 	}
 	smartCommuteService := smartcommutesvc.New(
-		smartcommutedb.NewRepository(db), smartcommutesvc.WithTrafficTraceReader(stateReader),
+		smartcommutedb.NewRepository(db, smartcommutedb.WithSuggestionResolutionObserver(metrics.RecordSmartCommuteSuggestionResolution)),
+		smartcommutesvc.WithTrafficTraceReader(stateReader),
 		smartcommutesvc.WithTrafficConnector(smartCommuteTraffic), smartcommutesvc.WithTrafficLiveReader(commuteTrafficLive),
 	)
 	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)

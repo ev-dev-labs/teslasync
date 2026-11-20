@@ -23,14 +23,31 @@ const (
 )
 
 type Repository struct {
-	db *database.DB
+	db                          *database.DB
+	observeSuggestionResolution func(domain.RoutineStatus)
 }
 
-func NewRepository(db *database.DB) *Repository {
+type Option func(*Repository)
+
+func WithSuggestionResolutionObserver(observe func(domain.RoutineStatus)) Option {
+	return func(repo *Repository) { repo.observeSuggestionResolution = observe }
+}
+
+func NewRepository(db *database.DB, options ...Option) *Repository {
 	if db == nil || db.Pool == nil {
 		panic("smartcommute.NewRepository: db and db.Pool must not be nil")
 	}
-	return &Repository{db: db}
+	repo := &Repository{db: db}
+	for _, option := range options {
+		option(repo)
+	}
+	return repo
+}
+
+func (r *Repository) recordSuggestionResolution(previous, next domain.RoutineStatus, err error) {
+	if err == nil && previous == domain.RoutineSuggested && r.observeSuggestionResolution != nil {
+		r.observeSuggestionResolution(next)
+	}
 }
 
 func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, now time.Time) (*domain.Snapshot, error) {

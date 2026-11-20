@@ -51,11 +51,17 @@ func (r *Repository) ConfirmRoutine(
 	ctx context.Context, subject string, routineID int64, input domain.RoutineInput, now time.Time,
 ) (*domain.Routine, error) {
 	var result *domain.Routine
+	var previous domain.RoutineStatus
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := lockEnabledSettings(ctx, tx, subject, input.VehicleID); err != nil {
 			return err
 		}
-		item, err := scanRoutine(tx.QueryRow(ctx, `
+		item, err := scanRoutineWithExtras(tx.QueryRow(ctx, `
+			WITH prior AS (
+			  SELECT id, status FROM smart_commute_routines
+			  WHERE subject = $1 AND vehicle_id = $2 AND id = $3
+			  FOR UPDATE
+			)
 			UPDATE smart_commute_routines AS r
 			SET status = 'confirmed', name = $4, weekday = $5, departure_s = $6,
 			    time_zone = $7, origin_latitude = $8, origin_longitude = $9,
@@ -63,19 +69,20 @@ func (r *Repository) ConfirmRoutine(
 			    evidence_matching_days = NULL, evidence_window_start_s = NULL,
 			    evidence_window_end_s = NULL, evidence_first_at = NULL, evidence_last_at = NULL,
 			    snoozed_until = NULL, updated_at = $12
-			WHERE subject = $1 AND vehicle_id = $2 AND id = $3
-			  AND (status = 'confirmed' OR (
-			    status = 'suggested' AND evidence_last_at > $12::timestamptz - INTERVAL '56 days'
+			FROM prior
+			WHERE r.id = prior.id
+			  AND (prior.status = 'confirmed' OR (
+			    prior.status = 'suggested' AND r.evidence_last_at > $12::timestamptz - INTERVAL '56 days'
 			    AND EXISTS (
 			      SELECT 1 FROM smart_commute_settings s
 			      WHERE s.subject = r.subject AND s.vehicle_id = r.vehicle_id
 			        AND s.local_analysis_enabled AND NOT s.paused
 			    )
 			  ))
-			RETURNING `+routineColumns,
+			RETURNING `+routineColumns+`, prior.status`,
 			subject, input.VehicleID, routineID, input.Name, input.Weekday, input.DepartureS,
 			input.TimeZone, input.Origin.Latitude, input.Origin.Longitude,
-			input.Destination.Latitude, input.Destination.Longitude, now))
+			input.Destination.Latitude, input.Destination.Longitude, now), &previous)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound
 		}
@@ -88,36 +95,47 @@ func (r *Repository) ConfirmRoutine(
 		result = item
 		return nil
 	})
+	r.recordSuggestionResolution(previous, domain.RoutineConfirmed, err)
 	return result, err
 }
 
 func (r *Repository) DeclineRoutine(
 	ctx context.Context, subject string, vehicleID, routineID int64, now time.Time,
 ) error {
-	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	var previous domain.RoutineStatus
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := lockEnabledSettings(ctx, tx, subject, vehicleID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `
+		err := tx.QueryRow(ctx, `
+			WITH prior AS (
+			  SELECT id, status FROM smart_commute_routines
+			  WHERE subject = $1 AND vehicle_id = $2 AND id = $3
+			  FOR UPDATE
+			)
 			UPDATE smart_commute_routines AS r SET status = 'declined', snoozed_until = NULL, updated_at = $4
-			WHERE subject = $1 AND vehicle_id = $2 AND id = $3
-			  AND (status = 'declined' OR (
-			    status = 'suggested' AND evidence_last_at > $4::timestamptz - INTERVAL '56 days'
+			FROM prior
+			WHERE r.id = prior.id
+			  AND (prior.status = 'declined' OR (
+			    prior.status = 'suggested' AND r.evidence_last_at > $4::timestamptz - INTERVAL '56 days'
 			    AND EXISTS (
 			      SELECT 1 FROM smart_commute_settings s
 			      WHERE s.subject = r.subject AND s.vehicle_id = r.vehicle_id
 			        AND s.local_analysis_enabled AND NOT s.paused
 			    )
-			  ))`,
-			subject, vehicleID, routineID, now)
+			  ))
+			RETURNING prior.status`,
+			subject, vehicleID, routineID, now).Scan(&previous)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return port.ErrNotFound
+		}
 		if err != nil {
 			return fmt.Errorf("decline smart commute routine: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			return port.ErrNotFound
-		}
 		return nil
 	})
+	r.recordSuggestionResolution(previous, domain.RoutineDeclined, err)
+	return err
 }
 
 func (r *Repository) SnoozeRoutine(

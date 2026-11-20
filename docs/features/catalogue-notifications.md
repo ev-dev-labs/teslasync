@@ -171,6 +171,12 @@ route again. To roll back, stop the notification worker first; migration
 source drives. Require fresh consent after rollback to an older API that
 does not track traffic settings.
 
+For Smart Commute suggestion outcomes, `teslasync_smart_commute_suggestion_resolutions_total`
+counts saved confirmations and **Not mine** dismissals. Browsing a suggestion,
+creating a manual routine, editing a confirmed routine, and retrying an
+already saved dismissal do not count. The only label is the outcome; the
+counter does not contain trip details or indicate time saved.
+
 ### Optional personal browser push
 
 In-app recommendations work without push credentials. For personal push, set

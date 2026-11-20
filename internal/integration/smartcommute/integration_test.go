@@ -168,6 +168,11 @@ type fixture struct {
 
 func newFixture(t *testing.T, options ...smartcommutesvc.Option) *fixture {
 	t.Helper()
+	return newFixtureWithRepositoryOptions(t, nil, options...)
+}
+
+func newFixtureWithRepositoryOptions(t *testing.T, repoOptions []commutedb.Option, options ...smartcommutesvc.Option) *fixture {
+	t.Helper()
 	spy := &driveQueryTracer{}
 	db := testDatabase(t, spy)
 	loc, err := time.LoadLocation("America/Los_Angeles")
@@ -194,7 +199,7 @@ func newFixture(t *testing.T, options ...smartcommutesvc.Option) *fixture {
 	}
 	f := &fixture{db: db, spy: spy, now: now}
 	clock := func() time.Time { return f.now }
-	repo := commutedb.NewRepository(db)
+	repo := commutedb.NewRepository(db, repoOptions...)
 	stateReader := signal.NewLogStateReader(db.Pool, zerolog.Nop())
 	baseOptions := []smartcommutesvc.Option{smartcommutesvc.WithClock(clock),
 		smartcommutesvc.WithTrafficConnector(true),
@@ -450,6 +455,37 @@ func TestPrivateEnrollmentAndDecisionJourney(t *testing.T) {
 	var driveCount int
 	if err := f.db.Pool.QueryRow(context.Background(), `SELECT count(*) FROM drives WHERE vehicle_id = 42`).Scan(&driveCount); err != nil || driveCount != 7 {
 		t.Fatalf("source drives changed: count=%d err=%v", driveCount, err)
+	}
+}
+
+func TestCountOnlyCommittedSuggestionResolutions(t *testing.T) {
+	var resolutions []commute.RoutineStatus
+	f := newFixtureWithRepositoryOptions(t, []commutedb.Option{
+		commutedb.WithSuggestionResolutionObserver(func(outcome commute.RoutineStatus) {
+			resolutions = append(resolutions, outcome)
+		}),
+	})
+	for _, owner := range []string{"subject-confirm", "subject-decline"} {
+		expectStatus(t, f.request(t, http.MethodPut, "/api/v1/smart-commute", owner, settings(42, true, true, false)), http.StatusNoContent)
+		got := snapshot(t, f.request(t, http.MethodGet, "/api/v1/smart-commute?vehicle_id=42", owner, nil))
+		if len(got.Routines) != 1 || got.Routines[0].Status != commute.RoutineSuggested {
+			t.Fatalf("learned routines = %+v, want one suggestion", got.Routines)
+		}
+		expectStatus(t, f.request(t, http.MethodGet, "/api/v1/action-center?vehicle_id=42", owner, nil), http.StatusOK)
+		path := fmt.Sprintf("/api/v1/smart-commute/routines/%d", got.Routines[0].ID)
+		if owner == "subject-confirm" {
+			expectStatus(t, f.request(t, http.MethodPut, path, owner, manualRoutine(42)), http.StatusOK)
+			expectStatus(t, f.request(t, http.MethodPut, path, owner, manualRoutine(42)), http.StatusOK)
+		} else {
+			body := map[string]int64{"vehicle_id": 42}
+			expectStatus(t, f.request(t, http.MethodPost, path+"/decline", "subject-confirm", body), http.StatusNotFound)
+			expectStatus(t, f.request(t, http.MethodPost, path+"/decline", owner, body), http.StatusNoContent)
+			expectStatus(t, f.request(t, http.MethodPost, path+"/decline", owner, body), http.StatusNoContent)
+		}
+		expectStatus(t, f.request(t, http.MethodPost, "/api/v1/smart-commute/routines", owner, manualRoutine(42)), http.StatusCreated)
+	}
+	if len(resolutions) != 2 || resolutions[0] != commute.RoutineConfirmed || resolutions[1] != commute.RoutineDeclined {
+		t.Fatalf("observed resolutions = %v, want exactly one confirmation and one dismissal", resolutions)
 	}
 }
 
