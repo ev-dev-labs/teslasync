@@ -23,6 +23,8 @@
 //     dropped and a labelled counter is bumped. The rest of the Payload
 //     continues to flow. A producer bug on a single field MUST NOT cause
 //     the whole batch to be redelivered — that would compound the bug.
+//     Explicit invalid media text instead records an unavailable value so
+//     downstream playback evidence cannot bridge a break in identity.
 package codec
 
 import "time"

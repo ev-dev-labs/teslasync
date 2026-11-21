@@ -1,4 +1,5 @@
 import { defaultDashcamSettings, type ClipRecord, type DashcamSettings } from '../types';
+import { canChangeRetention, type ClipRetention } from '../clipRetention';
 import type { DashcamDb } from './types';
 
 /**
@@ -10,6 +11,7 @@ import type { DashcamDb } from './types';
  */
 export function createMemoryDashcamDb(): DashcamDb {
   const clips = new Map<string, ClipRecord>();
+  const retention = new Map<string, ClipRetention>();
   let settings: DashcamSettings = defaultDashcamSettings();
 
   return {
@@ -24,12 +26,25 @@ export function createMemoryDashcamDb(): DashcamDb {
     },
     async deleteClip(id) {
       clips.delete(id);
+      for (const [key, plan] of retention) {
+        if (plan.clipId === id) retention.delete(key);
+      }
     },
     async getSettings() {
       return settings;
     },
     async putSettings(next) {
       settings = next;
+    },
+    async listRetention(subject, vehicleId) {
+      return [...retention.values()].filter(plan => plan.subject === subject && plan.vehicleId === vehicleId);
+    },
+    async changeRetention(change) {
+      const key = JSON.stringify(change.key);
+      if (!canChangeRetention(retention.get(key), clips.get(change.key[2]), change)) return false;
+      if (change.next) retention.set(key, change.next);
+      else retention.delete(key);
+      return true;
     },
   };
 }

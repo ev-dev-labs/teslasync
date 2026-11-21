@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/auth"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
 	port "github.com/ev-dev-labs/teslasync/internal/port/actioncenter"
+	commutep "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 const (
@@ -267,7 +269,35 @@ func (p vehicleReadinessProvider) Recommendations(
 	return items, nil
 }
 
-type systemHealthProvider struct{ source port.SourceReader }
+type operatorIncidentSource interface {
+	ListOperatorIncidentNotices(context.Context, string, time.Time, int) ([]commutep.EstimateIncident, error)
+}
+
+const estimateNoticeLifetime = 24 * time.Hour
+
+type systemHealthProvider struct {
+	source   port.SourceReader
+	notices  operatorIncidentSource
+	operator string
+}
+
+// WithOperatorIncidentNotices projects existing incident transitions into Action
+// Center for one allowlisted, signed-in administrator. It does not fan out.
+func WithOperatorIncidentNotices(source operatorIncidentSource, subject string) Option {
+	return func(s *Service) {
+		if source == nil || subject == "" || len(subject) > 512 || strings.TrimSpace(subject) != subject {
+			return
+		}
+		for i, provider := range s.providers {
+			if incidents, ok := provider.(systemHealthProvider); ok {
+				incidents.notices, incidents.operator = source, subject
+				s.providers[i] = incidents
+				s.incidentOperator = subject
+				break
+			}
+		}
+	}
+}
 
 func (p systemHealthProvider) SourceFeature() domain.SourceFeature {
 	return domain.SourceSystemHealth
@@ -334,7 +364,73 @@ func (p systemHealthProvider) Recommendations(
 			},
 		})
 	}
+	if p.notices != nil && !filter.ExcludePrivate && !filter.SharedOpenMode &&
+		operatorNoticesAllowed(ctx, p.operator, filter.subject) {
+		notices, err := p.notices.ListOperatorIncidentNotices(ctx, filter.subject, now.Add(-estimateNoticeLifetime), providerLimit)
+		if err == nil {
+			for _, row := range notices {
+				expiresAt := now.Add(estimateNoticeLifetime)
+				if row.ResolvedAt != nil {
+					expiresAt = row.ResolvedAt.Add(estimateNoticeLifetime)
+				}
+				items = append(items, operatorIncidentNotice(row, row.StartedAt, expiresAt, false))
+				if row.ResolvedAt != nil {
+					items = append(items, operatorIncidentNotice(row, *row.ResolvedAt, expiresAt, true))
+				}
+			}
+		}
+	}
 	return items, nil
+}
+
+func operatorNoticesAllowed(ctx context.Context, operator, subject string) bool {
+	_, appToken := auth.AppTokenSubjectFromContext(ctx)
+	return operator != "" && subject == operator && !appToken && !auth.IsImpersonating(ctx)
+}
+
+func operatorIncidentNotice(row commutep.EstimateIncident, observedAt, expiresAt time.Time, recovered bool) domain.Candidate {
+	var feed string
+	switch row.Feed {
+	case commutep.HEREImport:
+		feed = "HERE route import"
+	case commutep.HERERoutes:
+		feed = "HERE road routing"
+	case commutep.HEREFlow:
+		feed = "HERE traffic flow"
+	}
+	observedAt = observedAt.UTC()
+	occurrence := fmt.Sprintf("here_estimate_incident:%d:%d", row.ID, row.StartedAt.UnixMicro())
+	key := occurrence + ":outage"
+	transition := "outage"
+	title := "Estimates paused: " + feed
+	summary := "HERE reported service unavailable. Estimates that need this feed were paused pending a fresh response."
+	severity := domain.SeverityWarning
+	priority := domain.PriorityHigh
+	if recovered {
+		key = occurrence + ":recovery"
+		transition = "recovery"
+		title = "Estimates resumed: " + feed
+		summary = "A fresh usable HERE response verified recovery. New estimates for this feed can resume."
+		severity = domain.SeverityInfo
+		priority = domain.PriorityMedium
+	}
+	return domain.Candidate{
+		SourceFeature: domain.SourceSystemHealth, SourceKey: key, DedupKey: key, Title: title,
+		Summary: summary, Rationale: "Recorded upstream availability transition.",
+		Priority: priority, Severity: severity, BaseConfidence: 0.99,
+		ConfidenceBasis: []string{"Direct provider response recorded by the estimate health monitor"},
+		Evidence: []domain.EvidenceItem{{
+			ID: key, Kind: "upstream_availability", Summary: summary, ObservedAt: &observedAt,
+			Provenance: domain.EvidenceProvenance{Source: "here_estimate_incidents", RecordID: strconv.FormatInt(row.ID, 10)},
+			UpstreamIncident: &domain.UpstreamIncidentEvidence{
+				Feed: string(row.Feed), Transition: transition,
+			},
+		}},
+		SafeActions: []domain.ActionType{domain.ActionAcknowledge, domain.ActionDismiss, domain.ActionRestore},
+		ObservedAt:  &observedAt,
+		FreshFor:    24 * time.Hour, AgingFor: 48 * time.Hour, ExpiresAt: expiresAt,
+		Limitations: []string{"This notice does not indicate a vehicle fault or authorize a vehicle command."},
+	}
 }
 
 func incidentUrgency(value string) (domain.Priority, domain.Severity) {

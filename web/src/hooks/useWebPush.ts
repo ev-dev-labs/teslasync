@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useSubscribePush, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush'
+import { urlBase64ToUint8Array } from '@/lib/webPushKey'
 
 const isSupported = typeof window !== 'undefined' && 'Notification' in window
 const isPushAPISupported =
@@ -44,26 +45,6 @@ function subscribePermission(listener: () => void) {
       permissionTimer = undefined
     }
   }
-}
-
-/**
- * Convert a base64url string (the encoding used by VAPID public keys
- * over the wire) to the Uint8Array shape `PushManager.subscribe()`
- * expects for `applicationServerKey`. This is the standard
- * MDN-documented helper — kept inline because it's the only place we
- * use it.
- */
-function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  // Allocate a fresh ArrayBuffer (not SharedArrayBuffer) so the result
-  // is assignable to BufferSource — required by PushManager.subscribe()
-  // under TypeScript 5's stricter typed-array generics.
-  const buf = new ArrayBuffer(rawData.length)
-  const out = new Uint8Array(buf)
-  for (let i = 0; i < rawData.length; i++) out[i] = rawData.charCodeAt(i)
-  return out
 }
 
 /**

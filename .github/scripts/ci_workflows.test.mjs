@@ -40,7 +40,7 @@ test('existing required summary names and complete dependency gates remain stric
     [ci.jobs, 'ci-gate', 'CI (all checks)',
       ['changes', 'workflow-lint', 'generated', 'backend', 'frontend', 'docs', 'docker']],
     [browser.jobs, 'chromium-quality', 'Chromium responsive, a11y, keyboard, and performance',
-      ['contract', 'browser-build', 'chromium-tests']],
+      ['contract', 'browser-build', 'private-notifications', 'chromium-tests']],
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
       ['contract', 'browser-build', 'visual-tests']],
     [browser.jobs, 'cross-browser', '${{ matrix.browser }} critical smoke',
@@ -95,7 +95,7 @@ test('node_modules caches require exact OS, architecture, resolved Node and lock
 });
 
 test('browser caches use actual Playwright versions and Edge caches its real system executable', () => {
-  for (const id of ['contract', 'visual-tests']) {
+  for (const id of ['contract', 'private-notifications', 'visual-tests']) {
     const job = browser.jobs[id];
     const cache = job.steps.find(step => step.id === 'browsers');
     assert.ok(cache.with.key.includes('${{ steps.playwright.outputs.version }}'));
@@ -117,6 +117,50 @@ test('browser caches use actual Playwright versions and Edge caches its real sys
     assert.doesNotMatch(commands(job), /playwright install (chromium|firefox|webkit)/);
     assert.equal(job.env?.PLAYWRIGHT_BROWSERS_PATH, undefined);
   }
+});
+
+test('private notification browser gate uses real handlers and a disposable database', () => {
+  const job = browser.jobs['private-notifications'];
+  assert.equal(job.needs, 'browser-build');
+  assert.ok(job.services.postgres);
+  assert.ok(job.steps.some(step => step.with?.name === 'e2e-app' && step.with?.path === 'web/dist'));
+  const run = job.steps.find(step => step.env?.TESLASYNC_SMART_COMMUTE_BROWSER);
+  assert.ok(run);
+  assert.equal(run.env.TESLASYNC_SMART_COMMUTE_BROWSER, '1');
+  assert.equal(run.env.TESLASYNC_SMART_CHARGING_BROWSER, '1');
+  assert.equal(run.env.TESLASYNC_SMART_INCIDENT_BROWSER, '1');
+  assert.match(run.env.TESLASYNC_SMART_COMMUTE_TEST_DSN, /127\.0\.0\.1:5432\/teslasync_smart_test/);
+  assert.match(run.run, /^xvfb-run -a go test -race/);
+  assert.match(run.run, /\.\/internal\/integration\/smartreadiness/);
+  const selector = new RegExp(run.run.match(/-run '([^']+)'/)[1]);
+  for (const name of ['PrivateCommute', 'PrivateCommuteTraffic', 'PrivateCharging', 'PrivatePersonalDelivery', 'HEREIncident']) {
+    assert.ok(selector.test(`Test${name}BrowserJourney`), `browser gate must run ${name}`);
+  }
+  const paths = browser.on.push.paths;
+  for (const path of [
+    'internal/adapter/heretraffic/**',
+    'internal/api/status/**',
+    'internal/app/smartdeliverysvc/**',
+    'internal/database/actioncenter/**',
+    'internal/database/observability/**',
+    'internal/database/smartdelivery/**',
+    'internal/handler/v1/smartdelivery/**',
+    'internal/domain/smartcommute/**',
+    'internal/port/smartcommute/**',
+    'migrations/000263_smart_personal_push.*.sql',
+    'migrations/000264_smart_charging_trip_legs.*.sql',
+    'migrations/000265_smart_charging_scheduled_start.*.sql',
+    'migrations/000266_smart_charging_schedule_power_ceiling.*.sql',
+    'migrations/000267_smart_departure_overlap.*.sql',
+    'migrations/000268_smart_commute_traffic_consent.*.sql',
+    'migrations/000269_smart_commute_personal_push.*.sql',
+    'migrations/000270_smart_commute_arrival_deadline.*.sql',
+    'migrations/000271_smart_charging_site_performance.*.sql',
+    'migrations/000272_smart_commute_route_energy.*.sql',
+    'migrations/000273_type_commute_route_energy_evidence.*.sql',
+    'migrations/000274_smart_public_charging_fee_terms.*.sql',
+    'migrations/000318_here_estimate_health.*.sql',
+  ]) assert.ok(paths.includes(path), `private delivery changes must trigger the browser gate: ${path}`);
 });
 
 test('20 Chromium runners mix heavy and ordinary cases with isolated single-worker cheap suites', () => {

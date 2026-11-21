@@ -121,14 +121,16 @@ export default function SettingsPage() {
   const settingsLeaseKey = 'settings/general'
   useEditLease(settingsLeaseKey)
 
-  // Legacy /settings#ai → /integrations/helix redirect. Fires before the
-  // hash-anchor scroll effect below so #ai never resolves to a missing
-  // section. Replaces history so the back button skips the stale entry.
+  // Keep old deep links working after their sections move to dedicated pages.
   useEffect(() => {
     if (location.hash === '#ai') {
       navigate('/integrations/helix', { replace: true })
+    } else if (location.hash === '#smart-commute') {
+      navigate({ pathname: '/settings/smart-commute', search: location.search }, { replace: true })
+    } else if (location.hash === '#smart-charging') {
+      navigate({ pathname: '/settings/smart-charging', search: location.search }, { replace: true })
     }
-  }, [location.hash, navigate])
+  }, [location.hash, location.search, navigate])
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered

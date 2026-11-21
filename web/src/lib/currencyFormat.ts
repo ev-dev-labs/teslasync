@@ -69,6 +69,15 @@ export function microToValue(micro: number | null | undefined): number | null {
   return micro / MICRO_SCALE
 }
 
+export function currencyFractionDigits(currency: string, locale: string): number {
+  try {
+    return new Intl.NumberFormat(normaliseLocale(locale), { style: 'currency', currency })
+      .resolvedOptions().maximumFractionDigits ?? 2
+  } catch {
+    return 2
+  }
+}
+
 /**
  * Format a major-unit value as currency text using `Intl.NumberFormat`.
  *

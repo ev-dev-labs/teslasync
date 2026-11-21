@@ -89,6 +89,11 @@ var fieldOverrides = map[string]int{
 	// charging field with no perceptible UI lag.
 	"BatteryLevel": 30,
 
+	// A minute of elapsed playback cannot bracket a selected drive instant
+	// within the private track lookup's 30-second evidence limit. Keep a
+	// 10-second jitter margin without increasing the metadata cadence.
+	"MediaNowPlayingElapsed": 20,
+
 	// These two resettable counters are the only authoritative source for
 	// supervised-driving distance. MilesSinceReset is the synchronization
 	// clock: at Tesla's 10-second minimum cadence and smallest supported

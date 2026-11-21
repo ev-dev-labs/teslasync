@@ -126,8 +126,8 @@ func TestCommandLogSQL_Shape(t *testing.T) {
 
 	insertMust := []string{
 		"INSERT INTO command_logs",
-		"vehicle_id, command, params, status, error, created_at",
-		"VALUES ($1, $2, $3, $4, $5, $6)",
+		"vehicle_id, command, params, status, error, created_at, wake_requested_at",
+		"VALUES ($1, $2, $3, $4, $5, $6, $7)",
 		"RETURNING id",
 	}
 	for _, frag := range insertMust {

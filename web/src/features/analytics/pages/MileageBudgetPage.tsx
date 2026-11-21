@@ -33,6 +33,7 @@ import type { Drive } from '@/types/driving';
 import { computeMileageBudget } from '../lib/mileageBudget';
 import { useMileageBudget } from '../hooks/useMileageBudget';
 import { MileageBudgetBrief as MileageBudgetSummary } from '../components/operationalbrief-a-m/MileageBudgetBrief';
+import { MileageTermReviewPanel } from '../components/mileage-term/MileageTermReviewPanel';
 
 /** km per statute mile, derived from the shared conversion lib. */
 const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;
@@ -138,6 +139,7 @@ export default function MileageBudgetPage() {
       dataSources={[{ id: 'budget-drives', label: t('dataSources.labels.driveHistory', 'Drive history'), query: drivesQuery }]}
     >
       <StaleRefreshWarning state={source} />
+      <MileageTermReviewPanel vehicleId={vehicleId} />
       {!isLoading && !isError && historyCapped ? (
         <AlertBanner
           variant="warning"

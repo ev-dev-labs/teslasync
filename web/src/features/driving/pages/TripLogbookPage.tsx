@@ -13,6 +13,7 @@ import {
 import { MetricBar } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { TripPacketPanel } from '../components/trip-packet/TripPacketPanel';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -312,6 +313,8 @@ export default function TripLogbookPage() {
         />
         </SectionErrorBoundary>
       </FadeIn>
+
+      <TripPacketPanel vehicleId={vehicleId} drives={drives} />
 
       {/* 2 — Reimbursement (1/3) + drives table (2/3) */}
       <FadeIn delay={0.1}>

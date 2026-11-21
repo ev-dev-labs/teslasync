@@ -67,11 +67,11 @@ describe('sidenav polish', () => {
       expect(markup, item.to).not.toMatch(/lucide-(dot|signal-zero|signal-low)\b/)
     }
   })
-  it('uses an Inbox caption for Notifications without a duplicate rail bell', () => {
+  it('labels Notifications clearly without a duplicate rail bell', () => {
     render(<Deck title="Notifications" path="/notifications/inbox" />)
     const rail = screen.getByTestId('command-deck-rail')
     const notifications = within(rail).getByRole('button', { name: 'Notifications', exact: true })
-    expect(notifications).toHaveTextContent('Inbox')
+    expect(notifications).toHaveTextContent('Notifications')
     expect(notifications).not.toHaveTextContent('Alerts')
     expect(notifications.querySelector('svg')).toHaveClass('lucide-inbox')
     expect(rail.querySelectorAll('.lucide-bell, .lucide-bell-ring')).toHaveLength(0)

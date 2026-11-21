@@ -57,11 +57,12 @@ type LiveSignalStore interface {
 	GetAll(ctx context.Context, vehicleID int64) (map[string]any, error)
 }
 
-// TimedSignal carries a normalized value and its producer event time across
-// the side-effects boundary into the layered live store.
+// TimedSignal distinguishes producer time from a receipt fallback while
+// preserving the event key used to order updates.
 type TimedSignal struct {
-	Value     any
-	EmittedAt time.Time
+	Value          any
+	EmittedAt      time.Time
+	SourceObserved bool
 }
 
 // FSMHandler mirrors (*internal/api.FSMHandler).ProcessSignals. The
@@ -283,7 +284,10 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 		}
 		signals[a.Field] = a.Value
 		fieldTs[a.Field] = a.EmittedAt
-		timedSignals[a.Field] = TimedSignal{Value: a.Value, EmittedAt: a.EmittedAt}
+		timedSignals[a.Field] = TimedSignal{
+			Value: a.Value, EmittedAt: a.EmittedAt,
+			SourceObserved: a.SourceEmittedAt != nil && !a.SourceEmittedAt.IsZero() && a.SourceEmittedAt.Equal(a.EmittedAt),
+		}
 		if a.EmittedAt.After(payloadTs) {
 			payloadTs = a.EmittedAt
 		}

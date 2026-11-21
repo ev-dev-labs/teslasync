@@ -1,0 +1,2 @@
+ALTER TABLE smart_capacity_trend_digests DROP COLUMN evidence_fingerprint;
+ALTER TABLE smart_overnight_drain_reviews DROP COLUMN evidence_fingerprint;

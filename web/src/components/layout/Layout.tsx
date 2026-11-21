@@ -19,7 +19,7 @@ import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
-import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
+import { CookieConsentBannerHost } from '../feedback/CookieConsentBannerHost'
 import {
   TOUR_START_EVENT,
   TOURS,
@@ -342,6 +342,8 @@ export const navSections = [
     title: 'Notifications',
     titleKey: 'nav.groups.notifications',
     items: [
+      { to: '/settings/smart-commute', icon: Icons.navigationAlt, label: 'Smart Commute', labelKey: 'nav.items.settings_smart-commute', color: 'text-theme-accent' },
+      { to: '/settings/smart-charging', icon: Icons.batteryCharging, label: 'Charging readiness', labelKey: 'nav.items.settings_smart-charging', color: 'text-emerald-400' },
       { to: '/notifications/inbox', icon: Icons.notifications, label: 'All notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400', badge: 'unread' as const },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-theme-accent' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser notifications', labelKey: 'nav.items.notifications_browser', color: 'text-fuchsia-400' },
@@ -1331,7 +1333,7 @@ export default function Layout() {
           recorded a decision. Mounted last so the bottom-of-screen
           banner sits above every sticky surface but below modal
           dialogs the user is interacting with. */}
-      <CookieConsentBanner />
+      <CookieConsentBannerHost />
       </div>
       </WorkspaceScopeProvider>
       </BreadcrumbOverridesProvider>

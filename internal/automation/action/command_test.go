@@ -121,6 +121,7 @@ type mockTeslaCommander struct {
 	wakeErrFor map[string]error // per-VIN wake errors
 	sendErr    error
 	sendErrFor map[string]error // per-VIN errors
+	afterSend  func()
 	calls      []sendCall
 	wakeCalls  []string // VINs that WakeUp was called for
 }
@@ -147,6 +148,9 @@ func (m *mockTeslaCommander) WakeUp(_ context.Context, vin string) error {
 
 func (m *mockTeslaCommander) SendCommand(_ context.Context, vin string, command string, params map[string]interface{}) error {
 	m.calls = append(m.calls, sendCall{VIN: vin, Command: command, Params: params})
+	if m.afterSend != nil {
+		m.afterSend()
+	}
 	if m.sendErrFor != nil {
 		if e, ok := m.sendErrFor[vin]; ok {
 			return e
@@ -510,7 +514,7 @@ func TestExecute_ContextCancelled(t *testing.T) {
 	cancel()
 
 	_, err := exec.Execute(ctx, nil, cfg)
-	if err == nil || !strings.Contains(err.Error(), "context cancelled") {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context cancelled error, got: %v", err)
 	}
 }
@@ -936,9 +940,18 @@ func TestAutoWake_WakeDisabledInPollingConfig(t *testing.T) {
 func TestAutoWake_ContextCancelledDuringWake(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	polls := 0
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
-		stateByID: map[int64]string{1: "asleep"},
+		byID: map[int64]*vehiclemodel.Vehicle{1: v},
+		getStateFunc: func(int64) (string, error) {
+			polls++
+			if polls == 2 {
+				cancel()
+			}
+			return "asleep", nil
+		},
 	}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
@@ -948,32 +961,46 @@ func TestAutoWake_ContextCancelledDuringWake(t *testing.T) {
 	exec.wakePollInterval = 10 * time.Millisecond
 	exec.wakeTimeout = 5 * time.Second
 
-	ctx, cancel := context.WithCancel(context.Background())
+	chain := NewChainExecutor(vehicleRepo)
+	chain.Register("command", exec)
+	outcomes := chain.Execute(ctx, []ActionConfig{{Type: "command", Raw: makeConfig(t, "", "lock", nil)}}, v, true)
 
-	// Cancel after a short delay (long enough for wake command but not polling).
-	go func() {
-		time.Sleep(30 * time.Millisecond)
-		cancel()
-	}()
-
-	vid := int64(1)
-	cfg := makeConfig(t, "", "lock", nil)
-
-	resultJSON, err := exec.Execute(ctx, &vid, cfg)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	if len(outcomes) != 1 || !outcomes[0].Skipped || outcomes[0].Error != "" || outcomes[0].Success {
+		t.Fatalf("interrupted wake counted as an action failure: %#v", outcomes)
+	}
+	if len(teslaCmd.wakeCalls) != 1 || len(teslaCmd.calls) != 0 {
+		t.Fatalf("wake calls = %v; command calls = %v", teslaCmd.wakeCalls, teslaCmd.calls)
 	}
 
 	var results []CommandResult
-	if err := json.Unmarshal(resultJSON, &results); err != nil {
+	if err := json.Unmarshal(outcomes[0].Output, &results); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-
-	r := results[0]
-	if r.Success {
-		t.Error("expected failure on context cancellation during wake")
+	if len(results) != 1 || results[0].Success || !strings.Contains(results[0].Error, "auto-wake failed") {
+		t.Fatalf("lost interrupted wake evidence: %#v", results)
 	}
-	if !strings.Contains(r.Error, "auto-wake failed") {
-		t.Errorf("error %q should contain 'auto-wake failed'", r.Error)
+}
+
+func TestCommandChainPreservesFleetFailureBeforeCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	vehicles := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{
+		testVehicle(1, "VIN001", "First"),
+		testVehicle(2, "VIN002", "Second"),
+	}}
+	cmd := &mockTeslaCommander{hasToken: true, sendErr: errors.New("provider rejected command"), afterSend: cancel}
+	chain := NewChainExecutor(vehicles)
+	chain.Register("command", NewCommandExecutor(vehicles, &mockCommandLogRepo{},
+		&mockSettingsChecker{pollingCfg: defaultPollingConfig()}, cmd))
+	outcomes := chain.Execute(ctx, []ActionConfig{{Type: "command", Raw: makeConfig(t, "", "lock", nil)}}, nil, true)
+	if len(outcomes) != 1 || outcomes[0].Skipped || outcomes[0].Success || !strings.Contains(outcomes[0].Error, "1 of 2") {
+		t.Fatalf("failure masked by cancellation: %#v", outcomes)
+	}
+	var results []CommandResult
+	if err := json.Unmarshal(outcomes[0].Output, &results); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || results[0].VehicleID != 1 || results[0].Error != "provider rejected command" || len(cmd.calls) != 1 {
+		t.Fatalf("unexpected partial fleet outcome %#v; command calls = %v", results, cmd.calls)
 	}
 }

@@ -53,8 +53,8 @@ const MissingIdentityCode = "MISSING_IDENTITY"
 // to handle differently:
 //
 //   - headerName == "": OPEN MODE. The deployment has no upstream
-//     identity provider configured; downstream handlers SHOULD
-//     respond 501 with code AUTH_MODE_OPEN.
+//     identity provider configured. Features that require per-user
+//     identity respond 501; features with a shared scope may use it.
 //   - header configured but absent / whitespace-only on this request:
 //     FORWARD-AUTH MODE WITH MISSING HEADER. Downstream handlers
 //     SHOULD respond 401 with code MISSING_IDENTITY.

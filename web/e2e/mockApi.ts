@@ -14,6 +14,7 @@ export type E2EUIDensity = 'compact' | 'comfortable' | 'spacious';
 export interface BrowserSeedOptions {
   density?: E2EUIDensity;
   preserveDashboardState?: boolean;
+  allowServiceWorkers?: boolean;
 }
 
 const NOW = '2026-08-26T16:00:00.000Z';
@@ -887,6 +888,34 @@ export async function fulfillApiFixture(
   }
 }
 
+export async function forwardLocalApiFixture(
+  route: Route,
+  controller: MockApiController | null,
+  headers: Record<string, string>,
+): Promise<void> {
+  if (!controller || !process.env.E2E_BASE_URL) throw new Error('A local API fixture server is required');
+  const request = route.request();
+  const url = new URL(request.url());
+  const expected = new URL(process.env.E2E_BASE_URL);
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+      url.origin !== expected.origin || !url.pathname.startsWith('/api/v1/')) {
+    throw new Error('Refusing to forward an API fixture outside the local test server');
+  }
+  const record = requestRecord(controller, request);
+  if (!record) throw new Error('Local API request was not recorded');
+  controller.seen.add(`${request.method()} ${url.pathname.replace(/^\/api\/v1/, '')}${url.search}`);
+  controller.pending += 1;
+  controller.lastActivityAt = Date.now();
+  try {
+    const response = await route.fetch({ headers, maxRedirects: 0, maxRetries: 0 });
+    await route.fulfill({ response });
+    record.disposition = 'fulfilled';
+  } finally {
+    controller.pending -= 1;
+    controller.lastActivityAt = Date.now();
+  }
+}
+
 function isSseRequest(route: Route, path: string): boolean {
   const request = route.request();
   const accept = request.headers()['accept'] ?? '';
@@ -1207,9 +1236,9 @@ export async function installApiMocks(
 export async function waitForHarnessReady(
   page: Page,
   controller: MockApiController | null,
-  options: { domStabilityTimeoutMs?: number } = {},
+  options: { domStabilityTimeoutMs?: number; initialRenderTimeoutMs?: number } = {},
 ): Promise<void> {
-  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('main')).toBeVisible({ timeout: options.initialRenderTimeoutMs ?? 8_000 });
   if (controller) {
     await expect.poll(() => ({
       pending: controller.pending,
@@ -1335,6 +1364,7 @@ export async function expectThemeApplied(page: Page, theme: 'dark' | 'light'): P
 export async function assertMockApiComplete(
   page: Page,
   controller: MockApiController | null,
+  options: { preserveServiceWorkers?: boolean } = {},
 ): Promise<void> {
   if (!controller) return;
   await page.evaluate(() => {
@@ -1378,7 +1408,7 @@ export async function assertMockApiComplete(
     message: 'API requests escaped or were blocked by Playwright routing',
     timeout: 5_000,
   }).toEqual([]);
-  await cleanupServiceWorkers(page);
+  if (!options.preserveServiceWorkers) await cleanupServiceWorkers(page);
 }
 
 export async function prepareMockApiNavigation(page: Page): Promise<void> {
@@ -1589,8 +1619,8 @@ export async function seedBrowserState(
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
   await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState, disableServiceWorker }) => {
-    // Blank teardown documents have no origin-backed storage to seed.
-    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    // Shell storage is only seeded in the top-level app, never in provider frames.
+    if (window.top !== window || (location.protocol !== 'http:' && location.protocol !== 'https:')) return;
     // Hermetic runs block workers; disable the capability instead of giving
     // Workbox an undefined registration that looks like a production failure.
     if (disableServiceWorker && !Reflect.deleteProperty(Navigator.prototype, 'serviceWorker')) {
@@ -1839,6 +1869,6 @@ export async function seedBrowserState(
     allowedBeaconPaths: [...ALLOWED_BEACON_PATHS],
     maxBeaconBytes: MAX_BEACON_BYTES,
     preserveDashboardState: options.preserveDashboardState ?? false,
-    disableServiceWorker: process.env.E2E_MOCKS !== '0',
+    disableServiceWorker: process.env.E2E_MOCKS !== '0' && !options.allowServiceWorkers,
   });
 }

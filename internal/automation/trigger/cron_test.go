@@ -274,7 +274,10 @@ func TestFire_InvokesEngineWithSnapshot(t *testing.T) {
 	tr := NewCronTrigger(&fakeCronRepo{}, eng)
 	defer tr.Stop()
 
-	tr.fire(42, "morning routine", "0 8 * * *")
+	routine := cronAutomation(42, "morning routine", "0 8 * * *", "UTC")
+	routine.Automation.UpdatedAt = time.Now().Add(-time.Hour)
+	routine.Trigger.StepID = 53
+	tr.fire(routine)
 
 	if eng.callCount() != 1 {
 		t.Fatalf("expected 1 engine call, got %d", eng.callCount())
@@ -293,6 +296,11 @@ func TestFire_InvokesEngineWithSnapshot(t *testing.T) {
 	if _, err := time.Parse(time.RFC3339, snap.FiredAt); err != nil {
 		t.Fatalf("snapshot fired_at is not RFC3339: %q (%v)", snap.FiredAt, err)
 	}
+	if !call.scheduled || call.schedule.AutomationID != 42 || call.schedule.Trigger != routine.Trigger ||
+		!call.schedule.Revision.Equal(routine.Automation.UpdatedAt) ||
+		call.schedule.FiredAt.UTC().Format(time.RFC3339) != snap.FiredAt {
+		t.Fatalf("scheduler provenance does not match registered rule: %+v", call.schedule)
+	}
 }
 
 func TestFire_EngineErrorDoesNotPanic(t *testing.T) {
@@ -301,7 +309,7 @@ func TestFire_EngineErrorDoesNotPanic(t *testing.T) {
 	defer tr.Stop()
 
 	// Must not panic even though the engine returns an error.
-	tr.fire(1, "n", "@daily")
+	tr.fire(cronAutomation(1, "n", "@daily", "UTC"))
 	if eng.callCount() != 1 {
 		t.Fatalf("expected engine invoked once, got %d", eng.callCount())
 	}

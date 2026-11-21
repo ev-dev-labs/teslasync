@@ -20,6 +20,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { formatMaintenanceDate } from '../components/maintenance-modernization/serviceColumns';
+import { RecallWatchPanel } from '../components/RecallWatchPanel';
 import {
   MaintenanceGridSlot, MaintenanceSummary, MaintenanceItemsPanel,
   MaintenanceProjectionsPanel, MaintenanceCostPanel, MaintenanceCategoriesPanel,
@@ -120,6 +121,10 @@ export default function MaintenancePage() {
     {
       id: 'maintenance-advisor', size: 'full',
       content: <MaintenanceGridSlot delay={0.05}><AIPredictiveMaintenance vehicleId={vehicleId ?? undefined} /></MaintenanceGridSlot>,
+    },
+    {
+      id: 'maintenance-recall-watch', size: 'full',
+      content: <MaintenanceGridSlot><RecallWatchPanel vehicleId={vehicleId} /></MaintenanceGridSlot>,
     },
     {
       id: 'maintenance-items', size: 'half',

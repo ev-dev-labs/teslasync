@@ -219,6 +219,8 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/settings", name: "Settings", label: "Settings", i18nKey: "routes.settings" },
   { path: "/settings/fleet-setup", name: "FleetSetup", label: "Fleet setup", i18nKey: "routes.fleetSetup" },
   { path: "/settings/safety", name: "SafetySettingsPage", label: "Safety settings page", i18nKey: "routes.safetySettingsPage" },
+  { path: "/settings/smart-charging", name: "SmartChargingPage", label: "Charging readiness", i18nKey: "routes.smartChargingPage" },
+  { path: "/settings/smart-commute", name: "SmartCommutePage", label: "Smart Commute", i18nKey: "routes.smartCommutePage" },
   { path: "/share-card", name: "ShareCard", label: "Share card", i18nKey: "routes.shareCard" },
   { path: "/sharing/trips", name: "SharingTrips", label: "Sharing trips", i18nKey: "routes.sharingTrips" },
   { path: "/signal-change-points", name: "SignalChangePoints", label: "Signal change points", i18nKey: "routes.signalChangePoints" },

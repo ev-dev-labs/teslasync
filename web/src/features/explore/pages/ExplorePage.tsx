@@ -96,13 +96,13 @@ export default function ExplorePage() {
 
   // ── Catalog ─────────────────────────────────────────────────────────
   const visibleCatalog = useMemo(() => {
-    const all = buildFeatureCatalog();
+    const all = buildFeatureCatalog((key, fallback) => t(key, fallback));
     return all.filter((entry) => {
       if (entry.minVehicles && vehicleCount < entry.minVehicles) return false;
       if (entry.requiresAuth && !isForwardAuth) return false;
       return true;
     });
-  }, [vehicleCount, isForwardAuth]);
+  }, [vehicleCount, isForwardAuth, t]);
 
   const filtered = useMemo(
     () => filterFeatureCatalog(visibleCatalog, query, (key, fallback) => t(key, fallback)),

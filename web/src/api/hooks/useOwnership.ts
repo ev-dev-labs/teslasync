@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { request } from '../client';
+import { isApiError, request } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import { useMutationToast } from './_toastHelpers';
+import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity';
 import type {
   AssignDriveRequest,
   ChargingInvoice,
@@ -30,6 +31,7 @@ import type {
   InsurancePolicy,
   InsuranceRiskProfile,
   InvoiceDispute,
+  InvoiceReviewChange,
   JurisdictionRate,
   ModelTrustReport,
   OwnershipList,
@@ -194,11 +196,16 @@ export function useDeleteInsurancePolicy() {
 // 2. Tariff arbitrage lab
 // ---------------------------------------------------------------------------
 
-export function useTariffs(limit = 50, offset = 0) {
+export function useTariffs(limit = 50, offset = 0, scope?: PersonalScope) {
   return useQuery({
-    queryKey: ownershipKeys.tariffs(limit, offset),
+    queryKey: scope ? [...ownershipKeys.tariffs(limit, offset), scope] : ownershipKeys.tariffs(limit, offset),
     queryFn: ({ signal }) =>
-      request<OwnershipPage<Tariff>>(`${TARIFF}/tariffs${query({ limit, offset })}`, { signal }),
+      request<OwnershipPage<Tariff>>(`${TARIFF}/tariffs${query({ limit, offset })}`, {
+        signal, cache: 'no-store', headers: scope ? expectedPrincipalHeader(scope) : undefined,
+      }),
+    gcTime: scope ? 0 : undefined,
+    staleTime: scope ? 0 : undefined,
+    refetchOnWindowFocus: scope ? 'always' : undefined,
   });
 }
 
@@ -249,28 +256,37 @@ export function useSimulateTariffs() {
 // 3. Charging invoice reconciliation
 // ---------------------------------------------------------------------------
 
-export function useChargingInvoices(vehicleId: number | null, limit = 25, offset = 0) {
-  return useVehicleQuery<OwnershipPage<ChargingInvoice>>(
-    ownershipKeys.invoices(vehicleId, limit, offset),
-    `${RECONCILE}/invoices${query({ vehicle_id: vehicleId ?? undefined, limit, offset })}`,
-    vehicleId,
-  );
+export function useChargingInvoices(vehicleId: number | null, limit = 25, offset = 0, scope?: PersonalScope | null) {
+  return useQuery({
+    queryKey: [...ownershipKeys.invoices(vehicleId, limit, offset), scope],
+    queryFn: ({ signal }) =>
+      request<OwnershipPage<ChargingInvoice>>(
+        `${RECONCILE}/invoices${query({ vehicle_id: vehicleId ?? undefined, limit, offset })}`,
+        { signal, cache: 'no-store', headers: scope ? expectedPrincipalHeader(scope) : undefined },
+      ),
+    enabled: isValidVehicle(vehicleId) && scope !== null,
+    gcTime: 0,
+  });
 }
 
-export function useReconciliationReport(invoiceId: number | null) {
+export function useReconciliationReport(invoiceId: number | null, scope?: PersonalScope | null, vehicleId?: number) {
   return useQuery({
-    queryKey: ownershipKeys.invoiceReport(invoiceId),
+    queryKey: [...ownershipKeys.invoiceReport(invoiceId), scope, vehicleId],
     queryFn: ({ signal }) => {
       if (invoiceId == null || invoiceId <= 0) {
         throw new Error('invoice id must be a positive integer');
       }
-      return request<ReconciliationReport>(`${RECONCILE}/invoices/${invoiceId}/report`, { signal });
+      return request<ReconciliationReport>(
+        `${RECONCILE}/invoices/${invoiceId}/report${query({ vehicle_id: vehicleId })}`,
+        { signal, cache: 'no-store', headers: scope ? expectedPrincipalHeader(scope) : undefined },
+      );
     },
-    enabled: invoiceId != null && invoiceId > 0,
+    enabled: invoiceId != null && invoiceId > 0 && scope !== null,
+    gcTime: 0,
   });
 }
 
-export function useCreateInvoice() {
+export function useCreateInvoice(scope?: PersonalScope | null) {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
@@ -278,6 +294,7 @@ export function useCreateInvoice() {
       request<ChargingInvoice>(`${RECONCILE}/invoices`, {
         method: 'POST',
         requiresLiveMode: true,
+        headers: scope ? expectedPrincipalHeader(scope) : undefined,
         body: JSON.stringify(body),
       }),
     networkMode: 'always',
@@ -291,12 +308,14 @@ export function useCreateInvoice() {
   });
 }
 
-export function useDeleteInvoice() {
+export function useDeleteInvoice(scope?: PersonalScope | null) {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request<void>(`${RECONCILE}/invoices/${id}`, { method: 'DELETE', requiresLiveMode: true }),
+      request<void>(`${RECONCILE}/invoices/${id}`, {
+        method: 'DELETE', requiresLiveMode: true, headers: scope ? expectedPrincipalHeader(scope) : undefined,
+      }),
     networkMode: 'always',
     retry: false,
     onSuccess: () => {
@@ -308,7 +327,7 @@ export function useDeleteInvoice() {
   });
 }
 
-export function useCreateDispute(invoiceId: number | null) {
+export function useCreateDispute(invoiceId: number | null, scope?: PersonalScope | null) {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
@@ -319,6 +338,7 @@ export function useCreateDispute(invoiceId: number | null) {
       return request<InvoiceDispute>(`${RECONCILE}/invoices/${invoiceId}/disputes`, {
         method: 'POST',
         requiresLiveMode: true,
+        headers: scope ? expectedPrincipalHeader(scope) : undefined,
         body: JSON.stringify(body),
       });
     },
@@ -328,8 +348,69 @@ export function useCreateDispute(invoiceId: number | null) {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.reconcile.toast.disputed', 'Dispute opened');
     },
-    onError: (error) =>
-      toast.error(error, 'ownership.reconcile.toast.disputeError', 'Failed to open dispute'),
+    onError: (error) => {
+      if (isApiError(error) && error.code === 'INVOICE_REVIEW_CHANGED') {
+        void client.invalidateQueries({ queryKey: ownershipKeys.all });
+      } else if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        void client.invalidateQueries({ queryKey: personalIdentityKey });
+      }
+      toast.error(error, 'ownership.reconcile.toast.disputeError', 'Failed to open dispute');
+    },
+  });
+}
+
+export function useInvoiceReviewChange(invoiceId: number, vehicleId: number, scope: PersonalScope | null) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (change: InvoiceReviewChange) => {
+      if (scope?.mode !== 'forward_auth') throw new Error('Private review requires verified identity');
+      const path = `${RECONCILE}/invoices/${invoiceId}/review`;
+      const options = { cache: 'no-store', requiresLiveMode: true, headers: expectedPrincipalHeader(scope) } as const;
+      if (change.kind === 'clear') {
+        return request<void>(`${path}${query({ vehicle_id: vehicleId, expected_version: change.version })}`,
+          { ...options, method: 'DELETE' });
+      }
+      return request<void>(path, {
+        ...options,
+        method: 'PUT',
+        body: JSON.stringify({
+          vehicle_id: vehicleId,
+          expected_version: change.version,
+          confirmed: true,
+          variance_options: {
+            material_amount_minor: change.options.material_amount_minor,
+            complete_statement: change.options.complete_statement,
+          },
+          lines: change.lines.flatMap(({ id, variance_evidence: evidence }) => {
+            if (!evidence) return [];
+            const { billed_boundary, other_fees_minor, meter, rate } = evidence;
+            return [{
+              line_id: id,
+              evidence: {
+                billed_boundary, other_fees_minor,
+                meter: meter && {
+                  observed_boundary: meter.observed_boundary,
+                  observed_energy_wh: meter.observed_energy_wh,
+                  max_loss_wh: meter.max_loss_wh,
+                },
+                rate: rate && { boundary: rate.boundary, amount_minor: rate.amount_minor, energy_wh: rate.energy_wh },
+              },
+            }];
+          }),
+        }),
+      });
+    },
+    retry: false,
+    gcTime: 0,
+    networkMode: 'always',
+    onSettled: async (_data, error) => {
+      if (!error || (isApiError(error) && error.code === 'INVOICE_REVIEW_CHANGED')) {
+        await client.invalidateQueries({ queryKey: ownershipKeys.all });
+      }
+      if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        await client.invalidateQueries({ queryKey: personalIdentityKey });
+      }
+    },
   });
 }
 
@@ -442,12 +523,17 @@ export function useWarrantyOverview(vehicleId: number | null) {
   );
 }
 
-export function useWarranties(vehicleId: number | null) {
-  return useVehicleQuery<OwnershipList<Warranty>>(
-    ownershipKeys.warranties(vehicleId),
-    `${WARRANTY}/warranties${query({ vehicle_id: vehicleId ?? undefined })}`,
-    vehicleId,
-  );
+export function useWarranties(vehicleId: number | null, scope?: PersonalScope | null) {
+  return useQuery({
+    queryKey: scope ? [...ownershipKeys.warranties(vehicleId), scope] : ownershipKeys.warranties(vehicleId),
+    queryFn: ({ signal }) => request<OwnershipList<Warranty>>(
+      `${WARRANTY}/warranties${query({ vehicle_id: vehicleId ?? undefined })}`, {
+        signal, headers: scope ? expectedPrincipalHeader(scope) : undefined, cache: 'no-store',
+      }),
+    enabled: isValidVehicle(vehicleId) && scope !== null,
+    gcTime: scope ? 0 : undefined,
+    staleTime: scope ? 0 : undefined,
+  });
 }
 
 export function useCreateWarranty() {

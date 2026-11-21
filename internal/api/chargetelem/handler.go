@@ -3,6 +3,7 @@ package chargetelem
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -10,6 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
 // ChargingTelemetryHandler serves charging telemetry endpoints backed by the
@@ -109,6 +111,11 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 	for _, m := range chargingTelemetryMappings {
 		if v, ok := snap[m.Signal]; ok {
 			result[m.Field] = v
+		}
+	}
+	if raw, ok := snap["DetailedChargeState"].(string); ok {
+		if detailed, err := protomodel.ParseDetailedChargeStateValue(raw); err == nil {
+			result["charging_state"] = strings.TrimPrefix(detailed.String(), "DetailedChargeState")
 		}
 	}
 	mergeDCChargingValues(result)

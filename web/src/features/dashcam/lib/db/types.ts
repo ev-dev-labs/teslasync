@@ -1,4 +1,5 @@
 import type { ClipRecord, DashcamSettings } from '../types';
+import type { ClipRetention, RetentionChange } from '../clipRetention';
 
 /**
  * Storage abstraction for the dashcam feature. Two implementations exist:
@@ -16,4 +17,6 @@ export interface DashcamDb {
   deleteClip(id: string): Promise<void>;
   getSettings(): Promise<DashcamSettings>;
   putSettings(settings: DashcamSettings): Promise<void>;
+  listRetention(subject: string, vehicleId: number): Promise<ClipRetention[]>;
+  changeRetention(change: RetentionChange): Promise<boolean>;
 }

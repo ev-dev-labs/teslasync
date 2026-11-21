@@ -254,6 +254,7 @@ vi.mock('@/api/hooks/useAuthMode', () => ({
 }))
 vi.mock('@/api/hooks/useSettings', () => ({
   useSettings: () => ({ data: { completed_tours: [] }, isFetched: true }),
+  useVersionInfo: () => ({ data: { require_cookie_consent: false } }),
   settingsKeys: { settings: ['settings'] },
 }))
 
@@ -554,6 +555,12 @@ describe('navSections (data export)', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
     expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
+  })
+
+  it('exposes Smart Commute and Charging readiness in Notifications', () => {
+    const notifications = navSections.find((section) => section.title === 'Notifications')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-commute')?.label).toBe('Smart Commute')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-charging')?.label).toBe('Charging readiness')
   })
 
   it('places Vehicle Management in the Vehicles group', () => {

@@ -89,8 +89,11 @@ func (s *Service) CreateWarranty(
 	if request.TermDistanceM < 0 {
 		return nil, fmt.Errorf("%w: term_distance_m must not be negative", ErrInvalidInput)
 	}
-	if !requireNonNegF(request.StartOdometerM) {
+	if request.StartOdometerM != nil && !requireNonNegF(*request.StartOdometerM) {
 		return nil, fmt.Errorf("%w: start_odometer_m must not be negative", ErrInvalidInput)
+	}
+	if request.ZeroStartOdometerConfirmed && (request.StartOdometerM == nil || *request.StartOdometerM != 0) {
+		return nil, fmt.Errorf("%w: zero confirmation requires an explicit zero start_odometer_m", ErrInvalidInput)
 	}
 	if request.CapacityFloorPct != nil && (*request.CapacityFloorPct <= 0 || *request.CapacityFloorPct >= 100) {
 		return nil, fmt.Errorf("%w: capacity_floor_pct must sit between 0 and 100", ErrInvalidInput)
@@ -103,18 +106,19 @@ func (s *Service) CreateWarranty(
 		return nil, fmt.Errorf("%w: deductible_minor must not be negative", ErrInvalidInput)
 	}
 	record, err := s.durable.CreateWarranty(ctx, subject, port.WarrantyRecord{
-		VehicleID:        request.VehicleID,
-		Kind:             string(request.Kind),
-		Label:            label,
-		Provider:         provider,
-		StartAt:          request.StartAt.UTC(),
-		StartOdometerM:   request.StartOdometerM,
-		TermS:            request.TermS,
-		TermDistanceM:    request.TermDistanceM,
-		CapacityFloorPct: request.CapacityFloorPct,
-		DeductibleMinor:  request.DeductibleMinor,
-		Currency:         currency,
-		Notes:            notes,
+		VehicleID:                  request.VehicleID,
+		Kind:                       string(request.Kind),
+		Label:                      label,
+		Provider:                   provider,
+		StartAt:                    request.StartAt.UTC(),
+		StartOdometerM:             deref(request.StartOdometerM),
+		ZeroStartOdometerConfirmed: request.ZeroStartOdometerConfirmed,
+		TermS:                      request.TermS,
+		TermDistanceM:              request.TermDistanceM,
+		CapacityFloorPct:           request.CapacityFloorPct,
+		DeductibleMinor:            request.DeductibleMinor,
+		Currency:                   currency,
+		Notes:                      notes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create warranty: %w", err)
@@ -194,6 +198,14 @@ func (s *Service) WarrantyOverview(
 	if err != nil {
 		return nil, fmt.Errorf("vehicle snapshot: %w", err)
 	}
+	if snapshot != nil {
+		current := *snapshot
+		current.OdometerM = current.CurrentOdometerM
+		if current.OdometerM != nil && !requireNonNegF(*current.OdometerM) {
+			current.OdometerM = nil
+		}
+		snapshot = &current
+	}
 	warranties, err := s.durable.ListWarranties(ctx, subject, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("list warranties: %w", err)
@@ -235,7 +247,7 @@ func (s *Service) WarrantyOverview(
 				overview.ExpiringSoonCount++
 			}
 			if overview.NextExpiryAt == nil || coverage.ProjectedExpiryAt.Before(*overview.NextExpiryAt) {
-				overview.NextExpiryAt = domain.TimePointer(coverage.ProjectedExpiryAt)
+				overview.NextExpiryAt = coverage.ProjectedExpiryAt
 			}
 		}
 		if overview.Currency == "" {
@@ -244,7 +256,7 @@ func (s *Service) WarrantyOverview(
 		overview.Coverages = append(overview.Coverages, coverage)
 	}
 	sort.SliceStable(overview.Coverages, func(i, j int) bool {
-		return overview.Coverages[i].ProjectedExpiryAt.Before(overview.Coverages[j].ProjectedExpiryAt)
+		return coverageOrderTime(overview.Coverages[i]).Before(coverageOrderTime(overview.Coverages[j]))
 	})
 	overview.EvidenceBundleHash = warrantyDigest(vehicleID, overview)
 
@@ -253,13 +265,13 @@ func (s *Service) WarrantyOverview(
 		reasons = append(reasons, "no coverages have been registered yet")
 	}
 	if pace == nil {
-		reasons = append(reasons, "not enough recent drives to observe a distance pace, so expiry is time-only")
+		reasons = append(reasons, "not enough recent drives to project a distance expiry")
 	}
 	if retention == nil {
 		reasons = append(reasons, "no usable charge sessions to estimate battery capacity retention")
 	}
 	if snapshot == nil || snapshot.OdometerM == nil {
-		reasons = append(reasons, "odometer is unknown, so distance consumption is estimated from drive totals")
+		reasons = append(reasons, "current odometer is unknown, so distance consumption cannot be determined")
 	}
 	overview.Quality = quality(
 		gradeQuality(len(drives), minPaceDrives, 60),
@@ -283,6 +295,13 @@ func (s *Service) WarrantyOverview(
 		))
 	}
 	return overview, nil
+}
+
+func coverageOrderTime(coverage domain.WarrantyCoverage) time.Time {
+	if coverage.ProjectedExpiryAt != nil {
+		return *coverage.ProjectedExpiryAt
+	}
+	return coverage.TimeExpiryAt
 }
 
 func projectCoverage(
@@ -312,27 +331,31 @@ func projectCoverage(
 	coverage.TimeUsedPct = clamp(float64(elapsed)/float64(maxInt64(record.TermS, 1))*100, 0, 100)
 	coverage.TimeExpiryAt = record.StartAt.Add(time.Duration(record.TermS) * time.Second)
 
-	odometer := 0.0
+	distanceKnown := false
+	used := 0.0
 	if snapshot != nil && snapshot.OdometerM != nil {
-		odometer = *snapshot.OdometerM
+		odometer := *snapshot.OdometerM
+		distanceKnown = record.HasStartOdometer() && !math.IsNaN(odometer) && !math.IsInf(odometer, 0) && odometer >= record.StartOdometerM
+		if distanceKnown {
+			used = odometer - record.StartOdometerM
+		}
 	}
-	used := math.Max(odometer-record.StartOdometerM, 0)
 	coverage.DistanceUsedM = used
-	if record.TermDistanceM > 0 {
+	if distanceKnown && record.TermDistanceM > 0 {
 		coverage.DistanceRemainingM = math.Max(record.TermDistanceM-used, 0)
 		coverage.DistanceUsedPct = clamp(used/record.TermDistanceM*100, 0, 100)
 	}
 
-	coverage.ProjectedExpiryAt = coverage.TimeExpiryAt
+	coverage.ProjectedExpiryAt = domain.TimePointer(coverage.TimeExpiryAt)
 	coverage.BindingLimit = "time"
 	if pace != nil {
 		coverage.ObservedPaceMPerS = pace
-		if record.TermDistanceM > 0 && *pace > 0 {
+		if distanceKnown && record.TermDistanceM > 0 && *pace > 0 {
 			secondsLeft := coverage.DistanceRemainingM / *pace
 			expiry := now.Add(time.Duration(secondsLeft) * time.Second)
 			coverage.DistanceExpiryAt = domain.TimePointer(expiry)
-			if expiry.Before(coverage.ProjectedExpiryAt) {
-				coverage.ProjectedExpiryAt = expiry
+			if expiry.Before(*coverage.ProjectedExpiryAt) {
+				coverage.ProjectedExpiryAt = domain.TimePointer(expiry)
 				coverage.BindingLimit = "distance"
 			}
 		}
@@ -357,16 +380,22 @@ func projectCoverage(
 		}
 	}
 
-	coverage.Active = now.Before(coverage.TimeExpiryAt) &&
-		(record.TermDistanceM <= 0 || used < record.TermDistanceM)
+	distanceUnknown := record.TermDistanceM > 0 && !distanceKnown
+	if distanceUnknown {
+		coverage.ProjectedExpiryAt = nil
+		coverage.BindingLimit = "undetermined"
+	}
 	switch {
-	case !coverage.Active:
+	case !now.Before(coverage.TimeExpiryAt) || (record.TermDistanceM > 0 && distanceKnown && used >= record.TermDistanceM):
 		coverage.Status = "expired"
+	case distanceUnknown:
+		coverage.Status = "undetermined"
 	case coverage.ProjectedExpiryAt.Sub(now).Seconds() <= expiringSoonS:
 		coverage.Status = "expiring"
 	default:
 		coverage.Status = "active"
 	}
+	coverage.Active = coverage.Status == "active" || coverage.Status == "expiring"
 	if coverage.Active {
 		window := int64(coverage.ProjectedExpiryAt.Sub(now).Seconds())
 		coverage.ClaimWindowClosingS = pointer(window)
@@ -404,16 +433,24 @@ func buildReadiness(
 		switch spec.code {
 		case "coverage_active":
 			check.Satisfied = coverage.Active
-			if check.Satisfied {
+			switch {
+			case check.Satisfied:
 				check.Detail = fmt.Sprintf("Time coverage runs until %s.", coverage.TimeExpiryAt.Format(time.RFC3339))
-			} else {
+			case coverage.Status == "undetermined":
+				check.Detail = "Coverage cannot be confirmed without both starting and current odometer readings."
+			default:
 				check.Detail = "Coverage has already lapsed on time or distance."
 			}
 		case "distance_headroom":
 			check.Satisfied = record.TermDistanceM <= 0 || coverage.DistanceRemainingM > 0
-			if record.TermDistanceM <= 0 {
+			switch {
+			case record.TermDistanceM <= 0:
 				check.Detail = "This coverage has no distance limit."
-			} else {
+			case !record.HasStartOdometer():
+				check.Detail = "The odometer at coverage start is not recorded."
+			case coverage.ProjectedExpiryAt == nil:
+				check.Detail = "A usable current odometer reading is missing."
+			default:
 				check.Detail = fmt.Sprintf("%.0f m of the %.0f m allowance remains.", coverage.DistanceRemainingM, record.TermDistanceM)
 			}
 		case "capacity_evidence":
@@ -441,10 +478,13 @@ func buildReadiness(
 			}
 		case "claim_window_open":
 			check.Satisfied = coverage.Active && coverage.ProjectedExpiryAt.Sub(now) > 30*24*time.Hour
-			if coverage.Active {
+			switch {
+			case coverage.Active:
 				check.Detail = fmt.Sprintf("Projected expiry is %s (%s limit).",
 					coverage.ProjectedExpiryAt.Format(time.RFC3339), coverage.BindingLimit)
-			} else {
+			case coverage.Status == "undetermined":
+				check.Detail = "The claim deadline cannot be determined from the recorded readings."
+			default:
 				check.Detail = "The claim window is already closed."
 			}
 		}
@@ -472,6 +512,10 @@ func buildReadiness(
 }
 
 func coverageNarrative(record port.WarrantyRecord, coverage domain.WarrantyCoverage, satisfied, total int) string {
+	if coverage.Status == "undetermined" {
+		return fmt.Sprintf("%s has a recorded calendar end of %s, but coverage cannot be confirmed without both odometer readings. %d of %d readiness gates pass.",
+			record.Label, coverage.TimeExpiryAt.Format("2006-01-02"), satisfied, total)
+	}
 	if !coverage.Active {
 		return fmt.Sprintf("%s coverage has lapsed. %d of %d readiness gates still pass, which is what a retroactive claim would rest on.",
 			record.Label, satisfied, total)
@@ -536,12 +580,16 @@ func warrantyDigest(vehicleID int64, overview *domain.WarrantyOverview) string {
 	hasher := sha256.New()
 	fmt.Fprintf(hasher, "warranty-v1|%d|%s|", vehicleID, overview.AsOf.UTC().Format(time.RFC3339))
 	for _, coverage := range overview.Coverages {
+		expiry := ""
+		if coverage.ProjectedExpiryAt != nil {
+			expiry = coverage.ProjectedExpiryAt.UTC().Format(time.RFC3339)
+		}
 		fmt.Fprintf(hasher, "%s:%s:%.2f:%.2f:%s;",
 			coverage.Warranty.Kind,
 			coverage.Status,
 			coverage.TimeUsedPct,
 			coverage.DistanceUsedPct,
-			coverage.ProjectedExpiryAt.UTC().Format(time.RFC3339),
+			expiry,
 		)
 	}
 	return hex.EncodeToString(hasher.Sum(nil))
@@ -576,22 +624,23 @@ func maxInt64(a, b int64) int64 {
 
 func warrantyToDomain(record port.WarrantyRecord) domain.Warranty {
 	return domain.Warranty{
-		ID:               record.ID,
-		VehicleID:        record.VehicleID,
-		Kind:             domain.WarrantyKind(record.Kind),
-		Label:            record.Label,
-		Provider:         record.Provider,
-		StartAt:          record.StartAt,
-		StartOdometerM:   record.StartOdometerM,
-		TermS:            record.TermS,
-		TermDistanceM:    record.TermDistanceM,
-		CapacityFloorPct: record.CapacityFloorPct,
-		DeductibleMinor:  record.DeductibleMinor,
-		Currency:         record.Currency,
-		Notes:            record.Notes,
-		Version:          record.Version,
-		CreatedAt:        record.CreatedAt,
-		UpdatedAt:        record.UpdatedAt,
+		ID:                 record.ID,
+		VehicleID:          record.VehicleID,
+		Kind:               domain.WarrantyKind(record.Kind),
+		Label:              record.Label,
+		Provider:           record.Provider,
+		StartAt:            record.StartAt,
+		StartOdometerM:     record.StartOdometerM,
+		StartOdometerKnown: record.HasStartOdometer(),
+		TermS:              record.TermS,
+		TermDistanceM:      record.TermDistanceM,
+		CapacityFloorPct:   record.CapacityFloorPct,
+		DeductibleMinor:    record.DeductibleMinor,
+		Currency:           record.Currency,
+		Notes:              record.Notes,
+		Version:            record.Version,
+		CreatedAt:          record.CreatedAt,
+		UpdatedAt:          record.UpdatedAt,
 	}
 }
 

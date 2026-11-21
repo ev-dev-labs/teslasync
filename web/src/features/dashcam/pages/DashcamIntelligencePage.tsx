@@ -18,6 +18,7 @@ import {
   ClipCatalogList,
   ClipDetailPanel,
 } from '../components/dashcam';
+import { ClipRetentionPanel } from '../components/dashcam/ClipRetentionPanel';
 
 /**
  * Local Dashcam / Sentry Intelligence — a fully local-first vertical slice:
@@ -31,7 +32,7 @@ export default function DashcamIntelligencePage() {
   const { t } = useTranslation();
   usePageTitle(t('dashcam.page.title', 'Dashcam & Sentry intelligence'));
 
-  const { vehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicle, vehiclesState } = useSelectedVehicle();
   const { persistent, fallbackReason } = useDashcamDb();
   const clipsQuery = useClipCatalog();
   const catalogState = deriveDataState(clipsQuery);
@@ -67,6 +68,12 @@ export default function DashcamIntelligencePage() {
           )}
 
           <ImportPanel vehicleId={vehicleId} />
+
+          {persistent && vehicleId != null && vehicle && (
+            <ClipRetentionPanel vehicleId={vehicleId} fleetReady={vehiclesState.status === 'ok'}
+              catalogReady={catalogState.status === 'ok' && !clipsQuery.isFetching}
+              clips={clips} selected={selectedClip} onSelect={setSelectedClipId} />
+          )}
 
           <Grid cols={{ default: 1, lg: 3 }} gap={4}>
             <div className="space-y-4 lg:col-span-1">

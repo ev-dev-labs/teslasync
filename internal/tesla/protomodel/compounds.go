@@ -81,14 +81,14 @@ type Time struct {
 // proto Doors uses TrunkFront/TrunkRear. This struct mirrors the wire JSON.
 //
 // Parsing of the JSON string into this struct happens in the codec package;
-// this file only declares the contract.
+// this file only declares the contract. Nil means the closure was not reported.
 type DoorState struct {
-	DriverFront    bool
-	DriverRear     bool
-	PassengerFront bool
-	PassengerRear  bool
-	FrontTrunk     bool
-	RearTrunk      bool
+	DriverFront    *bool
+	DriverRear     *bool
+	PassengerFront *bool
+	PassengerRear  *bool
+	FrontTrunk     *bool
+	RearTrunk      *bool
 }
 
 // ScheduledChargingStartTime is the typed compound for the JSON-shaped

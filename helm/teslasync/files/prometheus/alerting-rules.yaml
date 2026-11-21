@@ -2,6 +2,786 @@
 # Source: slo/catalog.yaml
 # Multi-window multi-burn-rate per Google SRE Workbook ch. 5.
 groups:
+  - name: slo_smart_weekly_drive_efficiency_availability_burn
+    rules:
+      - alert: SLOSmartWeeklyDriveEfficiencyAvailabilityFastBurn
+        expr: "(1 - slo:smart_weekly_drive_efficiency_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_weekly_drive_efficiency_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_weekly_drive_efficiency_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_weekly_drive_efficiency_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_weekly_drive_efficiency_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartWeeklyDriveEfficiencyAvailabilitySlowBurn
+        expr: "(1 - slo:smart_weekly_drive_efficiency_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_weekly_drive_efficiency_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_weekly_drive_efficiency_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_weekly_drive_efficiency_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_subscription_renewal_availability_burn
+    rules:
+      - alert: SLOSmartSubscriptionRenewalAvailabilityFastBurn
+        expr: "(1 - slo:smart_subscription_renewal_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_subscription_renewal_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_subscription_renewal_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_subscription_renewal_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_subscription_renewal_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartSubscriptionRenewalAvailabilitySlowBurn
+        expr: "(1 - slo:smart_subscription_renewal_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_subscription_renewal_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_subscription_renewal_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_subscription_renewal_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_trip_packet_availability_burn
+    rules:
+      - alert: SLOSmartTripPacketAvailabilityFastBurn
+        expr: "(1 - slo:smart_trip_packet_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_trip_packet_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_trip_packet_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_trip_packet_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_trip_packet_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartTripPacketAvailabilitySlowBurn
+        expr: "(1 - slo:smart_trip_packet_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_trip_packet_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_trip_packet_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_trip_packet_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_mileage_term_review_availability_burn
+    rules:
+      - alert: SLOSmartMileageTermReviewAvailabilityFastBurn
+        expr: "(1 - slo:smart_mileage_term_review_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_mileage_term_review_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_mileage_term_review_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_mileage_term_review_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_mileage_term_review_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartMileageTermReviewAvailabilitySlowBurn
+        expr: "(1 - slo:smart_mileage_term_review_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_mileage_term_review_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_mileage_term_review_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_mileage_term_review_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_monthly_tariff_review_availability_burn
+    rules:
+      - alert: SLOSmartMonthlyTariffReviewAvailabilityFastBurn
+        expr: "(1 - slo:smart_monthly_tariff_review_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_monthly_tariff_review_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_monthly_tariff_review_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_monthly_tariff_review_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_monthly_tariff_review_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartMonthlyTariffReviewAvailabilitySlowBurn
+        expr: "(1 - slo:smart_monthly_tariff_review_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_monthly_tariff_review_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_monthly_tariff_review_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_monthly_tariff_review_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_charging_cost_digest_availability_burn
+    rules:
+      - alert: SLOSmartChargingCostDigestAvailabilityFastBurn
+        expr: "(1 - slo:smart_charging_cost_digest_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_charging_cost_digest_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_charging_cost_digest_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_charging_cost_digest_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_charging_cost_digest_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartChargingCostDigestAvailabilitySlowBurn
+        expr: "(1 - slo:smart_charging_cost_digest_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_charging_cost_digest_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_charging_cost_digest_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_charging_cost_digest_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_invoice_variance_availability_burn
+    rules:
+      - alert: SLOSmartInvoiceVarianceAvailabilityFastBurn
+        expr: "(1 - slo:smart_invoice_variance_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_invoice_variance_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_invoice_variance_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_invoice_variance_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_invoice_variance_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartInvoiceVarianceAvailabilitySlowBurn
+        expr: "(1 - slo:smart_invoice_variance_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_invoice_variance_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_invoice_variance_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_invoice_variance_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_favorite_digest_availability_burn
+    rules:
+      - alert: SLOSmartFavoriteDigestAvailabilityFastBurn
+        expr: "(1 - slo:smart_favorite_digest_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_favorite_digest_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_favorite_digest_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_favorite_digest_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_favorite_digest_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartFavoriteDigestAvailabilitySlowBurn
+        expr: "(1 - slo:smart_favorite_digest_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_favorite_digest_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_favorite_digest_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_favorite_digest_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_episode_review_availability_burn
+    rules:
+      - alert: SLOSmartEpisodeReviewAvailabilityFastBurn
+        expr: "(1 - slo:smart_episode_review_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_episode_review_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_episode_review_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_episode_review_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_episode_review_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartEpisodeReviewAvailabilitySlowBurn
+        expr: "(1 - slo:smart_episode_review_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_episode_review_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_episode_review_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_episode_review_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_drive_track_availability_burn
+    rules:
+      - alert: SLOSmartDriveTrackAvailabilityFastBurn
+        expr: "(1 - slo:smart_drive_track_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_drive_track_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_drive_track_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_drive_track_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_drive_track_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartDriveTrackAvailabilitySlowBurn
+        expr: "(1 - slo:smart_drive_track_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_drive_track_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_drive_track_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_drive_track_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_journey_soundtrack_availability_burn
+    rules:
+      - alert: SLOSmartJourneySoundtrackAvailabilityFastBurn
+        expr: "(1 - slo:smart_journey_soundtrack_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_journey_soundtrack_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_journey_soundtrack_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_journey_soundtrack_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_journey_soundtrack_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartJourneySoundtrackAvailabilitySlowBurn
+        expr: "(1 - slo:smart_journey_soundtrack_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_journey_soundtrack_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_journey_soundtrack_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_journey_soundtrack_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_media_playlist_availability_burn
+    rules:
+      - alert: SLOSmartMediaPlaylistAvailabilityFastBurn
+        expr: "(1 - slo:smart_media_playlist_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_media_playlist_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_media_playlist_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_media_playlist_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_media_playlist_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartMediaPlaylistAvailabilitySlowBurn
+        expr: "(1 - slo:smart_media_playlist_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_media_playlist_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_media_playlist_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_media_playlist_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_software_window_availability_burn
+    rules:
+      - alert: SLOSmartSoftwareWindowAvailabilityFastBurn
+        expr: "(1 - slo:smart_software_window_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_software_window_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_software_window_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_software_window_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_software_window_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartSoftwareWindowAvailabilitySlowBurn
+        expr: "(1 - slo:smart_software_window_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_software_window_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_software_window_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_software_window_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_parking_review_availability_burn
+    rules:
+      - alert: SLOSmartParkingReviewAvailabilityFastBurn
+        expr: "(1 - slo:smart_parking_review_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_parking_review_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_parking_review_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_parking_review_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_parking_review_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartParkingReviewAvailabilitySlowBurn
+        expr: "(1 - slo:smart_parking_review_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_parking_review_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_parking_review_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_parking_review_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_capacity_digest_availability_burn
+    rules:
+      - alert: SLOSmartCapacityDigestAvailabilityFastBurn
+        expr: "(1 - slo:smart_capacity_digest_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_capacity_digest_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_capacity_digest_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_capacity_digest_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_capacity_digest_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartCapacityDigestAvailabilitySlowBurn
+        expr: "(1 - slo:smart_capacity_digest_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_capacity_digest_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_capacity_digest_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_capacity_digest_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_overnight_drain_availability_burn
+    rules:
+      - alert: SLOSmartOvernightDrainAvailabilityFastBurn
+        expr: "(1 - slo:smart_overnight_drain_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_overnight_drain_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_overnight_drain_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_overnight_drain_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_overnight_drain_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartOvernightDrainAvailabilitySlowBurn
+        expr: "(1 - slo:smart_overnight_drain_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_overnight_drain_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_overnight_drain_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_overnight_drain_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_climate_schedule_availability_burn
+    rules:
+      - alert: SLOSmartClimateScheduleAvailabilityFastBurn
+        expr: "(1 - slo:smart_climate_schedule_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_climate_schedule_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_climate_schedule_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_climate_schedule_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_climate_schedule_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartClimateScheduleAvailabilitySlowBurn
+        expr: "(1 - slo:smart_climate_schedule_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_climate_schedule_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_climate_schedule_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_climate_schedule_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_park_reserve_availability_burn
+    rules:
+      - alert: SLOSmartParkReserveAvailabilityFastBurn
+        expr: "(1 - slo:smart_park_reserve_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_park_reserve_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_park_reserve_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_park_reserve_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_park_reserve_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartParkReserveAvailabilitySlowBurn
+        expr: "(1 - slo:smart_park_reserve_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_park_reserve_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_park_reserve_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_park_reserve_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_cabin_prep_availability_burn
+    rules:
+      - alert: SLOSmartCabinPrepAvailabilityFastBurn
+        expr: "(1 - slo:smart_cabin_prep_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_cabin_prep_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_cabin_prep_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_cabin_prep_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_cabin_prep_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartCabinPrepAvailabilitySlowBurn
+        expr: "(1 - slo:smart_cabin_prep_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_cabin_prep_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_cabin_prep_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_cabin_prep_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_service_case_availability_burn
+    rules:
+      - alert: SLOSmartServiceCaseAvailabilityFastBurn
+        expr: "(1 - slo:smart_service_case_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_service_case_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_service_case_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_service_case_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_service_case_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartServiceCaseAvailabilitySlowBurn
+        expr: "(1 - slo:smart_service_case_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_service_case_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_service_case_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_service_case_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_recall_watch_availability_burn
+    rules:
+      - alert: SLOSmartRecallWatchAvailabilityFastBurn
+        expr: "(1 - slo:smart_recall_watch_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_recall_watch_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_recall_watch_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_recall_watch_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_recall_watch_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartRecallWatchAvailabilitySlowBurn
+        expr: "(1 - slo:smart_recall_watch_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_recall_watch_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_recall_watch_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_recall_watch_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_cold_tire_availability_burn
+    rules:
+      - alert: SLOSmartColdTireAvailabilityFastBurn
+        expr: "(1 - slo:smart_cold_tire_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_cold_tire_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_cold_tire_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_cold_tire_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_cold_tire_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartColdTireAvailabilitySlowBurn
+        expr: "(1 - slo:smart_cold_tire_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_cold_tire_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_cold_tire_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_cold_tire_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_warranty_distance_availability_burn
+    rules:
+      - alert: SLOSmartWarrantyDistanceAvailabilityFastBurn
+        expr: "(1 - slo:smart_warranty_distance_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_warranty_distance_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_warranty_distance_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_warranty_distance_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_warranty_distance_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartWarrantyDistanceAvailabilitySlowBurn
+        expr: "(1 - slo:smart_warranty_distance_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_warranty_distance_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_warranty_distance_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_warranty_distance_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_delivery_availability_burn
+    rules:
+      - alert: SLOSmartDeliveryAvailabilityFastBurn
+        expr: "(1 - slo:smart_delivery_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_delivery_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_delivery_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_delivery_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_delivery_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartDeliveryAvailabilitySlowBurn
+        expr: "(1 - slo:smart_delivery_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_delivery_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_delivery_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_delivery_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_charging_availability_burn
+    rules:
+      - alert: SLOSmartChargingAvailabilityFastBurn
+        expr: "(1 - slo:smart_charging_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_charging_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_charging_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_charging_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_charging_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartChargingAvailabilitySlowBurn
+        expr: "(1 - slo:smart_charging_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_charging_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_charging_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_charging_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_commute_availability_burn
+    rules:
+      - alert: SLOSmartCommuteAvailabilityFastBurn
+        expr: "(1 - slo:smart_commute_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_commute_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_commute_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_commute_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_commute_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartCommuteAvailabilitySlowBurn
+        expr: "(1 - slo:smart_commute_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_commute_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_commute_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_commute_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_widget_design_preference_availability_burn
     rules:
       - alert: SLOWidgetDesignPreferenceAvailabilityFastBurn

@@ -189,8 +189,10 @@ describe('DataTable — standard toolbar controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
     expect(screen.getByText('Bravo')).toBeInTheDocument()
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: 'CHARLIE' } })
-    await waitFor(() => expect(screen.getByText('Showing 1–1 of 1')).toBeInTheDocument())
-    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Charlie')).toBeInTheDocument()
+      expect(screen.getByText('Showing 1–1 of 1')).toBeInTheDocument()
+    })
     expect(screen.queryByText('Alpha')).toBeNull()
     expect(screen.getByText('Exports include only matching loaded rows, or selected loaded rows.')).toBeInTheDocument()
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: 'missing' } })

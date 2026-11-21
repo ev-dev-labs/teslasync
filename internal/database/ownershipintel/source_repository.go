@@ -164,12 +164,21 @@ func (r *SourceRepository) ListCharges(
 func (r *SourceRepository) VehicleSnapshot(ctx context.Context, vehicleID int64) (*port.VehicleSnapshot, error) {
 	const query = `
 		WITH odo AS (
-		    SELECT MAX(end_odometer_m)   AS latest_m,
+		    SELECT MAX(end_odometer_m) AS recorded_m,
+		           MAX(end_odometer_m) FILTER (WHERE ended_at IS NOT NULL
+		               AND end_odometer_m >= 0 AND end_odometer_m < 'Infinity'::double precision) AS upper_m,
 		           MIN(start_odometer_m) AS earliest_m,
 		           MIN(started_at)       AS first_at,
 		           MAX(started_at)       AS last_at
 		    FROM drives
 		    WHERE vehicle_id = $1 AND end_odometer_m IS NOT NULL
+		),
+		latest_odo AS (
+		    SELECT start_odometer_m, end_odometer_m
+		    FROM drives
+		    WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+		    ORDER BY ended_at DESC, id DESC
+		    LIMIT 1
 		),
 		cap AS (
 		    SELECT started_at,
@@ -193,7 +202,13 @@ func (r *SourceRepository) VehicleSnapshot(ctx context.Context, vehicleID int64)
 		       COALESCE(v.display_name, ''),
 		       COALESCE(v.vin, ''),
 		       v.enrolled_at,
-		       odo.latest_m,
+		       odo.recorded_m,
+		       CASE WHEN latest_odo.end_odometer_m >= odo.upper_m
+		                 AND latest_odo.end_odometer_m < 'Infinity'::double precision
+		                 AND (latest_odo.start_odometer_m IS NULL OR
+		                     (latest_odo.start_odometer_m >= 0 AND
+		                      latest_odo.start_odometer_m <= latest_odo.end_odometer_m))
+		            THEN latest_odo.end_odometer_m END,
 		       odo.earliest_m,
 		       odo.first_at,
 		       odo.last_at,
@@ -202,6 +217,7 @@ func (r *SourceRepository) VehicleSnapshot(ctx context.Context, vehicleID int64)
 		       (SELECT COUNT(*)::int FROM cap)
 		FROM vehicles v
 		CROSS JOIN odo
+		LEFT JOIN latest_odo ON true
 		CROSS JOIN baseline
 		CROSS JOIN recent
 		WHERE v.id = $1`
@@ -212,6 +228,7 @@ func (r *SourceRepository) VehicleSnapshot(ctx context.Context, vehicleID int64)
 		&snapshot.VIN,
 		&snapshot.EnrolledAt,
 		&snapshot.OdometerM,
+		&snapshot.CurrentOdometerM,
 		&snapshot.FirstOdometerM,
 		&snapshot.FirstObservedAt,
 		&snapshot.LastObservedAt,

@@ -147,7 +147,7 @@ export function useGeofences() {
  * surface must continue receiving active rows only. The workspace also
  * polls so a newly discovered charging place appears without a page reload.
  */
-export function useGeofencesFull(includeArchived = false) {
+export function useGeofencesFull(includeArchived = false, enabled = true) {
   return useQuery({
     queryKey: locationKeys.geofencesFull(includeArchived),
     queryFn: ({ signal }) =>
@@ -156,6 +156,7 @@ export function useGeofencesFull(includeArchived = false) {
         { signal },
       ),
     select: safeArray,
+    enabled,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });

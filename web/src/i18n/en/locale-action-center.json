@@ -1,5 +1,6 @@
 {
   "actionCenter": {
+    "identityUnavailable": "A verified identity is unavailable.",
     "page": {
       "title": "Action center",
       "subtitle": "A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard."
@@ -68,8 +69,36 @@
       "drive_efficiency": "Drive efficiency",
       "fleet_maintenance": "Fleet maintenance",
       "signal_health": "Signal health",
+      "smart_charging": "Charging readiness",
+      "charging_site_performance": "Charging site performance",
+      "smart_commute": "Smart Commute",
       "system_health": "System health",
-      "vehicle_readiness": "Vehicle readiness"
+      "vehicle_readiness": "Vehicle readiness",
+      "warranty_distance": "Warranty mileage",
+      "trip_maintenance": "Trip maintenance",
+      "cold_tire_drift": "Cold tire checks",
+      "recall_watch": "Recall watch",
+      "service_case": "Service case",
+      "climate_schedule": "Scheduled climate",
+      "subscription_renewal": "Subscription renewals",
+      "automation_failure": "Automation failures"
+    },
+    "automationFailure": {
+      "basis": "Counts separate completed runs with a failed or partial outcome, not retries within one run.",
+      "title": "Review repeated automation failures",
+      "summary": "{{rule}} recorded {{runs}} failed or partial runs in a row.",
+      "open": "Open latest execution"
+    },
+    "estimateIncident": {
+      "import": "HERE route import",
+      "routing": "HERE road routing",
+      "flow": "HERE traffic flow",
+      "basis": "A direct provider response verified this change in availability.",
+      "resumed": "A fresh, usable response from {{feed}} verified recovery. Predictions using this feed can resume.",
+      "paused": "{{feed}} reported that it was unavailable. Predictions using this feed pause until a fresh, usable response is verified.",
+      "recoveryTitle": "Estimates resumed: {{feed}}",
+      "outageTitle": "Estimates paused: {{feed}}",
+      "limit": "This notice does not indicate a vehicle fault or start a vehicle command."
     },
     "state": {
       "open": "Open",
@@ -92,9 +121,11 @@
       "charging_sessions": "Charging history",
       "command_logs": "Vehicle command history",
       "drives": "Completed drive history",
+      "local_drive_analysis": "Local completed-drive analysis",
       "fleet_maintenance_work_orders": "Fleet maintenance work orders",
       "signal_log": "Telemetry history",
       "status_incidents": "System incident history",
+      "user_recorded": "User-recorded evidence",
       "tesla_battery_passport_ledger": "Issued battery passports",
       "method": "Ranked from persisted evidence without synthetic substitutes."
     },
@@ -603,6 +634,16 @@
     },
     "unknown": "Unknown"
   },
+  "maintenance": {
+    "recallWatch": {
+      "applicability": "Matches your recorded {{year}} {{model}}. An open recall for this VIN is not confirmed.",
+      "basis": "NHTSA received the report on {{reported}}. Last checked {{checked}}.",
+      "campaign": "NHTSA campaign {{campaign}}",
+      "limit": "Verify your VIN separately. The public catalog cannot confirm whether this car is affected or whether the remedy is complete.",
+      "open": "Review private recall watch",
+      "remedy": "Published remedy: {{remedy}}"
+    }
+  },
   "operationalMode": {
     "actionCenterDisabled": {
       "title": "Inbox actions are read-only"
@@ -648,6 +689,36 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "ownership": {
+    "subscription": {
+      "renewal": {
+        "cardBasis": "Owner-confirmed renewal date and stored subscription terms.",
+        "cardLimit": "Observed activity does not prove subscription use. No renewal or cancellation is made automatically.",
+        "cardSummary": "Check the recorded price and observed activity before the renewal date.",
+        "open": "Open private renewal review",
+        "ready": "Review the recorded subscription renewal"
+      }
+    },
+    "warranty": {
+      "mileage": {
+        "actionTitle": "Review the approaching warranty distance limit",
+        "basis": "{{remaining}} remained at the last recorded odometer reading. The estimate uses {{days}} observation days from {{from}} to {{through}} and the terms you entered.",
+        "limitation": "This is an estimated range, not a coverage decision. Check the original terms and current odometer before contacting the warranty provider.",
+        "open": "Review warranty terms",
+        "range": "At the recent recorded pace, the distance limit may arrive between {{earliest}} and {{latest}}, before the calendar term ends on {{term}}."
+      }
+    }
+  },
+  "preconditioningEffectiveness": {
+    "scheduledClimate": {
+      "cardBasis": "Accepted scheduled command for this vehicle, observed HVAC changes and parked telemetry",
+      "cardLimit": "The observed time window does not explain why climate ran or what happened later.",
+      "cardRationale": "Review whether this schedule still fits your routine. Nothing changes automatically.",
+      "cardTitle": "Review a recurring climate schedule",
+      "open": "Review scheduled climate",
+      "summary": "Climate started near {{count}} matching scheduled runs with no observed drive in the next 90 minutes."
+    }
   },
   "problemReport": {
     "context": {
@@ -729,6 +800,16 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "serviceEvidencePack": {
+    "privateCase": {
+      "cardBasis": "User-recorded case evidence, not a diagnosis",
+      "cardLimit": "Nothing is sent to a service provider. Review the export before sharing it.",
+      "cardRationale": "You opened this case and recorded evidence for this vehicle.",
+      "cardSummary": "Choose which recorded details and timestamps to include in a local export.",
+      "cardTitle": "Review your private service case",
+      "open": "Review private service case"
+    }
+  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {
@@ -740,6 +821,164 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "smartCharging": {
+    "actionBasisEstimate": "Trip consumption and reserve were entered by you",
+    "actionBasisSignals": "Fresh battery, gear, plug state and location observations",
+    "actionLimitationEstimate": "Return charge is an estimate based on the range you entered, not a measurement.",
+    "actionLimitationWrites": "This recommendation cannot start charging or operate the vehicle.",
+    "actionRationale": "Fresh parked and disconnected signals place the vehicle inside the selected charging location.",
+    "actionSummary": "Battery {{battery}}% at {{place}}; the trip estimate suggests {{low}}-{{high}}% on return versus a {{reserve}}% reserve. Departure: {{departure}}.",
+    "actionTitle": "Plug in before your planned trip",
+    "backup": {
+      "cardBasis": "Your outage and circuit confirmations, two Tesla Energy meter readings, and vehicle charging telemetry.",
+      "cardLimit": "This estimate is not a backup runtime forecast. Nothing changes automatically.",
+      "evidence": "Two consistent readings after your outage confirmation show {{vehicle}} of vehicle charging and at least {{minimum}} coming from the home battery. This is a conservative estimate from the site meters, not a backup runtime forecast.",
+      "reviewTitle": "Vehicle charging is drawing from household backup"
+    },
+    "changeFailed": "The change was not saved. Refresh and try again.",
+    "decisionUnavailable": "This decision is no longer actionable. Refresh the action center.",
+    "destinationChargeAssumption": "The return estimate assumes the planned {{charge}}% destination charge; it is not confirmed or guaranteed.",
+    "destinationEstimate": "With {{start}}% at departure, estimated charge at the destination is {{low}}-{{high}}% against a {{reserve}}% reserve.",
+    "destinationUncertain": "The higher outbound estimate may leave the destination unreachable.",
+    "destinationUnreachable": "With {{start}}% at departure, even the lower outbound estimate exceeds the available charge. Review a stop before the destination.",
+    "earlyStopBasis": "Observed charging, then no power while connected at the selected place.",
+    "earlyStopLimitation": "This does not identify why charging stopped. Check the vehicle or charger in person; TeslaSync does not restart charging.",
+    "earlyStopSummary": "At {{stopped}}, the vehicle reported no charging power. If charging does not resume, {{battery}}% may not be enough for your {{departure}} departure.",
+    "earlyStopTitle": "Inspect charging before your planned departure",
+    "installOverlapRationale": "The software install window you entered includes the saved departure.",
+    "installOverlapTitle": "Scheduled software install overlaps your planned departure",
+    "noDestinationChargeAssumption": "The return estimate assumes no destination charging.",
+    "overlapBasisPark": "Fresh parked gear observation",
+    "overlapBasisPlan": "Window and departure entered by you",
+    "overlapLimitation": "The window is entered by you, not verified against a service or vehicle schedule. No schedule was changed.",
+    "overlapSummary": "Review the window from {{start}} to {{end}} before your planned departure at {{departure}}.",
+    "privateHistory": "Charging-plan actions are managed in Settings, not the general action history.",
+    "returnEstimate": "If the destination is reached, the estimated return charge is {{low}}-{{high}}%.",
+    "returnUncertain": "The higher return-use estimate may require another charge.",
+    "returnUnreachable": "The return cannot be completed without an additional charge under these estimates.",
+    "scheduleActionBasis": "Fresh charging-port latch and pending schedule observations",
+    "scheduleActionLimitation": "The vehicle reports a clock time, not the date of the next start. No schedule was changed.",
+    "scheduleActionRationale": "The vehicle is plugged in and reports a pending schedule matching the clock time you entered.",
+    "scheduleActionSummary": "Battery {{battery}}% at {{place}}. If charging starts at the time you entered ({{start}}), it will not add charge before departure ({{departure}}).",
+    "scheduleActionTitle": "Review charging scheduled for departure or later",
+    "schedulePowerActionBasis": "Fresh nominal pack energy and the site power limit you entered",
+    "schedulePowerActionLimitation": "The estimate assumes uninterrupted charging at the entered limit without losses. The limit is not measured power.",
+    "schedulePowerActionSummary": "Battery {{battery}}% at {{place}}. If charging starts at {{start}}, even the {{power}} limit you entered may not leave enough charge for your {{departure}} departure.",
+    "schedulePowerActionTitle": "Scheduled charging may finish too late for your trip",
+    "serviceOverlapRationale": "The appointment window you entered includes the saved departure.",
+    "serviceOverlapTitle": "Service appointment overlaps your planned departure",
+    "signalSource": "Fresh shared live signals",
+    "sitePerformance": {
+      "actionTitle": "Charging has been slower at this place",
+      "basis": "Timestamped charging meter readings and similar charge levels and connector type",
+      "dates": "Evidence from {{from}} to {{through}}.",
+      "limitation": "Elapsed rates can include pauses. Review the current limit, schedule and site conditions; this is not a charger diagnosis.",
+      "meterSource": "Charging meter history",
+      "rationale": "Two recent sessions delivered materially less energy per elapsed hour than comparable sessions for the same vehicle and location.",
+      "summary": "{{recentCount}} recent sessions averaged {{recent}} at {{place}}; the median across {{baselineCount}} comparable sessions was {{baseline}}."
+    },
+    "slowActionBasis": "Fresh parked, charging, battery, pack-energy and charging-power observations",
+    "slowActionLimitationEstimate": "The estimate assumes constant power and nominal pack energy; actual power, taper and efficiency can change.",
+    "slowActionLimitationWrites": "This recommendation does not change a schedule, charging limit or vehicle setting.",
+    "slowActionRationale": "Fresh samples over at least five minutes indicate the current charging rate may not meet the trip reserve.",
+    "slowActionSummary": "Battery {{battery}}% at {{place}}. At the measured {{power}}, the estimated return is {{low}}-{{high}}% versus a {{reserve}}% reserve. Departure: {{departure}}.",
+    "slowActionTitle": "Charging may not be ready before your trip",
+    "slowCurrentBasis": "Fresh AC current request and maximum request observations",
+    "slowCurrentEvidence": "The vehicle reports an AC current request of {{requested}} A and maximum request of {{maximum}} A.",
+    "slowCurrentSafety": "Review the current setting and site electrical limits; the reported maximum does not establish that increasing current is safe or will help.",
+    "slowTripActionContext": "Battery {{battery}}% at {{place}}; measured charging power is {{power}}. Departure: {{departure}}.",
+    "snooze": "Snooze for 1 hour",
+    "solar": {
+      "basis": "Timestamped Tesla Energy readings and fresh shared vehicle signals",
+      "evidence": "At least {{export}} was exported across {{samples}} readings since {{start}}. Your home battery was at {{backup}}% with a {{reserve}}% reserve. The plugged-in vehicle was at {{battery}}%, below its {{target}}% limit.",
+      "opportunity": "There may be surplus solar available to charge",
+      "rationale": "Repeated export readings show the home battery remains above its configured reserve.",
+      "source": "Tesla Energy live measurements",
+      "timing": "Evidence as of {{observed}}; advice expires at {{expires}}. Export can change. If you have not already started, review charging on the car while parked."
+    },
+    "title": "Charging readiness",
+    "tripActionContext": "Battery {{battery}}% at {{place}}. Departure: {{departure}}.",
+    "tripMaintenance": {
+      "cardBasis": "Recorded odometer: {{current}} on {{observed}}. You entered a service at {{serviced}} on {{serviceDate}}, an interval of {{interval}}, and a trip estimate of {{tripLow}} to {{tripHigh}}.",
+      "cardLimitation": "This compares your trip estimate with the interval you recorded. It does not assess vehicle condition or book service.",
+      "cardSummary": "{{service}} is due at {{due}}. The trip on {{departure}} would put the estimated odometer between {{low}} and {{high}}.",
+      "cardTitle": "Review maintenance before your trip",
+      "open": "Review maintenance"
+    },
+    "tripProjectionLimitation": "These are estimates, not measurements. A 0% bound may mean a leg cannot be completed.",
+    "tripReviewRationale": "Even the lower entered trip-use estimates cannot meet the reserve by charging only at the selected place.",
+    "tripReviewSummary": "Battery {{battery}}% at {{place}}. Review a charging stop or record planned destination charging. Departure: {{departure}}.",
+    "tripReviewTitle": "Review a charging stop before your trip"
+  },
+  "smartCommute": {
+    "actionBasisDriver": "Similar endpoints and departure times do not identify the driver",
+    "actionBasisSample": "At least seven distinct local days within a bounded eight-week window",
+    "actionFreshness": {
+      "aging": "Aging evidence reduces confidence by 0.12",
+      "fresh": "Evidence is within the provider's fresh window",
+      "stale": "Stale evidence reduces confidence by 0.28",
+      "unknown": "Unknown observation age reduces confidence by 0.22"
+    },
+    "actionLimitationIdentity": "The driver and destination name are not inferred.",
+    "actionLimitationWrites": "This suggestion does not send notifications or operate the vehicle.",
+    "actionRationale": "Locally analyzed completed drives have similar departure times and endpoints.",
+    "actionSummary_one": "{{count}} matching departure day between {{start}} and {{end}} ({{zone}}). Candidate destination: {{destination}}.",
+    "actionSummary_other": "{{count}} matching departure days between {{start}} and {{end}} ({{zone}}). Candidate destination: {{destination}}.",
+    "changeFailed": "The change was not saved. Refresh and try again.",
+    "departure": "Local departure time",
+    "destinationLatitude": "Destination latitude",
+    "destinationLongitude": "Destination longitude",
+    "edit": "Edit",
+    "editRoutine": "Review and save routine",
+    "formPrivacy": "These coordinates stay on this server. Saving a routine does not send a notification or command.",
+    "invalidForm": "Enter a name, valid local time, time zone and coordinates.",
+    "manualRoutine": "Add a routine manually",
+    "name": "Routine name",
+    "notMine": "Not mine",
+    "originLatitude": "Origin latitude",
+    "originLongitude": "Origin longitude",
+    "question": "Is this your regular {{day}} drive?",
+    "saveRoutine": "Save routine",
+    "snooze": "Snooze for 24 hours",
+    "suggestionUnavailable": "This suggestion is no longer available. Refresh the action center.",
+    "timeZone": "IANA time zone",
+    "timeZoneHint": "For example, America/Los_Angeles.",
+    "title": "Smart Commute",
+    "traffic": {
+      "actionSummary": "HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.",
+      "actionTitle": "A faster route is available before your departure",
+      "comparison": "Compare routes",
+      "coverage": "Both routes had fresh directional HERE Traffic Flow coverage",
+      "deadline": {
+        "limitations": "TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.",
+        "rationale": "Even the fastest qualifying estimate misses your deadline at the planned departure time.",
+        "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.",
+        "title": "Leave earlier to make your arrival deadline"
+      },
+      "energy": {
+        "conditions": "Matched routes, travel times, and outside temperature near {{temp}}.",
+        "fastest": "Fastest offered route: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "limits": "The recorded ranges suggest a lower-energy option; they do not measure or guarantee energy use on your next trip.",
+        "rationale": "Comparable completed drives used less energy on the slower route under similar conditions.",
+        "saving": "Lower-energy alternative: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "title": "Compare a lower-energy route before departure"
+      },
+      "rationale": "Fresh HERE Traffic Flow covered both routes; the estimated difference exceeds your selected threshold.",
+      "teslaRoute": "These are estimates, not measured trip times. Tesla calculates its own route."
+    },
+    "unknownDay": "unknown day",
+    "useRoutine": "Use routine",
+    "weekday": "Local weekday",
+    "weekdays": {
+      "friday": "Friday",
+      "monday": "Monday",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "thursday": "Thursday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday"
+    }
   },
   "sourceLayer": {
     "age": "age",
@@ -760,6 +999,21 @@
   "timeline": {
     "empty": "No timeline entries yet.",
     "label": "Timeline"
+  },
+  "tireDifferentialDrift": {
+    "coldReview": {
+      "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+      "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning.",
+      "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+      "cardTitle": "Check one tire manually",
+      "open": "Review private cold checks"
+    },
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    }
   },
   "toast": {
     "admin": {

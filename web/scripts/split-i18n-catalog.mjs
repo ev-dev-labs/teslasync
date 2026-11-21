@@ -57,6 +57,12 @@ const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSo
 // Driving spans independent analysis routes. Pack their source closure together,
 // but resolve undiscovered keys from the existing narrow namespace fallbacks.
 const DETAIL_FALLBACK_FEATURES = new Set(['driving'])
+const ISOLATED_ROUTE_BUNDLES = new Map([
+  ['/settings/smart-charging', {
+    bundle: 'settings-smart-charging',
+    sourcePrefix: 'features/settings/components/smart-charging/',
+  }],
+])
 /**
  * A per-namespace fallback chunk this small costs less to inline than the
  * request that fetches it costs in headers and round trips. Inlining also
@@ -89,6 +95,8 @@ function shellSourceClosure() {
     // This lazy root can auto-open on any route, including a cold NotFound.
     // Only its translated UI is inlined; release-note content remains lazy.
     join(SOURCE_ROOT, 'components', 'feedback', 'ChangelogModal.tsx'),
+    // The consent prompt can auto-open on any route when the operator opts in.
+    join(SOURCE_ROOT, 'components', 'feedback', 'CookieConsentBanner.tsx'),
   ]
   // `import x from './en/shell.json'` resolves to a real file, so the raw
   // closure contains JSON assets. Parsing generated catalogs as TypeScript
@@ -229,9 +237,11 @@ export function routeBundleSources(appSource, availableBundles, sharedSources = 
   return parseRoutes(appSource).flatMap(({ path, name }) => {
     const source = lazyFeatures.get(name)
     if (!source || !availableBundles.has(source.feature)) return []
-    const bundle = DETAIL_FALLBACK_FEATURES.has(source.feature) && !/^\/drives(?:\/|$)/.test(path)
-      ? `${source.feature}-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
-      : source.feature
+    const isolated = ISOLATED_ROUTE_BUNDLES.get(path)
+    const bundle = isolated?.bundle
+      ?? (DETAIL_FALLBACK_FEATURES.has(source.feature) && !/^\/drives(?:\/|$)/.test(path)
+        ? `${source.feature}-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
+        : source.feature)
     return [{ path, bundle, ...source }]
   })
 }
@@ -458,8 +468,16 @@ function usageManifest(catalog) {
   ))
   const routeSources = routeBundleSources(readFileSync(join(SOURCE_ROOT, 'App.tsx'), 'utf8'), featureBundles)
   const routeRoots = new Map()
-  for (const { bundle, feature, file } of routeSources) {
-    if (!DETAIL_FALLBACK_FEATURES.has(feature)) continue
+  const isolatedRoots = new Set()
+  const isolatedPrefixes = []
+  for (const { bundle, feature, file, path } of routeSources) {
+    const isolated = ISOLATED_ROUTE_BUNDLES.get(path)
+    if (isolated) {
+      isolatedRoots.add(file)
+      isolatedPrefixes.push(isolated.sourcePrefix)
+    } else if (!DETAIL_FALLBACK_FEATURES.has(feature)) {
+      continue
+    }
     const roots = routeRoots.get(bundle) ?? new Set()
     roots.add(file)
     routeRoots.set(bundle, roots)
@@ -467,9 +485,11 @@ function usageManifest(catalog) {
     featureBundles.add(bundle)
   }
   for (const bundle of featureBundles) {
-    const roots = routeRoots.has(bundle) ? [...routeRoots.get(bundle)] : sourceFiles.filter(file =>
-      file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').startsWith(`features/${bundle}/`),
-    )
+    const roots = routeRoots.has(bundle) ? [...routeRoots.get(bundle)] : sourceFiles.filter(file => {
+      const relative = file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/')
+      return relative.startsWith(`features/${bundle}/`) && !isolatedRoots.has(file)
+        && !isolatedPrefixes.some(prefix => relative.startsWith(prefix))
+    })
     const keys = new Set()
     for (const file of staticClosure(SOURCE_ROOT, roots, dependencyCache)) {
       if (!/\.(?:ts|tsx)$/.test(file)) continue

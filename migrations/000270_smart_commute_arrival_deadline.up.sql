@@ -1,0 +1,15 @@
+ALTER TABLE smart_commute_traffic_consent
+    ADD COLUMN arrival_deadline_s integer CHECK (arrival_deadline_s BETWEEN 0 AND 86399);
+
+ALTER TABLE smart_commute_traffic_decisions
+    DROP CONSTRAINT smart_commute_traffic_decisions_check,
+    ADD COLUMN arrival_deadline_at timestamptz,
+    ADD COLUMN latest_departure_at timestamptz,
+    ADD CONSTRAINT smart_commute_traffic_decisions_deadline_check CHECK (
+        alternative_s BETWEEN 1 AND 10800 AND (
+            (arrival_deadline_at IS NULL AND latest_departure_at IS NULL AND alternative_s < usual_s)
+            OR (arrival_deadline_at > departure_at AND latest_departure_at < departure_at
+                AND arrival_deadline_at IS NOT NULL AND latest_departure_at IS NOT NULL
+                AND expires_at <= latest_departure_at)
+        )
+    );

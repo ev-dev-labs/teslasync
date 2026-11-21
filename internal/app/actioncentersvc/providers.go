@@ -15,6 +15,7 @@ const providerLimit = 50
 
 type provider interface {
 	SourceFeature() domain.SourceFeature
+	// Subject-scoped providers must use filter.subject to authorize their data.
 	Recommendations(ctx context.Context, filter ListFilter, now time.Time) ([]domain.Candidate, error)
 }
 

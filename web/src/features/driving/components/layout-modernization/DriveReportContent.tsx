@@ -16,6 +16,7 @@ import { PreservedPanelGrid } from './PreservedPanelGrid';
 
 export interface DriveReportContentProps {
   id?: string;
+  localEvidence?: boolean;
   data: Pick<ReturnType<typeof useDriveDetailData>,
     'drive' | 'stats' | 'chartData' | 'routeSource' | 'trail' | 'startPos' |
     'endPos' | 'centerPos' | 'speedSegments' | 'speedHistData'>;
@@ -32,7 +33,7 @@ export interface DriveReportContentProps {
 /** Presentation only: historical sources, charts and panel actions retain
  * their existing owners. Missing data never removes the report outline. */
 export function DriveReportContent({
-  id, data, meaningful, sections, fsdInsight, fsdLoading, fsdError, onFsdRetry, speedInsights, coaching,
+  id, localEvidence, data, meaningful, sections, fsdInsight, fsdLoading, fsdError, onFsdRetry, speedInsights, coaching,
 }: DriveReportContentProps) {
   const { t } = useTranslation();
   const {
@@ -62,7 +63,7 @@ export function DriveReportContent({
         {drive && stats ? (
           <HeroGauges drive={drive} stats={stats} chartData={chartData} meaningful={meaningful}
             map={<RouteMapSection embedded drive={drive} trail={trail} startPos={startPos} endPos={endPos}
-              centerPos={centerPos} speedSegments={speedSegments} routePoints={routeSource} fsdEvidence={fsdInsight?.evidence} />} />
+              centerPos={centerPos} speedSegments={speedSegments} routePoints={routeSource} fsdEvidence={fsdInsight?.evidence} localEvidence={localEvidence} />} />
         ) : null}
       </DriveDetailSection>
       <div id="energy" className="min-w-0 scroll-mt-24">
@@ -153,7 +154,7 @@ export function DriveReportContent({
           <GearTheaterPanel driveId={id} />
         </DriveDetailSection>
         <DriveDetailSection id="road-analysis" title={t('driveDetail.road.title', 'Possible road-surface anomalies')} available={!!id}>
-          {id ? <RoadAnomalyPanel driveId={id} /> : null}
+          {id ? <RoadAnomalyPanel driveId={id} localEvidence={localEvidence} /> : null}
         </DriveDetailSection>
         <DriveDetailSection id="why-ended" title={t('driveDetail.whyEnded.title', 'Why did this drive end?')} available={!!id}>
           {id ? <WhyEndedPanel driveId={id} /> : null}

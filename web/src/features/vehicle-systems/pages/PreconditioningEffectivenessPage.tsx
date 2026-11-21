@@ -39,6 +39,8 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/preconditioning-effectiveness';
 import { summarizePreconditioningEffectiveness } from '../lib/preconditioningEffectiveness';
+import { CabinPrepReminder } from '../components/preconditioning-effectiveness/CabinPrepReminder';
+import { ScheduledClimateReview } from '../components/preconditioning-effectiveness/ScheduledClimateReview';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function convertDeltaC(valueC: number, unit: TemperatureUnitPref): number {
@@ -193,6 +195,10 @@ export default function PreconditioningEffectivenessPage() {
         </div>
       )}
     >
+      <FadeIn>
+        <CabinPrepReminder vehicleId={vehicleId} />
+        <ScheduledClimateReview vehicleId={vehicleId} />
+      </FadeIn>
       <FadeIn>
         <PreconditioningEvidenceLedger
           summary={summary}

@@ -271,6 +271,15 @@ func Recovery(next http.Handler) http.Handler {
 // When tracing is not initialized, otelhttp uses the noop provider with zero overhead.
 func Tracing(next http.Handler) http.Handler {
 	return otelhttp.NewHandler(next, "http.request",
+		// The OAuth callback emits its own span without copying the URL query.
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			switch strings.TrimSuffix(r.URL.Path, "/") {
+			case "/api/v1/smart-charging/solar/connection/callback", "/api/v1/media/spotify/callback":
+				return false
+			default:
+				return true
+			}
+		}),
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 			return fmt.Sprintf("%s %s", r.Method, routeLabel(r))
 		}),

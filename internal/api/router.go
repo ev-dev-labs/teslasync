@@ -225,10 +225,12 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	automationdb "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	daylogdb "github.com/ev-dev-labs/teslasync/internal/database/daylog"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	efficiencerep "github.com/ev-dev-labs/teslasync/internal/database/driveefficiency"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
@@ -236,9 +238,18 @@ import (
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	dbocpp "github.com/ev-dev-labs/teslasync/internal/database/ocpp"
 	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
+	costtrenddb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/costtrend"
+	mileagetermdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/mileageterm"
+	monthlytariffdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/monthlytariff"
+	renewaldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/subscriptionrenewal"
+	trippacketdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/trippacket"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	smartcommutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
+	smartdeliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
+	smartmediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
+	smartreadinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -386,35 +397,58 @@ import (
 	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/yir"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
 	// Hexagonal adapters used by legacy route composition.
+	"github.com/ev-dev-labs/teslasync/internal/adapter/heretraffic"
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	smartdeliveryadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartdelivery"
+	smartreadinessadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/adapter/spotifyplaylist"
+	"github.com/ev-dev-labs/teslasync/internal/adapter/teslanavigation"
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/advancedintelligencesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/driveefficiencysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
+	costtrendsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/costtrend"
+	mileagetermsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/mileageterm"
+	monthlytariffsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/monthlytariff"
+	renewalsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/subscriptionrenewal"
+	trippacketsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/trippacket"
 	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartmediasvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/widgetdesignsvc"
+	smartcommutedomain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
 	analysishandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/analysis"
 	"github.com/ev-dev-labs/teslasync/internal/handler/v1/browserauth"
+	efficiencyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/driveefficiency"
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
+	smartcommutehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
+	smartdeliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
+	smartmediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
+	smartreadinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
 	widgetdesignhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/widgetdesign"
+	smartmediaport "github.com/ev-dev-labs/teslasync/internal/port/smartmedia"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -515,7 +549,7 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes) {
 }
 
 // Older native clients may send X-Sudo-Token; accepting the header grants no authority.
-var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App"}
+var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App", tsauth.ExpectedPrincipalHeader}
 
 // routerLiveSignalStore prefers the explicit reader dependency. Existing
 // telemetry-owning callers may still supply that same boundary via the handler.
@@ -687,7 +721,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		liveSignalStore = signal.NewNoopLiveSignalStore()
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
-	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
+	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader).WithWakeCommandLog(energydb.NewCommandLogRepo(db))
 	// Fleet-wide batch current-state read (ADR-009: handler/v1 + app/*svc).
 	// It shares service.VehicleService.ResolveCurrentState with the
 	// single-vehicle GET /vehicles/{id}/state above, so the two surfaces
@@ -1127,25 +1161,223 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		advancedIntelligenceService,
 		cfg.Auth.ForwardAuthHeader,
 	)
+	ownershipIntelRepo := ownershipinteldb.NewDurableRepository(db)
 	ownershipIntelService := ownershipintelsvc.New(
 		ownershipinteldb.NewSourceRepository(db),
-		ownershipinteldb.NewDurableRepository(db),
+		ownershipIntelRepo,
+	)
+	warrantyReminders := ownershipintelsvc.NewWarrantyReminders(ownershipIntelRepo, nil)
+	subscriptionRenewals := renewalsvc.NewReviews(renewaldb.NewRepository(db.Pool), nil)
+	weeklyEfficiency := efficiencyhandler.NewHandler(
+		driveefficiencysvc.NewReviews(efficiencerep.NewRepository(db.Pool), nil, nil).WithMotion(liveSignalStore),
+		cfg.Auth.ForwardAuthHeader,
 	)
 	ownershipIntelHandler := ownershipintelhandler.NewHandler(
 		ownershipIntelService,
 		cfg.Auth.ForwardAuthHeader,
+	).WithWarrantyReminders(warrantyReminders).
+		WithChargingCostReviews(costtrendsvc.NewReviews(costtrenddb.NewRepository(db.Pool), nil, nil)).
+		WithMonthlyTariffReviews(monthlytariffsvc.NewReviews(monthlytariffdb.NewRepository(db.Pool), nil, nil)).
+		WithMileageTermReviews(mileagetermsvc.NewReviews(mileagetermdb.NewRepository(db.Pool), nil)).
+		WithTripPackets(trippacketsvc.NewReviews(trippacketdb.NewRepository(db.Pool), nil)).
+		WithSubscriptionRenewals(subscriptionRenewals)
+	smartCommuteTraffic := cfg.SmartCommute.HasLicensedTraffic() && cfg.Redis.Enabled &&
+		!strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local")
+	var commuteTrafficLive smartcommutesvc.TrafficLiveReader
+	if smartCommuteTraffic {
+		commuteTrafficLive = liveSignalStore
+	}
+	smartCommuteRepository := smartcommutedb.NewRepository(db, smartcommutedb.WithSuggestionResolutionObserver(metrics.RecordSmartCommuteSuggestionResolution))
+	commuteCommandSettings := settingsdb.NewSettingsRepo(db)
+	smartCommuteService := smartcommutesvc.New(
+		smartCommuteRepository,
+		smartcommutesvc.WithTrafficTraceReader(stateReader),
+		smartcommutesvc.WithTrafficConnector(smartCommuteTraffic), smartcommutesvc.WithTrafficLiveReader(commuteTrafficLive),
+		smartcommutesvc.WithNavigation(smartCommuteRepository, teslanavigation.Executor{Client: teslaClient}, func(ctx context.Context) bool {
+			if !teslaClient.NavigationAllowed(ctx) {
+				return false
+			}
+			suspended, err := commuteCommandSettings.IsAPISuspended(ctx)
+			if err != nil {
+				log.Warn().Err(err).Msg("could not check Fleet API suspension for commute navigation")
+			}
+			return err == nil && !suspended
+		}),
+		smartcommutesvc.WithNavigationObserver(metrics.RecordSmartCommuteNavigationOutcome),
 	)
-	actionCenterService := actioncentersvc.New(
-		actioncenterdb.NewSourceRepository(db),
-		actioncenterdb.NewStateRepository(db),
+	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)
+	var playlistProvider smartmediaport.SpotifyProvider
+	var libraryProvider smartmediaport.LibraryProvider
+	var episodeProvider smartmediaport.EpisodeProvider
+	if opt.Encryptor != nil && cfg.SpotifyPlaylists.ClientID != "" && cfg.SpotifyPlaylists.RedirectURI != "" {
+		if provider, err := spotifyplaylist.New(cfg.SpotifyPlaylists.ClientID, cfg.SpotifyPlaylists.RedirectURI); err == nil {
+			playlistProvider = provider
+			libraryProvider = provider
+			episodeProvider = provider
+		}
+	}
+	smartMediaRepo := smartmediadb.NewRepository(db)
+	smartMediaHandler := smartmediahandler.NewHandler(
+		smartmediasvc.NewReviews(smartMediaRepo, playlistProvider, opt.Encryptor, time.Now),
+		smartmediasvc.NewSoundtracks(smartMediaRepo, time.Now),
+		smartmediasvc.NewTrackReviews(smartMediaRepo, libraryProvider, opt.Encryptor, time.Now),
+		smartmediasvc.NewEpisodeReviews(smartMediaRepo, episodeProvider, opt.Encryptor, time.Now),
+		cfg.Auth.ForwardAuthHeader)
+	favoriteDigestsHandler := smartmediahandler.NewFavoritesHandler(smartmediasvc.NewFavoriteDigests(smartMediaRepo, time.Now),
+		cfg.Auth.ForwardAuthHeader)
+	smartChargingRepo := smartreadinessdb.NewRepository(db)
+	operators := tsauth.NewOperatorAccess(cfg.Auth.ForwardAuthHeader, cfg.Auth.OperatorSubjects)
+	incidentRecipient := operators.IncidentRecipient(cfg.Auth.IncidentSubject)
+	sharedChargerHandler := smartreadinesshandler.NewSharedChargerHandler(
+		smartreadinesssvc.NewSharedChargerService(smartChargingRepo, func(ctx context.Context, subject string) (bool, error) {
+			return operators.Allows(ctx, subject), nil
+		}, time.Now), cfg.Auth.ForwardAuthHeader)
+	sharedTripHandler := smartreadinesshandler.NewSharedTripHandler(
+		smartreadinesssvc.NewSharedTripService(smartChargingRepo, liveSignalStore, operators.Allows, time.Now), cfg.Auth.ForwardAuthHeader)
+	smartChargingOptions := []smartreadinesssvc.Option{
+		smartreadinesssvc.WithSitePerformance(smartChargingRepo),
+		smartreadinesssvc.WithPublicFees(smartChargingRepo),
+	}
+	var solarAuthorization smartreadinesssvc.SolarEnergyAuthorizationClient
+	if opt.Encryptor != nil && teslaClient != nil && cfg.Redis.Enabled &&
+		!strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local") {
+		if _, err := teslaClient.EnergyReadAuthURL("setup-check"); err == nil {
+			solarAuthorization = smartreadinessadapter.NewTeslaSolarAuthorization(teslaClient)
+		}
+	}
+	solarConnections := smartreadinesssvc.NewSolarEnergyConnections(
+		smartreadinessdb.NewSolarEnergyConnectionRepository(db, opt.Encryptor), solarAuthorization)
+	var solarEnergy smartreadinesssvc.SolarEnergyReader
+	if solarConnections.CanConnect() {
+		solarEnergy = smartreadinessadapter.NewSolarEnergy(teslaClient, solarConnections)
+	}
+	smartChargingOptions = append(smartChargingOptions, smartreadinesssvc.WithSolarCharging(smartChargingRepo, solarEnergy))
+	smartSites := smartreadinessadapter.NewSites(geofencedb.NewGeofenceRepo(db))
+	smartChargingService := smartreadinesssvc.New(smartChargingRepo, liveSignalStore, smartSites, smartChargingOptions...)
+	var stopRouter smartreadinesssvc.StopRouter
+	if cfg.SmartCommute.HasLicensedTraffic() {
+		if here, err := heretraffic.New(cfg.SmartCommute.HEREAPIKey,
+			heretraffic.WithEstimateHealth(dbobs.NewEstimateHealth(db, incidentRecipient))); err == nil {
+			stopRouter = here
+		}
+	}
+	tripStops := smartreadinesssvc.NewTripStops(smartChargingRepo, stopRouter, time.Now, metrics.RecordSmartTripStop)
+	tripMaintenance := smartreadinesssvc.NewTripMaintenance(smartChargingRepo, time.Now)
+	coldTireChecks := smartreadinesssvc.NewColdTireChecks(smartChargingRepo, time.Now)
+	nhtsaClient := nhtsa.NewClient(nhtsa.Config{})
+	recallWatch := smartreadinesssvc.NewRecallWatch(smartChargingRepo, nhtsaClient, time.Now)
+	serviceCases := smartreadinesssvc.NewServiceCases(smartChargingRepo, time.Now)
+	cabinPrep := smartreadinesssvc.NewCabinPrep(smartChargingRepo,
+		smartreadinesssvc.NewCabinHistory(smartChargingRepo, stateReader), liveSignalStore, time.Now)
+	parkReserves := smartreadinesssvc.NewParkReserves(smartChargingRepo,
+		smartreadinesssvc.NewParkReserveHistory(smartChargingRepo, stateReader), liveSignalStore, time.Now)
+	windowRain := smartreadinesssvc.NewWindowRainWatches(smartChargingRepo, liveSignalStore, nil, nil, time.Now)
+	parkedClosures := smartreadinesssvc.NewParkedClosures(smartChargingRepo,
+		smartreadinesssvc.NewParkedClosureHistory(smartChargingRepo, liveSignalStore), time.Now)
+	parkedUnlocks := smartreadinesssvc.NewParkedUnlocks(smartChargingRepo, smartChargingRepo, smartSites, liveSignalStore, time.Now)
+	climateScheduleReviews := smartreadinesssvc.NewClimateScheduleReviews(smartChargingRepo, stateReader, time.Now)
+	overnightDrain := smartreadinesssvc.NewOvernightDrainReviews(smartChargingRepo,
+		smartreadinesssvc.NewOvernightDrainHistory(smartChargingRepo, stateReader), time.Now)
+	capacityDigest := smartreadinesssvc.NewCapacityTrendReviews(smartChargingRepo,
+		smartreadinesssvc.NewCapacityTrendHistory(smartChargingRepo, stateReader), time.Now)
+	deliveryRepo := smartdeliverydb.NewRepository(db)
+	var commuteOriginCheck smartdeliverysvc.CommuteOriginCheck
+	if smartCommuteTraffic {
+		commuteOriginCheck = func(ctx context.Context, vehicleID int64, origin smartcommutedomain.Point, now time.Time) (bool, error) {
+			return smartcommutesvc.ParkedAtTrafficOrigin(ctx, commuteTrafficLive, vehicleID, origin, now)
+		}
+	}
+	distributedSmartLive := cfg.Redis.Enabled && !strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local")
+	backupCharging := smartreadinesssvc.NewBackupCharging(smartChargingRepo, liveSignalStore, smartSites,
+		distributedSmartLive && solarConnections.CanConnect(), nil, time.Now)
+	var softwareWindowLive smartreadinesssvc.LiveSignals
+	if distributedSmartLive {
+		softwareWindowLive = liveSignalStore
+	}
+	softwareWindows := smartreadinesssvc.NewSoftwareWindows(smartChargingRepo, smartChargingRepo, softwareWindowLive, time.Now)
+	var windowRainDelivery smartdeliverysvc.WindowRainCandidates
+	var parkedClosureDelivery smartdeliverysvc.ParkedClosureCandidates
+	var parkedUnlockDelivery smartdeliverysvc.ParkedUnlockCandidates
+	if distributedSmartLive {
+		windowRainDelivery = windowRain
+		parkedClosureDelivery = parkedClosures
+		parkedUnlockDelivery = parkedUnlocks
+	}
+	smartDeliveryService := smartdeliverysvc.New(
+		deliveryRepo, opt.Encryptor,
+		smartdeliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
+		smartdeliverysvc.WithChargingCandidates(smartChargingService),
+		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, commuteOriginCheck),
+		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, smartChargingService),
+		smartdeliverysvc.WithBackupDelivery(deliveryRepo, backupCharging),
+		smartdeliverysvc.WithCabinPrepDelivery(deliveryRepo, cabinPrep),
+		smartdeliverysvc.WithParkReserveDelivery(deliveryRepo, parkReserves),
+		smartdeliverysvc.WithWindowRainDelivery(deliveryRepo, windowRainDelivery),
+		smartdeliverysvc.WithParkedClosureDelivery(deliveryRepo, parkedClosureDelivery),
+		smartdeliverysvc.WithParkedUnlockDelivery(deliveryRepo, parkedUnlockDelivery),
+		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
+		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
+	)
+	cabinSetupAvailable := func() bool { return smartDeliveryService.CabinPrepAvailable() && distributedSmartLive }
+	parkSetupAvailable := func() (bool, bool) {
+		return distributedSmartLive, distributedSmartLive && smartDeliveryService.ParkReserveAvailable()
+	}
+	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader,
+		smartreadinesshandler.WithSolarCharging(smartChargingService, solarConnections),
+		smartreadinesshandler.WithBackupCharging(backupCharging, func() bool {
+			return distributedSmartLive && solarConnections.CanConnect() && smartDeliveryService.BackupDeliveryAvailable()
+		}),
+		smartreadinesshandler.WithTripStops(tripStops),
+		smartreadinesshandler.WithTripReviews(smartreadinesssvc.NewTripReviews(smartChargingRepo, time.Now)),
+		smartreadinesshandler.WithTripMaintenance(tripMaintenance),
+		smartreadinesshandler.WithColdTireChecks(coldTireChecks),
+		smartreadinesshandler.WithRecallWatch(recallWatch),
+		smartreadinesshandler.WithServiceCases(serviceCases),
+		smartreadinesshandler.WithCabinPrep(cabinPrep, cabinSetupAvailable),
+		smartreadinesshandler.WithParkReserve(parkReserves, parkSetupAvailable),
+		smartreadinesshandler.WithWindowRain(windowRain, smartDeliveryService.WindowRainAvailable),
+		smartreadinesshandler.WithParkedClosure(parkedClosures, smartDeliveryService.ParkedClosureAvailable),
+		smartreadinesshandler.WithParkedUnlock(parkedUnlocks, smartDeliveryService.ParkedUnlockAvailable),
+		smartreadinesshandler.WithSoftwareWindow(softwareWindows),
+		smartreadinesshandler.WithClimateScheduleReviews(climateScheduleReviews),
+		smartreadinesshandler.WithOvernightDrain(overnightDrain),
+		smartreadinesshandler.WithCapacityTrend(capacityDigest))
+	smartDeliveryHandler := smartdeliveryhandler.NewHandler(smartDeliveryService, cfg.Auth.ForwardAuthHeader)
+	actionCenterSources := actioncenterdb.NewSourceRepository(db)
+	actionCenterOptions := []actioncentersvc.Option{
 		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
+		actioncentersvc.WithSmartCommute(smartCommuteService),
+		actioncentersvc.WithSmartCharging(smartChargingService),
+		actioncentersvc.WithChargingSitePerformance(smartChargingService),
+		actioncentersvc.WithWarrantyDistance(warrantyReminders),
+		actioncentersvc.WithSubscriptionRenewals(subscriptionRenewals),
+		actioncentersvc.WithTripMaintenance(tripMaintenance),
+		actioncentersvc.WithColdTireDrift(coldTireChecks),
+		actioncentersvc.WithRecallWatch(recallWatch),
+		actioncentersvc.WithServiceCases(serviceCases, metrics.RecordServiceCaseEvent),
+		actioncentersvc.WithClimateScheduleReviews(climateScheduleReviews),
+		actioncentersvc.WithOperatorIncidentNotices(actionCenterSources, incidentRecipient),
+	}
+	if operators.Enabled() {
+		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithAutomationFailureGroups(
+			automationdb.NewAutomationHistoryRepo(db), operators.Allows))
+	}
+	if solarConnections.CanConnect() {
+		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
+		if distributedSmartLive && smartDeliveryService.BackupDeliveryAvailable() {
+			actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithBackupCharging(backupCharging))
+		}
+	}
+	actionCenterService := actioncentersvc.New(
+		actionCenterSources,
+		actioncenterdb.NewStateRepository(db),
+		actionCenterOptions...,
 	)
 	actionCenterHandler := actioncenterhandler.NewHandler(
 		actionCenterService,
 		cfg.Auth.ForwardAuthHeader,
 	)
 	fleetOpsHandler := apifleetops.NewHandler(db)
-	nhtsaClient := nhtsa.NewClient(nhtsa.Config{})
 	communicationsProvider := apiserviceintelligence.NewDatabaseManufacturerCommunicationsProvider(db)
 	communicationsBulkClient := nhtsa.NewCommunicationsBulkClient(nhtsa.CommunicationsBulkConfig{})
 	communicationsImportService := apiserviceintelligence.NewCommunicationsImportService(
@@ -3855,6 +4087,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// open-mode installs use one local subject because no identity exists.
 		advancedIntelligenceHandler.MountRoutes(r)
 		ownershipIntelHandler.MountRoutes(r)
+		smartCommuteHandler.MountRoutes(r)
+		smartDeliveryHandler.MountRoutes(r)
+		smartChargingHandler.MountRoutes(r)
+		sharedChargerHandler.MountRoutes(r)
+		sharedTripHandler.MountRoutes(r)
+		smartMediaHandler.MountRoutes(r)
+		favoriteDigestsHandler.MountRoutes(r)
+		r.Get("/analytics/route-efficiency/weekly-digest", weeklyEfficiency.Review)
+		r.With(ratemw.LimitByIP(15, time.Minute)).Put("/analytics/route-efficiency/weekly-digest", weeklyEfficiency.Review)
+		r.With(ratemw.LimitByIP(15, time.Minute)).Patch("/analytics/route-efficiency/weekly-digest", weeklyEfficiency.Review)
+		r.With(ratemw.LimitByIP(10, time.Minute)).Delete("/analytics/route-efficiency/weekly-digest", weeklyEfficiency.Review)
 		r.Get("/action-center", actionCenterHandler.List)
 		r.Get("/action-center/{recommendationID}/history", actionCenterHandler.History)
 		r.With(ratemw.LimitByIP(30, time.Minute)).

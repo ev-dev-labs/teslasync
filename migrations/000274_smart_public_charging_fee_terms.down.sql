@@ -1,0 +1,2 @@
+DROP TABLE smart_push_public_fee_deliveries;
+DROP TABLE smart_public_charging_fee_terms;

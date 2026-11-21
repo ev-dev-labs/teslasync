@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, Plus } from 'lucide-react';
@@ -32,7 +32,8 @@ export default function AutomationHistoryPage() {
     persistKey: 'automations.history.range',
   });
   const [params, setParams] = useSearchParams();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const historyIdRaw = Number(params.get('history_id'));
+  const selectedId = Number.isSafeInteger(historyIdRaw) && historyIdRaw > 0 ? historyIdRaw : null;
   const automationIdRaw = Number(params.get('automation_id'));
   const automationId = Number.isSafeInteger(automationIdRaw) && automationIdRaw > 0
     ? automationIdRaw : undefined;
@@ -70,6 +71,15 @@ export default function AutomationHistoryPage() {
       if (value) next.set(key, value);
       else next.delete(key);
       if (key !== 'page') next.delete('page');
+      return next;
+    }, { replace: true });
+  }
+
+  function showExecution(id: number | null) {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (id == null) next.delete('history_id');
+      else next.set('history_id', String(id));
       return next;
     }, { replace: true });
   }
@@ -193,7 +203,7 @@ export default function AutomationHistoryPage() {
             />
           ) : (
             <>
-              <AutomationHistoryTable rows={rows} onOpen={setSelectedId} />
+              <AutomationHistoryTable rows={rows} onOpen={showExecution} />
               <Pagination
                 page={effectivePage}
                 pageSize={PAGE_SIZE}
@@ -204,7 +214,7 @@ export default function AutomationHistoryPage() {
           )}
         </GlassPanel>
       </FadeIn>
-      <AutomationExecutionDetail id={selectedId} onClose={() => setSelectedId(null)} />
+      <AutomationExecutionDetail id={selectedId} onClose={() => showExecution(null)} />
     </PageLayout>
   );
 }

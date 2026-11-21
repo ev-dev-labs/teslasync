@@ -6,9 +6,9 @@
  * categorized commands, safety guidance, and recent activity.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { History, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
@@ -28,6 +28,9 @@ import {
 export default function CommandsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { hash } = useLocation();
+  const [params] = useSearchParams();
+  const cabinVehicle = params.get('cabin_vehicle_id');
   usePageTitle(t('commands.title', 'Commands'));
 
   /**
@@ -45,13 +48,22 @@ export default function CommandsPage() {
    * picker change. Resolve from the current roster as a synchronous fallback
    * so the hero never flashes an unrelated empty state.
    */
-  const selectedVehicle =
-    selectedFromStore ??
-    (vehicleId != null
-      ? vehicles.find((vehicle) => vehicle.id === vehicleId) ?? null
-      : null) ??
-    vehicles[0] ??
-    null;
+  const selectedVehicle = cabinVehicle != null
+    ? vehicles.find(vehicle => String(vehicle.id) === cabinVehicle && params.get('vehicle_id') === cabinVehicle) ?? null
+    : selectedFromStore ??
+      (vehicleId != null
+        ? vehicles.find((vehicle) => vehicle.id === vehicleId) ?? null
+        : null) ??
+      vehicles[0] ??
+      null;
+
+  useEffect(() => {
+    if (selectedVehicle && hash === '#climate-controls') {
+      const climate = document.getElementById('climate-controls');
+      climate?.scrollIntoView?.({ block: 'start' });
+      climate?.focus({ preventScroll: true });
+    }
+  }, [hash, selectedVehicle?.id]);
 
   // Roster state is historical; it cannot establish current reachability.
   const lastKnownActiveCount = useMemo(

@@ -28,8 +28,8 @@ func clampLimit(limit, def, max int) int {
 // without a live Postgres — this package has no pgxmock/testcontainers
 // harness, mirroring the drive/trip/vehicle repos.
 const (
-	commandLogInsertSQL = `INSERT INTO command_logs (vehicle_id, command, params, status, error, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	commandLogInsertSQL = `INSERT INTO command_logs (vehicle_id, command, params, status, error, created_at, wake_requested_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 
 	commandLogLatestByVehicleSQL = `SELECT DISTINCT ON (command) id, vehicle_id, command, params, status, error, created_at
 		FROM command_logs
@@ -104,7 +104,7 @@ func (r *CommandLogRepo) Create(ctx context.Context, cl *vehiclemodel.CommandLog
 	}
 	now := time.Now().UTC()
 	if err := r.db.Pool.QueryRow(ctx, commandLogInsertSQL,
-		cl.VehicleID, cl.Command, cl.Params, cl.Status, cl.Error, now,
+		cl.VehicleID, cl.Command, cl.Params, cl.Status, cl.Error, now, cl.WakeRequestedAt,
 	).Scan(&cl.ID); err != nil {
 		return fmt.Errorf("insert command log: %w", err)
 	}

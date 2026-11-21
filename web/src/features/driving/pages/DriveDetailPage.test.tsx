@@ -14,6 +14,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 import type { DataStateSource } from '@/api/dataState'
@@ -339,12 +340,15 @@ const NOT_FOUND_COPY =
   'This drive could not be found. It may have been deleted, or the link is incorrect.'
 
 function renderPage(path = '/drives/42', routePath = '/drives/:id') {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const page = () => (
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path={routePath} element={<DriveDetailPage />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path={routePath} element={<DriveDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   )
   const result = render(page())
   return { ...result, rerenderPage: () => result.rerender(page()) }
@@ -768,7 +772,7 @@ describe('DriveDetailPage', () => {
   it.each([
     { name: 'missing record', loaded: false },
     { name: 'retained rich record', loaded: true },
-  ])('preserves all nineteen report sections and six jump destinations for $name', ({ loaded }) => {
+  ])('preserves the report sections and six jump destinations for $name', ({ loaded }) => {
     hookState.current = loaded ? loadedState() : emptyState()
     const { container } = renderPage()
 
@@ -780,10 +784,11 @@ describe('DriveDetailPage', () => {
       'tire-trace', 'speed-insights', 'physics-debrief', 'physics-ledger',
       'coaching', 'gear-theater', 'road-analysis', 'why-ended',
     ]
+    if (loaded) sectionIds.push('drive-track-review')
     for (const id of sectionIds) {
       expect(container.querySelector(`section#${id}`)).toBeInTheDocument()
     }
-    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(19)
+    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(sectionIds.length)
     const navigation = screen.getByRole('navigation', { name: 'Drive report sections' })
     expect(Array.from(navigation.querySelectorAll('a'), link => link.getAttribute('href'))).toEqual([
       '#overview', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics',

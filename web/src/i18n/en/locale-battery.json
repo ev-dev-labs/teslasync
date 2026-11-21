@@ -2113,6 +2113,78 @@
     }
   },
   "vampireDrain": {
+    "overnight": {
+      "title": "Private overnight drain review",
+      "description": "Off by default. Compare similar parked nights using local vehicle history. No push, vehicle wake, or data sharing.",
+      "open": "Review overnight drain",
+      "signIn": "Sign in to set up or view your private overnight review.",
+      "vehicle": "Select the vehicle to review.",
+      "off": "Off. No overnight checks are scheduled for this vehicle.",
+      "paused": "Paused. No overnight checks until you resume.",
+      "available": "Active. A private morning review is available.",
+      "quiet": "Active. No morning review is available. Ordinary nights and nights without enough evidence stay quiet.",
+      "setup": "Set up overnight review",
+      "resume": "Resume overnight review",
+      "edit": "Change review time zone",
+      "pause": "Pause overnight review",
+      "clear": "Turn off and clear overnight review",
+      "zone": "Review time zone",
+      "zoneHelp": "Use a time zone such as America/New_York or UTC. The review covers 10 PM to 6 AM in that time zone.",
+      "consent": "I want a private morning review for this vehicle using local parked history.",
+      "confirm": "Confirm private overnight review",
+      "failed": "The review could not be changed. Check the time zone or refresh and try again.",
+      "above": "More battery drain than usual last night",
+      "summary_other": "Battery charge fell {{loss}} percentage points. The middle half of {{count}} comparable nights was {{low}}–{{high}} points over the same duration.",
+      "window": "Measured from {{start}} to {{end}} ({{zone}}). This review expires at {{expiry}}.",
+      "why": "Why this? Similar nights had comparable starting charge and outside temperatures. These observations coincided with the loss; they do not prove what caused it. No report does not mean a feature was off.",
+      "sentry": "Sentry reported armed or active",
+      "climate": "Cabin climate or protection reported on",
+      "wake": "Wake request recorded (not a confirmed wake)",
+      "factor": "{{factor}} at {{time}}",
+      "sessions": "Compare with your drain sessions",
+      "dismiss": "Dismiss this morning’s review"
+    },
+    "parkReserve": {
+      "title": "Private parked charge reserve",
+      "description": "Off by default. Estimate return charge for one long park using comparable local history. No vehicle wake, command, or charging change is automatic.",
+      "open": "Review parked reserve",
+      "signIn": "Sign in to review or set a private parked reserve plan.",
+      "vehicle": "Select the vehicle for this plan. The linked vehicle may no longer be available.",
+      "oldLink": "This private plan is no longer available. It may have been cleared or replaced.",
+      "current": "Review the current plan",
+      "unavailable": "Needs setup: distributed live telemetry is required.",
+      "off": "Off. No parked reserve plan is set for this vehicle.",
+      "expired": "Expired. This plan no longer has a current estimate.",
+      "risk": "The estimated return range could fall below your reserve.",
+      "alreadyLow": "The observed charge is already at or below your reserve. This is not a forecast of a new crossing.",
+      "above": "Comparable parks do not support a material reserve crossing.",
+      "waiting": "Active. Waiting for trustworthy parked and unplugged observations.",
+      "insufficient": "No estimate. At least three comparable unplugged parks with measured charge are needed.",
+      "changed": "No current estimate. Parked, unplugged conditions changed or could not be verified.",
+      "planned": "Planned return: {{when}}. Your reserve: {{reserve}}.",
+      "pushPaused": "Private push is unavailable. You can still review the plan here.",
+      "estimate": "Estimated return charge: {{low}} to {{high}}. Starting charge was {{start}} at {{when}}. Based on {{count}} parks with comparable duration, temperature and Sentry state; not a guarantee.",
+      "actBy": "If you can, plug in or review charging options by {{when}}.",
+      "charging": "Review charging for this vehicle",
+      "edit": "Change parked reserve plan",
+      "set": "Plan a long park",
+      "clear": "Turn off and clear plan",
+      "clearFailed": "The plan was not cleared. Refresh and try again.",
+      "setupHelp": "Choose a return 12 hours to 7 days away. TeslaSync checks while you can still act, for up to 90 minutes after saving.",
+      "returnInput": "Planned return ({{zone}})",
+      "reserveInput": "Minimum return charge (%)",
+      "confirm": "The vehicle is parked and unplugged, and I can still adjust my plans. Check this vehicle’s local history.",
+      "electPush": "Send one private reminder to this verified browser if the estimate crosses my reserve.",
+      "pushPrivacy": "Only an opaque code goes through your browser’s push service. Your signed-in browser fetches the reminder from TeslaSync.",
+      "retryBrowser": "Retry browser verification check",
+      "browserReady": "This browser is verified for personal delivery.",
+      "verifyBrowser": "Verify this browser in personal delivery settings",
+      "invalid": "Choose a return 12 hours to 7 days away and a reserve from 5% to 90%.",
+      "saveFailed": "The plan was not saved. Refresh and check your settings and browser selection.",
+      "save": "Save parked reserve plan",
+      "pushTitle": "Review your parked charge reserve",
+      "pushBody": "Your estimated return charge could fall below your reserve. Review the range while you can still adjust your plans."
+    },
     "observed": {
       "causeLimit": "Cause unconfirmed. Current Park truth is independent of historical SOC-loss windows; correlation does not establish a cause or a residual after Sentry/HVAC.",
       "causeUnconfirmed": "Cause unconfirmed",
@@ -2911,6 +2983,36 @@
       },
       "capacity": "Capacity",
       "capacityCalibration": "Actual pack-capacity calibration remains candidate BD-C01; no calibration is applied here.",
+      "capacityDigest": {
+        "available": "Active. A private monthly digest is available.",
+        "changed": "Estimated usable battery energy changed",
+        "clear": "Turn off and clear monthly digest",
+        "confirm": "Confirm private monthly digest",
+        "consent": "I want a private monthly digest for this vehicle using local charging history.",
+        "coverage": "Latest observation: {{observed}}. This digest expires {{expiry}} ({{zone}}).",
+        "description": "Off by default. Compare usable-energy estimates across similar charge sessions using only your local vehicle history. No push or sharing.",
+        "dismiss": "Dismiss this month’s digest",
+        "edit": "Change digest time zone",
+        "failed": "The digest settings could not be changed. Check the time zone or refresh and try again.",
+        "history": "Review degradation history",
+        "off": "Off. No monthly battery review is scheduled for this vehicle.",
+        "open": "Review monthly battery digest",
+        "overall": "Estimated change: {{range}}.",
+        "pause": "Pause monthly review",
+        "paused": "Paused. No monthly checks until you resume.",
+        "quiet": "Active. No digest is available. The feature stays quiet without enough comparable data or a lasting change.",
+        "range": "{{low}} to {{high}}",
+        "resume": "Resume monthly battery review",
+        "sample_one": "{{month}}: {{range}} from {{count}} comparable charge day.",
+        "sample_other": "{{month}}: {{range}} from {{count}} comparable charge days.",
+        "setup": "Set up monthly battery review",
+        "signIn": "Sign in to set up or view your private battery digest.",
+        "title": "Private monthly battery digest",
+        "vehicle": "Select the vehicle to review.",
+        "why": "Why this? Both halves of the latest month shifted beyond the previous range. The estimate uses energy added at the battery and the change in charge at similar pack temperatures and AC power. It is not a capacity test or diagnosis; losses and battery calibration can affect it.",
+        "zone": "Digest time zone",
+        "zoneHelp": "Use a time zone such as America/New_York or UTC. The monthly check begins at 5 AM on the second day in that time zone."
+      },
       "capacityEstimator": "Current capacity is a telemetry-derived estimator: the median of up to eight recent valid daily capacity estimates, or EnergyRemaining / (BatteryLevel / 100) when history is unavailable. SOH compares this estimator with the nominal baseline; it is not a direct capacity measurement.",
       "capacityEstimatorUnavailable": "Observed current-capacity estimator unavailable; the nominal baseline alone does not establish current capacity or SOH.",
       "capacityEvidence": "Nominal baseline evidence: capacity_source={{source}}; original_capacity_wh={{capacity}}. This baseline is an assumption, not an observed or calibrated original pack capacity.",
@@ -3197,6 +3299,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -3275,6 +3384,15 @@
       "upperBound": "Upper bound"
     }
   },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "dataRepair": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -3298,6 +3416,11 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -3459,6 +3582,34 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -3675,6 +3826,9 @@
       "title": "Suggest a geofence for this location",
       "unnamed": "(unnamed)"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "helix": {
     "ariaLabel": "Helix",
@@ -4049,6 +4203,17 @@
       "review": "Review recommended"
     }
   },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -4308,6 +4473,10 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "timeMachine": {
     "ageFresh": "Fresh",
     "ageSeconds": "{{value}}s"
@@ -4546,6 +4715,29 @@
       }
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicles": {
     "aiPaintPreview": {
       "badge": "Helix",
@@ -4592,7 +4784,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -21,6 +22,10 @@ func (r *AutomationStepChildRepo) HydrateAutomation(ctx context.Context, automat
 // HydrateAutomations attaches typed CTI children to a batch of AutomationFull
 // aggregates using one loader call per CTI lane.
 func (r *AutomationStepChildRepo) HydrateAutomations(ctx context.Context, automations []*models.AutomationFull) error {
+	return r.hydrateAutomations(ctx, r.db.Pool, automations)
+}
+
+func (r *AutomationStepChildRepo) hydrateAutomations(ctx context.Context, db database.DBTX, automations []*models.AutomationFull) error {
 	stepIDs := make([]int64, 0)
 	for _, automation := range automations {
 		if automation == nil {
@@ -37,15 +42,15 @@ func (r *AutomationStepChildRepo) HydrateAutomations(ctx context.Context, automa
 		return nil
 	}
 
-	triggers, err := r.loadTriggers(ctx, stepIDs)
+	triggers, err := r.loadTriggers(ctx, db, stepIDs)
 	if err != nil {
 		return err
 	}
-	conditions, err := r.loadConditions(ctx, stepIDs)
+	conditions, err := r.loadConditions(ctx, db, stepIDs)
 	if err != nil {
 		return err
 	}
-	actions, err := r.loadActions(ctx, stepIDs)
+	actions, err := r.loadActions(ctx, db, stepIDs)
 	if err != nil {
 		return err
 	}
@@ -107,7 +112,7 @@ func hydrateAutomationChildren(automations []*models.AutomationFull, triggers, c
 //   - *models.AutomationStepTriggerEvent
 //
 // Steps without a trigger child row are simply absent from the map.
-func (r *AutomationStepChildRepo) loadTriggers(ctx context.Context, stepIDs []int64) (map[int64]any, error) {
+func (r *AutomationStepChildRepo) loadTriggers(ctx context.Context, db database.DBTX, stepIDs []int64) (map[int64]any, error) {
 	if len(stepIDs) == 0 {
 		return nil, nil
 	}
@@ -125,7 +130,7 @@ func (r *AutomationStepChildRepo) loadTriggers(ctx context.Context, stepIDs []in
 		SELECT step_id, 'event'    AS kind, to_jsonb(t.*) AS payload
 		  FROM automation_step_trigger_event    t WHERE step_id = ANY($1)`
 
-	rows, err := r.db.Pool.Query(ctx, q, stepIDs)
+	rows, err := db.Query(ctx, q, stepIDs)
 	if err != nil {
 		return nil, fmt.Errorf("automation-step-children-loader-trigger: query: %w", err)
 	}
@@ -190,7 +195,7 @@ func (r *AutomationStepChildRepo) loadTriggers(ctx context.Context, stepIDs []in
 //   - *models.AutomationStepConditionOtherAutomation
 //
 // Steps without a condition child row are simply absent from the map.
-func (r *AutomationStepChildRepo) loadConditions(ctx context.Context, stepIDs []int64) (map[int64]any, error) {
+func (r *AutomationStepChildRepo) loadConditions(ctx context.Context, db database.DBTX, stepIDs []int64) (map[int64]any, error) {
 	if len(stepIDs) == 0 {
 		return nil, nil
 	}
@@ -208,7 +213,7 @@ func (r *AutomationStepChildRepo) loadConditions(ctx context.Context, stepIDs []
 		SELECT step_id, 'other_automation' AS kind, to_jsonb(c.*) AS payload
 		  FROM automation_step_condition_other_automation c WHERE step_id = ANY($1)`
 
-	rows, err := r.db.Pool.Query(ctx, q, stepIDs)
+	rows, err := db.Query(ctx, q, stepIDs)
 	if err != nil {
 		return nil, fmt.Errorf("automation-step-children-loader-condition: query: %w", err)
 	}
@@ -273,7 +278,7 @@ func (r *AutomationStepChildRepo) loadConditions(ctx context.Context, stepIDs []
 //   - *models.AutomationStepActionCallAutomation
 //
 // Steps without an action child row are simply absent from the map.
-func (r *AutomationStepChildRepo) loadActions(ctx context.Context, stepIDs []int64) (map[int64]any, error) {
+func (r *AutomationStepChildRepo) loadActions(ctx context.Context, db database.DBTX, stepIDs []int64) (map[int64]any, error) {
 	if len(stepIDs) == 0 {
 		return nil, nil
 	}
@@ -294,7 +299,7 @@ func (r *AutomationStepChildRepo) loadActions(ctx context.Context, stepIDs []int
 		SELECT step_id, 'wait' AS kind, to_jsonb(a.*) AS payload
 		  FROM automation_step_action_wait a WHERE step_id = ANY($1)`
 
-	rows, err := r.db.Pool.Query(ctx, q, stepIDs)
+	rows, err := db.Query(ctx, q, stepIDs)
 	if err != nil {
 		return nil, fmt.Errorf("automation-step-children-loader-action: query: %w", err)
 	}

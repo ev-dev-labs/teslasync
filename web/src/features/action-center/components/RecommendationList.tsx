@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
+import type { PersonalScope } from '@/api/hooks/usePersonalIdentity';
 import type {
   ActionCenterRecommendation,
   ActionCenterStateAction,
@@ -20,6 +21,7 @@ interface RecommendationListProps {
   onClearFilters: () => void;
   actionsDisabled?: boolean;
   actionsDisabledReason?: string;
+  personalScope?: PersonalScope;
 }
 
 export function RecommendationList({
@@ -31,6 +33,7 @@ export function RecommendationList({
   onClearFilters,
   actionsDisabled = false,
   actionsDisabledReason,
+  personalScope,
 }: RecommendationListProps) {
   const { t } = useTranslation();
   const EmptyIcon = Icons.notifications;
@@ -76,6 +79,7 @@ export function RecommendationList({
           onAction={onAction}
           actionsDisabled={actionsDisabled}
           actionsDisabledReason={actionsDisabledReason}
+          personalScope={personalScope}
         />
       ))}
     </section>

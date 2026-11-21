@@ -20,6 +20,7 @@ type FleetEndpoint struct {
 
 var fleetDataEndpoints = []FleetEndpoint{
 	{"vehicles.list", http.MethodGet, "/api/1/vehicles", "Vehicle data", true},
+	{"vehicles.connectivity", http.MethodGet, navigationVehiclePath, "Vehicle data", false},
 	{"vehicle_data.charge_state", http.MethodGet, "/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state", "Vehicle data", true},
 	{"vehicle_data.climate_state", http.MethodGet, "/api/1/vehicles/{vin}/vehicle_data?endpoints=climate_state", "Vehicle data", true},
 	{"vehicle_data.drive_state", http.MethodGet, "/api/1/vehicles/{vin}/vehicle_data?endpoints=drive_state", "Vehicle data", true},

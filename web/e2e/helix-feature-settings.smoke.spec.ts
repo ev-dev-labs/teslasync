@@ -19,6 +19,16 @@ for (const width of [390, 1440]) {
     )
     await page.goto('/integrations/helix', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
+    if (width >= 640) {
+      const modeCards = page
+        .getByRole('radiogroup', { name: 'Helix mode' })
+        .locator('[data-app-choice-surface="radio"]')
+      const heights = await modeCards.evaluateAll(elements =>
+        elements.map(element => element.getBoundingClientRect().height),
+      )
+      expect(heights).toHaveLength(3)
+      expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1)
+    }
     const explorer = page.getByTestId('ai-feature-toggle-list')
     await explorer.scrollIntoViewIfNeeded()
     await expect(explorer.getByRole('searchbox', { name: 'Search AI features' })).toBeVisible()

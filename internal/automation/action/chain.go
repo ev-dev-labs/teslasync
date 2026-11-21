@@ -3,6 +3,7 @@ package action
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -222,7 +223,10 @@ func (c *ChainExecutor) Execute(
 			Output:     output,
 		}
 
-		if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil && errors.Is(err, ctxErr) {
+			result.Skipped = true
+			result.SkipReason = "execution context ended"
+		} else if err != nil {
 			result.Error = err.Error()
 
 			c.logger.Warn().

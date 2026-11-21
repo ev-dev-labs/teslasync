@@ -36,6 +36,9 @@ import {
 } from '../components/security-access';
 import { SecurityOperationalBrief } from '../components/operationalbrief-r-z/SecurityOperationalBrief';
 import { SecurityStatisticsBrief } from '../components/operationalbrief-r-z/SecurityStatisticsBrief';
+import { WindowRainReview } from '../components/security-access/WindowRainReview';
+import { ParkedClosureReview } from '../components/security-access/ParkedClosureReview';
+import { ParkedUnlockReview } from '../components/security-access/ParkedUnlockReview';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -222,6 +225,10 @@ export default function SecurityAccessPage() {
           />
         </section>
       </FadeIn>
+
+      <WindowRainReview vehicleId={twinVehicleId ?? null} />
+      <ParkedClosureReview vehicleId={twinVehicleId ?? null} />
+      <ParkedUnlockReview vehicleId={twinVehicleId ?? null} />
 
       {/* 4 — Analytics bento: sentry chart (hero) + statistics */}
       <FadeIn delay={0.2}>

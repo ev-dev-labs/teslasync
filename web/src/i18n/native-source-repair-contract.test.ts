@@ -198,7 +198,7 @@ describe('exact e1fb native source repair successor (not native certification)',
       current.replace("  const touchBrush = useMediaQuery('(max-width: 767px), (pointer: coarse)');\n", ''),
       current.replace('travellerWidth: chartTokens.brush.touchSize', 'travellerWidth: 8'),
     ]) {
-      expect(() => restoreNativeSourceRepair(touchBrush, stale)).toThrow('exact touch brush successor');
+      expect(() => restoreNativeSourceRepair(touchBrush, stale)).toThrow('notification successor');
     }
   });
 

@@ -1,0 +1,3 @@
+DROP TABLE smart_solar_charging_samples;
+DROP TABLE smart_solar_charging_plans;
+DROP TABLE smart_solar_energy_connections;

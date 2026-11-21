@@ -13,6 +13,7 @@ import (
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -104,6 +105,9 @@ func TestAutomationRuntimeDispatchesTypedTriggerConditionAndAction(t *testing.T)
 	}
 	if history.created == nil || history.created.TriggerType != models.AutomationStepKindTriggerSchedule {
 		t.Fatalf("history trigger = %#v", history.created)
+	}
+	if history.climate != nil {
+		t.Fatal("direct evaluation with a schedule snapshot must not record a scheduler receipt")
 	}
 }
 
@@ -210,7 +214,9 @@ func (s *runtimeAutomationStore) IncrementExecution(context.Context, int64, bool
 }
 
 type runtimeHistoryStore struct {
-	created *automationmodel.AutomationHistory
+	created   *automationmodel.AutomationHistory
+	completed *automationmodel.AutomationHistory
+	climate   *automationmodel.ScheduledClimateReceipt
 }
 
 func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.AutomationHistory) error {
@@ -221,7 +227,13 @@ func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.Autom
 	return nil
 }
 
-func (s *runtimeHistoryStore) Complete(context.Context, int64, string, *string, int) error {
+func (s *runtimeHistoryStore) Complete(ctx context.Context, h *automationmodel.AutomationHistory, climate *automationmodel.ScheduledClimateReceipt) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	copy := *h
+	s.completed = &copy
+	s.climate = climate
 	return nil
 }
 
@@ -253,4 +265,164 @@ func (r *typedActionRecorder) ExecuteTyped(_ context.Context, _ *int64, payload 
 	}
 	r.typedCalled = true
 	return json.RawMessage(`{"ok":true}`), nil
+}
+
+type capturedCronRegistration struct {
+	registration trigger.CronAutomation
+	fired        chan context.Context
+}
+
+func (c capturedCronRegistration) LoadEnabledScheduleTriggers(context.Context) ([]trigger.CronAutomation, error) {
+	return []trigger.CronAutomation{c.registration}, nil
+}
+
+func (c capturedCronRegistration) Evaluate(ctx context.Context, _ int64, _ json.RawMessage) error {
+	select {
+	case c.fired <- ctx:
+	default:
+	}
+	return nil
+}
+
+func TestAutomationRuntimeDoesNotDispatchAnObsoleteScheduleRegistration(t *testing.T) {
+	revision := time.Now().UTC().Add(-time.Hour)
+	schedule := models.AutomationStepTriggerSchedule{StepID: 17, CronExpr: "@every 1s", Timezone: "UTC"}
+	rule := &models.AutomationFull{
+		Automation: models.Automation{ID: 1, UpdatedAt: revision, Enabled: true},
+		Steps:      []models.AutomationStep{{ID: 17, Kind: models.AutomationStepKindTriggerSchedule}},
+		Triggers:   []any{&schedule},
+		Actions:    []any{&models.AutomationAction{CommandName: "lock"}},
+	}
+	capture := capturedCronRegistration{
+		registration: trigger.CronAutomation{Automation: rule.Automation, Trigger: schedule},
+		fired:        make(chan context.Context, 1),
+	}
+	cron := trigger.NewCronTrigger(capture, capture)
+	if err := cron.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer cron.Stop()
+	var firing context.Context
+	select {
+	case firing = <-capture.fired:
+	case <-time.After(5 * time.Second):
+		t.Fatal("registered schedule never fired")
+	}
+	history, recorder := &runtimeHistoryStore{}, &typedActionRecorder{}
+	chain := action.NewChainExecutor(nil)
+	chain.Register("command", recorder)
+	engine := NewEngine(&runtimeAutomationStore{automation: rule}, history, chain)
+	if err := engine.Evaluate(firing, rule.ID, nil); err != nil || !recorder.typedCalled || history.completed == nil {
+		t.Fatalf("matching registration did not dispatch: %v", err)
+	}
+	for _, change := range []func(){
+		func() { rule.Triggers = []any{&models.AutomationStepTriggerSchedule{StepID: 17, CronExpr: "@every 2s", Timezone: "UTC"}} },
+		func() { rule.Triggers, rule.UpdatedAt = []any{&schedule}, revision.Add(time.Minute) },
+	} {
+		change()
+		*recorder, *history = typedActionRecorder{}, runtimeHistoryStore{}
+		if err := engine.Evaluate(firing, rule.ID, nil); err != nil || recorder.typedCalled || history.created != nil {
+			t.Fatalf("obsolete registration evaluated a different snapshot: %v", err)
+		}
+	}
+}
+
+type interruptedRuntimeWait struct {
+	cancel   context.CancelFunc
+	unrelated bool
+}
+
+func (a interruptedRuntimeWait) Execute(ctx context.Context, _ *int64, _ json.RawMessage) (json.RawMessage, error) {
+	a.cancel()
+	if a.unrelated {
+		return nil, fmt.Errorf("independent failure")
+	}
+	return nil, fmt.Errorf("wait interrupted: %w", ctx.Err())
+}
+
+func TestAutomationRuntimeKeepsFailuresDistinctFromInterruptions(t *testing.T) {
+	rule := &models.AutomationFull{
+		Automation: models.Automation{ID: 1, Enabled: true},
+		Steps:      []models.AutomationStep{{ID: 21, Kind: models.AutomationStepKindTriggerSchedule}},
+		Triggers:   []any{&models.AutomationStepTriggerSchedule{StepID: 21}},
+		Actions:    []any{&models.AutomationStepActionWait{DurationS: 1}},
+	}
+	for _, tc := range []struct {
+		status    string
+		unrelated bool
+		failed    int
+	}{{"cancelled", false, 0}, {"failed", true, 1}} {
+		t.Run(tc.status, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			chain := action.NewChainExecutor(nil)
+			chain.Register("wait", interruptedRuntimeWait{cancel: cancel, unrelated: tc.unrelated})
+			history := &runtimeHistoryStore{}
+			engine := NewEngine(&runtimeAutomationStore{automation: rule}, history, chain)
+			if err := engine.Evaluate(ctx, rule.ID, nil); err != nil {
+				t.Fatal(err)
+			}
+			if h := history.completed; h == nil || h.Status != tc.status || h.ActionsFailed != tc.failed {
+				t.Fatalf("incorrect durable classification: %+v", h)
+			}
+		})
+	}
+}
+
+func TestScheduledClimateReceiptRequiresExactAcceptedOutcomeAndCurrentSchedule(t *testing.T) {
+	target := int64(7)
+	revision := time.Date(2026, 11, 3, 0, 0, 0, 0, time.UTC)
+	fired := trigger.ScheduleFire{AutomationID: 1, Revision: revision, FiredAt: revision.Add(8 * time.Hour),
+		Trigger: models.AutomationStepTriggerSchedule{StepID: 2, CronExpr: "0 8 * * 2", Timezone: "UTC"}}
+
+	type scenario struct {
+		name   string
+		change func(*models.AutomationFull, *trigger.ScheduleFire, *action.ActionResult)
+	}
+	for _, tt := range []scenario{
+		{name: "accepted for this vehicle"},
+		{name: "accepted only for another vehicle", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Output = json.RawMessage(`[{"vehicle_id":15,"command":"hvac_on","success":true}]`)
+		}},
+		{name: "ambiguous duplicate vehicle", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Output = json.RawMessage(`[{"vehicle_id":7,"command":"hvac_on","success":true},{"vehicle_id":7,"command":"hvac_on","success":true}]`)
+		}},
+		{name: "command timed out", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Success, r.Error = false, "deadline exceeded"
+		}},
+		{name: "edited since registration", change: func(a *models.AutomationFull, _ *trigger.ScheduleFire, _ *action.ActionResult) {
+			a.UpdatedAt = a.UpdatedAt.Add(time.Minute)
+		}},
+		{name: "different typed schedule step", change: func(_ *models.AutomationFull, newer *trigger.ScheduleFire, _ *action.ActionResult) {
+			newer.Trigger.StepID++
+		}},
+		{name: "manual invocation", change: func(_ *models.AutomationFull, newer *trigger.ScheduleFire, _ *action.ActionResult) {
+			*newer = trigger.ScheduleFire{}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			schedule := fired.Trigger
+			rule := models.AutomationFull{
+				Automation: models.Automation{ID: 1, VehicleID: &target, UpdatedAt: revision},
+				Triggers:   []any{&schedule},
+				Actions:    []any{&models.AutomationAction{CommandName: "hvac_on"}},
+			}
+			result := action.ActionResult{ActionType: "command", Success: true,
+				Output: json.RawMessage(`[{"vehicle_id":15,"command":"hvac_on","success":true},{"vehicle_id":7,"command":"hvac_on","success":true}]`)}
+			firing := fired
+			if tt.change != nil {
+				tt.change(&rule, &firing, &result)
+			}
+			got := scheduledClimateReceipt(&rule, firing, []action.ActionResult{result})
+			if tt.change != nil {
+				if got != nil {
+					t.Fatalf("unattributable result was recorded: %+v", got)
+				}
+				return
+			}
+			if got == nil || got.VehicleID != target || !got.FiredAt.Equal(fired.FiredAt) || !got.Revision.Equal(revision) {
+				t.Fatalf("matched outcome not recorded for exact target: %+v", got)
+			}
+		})
+	}
 }

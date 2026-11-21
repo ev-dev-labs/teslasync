@@ -21,38 +21,40 @@ const (
 
 // Warranty is a stored coverage definition.
 type Warranty struct {
-	Version          int          `json:"version"`
-	ID               int64        `json:"id"`
-	VehicleID        int64        `json:"vehicle_id"`
-	Kind             WarrantyKind `json:"kind"`
-	Label            string       `json:"label"`
-	Provider         string       `json:"provider"`
-	StartAt          time.Time    `json:"start_at"`
-	StartOdometerM   float64      `json:"start_odometer_m"`
-	TermS            int64        `json:"term_s"`
-	TermDistanceM    float64      `json:"term_distance_m"`
-	CapacityFloorPct *float64     `json:"capacity_floor_pct"`
-	DeductibleMinor  int64        `json:"deductible_minor"`
-	Currency         string       `json:"currency"`
-	Notes            string       `json:"notes"`
-	CreatedAt        time.Time    `json:"created_at"`
-	UpdatedAt        time.Time    `json:"updated_at"`
+	Version            int          `json:"version"`
+	ID                 int64        `json:"id"`
+	VehicleID          int64        `json:"vehicle_id"`
+	Kind               WarrantyKind `json:"kind"`
+	Label              string       `json:"label"`
+	Provider           string       `json:"provider"`
+	StartAt            time.Time    `json:"start_at"`
+	StartOdometerM     float64      `json:"start_odometer_m"`
+	StartOdometerKnown bool         `json:"start_odometer_known"`
+	TermS              int64        `json:"term_s"`
+	TermDistanceM      float64      `json:"term_distance_m"`
+	CapacityFloorPct   *float64     `json:"capacity_floor_pct"`
+	DeductibleMinor    int64        `json:"deductible_minor"`
+	Currency           string       `json:"currency"`
+	Notes              string       `json:"notes"`
+	CreatedAt          time.Time    `json:"created_at"`
+	UpdatedAt          time.Time    `json:"updated_at"`
 }
 
 // CreateWarrantyRequest registers a coverage definition.
 type CreateWarrantyRequest struct {
-	VehicleID        int64        `json:"vehicle_id"`
-	Kind             WarrantyKind `json:"kind"`
-	Label            string       `json:"label"`
-	Provider         string       `json:"provider"`
-	StartAt          time.Time    `json:"start_at"`
-	StartOdometerM   float64      `json:"start_odometer_m"`
-	TermS            int64        `json:"term_s"`
-	TermDistanceM    float64      `json:"term_distance_m"`
-	CapacityFloorPct *float64     `json:"capacity_floor_pct"`
-	DeductibleMinor  int64        `json:"deductible_minor"`
-	Currency         string       `json:"currency"`
-	Notes            string       `json:"notes"`
+	VehicleID                  int64        `json:"vehicle_id"`
+	Kind                       WarrantyKind `json:"kind"`
+	Label                      string       `json:"label"`
+	Provider                   string       `json:"provider"`
+	StartAt                    time.Time    `json:"start_at"`
+	StartOdometerM             *float64     `json:"start_odometer_m"`
+	ZeroStartOdometerConfirmed bool         `json:"zero_start_odometer_confirmed"`
+	TermS                      int64        `json:"term_s"`
+	TermDistanceM              float64      `json:"term_distance_m"`
+	CapacityFloorPct           *float64     `json:"capacity_floor_pct"`
+	DeductibleMinor            int64        `json:"deductible_minor"`
+	Currency                   string       `json:"currency"`
+	Notes                      string       `json:"notes"`
 }
 
 // ClaimStatus is the lifecycle stage of a warranty claim. The values mirror the
@@ -113,7 +115,7 @@ type WarrantyCoverage struct {
 	ObservedPaceMPerS     *float64         `json:"observed_pace_m_per_s"`
 	TimeExpiryAt          time.Time        `json:"time_expiry_at"`
 	DistanceExpiryAt      *time.Time       `json:"distance_expiry_at"`
-	ProjectedExpiryAt     time.Time        `json:"projected_expiry_at"`
+	ProjectedExpiryAt     *time.Time       `json:"projected_expiry_at"`
 	BindingLimit          string           `json:"binding_limit"`
 	CapacityRetentionPct  *float64         `json:"capacity_retention_pct"`
 	CapacityFloorBreachAt *time.Time       `json:"capacity_floor_breach_at"`

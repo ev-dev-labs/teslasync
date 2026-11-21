@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -97,11 +98,28 @@ func (r *AutomationRepo) ListFull(ctx context.Context) ([]models.AutomationFull,
 // GetByID loads a single automation by primary key, hydrated with its ordered
 // steps. Returns (nil, nil) when no row exists for the given ID.
 func (r *AutomationRepo) GetByID(ctx context.Context, id int64) (*models.AutomationFull, error) {
+	// A concurrent edit must not pair an old parent revision with new steps.
+	tx, err := r.db.Pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, fmt.Errorf("begin automation snapshot: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	out, err := r.getByID(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit automation snapshot: %w", err)
+	}
+	return out, nil
+}
+
+func (r *AutomationRepo) getByID(ctx context.Context, q database.DBTX, id int64) (*models.AutomationFull, error) {
 	const parentQuery = `
 		SELECT id, name, description, enabled, vehicle_id, created_at, updated_at
 		FROM automations WHERE id = $1`
 	var a models.Automation
-	err := r.db.Pool.QueryRow(ctx, parentQuery, id).Scan(
+	err := q.QueryRow(ctx, parentQuery, id).Scan(
 		&a.ID, &a.Name, &a.Description, &a.Enabled, &a.VehicleID, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -121,7 +139,7 @@ func (r *AutomationRepo) GetByID(ctx context.Context, id int64) (*models.Automat
 		FROM automation_steps
 		WHERE automation_id = $1
 		ORDER BY step_order`
-	rows, err := r.db.Pool.Query(ctx, stepsQuery, id)
+	rows, err := q.Query(ctx, stepsQuery, id)
 	if err != nil {
 		return nil, fmt.Errorf("automations-repo-get-by-id-steps: %w", err)
 	}
@@ -137,7 +155,7 @@ func (r *AutomationRepo) GetByID(ctx context.Context, id int64) (*models.Automat
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("automations-repo-get-by-id-steps-rows: %w", err)
 	}
-	if err := NewAutomationStepChildRepo(r.db).HydrateAutomation(ctx, out); err != nil {
+	if err := NewAutomationStepChildRepo(r.db).hydrateAutomations(ctx, q, []*models.AutomationFull{out}); err != nil {
 		return nil, fmt.Errorf("automations-repo-get-by-id-children: %w", err)
 	}
 	return out, nil

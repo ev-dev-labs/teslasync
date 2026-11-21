@@ -9,6 +9,7 @@ export interface NavGroup {
   label: string
   pages: FlatSidebarEntry[]
   ungrouped?: boolean
+  expandInSheet?: boolean
 }
 
 export interface NavModel {
@@ -50,7 +51,7 @@ export function deriveNavGroups(
   const pinned: FlatSidebarEntry[] = []
   const orderedGroups: NavGroup[] = []
   const collectionIds: string[] = []
-  for (const { label, labelKey, entries } of groupSidebarItems(section?.items ?? [], model.collections)) {
+  for (const { label, labelKey, entries, expandInSheet } of groupSidebarItems(section?.items ?? [], model.collections)) {
     const name = label && labelKey ? t(labelKey, label) : label
     if (name) collectionIds.push(entries[0].to)
     const matchGroup = name && matchesSidebarTokens(`${label} ${name}`.toLowerCase(), tokens)
@@ -58,7 +59,7 @@ export function deriveNavGroups(
     for (const page of pages) if (model.pinnedPaths.has(page.to)) pinned.push(page)
     if (!pages.length) continue
     if (name) {
-      const group = { id: entries[0].to, label: name, pages }
+      const group = { id: entries[0].to, label: name, pages, ...(expandInSheet && { expandInSheet }) }
       groups.push(group)
       orderedGroups.push(group)
     } else {

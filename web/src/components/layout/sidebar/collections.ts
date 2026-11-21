@@ -29,6 +29,7 @@ export interface FlatSidebarEntry {
 export interface SidebarEntryGroup {
   label?: string
   labelKey?: string
+  expandInSheet?: boolean
   entries: FlatSidebarEntry[]
 }
 
@@ -44,6 +45,7 @@ export function groupSidebarItems<
     return entries.length ? [{
       label: group?.label,
       labelKey: group?.labelKey,
+      ...(group?.expandInSheet && { expandInSheet: true }),
       entries,
     }] : []
   })
@@ -112,6 +114,7 @@ const DEFINITIONS = [
   ["Command center", '/commands', '/command-history', '/command-reliability'],
   ["Alerts & automation", '/automations', '/notifications/studio', '/notifications/rules', '/notifications/packs'],
   ["Notification center", '/notifications/inbox', '/notifications/channels', '/notifications/browser', '/notifications/quiet-hours', '/notifications/health'],
+  ["Smart notifications", '/settings/smart-commute', '/settings/smart-charging'],
   ["Safety & security", '/security-access', '/safety-settings', '/guard-mode', '/dashcam'],
   ["Tesla account & services", '/tesla-account', '/tesla-orders', '/fleet-api', '/tesla-region', '/tesla-features', '/account/2fa', '/account/sessions', '/account/privacy'],
   ["Helix tools", '/chatbot', '/integrations/helix', '/intelligence-packs'],
@@ -127,14 +130,16 @@ export const COLLECTION_DEFINITIONS = DEFINITIONS.map(([label, primary, ...sibli
   primary,
   paths: [primary, ...siblings],
   labelKey: `nav.collections.${primary.slice(1).replace(/\W/g, '_')}`,
+  expandInSheet: primary === '/settings/smart-commute',
 }))
 
 export function collectionGroups<T extends IconItem>(sections: readonly Section<T>[]): SectionGroup[] {
   const items = new Map(sections.flatMap(section => section.items.map(item => [item.to, item] as const)))
-  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths }) => ({
+  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths, expandInSheet }) => ({
     primary,
     label,
     labelKey,
+    ...(expandInSheet && { expandInSheet }),
     pages: paths.flatMap(path => {
       const item = items.get(path)
       return item ? [{ to: item.to, label: item.label, labelKey: item.labelKey, icon: item.icon, color: item.color }] : []

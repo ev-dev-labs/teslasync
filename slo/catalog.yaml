@@ -14,6 +14,266 @@
 version: 1
 
 slos:
+  - name: smart_weekly_drive_efficiency_availability
+    description: "Private weekly drive efficiency setup and review must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/route-efficiency/weekly-digest\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_subscription_renewal_availability
+    description: "Private subscription renewal setup, review, and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/subscription-roi/renewal\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_trip_packet_availability
+    description: "Private monthly trip packet setup, review, and explicit export must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ownership/trip-packet\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_mileage_term_review_availability
+    description: "Private monthly allowance consent, comparison, and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/mileage-budget/review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_monthly_tariff_review_availability
+    description: "Private monthly tariff consent, comparison, and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tariff-lab/monthly-review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_charging_cost_digest_availability
+    description: "Private monthly charging cost consent, comparison, and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/analytics/tco/charging-cost-digest\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_invoice_variance_availability
+    description: "Private invoice imports, report reads and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/charging-reconciliation/invoices.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_favorite_digest_availability
+    description: "Private weekly shortlist consent, review and confirmation must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/favorite-digest\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_episode_review_availability
+    description: "Private episode progress consent, review and removal must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/episode-review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_drive_track_availability
+    description: "Private exact-time track lookup and optional library authorization and save must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/drive-track/[^/]+(/spotify(/save)?)?\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_journey_soundtrack_availability
+    description: "Private completed journey soundtrack review and consent must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/media/journey-soundtrack/{journeyID}\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_media_playlist_availability
+    description: "Private playlist previews, consent and save outcome endpoints must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/media/(playlist-review(/save)?|spotify/(connection|callback))\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_software_window_availability
+    description: "Private software update window consent and review must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/software-updates/window-review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_parking_review_availability
+    description: "Private parked closure, unlock, and window rain reviews must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/security/(parked-closure|parked-unlock|window-rain)\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_capacity_digest_availability
+    description: "Private monthly capacity digest consent and evidence must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/capacity-digest\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_overnight_drain_availability
+    description: "Private overnight drain consent and morning evidence must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/battery/overnight-drain-review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_climate_schedule_availability
+    description: "Private scheduled climate review consent and evidence must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/scheduled-review\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_park_reserve_availability
+    description: "Private parked reserve consent and forecast reviews must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/charging/park-reserve\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_cabin_prep_availability
+    description: "Private cabin preparation consent and recommendation reviews must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/climate/cabin-prep\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_service_case_availability
+    description: "Private case records, evidence review and redacted downloads must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/service-intelligence/service-case(/.*)?\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_recall_watch_availability
+    description: "Private recall watch consent and evidence must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/recall-watch\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_cold_tire_availability
+    description: "Private cold gauge review and setup must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/tire-pressure/cold-checks\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_warranty_distance_availability
+    description: "Private warranty mileage consent and projections must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/warranty-command/warranties/{warrantyID}/reminder\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_delivery_availability
+    description: "Subject-scoped personal delivery setup and verification must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-delivery.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_charging_availability
+    description: "Private charging readiness setup and plan decisions must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-charging.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: smart_commute_availability
+    description: "Private smart commute setup and routine decisions must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/smart-commute.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
   - name: widget_design_preference_availability
     description: "Durable subject-scoped widget design reads and writes must avoid server errors."
     sli:

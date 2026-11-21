@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
+    <title>Spotify episode player</title>
+  </head>
+  <body style="margin:0">
+    <div id="episode"></div>
+    <script>
+(() => {
+  if (window.parent === window || window.origin !== 'null') return;
+
+  const protocol = 'teslasync-spotify-episode-v1';
+  const parentOrigin = new URL(window.location.href).origin;
+  const episode = /^spotify:episode:[A-Za-z0-9]{22}$/;
+  let started = false;
+  window.addEventListener('message', event => {
+    if (started || event.source !== window.parent || event.origin !== parentOrigin) return;
+    const { protocol: version, type, uri, positionS } = event.data ?? {};
+    if (version !== protocol || type !== 'load' || typeof uri !== 'string' || !episode.test(uri) ||
+        !Number.isInteger(positionS) || positionS < 0 || positionS >= 86400) return;
+    started = true;
+    let ready = false;
+    let matchingPlaybackStarted = false;
+    let checkedPlayback = false;
+    const report = (state, positionMs) => window.parent.postMessage(
+      { protocol, type: state, uri, positionMs }, parentOrigin,
+    );
+    window.onSpotifyIframeApiReady = api => {
+      try {
+        const element = document.getElementById('episode');
+        api.createController(element, { width: '100%', height: 232 }, controller => {
+          const frame = document.querySelector('iframe');
+          if (!frame) {
+            report('unavailable');
+            return;
+          }
+          frame.allow = 'encrypted-media *';
+          frame.referrerPolicy = 'no-referrer';
+          frame.title = 'Spotify player';
+          controller.addListener('ready', () => {
+            ready = true;
+            report('ready');
+          });
+          controller.addListener('playback_started', ({ data }) => {
+            matchingPlaybackStarted = ready && data?.playingURI === uri;
+          });
+          controller.addListener('playback_update', ({ data }) => {
+            if (checkedPlayback || !matchingPlaybackStarted || data?.playingURI !== uri ||
+                data.isPaused !== false || data.isBuffering !== false ||
+                !Number.isFinite(data.position) || !Number.isFinite(data.duration) ||
+                data.position < 0 || data.position >= data.duration) return;
+            checkedPlayback = true;
+            const offset = data.position - positionS * 1000;
+            if (offset >= -1000 && offset <= 5000) {
+              report('observed', data.position);
+            } else {
+              report('unconfirmed');
+            }
+          });
+          controller.loadEntity(uri, false, positionS);
+        });
+      } catch {
+        report('unavailable');
+      }
+    };
+    const loader = document.createElement('script');
+    loader.src = 'https://open.spotify.com/embed/iframe-api/v1';
+    loader.referrerPolicy = 'no-referrer';
+    loader.onerror = () => report('unavailable');
+    document.head.append(loader);
+  });
+})();
+    </script>
+  </body>
+</html>

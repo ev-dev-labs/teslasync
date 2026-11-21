@@ -54,6 +54,7 @@ import {
 } from '../components';
 import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
+import { SubscriptionRenewalPanel } from '../components/subscription-renewal/SubscriptionRenewalPanel';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -522,6 +523,8 @@ export default function SubscriptionROIPage() {
           'Realised value is measured usage multiplied by the benchmark rate you set — what the same usage would have cost without the subscription. A subscription active for under 30 days is reported as too early to judge, never as a loss.',
         )}
       </AlertBanner>
+
+      <SubscriptionRenewalPanel vehicleId={vehicleId} />
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.subscription.summary.title', 'Portfolio economics')}

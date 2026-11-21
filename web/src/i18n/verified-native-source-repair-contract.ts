@@ -7,6 +7,7 @@ import mobilePresentation from './__fixtures__/mobile-presentation-preservation.
 import { producerProjection, projectionDigest } from './producer-projection';
 import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract';
 import { restoreCommandBoardSource } from './verified-command-board-contract';
+import { restoreSmartNotificationsSource } from './verified-smart-notifications-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
@@ -239,6 +240,7 @@ export function restoreNativeSourceRepair(
   readDependency: (file: string) => string = actualRepairSource,
 ): string {
   expect(hash(JSON.stringify(repair)), 'pinned exact native source repair').toBe(fingerprint);
+  source = restoreSmartNotificationsSource(file, source);
   source = restoreCommandBoardSource(file, source);
   source = restoreHorizontalNavigationSource(file, source);
   source = restoreKeyIdentitySource(file, source);

@@ -94,6 +94,23 @@ func TestActionCenterUsesStableSubjectInOpenMode(t *testing.T) {
 	if service.subject != openModeSubject {
 		t.Fatalf("subject = %q, want %q", service.subject, openModeSubject)
 	}
+	if service.filter.ExcludePrivate || !service.filter.SharedOpenMode {
+		t.Fatalf("open-mode filter = %+v, want shared recommendations", service.filter)
+	}
+}
+
+func TestActionCenterOpenModeUsesSharedScopeForActions(t *testing.T) {
+	service := &fakeActionCenterService{}
+	handler := NewHandler(service, "")
+	request := httptest.NewRequest(http.MethodPost, "/action-center/id/actions",
+		strings.NewReader(`{"fingerprint":"x","action":"dismiss","expected_version":0,"confirmed":true}`))
+	response := httptest.NewRecorder()
+
+	handler.ApplyAction(response, request)
+
+	if response.Code != http.StatusOK || service.action.ExcludePrivate || !service.action.SharedOpenMode {
+		t.Fatalf("status = %d, action = %+v", response.Code, service.action)
+	}
 }
 
 func TestActionCenterRejectsMissingConfiguredSubject(t *testing.T) {

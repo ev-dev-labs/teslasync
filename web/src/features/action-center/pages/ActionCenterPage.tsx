@@ -5,7 +5,9 @@ import {
   useActionCenter,
   useApplyActionCenterAction,
 } from '@/api/hooks/useActionCenter';
-import { StaleRefreshWarning, useToast } from '@/components/feedback';
+import { personalScope, usePersonalIdentity } from '@/api/hooks/usePersonalIdentity';
+import { isApiError } from '@/api/client';
+import { QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Pagination, IconButton } from '@/components/ui';
@@ -51,7 +53,9 @@ export default function ActionCenterPage() {
   const [source] = useUrlEnum('source_feature', [
     '', 'active_alerts', 'advanced_intelligence', 'battery_health',
     'charging_reliability', 'drive_efficiency', 'fleet_maintenance',
-    'signal_health', 'system_health', 'vehicle_readiness',
+    'signal_health', 'smart_charging', 'charging_site_performance', 'smart_commute', 'system_health', 'vehicle_readiness',
+    'warranty_distance', 'trip_maintenance', 'cold_tire_drift', 'recall_watch', 'service_case', 'climate_schedule',
+    'subscription_renewal', 'automation_failure',
   ], '');
   const [state] = useUrlEnum('state', ['all', 'open', 'acknowledged', 'snoozed', 'dismissed'], 'open');
   const [limit] = useUrlState({
@@ -70,10 +74,17 @@ export default function ActionCenterPage() {
     offset,
   }), [vehicleScope, vehicleId, priority, source, state, limit, offset]);
   const [pending, setPending] = useState<PendingAction | null>(null);
-  const query = useActionCenter(filter);
+  const identity = usePersonalIdentity();
+  const scope = identity.isFetching || identity.isError ? null : personalScope(identity.data);
+  const scopeKey = JSON.stringify(scope);
+  const query = useActionCenter(filter, scope);
   const actionCenterState = useDataState(query, { provenance: 'inferred' });
-  const applyAction = useApplyActionCenterAction();
+  const applyAction = useApplyActionCenterAction(scope);
   usePageTitle(t('actionCenter.page.title', 'Action center'));
+
+  useEffect(() => {
+    setPending(null);
+  }, [scopeKey]);
 
   useEffect(() => {
     // Materialize inherited or rejected URL scope so Copy link uses the effective selection.
@@ -107,7 +118,7 @@ export default function ActionCenterPage() {
         if (recommendation.navigation_path) navigate(recommendation.navigation_path);
         return;
       }
-      if (!operationalMode.canWrite) {
+      if (!operationalMode.canWrite || actionCenterState.status !== 'ok' || query.isFetching) {
         toast.warning(
           t(
             'operationalMode.actionCenterDisabled.title',
@@ -119,7 +130,7 @@ export default function ActionCenterPage() {
       }
       setPending({ recommendation, action });
     },
-    [navigate, operationalMode, t, toast],
+    [navigate, operationalMode, actionCenterState.status, query.isFetching, t, toast],
   );
 
   const confirmAction = useCallback(async () => {
@@ -209,6 +220,23 @@ export default function ActionCenterPage() {
     </div>
   );
 
+  const accessDenied = isApiError(query.error) &&
+    (query.error.status === 401 || query.error.status === 403 || query.error.code === 'IDENTITY_CHANGED');
+  if (!scope || accessDenied) {
+    return (
+      <PageLayout title={t('actionCenter.page.title', 'Action center')}>
+        {identity.isFetching || identity.isLoading ? <Skeleton lines={3} /> : identity.error ? (
+          <QueryError error={identity.error} onRetry={() => void identity.refetch()} />
+        ) : accessDenied ? (
+          <QueryError error={query.error} onRetry={() => void identity.refetch()} />
+        ) : (
+          <QueryError error={new Error(t('actionCenter.identityUnavailable', 'A verified identity is unavailable.'))}
+            onRetry={() => void identity.refetch()} />
+        )}
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout
       title={t('actionCenter.page.title', 'Action center')}
@@ -250,13 +278,20 @@ export default function ActionCenterPage() {
       </FadeIn>
       <FadeIn delay={0.12}>
         <RecommendationList
-          items={query.data?.items ?? []}
+          key={scopeKey}
+          items={(query.data?.items ?? []).filter((item) => {
+            const energyOnly = item.source_feature === 'smart_commute' &&
+              item.evidence.some((evidence) => evidence.commute_traffic?.route_energy_only)
+            return (item.source_feature !== 'charging_site_performance' && !energyOnly) ||
+              (actionCenterState.status === 'ok' && Date.parse(item.expires_at) > Date.now())
+          })}
           loading={!actionCenterState.hasData && query.isLoading}
           error={actionCenterState.fatalError}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
-          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabled={!operationalMode.canWrite || actionCenterState.status !== 'ok' || query.isFetching}
           actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
+          personalScope={scope}
           onClearFilters={() => handleFilterChange(initialFilter)}
         />
         <Pagination

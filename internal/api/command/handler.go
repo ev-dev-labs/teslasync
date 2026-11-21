@@ -199,6 +199,7 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		fsm.MarkVehicleAwake()
 	}
 
+	requestedAt := time.Now().UTC()
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
 
 	// Propagate Tesla third-party token expiry as a distinct error code so the
@@ -286,6 +287,9 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		Params:    string(paramsJSON),
 		Status:    status,
 		Error:     errMsg,
+	}
+	if cmdErr == nil && (body.Command == "wake" || body.Command == "wake_up") {
+		cl.WakeRequestedAt = &requestedAt
 	}
 	if logErr := h.commandRepo.Create(r.Context(), cl); logErr != nil {
 		log.Error().Err(logErr).Msg("failed to log command")

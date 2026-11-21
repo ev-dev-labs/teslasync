@@ -1,0 +1,3 @@
+DROP TABLE smart_confirmed_favorite_tracks;
+DROP TABLE smart_favorite_digest_candidates;
+DROP TABLE smart_favorite_digest_plans;

@@ -25,7 +25,7 @@ type liveSignalStoreAdapter struct {
 func (a *liveSignalStoreAdapter) UpdateAll(ctx context.Context, vehicleID int64, signals map[string]teslapipeline.TimedSignal) error {
 	values := make(map[string]*sigsvc.Value, len(signals))
 	for name, value := range signals {
-		values[name] = &sigsvc.Value{Raw: value.Value, Timestamp: value.EmittedAt}
+		values[name] = &sigsvc.Value{Raw: value.Value, Timestamp: value.EmittedAt, TimestampSynthetic: !value.SourceObserved}
 	}
 	return a.store.UpdateValuesNonBlocking(ctx, vehicleID, values)
 }

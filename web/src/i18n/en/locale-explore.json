@@ -732,6 +732,12 @@
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
   },
+  "smartCharging": {
+    "pageSubtitle": "Trip plans and charging decisions"
+  },
+  "smartCommute": {
+    "pageSubtitle": "Recurring drives and local analysis"
+  },
   "sourceLayer": {
     "age": "age",
     "log": {

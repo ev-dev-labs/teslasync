@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
 	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -325,16 +326,24 @@ func (r *DurableRepository) DeleteTariff(ctx context.Context, subject string, id
 // ---------------------------------------------------------------------------
 
 const invoiceColumns = `id, vehicle_id, provider, invoice_ref, currency,
-	period_start, period_end, billed_total_minor, status, version, created_at, updated_at`
+	period_start, period_end, billed_total_minor, status, version, created_at, updated_at,
+	variance_threshold_minor, variance_complete_statement, variance_review_cleared`
 
-func scanInvoice(row pgx.Row) (*port.InvoiceRecord, error) {
+const scopedInvoice = `SELECT ` + invoiceColumns + ` FROM charging_invoices WHERE subject=$1 AND id=$2`
+
+func scanInvoice(row pgx.Row, trailing ...any) (*port.InvoiceRecord, error) {
 	var record port.InvoiceRecord
-	if err := row.Scan(
+	var threshold *int64
+	var complete bool
+	if err := row.Scan(append([]any{
 		&record.ID, &record.VehicleID, &record.Provider, &record.InvoiceRef, &record.Currency,
 		&record.PeriodStart, &record.PeriodEnd, &record.BilledTotalMinor, &record.Status,
-		&record.Version, &record.CreatedAt, &record.UpdatedAt,
-	); err != nil {
+		&record.Version, &record.CreatedAt, &record.UpdatedAt, &threshold, &complete, &record.ReviewCleared,
+	}, trailing...)...); err != nil {
 		return nil, err
+	}
+	if threshold != nil {
+		record.VarianceOptions = &domain.InvoiceVarianceOptions{MaterialAmountMinor: *threshold, CompleteStatement: complete}
 	}
 	return &record, nil
 }
@@ -346,7 +355,9 @@ func (r *DurableRepository) loadInvoiceLines(ctx context.Context, q database.DBT
 	const query = `
 		SELECT id, invoice_id, line_ref, occurred_at, location,
 		       billed_energy_wh, billed_energy_minor, billed_idle_minor,
-		       billed_tax_minor, billed_total_minor
+		       billed_tax_minor, billed_total_minor, billed_amount_coverage, review_billed_boundary,
+		       review_observed_boundary, review_observed_energy_wh, review_max_loss_wh,
+		       review_rate_boundary, review_rate_amount_minor, review_rate_energy_wh, review_other_fees_minor
 		FROM charging_invoice_lines
 		WHERE invoice_id = ANY($1)
 		ORDER BY invoice_id, occurred_at, id`
@@ -359,13 +370,16 @@ func (r *DurableRepository) loadInvoiceLines(ctx context.Context, q database.DBT
 	byInvoice := map[int64][]port.InvoiceLineRecord{}
 	for rows.Next() {
 		var line port.InvoiceLineRecord
+		var variance invoiceVarianceFields
 		if err := rows.Scan(
 			&line.ID, &line.InvoiceID, &line.LineRef, &line.OccurredAt, &line.Location,
 			&line.BilledEnergyWh, &line.BilledEnergyMinor, &line.BilledIdleMinor,
-			&line.BilledTaxMinor, &line.BilledTotalMinor,
+			&line.BilledTaxMinor, &line.BilledTotalMinor, &line.AmountCoverage, &variance.billed, &variance.observed,
+			&variance.energy, &variance.loss, &variance.rateBoundary, &variance.rateAmount, &variance.rateEnergy, &variance.otherFees,
 		); err != nil {
 			return nil, fmt.Errorf("scan invoice line: %w", err)
 		}
+		line.VarianceEvidence = variance.toDomain()
 		byInvoice[line.InvoiceID] = append(byInvoice[line.InvoiceID], line)
 	}
 	if err := rows.Err(); err != nil {
@@ -390,15 +404,11 @@ func (r *DurableRepository) ListInvoices(ctx context.Context, subject string, ve
 	items := make([]port.InvoiceRecord, 0)
 	total := 0
 	for rows.Next() {
-		var item port.InvoiceRecord
-		if err := rows.Scan(
-			&item.ID, &item.VehicleID, &item.Provider, &item.InvoiceRef, &item.Currency,
-			&item.PeriodStart, &item.PeriodEnd, &item.BilledTotalMinor, &item.Status,
-			&item.Version, &item.CreatedAt, &item.UpdatedAt, &total,
-		); err != nil {
+		item, err := scanInvoice(rows, &total)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan invoice: %w", err)
 		}
-		items = append(items, item)
+		items = append(items, *item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate invoices: %w", err)
@@ -418,31 +428,48 @@ func (r *DurableRepository) ListInvoices(ctx context.Context, subject string, ve
 }
 
 func (r *DurableRepository) GetInvoice(ctx context.Context, subject string, id int64) (*port.InvoiceRecord, error) {
-	const query = `SELECT ` + invoiceColumns + ` FROM charging_invoices WHERE subject = $1 AND id = $2`
-	record, err := scanInvoice(r.q.QueryRow(ctx, query, subject, id))
-	if err != nil {
-		return nil, mapWriteError("get invoice", err)
-	}
-	byInvoice, err := r.loadInvoiceLines(ctx, r.q, []int64{record.ID})
+	var record *port.InvoiceRecord
+	err := r.withTx(ctx, func(tx database.DBTX) error {
+		var err error
+		record, err = scanInvoice(tx.QueryRow(ctx, scopedInvoice+` FOR SHARE`, subject, id))
+		if err != nil {
+			return mapWriteError("get invoice", err)
+		}
+		return r.attachInvoiceLines(ctx, tx, record)
+	})
 	if err != nil {
 		return nil, err
 	}
-	record.Lines = byInvoice[record.ID]
 	return record, nil
+}
+
+func (r *DurableRepository) attachInvoiceLines(ctx context.Context, q database.DBTX, invoice *port.InvoiceRecord) error {
+	lines, err := r.loadInvoiceLines(ctx, q, []int64{invoice.ID})
+	if err != nil {
+		return err
+	}
+	invoice.Lines = lines[invoice.ID]
+	return nil
 }
 
 func (r *DurableRepository) CreateInvoice(ctx context.Context, subject string, in port.InvoiceRecord) (*port.InvoiceRecord, error) {
 	var created *port.InvoiceRecord
+	var threshold *int64
+	var complete bool
+	if in.VarianceOptions != nil {
+		threshold = &in.VarianceOptions.MaterialAmountMinor
+		complete = in.VarianceOptions.CompleteStatement
+	}
 	err := r.withTx(ctx, func(tx database.DBTX) error {
 		const insertInvoice = `
 			INSERT INTO charging_invoices (
 			    subject, vehicle_id, provider, invoice_ref, currency,
-			    period_start, period_end, billed_total_minor, status
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			    period_start, period_end, billed_total_minor, status, variance_threshold_minor, variance_complete_statement
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			RETURNING ` + invoiceColumns
 		record, err := scanInvoice(tx.QueryRow(ctx, insertInvoice,
 			subject, in.VehicleID, in.Provider, in.InvoiceRef, in.Currency,
-			in.PeriodStart, in.PeriodEnd, in.BilledTotalMinor, in.Status,
+			in.PeriodStart, in.PeriodEnd, in.BilledTotalMinor, in.Status, threshold, complete,
 		))
 		if err != nil {
 			return mapWriteError("insert invoice", err)
@@ -450,15 +477,20 @@ func (r *DurableRepository) CreateInvoice(ctx context.Context, subject string, i
 		const insertLine = `
 			INSERT INTO charging_invoice_lines (
 			    invoice_id, line_ref, occurred_at, location, billed_energy_wh,
-			    billed_energy_minor, billed_idle_minor, billed_tax_minor, billed_total_minor
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			    billed_energy_minor, billed_idle_minor, billed_tax_minor, billed_total_minor, billed_amount_coverage, review_billed_boundary,
+			    review_observed_boundary, review_observed_energy_wh, review_max_loss_wh,
+			    review_rate_boundary, review_rate_amount_minor, review_rate_energy_wh, review_other_fees_minor
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 			RETURNING id`
 		record.Lines = make([]port.InvoiceLineRecord, 0, len(in.Lines))
 		for _, line := range in.Lines {
 			line.InvoiceID = record.ID
+			variance := invoiceVarianceFromDomain(line.VarianceEvidence)
 			if err := tx.QueryRow(ctx, insertLine,
 				record.ID, line.LineRef, line.OccurredAt, line.Location, line.BilledEnergyWh,
-				line.BilledEnergyMinor, line.BilledIdleMinor, line.BilledTaxMinor, line.BilledTotalMinor,
+				line.BilledEnergyMinor, line.BilledIdleMinor, line.BilledTaxMinor, line.BilledTotalMinor, line.AmountCoverage,
+				variance.billed, variance.observed, variance.energy, variance.loss,
+				variance.rateBoundary, variance.rateAmount, variance.rateEnergy, variance.otherFees,
 			).Scan(&line.ID); err != nil {
 				return mapWriteError("insert invoice line", err)
 			}
@@ -484,25 +516,67 @@ func (r *DurableRepository) DeleteInvoice(ctx context.Context, subject string, i
 const disputeColumns = `id, invoice_id, claimed_minor, recovered_minor, status,
 	reasons, note, opened_at, resolved_at`
 
-func (r *DurableRepository) CreateDispute(ctx context.Context, subject string, in port.DisputeRecord) (*port.DisputeRecord, error) {
+func (r *DurableRepository) CreateDispute(ctx context.Context, subject string, in port.DisputeRecord, gate *port.DisputeReviewGate) (*port.DisputeRecord, error) {
+	var record port.DisputeRecord
+	err := r.withTx(ctx, func(tx database.DBTX) error {
+		invoice, err := scanInvoice(tx.QueryRow(ctx, scopedInvoice+` FOR UPDATE`, subject, in.InvoiceID))
+		if err != nil {
+			return mapWriteError("lock invoice for dispute", err)
+		}
+		if invoice.ReviewCleared {
+			return port.ErrInvoiceReviewChanged
+		}
+		if invoice.VarianceOptions != nil || gate != nil {
+			if err := r.verifyDispute(ctx, tx, subject, invoice, gate); err != nil {
+				return err
+			}
+		}
+		return insertDispute(ctx, tx, subject, in, &record)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+func (r *DurableRepository) verifyDispute(ctx context.Context, tx database.DBTX, subject string, invoice *port.InvoiceRecord, gate *port.DisputeReviewGate) error {
+	if gate != nil && invoice.VehicleID != gate.VehicleID {
+		return port.ErrNotFound
+	}
+	if gate == nil || gate.Verify == nil || invoice.VarianceOptions == nil || invoice.Version != gate.Version {
+		return port.ErrInvoiceReviewChanged
+	}
+	var handled bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM charging_invoice_disputes WHERE invoice_id=$1 AND subject=$2)`,
+		invoice.ID, subject).Scan(&handled); err != nil {
+		return fmt.Errorf("check whether the private statement is already handled: %w", err)
+	}
+	if handled {
+		return port.ErrInvoiceReviewChanged
+	}
+	if err := r.attachInvoiceLines(ctx, tx, invoice); err != nil {
+		return err
+	}
+	return gate.Verify(ctx, *invoice, &SourceRepository{q: tx})
+}
+
+func insertDispute(ctx context.Context, tx database.DBTX, subject string, in port.DisputeRecord, record *port.DisputeRecord) error {
 	const query = `
 		INSERT INTO charging_invoice_disputes (
 		    invoice_id, subject, claimed_minor, status, reasons, note, opened_at
 		)
-		SELECT $1, $2, $3, $4, $5, $6, $7
-		WHERE EXISTS (SELECT 1 FROM charging_invoices WHERE id = $1 AND subject = $2)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING ` + disputeColumns
-	var record port.DisputeRecord
-	err := r.q.QueryRow(ctx, query,
+	err := tx.QueryRow(ctx, query,
 		in.InvoiceID, subject, in.ClaimedMinor, in.Status, in.Reasons, in.Note, in.OpenedAt,
 	).Scan(
 		&record.ID, &record.InvoiceID, &record.ClaimedMinor, &record.RecoveredMinor,
 		&record.Status, &record.Reasons, &record.Note, &record.OpenedAt, &record.ResolvedAt,
 	)
 	if err != nil {
-		return nil, mapWriteError("create dispute", err)
+		return mapWriteError("create dispute", err)
 	}
-	return &record, nil
+	return nil
 }
 
 func (r *DurableRepository) ListDisputes(ctx context.Context, subject string, invoiceID int64) ([]port.DisputeRecord, error) {
@@ -646,7 +720,7 @@ func (r *DurableRepository) UpsertAssignment(ctx context.Context, subject string
 // ---------------------------------------------------------------------------
 
 const warrantyColumns = `id, vehicle_id, kind, label, provider, start_at,
-	start_odometer_m, term_s, term_distance_m, capacity_floor_pct,
+	start_odometer_m, zero_start_odometer_confirmed, term_s, term_distance_m, capacity_floor_pct,
 	deductible_minor, currency, notes, version, created_at, updated_at`
 
 func (r *DurableRepository) ListWarranties(ctx context.Context, subject string, vehicleID int64) ([]port.WarrantyRecord, error) {
@@ -665,7 +739,7 @@ func (r *DurableRepository) ListWarranties(ctx context.Context, subject string, 
 		var record port.WarrantyRecord
 		if err := rows.Scan(
 			&record.ID, &record.VehicleID, &record.Kind, &record.Label, &record.Provider, &record.StartAt,
-			&record.StartOdometerM, &record.TermS, &record.TermDistanceM, &record.CapacityFloorPct,
+			&record.StartOdometerM, &record.ZeroStartOdometerConfirmed, &record.TermS, &record.TermDistanceM, &record.CapacityFloorPct,
 			&record.DeductibleMinor, &record.Currency, &record.Notes, &record.Version,
 			&record.CreatedAt, &record.UpdatedAt,
 		); err != nil {
@@ -682,17 +756,17 @@ func (r *DurableRepository) ListWarranties(ctx context.Context, subject string, 
 func (r *DurableRepository) CreateWarranty(ctx context.Context, subject string, in port.WarrantyRecord) (*port.WarrantyRecord, error) {
 	const query = `
 		INSERT INTO vehicle_warranties (
-		    subject, vehicle_id, kind, label, provider, start_at, start_odometer_m,
+		    subject, vehicle_id, kind, label, provider, start_at, start_odometer_m, zero_start_odometer_confirmed,
 		    term_s, term_distance_m, capacity_floor_pct, deductible_minor, currency, notes
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING ` + warrantyColumns
 	var record port.WarrantyRecord
 	err := r.q.QueryRow(ctx, query,
-		subject, in.VehicleID, in.Kind, in.Label, in.Provider, in.StartAt, in.StartOdometerM,
+		subject, in.VehicleID, in.Kind, in.Label, in.Provider, in.StartAt, in.StartOdometerM, in.ZeroStartOdometerConfirmed,
 		in.TermS, in.TermDistanceM, in.CapacityFloorPct, in.DeductibleMinor, in.Currency, in.Notes,
 	).Scan(
 		&record.ID, &record.VehicleID, &record.Kind, &record.Label, &record.Provider, &record.StartAt,
-		&record.StartOdometerM, &record.TermS, &record.TermDistanceM, &record.CapacityFloorPct,
+		&record.StartOdometerM, &record.ZeroStartOdometerConfirmed, &record.TermS, &record.TermDistanceM, &record.CapacityFloorPct,
 		&record.DeductibleMinor, &record.Currency, &record.Notes, &record.Version,
 		&record.CreatedAt, &record.UpdatedAt,
 	)

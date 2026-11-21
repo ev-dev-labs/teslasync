@@ -23,7 +23,7 @@ export function NavSheetPages({ id, groups, model, editing, query, onSelect }: {
 }) {
   const { t } = useTranslation()
   const searching = !!query.trim()
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  const [expanded, setExpanded] = useState<ReadonlyMap<string, boolean>>(new Map())
   const collections = groups.filter(group => group.id !== PINNED)
   const pages = new Map(collections.flatMap(group => group.pages.map(page => [page.to, page] as const)))
   const shortcuts = [...new Set([...QUICK_PATHS, ...model.pinnedPaths])]
@@ -40,17 +40,13 @@ export function NavSheetPages({ id, groups, model, editing, query, onSelect }: {
         editing={editing} onSelect={onSelect} />
     </section>}
     {collections.map((group, index) => {
-      const open = searching || editing || expanded.has(group.id)
+      const open = searching || editing || (expanded.get(group.id) ?? group.expandInSheet ?? false)
       const panelId = `${id}-group-${index}`
       return <section key={group.id} className="horizontal-nav-sheet-group" aria-label={group.label}>
         {searching || editing ? <PanelTitle as="h3">{group.label}</PanelTitle>
           : <Button data-nav-choice={group.id} variant="ghost" className="horizontal-nav-row"
-              aria-expanded={open} aria-controls={panelId} onClick={() => setExpanded(current => {
-                const next = new Set(current)
-                if (next.has(group.id)) next.delete(group.id)
-                else next.add(group.id)
-                return next
-              })}>
+              aria-expanded={open} aria-controls={panelId}
+              onClick={() => setExpanded(current => new Map(current).set(group.id, !open))}>
               <span>{group.label}</span><span className="horizontal-nav-count">{group.pages.length}</span>
               <Icons.next className={open ? 'size-4 shrink-0 -rotate-90' : 'size-4 shrink-0 rotate-90'} aria-hidden />
             </Button>}

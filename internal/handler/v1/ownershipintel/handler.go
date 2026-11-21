@@ -25,12 +25,13 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
+	personalhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/personal"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel"
 )
 
 const (
 	maxRequestBodyBytes = 256 << 10
-	openModeSubject     = "open-mode"
 	defaultWindowDays   = 90
 )
 
@@ -47,8 +48,10 @@ type service interface {
 	ListInvoices(context.Context, string, int64, int, int) (*domain.Page[domain.ChargingInvoice], error)
 	CreateInvoice(context.Context, string, domain.CreateInvoiceRequest) (*domain.ChargingInvoice, error)
 	DeleteInvoice(context.Context, string, int64) error
-	ReconcileInvoice(context.Context, string, int64) (*domain.ReconciliationReport, error)
+	ReconcileInvoice(context.Context, string, int64, int64) (*domain.ReconciliationReport, error)
 	CreateDispute(context.Context, string, int64, domain.CreateDisputeRequest) (*domain.InvoiceDispute, error)
+	UpdateInvoiceReview(context.Context, string, int64, domain.UpdateInvoiceReviewRequest) error
+	ClearInvoiceReview(context.Context, string, int64, domain.InvoiceReviewScope) error
 
 	DriverAttribution(context.Context, string, int64, int, int, int) (*domain.DriverAttributionReport, error)
 	GhostDrives(context.Context, string, int64, int) (*domain.GhostReport, error)
@@ -94,8 +97,14 @@ type service interface {
 
 // Handler serves the ownership intelligence contract.
 type Handler struct {
-	service    service
-	headerName string
+	service             service
+	headerName          string
+	warrantyReminders   warrantyReminderService
+	chargingCost        chargingCostService
+	monthlyTariff       monthlyTariffService
+	mileageTerm         mileageTermService
+	tripPacket          tripPacketService
+	subscriptionRenewal subscriptionRenewalService
 }
 
 // NewHandler builds the transport adapter.
@@ -111,6 +120,26 @@ func NewHandler(svc service, forwardAuthHeader string) *Handler {
 func (h *Handler) MountRoutes(r chi.Router) {
 	writeLimit := httprate.LimitByIP(20, time.Minute)
 
+	if h.chargingCost != nil {
+		r.Get("/analytics/tco/charging-cost-digest", h.ChargingCostDigest)
+		r.With(writeLimit).Put("/analytics/tco/charging-cost-digest", h.ChargingCostDigest)
+		r.With(writeLimit).Patch("/analytics/tco/charging-cost-digest", h.ChargingCostDigest)
+		r.With(writeLimit).Delete("/analytics/tco/charging-cost-digest", h.ChargingCostDigest)
+	}
+	if h.mileageTerm != nil {
+		r.Get("/analytics/mileage-budget/review", h.MileageTermReview)
+		r.With(writeLimit).Put("/analytics/mileage-budget/review", h.MileageTermReview)
+		r.With(writeLimit).Patch("/analytics/mileage-budget/review", h.MileageTermReview)
+		r.With(writeLimit).Delete("/analytics/mileage-budget/review", h.MileageTermReview)
+	}
+	if h.tripPacket != nil {
+		r.Get("/ownership/trip-packet", h.TripPacket)
+		r.With(writeLimit).Put("/ownership/trip-packet", h.TripPacket)
+		r.With(writeLimit).Patch("/ownership/trip-packet", h.TripPacket)
+		r.With(writeLimit).Post("/ownership/trip-packet", h.TripPacket)
+		r.With(writeLimit).Delete("/ownership/trip-packet", h.TripPacket)
+	}
+
 	r.Route("/insurance-telematics", func(r chi.Router) {
 		r.Get("/", h.InsuranceRiskProfile)
 		r.With(writeLimit).Put("/policy", h.UpsertInsurancePolicy)
@@ -122,13 +151,22 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Post("/tariffs", h.CreateTariff)
 		r.With(writeLimit).Delete("/tariffs/{id}", h.DeleteTariff)
 		r.With(writeLimit).Post("/simulate", h.SimulateTariffs)
+		if h.monthlyTariff != nil {
+			r.Get("/monthly-review", h.MonthlyTariffReview)
+			r.With(writeLimit).Put("/monthly-review", h.MonthlyTariffReview)
+			r.With(writeLimit).Patch("/monthly-review", h.MonthlyTariffReview)
+			r.With(writeLimit).Delete("/monthly-review", h.MonthlyTariffReview)
+		}
 	})
 
 	r.Route("/charging-reconciliation", func(r chi.Router) {
+		r.Use(h.invoicePrivacy)
 		r.Get("/invoices", h.ListInvoices)
 		r.With(writeLimit).Post("/invoices", h.CreateInvoice)
 		r.With(writeLimit).Delete("/invoices/{id}", h.DeleteInvoice)
 		r.Get("/invoices/{id}/report", h.ReconcileInvoice)
+		r.With(writeLimit).Put("/invoices/{id}/review", h.ChangeInvoiceReview)
+		r.With(writeLimit).Delete("/invoices/{id}/review", h.ChangeInvoiceReview)
 		r.With(writeLimit).Post("/invoices/{id}/disputes", h.CreateDispute)
 	})
 
@@ -146,6 +184,11 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.Get("/warranties", h.ListWarranties)
 		r.With(writeLimit).Post("/warranties", h.CreateWarranty)
 		r.With(writeLimit).Delete("/warranties/{id}", h.DeleteWarranty)
+		if h.warrantyReminders != nil {
+			r.Get("/warranties/{warrantyID}/reminder", h.WarrantyReminder)
+			r.With(writeLimit).Put("/warranties/{warrantyID}/reminder", h.WarrantyReminder)
+			r.With(writeLimit).Delete("/warranties/{warrantyID}/reminder", h.WarrantyReminder)
+		}
 		r.With(writeLimit).Post("/claims", h.CreateWarrantyClaim)
 	})
 
@@ -185,6 +228,12 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.Get("/subscriptions", h.ListSubscriptions)
 		r.With(writeLimit).Post("/subscriptions", h.CreateSubscription)
 		r.With(writeLimit).Delete("/subscriptions/{id}", h.DeleteSubscription)
+		if h.subscriptionRenewal != nil {
+			r.Get("/renewal", h.SubscriptionRenewal)
+			r.With(writeLimit).Put("/renewal", h.SubscriptionRenewal)
+			r.With(writeLimit).Patch("/renewal", h.SubscriptionRenewal)
+			r.With(writeLimit).Delete("/renewal", h.SubscriptionRenewal)
+		}
 	})
 }
 
@@ -251,8 +300,13 @@ func (h *Handler) DeleteInsurancePolicy(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) ListTariffs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "ownershipintel.ListTariffs")
 	defer span.End()
+	w.Header().Set("Cache-Control", "no-store")
 	subject, ok := h.subject(w, r, span)
 	if !ok {
+		return
+	}
+	if !tsauth.MatchesExpectedPrincipal(r, h.headerName, subject) {
+		writeError(w, http.StatusConflict, "IDENTITY_CHANGED", "refresh before viewing saved tariffs")
 		return
 	}
 	limit, offset, err := parsePaging(r)
@@ -317,6 +371,30 @@ func (h *Handler) SimulateTariffs(w http.ResponseWriter, r *http.Request) {
 // 3. Charging invoice reconciliation
 // ---------------------------------------------------------------------------
 
+func (h *Handler) invoicePrivacy(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		subject, ok := personalhandler.Subject(w, r, h.headerName, "invoice reconciliation")
+		if !ok {
+			return
+		}
+		if subject == domain.LegacyOpenSubject {
+			writeError(w, http.StatusForbidden, "PERSONAL_SCOPE_REQUIRED", "reserved invoice identity")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func privateInvoiceError(err error) error {
+	switch {
+	case err == nil, errors.Is(err, port.ErrNotFound), errors.Is(err, port.ErrConflict), errors.Is(err, port.ErrInvoiceReviewChanged),
+		errors.Is(err, ownershipintelsvc.ErrInvalidInput), errors.Is(err, ownershipintelsvc.ErrNotConfirmed):
+		return err
+	default:
+		return errors.New("private invoice operation failed")
+	}
+}
+
 func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "ownershipintel.ListInvoices")
 	defer span.End()
@@ -332,7 +410,7 @@ func (h *Handler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID))
 	response, err := h.service.ListInvoices(ctx, subject, vehicleID, limit, offset)
 	if err != nil {
-		h.handleError(w, span, "list charging invoices", err)
+		h.handleError(w, span, "list charging invoices", privateInvoiceError(err))
 		return
 	}
 	writeJSON(w, http.StatusOK, response)
@@ -347,20 +425,29 @@ func (h *Handler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 	var request domain.CreateInvoiceRequest
 	if err := decodeBody(w, r, &request); err != nil {
-		validationError(w, span, err)
+		validationError(w, span, errors.New("invalid invoice request"))
+		return
+	}
+	if request.VarianceOptions != nil && subject == domain.LegacyOpenSubject {
+		writeError(w, http.StatusForbidden, "PERSONAL_SCOPE_REQUIRED", "private invoice reviews require a verified identity")
 		return
 	}
 	span.SetAttributes(attribute.Int64("vehicle_id", request.VehicleID))
 	response, err := h.service.CreateInvoice(ctx, subject, request)
 	if err != nil {
-		h.handleError(w, span, "create charging invoice", err)
+		h.handleError(w, span, "create charging invoice", privateInvoiceError(err))
 		return
+	}
+	if response.VarianceOptions != nil {
+		metrics.RecordInvoiceVariance("imported")
 	}
 	writeJSON(w, http.StatusCreated, response)
 }
 
 func (h *Handler) DeleteInvoice(w http.ResponseWriter, r *http.Request) {
-	h.delete(w, r, "ownershipintel.DeleteInvoice", "delete charging invoice", h.service.DeleteInvoice)
+	h.delete(w, r, "ownershipintel.DeleteInvoice", "delete charging invoice", func(ctx context.Context, subject string, id int64) error {
+		return privateInvoiceError(h.service.DeleteInvoice(ctx, subject, id))
+	})
 }
 
 func (h *Handler) ReconcileInvoice(w http.ResponseWriter, r *http.Request) {
@@ -376,10 +463,21 @@ func (h *Handler) ReconcileInvoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	span.SetAttributes(attribute.Int64("invoice_id", id))
-	response, err := h.service.ReconcileInvoice(ctx, subject, id)
+	var vehicleID int64
+	if r.URL.Query().Has("vehicle_id") {
+		vehicleID, err = parseVehicleID(r)
+		if err != nil {
+			validationError(w, span, err)
+			return
+		}
+	}
+	response, err := h.service.ReconcileInvoice(ctx, subject, id, vehicleID)
 	if err != nil {
-		h.handleError(w, span, "reconcile charging invoice", err)
+		h.handleError(w, span, "reconcile charging invoice", privateInvoiceError(err))
 		return
+	}
+	if response.VarianceReview != nil {
+		metrics.RecordInvoiceVariance(response.VarianceReview.State)
 	}
 	writeJSON(w, http.StatusOK, response)
 }
@@ -398,16 +496,60 @@ func (h *Handler) CreateDispute(w http.ResponseWriter, r *http.Request) {
 	}
 	var request domain.CreateDisputeRequest
 	if err := decodeBody(w, r, &request); err != nil {
-		validationError(w, span, err)
+		validationError(w, span, errors.New("invalid invoice dispute request"))
 		return
 	}
 	span.SetAttributes(attribute.Int64("invoice_id", id))
 	response, err := h.service.CreateDispute(ctx, subject, id, request)
 	if err != nil {
-		h.handleError(w, span, "create invoice dispute", err)
+		h.handleError(w, span, "create invoice dispute", privateInvoiceError(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, response)
+}
+
+func (h *Handler) ChangeInvoiceReview(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracer.Start(r.Context(), "ownershipintel.ChangeInvoiceReview")
+	defer span.End()
+	subject, ok := h.subject(w, r, span)
+	if !ok {
+		return
+	}
+	id, err := parsePathID(r)
+	if err != nil {
+		validationError(w, span, err)
+		return
+	}
+	outcome := "edited"
+	switch r.Method {
+	case http.MethodPut:
+		var input domain.UpdateInvoiceReviewRequest
+		if decodeBody(w, r, &input) != nil {
+			validationError(w, span, errors.New("invalid invoice review request"))
+			return
+		}
+		err = h.service.UpdateInvoiceReview(ctx, subject, id, input)
+	case http.MethodDelete:
+		outcome = "cleared"
+		var vehicleID int64
+		vehicleID, err = parseVehicleID(r)
+		if err != nil {
+			validationError(w, span, err)
+			return
+		}
+		version, parseErr := strconv.Atoi(r.URL.Query().Get("expected_version"))
+		if parseErr != nil || version <= 0 {
+			validationError(w, span, errors.New("expected_version must be a positive integer"))
+			return
+		}
+		err = h.service.ClearInvoiceReview(ctx, subject, id, domain.InvoiceReviewScope{VehicleID: vehicleID, ExpectedVersion: version})
+	}
+	if err != nil {
+		h.handleError(w, span, "change private invoice review", privateInvoiceError(err))
+		return
+	}
+	metrics.RecordInvoiceVariance(outcome)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ---------------------------------------------------------------------------
@@ -558,8 +700,13 @@ func (h *Handler) WarrantyOverview(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListWarranties(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "ownershipintel.ListWarranties")
 	defer span.End()
+	w.Header().Set("Cache-Control", "no-store")
 	subject, ok := h.subject(w, r, span)
 	if !ok {
+		return
+	}
+	if !tsauth.MatchesExpectedPrincipal(r, h.headerName, subject) {
+		writeError(w, http.StatusConflict, "IDENTITY_CHANGED", "authenticated identity changed; refresh before continuing")
 		return
 	}
 	vehicleID, err := parseVehicleID(r)
@@ -1005,8 +1152,17 @@ func (h *Handler) SubscriptionROI(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "ownershipintel.ListSubscriptions")
 	defer span.End()
+	w.Header().Set("Cache-Control", "no-store")
 	subject, ok := h.subject(w, r, span)
 	if !ok {
+		return
+	}
+	if r.Header.Get(tsauth.ExpectedPrincipalHeader) != "" && tsauth.IsImpersonating(r.Context()) {
+		writeError(w, http.StatusForbidden, "PERSONAL_DATA_IMPERSONATION_DENIED", "private renewal review is unavailable during impersonation")
+		return
+	}
+	if !tsauth.MatchesExpectedPrincipal(r, h.headerName, subject) {
+		writeError(w, http.StatusConflict, "IDENTITY_CHANGED", "authenticated identity changed; refresh before continuing")
 		return
 	}
 	vehicleID, err := parseVehicleID(r)
@@ -1081,7 +1237,7 @@ func (h *Handler) subject(w http.ResponseWriter, r *http.Request, span trace.Spa
 		return subject, true
 	}
 	if tsauth.IsOpenMode(h.headerName) {
-		return openModeSubject, true
+		return domain.LegacyOpenSubject, true
 	}
 	err := errors.New("configured identity header is missing")
 	span.RecordError(err)
@@ -1099,6 +1255,8 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, message st
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 	case errors.Is(err, port.ErrNotFound):
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "record not found")
+	case errors.Is(err, port.ErrInvoiceReviewChanged):
+		writeError(w, http.StatusConflict, "INVOICE_REVIEW_CHANGED", "refresh the private statement review before acting")
 	case errors.Is(err, port.ErrConflict):
 		writeError(w, http.StatusConflict, "VERSION_CONFLICT", "a record with the same identity already exists")
 	default:

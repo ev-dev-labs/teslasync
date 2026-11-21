@@ -212,6 +212,8 @@ const DESCRIPTIONS: Record<string, string> = {
   '/notifications/browser': 'Enable browser push notifications for this device.',
   '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',
   '/notifications/health': 'Understand alert fatigue, notification delivery error budgets, and tail latency together.',
+  '/settings/smart-commute': 'Recurring drives and local analysis',
+  '/settings/smart-charging': 'Trip plans and charging decisions',
 
   // ── Security ───────────────────────────────────────────────────────
   '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',
@@ -302,7 +304,11 @@ const DESCRIPTIONS: Record<string, string> = {
  * navSections without a description gets a placeholder so the page never
  * blanks out, but the test suite will fail to keep us honest.
  */
-export function buildFeatureCatalog(): FeatureCatalogEntry[] {
+export function buildFeatureCatalog(t?: (key: string, fallback: string) => string): FeatureCatalogEntry[] {
+  const localizedDescriptions: Record<string, string> = t ? {
+    '/settings/smart-commute': t('smartCommute.pageSubtitle', DESCRIPTIONS['/settings/smart-commute']),
+    '/settings/smart-charging': t('smartCharging.pageSubtitle', DESCRIPTIONS['/settings/smart-charging']),
+  } : {};
   const out: FeatureCatalogEntry[] = [];
   for (const section of navSections) {
     for (const raw of section.items) {
@@ -319,7 +325,7 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
         icon: item.icon,
         color: item.color,
         description:
-          DESCRIPTIONS[item.to] ??
+          localizedDescriptions[item.to] ?? DESCRIPTIONS[item.to] ??
           `Open ${item.label}.` /* visible fallback so the page never breaks */,
         minVehicles: item.minVehicles,
         requiresAuth: item.requiresAuth,

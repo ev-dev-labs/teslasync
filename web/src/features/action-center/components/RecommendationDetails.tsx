@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useActionCenterHistory } from '@/api/hooks/useActionCenter';
+import type { PersonalScope } from '@/api/hooks/usePersonalIdentity';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import {
   OperationalNarrativeDetails,
@@ -18,6 +19,7 @@ interface RecommendationDetailsProps {
   recommendation: ActionCenterRecommendation;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  personalScope?: PersonalScope;
 }
 
 function formatCost(impact: ActionCenterProjectedImpact, locale: string): string | null {
@@ -36,6 +38,7 @@ export function RecommendationDetails({
   recommendation,
   open,
   onOpenChange,
+  personalScope,
 }: RecommendationDetailsProps) {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
@@ -43,8 +46,12 @@ export function RecommendationDetails({
   const { fmtInt } = useNumberFormatting();
   const [paging, setPaging] = useState({ id: recommendation.id, offset: 0 });
   const offset = paging.id === recommendation.id ? paging.offset : 0;
+  const sitePerformance = recommendation.source_feature === 'charging_site_performance';
   if (paging.id !== recommendation.id) setPaging({ id: recommendation.id, offset: 0 });
-  const history = useActionCenterHistory(recommendation.id, open, { limit: 25, offset });
+  const history = useActionCenterHistory(
+    recommendation.id, open && recommendation.source_feature !== 'smart_charging' && !sitePerformance, { limit: 25, offset },
+    ...(personalScope ? [personalScope] as const : []),
+  );
   const [retained, setRetained] = useState<{
     id: string; data: ActionCenterHistoryPage; updatedAt: number;
   } | null>(null);
@@ -86,6 +93,8 @@ export function RecommendationDetails({
       'actionCenter.provenance.charging_sessions',
       'Charging history',
     ),
+    charging_telemetry: t('smartCharging.sitePerformance.meterSource', 'Charging meter history'),
+    tesla_energy: t('smartCharging.solar.source', 'Tesla Energy live measurements'),
     command_logs: t(
       'actionCenter.provenance.command_logs',
       'Vehicle command history',
@@ -94,6 +103,11 @@ export function RecommendationDetails({
       'actionCenter.provenance.drives',
       'Completed drive history',
     ),
+    local_drive_analysis: t(
+      'actionCenter.provenance.local_drive_analysis',
+      'Local completed-drive analysis',
+    ),
+    live_signal_store: t('smartCharging.signalSource', 'Fresh shared live signals'),
     fleet_maintenance_work_orders: t(
       'actionCenter.provenance.fleet_maintenance_work_orders',
       'Fleet maintenance work orders',
@@ -106,6 +120,7 @@ export function RecommendationDetails({
       'actionCenter.provenance.status_incidents',
       'System incident history',
     ),
+    user_recorded: t('actionCenter.provenance.user_recorded', 'User-recorded evidence'),
     tesla_battery_passport_ledger: t(
       'actionCenter.provenance.tesla_battery_passport_ledger',
       'Issued battery Passports',
@@ -199,6 +214,11 @@ export function RecommendationDetails({
         </section>
       </div>
 
+      {recommendation.source_feature === 'smart_charging' ? (
+        <Text as="p" variant="bodySm" className="mt-5">
+          {t('smartCharging.privateHistory', 'Charging-plan actions are managed in Settings, not the general action history.')}
+        </Text>
+      ) : sitePerformance ? null : (
       <section className="mt-5 border-t border-[var(--border-subtle)] pt-4" aria-label={t('actionCenter.history.title', 'Action history')}>
         <PanelTitle>
           {t('actionCenter.history.title', 'Action history')}
@@ -277,6 +297,7 @@ export function RecommendationDetails({
           </div>
         )}
       </section>
+      )}
     </Accordion>
   );
 }

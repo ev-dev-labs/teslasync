@@ -37,7 +37,8 @@ vi.mock('@/api/hooks/useMaintenance', () => ({
   useMaintenance: () => h.items,
   useServiceRecords: () => h.records,
 }));
-vi.mock('@/api/client', () => ({
+vi.mock('@/api/client', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
   request: h.request,
 }));
 // Prevent incidental shared read hooks from invoking their query functions.
