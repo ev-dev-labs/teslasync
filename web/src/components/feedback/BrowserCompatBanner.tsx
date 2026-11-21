@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   detectMissingFeatures,
   dismissCompatWarning,
@@ -41,6 +42,7 @@ interface BrowserCompatBannerProps {
 }
 
 export function BrowserCompatBanner({ testHookMissing }: BrowserCompatBannerProps = {}) {
+  const { t } = useTranslation()
   const [detected] = useState(() => testHookMissing ?? detectMissingFeatures())
   const [dismissed, setDismissed] = useState(isCompatWarningDismissed)
   const missing = testHookMissing ?? detected
@@ -51,11 +53,12 @@ export function BrowserCompatBanner({ testHookMissing }: BrowserCompatBannerProp
   }
 
   if (dismissed || missing.length === 0) return null
+  const title = t('compat.banner.title', 'Your browser is missing required features')
 
   return (
-    <ErrorBoundary name="Browser compatibility warning" inline>
+    <ErrorBoundary name={title} inline>
       <Suspense fallback={null}>
-        <BrowserCompatWarning missing={missing} onDismiss={handleDismiss} />
+        <BrowserCompatWarning title={title} missing={missing} onDismiss={handleDismiss} />
       </Suspense>
     </ErrorBoundary>
   )

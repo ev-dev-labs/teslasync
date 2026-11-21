@@ -6,14 +6,14 @@ const RECOMMENDED_BROWSERS_FALLBACK =
   'Use Chrome ≥ 110, Edge ≥ 110, Firefox ≥ 109, or Safari ≥ 16.'
 
 interface BrowserCompatWarningProps {
+  title: string
   missing: readonly string[]
   onDismiss: () => void
 }
 
-export default function BrowserCompatWarning({ missing, onDismiss }: BrowserCompatWarningProps) {
+export default function BrowserCompatWarning({ title, missing, onDismiss }: BrowserCompatWarningProps) {
   const { t } = useTranslation()
   const featureList = missing.join(', ')
-  const title = t('compat.banner.title', 'Your browser is missing required features')
   const body = t(
     'compat.banner.body',
     'TeslaSync needs {{features}} to work correctly. {{recommendation}}',
