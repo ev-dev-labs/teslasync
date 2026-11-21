@@ -399,10 +399,10 @@ for (const width of [320, 1440]) {
       await expect(parsed).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Export', exact: true })).toBeEnabled();
       await selectTab(page, 'Audit log');
-      await expect(page.getByText('install', { exact: true })).toBeVisible();
-      await expect(page.getByText('trust-decision', { exact: true })).toBeVisible();
-      await expect(page.getByText('disable', { exact: true })).toBeVisible();
-      await expect(page.getByText('enable', { exact: true })).toBeVisible();
+      const auditRows = page.locator('[data-grid-frame]').locator('tbody, [data-mobile-table]');
+      for (const action of ['install', 'trust-decision', 'disable', 'enable']) {
+        await expect(auditRows.getByText(action, { exact: true })).toBeVisible();
+      }
       await selectTab(page, 'Security & Methodology');
       await expect(page.getByText(/The sandbox proves computational safety, not real-world analytical correctness/)).toBeVisible();
       await expect(page.getByRole('table', { name: 'Resource ceilings & budgets in this build', exact: true })).toBeVisible();
