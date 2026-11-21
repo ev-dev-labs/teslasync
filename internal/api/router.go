@@ -1188,21 +1188,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		commuteTrafficLive = liveSignalStore
 	}
 	smartCommuteRepository := smartcommutedb.NewRepository(db, smartcommutedb.WithSuggestionResolutionObserver(metrics.RecordSmartCommuteSuggestionResolution))
-	commuteCommandSettings := settingsdb.NewSettingsRepo(db)
 	smartCommuteService := smartcommutesvc.New(
 		smartCommuteRepository,
 		smartcommutesvc.WithTrafficTraceReader(stateReader),
 		smartcommutesvc.WithTrafficConnector(smartCommuteTraffic), smartcommutesvc.WithTrafficLiveReader(commuteTrafficLive),
-		smartcommutesvc.WithNavigation(smartCommuteRepository, teslanavigation.Executor{Client: teslaClient}, func(ctx context.Context) bool {
-			if !teslaClient.NavigationAllowed(ctx) {
-				return false
-			}
-			suspended, err := commuteCommandSettings.IsAPISuspended(ctx)
-			if err != nil {
-				log.Warn().Err(err).Msg("could not check Fleet API suspension for commute navigation")
-			}
-			return err == nil && !suspended
-		}),
+		smartcommutesvc.WithNavigation(smartCommuteRepository, teslanavigation.Executor{Client: teslaClient}, teslaClient.NavigationAllowed),
 		smartcommutesvc.WithNavigationObserver(metrics.RecordSmartCommuteNavigationOutcome),
 	)
 	smartCommuteHandler := smartcommutehandler.NewHandler(smartCommuteService, cfg.Auth.ForwardAuthHeader)

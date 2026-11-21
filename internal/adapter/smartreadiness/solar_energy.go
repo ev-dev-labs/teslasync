@@ -15,6 +15,7 @@ import (
 var errSolarEnergyUnavailable = errors.New("Tesla energy evidence unavailable")
 
 type SolarEnergyClient interface {
+	CheckSmartFleetEndpoints(context.Context, ...string) error
 	ReadPrivateEnergyLiveStatus(context.Context, int64, string) ([]byte, int, error)
 	ReadPrivateEnergySiteInfo(context.Context, int64, string) ([]byte, int, error)
 }
@@ -35,12 +36,27 @@ func NewSolarEnergy(client SolarEnergyClient, grants SolarEnergyGrants) *SolarEn
 }
 
 func (s *SolarEnergy) Available(ctx context.Context, subject string, siteID int64) (bool, error) {
+	if s.client.CheckSmartFleetEndpoints(ctx, tesla.EnergySiteInfoEndpoint, tesla.EnergyLiveStatusEndpoint) != nil {
+		return false, nil
+	}
 	return s.grants.Available(ctx, subject, siteID)
 }
 
-func (s *SolarEnergy) ReadReserve(ctx context.Context, subject string, siteID int64) (domain.SolarBackupReserve, error) {
+func (s *SolarEnergy) accessToken(ctx context.Context, subject string, siteID int64, endpoint string) (string, error) {
+	// A disabled read must not trigger an otherwise unnecessary OAuth refresh.
+	if s.client.CheckSmartFleetEndpoints(ctx, endpoint) != nil {
+		return "", errSolarEnergyUnavailable
+	}
 	token, err := s.grants.AccessToken(ctx, subject, siteID)
 	if err != nil || token == "" {
+		return "", errSolarEnergyUnavailable
+	}
+	return token, nil
+}
+
+func (s *SolarEnergy) ReadReserve(ctx context.Context, subject string, siteID int64) (domain.SolarBackupReserve, error) {
+	token, err := s.accessToken(ctx, subject, siteID, tesla.EnergySiteInfoEndpoint)
+	if err != nil {
 		return domain.SolarBackupReserve{}, errSolarEnergyUnavailable
 	}
 	return readSolarReserve(ctx, s.client, siteID, token, s.now)
@@ -70,11 +86,17 @@ func NewTeslaSolarAuthorization(client *tesla.Client) *TeslaSolarAuthorization {
 	return &TeslaSolarAuthorization{client: client}
 }
 
-func (a *TeslaSolarAuthorization) EnergyReadAuthURL(state string) (string, error) {
+func (a *TeslaSolarAuthorization) EnergyReadAuthURL(ctx context.Context, state string) (string, error) {
+	if a.client.CheckSmartFleetEndpoints(ctx, tesla.EnergySiteInfoEndpoint) != nil {
+		return "", errSolarEnergyUnavailable
+	}
 	return a.client.EnergyReadAuthURL(state)
 }
 
 func (a *TeslaSolarAuthorization) ExchangeEnergyAuthorization(ctx context.Context, code string) (port.SolarEnergyTokens, error) {
+	if a.client.CheckSmartFleetEndpoints(ctx, tesla.EnergySiteInfoEndpoint) != nil {
+		return port.SolarEnergyTokens{}, errSolarEnergyUnavailable
+	}
 	return solarTokens(a.client.ExchangeEnergyReadCode(ctx, code))
 }
 
@@ -98,8 +120,8 @@ func solarTokens(tokens *tesla.TokenResponse, err error) (port.SolarEnergyTokens
 }
 
 func (s *SolarEnergy) ReadObservation(ctx context.Context, subject string, siteID int64) (domain.SolarSurplusObservation, error) {
-	token, err := s.grants.AccessToken(ctx, subject, siteID)
-	if err != nil || token == "" {
+	token, err := s.accessToken(ctx, subject, siteID, tesla.EnergyLiveStatusEndpoint)
+	if err != nil {
 		return domain.SolarSurplusObservation{}, errSolarEnergyUnavailable
 	}
 	var response struct {

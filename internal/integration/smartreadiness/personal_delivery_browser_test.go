@@ -66,7 +66,7 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	solarProvider := &solarTestProvider{now: func() time.Time { return j.now }}
 	solarReadiness := smartreadinesssvc.New(solarRepo, j.live, controlledSite{}, smartreadinesssvc.WithSolarCharging(solarRepo, solarProvider),
 		smartreadinesssvc.WithClock(func() time.Time { return j.now }))
-	backupFixture, backupEnergy := newBackupEnergyFixture(t, solarConnections)
+	backupFixture, backupEnergy := newBackupEnergyFixture(t, solarConnections, j.db)
 	backup := smartreadinesssvc.NewBackupCharging(solarRepo, j.live, controlledSite{}, true, backupEnergy, func() time.Time { return j.now })
 	deliveryRepo := deliverydb.NewRepository(j.db)
 	deliveryEncryptor, err := crypto.New("synthetic-test-encryption-key")
@@ -377,7 +377,7 @@ func (j *chargingDeliveryJourney) clearSyntheticEarlyStop(stop time.Time) {
 		stop, stop.Add(-90*time.Second), stop.Add(-30*time.Second))
 }
 
-func (solarBrowserAuthorization) EnergyReadAuthURL(state string) (string, error) {
+func (solarBrowserAuthorization) EnergyReadAuthURL(_ context.Context, state string) (string, error) {
 	return "/__fixture/solar-authorize?state=" + url.QueryEscape(state), nil
 }
 

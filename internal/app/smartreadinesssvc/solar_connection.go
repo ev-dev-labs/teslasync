@@ -16,7 +16,7 @@ const (
 )
 
 type SolarEnergyAuthorizationClient interface {
-	EnergyReadAuthURL(state string) (string, error)
+	EnergyReadAuthURL(ctx context.Context, state string) (string, error)
 	ExchangeEnergyAuthorization(ctx context.Context, code string) (port.SolarEnergyTokens, error)
 	RefreshEnergyAuthorization(ctx context.Context, refreshToken string) (port.SolarEnergyTokens, error)
 	CheckEnergySiteAccess(ctx context.Context, siteID int64, accessToken string) error
@@ -44,7 +44,7 @@ func (s *SolarEnergyConnections) Begin(ctx context.Context, subject string, site
 		return "", "", err
 	}
 	state = base64.RawURLEncoding.EncodeToString(nonce[:])
-	link, err = s.client.EnergyReadAuthURL(state)
+	link, err = s.client.EnergyReadAuthURL(ctx, state)
 	if err != nil {
 		return "", "", ErrSolarChargingUnavailable
 	}

@@ -2,15 +2,58 @@ package smartreadiness
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 type solarEnergyFixture struct {
-	live string
-	info string
+	live   string
+	info   string
+	denied string
+}
+
+func (s solarEnergyFixture) CheckSmartFleetEndpoints(_ context.Context, keys ...string) error {
+	for _, key := range keys {
+		if key == s.denied {
+			return tesla.ErrEndpointDisabled
+		}
+	}
+	return nil
+}
+
+type solarGrantWithoutRefresh struct {
+	solarEnergyGrantFixture
+	calls int
+}
+
+func (s *solarGrantWithoutRefresh) AccessToken(context.Context, string, int64) (string, error) {
+	s.calls++
+	return "", errors.New("synthetic refresh attempt")
+}
+
+func TestSolarAndBackupDoNotRequestTokensForDisabledReads(t *testing.T) {
+	grants := &solarGrantWithoutRefresh{}
+	provider := NewSolarEnergy(solarEnergyFixture{denied: tesla.EnergyLiveStatusEndpoint}, grants)
+	ctx := t.Context()
+	const owner, siteID = "synthetic-owner", 44
+	if available, err := provider.Available(ctx, owner, siteID); available || err != nil {
+		t.Fatalf("solar requires both routes: available=%v err=%v", available, err)
+	}
+	if _, err := provider.ReadObservation(ctx, owner, siteID); !errors.Is(err, errSolarEnergyUnavailable) {
+		t.Fatalf("read observation: %v", err)
+	}
+	if _, err := provider.ReadBackupSite(ctx, owner, siteID); !errors.Is(err, errSolarEnergyUnavailable) {
+		t.Fatalf("read backup: %v", err)
+	}
+	provider.client = solarEnergyFixture{denied: tesla.EnergySiteInfoEndpoint}
+	if _, err := provider.ReadReserve(ctx, owner, siteID); !errors.Is(err, errSolarEnergyUnavailable) || grants.calls != 0 {
+		t.Fatalf("disabled reads must not request or refresh a grant: %v (%d attempts)", err, grants.calls)
+	}
 }
 
 func (s solarEnergyFixture) ReadPrivateEnergyLiveStatus(_ context.Context, _ int64, token string) ([]byte, int, error) {

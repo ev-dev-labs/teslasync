@@ -86,6 +86,9 @@ func (s *Service) sendNavigation(
 	}
 	switch state {
 	case "asleep":
+		if !executor.CanWake(ctx) {
+			return domain.NavigationNotSent, nil
+		}
 		if !request.WakeConfirmed {
 			return domain.NavigationWakeRequired, nil
 		}

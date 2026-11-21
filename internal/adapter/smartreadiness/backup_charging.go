@@ -8,11 +8,12 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 func (s *SolarEnergy) ReadBackupSite(ctx context.Context, subject string, siteID int64) (domain.BackupSiteReading, error) {
-	token, err := s.grants.AccessToken(ctx, subject, siteID)
-	if err != nil || token == "" {
+	token, err := s.accessToken(ctx, subject, siteID, tesla.EnergyLiveStatusEndpoint)
+	if err != nil {
 		return domain.BackupSiteReading{}, errSolarEnergyUnavailable
 	}
 	body, status, err := s.client.ReadPrivateEnergyLiveStatus(ctx, siteID, token)

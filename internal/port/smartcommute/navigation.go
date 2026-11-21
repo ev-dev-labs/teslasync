@@ -30,6 +30,7 @@ type NavigationRepository interface {
 
 type NavigationExecutor interface {
 	Connectivity(context.Context, string) string
+	CanWake(context.Context) bool
 	Wake(context.Context, string, func(context.Context) error) (string, domain.NavigationOutcome)
 	Send(context.Context, string, string, func(context.Context) error) domain.NavigationOutcome
 }

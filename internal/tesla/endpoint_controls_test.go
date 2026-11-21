@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,6 +17,73 @@ type endpointControlsReaderFunc func(context.Context) (settingsmodel.LegacyPolli
 
 func (f endpointControlsReaderFunc) GetEndpointControls(ctx context.Context) (settingsmodel.LegacyPollingConfig, error) {
 	return f(ctx)
+}
+
+type smartFleetControls struct {
+	config    settingsmodel.LegacyPollingConfig
+	suspended bool
+}
+
+func (s *smartFleetControls) GetEndpointControls(context.Context) (settingsmodel.LegacyPollingConfig, error) {
+	return s.config, nil
+}
+
+func (s *smartFleetControls) IsAPISuspended(context.Context) (bool, error) {
+	return s.suspended, nil
+}
+
+func enableSmartTestEndpoints(c *Client, keys ...string) *smartFleetControls {
+	s := &smartFleetControls{config: settingsmodel.DefaultPollingConfig()}
+	s.config.SmartEndpoints = make(map[string]bool)
+	for _, key := range keys {
+		s.config.SmartEndpoints[key] = true
+	}
+	c.SetEndpointControlsReader(s)
+	return s
+}
+
+func TestSmartFleetRoutesFailClosedWithoutAffectingManualOrPolling(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	c := newTestClient(server)
+	ctx := t.Context()
+	smart := smartFeaturesContext(ctx)
+	deny := func(ctx context.Context, path string) {
+		t.Helper()
+		before := calls.Load()
+		if _, status, err := c.doRequest(ctx, http.MethodGet, path, nil); status != http.StatusForbidden || !errors.Is(err, ErrEndpointDisabled) || calls.Load() != before {
+			t.Fatalf("disabled %s reached transport or returned wrong status: %d %v", path, status, err)
+		}
+	}
+	allow := func(ctx context.Context, path string) {
+		t.Helper()
+		before := calls.Load()
+		if _, status, err := c.doRequest(ctx, http.MethodGet, path, nil); status != http.StatusOK || err != nil || calls.Load() != before+1 {
+			t.Fatalf("enabled %s did not reach transport: %d %v", path, status, err)
+		}
+	}
+	const list = "/api/1/vehicles"
+	const bundle = "/api/1/vehicles/SYNTHETIC/vehicle_data?endpoints=charge_state;drive_state"
+	deny(smart, list)
+	flags := enableSmartTestEndpoints(c)
+	flags.config.AutoPollingEnabled = true
+	allow(ctx, list)
+	allow(AutomaticPollingContext(ctx), list)
+	deny(smart, list)
+	flags.config.SmartEndpoints["vehicle_data.charge_state"] = true
+	deny(smart, bundle)
+	flags.config.SmartEndpoints["vehicle_data.drive_state"] = true
+	allow(smart, bundle)
+	flags.config.FleetEndpoints = map[string]bool{"vehicle_data.drive_state": false}
+	deny(smart, bundle)
+	flags.config.SmartEndpoints["vehicles.list"] = true
+	flags.suspended = true
+	deny(smart, list)
+	allow(ctx, list)
 }
 
 func TestFleetEndpointGuardRunsBeforeRequestAndProxy(t *testing.T) {

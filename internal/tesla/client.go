@@ -56,7 +56,7 @@ type EndpointControlsReader interface {
 }
 
 // SetEndpointControlsReader is called by the composition root before requests
-// begin. A nil reader leaves standalone Tesla clients unrestricted.
+// begin. A nil reader leaves standalone Tesla clients unrestricted except for Smart Features.
 func (c *Client) SetEndpointControlsReader(reader EndpointControlsReader) {
 	c.budgetMu.Lock()
 	c.endpointControls = reader
@@ -353,6 +353,12 @@ func (c *Client) doFleetRequestAdmitted(
 	if body != nil {
 		reqBodyBytes, _ = io.ReadAll(body)
 		body = bytes.NewReader(reqBodyBytes)
+	}
+	if isSmartFeaturesRequest(ctx) {
+		// Rate, budget and feature admission may have taken time.
+		if err := c.checkEndpointControls(ctx, method, path); err != nil {
+			return nil, http.StatusForbidden, err
+		}
 	}
 
 	result, cbErr := c.cb.Execute(func() (interface{}, error) {

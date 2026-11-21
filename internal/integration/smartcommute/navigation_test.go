@@ -45,6 +45,7 @@ type navigationFleetOptions struct {
 	replyStatus  int
 	beforeStatus func(context.Context) error
 	beforeWake   func(context.Context) error
+	disableWake  bool
 }
 
 type navigationFleetControls struct {
@@ -54,6 +55,8 @@ type navigationFleetControls struct {
 func (c navigationFleetControls) GetEndpointControls(context.Context) (settingsmodel.LegacyPollingConfig, error) {
 	return c.config, nil
 }
+
+func (navigationFleetControls) IsAPISuspended(context.Context) (bool, error) { return false, nil }
 
 func newNavigationFleetFixture(t *testing.T, options navigationFleetOptions) *navigationFleetFixture {
 	t.Helper()
@@ -110,7 +113,10 @@ func newNavigationFleetFixture(t *testing.T, options navigationFleetOptions) *na
 	client := tesla.NewClient(config.TeslaConfig{BaseURL: server.URL, Timeout: 3 * time.Second})
 	client.SetTokens("synthetic-navigation-token", "", time.Now().Add(time.Hour))
 	controls := settingsmodel.DefaultPollingConfig()
-	controls.FleetEndpoints = map[string]bool{"vehicles.connectivity": true, "vehicles.wake_up": true, "command.navigation_request": true}
+	controls.SmartEndpoints = map[string]bool{"vehicles.connectivity": true, "vehicles.wake_up": true, "command.navigation_request": true}
+	if options.disableWake {
+		delete(controls.SmartEndpoints, "vehicles.wake_up")
+	}
 	client.SetEndpointControlsReader(navigationFleetControls{config: controls})
 	fleet.executor = teslanavigation.Executor{Client: client}
 	return fleet
@@ -271,6 +277,21 @@ func TestNavigationRequiresIndependentWakeAndNeverReplaysTimeout(t *testing.T) {
 	f.now = decision.ExpiresAt.Add(time.Second)
 	if got := send(); got != domain.NavigationExpired || fleet.checks.Load() != 2 {
 		t.Fatalf("expiry initiated a new request: %s", got)
+	}
+}
+
+func TestNavigationDoesNotOfferOrSendDisabledWake(t *testing.T) {
+	fleet := newNavigationFleetFixture(t, navigationFleetOptions{initialState: "asleep", replyStatus: http.StatusOK, disableWake: true})
+	f, _, decision := newNavigationFixture(t, fleet)
+	for _, wake := range []bool{false, true} {
+		outcome := navigationResult(t, navigationRequest(f.router, decision.RoutineID, navigationOwner, "subject:"+navigationOwner,
+			domain.NavigationRequest{VehicleID: 42, OccurrenceID: decision.OccurrenceID, Address: navigationAddress, Confirmed: true, WakeConfirmed: wake}))
+		if outcome != domain.NavigationNotSent {
+			t.Fatalf("disabled wake, confirmed=%t: got %s", wake, outcome)
+		}
+	}
+	if fleet.checks.Load() != 2 || fleet.wakes.Load()+fleet.sends.Load() != 0 {
+		t.Fatal("disabled wake should stop navigation after connectivity")
 	}
 }
 

@@ -53,7 +53,10 @@ func TestEndpointControlsHandlersPersistRoundTrip(t *testing.T) {
 	if len(got.FleetEndpoints) <= 20 || len(got.AutoEndpoints) != 7 || !got.FleetEndpoints["command.door_lock"] {
 		t.Fatal("GET must include each implemented route and its effective flags")
 	}
-	got.FleetEndpoints, got.AutoEndpoints = nil, nil
+	if got.SmartEndpoints == nil || len(got.SmartEndpoints) != 0 {
+		t.Fatal("existing installations must have no Smart Features opt-ins")
+	}
+	got.FleetEndpoints, got.AutoEndpoints, got.SmartEndpoints = nil, nil, nil
 	if !reflect.DeepEqual(got, pc) {
 		t.Fatalf("GET legacy switches changed: got %+v, want %+v", got, pc)
 	}
@@ -67,6 +70,41 @@ func TestEndpointControlsHandlersPersistRoundTrip(t *testing.T) {
 	h.UpdatePollingConfig(w, httptest.NewRequest(http.MethodPut, "/settings/polling-config", strings.NewReader(string(raw))))
 	if w.Code != http.StatusInternalServerError || store.writes != 1 {
 		t.Fatalf("PUT database error status=%d, writes=%d", w.Code, store.writes)
+	}
+}
+
+func TestEndpointControlsSmartPermissionDoesNotSurviveDisablingAccess(t *testing.T) {
+	store := &memoryEndpointControls{config: settingsmodel.DefaultPollingConfig()}
+	h := &SettingsHandler{endpointControls: store}
+	update := func(pc settingsmodel.LegacyPollingConfig) settingsmodel.LegacyPollingConfig {
+		t.Helper()
+		raw, err := json.Marshal(pc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		h.UpdatePollingConfig(w, httptest.NewRequest(http.MethodPut, "/settings/polling-config", strings.NewReader(string(raw))))
+		var got settingsmodel.LegacyPollingConfig
+		if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &got) != nil {
+			t.Fatalf("PUT status=%d body=%s", w.Code, w.Body.String())
+		}
+		return got
+	}
+	const siteInfo, liveStatus = "energy.site_info", "energy.live_status"
+	pc := store.config
+	pc.SmartEndpoints = map[string]bool{siteInfo: true, liveStatus: true}
+	got := update(pc)
+	if !got.SmartEndpoints[siteInfo] || !got.SmartEndpoints[liveStatus] || got.AutoPollingEnabled {
+		t.Fatalf("independent Smart opt-in not persisted: %+v", got.SmartEndpoints)
+	}
+	got.FleetEndpoints[siteInfo] = false
+	got = update(got)
+	if got.SmartEndpoints[siteInfo] || store.config.SmartEndpoints[siteInfo] || !got.SmartEndpoints[liveStatus] {
+		t.Fatalf("did not clear only the disabled route: %+v", got.SmartEndpoints)
+	}
+	got.FleetEndpoints[siteInfo] = true
+	if got = update(got); got.SmartEndpoints[siteInfo] {
+		t.Fatal("restoring base access must not opt a route back into Smart Features")
 	}
 }
 
@@ -90,6 +128,9 @@ func TestEndpointControlsRejectUnknownAndInvalidPollingSelections(t *testing.T) 
 	}{
 		{"unknown route", func(pc *settingsmodel.LegacyPollingConfig) {
 			pc.FleetEndpoints = map[string]bool{"unknown.route": true}
+		}},
+		{"unknown Smart Features route", func(pc *settingsmodel.LegacyPollingConfig) {
+			pc.SmartEndpoints = map[string]bool{"unknown.route": true}
 		}},
 		{"command cannot poll", func(pc *settingsmodel.LegacyPollingConfig) {
 			pc.AutoEndpoints = map[string]bool{"command.door_lock": true}

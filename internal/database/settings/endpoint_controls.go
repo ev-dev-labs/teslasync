@@ -19,6 +19,7 @@ type endpointControls struct {
 	AutoPollingEnabled       bool            `json:"auto_polling_enabled"`
 	FleetEndpoints           map[string]bool `json:"fleet_endpoints"`
 	AutoEndpoints            map[string]bool `json:"auto_endpoints"`
+	SmartEndpoints           map[string]bool `json:"smart_endpoints"`
 	VehicleDiscovery         bool            `json:"vehicle_discovery"`
 	ChargeState              bool            `json:"charge_state"`
 	ClimateState             bool            `json:"climate_state"`
@@ -46,6 +47,7 @@ func endpointControlsFrom(pc settings.LegacyPollingConfig) endpointControls {
 		AutoPollingEnabled:       pc.AutoPollingEnabled,
 		FleetEndpoints:           pc.FleetEndpoints,
 		AutoEndpoints:            pc.AutoEndpoints,
+		SmartEndpoints:           pc.SmartEndpoints,
 		VehicleDiscovery:         pc.VehicleDiscovery,
 		ChargeState:              pc.ChargeState,
 		ClimateState:             pc.ClimateState,

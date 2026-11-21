@@ -22,6 +22,7 @@ const (
 
 	navigationVehiclePath = "/api/1/vehicles/{vin}"
 	navigationWakePath    = navigationVehiclePath + "/wake_up"
+	navigationWakeKey     = "vehicles.wake_up"
 )
 
 var errNavigationNotSent = errors.New("navigation transport did not dispatch")
@@ -31,9 +32,12 @@ func navigationCommandPath() string {
 }
 
 func (c *Client) NavigationAllowed(ctx context.Context) bool {
-	return c != nil && c.HasValidToken() &&
-		c.checkEndpointControls(ctx, http.MethodGet, navigationVehiclePath) == nil &&
-		c.checkEndpointControls(ctx, http.MethodPost, navigationCommandPath()) == nil
+	return c != nil && c.HasValidToken() && c.CheckSmartFleetEndpoints(ctx,
+		"vehicles.connectivity", "command."+commands["navigation_request"].endpoint) == nil
+}
+
+func (c *Client) NavigationWakeAllowed(ctx context.Context) bool {
+	return c.CheckSmartFleetEndpoints(ctx, navigationWakeKey) == nil
 }
 
 // NavigationConnectivity checks Tesla's reported connection state without asking the car for live data.
@@ -129,11 +133,12 @@ func (c *Client) privateNavigationRequest(
 		return nil, http.StatusUnauthorized, ErrUnauthorized
 	}
 	path := strings.Replace(route, "{vin}", url.PathEscape(vin), 1)
+	ctx = smartFeaturesContext(ctx)
 	if method == http.MethodGet {
 		return c.doFleetRequest(ctx, method, path, nil, route, token)
 	}
 	admit := func(ctx context.Context) error {
-		if authorize == nil || c.checkEndpointControls(ctx, method, path) != nil || authorize(ctx) != nil || ctx.Err() != nil {
+		if authorize == nil || authorize(ctx) != nil || ctx.Err() != nil {
 			return errNavigationNotSent
 		}
 		c.mu.RLock()

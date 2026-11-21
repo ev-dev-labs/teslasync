@@ -13,10 +13,13 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 )
 
 func permitNavigation(context.Context) error { return nil }
+
+func enableSmartNavigation(c *Client) *smartFleetControls {
+	return enableSmartTestEndpoints(c, "vehicles.connectivity", "vehicles.wake_up", "command.navigation_request")
+}
 
 func TestSendNavigationAddressUsesPrivateSingleAttempt(t *testing.T) {
 	const vin = "SYNTHETICVEHICLE1"
@@ -58,6 +61,7 @@ func TestSendNavigationAddressUsesPrivateSingleAttempt(t *testing.T) {
 			}))
 			defer server.Close()
 			client := NewClient(config.TeslaConfig{BaseURL: server.URL, Timeout: time.Second})
+			enableSmartNavigation(client)
 			client.SetTokens("synthetic-token", "", time.Now().Add(time.Hour))
 			var audits int
 			client.SetLogCallback(func(method, path string, _ int, request, response []byte, _ int, err error) {
@@ -92,15 +96,11 @@ func TestNavigationStatusAndWakeAreSeparateFromSending(t *testing.T) {
 	}))
 	defer server.Close()
 	client := NewClient(config.TeslaConfig{BaseURL: server.URL, Timeout: time.Second})
+	controls := enableSmartNavigation(client)
 	if got := client.SendNavigationAddress(t.Context(), vin, "100 Synthetic Way", permitNavigation); got != NavigationRejected {
 		t.Fatalf("missing authorization returned %s", got)
 	}
 	client.SetTokens("synthetic-token", "", time.Now().Add(time.Hour))
-	controls := settingsmodel.DefaultPollingConfig()
-	controls.FleetEndpoints = map[string]bool{"vehicles.connectivity": true, "vehicles.wake_up": true, "command.navigation_request": true}
-	client.SetEndpointControlsReader(endpointControlsReaderFunc(func(context.Context) (settingsmodel.LegacyPollingConfig, error) {
-		return controls, nil
-	}))
 	if !client.NavigationAllowed(t.Context()) {
 		t.Fatal("enabled navigation must use the installation's Fleet endpoint catalog")
 	}
@@ -116,10 +116,18 @@ func TestNavigationStatusAndWakeAreSeparateFromSending(t *testing.T) {
 	if len(requests) != 2 || <-requests != "GET "+path || <-requests != "POST "+path+"/wake_up" {
 		t.Fatal("only the explicit status and wake calls may reach Tesla")
 	}
-	controls.FleetEndpoints["command.navigation_request"] = false
+	delete(controls.config.SmartEndpoints, "command.navigation_request")
 	if client.NavigationAllowed(t.Context()) || client.SendNavigationAddress(t.Context(), vin, "100 Synthetic Way", permitNavigation) != NavigationRejected ||
 		len(requests) != 0 {
 		t.Fatal("disabled command must hide navigation and prevent requests")
+	}
+	delete(controls.config.SmartEndpoints, "vehicles.connectivity")
+	delete(controls.config.SmartEndpoints, "vehicles.wake_up")
+	if client.NavigationConnectivity(t.Context(), vin) != "" {
+		t.Fatal("disabled connectivity must not read from Tesla")
+	}
+	if _, got := client.RequestNavigationWake(t.Context(), vin, permitNavigation); got != NavigationRejected || len(requests) != 0 {
+		t.Fatal("disabled wake must not reach Tesla")
 	}
 }
 
@@ -130,6 +138,7 @@ func TestNavigationLastAdmissionRejectsRevocationAndTokenChange(t *testing.T) {
 	}))
 	defer server.Close()
 	client := NewClient(config.TeslaConfig{BaseURL: server.URL, Timeout: time.Second})
+	flags := enableSmartNavigation(client)
 	client.SetTokens("synthetic-token", "", time.Now().Add(time.Hour))
 	const vin, address = "SYNTHETICVEHICLE1", "100 Synthetic Way"
 	if got := client.SendNavigationAddress(t.Context(), vin, address, nil); got != NavigationNotSent {
@@ -146,6 +155,12 @@ func TestNavigationLastAdmissionRejectsRevocationAndTokenChange(t *testing.T) {
 	}); got != NavigationNotSent {
 		t.Errorf("changed token returned %s", got)
 	}
+	if got := client.SendNavigationAddress(t.Context(), vin, address, func(context.Context) error {
+		delete(flags.config.SmartEndpoints, "command.navigation_request")
+		return nil
+	}); got != NavigationRejected {
+		t.Errorf("permission revoked during admission returned %s", got)
+	}
 }
 
 func TestNavigationNetworkTimeoutDoesNotReplay(t *testing.T) {
@@ -160,6 +175,7 @@ func TestNavigationNetworkTimeoutDoesNotReplay(t *testing.T) {
 	}))
 	defer server.Close()
 	client := NewClient(config.TeslaConfig{BaseURL: server.URL, Timeout: 3 * time.Second})
+	enableSmartNavigation(client)
 	client.SetTokens("synthetic-token", "", time.Now().Add(time.Hour))
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()

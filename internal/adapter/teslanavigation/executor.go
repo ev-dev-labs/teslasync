@@ -15,6 +15,10 @@ func (e Executor) Connectivity(ctx context.Context, vin string) string {
 	return e.Client.NavigationConnectivity(ctx, vin)
 }
 
+func (e Executor) CanWake(ctx context.Context) bool {
+	return e.Client.NavigationWakeAllowed(ctx)
+}
+
 func (e Executor) Wake(ctx context.Context, vin string, authorize func(context.Context) error) (string, domain.NavigationOutcome) {
 	state, outcome := e.Client.RequestNavigationWake(ctx, vin, authorize)
 	return state, domain.NavigationOutcome(outcome)

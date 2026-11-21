@@ -11,6 +11,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+const (
+	EnergyLiveStatusEndpoint = "energy.live_status"
+	EnergySiteInfoEndpoint   = "energy.site_info"
+)
+
 func (c *Client) ReadPrivateEnergyLiveStatus(ctx context.Context, siteID int64, accessToken string) ([]byte, int, error) {
 	return c.readPrivateEnergy(ctx, siteID, "live_status", accessToken)
 }
@@ -25,7 +30,7 @@ func (c *Client) readPrivateEnergy(ctx context.Context, siteID int64, endpoint, 
 	}
 	telemetryPath := "/api/1/energy_sites/{site_id}/" + endpoint
 	path := fmt.Sprintf("/api/1/energy_sites/%d/%s", siteID, endpoint)
-	return c.doFleetRequest(ctx, http.MethodGet, path, nil, telemetryPath, accessToken)
+	return c.doFleetRequest(smartFeaturesContext(ctx), http.MethodGet, path, nil, telemetryPath, accessToken)
 }
 
 // GetChargingHistory calls GET /api/1/dx/charging/history with pagination.

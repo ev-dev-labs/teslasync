@@ -2,6 +2,7 @@ package tesla
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +27,7 @@ func TestPrivateEnergySiteReadsDoNotAuditIdentifiersOrPayloads(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
+	enableSmartTestEndpoints(client, EnergyLiveStatusEndpoint, EnergySiteInfoEndpoint)
 	var paths []string
 	client.SetLogCallback(func(method, path string, _ int, request, response []byte, _ int, _ error) {
 		paths = append(paths, strings.TrimPrefix(path, server.URL))
@@ -65,10 +67,15 @@ func TestPrivateEnergyReadsRejectProviderRedirectsAndOversizedData(t *testing.T)
 	defer server.Close()
 
 	client := newTestClient(server)
+	flags := enableSmartTestEndpoints(client, EnergyLiveStatusEndpoint)
 	ctx := context.Background()
 	if _, status, err := client.ReadPrivateEnergyLiveStatus(ctx, 96745, "synthetic-energy-only-token"); status != http.StatusFound || err != nil {
 		t.Fatalf("private GET status=%d err=%v; expected redirect to remain unfollowed", status, err)
 	}
+	if _, status, err := client.ReadPrivateEnergySiteInfo(ctx, 96745, "synthetic-energy-only-token"); status != http.StatusForbidden || !errors.Is(err, ErrEndpointDisabled) {
+		t.Fatalf("live status permission must not allow site info: %d %v", status, err)
+	}
+	flags.config.SmartEndpoints[EnergySiteInfoEndpoint] = true
 	if body, _, err := client.ReadPrivateEnergySiteInfo(ctx, 96745, "synthetic-energy-only-token"); err == nil || len(body) != 0 {
 		t.Fatal("expected a bounded read to reject oversized provider data")
 	}

@@ -295,14 +295,19 @@ func endpointControlsView(pc settingsmodel.LegacyPollingConfig) endpointControls
 	catalog := tesla.FleetEndpointCatalog()
 	enabled := make(map[string]bool, len(catalog))
 	auto := make(map[string]bool)
+	smart := make(map[string]bool)
 	for _, endpoint := range catalog {
 		enabled[endpoint.Key] = pc.EndpointEnabled(endpoint.Key)
 		if endpoint.Pollable {
 			auto[endpoint.Key] = enabled[endpoint.Key] && pc.AutoPreference(endpoint.Key)
 		}
+		if enabled[endpoint.Key] && pc.SmartEndpoints[endpoint.Key] {
+			smart[endpoint.Key] = true
+		}
 	}
 	pc.FleetEndpoints = enabled
 	pc.AutoEndpoints = auto
+	pc.SmartEndpoints = smart
 	return endpointControlsResponse{LegacyPollingConfig: pc, EndpointCatalog: catalog}
 }
 
@@ -340,6 +345,15 @@ func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Req
 		if enabled && !pc.EndpointEnabled(key) {
 			httpx.WriteError(w, http.StatusBadRequest, "disabled endpoint cannot participate in automatic polling")
 			return
+		}
+	}
+	for key, enabled := range pc.SmartEndpoints {
+		if _, ok := valid[key]; !ok {
+			httpx.WriteError(w, http.StatusBadRequest, "unknown Smart Features endpoint key")
+			return
+		}
+		if !enabled || !pc.EndpointEnabled(key) {
+			delete(pc.SmartEndpoints, key)
 		}
 	}
 	if err := h.endpointControls.UpsertEndpointControls(ctx, pc); err != nil {

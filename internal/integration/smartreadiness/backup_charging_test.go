@@ -18,8 +18,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	actiondb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	actiondomain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
@@ -27,6 +29,7 @@ import (
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
@@ -67,13 +70,25 @@ func (f *backupEnergyFixture) count() int {
 	return f.calls
 }
 
-func newBackupEnergyFixture(t *testing.T, grants *smartreadinesssvc.SolarEnergyConnections) (*backupEnergyFixture, *smartadapter.SolarEnergy) {
+func newBackupEnergyFixture(t *testing.T, grants *smartreadinesssvc.SolarEnergyConnections,
+	db *database.DB,
+) (*backupEnergyFixture, *smartadapter.SolarEnergy) {
 	t.Helper()
+	if _, err := db.Pool.Exec(t.Context(), `CREATE TABLE settings (
+		key text PRIMARY KEY, value_jsonb jsonb, value_text text,
+		value_num numeric, value_bool boolean, data_kind text NOT NULL
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	settings := settingsdb.NewSettingsRepo(db)
+	setSmartLiveStatus(t, settings, true)
 	fixture := &backupEnergyFixture{t: t}
 	server := httptest.NewServer(fixture)
 	t.Cleanup(server.Close)
 	cfg := config.TeslaConfig{BaseURL: server.URL, Timeout: 3 * time.Second}
-	return fixture, smartadapter.NewSolarEnergy(tesla.NewClient(cfg), grants)
+	client := tesla.NewClient(cfg)
+	client.SetEndpointControlsReader(settings)
+	return fixture, smartadapter.NewSolarEnergy(client, grants)
 }
 
 type backupJourney struct {
@@ -97,7 +112,7 @@ func newBackupJourney(t *testing.T) *backupJourney {
 	}
 	j.connections = readinessdb.NewSolarEnergyConnectionRepository(j.db, j.enc)
 	j.connect()
-	j.provider, j.energy = newBackupEnergyFixture(t, smartreadinesssvc.NewSolarEnergyConnections(j.connections, nil))
+	j.provider, j.energy = newBackupEnergyFixture(t, smartreadinesssvc.NewSolarEnergyConnections(j.connections, nil), j.db)
 	j.placeAt = j.now.Add(-24 * time.Hour)
 	j.earlyStopExec(`UPDATE geofences SET updated_at=$1 WHERE id=9`, j.placeAt)
 	applyReadinessMigration(t, j.db, "000223_action_center_state", "up")
@@ -110,6 +125,17 @@ func newBackupJourney(t *testing.T) *backupJourney {
 	j.live.values["ACChargingPower"] = &signal.Value{Raw: 3500.0, Timestamp: j.now}
 	j.browserID = j.enroll(backupOwner, "https://push.example.invalid/backup-browser")
 	return j
+}
+
+func setSmartLiveStatus(t *testing.T, settings *settingsdb.SettingsRepo, enabled bool) {
+	t.Helper()
+	flags := settingsmodel.DefaultPollingConfig()
+	if enabled {
+		flags.SmartEndpoints = map[string]bool{tesla.EnergyLiveStatusEndpoint: true}
+	}
+	if err := settings.UpsertEndpointControls(t.Context(), flags); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func (j *backupJourney) mountBackup() {
@@ -290,6 +316,26 @@ func TestBackupChargingPrivateOutageLifecycle(t *testing.T) {
 	j.process(0)
 	if n, _ := j.pushState(); n != 2 {
 		t.Fatal("recovery duplicated the charging push")
+	}
+}
+
+func TestBackupChargingWorkerHonorsFleetPermissionRevocation(t *testing.T) {
+	j := newBackupJourney(t)
+	setup := j.settings(backupOwner)
+	j.start(setup.ConnectionRevision, j.browserID, true, true, http.StatusNoContent)
+	j.sample(j.now, "off_grid", nil)
+	j.process(1)
+	if j.provider.count() != 1 {
+		t.Fatal("live status must work without automatic polling or site info permission")
+	}
+
+	setSmartLiveStatus(t, settingsdb.NewSettingsRepo(j.db), false)
+	j.now = j.now.Add(time.Minute)
+	j.live.values["ACChargingPower"].Timestamp = j.now
+	j.sample(j.now, "off_grid", nil)
+	claimed, err := j.backup.ProcessBackupCharging(t.Context(), 3, nil)
+	if claimed != 1 || err == nil || j.provider.count() != 1 || j.settings(backupOwner).Decision != nil {
+		t.Fatalf("revoked permission should block the next worker read: claimed=%d err=%v reads=%d", claimed, err, j.provider.count())
 	}
 }
 
