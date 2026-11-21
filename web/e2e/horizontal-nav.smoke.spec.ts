@@ -68,14 +68,18 @@ async function reviewAppearance(page: Page, screenshotPath: string) {
   await page.getByRole('button', { name: 'Close preview', exact: true }).click()
 }
 
-test('all packs keep the Driving secondary aligned and contained at laptop and desktop sizes', async ({ page, baseURL }, testInfo) => {
-  testInfo.setTimeout(180_000)
-  const mocks = await openNavigation(page, baseURL!, 1440, 'classic')
+const drivingDesigns = Object.entries(APPLICATION_DESIGNS)
+const drivingPacksPerCase = 7
+
+async function assertDrivingSecondary(page: Page, baseURL: string, first: number) {
+  const previous = (drivingDesigns[first - 1]?.[0] ?? 'classic') as PackId
+  const mocks = await openNavigation(page, baseURL, first % 2 === 0 ? 1440 : 1024, previous)
   const nav = page.getByRole('navigation', { name: 'Primary', exact: true })
   const flyout = page.locator('[data-role="section-flyout"]')
   const rail = page.getByTestId('command-deck-rail')
   const side = page.getByTestId('atlas-panel-secondary')
-  for (const [index, [id, design]] of Object.entries(APPLICATION_DESIGNS).entries()) {
+  for (const [offset, [id, design]] of drivingDesigns.slice(first, first + drivingPacksPerCase).entries()) {
+    const index = first + offset
     const pack = id as PackId
     if (pack !== 'classic') await selectReviewPack(page, pack)
     await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack)
@@ -138,7 +142,15 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
     }
   }
   await closeMockedPage(page, mocks)
-})
+}
+
+for (let first = 0; first < drivingDesigns.length; first += drivingPacksPerCase) {
+  const last = Math.min(first + drivingPacksPerCase, drivingDesigns.length)
+  test(`all packs keep the Driving secondary aligned and contained at laptop and desktop sizes (${first + 1}-${last})`, async ({ page, baseURL }, testInfo) => {
+    testInfo.setTimeout(180_000)
+    await assertDrivingSecondary(page, baseURL!, first)
+  })
+}
 
 test('horizontal sections page through whole tiles and the flyout switches groups by keyboard and pointer', async ({ page, baseURL }) => {
   const mocks = await openNavigation(page, baseURL!, 1440)
