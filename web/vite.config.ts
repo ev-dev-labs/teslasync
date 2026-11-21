@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, transformWithEsbuild, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execFileSync } from 'node:child_process'
@@ -54,6 +54,18 @@ const isVitest = process.env.VITEST !== undefined
 // the actual build output plus the Docker/nginx serving path.
 const sourcemapMode = (process.env.VITE_SOURCEMAP_MODE ?? '').trim().toLowerCase()
 const sourcemap: 'hidden' | false = sourcemapMode === 'private' ? 'hidden' : false
+
+const personalDeliveryWorkerMap: Plugin = {
+  name: 'personal-delivery-worker-map',
+  apply: 'build',
+  async generateBundle() {
+    const worker = 'personal-delivery/sw.js'
+    const source = `public/${worker}`
+    const result = await transformWithEsbuild(readFileSync(path.join(__dirname, source), 'utf8'), `../${source}`)
+    this.emitFile({ type: 'asset', fileName: worker, source: result.code })
+    this.emitFile({ type: 'asset', fileName: `${worker}.map`, source: JSON.stringify(result.map) })
+  },
+}
 
 const verifyEnglishCatalogSplit = {
   name: 'verify-english-catalog-split',
@@ -144,6 +156,7 @@ export default defineConfig({
     ...(isVitest ? [] : [react()]),
     // Build/dev guard only: unit tests never consume the split catalog output.
     ...(isVitest ? [] : [verifyEnglishCatalogSplit]),
+    ...(sourcemap ? [personalDeliveryWorkerMap] : []),
     VitePWA({
       // Mocked browser suites intercept every API request. Omitting the worker
       // prevents Workbox from bypassing those fixtures; production builds and
