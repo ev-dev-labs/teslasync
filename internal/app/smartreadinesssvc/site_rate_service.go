@@ -6,21 +6,15 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
-	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-func (s *Service) addSiteRateComparisons(
-	ctx context.Context, plans []domain.Plan, values map[string]*signal.Value, estimates []domain.LatestStart,
-) error {
+func (s *Service) loadStableSiteRates(
+	ctx context.Context, plans []domain.Plan, estimates []domain.LatestStart, capacityWh float64,
+) (map[int64][]domain.SiteRateWindow, error) {
+	if !finiteBetween(capacityWh, 1, 500000) {
+		return nil, nil
+	}
 	now := s.now().UTC()
-	capacity := values["NominalFullPackEnergyKwh"]
-	if capacity == nil {
-		return nil
-	}
-	capacityWh, ok := signal.Float64(capacity.Raw)
-	if !ok {
-		return nil
-	}
 	placeIDs := make([]int64, 0)
 	seen := make(map[int64]bool)
 	var latestDeparture time.Time
@@ -42,11 +36,11 @@ func (s *Service) addSiteRateComparisons(
 		}
 	}
 	if len(placeIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 	windows, err := s.repository.ListSiteRateWindows(ctx, placeIDs, now, latestDeparture)
 	if err != nil {
-		return fmt.Errorf("read charging place price windows: %w", err)
+		return nil, fmt.Errorf("read charging place price windows: %w", err)
 	}
 	byPlace := groupSiteRates(windows)
 	found := false
@@ -54,26 +48,25 @@ func (s *Service) addSiteRateComparisons(
 		if !plan.CompareSiteRates || plan.ChargingPlaceID == nil {
 			continue
 		}
-		estimates[i].CostComparison = estimateSiteRateComparison(
-			plan, estimates[i], capacityWh, byPlace[*plan.ChargingPlaceID], now,
-		)
-		found = found || estimates[i].CostComparison != nil
+		if estimateSiteRateComparison(plan, estimates[i], capacityWh, byPlace[*plan.ChargingPlaceID], now) != nil {
+			found = true
+			break
+		}
 	}
 	if !found {
-		return nil
+		return nil, nil
 	}
 	current, err := s.repository.ListSiteRateWindows(ctx, placeIDs, now, latestDeparture)
 	if err != nil {
-		return fmt.Errorf("recheck charging place price windows: %w", err)
+		return nil, fmt.Errorf("recheck charging place price windows: %w", err)
 	}
 	currentByPlace := groupSiteRates(current)
-	for i, plan := range plans {
-		if estimates[i].CostComparison != nil && plan.ChargingPlaceID != nil &&
-			!sameSiteRates(byPlace[*plan.ChargingPlaceID], currentByPlace[*plan.ChargingPlaceID]) {
-			estimates[i].CostComparison = nil
+	for placeID, rates := range byPlace {
+		if !sameSiteRates(rates, currentByPlace[placeID]) {
+			delete(byPlace, placeID)
 		}
 	}
-	return nil
+	return byPlace, nil
 }
 
 func groupSiteRates(windows []domain.SiteRateWindow) map[int64][]domain.SiteRateWindow {

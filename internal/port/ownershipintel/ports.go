@@ -11,6 +11,8 @@ var (
 	ErrNotFound = errors.New("ownership intelligence record not found")
 	// ErrConflict is returned when a uniqueness constraint rejects a write.
 	ErrConflict = errors.New("ownership intelligence record already exists")
+	// ErrInvoiceReviewChanged rejects a write against stale or already handled evidence.
+	ErrInvoiceReviewChanged = errors.New("private invoice review changed")
 )
 
 // DriveRecord is one completed drive projected into SI canonical units. It is
@@ -65,6 +67,7 @@ type VehicleSnapshot struct {
 	VIN                string
 	EnrolledAt         *time.Time
 	OdometerM          *float64
+	CurrentOdometerM   *float64
 	FirstOdometerM     *float64
 	FirstObservedAt    *time.Time
 	LastObservedAt     *time.Time
@@ -85,8 +88,8 @@ type DatasetStat struct {
 
 // SourceRepository reads existing telemetry-derived evidence. It never writes.
 type SourceRepository interface {
+	ChargeReader
 	ListDrives(ctx context.Context, vehicleID int64, from, to time.Time) ([]DriveRecord, error)
-	ListCharges(ctx context.Context, vehicleID int64, from, to time.Time) ([]ChargeRecord, error)
 	VehicleSnapshot(ctx context.Context, vehicleID int64) (*VehicleSnapshot, error)
 	DatasetStats(ctx context.Context, datasets []string) ([]DatasetStat, error)
 	DatasetExpiry(ctx context.Context, dataset string, cutoff, downsampleCutoff time.Time) (scanned, expiring, downsampling int64, err error)
@@ -114,8 +117,9 @@ type InvoiceRepository interface {
 	ListInvoices(ctx context.Context, subject string, vehicleID int64, limit, offset int) ([]InvoiceRecord, int, error)
 	GetInvoice(ctx context.Context, subject string, id int64) (*InvoiceRecord, error)
 	CreateInvoice(ctx context.Context, subject string, record InvoiceRecord) (*InvoiceRecord, error)
+	UpdateInvoiceReview(ctx context.Context, subject string, id int64, update InvoiceReviewUpdate) error
 	DeleteInvoice(ctx context.Context, subject string, id int64) error
-	CreateDispute(ctx context.Context, subject string, record DisputeRecord) (*DisputeRecord, error)
+	CreateDispute(ctx context.Context, subject string, record DisputeRecord, gate *DisputeReviewGate) (*DisputeRecord, error)
 	ListDisputes(ctx context.Context, subject string, invoiceID int64) ([]DisputeRecord, error)
 }
 

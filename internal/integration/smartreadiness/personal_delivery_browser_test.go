@@ -40,7 +40,12 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 	defer cancel()
 	j.ctx = ctx
 	j.advance(time.Now().UTC())
-	createPublicFeeEvidenceTables(t, j.db)
+	createMeasuredChargingTables(t, j.db)
+	createPublicFeeSignals(t, j.db)
+	j.live.values["NominalFullPackEnergyKwh"] = &signal.Value{Raw: 80000.0}
+	j.live.values["ChargeLimitSoc"] = &signal.Value{Raw: 80.0}
+	j.advance(time.Now().UTC())
+	seedMeasuredRemedySessions(j, 9)
 	applySolarMigration(t, j.db, "up")
 	enc, err := crypto.New("synthetic-solar-browser-encryption-key")
 	if err != nil {
@@ -81,7 +86,9 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 		t.Fatal(err)
 	}
 	distRoot := filepath.Join(webRoot, "dist")
-	if os.Getenv("TESLASYNC_BROWSER_E2E_DIST") == "1" {
+	if exact := os.Getenv("TESLASYNC_SMART_CHARGING_BROWSER_DIST"); exact != "" {
+		distRoot = exact
+	} else if os.Getenv("TESLASYNC_BROWSER_E2E_DIST") == "1" {
 		distRoot = filepath.Join(webRoot, "e2e", ".app-dist")
 	}
 	index := filepath.Join(distRoot, "index.html")
@@ -124,7 +131,7 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 			defer fixtureMu.Unlock()
 			completed := time.Now().UTC().Truncate(time.Microsecond)
 			if _, err := j.db.Pool.Exec(r.Context(), `
-				INSERT INTO charging_sessions
+				INSERT INTO charging_sessions (id,vehicle_id,geofence_id,started_at,ended_at)
 				SELECT 51, 7, 9, confirmed_at + INTERVAL '1 microsecond',
 				  GREATEST($1::timestamptz, confirmed_at + INTERVAL '2 milliseconds')
 				FROM smart_public_charging_fee_terms WHERE subject = 'synthetic-personal-a-public-fee'`,
@@ -215,7 +222,7 @@ func TestPrivatePersonalDeliveryBrowserJourney(t *testing.T) {
 
 	cmd := exec.CommandContext(ctx, "node",
 		filepath.Join("node_modules", "@playwright", "test", "cli.js"), "test",
-		filepath.Join("e2e", "personal-delivery.real.smoke.spec.ts"),
+		"personal-delivery.real.smoke.spec.ts",
 		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line", "--headed",
 		"--output="+filepath.Join(os.TempDir(), "teslasync-personal-delivery-browser-results"),
 	)

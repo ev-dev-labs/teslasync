@@ -40,30 +40,32 @@ const (
 func Evaluate(
 	plan Plan, values map[string]*signal.Value, now time.Time, atChargingSite func(float64, float64) bool,
 ) Decision {
+	if reason := readinessWindowReason(plan, now); reason != "" {
+		return Decision{Reason: reason}
+	}
+	return evaluateCharging(plan, values, now, atChargingSite)
+}
+
+func readinessWindowReason(plan Plan, now time.Time) Reason {
 	if !plan.Enabled {
-		return Decision{Reason: ReasonDisabled}
+		return ReasonDisabled
 	}
 	if !validPlan(plan) {
-		return Decision{Reason: ReasonInvalidPlan}
+		return ReasonInvalidPlan
 	}
 	if now.Before(plan.NotifyAt) {
-		return Decision{Reason: ReasonNotDue}
+		return ReasonNotDue
 	}
-	deadline := plan.DepartureAt.Add(-minimumRemedyTime)
-	if !now.Before(deadline) {
-		return Decision{Reason: ReasonExpired}
+	if !now.Before(plan.DepartureAt.Add(-minimumRemedyTime)) {
+		return ReasonExpired
 	}
-	if overlap, observedAt, ok := departureOverlap(plan, values, now); ok {
-		expiresAt := observedAt.Add(signal.LiveSignalFreshnessThreshold)
-		if deadline.Before(expiresAt) {
-			expiresAt = deadline
-		}
-		if now.Before(expiresAt) {
-			return Decision{Reason: ReasonEligible, Kind: domain.DecisionDepartureOverlap,
-				DepartureOverlap: &overlap, ObservedAt: observedAt.UTC(), ExpiresAt: expiresAt.UTC()}
-		}
-	}
+	return ""
+}
 
+func evaluateCharging(
+	plan Plan, values map[string]*signal.Value, now time.Time, atChargingSite func(float64, float64) bool,
+) Decision {
+	deadline := plan.DepartureAt.Add(-minimumRemedyTime)
 	names := []string{"BatteryLevel", "DetailedChargeState", "Gear", "LocationLatitude", "LocationLongitude"}
 	observedAt := now
 	for _, name := range names {
@@ -157,6 +159,12 @@ func Evaluate(
 		}
 		if powerAt.Before(observedAt) {
 			observedAt = powerAt
+		}
+	}
+	if kind == domain.DecisionSlowCharging || kind == domain.DecisionScheduleConflict {
+		if limit, limitAt, ok := freshNumeric(values["ChargeLimitSoc"], now, 1, 100); ok {
+			projectedBattery = min(projectedBattery, max(battery, limit))
+			observedAt = minTime(observedAt, limitAt)
 		}
 	}
 	projection, bestDestination, bestReturn := projectTrip(plan, projectedBattery)

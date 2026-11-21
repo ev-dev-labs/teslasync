@@ -21,14 +21,14 @@ import (
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
 )
 
-func seedSitePerformance(t *testing.T, db *database.DB, now time.Time) {
+func createMeasuredChargingTables(t *testing.T, db *database.DB) {
 	t.Helper()
-	ctx := t.Context()
-	if _, err := db.Pool.Exec(ctx, `
+	if _, err := db.Pool.Exec(t.Context(), `
 		CREATE TABLE charging_sessions (
 			id bigint PRIMARY KEY, vehicle_id bigint NOT NULL, geofence_id bigint,
 			started_at timestamptz NOT NULL, ended_at timestamptz,
-			start_soc_pct float8, end_soc_pct float8, charger_type text, cable_type text, total_energy_added_wh float8
+			start_soc_pct float8, end_soc_pct float8, charger_type text, cable_type text, total_energy_added_wh float8,
+			start_lat float8, start_lng float8
 		);
 		CREATE TABLE charging_telemetry (
 			vehicle_id bigint, session_id bigint, ts timestamptz,
@@ -39,6 +39,12 @@ func seedSitePerformance(t *testing.T, db *database.DB, now time.Time) {
 		VALUES (10, 'Different synthetic place', true, false, true);`); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func seedSitePerformance(t *testing.T, db *database.DB, now time.Time) {
+	t.Helper()
+	createMeasuredChargingTables(t, db)
+	ctx := t.Context()
 	if _, err := db.Pool.Exec(ctx, `
 		INSERT INTO charging_sessions
 		SELECT i, 7, 9, $1::timestamptz - i*INTERVAL '1 day' - (CASE WHEN i <= 2 THEN 2 ELSE 1 END)*INTERVAL '1 hour',

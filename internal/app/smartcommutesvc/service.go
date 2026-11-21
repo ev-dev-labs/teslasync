@@ -14,11 +14,13 @@ import (
 var ErrInvalidInput = errors.New("invalid smart commute input")
 
 type Service struct {
-	repository        port.Repository
-	traceReader       trafficTraceReader
-	trafficConfigured bool
-	traffic           trafficEvaluation
-	now               func() time.Time
+	repository         port.Repository
+	traceReader        trafficTraceReader
+	trafficConfigured  bool
+	traffic            trafficEvaluation
+	navigation         *navigation
+	navigationObserver func(domain.NavigationOutcome)
+	now                func() time.Time
 }
 
 type Option func(*Service)
@@ -54,6 +56,9 @@ func (s *Service) Get(ctx context.Context, subject string, vehicleID int64) (*do
 	result.TrafficDecisions = make([]domain.TrafficDecision, 0)
 	if s.trafficConfigured && result.Settings.Enabled && result.Settings.LocalAnalysisEnabled && !result.Settings.Paused {
 		result.TrafficDecisions, err = s.ListTrafficDecisions(ctx, subject, &vehicleID, now, 10)
+		if err == nil && len(result.TrafficDecisions) > 0 {
+			result.NavigationAvailable = s.navigationAvailable(ctx, subject)
+		}
 	}
 	return result, err
 }

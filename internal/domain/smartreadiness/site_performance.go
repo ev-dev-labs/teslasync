@@ -3,14 +3,16 @@ package smartreadiness
 import "time"
 
 type SitePerformanceSession struct {
-	ID          int64
-	StartedAt   time.Time
-	EndedAt     time.Time
-	StartSocPct float64
-	EndSocPct   float64
-	Charger     string
-	Cable       string
-	DeliveredWh float64
+	ID             int64
+	StartedAt      time.Time
+	EndedAt        time.Time
+	StartSocPct    float64
+	EndSocPct      float64
+	Charger        string
+	Cable          string
+	DeliveredWh    float64
+	StartLatitude  *float64
+	StartLongitude *float64
 }
 
 type SitePerformanceScope struct {

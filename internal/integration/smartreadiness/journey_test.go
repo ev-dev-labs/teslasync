@@ -356,9 +356,10 @@ func TestPrivateChargingPriceComparisonThroughHandlers(t *testing.T) {
 		t.Fatalf("foreign subject comparison = %+v, signal reads=%d", got, live.readCount())
 	}
 	path := fmt.Sprintf("%s/%d", plansPath, created.Data.ID)
+	input["expected_version"], input["expected_check_at"] = created.Data.Version, created.Data.NotifyAt
 	input["compare_site_rates"] = true
 	request(http.MethodPut, path, "subject-b", input, http.StatusNotFound)
-	request(http.MethodPut, path, "subject-a", input, http.StatusOK)
+	recordPlanRevision(t, input, request(http.MethodPut, path, "subject-a", input, http.StatusOK))
 	if got := read("subject-a"); len(got) != 1 || got[0].CostComparison == nil ||
 		got[0].CostComparison.Currency != "USD" || got[0].CostComparison.CostNowDecimal != "8.000000" ||
 		got[0].CostComparison.CostLaterDecimal != "2.000000" ||
@@ -478,9 +479,10 @@ func TestTripLegsThroughWorkerAndPrivateHandlers(t *testing.T) {
 		t.Fatalf("disabled plan processed: count=%d reads=%d err=%v", count, live.readCount(), err)
 	}
 	planPath := fmt.Sprintf("%s/%d", path, created.Data.ID)
+	input["expected_version"], input["expected_check_at"] = created.Data.Version, created.Data.NotifyAt
 	input["enabled"] = true
 	request(http.MethodPut, planPath, "subject-b", input, http.StatusNotFound)
-	request(http.MethodPut, planPath, "subject-a", input, http.StatusOK)
+	recordPlanRevision(t, input, request(http.MethodPut, planPath, "subject-a", input, http.StatusOK))
 	if count, err := service.ProcessDue(context.Background(), 10); err != nil || count != 1 {
 		t.Fatalf("worker evaluation = %d, %v", count, err)
 	}
@@ -514,7 +516,7 @@ func TestTripLegsThroughWorkerAndPrivateHandlers(t *testing.T) {
 		t.Fatalf("private latest trip projection = %+v, %v", latest, err)
 	}
 	legs["destination_charge_pct"] = 20
-	request(http.MethodPut, planPath, "subject-a", input, http.StatusOK)
+	recordPlanRevision(t, input, request(http.MethodPut, planPath, "subject-a", input, http.StatusOK))
 	if count, err := service.ProcessDue(context.Background(), 10); err != nil || count != 1 {
 		t.Fatalf("worker after planned charge = %d, %v", count, err)
 	}
@@ -522,7 +524,7 @@ func TestTripLegsThroughWorkerAndPrivateHandlers(t *testing.T) {
 		t.Fatalf("resolved planned charge did not suppress the shortfall: %+v", got)
 	}
 	legs["return_use_low_pct"], legs["return_use_high_pct"], legs["destination_charge_pct"] = 90, 95, 100
-	request(http.MethodPut, planPath, "subject-a", input, http.StatusOK)
+	recordPlanRevision(t, input, request(http.MethodPut, planPath, "subject-a", input, http.StatusOK))
 	live.setChargeState("Charging")
 	if count, err := service.ProcessDue(context.Background(), 10); err != nil || count != 1 {
 		t.Fatalf("worker for impossible reserve = %d, %v", count, err)
@@ -661,9 +663,12 @@ func TestPrivateChargingPlanThroughWorkerAndHandlers(t *testing.T) {
 		t.Fatalf("disabled latest-start lookup = %d, %+v, signal reads=%d", rec.Code, latest, live.readCount())
 	}
 	path := fmt.Sprintf("%s/%d", plansPath, created.Data.ID)
+	input["expected_version"], input["expected_check_at"] = created.Data.Version, created.Data.NotifyAt
 	input["enabled"] = true
 	requireStatus(request(router, http.MethodPut, path, "subject-b", input, false), http.StatusNotFound)
-	requireStatus(request(router, http.MethodPut, path, owner, input, false), http.StatusOK)
+	rec = request(router, http.MethodPut, path, owner, input, false)
+	requireStatus(rec, http.StatusOK)
+	recordPlanRevision(t, input, rec)
 	if _, err := db.Pool.Exec(context.Background(),
 		`UPDATE smart_charging_plans SET notify_at=$2 WHERE id=$1`, created.Data.ID, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
@@ -779,12 +784,29 @@ func TestPrivateChargingPlanThroughWorkerAndHandlers(t *testing.T) {
 	}
 	input["charging_place_id"] = nil
 	input["enabled"] = false
+	rec = request(router, http.MethodGet, plansPath+"?vehicle_id=7", owner, nil, false)
+	requireStatus(rec, http.StatusOK)
+	var current struct{ Data []readiness.Plan }
+	if err := json.NewDecoder(rec.Body).Decode(&current); err != nil || len(current.Data) != 1 ||
+		current.Data[0].ID != created.Data.ID || current.Data[0].ChargingPlaceID != nil {
+		t.Fatalf("reload plan after snoozing and removing its place: %+v, %v", current.Data, err)
+	}
+	input["expected_version"], input["expected_check_at"] = current.Data[0].Version, current.Data[0].NotifyAt
 	requireStatus(request(router, http.MethodPut, path, owner, input, false), http.StatusOK)
 	reads := live.readCount()
 	if count, err := service.ProcessDue(context.Background(), 10); err != nil || count != 0 || live.readCount() != reads {
 		t.Fatalf("disabled site-less processing = %d, reads = %d, error = %v", count, live.readCount(), err)
 	}
 	requireStatus(request(router, http.MethodDelete, path+"?vehicle_id=7", owner, nil, false), http.StatusNoContent)
+}
+
+func recordPlanRevision(t *testing.T, input map[string]any, response *httptest.ResponseRecorder) {
+	t.Helper()
+	var saved struct{ Data readiness.Plan }
+	if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil || saved.Data.Version <= 0 {
+		t.Fatalf("read plan revision: %s (%v)", response.Body, err)
+	}
+	input["expected_version"], input["expected_check_at"] = saved.Data.Version, saved.Data.NotifyAt
 }
 
 func TestSharedOpenChargingIsIsolatedAndProcessedOnlyInItsMode(t *testing.T) {

@@ -69,6 +69,7 @@ type Config struct {
 	APILogs                      APILogsConfig
 	WebPush                      WebPushConfig
 	SmartCommute                 SmartCommuteConfig
+	SpotifyPlaylists             SpotifyPlaylistsConfig
 	System                       SystemConfig
 	GitHub                       GitHubConfig
 	Physics                      PhysicsConfig
@@ -80,6 +81,11 @@ type Config struct {
 type SmartCommuteConfig struct {
 	HERELicenseConfirmed bool
 	HEREAPIKey           string `json:"-"`
+}
+
+type SpotifyPlaylistsConfig struct {
+	ClientID    string
+	RedirectURI string
 }
 
 func (s SmartCommuteConfig) HasLicensedTraffic() bool {
@@ -645,6 +651,10 @@ func Load() (*Config, error) {
 		SmartCommute: SmartCommuteConfig{
 			HERELicenseConfirmed: envBool("SMART_COMMUTE_HERE_LICENSE_CONFIRMED", false),
 			HEREAPIKey:           envStr("SMART_COMMUTE_HERE_API_KEY", ""),
+		},
+		SpotifyPlaylists: SpotifyPlaylistsConfig{
+			ClientID:    envStr("SMART_MEDIA_SPOTIFY_CLIENT_ID", ""),
+			RedirectURI: envStr("SMART_MEDIA_SPOTIFY_REDIRECT_URI", ""),
 		},
 
 		System: SystemConfig{

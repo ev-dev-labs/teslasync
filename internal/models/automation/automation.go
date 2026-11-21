@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type ScheduledClimateReceipt struct {
+	VehicleID int64     `db:"vehicle_id"`
+	Revision  time.Time `db:"schedule_revision"`
+	FiredAt   time.Time `db:"fired_at"`
+}
+
 // AutomationHistory records the result of a single automation execution.
 type AutomationHistory struct {
 	ID                 int64           `json:"id" db:"id"`

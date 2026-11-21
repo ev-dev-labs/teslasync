@@ -14,6 +14,19 @@ func validDepartureWindow(window *domain.DepartureWindow, departure time.Time) b
 		!window.EndsAt.After(departure.Add(limit)) && window.StartsAt.Before(window.EndsAt))
 }
 
+func evaluateDepartureWindow(plan Plan, values map[string]*signal.Value, now time.Time) Decision {
+	if reason := readinessWindowReason(plan, now); reason != "" {
+		return Decision{Reason: reason}
+	}
+	overlap, observedAt, ok := departureOverlap(plan, values, now)
+	expiresAt := minTime(observedAt.Add(signal.LiveSignalFreshnessThreshold), plan.DepartureAt.Add(-minimumRemedyTime))
+	if !ok || !now.Before(expiresAt) {
+		return Decision{Reason: ReasonUnknownState}
+	}
+	return Decision{Reason: ReasonEligible, Kind: domain.DecisionDepartureOverlap,
+		DepartureOverlap: &overlap, ObservedAt: observedAt.UTC(), ExpiresAt: expiresAt.UTC()}
+}
+
 func departureOverlap(plan Plan, values map[string]*signal.Value, now time.Time) (domain.DepartureOverlap, time.Time, bool) {
 	gear := values["Gear"]
 	if !freshObservation(gear, now) || gear.Raw != enums.GearPark {

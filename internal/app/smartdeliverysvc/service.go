@@ -17,6 +17,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	readiness "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	readinessport "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
@@ -35,7 +36,7 @@ type Sender interface {
 }
 
 type ChargingCandidates interface {
-	FindCandidate(context.Context, string, int64, int64) (*readinessport.Candidate, error)
+	FindCandidate(context.Context, string, int64, int64, readiness.DecisionKind) (*readinessport.Candidate, error)
 }
 
 type QuietHours interface {
@@ -43,17 +44,27 @@ type QuietHours interface {
 }
 
 type Service struct {
-	repository port.Repository
-	encryptor  *crypto.Encryptor
-	sender     Sender
-	now        func() time.Time
-	candidates ChargingCandidates
-	commute    port.CommuteRepository
-	atOrigin   CommuteOriginCheck
-	publicFees port.PublicFeeRepository
-	feeSource  PublicFeeCandidates
-	quietHours QuietHours
-	observe    func(string)
+	repository   port.Repository
+	encryptor    *crypto.Encryptor
+	sender       Sender
+	now          func() time.Time
+	candidates   ChargingCandidates
+	commute      port.CommuteRepository
+	atOrigin     CommuteOriginCheck
+	publicFees   port.PublicFeeRepository
+	feeSource    PublicFeeCandidates
+	cabinRepo    port.CabinPrepRepository
+	cabinPlans   CabinPrepCandidates
+	parkRepo     port.ParkReserveRepository
+	parkPlans    ParkReserveCandidates
+	rainRepo     port.WindowRainRepository
+	rainPlans    WindowRainCandidates
+	closureRepo  port.ParkedClosureRepository
+	closurePlans ParkedClosureCandidates
+	unlockRepo   port.ParkedUnlockRepository
+	unlockPlans  ParkedUnlockCandidates
+	quietHours   QuietHours
+	observe      func(string)
 }
 
 type Option func(*Service)

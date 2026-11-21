@@ -311,7 +311,13 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 	return c.doFleetRequest(ctx, method, path, body, "", "")
 }
 
-func (c *Client) doFleetRequest(ctx context.Context, method, path string, body io.Reader, privatePath, privateToken string) (respBody []byte, statusCode int, err error) {
+func (c *Client) doFleetRequest(ctx context.Context, method, path string, body io.Reader, privatePath, privateToken string) ([]byte, int, error) {
+	return c.doFleetRequestAdmitted(ctx, method, path, body, privatePath, privateToken, nil)
+}
+
+func (c *Client) doFleetRequestAdmitted(
+	ctx context.Context, method, path string, body io.Reader, privatePath, privateToken string, admit func(context.Context) error,
+) (respBody []byte, statusCode int, err error) {
 	if err := c.checkEndpointControls(ctx, method, path); err != nil {
 		return nil, http.StatusForbidden, err
 	}
@@ -334,6 +340,11 @@ func (c *Client) doFleetRequest(ctx context.Context, method, path string, body i
 	if budgetErr := c.reserveBudget(ctx, method, path); budgetErr != nil {
 		return nil, budgetHTTPStatus(budgetErr), budgetErr
 	}
+	if admit != nil {
+		if err := admit(ctx); err != nil {
+			return nil, 0, err
+		}
+	}
 
 	url := c.baseURL + path
 	start := time.Now()
@@ -348,7 +359,7 @@ func (c *Client) doFleetRequest(ctx context.Context, method, path string, body i
 		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
 		if reqErr != nil {
 			if privatePath != "" {
-				return nil, &privateEnergyRequestError{cause: reqErr}
+				return nil, &privateFleetRequestError{cause: reqErr}
 			}
 			return nil, fmt.Errorf("create request: %w", reqErr)
 		}
@@ -362,11 +373,14 @@ func (c *Client) doFleetRequest(ctx context.Context, method, path string, body i
 
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
+		if admit != nil {
+			req.GetBody = nil
+		}
 
 		resp, doErr := client.Do(req)
 		if doErr != nil {
 			if privatePath != "" {
-				return nil, &privateEnergyRequestError{cause: doErr}
+				return nil, &privateFleetRequestError{cause: doErr}
 			}
 			return nil, fmt.Errorf("do request: %w", doErr)
 		}
@@ -380,12 +394,12 @@ func (c *Client) doFleetRequest(ctx context.Context, method, path string, body i
 		data, readErr := io.ReadAll(response)
 		if readErr != nil {
 			if privatePath != "" {
-				return nil, &privateEnergyRequestError{cause: readErr}
+				return nil, &privateFleetRequestError{cause: readErr}
 			}
 			return nil, fmt.Errorf("read body: %w", readErr)
 		}
 		if privatePath != "" && len(data) > maxPrivateResponseBytes {
-			return nil, errors.New("private Tesla energy response exceeds size limit")
+			return nil, errors.New("private Tesla response exceeds size limit")
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -445,3 +459,8 @@ type apiResponse struct {
 	StatusCode int
 	Body       []byte
 }
+
+type privateFleetRequestError struct{ cause error }
+
+func (e *privateFleetRequestError) Error() string { return "private Tesla request failed" }
+func (e *privateFleetRequestError) Unwrap() error { return e.cause }

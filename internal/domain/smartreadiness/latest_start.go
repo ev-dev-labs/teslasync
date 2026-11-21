@@ -32,6 +32,7 @@ type LatestStart struct {
 	ChargingPowerW      float64               `json:"charging_power_w"`
 	EarliestSafeStartAt *time.Time            `json:"earliest_safe_start_at,omitempty"`
 	LatestSafeStartAt   *time.Time            `json:"latest_safe_start_at,omitempty"`
+	EarlierCheckAt      *time.Time            `json:"earlier_check_at,omitempty"`
 	ObservedAt          *time.Time            `json:"observed_at,omitempty"`
 	ExpiresAt           *time.Time            `json:"expires_at,omitempty"`
 	TripProjection      *TripProjection       `json:"trip_projection,omitempty"`

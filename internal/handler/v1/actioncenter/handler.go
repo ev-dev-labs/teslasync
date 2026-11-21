@@ -21,6 +21,7 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
 	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	port "github.com/ev-dev-labs/teslasync/internal/port/actioncenter"
 )
 
@@ -74,6 +75,11 @@ func (h *ActionCenterHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	span.SetAttributes(attribute.Int("action_center.item_count", len(response.Items)))
+	for _, item := range response.Items {
+		if item.SourceFeature == domain.SourceServiceCase {
+			metrics.RecordServiceCaseEvent("card_served")
+		}
+	}
 	writeJSON(w, http.StatusOK, response)
 }
 
@@ -116,6 +122,25 @@ func (h *ActionCenterHandler) ApplyAction(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		h.handleError(w, span, "apply action center action", err)
 		return
+	}
+	switch result.Recommendation.SourceFeature {
+	case domain.SourceWarrantyDistance:
+		metrics.RecordWarrantyReminderAction(result.Event.Action)
+	case domain.SourceTripMaintenance:
+		metrics.RecordTripMaintenanceAction(result.Event.Action)
+	case domain.SourceColdTireDrift:
+		metrics.RecordColdTireAction(result.Event.Action)
+	case domain.SourceRecallWatch:
+		metrics.RecordRecallWatchAction(result.Event.Action)
+	case domain.SourceClimateSchedule:
+		metrics.RecordClimateScheduleAction(result.Event.Action)
+	case domain.SourceServiceCase:
+		switch result.Event.Action {
+		case domain.ActionDismiss:
+			metrics.RecordServiceCaseEvent("card_dismissed")
+		case domain.ActionAcknowledge:
+			metrics.RecordServiceCaseEvent("card_acknowledged")
+		}
 	}
 	writeJSON(w, http.StatusOK, result)
 }

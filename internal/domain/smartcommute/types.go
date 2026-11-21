@@ -65,10 +65,11 @@ type Routine struct {
 }
 
 type Snapshot struct {
-	Settings         Settings          `json:"settings"`
-	Routines         []Routine         `json:"routines"`
-	TrafficAvailable bool              `json:"traffic_available"`
-	TrafficDecisions []TrafficDecision `json:"traffic_decisions"`
+	Settings            Settings          `json:"settings"`
+	Routines            []Routine         `json:"routines"`
+	TrafficAvailable    bool              `json:"traffic_available"`
+	TrafficDecisions    []TrafficDecision `json:"traffic_decisions"`
+	NavigationAvailable bool              `json:"navigation_available,omitempty"`
 }
 
 type RoutineInput struct {

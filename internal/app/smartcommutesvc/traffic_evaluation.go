@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/driveevidence"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
@@ -92,7 +93,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		if !now.Before(check.Consent.DepartureAt) || now.Sub(check.Consent.CheckAt) > maxTrafficCheckDelay {
 			return port.ErrTrafficClaimLost
 		}
-		if err := s.repository.VerifyTrafficCheck(ctx, check); err != nil {
+		if err := s.repository.VerifyTrafficCheck(ctx, check, now); err != nil {
 			return err
 		}
 		quiet, err := s.traffic.isQuiet(ctx, check.Subject, now)
@@ -109,7 +110,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		if !eligible {
 			return errTrafficOriginUnknown
 		}
-		return s.repository.VerifyTrafficCheck(ctx, check)
+		return s.repository.VerifyTrafficCheck(ctx, check, s.now())
 	}
 	if err := authorize(ctx); err != nil {
 		return s.observeTrafficSuppression(err)
@@ -135,6 +136,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 	window := trafficWindow{departureAt: check.Consent.DepartureAt, checkAt: check.Consent.CheckAt}
 	decision := domain.TrafficDecision{
 		UsualS: comparison.Usual.DurationS, AlternativeS: comparison.Alternative.DurationS,
+		UsualRouteLabel: comparison.Usual.RouteLabel, AlternativeRouteLabel: comparison.Alternative.RouteLabel,
 		ObservedAt: minInstant(comparison.Usual.FlowUpdatedAt, comparison.Alternative.FlowUpdatedAt),
 	}
 	if check.Consent.ArrivalDeadlineS != nil && comparison.AlternativesQualified {
@@ -168,6 +170,7 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		if decision.ExpiresAt.IsZero() {
 			decision.RouteEnergyOnly = true
 			decision.UsualS, decision.AlternativeS = energy.Fastest.ETAS, energy.Saving.ETAS
+			decision.UsualRouteLabel, decision.AlternativeRouteLabel = "", ""
 			decision.ObservedAt, decision.ExpiresAt = energyObserved, energyExpires
 		}
 	}
@@ -233,18 +236,33 @@ func (s *Service) ListTrafficDecisions(
 	if err != nil {
 		return nil, err
 	}
+	parkedOrigins := make(map[string]domain.Point, len(rows))
 	for _, row := range rows {
 		parked, err := s.parkedAtOrigin(ctx, row.VehicleID, row.Origin, s.now())
 		if err != nil {
 			return nil, err
 		}
 		if parked && row.ExpiresAt.After(s.now()) {
-			if row.RouteEnergy != nil && !row.RouteEnergy.ExpiresAt.After(s.now()) {
-				row.RouteEnergy = nil
-			}
-			row.OccurrenceID = domain.TrafficOccurrenceID(row.RoutineID, row.DepartureAt)
-			result = append(result, row)
+			parkedOrigins[domain.TrafficOccurrenceID(row.RoutineID, row.DepartureAt)] = row.Origin
 		}
+	}
+	if len(parkedOrigins) == 0 {
+		return result, nil
+	}
+	verifiedAt := s.now()
+	rows, err = s.repository.ListTrafficDecisions(ctx, subject, vehicleID, verifiedAt, limit)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		row.OccurrenceID = domain.TrafficOccurrenceID(row.RoutineID, row.DepartureAt)
+		if origin, ok := parkedOrigins[row.OccurrenceID]; !ok || origin != row.Origin {
+			continue
+		}
+		if row.RouteEnergy != nil && !row.RouteEnergy.ExpiresAt.After(verifiedAt) {
+			row.RouteEnergy = nil
+		}
+		result = append(result, row)
 	}
 	return result, nil
 }
@@ -263,7 +281,7 @@ func ParkedAtTrafficOrigin(ctx context.Context, live TrafficLiveReader, vehicleI
 	}
 	gear, lat, lng := values["Gear"], values["LocationLatitude"], values["LocationLongitude"]
 	for _, value := range []*signal.Value{gear, lat, lng} {
-		if value == nil || value.Timestamp.IsZero() || value.Timestamp.After(now) ||
+		if value == nil || value.TimestampSynthetic || value.Timestamp.IsZero() || value.Timestamp.After(now) ||
 			now.Sub(value.Timestamp) > signal.LiveSignalFreshnessThreshold {
 			return false, nil
 		}
@@ -276,7 +294,7 @@ func ParkedAtTrafficOrigin(ctx context.Context, live TrafficLiveReader, vehicleI
 	longitude, hasLng := signal.Float64(lng.Raw)
 	point := domain.Point{Latitude: latitude, Longitude: longitude}
 	return hasLat && hasLng && validPoint(point) && (latitude != 0 || longitude != 0) &&
-		trafficPointDistanceM(point, origin) <= liveOriginRadiusM, nil
+		driveevidence.DistanceM(point, origin) <= liveOriginRadiusM, nil
 }
 
 func maxInstant(a, b time.Time) time.Time {

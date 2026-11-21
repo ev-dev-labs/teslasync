@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/driveevidence"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -71,7 +71,7 @@ func (s *Service) compareTrafficEnergy(
 		now.Sub(outside.Timestamp) > signal.LiveSignalFreshnessThreshold {
 		return nil, time.Time{}, time.Time{}
 	}
-	tempC, ok := routeEnergyNumber(outside.Raw)
+	tempC, ok := driveevidence.Number(outside.Raw)
 	if !ok || !(tempC >= -40 && tempC <= 55) {
 		return nil, time.Time{}, time.Time{}
 	}
@@ -124,11 +124,11 @@ func (s routeEnergySource) observations(
 			return nil, fmt.Errorf("read bounded route and temperature evidence: %w", err)
 		}
 		path, pathOK := prepareTrafficTrace(rows, drive.StartedAt, drive.EndedAt, check.Routine)
-		temperature, tempOK := observedRouteTemperature(rows, drive.StartedAt, drive.EndedAt)
+		temperature, tempOK := driveevidence.OutsideTemperature(rows, drive.StartedAt, drive.EndedAt)
 		if !pathOK || !tempOK {
 			continue
 		}
-		power := measuredRouteEnergy(rows, drive.StartedAt, drive.EndedAt)
+		power := driveevidence.IntegratePackEnergy(rows, drive.StartedAt, drive.EndedAt)
 		out = append(out, routeEnergyObservation{
 			driveID: drive.ID, trace: path, endedAt: drive.EndedAt, elapsedS: drive.EndedAt.Sub(drive.StartedAt).Seconds(),
 			coveredS: power.CoveredS, netEnergyWh: power.DrawWh - power.RegenWh, temperatureC: temperature,
@@ -137,89 +137,17 @@ func (s routeEnergySource) observations(
 	return out, nil
 }
 
-func measuredRouteEnergy(rows []signal.TimelineRow, start, end time.Time) signal.PowerIntegral {
-	var out signal.PowerIntegral
-	const pairFreshness = 20 * time.Second
-	for i, row := range rows {
-		voltageAt, currentAt := row.ObservedAt["voltage"], row.ObservedAt["current"]
-		if voltageAt.IsZero() || currentAt.IsZero() || row.Timestamp.After(end) {
-			continue
-		}
-		voltage, vOK := routeEnergyNumber(row.Fields["voltage"])
-		current, cOK := routeEnergyNumber(row.Fields["current"])
-		if !vOK || !cOK || !(voltage >= 100 && voltage <= 1000 && math.Abs(current) <= 1200) {
-			continue
-		}
-		until := minInstant(end, voltageAt.Add(pairFreshness), currentAt.Add(pairFreshness))
-		if i+1 < len(rows) {
-			until = minInstant(until, rows[i+1].Timestamp)
-		}
-		coveredS := until.Sub(maxInstant(start, row.Timestamp)).Seconds()
-		if coveredS <= 0 {
-			continue
-		}
-		energyWh := voltage * current * coveredS / 3600
-		out.CoveredS += coveredS
-		out.DrawWh += max(0, energyWh)
-		out.RegenWh += max(0, -energyWh)
-	}
-	return out
-}
-
-func routeEnergyNumber(value any) (float64, bool) {
-	switch value.(type) {
-	case bool, map[string]any:
-		return 0, false
-	default:
-		return signal.Float64(value)
-	}
-}
-
-func observedRouteTemperature(rows []signal.TimelineRow, start, end time.Time) (float64, bool) {
-	var firstAt, lastAt time.Time
-	var sumS, previous, minC, maxC float64
-	const maxGap = 10 * time.Minute
-	for _, row := range rows {
-		if row.Timestamp.Before(start) || row.Timestamp.After(end) ||
-			!row.ObservedAt["outside_c"].Equal(row.Timestamp) {
-			continue
-		}
-		temp, ok := routeEnergyNumber(row.Fields["outside_c"])
-		if !ok || !(temp >= -40 && temp <= 55) {
-			return 0, false
-		}
-		if firstAt.IsZero() {
-			if row.Timestamp.Sub(start) > 2*time.Minute {
-				return 0, false
-			}
-			firstAt, minC, maxC = row.Timestamp, temp, temp
-		} else {
-			gap := row.Timestamp.Sub(lastAt)
-			if gap <= 0 || gap > maxGap {
-				return 0, false
-			}
-			sumS += previous * gap.Seconds()
-			minC, maxC = math.Min(minC, temp), math.Max(maxC, temp)
-		}
-		lastAt, previous = row.Timestamp, temp
-	}
-	if firstAt.IsZero() || !lastAt.After(firstAt) || end.Sub(lastAt) > 2*time.Minute || maxC-minC > 5 {
-		return 0, false
-	}
-	return sumS / lastAt.Sub(firstAt).Seconds(), true
-}
-
 func energyRouteGeometry(routes []domain.TrafficRoute) []energyRoute {
 	result := make([]energyRoute, 0, len(routes))
 	for _, route := range routes {
 		if len(route.Geometry) < 3 {
 			return nil
 		}
-		path := simplifyTrafficTrace(route.Geometry)
+		path := driveevidence.SimplifyPath(route.Geometry)
 		if len(path) == 2 {
 			path = []domain.Point{path[0], route.Geometry[len(route.Geometry)/2], path[1]}
 		}
-		if !validEnergyTrace(path) {
+		if !driveevidence.ValidPath(path) {
 			return nil
 		}
 		result = append(result, energyRoute{trace: path, etaS: route.DurationS})

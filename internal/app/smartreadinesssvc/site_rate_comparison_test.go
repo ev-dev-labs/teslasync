@@ -154,3 +154,31 @@ func TestLatestStartsOnlyReadsRatesWithConsentAndRechecksChanges(t *testing.T) {
 		t.Fatalf("revoked comparison = %+v, error %v", revoked, err)
 	}
 }
+
+func TestLatestStartsPricesNowAfterTheTariffReadCrossesARateBoundary(t *testing.T) {
+	start := time.Date(2026, 4, 6, 19, 0, 0, 0, time.UTC)
+	now := start
+	plan, values, windows := rateComparisonFixture(start)
+	change := start.Add(30 * time.Second)
+	windows[0].RatePerWh = "0.0240000000"
+	windows[0].EffectiveTo = &change
+	windows[1].EffectiveFrom = change
+	repo := &stubRepository{activePlans: []domain.Plan{plan}, rateWindows: windows}
+	service := New(repo, &stubLive{values: values}, &stubSites{inside: true}, WithClock(func() time.Time { return now }))
+
+	before, err := service.LatestStarts(context.Background(), "subject-a", plan.VehicleID)
+	if err != nil || len(before) != 1 || before[0].CostComparison == nil {
+		t.Fatalf("expected a material saving before the rate change, got %+v, error %v", before, err)
+	}
+
+	repo.rateReads = 0
+	repo.onRateRead = func(count int) {
+		if count == 2 {
+			now = change
+		}
+	}
+	after, err := service.LatestStarts(context.Background(), "subject-a", plan.VehicleID)
+	if err != nil || len(after) != 1 || after[0].Status != domain.LatestStartEstimate || after[0].CostComparison != nil {
+		t.Fatalf("expected a fresh start estimate without obsolete savings, got %+v, error %v", after, err)
+	}
+}

@@ -56,6 +56,7 @@ type TrafficQuery struct {
 type TrafficEstimate struct {
 	DurationS     int64
 	FlowUpdatedAt time.Time
+	RouteLabel    string
 }
 
 type TrafficComparison struct {
@@ -72,22 +73,25 @@ type TrafficRoute struct {
 }
 
 type TrafficDecision struct {
-	OccurrenceID      string                 `json:"occurrence_id"`
-	RoutineID         int64                  `json:"routine_id"`
-	VehicleID         int64                  `json:"vehicle_id"`
-	RoutineName       string                 `json:"routine_name"`
-	VehicleName       string                 `json:"vehicle_name"`
-	TimeZone          string                 `json:"time_zone"`
-	DepartureAt       time.Time              `json:"departure_at"`
-	UsualS            int64                  `json:"usual_s"`
-	AlternativeS      int64                  `json:"alternative_s"`
-	ObservedAt        time.Time              `json:"observed_at"`
-	ExpiresAt         time.Time              `json:"expires_at"`
-	ArrivalDeadlineAt *time.Time             `json:"arrival_deadline_at,omitempty"`
-	LatestDepartureAt *time.Time             `json:"latest_departure_at,omitempty"`
-	RouteEnergy       *TrafficEnergyEvidence `json:"route_energy,omitempty"`
-	RouteEnergyOnly   bool                   `json:"route_energy_only,omitempty"`
-	Origin            Point                  `json:"-"`
+	OccurrenceID          string                 `json:"occurrence_id"`
+	RoutineID             int64                  `json:"routine_id"`
+	VehicleID             int64                  `json:"vehicle_id"`
+	RoutineName           string                 `json:"routine_name"`
+	VehicleName           string                 `json:"vehicle_name"`
+	TimeZone              string                 `json:"time_zone"`
+	DepartureAt           time.Time              `json:"departure_at"`
+	UsualS                int64                  `json:"usual_s"`
+	AlternativeS          int64                  `json:"alternative_s"`
+	UsualRouteLabel       string                 `json:"usual_route_label,omitempty"`
+	AlternativeRouteLabel string                 `json:"alternative_route_label,omitempty"`
+	ObservedAt            time.Time              `json:"observed_at"`
+	ExpiresAt             time.Time              `json:"expires_at"`
+	ArrivalDeadlineAt     *time.Time             `json:"arrival_deadline_at,omitempty"`
+	LatestDepartureAt     *time.Time             `json:"latest_departure_at,omitempty"`
+	RouteEnergy           *TrafficEnergyEvidence `json:"route_energy,omitempty"`
+	RouteEnergyOnly       bool                   `json:"route_energy_only,omitempty"`
+	NavigationOutcome     NavigationOutcome      `json:"navigation_outcome,omitempty"`
+	Origin                Point                  `json:"-"`
 }
 
 type TrafficEnergyEvidence struct {

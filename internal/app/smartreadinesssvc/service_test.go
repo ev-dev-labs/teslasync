@@ -45,12 +45,21 @@ func (r *stubRepository) ListLatestStartPlans(_ context.Context, subject string,
 	}
 	return r.plansFor(subject, vehicleID), nil
 }
+func (*stubRepository) ReadEarlierCheckPlan(context.Context, domain.StopPlanKey) (port.EarlierCheckPlan, error) {
+	return port.EarlierCheckPlan{}, port.ErrNotFound
+}
+func (*stubRepository) AdvanceCheck(context.Context, port.EarlierCheckPlan, time.Time, time.Time, time.Time) error {
+	return port.ErrEarlierCheck
+}
 func (r *stubRepository) ListSiteRateWindows(_ context.Context, _ []int64, _, _ time.Time) ([]domain.SiteRateWindow, error) {
 	r.rateReads++
 	if r.onRateRead != nil {
 		r.onRateRead(r.rateReads)
 	}
 	return append([]domain.SiteRateWindow(nil), r.rateWindows...), nil
+}
+func (*stubRepository) ListChargeRemedySessions(context.Context, port.Candidate, time.Time) ([]domain.SitePerformanceSession, error) {
+	return nil, nil
 }
 func (r *stubRepository) plansFor(subject string, vehicleID int64) []domain.Plan {
 	plans := make([]domain.Plan, 0, len(r.activePlans))
@@ -78,7 +87,7 @@ func (r *stubRepository) ClaimDue(_ context.Context, _ time.Time, sharedOpenMode
 	r.claims = r.claims[1:]
 	return claim, nil
 }
-func (r *stubRepository) FinishClaim(_ context.Context, _ port.Claim, decision domain.Decision, _ time.Time) error {
+func (r *stubRepository) FinishClaim(_ context.Context, _ port.Claim, decision, _ domain.Decision, _ time.Time) error {
 	r.finished = append(r.finished, decision)
 	return nil
 }
@@ -99,13 +108,13 @@ func (r *stubRepository) ListCandidates(_ context.Context, subject string, vehic
 	return result, nil
 }
 
-func (r *stubRepository) FindCandidate(ctx context.Context, subject string, vehicleID, planID int64, now time.Time) (*port.Candidate, error) {
+func (r *stubRepository) FindCandidate(ctx context.Context, subject string, vehicleID, planID int64, kind domain.DecisionKind, now time.Time) (*port.Candidate, error) {
 	candidates, err := r.ListCandidates(ctx, subject, &vehicleID, now, 100)
 	if err != nil {
 		return nil, err
 	}
 	for _, candidate := range candidates {
-		if candidate.Plan.ID == planID {
+		if candidate.Plan.ID == planID && candidate.Decision.Kind == kind {
 			return &candidate, nil
 		}
 	}

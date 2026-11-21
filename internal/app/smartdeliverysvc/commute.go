@@ -69,6 +69,11 @@ func (s *Service) NotifyCommute(
 		return err
 	}
 	eligible, eligibilityErr := s.commuteEligible(ctx, subject, candidate)
+	if eligible {
+		var departed bool
+		departed, eligibilityErr = lease.Departed(ctx, s.now().UTC())
+		eligible = eligibilityErr == nil && !departed
+	}
 	status := domain.DeliveryFailed
 	if eligible {
 		status = s.sendPersonal(ctx, "commute", lease.Ciphertext(), token, candidate.ExpiresAt)

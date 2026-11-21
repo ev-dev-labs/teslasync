@@ -3,6 +3,7 @@ package automation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -93,11 +94,30 @@ func (r *AutomationHistoryRepo) Create(ctx context.Context, h *automationmodel.A
 }
 
 // Complete updates an execution record with final status and timing.
-func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error {
-	now := time.Now().UTC()
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE automation_history SET status=$2, error=$3, duration_ms=$4, completed_at=$5 WHERE id=$1`,
-		id, status, errMsg, durationMs, now)
+func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int, completedAt time.Time, climate *automationmodel.ScheduledClimateReceipt) error {
+	const complete = `UPDATE automation_history SET status=$2, error=$3, duration_ms=$4, completed_at=$5 WHERE id=$1`
+	args := []any{id, status, errMsg, durationMs, completedAt}
+	query := complete
+	if climate != nil && status == "success" {
+		query = `WITH executed AS (` + complete + ` RETURNING id,automation_id,triggered_at)
+			INSERT INTO smart_climate_schedule_receipts (plan_id,history_id,fired_at)
+			SELECT p.id,h.id,$8
+			  FROM executed h JOIN automations a ON a.id=h.automation_id
+			  JOIN smart_climate_schedule_plans p ON p.automation_id=a.id AND p.vehicle_id=a.vehicle_id
+			  JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
+			 WHERE a.enabled AND a.vehicle_id=$6 AND a.updated_at=$7 AND p.schedule_revision=$7
+			   AND p.enabled_at<=$8 AND h.triggered_at BETWEEN $8::timestamptz AND $8::timestamptz+INTERVAL '5 seconds'
+			   AND $5::timestamptz BETWEEN h.triggered_at AND ($8::timestamptz+INTERVAL '3 minutes')
+			FOR KEY SHARE OF p
+			ON CONFLICT (plan_id,history_id) DO NOTHING`
+		args = append(args, climate.VehicleID, climate.Revision, climate.FiredAt)
+	}
+	_, err := r.db.Pool.Exec(ctx, query, args...)
+	if err != nil && query != complete {
+		// Recommendation evidence must not prevent recording an existing automation outcome.
+		_, fallbackErr := r.db.Pool.Exec(ctx, complete, args[:5]...)
+		err = errors.Join(err, fallbackErr)
+	}
 	if err != nil {
 		return fmt.Errorf("complete automation history %d: %w", id, err)
 	}

@@ -11,11 +11,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-type privateEnergyRequestError struct{ cause error }
-
-func (e *privateEnergyRequestError) Error() string { return "private Tesla energy request failed" }
-func (e *privateEnergyRequestError) Unwrap() error { return e.cause }
-
 func (c *Client) ReadPrivateEnergyLiveStatus(ctx context.Context, siteID int64, accessToken string) ([]byte, int, error) {
 	return c.readPrivateEnergy(ctx, siteID, "live_status", accessToken)
 }

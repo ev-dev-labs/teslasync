@@ -19,17 +19,24 @@ import (
 )
 
 type trafficLiveFixture struct {
-	now  time.Time
-	gear string
+	now        time.Time
+	gear       string
+	synthetic  bool
+	beforeRead func(context.Context) error
 }
 
-func (l *trafficLiveFixture) GetAll(_ context.Context, vehicle int64, preference signal.LiveSignalReadPreference) (map[string]*signal.Value, error) {
+func (l *trafficLiveFixture) GetAll(ctx context.Context, vehicle int64, preference signal.LiveSignalReadPreference) (map[string]*signal.Value, error) {
 	if vehicle != 42 || preference != signal.LiveSignalReadDistributed {
 		return nil, errors.New("unexpected live eligibility lookup")
 	}
+	if l.beforeRead != nil {
+		if err := l.beforeRead(ctx); err != nil {
+			return nil, err
+		}
+	}
 	return map[string]*signal.Value{
 		"Gear":              {Raw: l.gear, Timestamp: l.now},
-		"LocationLatitude":  {Raw: 47.1, Timestamp: l.now},
+		"LocationLatitude":  {Raw: 47.1, Timestamp: l.now, TimestampSynthetic: l.synthetic},
 		"LocationLongitude": {Raw: -122.1, Timestamp: l.now},
 	}, nil
 }
@@ -144,6 +151,7 @@ func TestTrafficWorkerOnlyPublishesAnEligiblePrivateOccurrence(t *testing.T) {
 		{"quiet", "quiet", 29 * 60, 0, 0},
 		{"moving", "moving", 29 * 60, 0, 0},
 		{"stale", "stale", 29 * 60, 0, 0},
+		{"unverified location timestamp", "synthetic", 29 * 60, 0, 0},
 		{"skip today", "skip", 29 * 60, 0, 0},
 		{"pause", "pause", 29 * 60, 0, 0},
 		{"signed-in routine not processed in open mode", "open_worker", 29 * 60, 0, 0},
@@ -220,6 +228,8 @@ func TestTrafficWorkerOnlyPublishesAnEligiblePrivateOccurrence(t *testing.T) {
 				live.gear = "D"
 			case "stale":
 				live.now = f.now.Add(-3 * time.Minute)
+			case "synthetic":
+				live.synthetic = true
 			case "skip":
 				expectStatus(t, f.request(t, http.MethodPost, route+"/traffic-skip", "other", map[string]int{"vehicle_id": 42}), http.StatusNotFound)
 				expectStatus(t, f.request(t, http.MethodPost, route+"/traffic-skip", subject, map[string]int{"vehicle_id": 42}), http.StatusNoContent)

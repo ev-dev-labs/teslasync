@@ -40,7 +40,8 @@ type driveQueryTracer struct {
 }
 
 func (s *driveQueryTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
-	if strings.Contains(strings.ToLower(data.SQL), "from drives") {
+	query := strings.ToLower(strings.TrimSpace(data.SQL))
+	if strings.HasPrefix(query, "select") && strings.Contains(query, "from drives") {
 		s.count.Add(1)
 		if s.block.CompareAndSwap(true, false) {
 			close(s.started)
@@ -95,7 +96,7 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		admin.Close()
 	})
 	if _, err := pool.Exec(ctx, `
-		CREATE TABLE vehicles (id bigint PRIMARY KEY, display_name text NOT NULL, archived_at timestamptz);
+		CREATE TABLE vehicles (id bigint PRIMARY KEY, display_name text NOT NULL, archived_at timestamptz, vin text NOT NULL DEFAULT '');
 		CREATE TABLE drives (
 		  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, vehicle_id bigint NOT NULL,
 		  started_at timestamptz NOT NULL, ended_at timestamptz,
@@ -103,6 +104,7 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		  end_lat double precision, end_lng double precision
 		);
 		CREATE INDEX drives_vehicle_started ON drives(vehicle_id, started_at DESC);
+		CREATE INDEX drives_vehicle_ended_repair_scan ON drives(vehicle_id, ended_at) WHERE ended_at IS NOT NULL;
 		CREATE TABLE signal_log (
 		  vehicle_id bigint NOT NULL, ts timestamptz NOT NULL, field text NOT NULL,
 		  value_kind smallint NOT NULL, str_value text, bool_value boolean, int_value bigint,
@@ -116,6 +118,8 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		"000268_smart_commute_traffic_consent.up.sql", "000270_smart_commute_arrival_deadline.up.sql",
 		"000272_smart_commute_route_energy.up.sql",
 		"000273_type_commute_route_energy_evidence.up.sql",
+		"000305_smart_commute_navigation_attempts.up.sql",
+		"000306_smart_commute_comparison_evidence.up.sql",
 	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
 		if err != nil {
@@ -173,6 +177,11 @@ func newFixture(t *testing.T, options ...smartcommutesvc.Option) *fixture {
 
 func newFixtureWithRepositoryOptions(t *testing.T, repoOptions []commutedb.Option, options ...smartcommutesvc.Option) *fixture {
 	t.Helper()
+	return newFixtureWithServices(t, repoOptions, nil, options...)
+}
+
+func newFixtureWithServices(t *testing.T, repoOptions []commutedb.Option, setup func(*commutedb.Repository) smartcommutesvc.Option, options ...smartcommutesvc.Option) *fixture {
+	t.Helper()
 	spy := &driveQueryTracer{}
 	db := testDatabase(t, spy)
 	loc, err := time.LoadLocation("America/Los_Angeles")
@@ -182,9 +191,10 @@ func newFixtureWithRepositoryOptions(t *testing.T, repoOptions []commutedb.Optio
 	now := time.Date(2026, 4, 7, 7, 45, 0, 0, loc)
 	ctx := context.Background()
 	if _, err := db.Pool.Exec(ctx, `
-		INSERT INTO vehicles(id, display_name, archived_at) VALUES
-		  (42, 'Synthetic vehicle A', NULL), (43, 'Synthetic vehicle B', NULL),
-		  (44, 'Archived vehicle', now())`); err != nil {
+		INSERT INTO vehicles(id, display_name, archived_at, vin) VALUES
+		  (42, 'Synthetic vehicle A', NULL, 'SYNTHETICVEHICLE1'),
+		  (43, 'Synthetic vehicle B', NULL, 'SYNTHETICVEHICLE2'),
+		  (44, 'Archived vehicle', now(), 'SYNTHETICVEHICLE3')`); err != nil {
 		t.Fatal(err)
 	}
 	for week := 1; week <= 7; week++ {
@@ -205,6 +215,9 @@ func newFixtureWithRepositoryOptions(t *testing.T, repoOptions []commutedb.Optio
 		smartcommutesvc.WithTrafficConnector(true),
 		smartcommutesvc.WithTrafficTraceReader(stateReader),
 		smartcommutesvc.WithRouteEnergyHistory(repo, stateReader)}
+	if setup != nil {
+		baseOptions = append(baseOptions, setup(repo))
+	}
 	service := smartcommutesvc.New(repo, append(baseOptions, options...)...)
 	f.commute = service
 	commuteHTTP := commutehandler.NewHandler(service, "X-Test-Subject")

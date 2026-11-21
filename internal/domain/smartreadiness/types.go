@@ -24,6 +24,7 @@ type Plan struct {
 	UpdatedAt            time.Time        `json:"updated_at"`
 	Subject              string           `json:"-"`
 	Version              int64            `json:"version,omitempty"`
+	ExpectedCheckAt      *time.Time       `json:"-"`
 }
 
 type ScheduledStart struct {
@@ -112,4 +113,10 @@ type Decision struct {
 	DepartureOverlap *DepartureOverlap
 	ObservedAt       time.Time
 	ExpiresAt        time.Time
+	FeasibleRemedy   bool
+}
+
+func (d Decision) RequiresFeasibleRemedy(plan Plan) bool {
+	return d.Kind == DecisionSlowCharging || d.Kind == DecisionScheduleConflict ||
+		(d.Kind == DecisionPlugIn && plan.TripLegs != nil)
 }

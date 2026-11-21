@@ -37,7 +37,7 @@ type AutomationStore interface {
 // HistoryStore provides execution history persistence.
 type HistoryStore interface {
 	Create(ctx context.Context, h *automationmodel.AutomationHistory) error
-	Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error
+	Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int, completedAt time.Time, climate *automationmodel.ScheduledClimateReceipt) error
 	CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
 }
 
@@ -305,7 +305,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "invalid actions")
 		errMsg := fmt.Sprintf("invalid actions: %v", err)
-		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start)
+		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start, nil)
 		_ = e.automationRepo.IncrementExecution(ctx, automationID, false)
 		return fmt.Errorf("prepare typed actions for automation %d: %w", automationID, err)
 	}
@@ -341,7 +341,12 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		span.SetStatus(codes.Error, "all actions failed")
 	}
 
-	e.completeHistory(ctx, hist.ID, status, errStr, start)
+	fired, scheduled := trigger.ScheduleFireFromContext(ctx)
+	var climate *automationmodel.ScheduledClimateReceipt
+	if scheduled {
+		climate = scheduledClimateReceipt(a, fired, results)
+	}
+	e.completeHistory(ctx, hist.ID, status, errStr, start, climate)
 
 	_ = e.automationRepo.IncrementExecution(ctx, automationID, status != "failed")
 

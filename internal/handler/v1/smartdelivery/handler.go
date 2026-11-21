@@ -33,6 +33,11 @@ type service interface {
 	ClaimCharging(context.Context, string, string) (*domain.Notification, error)
 	ClaimCommute(context.Context, string, string) (*domain.Notification, error)
 	ClaimPublicFee(context.Context, string, string) (*domain.Notification, error)
+	ClaimCabinPrep(context.Context, string, string) (*domain.Notification, error)
+	ClaimParkReserve(context.Context, string, string) (*domain.Notification, error)
+	ClaimWindowRain(context.Context, string, string) (*domain.Notification, error)
+	ClaimParkedClosure(context.Context, string, string) (*domain.Notification, error)
+	ClaimParkedUnlock(context.Context, string, string) (*domain.Notification, error)
 	SetChargingEnabled(context.Context, string, int64, bool) error
 	SetCommuteEnabled(context.Context, string, int64, bool, domain.Copy) error
 	DeleteDevice(context.Context, string, int64) error
@@ -87,6 +92,16 @@ func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {
 		notification, err = h.service.ClaimCommute(ctx, subject, request.Token)
 	case "public-fee":
 		notification, err = h.service.ClaimPublicFee(ctx, subject, request.Token)
+	case "cabin-prep":
+		notification, err = h.service.ClaimCabinPrep(ctx, subject, request.Token)
+	case "park-reserve":
+		notification, err = h.service.ClaimParkReserve(ctx, subject, request.Token)
+	case "window-rain":
+		notification, err = h.service.ClaimWindowRain(ctx, subject, request.Token)
+	case "parked-closure":
+		notification, err = h.service.ClaimParkedClosure(ctx, subject, request.Token)
+	case "parked-unlock":
+		notification, err = h.service.ClaimParkedUnlock(ctx, subject, request.Token)
 	default:
 		err = smartdeliverysvc.ErrInvalidInput
 	}

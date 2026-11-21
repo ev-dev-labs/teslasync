@@ -4,6 +4,7 @@ package actioncenter
 import (
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 )
@@ -23,13 +24,22 @@ const (
 	SourceSmartCommute            SourceFeature = "smart_commute"
 	SourceSystemHealth            SourceFeature = "system_health"
 	SourceVehicleReadiness        SourceFeature = "vehicle_readiness"
+	SourceWarrantyDistance        SourceFeature = "warranty_distance"
+	SourceTripMaintenance         SourceFeature = "trip_maintenance"
+	SourceColdTireDrift           SourceFeature = "cold_tire_drift"
+	SourceRecallWatch             SourceFeature = "recall_watch"
+	SourceServiceCase             SourceFeature = "service_case"
+	SourceClimateSchedule         SourceFeature = "climate_schedule"
+	SourceSubscriptionRenewal     SourceFeature = "subscription_renewal"
 )
 
 func (v SourceFeature) Valid() bool {
 	switch v {
 	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceBatteryHealth,
 		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
-		SourceSignalHealth, SourceSmartCharging, SourceChargingSitePerformance, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness:
+		SourceSignalHealth, SourceSmartCharging, SourceChargingSitePerformance, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness,
+		SourceWarrantyDistance, SourceTripMaintenance, SourceColdTireDrift, SourceRecallWatch, SourceServiceCase, SourceClimateSchedule,
+		SourceSubscriptionRenewal:
 		return true
 	default:
 		return false
@@ -37,7 +47,9 @@ func (v SourceFeature) Valid() bool {
 }
 
 func (v SourceFeature) Private() bool {
-	return v == SourceSmartCharging || v == SourceChargingSitePerformance || v == SourceSmartCommute
+	return v == SourceSmartCharging || v == SourceChargingSitePerformance || v == SourceSmartCommute ||
+		v == SourceWarrantyDistance || v == SourceTripMaintenance || v == SourceColdTireDrift || v == SourceRecallWatch ||
+		v == SourceServiceCase || v == SourceClimateSchedule || v == SourceSubscriptionRenewal
 }
 
 type Priority string
@@ -208,17 +220,22 @@ type CommuteTrafficEvidence struct {
 }
 
 type EvidenceItem struct {
-	ID                string                                `json:"id"`
-	Kind              string                                `json:"kind"`
-	Summary           string                                `json:"summary"`
-	Provenance        EvidenceProvenance                    `json:"provenance"`
-	ObservedAt        *time.Time                            `json:"observed_at"`
-	RecurringDrive    *RecurringDriveEvidence               `json:"recurring_drive,omitempty"`
-	ChargingReadiness *ChargingReadinessEvidence            `json:"charging_readiness,omitempty"`
-	DepartureOverlap  *DepartureOverlapEvidence             `json:"departure_overlap,omitempty"`
-	CommuteTraffic    *CommuteTrafficEvidence               `json:"commute_traffic,omitempty"`
-	SitePerformance   *smartreadiness.SitePerformanceReview `json:"site_performance,omitempty"`
-	SolarSurplus      *smartreadiness.SolarSurplusDecision  `json:"solar_surplus,omitempty"`
+	ID                string                                    `json:"id"`
+	Kind              string                                    `json:"kind"`
+	Summary           string                                    `json:"summary"`
+	Provenance        EvidenceProvenance                        `json:"provenance"`
+	ObservedAt        *time.Time                                `json:"observed_at"`
+	RecurringDrive    *RecurringDriveEvidence                   `json:"recurring_drive,omitempty"`
+	ChargingReadiness *ChargingReadinessEvidence                `json:"charging_readiness,omitempty"`
+	DepartureOverlap  *DepartureOverlapEvidence                 `json:"departure_overlap,omitempty"`
+	CommuteTraffic    *CommuteTrafficEvidence                   `json:"commute_traffic,omitempty"`
+	SitePerformance   *smartreadiness.SitePerformanceReview     `json:"site_performance,omitempty"`
+	SolarSurplus      *smartreadiness.SolarSurplusDecision      `json:"solar_surplus,omitempty"`
+	WarrantyDistance  *ownershipintel.WarrantyDistanceReminder  `json:"warranty_distance,omitempty"`
+	TripMaintenance   *smartreadiness.TripMaintenanceProjection `json:"trip_maintenance,omitempty"`
+	ColdTireDrift     *smartreadiness.ColdTireDrift             `json:"cold_tire_drift,omitempty"`
+	RecallWatchMatch  *smartreadiness.RecallCampaignMatch       `json:"recall_watch_match,omitempty"`
+	ClimateSchedule   *smartreadiness.ClimateScheduleEvidence   `json:"climate_schedule,omitempty"`
 }
 
 type ImpactRiskLevel string

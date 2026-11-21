@@ -68,6 +68,11 @@ func attachCommuteDelivery(t *testing.T, f *fixture, live *trafficLiveFixture, s
 	for _, file := range []string{
 		"000170_quiet_hours", "000260_smart_charging_readiness", "000263_smart_personal_push",
 		"000269_smart_commute_personal_push", "000274_smart_public_charging_fee_terms",
+		"000283_smart_cabin_prep",
+		"000285_smart_park_reserve",
+		"000288_smart_window_rain",
+		"000289_smart_parked_closure",
+		"000290_smart_parked_unlock",
 	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file+".up.sql"))
 		if err != nil {
@@ -109,7 +114,8 @@ func attachCommuteDelivery(t *testing.T, f *fixture, live *trafficLiveFixture, s
 }
 
 func TestCommutePushClaimsAndSuppression(t *testing.T) {
-	tests := []string{"accepted", "opt_out", "revoked", "stale", "moving", "expired", "replaced_device", "quiet", "unknown", "charging_cooldown"}
+	tests := []string{"accepted", "opt_out", "revoked", "stale", "moving", "reparked", "departed_during_dispatch",
+		"expired", "replaced_device", "quiet", "unknown", "charging_cooldown"}
 	for _, scenario := range tests {
 		t.Run(scenario, func(t *testing.T) {
 			testCommuteDelivery(t, scenario)
@@ -135,9 +141,23 @@ func testCommuteDelivery(t *testing.T, scenario string) {
 			Alternative: commute.TrafficEstimate{DurationS: 1740, FlowUpdatedAt: observed},
 		}, nil
 	})
-	f := newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
+	var f *fixture
+	f = newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
 		smartcommutesvc.WithTrafficEvaluator(source, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil),
 		smartcommutesvc.WithTrafficNotifier(func(ctx context.Context, subject string, consentID, routineID int64, departure time.Time) error {
+			if scenario == "departed_during_dispatch" {
+				f.now = f.now.Add(90 * time.Second)
+				live.now = f.now
+				reads := 0
+				live.beforeRead = func(context.Context) error {
+					reads++
+					if reads == 2 {
+						recordTrafficDeparture(t, f)
+					}
+					return nil
+				}
+				defer func() { live.beforeRead = nil }()
+			}
 			return deliveryService.NotifyCommute(ctx, subject, consentID, routineID, departure)
 		}))
 	live.now = f.now
@@ -185,9 +205,15 @@ func testCommuteDelivery(t *testing.T, scenario string) {
 		}
 	}
 	count, payload := sender.latest()
-	if scenario == "opt_out" || scenario == "quiet" || scenario == "charging_cooldown" {
+	if scenario == "opt_out" || scenario == "quiet" || scenario == "charging_cooldown" || scenario == "departed_during_dispatch" {
 		if count != baseline {
 			t.Fatal("a suppressed commute arrived at the push transport")
+		}
+		if scenario == "departed_during_dispatch" {
+			var state string
+			if err := f.db.Pool.QueryRow(ctx, `SELECT status FROM smart_push_commute_deliveries`).Scan(&state); err != nil || state != "failed" {
+				t.Fatalf("departure after reservation did not abort the pending push: %q, %v", state, err)
+			}
 		}
 		return
 	}
@@ -234,6 +260,10 @@ func testCommuteDelivery(t *testing.T, scenario string) {
 		live.now = f.now.Add(-3 * time.Minute)
 	case "moving":
 		live.gear = "D"
+	case "reparked":
+		f.now = f.now.Add(90 * time.Second)
+		live.now = f.now
+		recordTrafficDeparture(t, f)
 	case "expired":
 		f.now, live.now = departure, departure
 	case "replaced_device":

@@ -9,6 +9,7 @@ import (
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -115,12 +116,59 @@ func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, tr
 }
 
 // completeHistory updates a running history record with final status.
-func (e *Engine) completeHistory(ctx context.Context, historyID int64, status string, errMsg *string, start time.Time) {
-	durationMs := int(time.Since(start).Milliseconds())
-	if err := e.historyRepo.Complete(ctx, historyID, status, errMsg, durationMs); err != nil {
+func (e *Engine) completeHistory(ctx context.Context, historyID int64, status string, errMsg *string, start time.Time, climate *automationmodel.ScheduledClimateReceipt) {
+	completed := time.Now().UTC()
+	durationMs := int(completed.Sub(start).Milliseconds())
+	if err := e.historyRepo.Complete(ctx, historyID, status, errMsg, durationMs, completed, climate); err != nil {
 		e.logger.Error().Err(err).
 			Int64("history_id", historyID).
 			Str("status", status).
 			Msg("failed to complete history record")
 	}
+}
+
+func scheduledClimateReceipt(a *models.AutomationFull, fired trigger.ScheduleFire, results []action.ActionResult) *automationmodel.ScheduledClimateReceipt {
+	if a.VehicleID == nil || *a.VehicleID <= 0 || a.ID != fired.AutomationID ||
+		fired.Revision.IsZero() || !a.UpdatedAt.Equal(fired.Revision) || fired.FiredAt.Before(fired.Revision) ||
+		len(a.Triggers) != 1 || len(results) != 1 || len(a.Actions) != 1 {
+		return nil
+	}
+	schedule, ok := a.Triggers[0].(*models.AutomationStepTriggerSchedule)
+	if !ok || schedule == nil || schedule.StepID <= 0 || *schedule != fired.Trigger {
+		return nil
+	}
+	var command *models.AutomationAction
+	switch item := a.Actions[0].(type) {
+	case *models.AutomationAction:
+		command = item
+	case models.AutomationAction:
+		command = &item
+	}
+	if command == nil || (command.CommandName != "climate_on" && command.CommandName != "hvac_on") {
+		return nil
+	}
+	result := results[0]
+	if !result.Success || result.Skipped || result.Error != "" || result.ActionType != "command" {
+		return nil
+	}
+	var outcomes []action.CommandResult
+	if err := json.Unmarshal(result.Output, &outcomes); err != nil {
+		return nil
+	}
+	targetAccepted := false
+	for _, outcome := range outcomes {
+		if outcome.VehicleID <= 0 || !outcome.Success || outcome.Error != "" || outcome.Command != command.CommandName {
+			return nil
+		}
+		if outcome.VehicleID == *a.VehicleID {
+			if targetAccepted {
+				return nil
+			}
+			targetAccepted = true
+		}
+	}
+	if !targetAccepted {
+		return nil
+	}
+	return &automationmodel.ScheduledClimateReceipt{VehicleID: *a.VehicleID, Revision: fired.Revision, FiredAt: fired.FiredAt}
 }

@@ -26,6 +26,7 @@ import (
 type service interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	LatestStarts(context.Context, string, int64) ([]domain.LatestStart, error)
+	AdvanceCheck(context.Context, domain.StopPlanKey, int64, time.Time, time.Time, time.Time) error
 	SitePerformanceSettings(context.Context, string, int64) (domain.SitePerformanceSettings, error)
 	SetSitePerformance(context.Context, string, int64, *int64) error
 	PublicFeeSettings(context.Context, string, int64) (domain.PublicFeeSettings, error)
@@ -38,10 +39,30 @@ type service interface {
 }
 
 type Handler struct {
-	service    service
-	headerName string
-	solar      solarCharging
-	energy     solarConnections
+	service            service
+	headerName         string
+	solar              solarCharging
+	energy             solarConnections
+	stops              tripStopService
+	reviews            tripReviewService
+	maintenance        tripMaintenanceService
+	coldTires          coldTireService
+	recallWatch        recallWatchService
+	serviceCases       serviceCaseService
+	cabinPrep          cabinPrepService
+	cabinEnabled       func() bool
+	climateSchedules   climateScheduleService
+	parkReserves       parkReserveService
+	parkAvailable      func() (setup, push bool)
+	overnightDrain     overnightDrainService
+	capacityTrend      capacityTrendService
+	windowRain         windowRainService
+	windowRainReady    func() bool
+	parkedClosure      parkedClosureService
+	parkedClosureReady func() bool
+	parkedUnlock       parkedUnlockService
+	parkedUnlockReady  func() bool
+	softwareWindow     softwareWindowService
 }
 
 type Option func(*Handler)
@@ -59,6 +80,76 @@ func NewHandler(service service, forwardAuthHeader string, options ...Option) *H
 
 func (h *Handler) MountRoutes(r chi.Router) {
 	writeLimit := httprate.LimitByIP(20, time.Minute)
+	if h.softwareWindow != nil {
+		r.Get("/software-updates/window-review", h.SoftwareWindow)
+		r.With(writeLimit).Put("/software-updates/window-review", h.SoftwareWindow)
+		r.With(writeLimit).Patch("/software-updates/window-review", h.SoftwareWindow)
+		r.With(writeLimit).Delete("/software-updates/window-review", h.SoftwareWindow)
+	}
+	if h.parkReserves != nil {
+		r.Get("/charging/park-reserve", h.ParkReserve)
+		r.With(writeLimit).Put("/charging/park-reserve", h.ParkReserve)
+		r.With(writeLimit).Delete("/charging/park-reserve", h.ParkReserve)
+	}
+	if h.windowRain != nil {
+		r.Get("/security/window-rain", h.WindowRain)
+		r.With(writeLimit).Put("/security/window-rain", h.WindowRain)
+		r.With(writeLimit).Patch("/security/window-rain", h.WindowRain)
+		r.With(writeLimit).Delete("/security/window-rain", h.WindowRain)
+	}
+	if h.parkedClosure != nil {
+		r.Get("/security/parked-closure", h.ParkedClosure)
+		r.With(writeLimit).Put("/security/parked-closure", h.ParkedClosure)
+		r.With(writeLimit).Patch("/security/parked-closure", h.ParkedClosure)
+		r.With(writeLimit).Delete("/security/parked-closure", h.ParkedClosure)
+	}
+	if h.parkedUnlock != nil {
+		r.Get("/security/parked-unlock", h.ParkedUnlock)
+		r.With(writeLimit).Put("/security/parked-unlock", h.ParkedUnlock)
+		r.With(writeLimit).Patch("/security/parked-unlock", h.ParkedUnlock)
+		r.With(writeLimit).Delete("/security/parked-unlock", h.ParkedUnlock)
+	}
+	if h.overnightDrain != nil {
+		r.Get("/battery/overnight-drain-review", h.OvernightDrain)
+		r.With(writeLimit).Put("/battery/overnight-drain-review", h.OvernightDrain)
+		r.With(writeLimit).Patch("/battery/overnight-drain-review", h.OvernightDrain)
+		r.With(writeLimit).Delete("/battery/overnight-drain-review", h.OvernightDrain)
+	}
+	if h.capacityTrend != nil {
+		r.Get("/battery/capacity-digest", h.CapacityTrend)
+		r.With(writeLimit).Put("/battery/capacity-digest", h.CapacityTrend)
+		r.With(writeLimit).Patch("/battery/capacity-digest", h.CapacityTrend)
+		r.With(writeLimit).Delete("/battery/capacity-digest", h.CapacityTrend)
+	}
+	if h.cabinPrep != nil {
+		r.Get("/climate/cabin-prep", h.CabinPrep)
+		r.With(writeLimit).Put("/climate/cabin-prep", h.CabinPrep)
+		r.With(writeLimit).Delete("/climate/cabin-prep", h.CabinPrep)
+	}
+	if h.climateSchedules != nil {
+		r.Get("/climate/scheduled-review", h.ClimateSchedule)
+		r.With(writeLimit).Put("/climate/scheduled-review", h.ClimateSchedule)
+		r.With(writeLimit).Delete("/climate/scheduled-review", h.ClimateSchedule)
+	}
+	if h.serviceCases != nil {
+		r.Get("/service-intelligence/service-case", h.privateServiceCase(h.readServiceCase))
+		r.With(writeLimit).Put("/service-intelligence/service-case", h.privateServiceCase(h.saveServiceCase))
+		r.With(writeLimit).Delete("/service-intelligence/service-case", h.privateServiceCase(h.deleteServiceCase))
+		r.With(writeLimit).Post("/service-intelligence/service-case/evidence", h.privateServiceCase(h.appendServiceCaseEvidence))
+		r.With(writeLimit).Delete("/service-intelligence/service-case/evidence/{evidenceID}", h.privateServiceCase(h.removeServiceCaseEvidence))
+		r.With(writeLimit).Post("/service-intelligence/service-case/preview", h.privateServiceCase(h.reviewServiceCase(false)))
+		r.With(writeLimit).Post("/service-intelligence/service-case/export", h.privateServiceCase(h.reviewServiceCase(true)))
+	}
+	if h.recallWatch != nil {
+		r.Get("/service-intelligence/recall-watch", h.RecallWatch)
+		r.With(writeLimit).Put("/service-intelligence/recall-watch", h.RecallWatch)
+		r.With(writeLimit).Delete("/service-intelligence/recall-watch", h.RecallWatch)
+	}
+	if h.coldTires != nil {
+		r.Get("/tire-pressure/cold-checks", h.ColdTireReview)
+		r.With(writeLimit).Post("/tire-pressure/cold-checks", h.ColdTireReview)
+		r.With(writeLimit).Delete("/tire-pressure/cold-checks", h.ColdTireReview)
+	}
 	r.Route("/smart-charging", func(r chi.Router) {
 		r.Get("/plans", h.ListPlans)
 		r.Get("/latest-start", h.LatestStarts)
@@ -70,8 +161,20 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Delete("/public-fee-terms", h.RevokePublicFeeTerms)
 		r.With(writeLimit).Post("/plans", h.CreatePlan)
 		r.With(writeLimit).Put("/plans/{planID}", h.UpdatePlan)
+		r.With(writeLimit).Patch("/plans/{planID}", h.AdvanceCheck)
 		r.With(writeLimit).Delete("/plans/{planID}", h.DeletePlan)
 		r.With(writeLimit).Post("/plans/{planID}/snooze", h.SnoozePlan)
+		r.Get("/plans/{planID}/stops", h.TripStops)
+		r.With(writeLimit).Put("/plans/{planID}/stops", h.TripStops)
+		r.With(writeLimit).Post("/plans/{planID}/stops", h.TripStops)
+		r.With(writeLimit).Delete("/plans/{planID}/stops", h.TripStops)
+		r.Get("/plans/{planID}/review", h.TripReview)
+		r.With(writeLimit).Put("/plans/{planID}/review", h.TripReview)
+		r.With(writeLimit).Post("/plans/{planID}/review", h.TripReview)
+		r.With(writeLimit).Delete("/plans/{planID}/review", h.TripReview)
+		r.Get("/plans/{planID}/maintenance", h.TripMaintenance)
+		r.With(writeLimit).Put("/plans/{planID}/maintenance", h.TripMaintenance)
+		r.With(writeLimit).Delete("/plans/{planID}/maintenance", h.TripMaintenance)
 		r.Get("/solar", h.SolarSettings)
 		r.With(writeLimit).Put("/solar", h.SaveSolarConsent)
 		r.With(writeLimit).Delete("/solar", h.RevokeSolarConsent)
@@ -138,6 +241,8 @@ type planRequest struct {
 	TripLegs             *tripLegsRequest        `json:"trip_legs"`
 	ReservePct           *float64                `json:"reserve_pct"`
 	CompareSiteRates     *bool                   `json:"compare_site_rates"`
+	ExpectedVersion      int64                   `json:"expected_version"`
+	ExpectedCheckAt      *time.Time              `json:"expected_check_at"`
 }
 
 type tripLegsRequest struct {
@@ -151,7 +256,8 @@ type tripLegsRequest struct {
 func (request planRequest) plan(id int64) (domain.Plan, error) {
 	if request.Enabled == nil || request.NotifyAt == nil ||
 		request.DepartureAt == nil || request.TripUseLowPct == nil ||
-		request.TripUseHighPct == nil || request.ReservePct == nil {
+		request.TripUseHighPct == nil || request.ReservePct == nil ||
+		(id > 0 && (request.ExpectedVersion <= 0 || request.ExpectedCheckAt == nil || request.ExpectedCheckAt.IsZero())) {
 		return domain.Plan{}, smartreadinesssvc.ErrInvalidInput
 	}
 	var legs *domain.TripLegs
@@ -175,6 +281,7 @@ func (request planRequest) plan(id int64) (domain.Plan, error) {
 		DepartureOverlapPush: request.DepartureOverlapPush,
 		TripUseLowPct:        *request.TripUseLowPct, TripUseHighPct: *request.TripUseHighPct, TripLegs: legs,
 		ReservePct: *request.ReservePct, CompareSiteRates: request.CompareSiteRates != nil && *request.CompareSiteRates,
+		Version: request.ExpectedVersion, ExpectedCheckAt: request.ExpectedCheckAt,
 	}, nil
 }
 
@@ -277,6 +384,8 @@ func (h *Handler) handleError(w http.ResponseWriter, span trace.Span, err error)
 		httputil.RespondError(w, http.StatusNotFound, "NOT_FOUND", "charging readiness resource not found")
 	case errors.Is(err, port.ErrLimit):
 		httputil.RespondError(w, http.StatusConflict, "PLAN_LIMIT", "too many charging readiness plans")
+	case errors.Is(err, port.ErrPlanChanged):
+		httputil.RespondError(w, http.StatusConflict, "PLAN_CHANGED", "charging plan changed; refresh before saving")
 	case errors.Is(err, smartreadinesssvc.ErrSitePerformanceUnavailable):
 		httputil.RespondError(w, http.StatusServiceUnavailable, "SITE_PERFORMANCE_UNAVAILABLE", "charging site performance analysis is unavailable")
 	case errors.Is(err, smartreadinesssvc.ErrPublicFeeUnavailable):

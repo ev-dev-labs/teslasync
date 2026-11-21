@@ -57,6 +57,7 @@ type rawEvent struct {
 	Value SignalValue
 	// ReceivedAt is optional ingest-boundary time for this emission.
 	ReceivedAt *time.Time
+	SourceTime *time.Time
 }
 
 // forwardFold derives a slice of TimelineRow from a seed state plus a
@@ -120,6 +121,7 @@ type timelineFolder struct {
 	maxRows       int
 	state         map[string]SignalValue
 	observedAt    map[string]time.Time
+	sourceTime    map[string]time.Time
 	groupTs       time.Time
 	groupReceived *time.Time
 	grouping      bool
@@ -159,6 +161,14 @@ func (f *timelineFolder) Add(ev rawEvent) bool {
 	}
 	f.state[ev.Signal] = ev.Value
 	f.observedAt[ev.Signal] = ev.Ts
+	if ev.SourceTime != nil {
+		if f.sourceTime == nil {
+			f.sourceTime = make(map[string]time.Time, len(f.mappings))
+		}
+		f.sourceTime[ev.Signal] = *ev.SourceTime
+	} else {
+		delete(f.sourceTime, ev.Signal)
+	}
 	f.groupTs = ev.Ts
 	f.grouping = true
 	f.groupReceived = laterReceivedAt(f.groupReceived, ev.ReceivedAt)
@@ -196,6 +206,14 @@ func (f *timelineFolder) flush() bool {
 	}
 	f.leadingNil = false
 	row := TimelineRow{Timestamp: f.groupTs, ReceivedAt: f.groupReceived, Fields: fields, ObservedAt: observedAt}
+	if len(f.sourceTime) != 0 {
+		row.SourceTime = make(map[string]time.Time, len(f.sourceTime))
+		for _, m := range f.mappings {
+			if at, ok := f.sourceTime[m.Signal]; ok {
+				row.SourceTime[m.Field] = at
+			}
+		}
+	}
 	if len(f.collapseBy) > 0 {
 		key := projectCollapseKey(row, f.collapseBy)
 		if f.hasPrev && key == f.prevKey {

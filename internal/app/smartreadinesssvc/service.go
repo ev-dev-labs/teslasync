@@ -110,21 +110,18 @@ func (s *Service) LatestStarts(ctx context.Context, subject string, vehicleID in
 	}
 	estimates := make([]domain.LatestStart, 0, len(plans))
 	for _, plan := range plans {
-		var siteErr error
-		estimate := EstimateLatestStart(plan, values, s.now().UTC(), func(lat, lon float64) bool {
-			if plan.ChargingPlaceID == nil {
-				return false
-			}
-			var contains bool
-			contains, siteErr = s.sites.Contains(ctx, *plan.ChargingPlaceID, lat, lon)
-			return contains
-		})
-		if siteErr != nil {
-			return nil, fmt.Errorf("check latest charging start place: %w", siteErr)
+		estimate, err := s.estimateLatestStart(ctx, plan, values)
+		if err != nil {
+			return nil, err
 		}
 		estimates = append(estimates, estimate)
 	}
-	if err := s.addSiteRateComparisons(ctx, plans, values, estimates); err != nil {
+	var capacityWh float64
+	if capacity := values["NominalFullPackEnergyKwh"]; capacity != nil {
+		capacityWh, _ = signal.Float64(capacity.Raw)
+	}
+	stableRates, err := s.loadStableSiteRates(ctx, plans, estimates, capacityWh)
+	if err != nil {
 		return nil, err
 	}
 	current, err := s.repository.ListLatestStartPlans(ctx, subject, vehicleID, s.now().UTC(), 100)
@@ -151,10 +148,33 @@ func (s *Service) LatestStarts(ctx context.Context, subject string, vehicleID in
 		} else if estimate.Status == domain.LatestStartEstimate && estimate.EarliestSafeStartAt != nil &&
 			!verifiedAt.Before(*estimate.EarliestSafeStartAt) {
 			estimate.Status = domain.LatestStartOverdue
+		} else if plan.CompareSiteRates && plan.ChargingPlaceID != nil {
+			estimate.CostComparison = estimateSiteRateComparison(
+				plan, estimate, capacityWh, stableRates[*plan.ChargingPlaceID], verifiedAt,
+			)
+		}
+		if checkAt := earlierCheckAt(plan, estimate, verifiedAt); !checkAt.IsZero() {
+			estimate.EarlierCheckAt = &checkAt
 		}
 		result = append(result, estimate)
 	}
 	return result, nil
+}
+
+func (s *Service) estimateLatestStart(ctx context.Context, plan domain.Plan, values map[string]*signal.Value) (domain.LatestStart, error) {
+	var siteErr error
+	estimate := EstimateLatestStart(plan, values, s.now().UTC(), func(lat, lon float64) bool {
+		if plan.ChargingPlaceID == nil {
+			return false
+		}
+		var contains bool
+		contains, siteErr = s.sites.Contains(ctx, *plan.ChargingPlaceID, lat, lon)
+		return contains
+	})
+	if siteErr != nil {
+		return domain.LatestStart{}, fmt.Errorf("check latest charging start place: %w", siteErr)
+	}
+	return estimate, nil
 }
 
 func (s *Service) SavePlan(ctx context.Context, subject string, plan domain.Plan) (*domain.Plan, error) {
@@ -236,11 +256,11 @@ func (s *Service) ProcessDue(ctx context.Context, limit int) (int, error) {
 		if claim == nil {
 			return processed, nil
 		}
-		decision, err := s.evaluate(ctx, claim.Plan)
+		charging, overlap, err := s.evaluate(ctx, claim.Plan, nil)
 		if err != nil {
 			return processed, err
 		}
-		if err := s.repository.FinishClaim(ctx, *claim, decision, s.now().UTC()); err != nil {
+		if err := s.repository.FinishClaim(ctx, *claim, charging, overlap, s.now().UTC()); err != nil {
 			if errors.Is(err, port.ErrClaimLost) {
 				processed++
 				continue
@@ -248,11 +268,25 @@ func (s *Service) ProcessDue(ctx context.Context, limit int) (int, error) {
 			return processed, fmt.Errorf("finish charging readiness work: %w", err)
 		}
 		if s.observe != nil {
-			s.observe(decision.Reason)
+			reason := charging.Reason
+			if overlap.Reason == domain.ReasonEligible {
+				reason = overlap.Reason
+			}
+			s.observe(reason)
 		}
 		processed++
-		if decision.Reason == domain.ReasonEligible && s.notify != nil {
-			candidate, candidateErr := s.FindCandidate(ctx, claim.Plan.Subject, claim.Plan.VehicleID, claim.Plan.ID)
+		if s.notify == nil {
+			continue
+		}
+		var decisions []domain.Decision
+		if overlap.Reason == domain.ReasonEligible && claim.Plan.DepartureOverlapPush {
+			decisions = append(decisions, overlap)
+		}
+		if charging.Reason == domain.ReasonEligible {
+			decisions = append(decisions, charging)
+		}
+		for _, decision := range decisions {
+			candidate, candidateErr := s.FindCandidate(ctx, claim.Plan.Subject, claim.Plan.VehicleID, claim.Plan.ID, decision.Kind)
 			if candidateErr != nil {
 				return processed, candidateErr
 			}
@@ -267,27 +301,28 @@ func (s *Service) ProcessDue(ctx context.Context, limit int) (int, error) {
 }
 
 func (s *Service) FindCandidate(
-	ctx context.Context, subject string, vehicleID, planID int64,
+	ctx context.Context, subject string, vehicleID, planID int64, kind domain.DecisionKind,
 ) (*port.Candidate, error) {
-	if err := validateScope(subject, vehicleID); err != nil || planID <= 0 {
+	if err := validateScope(subject, vehicleID); err != nil || planID <= 0 || kind == "" {
 		return nil, ErrInvalidInput
 	}
 	now := s.now().UTC()
-	candidate, err := s.repository.FindCandidate(ctx, subject, vehicleID, planID, now)
+	candidate, err := s.repository.FindCandidate(ctx, subject, vehicleID, planID, kind, now)
 	if err != nil {
 		return nil, fmt.Errorf("find charging readiness candidate: %w", err)
 	}
 	if candidate == nil {
 		return nil, nil
 	}
-	decision, err := s.evaluate(ctx, candidate.Plan)
+	charging, overlap, err := s.evaluate(ctx, candidate.Plan, candidate)
 	if err != nil {
 		return nil, err
 	}
-	if decision.Reason != domain.ReasonEligible || decision.Kind != candidate.Decision.Kind {
+	decision := decisionForKind(kind, charging, overlap)
+	if decision.Reason != domain.ReasonEligible || decision.Kind != kind {
 		return nil, nil
 	}
-	current, err := s.repository.FindCandidate(ctx, subject, vehicleID, planID, s.now().UTC())
+	current, err := s.repository.FindCandidate(ctx, subject, vehicleID, planID, kind, s.now().UTC())
 	if err != nil {
 		return nil, fmt.Errorf("recheck charging readiness candidate: %w", err)
 	}
@@ -319,11 +354,19 @@ func (s *Service) ListCandidates(
 		return nil, fmt.Errorf("list charging readiness work: %w", err)
 	}
 	eligible := make([]port.Candidate, 0, len(rows))
+	type evaluated struct{ charging, overlap domain.Decision }
+	evaluations := make(map[int64]evaluated, len(rows))
 	for _, row := range rows {
-		decision, evalErr := s.evaluate(ctx, row.Plan)
-		if evalErr != nil {
-			return nil, evalErr
+		evaluation, ok := evaluations[row.Plan.ID]
+		if !ok {
+			charging, overlap, evalErr := s.evaluate(ctx, row.Plan, nil)
+			if evalErr != nil {
+				return nil, evalErr
+			}
+			evaluation = evaluated{charging: charging, overlap: overlap}
+			evaluations[row.Plan.ID] = evaluation
 		}
+		decision := decisionForKind(row.Decision.Kind, evaluation.charging, evaluation.overlap)
 		if decision.Reason == domain.ReasonEligible && decision.Kind == row.Decision.Kind {
 			row.Decision = decision
 			eligible = append(eligible, row)
@@ -344,14 +387,17 @@ func (s *Service) ListCandidates(
 	if verifiedAt.Before(recheckAt) {
 		verifiedAt = recheckAt
 	}
-	versions := make(map[int64]port.Candidate, len(current))
+	type decisionKey struct {
+		planID int64
+		kind   domain.DecisionKind
+	}
+	versions := make(map[decisionKey]port.Candidate, len(current))
 	for _, row := range current {
-		versions[row.Plan.ID] = row
+		versions[decisionKey{row.Plan.ID, row.Decision.Kind}] = row
 	}
 	result := eligible[:0]
 	for _, row := range eligible {
-		if latest, ok := versions[row.Plan.ID]; ok && latest.Plan.Version == row.Plan.Version &&
-			latest.Decision.Kind == row.Decision.Kind &&
+		if latest, ok := versions[decisionKey{row.Plan.ID, row.Decision.Kind}]; ok && latest.Plan.Version == row.Plan.Version &&
 			latest.PlaceUpdatedAt.Equal(row.PlaceUpdatedAt) && verifiedAt.Before(row.Decision.ExpiresAt) {
 			result = append(result, row)
 		}
@@ -359,17 +405,29 @@ func (s *Service) ListCandidates(
 	return result, nil
 }
 
-func (s *Service) evaluate(ctx context.Context, plan domain.Plan) (domain.Decision, error) {
-	decision := Evaluate(plan, nil, s.now().UTC(), nil)
-	if decision.Reason != domain.ReasonUnknownState {
-		return decision, nil
+func decisionForKind(kind domain.DecisionKind, charging, overlap domain.Decision) domain.Decision {
+	if kind == domain.DecisionDepartureOverlap {
+		return overlap
+	}
+	return charging
+}
+
+func (s *Service) evaluate(ctx context.Context, plan domain.Plan, candidate *port.Candidate) (domain.Decision, domain.Decision, error) {
+	if reason := readinessWindowReason(plan, s.now().UTC()); reason != "" {
+		decision := domain.Decision{Reason: reason}
+		return decision, decision, nil
 	}
 	values, err := s.live.GetAll(ctx, plan.VehicleID, signal.LiveSignalReadDistributed)
 	if err != nil {
-		return domain.Decision{}, fmt.Errorf("read charging readiness signals: %w", err)
+		return domain.Decision{}, domain.Decision{}, fmt.Errorf("read charging readiness signals: %w", err)
 	}
 	var siteErr error
-	decision = Evaluate(plan, values, s.now().UTC(), func(lat, lon float64) bool {
+	now := s.now().UTC()
+	overlap := evaluateDepartureWindow(plan, values, now)
+	if candidate != nil && candidate.Decision.Kind == domain.DecisionDepartureOverlap {
+		return domain.Decision{}, overlap, nil
+	}
+	decision := Evaluate(plan, values, now, func(lat, lon float64) bool {
 		if plan.ChargingPlaceID == nil {
 			return false
 		}
@@ -378,12 +436,18 @@ func (s *Service) evaluate(ctx context.Context, plan domain.Plan) (domain.Decisi
 		return contains
 	})
 	if siteErr != nil {
-		return domain.Decision{}, fmt.Errorf("check charging readiness place: %w", siteErr)
+		return domain.Decision{}, domain.Decision{}, fmt.Errorf("check charging readiness place: %w", siteErr)
+	}
+	if candidate != nil && decision.Reason == domain.ReasonEligible && decision.Kind == candidate.Decision.Kind &&
+		decision.RequiresFeasibleRemedy(plan) {
+		if err := s.checkFeasibleRemedy(ctx, *candidate, values, &decision, now); err != nil {
+			return domain.Decision{}, domain.Decision{}, err
+		}
 	}
 	if decision.Reason == domain.ReasonEligible && !s.now().UTC().Before(decision.ExpiresAt) {
-		return domain.Decision{Reason: domain.ReasonUnknownState}, nil
+		decision = domain.Decision{Reason: domain.ReasonUnknownState}
 	}
-	return decision, nil
+	return decision, overlap, nil
 }
 
 func validateScope(subject string, vehicleID int64) error {

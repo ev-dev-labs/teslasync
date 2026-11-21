@@ -17,6 +17,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/journey"
+	"github.com/ev-dev-labs/teslasync/internal/api/waitoracle"
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	actiondb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
@@ -41,7 +43,16 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
-	seedSitePerformance(t, db, now)
+	stopRevision := seedTripStopHistory(t, db, now)
+	stopProvider := &controlledStopRouter{}
+	reviewJourneyID := seedTripReviewFixture(t, db)
+	if _, err := db.Pool.Exec(t.Context(), `INSERT INTO journey_sessions (vehicle_id, name)
+		VALUES (8, 'Other vehicle journey')`); err != nil {
+		t.Fatal(err)
+	}
+	journeyStore := journey.NewStore(db)
+	journeyHandler := journey.NewHandler(journeyStore, journeyStore, waitoracle.NewStore(db))
+	reviewDeparture := now.Add(2 * time.Hour).Truncate(time.Millisecond)
 	if _, err := db.Pool.Exec(context.Background(), `
 		INSERT INTO geofence_rates (geofence_id, rate_per_wh, currency, effective_from, effective_to)
 		VALUES (9, 0.0004, 'USD', $1, $2), (9, 0.0001, 'USD', $2, NULL)`,
@@ -51,6 +62,9 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 	var clockNanos atomic.Int64
 	clockNanos.Store(now.UnixNano())
 	clock := func() time.Time { return time.Unix(0, clockNanos.Load()).UTC() }
+	var reviewClockNanos atomic.Int64
+	reviewClockNanos.Store(now.UnixNano())
+	reviewClock := func() time.Time { return time.Unix(0, reviewClockNanos.Load()).UTC() }
 	live := &controlledLive{values: map[string]*signal.Value{
 		"BatteryLevel":             {Raw: 45.0, Timestamp: now},
 		"DetailedChargeState":      {Raw: "Disconnected", Timestamp: now},
@@ -80,9 +94,14 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 		)
 		router := chi.NewRouter()
 		router.Route("/api/v1", func(r chi.Router) {
-			readinesshandler.NewHandler(service, header).MountRoutes(r)
+			readinesshandler.NewHandler(service, header, readinesshandler.WithTripStops(
+				smartreadinesssvc.NewTripStops(repo, stopProvider, clock, nil),
+			), readinesshandler.WithTripReviews(
+				smartreadinesssvc.NewTripReviews(repo, reviewClock),
+			)).MountRoutes(r)
 			action := actionhandler.NewHandler(actionService, header)
 			r.Get("/action-center", action.List)
+			r.Get("/journey/sessions", journeyHandler.List)
 		})
 		return router
 	}
@@ -131,12 +150,49 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 		t.Fatal(err)
 	}
 	distRoot := filepath.Join(webRoot, "dist")
+	if dist := os.Getenv("TESLASYNC_SMART_CHARGING_BROWSER_DIST"); dist != "" {
+		distRoot = dist
+	}
 	index := filepath.Join(distRoot, "index.html")
 	if _, err := os.Stat(index); err != nil {
 		t.Fatalf("build the frontend before running the browser journey: %v", err)
 	}
 	static := http.FileServer(http.Dir(distRoot))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__fixture/trip-review" {
+			w.Header().Set("Cache-Control", "no-store")
+			switch r.Method {
+			case http.MethodGet:
+				w.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(w).Encode(map[string]any{
+					"now": reviewClock(), "departure_at": reviewDeparture, "journey_id": reviewJourneyID, "revision": stopRevision,
+				}); err != nil {
+					t.Errorf("respond with trip review fixture metadata: %v", err)
+				}
+			case http.MethodPost:
+				if err := completeTripReviewFixture(r.Context(), db, reviewJourneyID, reviewDeparture); err != nil {
+					t.Errorf("complete trip review browser fixture: %v", err)
+					http.Error(w, "trip completion fixture failed", http.StatusInternalServerError)
+					return
+				}
+				reviewClockNanos.Store(reviewDeparture.Add(4 * time.Hour).UnixNano())
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			}
+			return
+		}
+		if r.URL.Path == "/__fixture/trip-stops" && r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"now": clock(), "revision": stopRevision, "provider_calls": stopProvider.calls.Load(),
+			})
+			if err != nil {
+				t.Errorf("respond with trip stop fixture metadata: %v", err)
+			}
+			return
+		}
 		if r.URL.Path == "/__fixture/charge" && r.Method == http.MethodPost {
 			var body struct {
 				State          string   `json:"state"`
@@ -204,14 +260,13 @@ func TestPrivateChargingBrowserJourney(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Each of the four real-handler browser variants has a two-minute deadline.
 	runCtx, cancel := context.WithTimeout(context.Background(), 9*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, "node",
 		filepath.Join("node_modules", "@playwright", "test", "cli.js"), "test",
-		filepath.Join("e2e", "smart-charging.smoke.spec.ts"),
-		"--grep=charging readiness is consented and scoped:",
-		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line",
+		filepath.ToSlash(filepath.Join("e2e", "smart-charging.smoke.spec.ts")),
+		"--grep=charging readiness is consented and scoped:|reviewed trip stops require private consent:|trip review uses recorded plan and actuals|charging site performance requires private consent",
+		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line", "--headed",
 		"--output="+filepath.Join(os.TempDir(), "teslasync-smart-charging-browser-results"),
 	)
 	cmd.Dir = webRoot

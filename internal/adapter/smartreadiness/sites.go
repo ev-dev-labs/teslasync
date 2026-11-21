@@ -1,4 +1,4 @@
-// Package smartreadiness adapts charging-place records for readiness decisions.
+// Package smartreadiness adapts saved places for readiness decisions.
 package smartreadiness
 
 import (
@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 )
@@ -37,48 +38,75 @@ func (s *Sites) Contains(ctx context.Context, id int64, lat, lon float64) (bool,
 	return containsSimplePolygon(place.PolygonWKT, lat, lon), nil
 }
 
+func (s *Sites) MonitoredPlace(ctx context.Context, id int64, revision time.Time) (func(float64, float64) bool, error) {
+	place, err := s.reader.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("read monitored place: %w", err)
+	}
+	if place == nil || !place.Enabled || place.NeedsReview || place.ArchivedAt != nil ||
+		revision.IsZero() || !place.UpdatedAt.Equal(revision) {
+		return nil, nil
+	}
+	points := parseSimplePolygon(place.PolygonWKT)
+	if points == nil {
+		return nil, nil
+	}
+	return func(lat, lon float64) bool { return polygonContains(points, lat, lon) }, nil
+}
+
 type point struct {
 	x float64
 	y float64
 }
 
 func containsSimplePolygon(wkt string, lat, lon float64) bool {
-	if !inRange(lat, -90, 90) || !inRange(lon, -180, 180) || len(wkt) > 65536 {
-		return false
+	return polygonContains(parseSimplePolygon(wkt), lat, lon)
+}
+
+func parseSimplePolygon(wkt string) []point {
+	if len(wkt) > 65536 {
+		return nil
 	}
 	wkt = strings.TrimSpace(wkt)
 	if len(wkt) < 11 || !strings.EqualFold(wkt[:9], "POLYGON((") ||
 		!strings.HasSuffix(wkt, "))") {
-		return false
+		return nil
 	}
 	ring := wkt[9 : len(wkt)-2]
 	if strings.ContainsAny(ring, "()") {
-		return false
+		return nil
 	}
 	pairs := strings.Split(ring, ",")
 	if len(pairs) < 4 || len(pairs) > 513 {
-		return false
+		return nil
 	}
 	points := make([]point, 0, len(pairs))
 	minLon, maxLon := 180.0, -180.0
 	for _, pair := range pairs {
 		fields := strings.Fields(pair)
 		if len(fields) != 2 {
-			return false
+			return nil
 		}
 		x, xErr := strconv.ParseFloat(fields[0], 64)
 		y, yErr := strconv.ParseFloat(fields[1], 64)
 		if xErr != nil || yErr != nil || !inRange(x, -180, 180) || !inRange(y, -90, 90) {
-			return false
+			return nil
 		}
 		minLon, maxLon = math.Min(minLon, x), math.Max(maxLon, x)
 		points = append(points, point{x: x, y: y})
 	}
 	if points[0] != points[len(points)-1] || maxLon-minLon > 180 {
-		return false
+		return nil
 	}
 	points = points[:len(points)-1]
 	if !simpleRing(points) {
+		return nil
+	}
+	return points
+}
+
+func polygonContains(points []point, lat, lon float64) bool {
+	if !inRange(lat, -90, 90) || !inRange(lon, -180, 180) {
 		return false
 	}
 	target := point{x: lon, y: lat}

@@ -78,7 +78,7 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	params := url.Values{
-		"transportMode": {"car"}, "return": {"polyline,summary"}, "spans": {"segmentRef,length"},
+		"transportMode": {"car"}, "return": {"polyline,summary,routeLabels"}, "spans": {"segmentRef,length"},
 		"departureTime": {query.DepartureAt.UTC().Format(time.RFC3339)},
 	}
 	var baseline routingResponse
@@ -142,8 +142,8 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 		allQualified = allQualified && covered
 	}
 	result := domain.TrafficComparison{
-		Usual:                 domain.TrafficEstimate{DurationS: usual.durationS, FlowUpdatedAt: observedAt},
-		Alternative:           domain.TrafficEstimate{DurationS: best.durationS, FlowUpdatedAt: observedAt},
+		Usual:                 domain.TrafficEstimate{DurationS: usual.durationS, FlowUpdatedAt: observedAt, RouteLabel: usual.label},
+		Alternative:           domain.TrafficEstimate{DurationS: best.durationS, FlowUpdatedAt: observedAt, RouteLabel: best.label},
 		AlternativesQualified: allQualified && (bestSimilarS == 0 || bestSimilarS >= min(usual.durationS, best.durationS)),
 	}
 	if query.IncludeRouteGeometry && allQualified {

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -21,6 +23,7 @@ type routingResponse struct {
 }
 
 type routingRoute struct {
+	Labels   []routingLabel `json:"routeLabels"`
 	Sections []struct {
 		Type         string            `json:"type"`
 		Polyline     string            `json:"polyline"`
@@ -38,10 +41,18 @@ type routingRoute struct {
 	Notices []struct{} `json:"notices"`
 }
 
+type routingLabel struct {
+	Type string `json:"label_type"`
+	Name struct {
+		Value string `json:"value"`
+	} `json:"name"`
+}
+
 type routeEstimate struct {
 	durationS int64
 	lengthM   float64
 	spans     []routeSpan
+	label     string
 }
 
 type routeSpan struct {
@@ -86,7 +97,22 @@ func qualifyRoute(route routingRoute) (routeEstimate, bool) {
 		result.durationS += section.Summary.DurationS
 		result.lengthM += max(spanLengthM, section.Summary.LengthM)
 	}
+	result.label = routeLabel(route.Labels)
 	return result, result.durationS <= 3*3600 && result.lengthM <= 200_000 && len(result.spans) > 0
+}
+
+func routeLabel(labels []routingLabel) string {
+	var names []string
+	for _, entry := range labels[:min(len(labels), 2)] {
+		name := strings.TrimSpace(entry.Name.Value)
+		if (entry.Type == "Name" || entry.Type == "RouteNumber") && name != "" &&
+			utf8.RuneCountInString(name) <= 55 &&
+			!strings.ContainsFunc(name, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) }) &&
+			!slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 func parseSegmentRef(compact string, replacements map[string]string) segmentRef {

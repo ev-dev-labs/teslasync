@@ -324,7 +324,7 @@ func TestEngagedLatchSuppressesReminderDuringChargeStateLag(t *testing.T) {
 	if calls, _ := j.sender.last(); calls != 1 {
 		t.Fatalf("push went out even though the plug was latched: %d messages", calls)
 	}
-	if card, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID); err != nil || card != nil {
+	if card, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID, readiness.DecisionPlugIn); err != nil || card != nil {
 		t.Fatalf("engaged latch produced an unplugged card: %+v, %v", card, err)
 	}
 
@@ -341,8 +341,124 @@ func TestEngagedLatchSuppressesReminderDuringChargeStateLag(t *testing.T) {
 	}
 }
 
+func planReplacement(plan, current readiness.Plan) any {
+	return struct {
+		readiness.Plan
+		ExpectedVersion int64     `json:"expected_version"`
+		ExpectedCheckAt time.Time `json:"expected_check_at"`
+	}{plan, current.Version, current.NotifyAt}
+}
+
+func TestElectEarlierChargingCheckRequiresCurrentPlanAndFreshPreview(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	plan := testPlan(j.now)
+	plan.DepartureAt = j.now.Add(5 * time.Hour)
+	plan.NotifyAt = j.now.Add(4 * time.Hour)
+	plan.ScheduledStart = &readiness.ScheduledStart{At: j.now.Add(4*time.Hour + 15*time.Minute), TimeZone: "UTC"}
+	var saved struct{ Data readiness.Plan }
+	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
+	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
+		t.Fatalf("create charging plan: %d %s", rec.Code, rec.Body)
+	}
+	path := "/smart-charging/plans/" + strconv.FormatInt(saved.Data.ID, 10)
+	j.live.setChargeState("Charging")
+	j.live.values["NominalFullPackEnergyKwh"] = &signal.Value{Raw: 80000.0}
+	j.live.values["ACChargingPower"] = &signal.Value{Raw: 10000.0}
+	j.advance(j.now)
+	var estimates struct{ Data []readiness.LatestStart }
+	rec = j.request(http.MethodGet, "/smart-charging/latest-start?vehicle_id=7", "subject-a", nil)
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &estimates) != nil ||
+		len(estimates.Data) != 1 || estimates.Data[0].EarlierCheckAt == nil || estimates.Data[0].ExpiresAt == nil ||
+		!estimates.Data[0].EarlierCheckAt.Equal(j.now.Add(2*time.Hour+45*time.Minute)) {
+		t.Fatalf("fresh preview: %d %s", rec.Code, rec.Body)
+	}
+	proposal, expiry := *estimates.Data[0].EarlierCheckAt, *estimates.Data[0].ExpiresAt
+	request := func(subject string, vehicleID, version int64, check, until time.Time) int {
+		return j.request(http.MethodPatch, path, subject, map[string]any{
+			"vehicle_id": vehicleID, "expected_version": version, "expected_check_at": plan.NotifyAt,
+			"check_at": check, "preview_expires_at": until,
+		}).Code
+	}
+	version := saved.Data.Version
+	if code := request("subject-b", 7, version, proposal, expiry); code != http.StatusNotFound {
+		t.Fatalf("foreign subject could confirm preview: %d", code)
+	}
+	if code := request("subject-a", 8, version, proposal, expiry); code != http.StatusNotFound {
+		t.Fatalf("wrong vehicle could confirm preview: %d", code)
+	}
+	if code := request("subject-a", 7, version, proposal, j.now); code != http.StatusConflict {
+		t.Fatalf("expired preview could be confirmed: %d", code)
+	}
+	if code := request("subject-a", 7, version, proposal.Add(time.Minute), expiry); code != http.StatusConflict {
+		t.Fatalf("unproposed time could be confirmed: %d", code)
+	}
+	j.live.setChargeState("Disconnected")
+	if code := request("subject-a", 7, version, proposal, expiry); code != http.StatusConflict {
+		t.Fatalf("lost measured power did not invalidate confirmation: %d", code)
+	}
+	j.live.setChargeState("Charging")
+	plan.Enabled = false
+	rec = j.request(http.MethodPut, path, "subject-a", planReplacement(plan, saved.Data))
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
+		t.Fatalf("pause racing with preview: %d %s", rec.Code, rec.Body)
+	}
+	if code := request("subject-a", 7, version, proposal, expiry); code != http.StatusConflict {
+		t.Fatalf("stale confirmation could undo pause: %d", code)
+	}
+	plan.Enabled = true
+	rec = j.request(http.MethodPut, path, "subject-a", planReplacement(plan, saved.Data))
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
+		t.Fatalf("resume plan: %d %s", rec.Code, rec.Body)
+	}
+	version = saved.Data.Version
+	codes := make(chan int, 2)
+	for range 2 {
+		go func() { codes <- request("subject-a", 7, version, proposal, expiry) }()
+	}
+	first, second := <-codes, <-codes
+	if !(first == http.StatusNoContent && second == http.StatusConflict ||
+		first == http.StatusConflict && second == http.StatusNoContent) {
+		t.Fatalf("duplicate confirmation results: %d, %d", first, second)
+	}
+	stalePause := plan
+	stalePause.Enabled = false
+	rec = j.request(http.MethodPut, path, "subject-a", stalePause)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("unfenced plan write: %d %s", rec.Code, rec.Body)
+	}
+	rec = j.request(http.MethodPut, path, "subject-a", planReplacement(stalePause, saved.Data))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("stale pause could restore the old check: %d %s", rec.Code, rec.Body)
+	}
+	var persisted struct{ Data []readiness.Plan }
+	rec = j.request(http.MethodGet, "/smart-charging/plans?vehicle_id=7", "subject-a", nil)
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &persisted) != nil || len(persisted.Data) != 1 {
+		t.Fatalf("read updated plan: %d %s", rec.Code, rec.Body)
+	}
+	got := persisted.Data[0]
+	if !got.Enabled || got.Version != version || !got.NotifyAt.Equal(proposal) || !got.DepartureAt.Equal(plan.DepartureAt) ||
+		got.ScheduledStart == nil || !got.ScheduledStart.At.Equal(plan.ScheduledStart.At) {
+		t.Fatalf("earlier check changed other plan settings: %+v", got)
+	}
+	got.Enabled = false
+	rec = j.request(http.MethodPut, path, "subject-a", planReplacement(got, persisted.Data[0]))
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
+		t.Fatalf("pause refreshed plan: %d %s", rec.Code, rec.Body)
+	}
+	got.Enabled = true
+	rec = j.request(http.MethodPut, path, "subject-a", planReplacement(got, saved.Data))
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &saved) != nil ||
+		!saved.Data.Enabled || !saved.Data.NotifyAt.Equal(proposal) {
+		t.Fatalf("resume did not preserve the elected check: %d %s", rec.Code, rec.Body)
+	}
+	if messages := j.sender.messages(); len(messages) != 0 {
+		t.Fatalf("the election sent a push: %d messages", len(messages))
+	}
+}
+
 func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 	j := newChargingDeliveryJourney(t, nil)
+	createMeasuredChargingTables(t, j.db)
 	j.enroll("subject-a", "https://push.example.invalid/device-a")
 	j.enroll("subject-b", "https://push.example.invalid/device-b")
 	plan := testPlan(j.now)
@@ -363,7 +479,14 @@ func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 	j.live.values["ScheduledChargingStartTime"] = &signal.Value{Raw: plan.ScheduledStart.At.AddDate(0, 0, -1)}
 	j.live.values["ChargePortLatch"] = &signal.Value{Raw: "Engaged"}
 	j.live.values["NominalFullPackEnergyKwh"] = &signal.Value{Raw: 80000.0}
+	j.live.values["ChargeLimitSoc"] = &signal.Value{Raw: 80.0}
 	j.advance(j.now)
+	j.process()
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("the site ceiling alone did not establish a remedy: %d pushes", calls)
+	}
+	seedMeasuredRemedySessions(j, 9)
+	j.advance(j.now.Add(time.Minute))
 	j.process()
 	messages := j.sender.messages()
 	if len(messages) != 3 || messages[2].endpoint != "https://push.example.invalid/device-a" {
@@ -398,6 +521,7 @@ func TestScheduleConflictUsesPrivateDeliveryAndRechecksPending(t *testing.T) {
 
 func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
 	j := newChargingDeliveryJourney(t, nil)
+	j.live.values["BatteryLevel"].Raw = 80.0
 	j.enroll("subject-a", "https://push.example.invalid/device-a")
 	j.enroll("subject-b", "https://push.example.invalid/device-b")
 	plan := testPlan(j.now)
@@ -422,7 +546,8 @@ func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
 	}
 	plan.DepartureOverlapPush = true
 	path := "/smart-charging/plans/" + strconv.FormatInt(saved.Data.ID, 10)
-	if rec = j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+	if rec = j.request(http.MethodPut, path, "subject-a", planReplacement(plan, saved.Data)); rec.Code != http.StatusOK ||
+		json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
 		t.Fatalf("opt in: %d %s", rec.Code, rec.Body.String())
 	}
 	j.advance(j.now.Add(time.Minute))
@@ -436,7 +561,7 @@ func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
 		t.Fatalf("foreign subject claimed departure conflict: %d", rec.Code)
 	}
 	plan.SoftwareInstall = nil
-	if rec = j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+	if rec = j.request(http.MethodPut, path, "subject-a", planReplacement(plan, saved.Data)); rec.Code != http.StatusOK {
 		t.Fatalf("clear window: %d %s", rec.Code, rec.Body.String())
 	}
 	if rec = j.claim("subject-a", token); rec.Code != http.StatusNotFound {
@@ -444,8 +569,63 @@ func TestDepartureOverlapDeliveryRequiresPlanConsent(t *testing.T) {
 	}
 }
 
+func TestDepartureOverlapCoexistsWithChargingAndFencesBothDeliveryFamilies(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	j.enroll("subject-a", "https://push.example.invalid/device-a")
+	plan := testPlan(j.now)
+	plan.ServiceAppointment = &readiness.DepartureWindow{StartsAt: plan.DepartureAt, EndsAt: plan.DepartureAt.Add(time.Hour)}
+	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
+	var saved struct{ Data readiness.Plan }
+	if rec.Code != http.StatusCreated || json.Unmarshal(rec.Body.Bytes(), &saved) != nil {
+		t.Fatalf("create overlap with shortfall: %d %s", rec.Code, rec.Body)
+	}
+	j.process()
+	rows, err := j.readiness.ListCandidates(j.ctx, "subject-a", nil, j.now, 10)
+	if err != nil || len(rows) != 2 || rows[0].Decision.Kind != readiness.DecisionDepartureOverlap ||
+		rows[1].Decision.Kind != readiness.DecisionPlugIn {
+		t.Fatalf("in-app overlap suppressed independent charging advice: %+v, %v", rows, err)
+	}
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("expected one plug-in message despite the card-only overlap: %d", calls)
+	}
+	if rec := j.claim("subject-a", j.claimToken()); rec.Code != http.StatusOK {
+		t.Fatalf("a simultaneous overlap prevented the owner claiming the plug-in push: %d %s", rec.Code, rec.Body)
+	}
+	plan.DepartureOverlapPush = true
+	path := "/smart-charging/plans/" + strconv.FormatInt(saved.Data.ID, 10)
+	if rec = j.request(http.MethodPut, path, "subject-a", planReplacement(plan, saved.Data)); rec.Code != http.StatusOK {
+		t.Fatalf("opt in to later conflict push: %d %s", rec.Code, rec.Body)
+	}
+	j.advance(j.now.Add(59 * time.Minute))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("conflict push bypassed the shared cooldown: %d messages", calls)
+	}
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 3 {
+		t.Fatalf("plug-in occurrence identity prevented the distinct consented conflict: %d messages", calls)
+	}
+	token := j.claimToken()
+	if rec := j.claim("subject-b", token); rec.Code != http.StatusNotFound {
+		t.Fatalf("foreign subject claimed the conflict: %d", rec.Code)
+	}
+	if rec := j.claim("subject-a", token); rec.Code != http.StatusOK {
+		t.Fatalf("owner conflict claim: %d %s", rec.Code, rec.Body)
+	}
+	for _, direction := range []string{"down", "up"} {
+		applyReadinessMigration(t, j.db, "000307_smart_departure_conflict_delivery", direction)
+	}
+	j.advance(j.now.Add(time.Hour))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 3 {
+		t.Fatalf("migration round trip replayed an existing conflict: %d messages", calls)
+	}
+}
+
 func TestTripReviewStaysInAppUntilThereIsAnActionAtTheChosenCharger(t *testing.T) {
 	j := newChargingDeliveryJourney(t, nil)
+	createMeasuredChargingTables(t, j.db)
 	j.enroll("subject-a", "https://push.example.invalid/device-a")
 	j.enroll("subject-b", "https://push.example.invalid/device-b")
 	plannedCharge := 100.0
@@ -474,9 +654,21 @@ func TestTripReviewStaysInAppUntilThereIsAnActionAtTheChosenCharger(t *testing.T
 	plan.TripLegs.ReturnUseHighPct = 30
 	plan.TripLegs.DestinationChargePct = nil
 	path := "/smart-charging/plans/" + strconv.FormatInt(created.Data.ID, 10)
-	if rec := j.request(http.MethodPut, path, "subject-a", plan); rec.Code != http.StatusOK {
+	if rec := j.request(http.MethodPut, path, "subject-a", planReplacement(plan, created.Data)); rec.Code != http.StatusOK {
 		t.Fatalf("save trip that can benefit from plugging in: %d %s", rec.Code, rec.Body.String())
 	}
+	j.live.values["ChargeLimitSoc"] = &signal.Value{Raw: 80.0}
+	j.live.values["NominalFullPackEnergyKwh"] = &signal.Value{Raw: 80000.0}
+	seedMeasuredRemedySessions(j, 10)
+	j.advance(j.now)
+	j.process()
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("another site's charging history qualified a push: %d messages", calls)
+	}
+	if _, err := j.db.Pool.Exec(j.ctx, `UPDATE charging_sessions SET geofence_id=9`); err != nil {
+		t.Fatal(err)
+	}
+	j.advance(j.now.Add(time.Minute))
 	j.process()
 	messages := j.sender.messages()
 	if len(messages) != 3 || messages[2].endpoint != "https://push.example.invalid/device-a" {
@@ -486,11 +678,100 @@ func TestTripReviewStaysInAppUntilThereIsAnActionAtTheChosenCharger(t *testing.T
 	if rec := j.claim("subject-b", token); rec.Code != http.StatusNotFound {
 		t.Fatalf("foreign subject claimed a trip shortfall: %d", rec.Code)
 	}
+	j.live.values["ChargeLimitSoc"].Raw = 50.0
+	if rec := j.claim("subject-a", token); rec.Code != http.StatusNotFound {
+		t.Fatalf("the lower vehicle charge limit made the remedy infeasible: %d", rec.Code)
+	}
+	j.live.values["ChargeLimitSoc"].Raw = 80.0
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusOK {
 		t.Fatalf("owner could not claim a trip shortfall: %d %s", rec.Code, rec.Body.String())
 	}
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusNotFound {
 		t.Fatalf("trip shortfall token was replayed: %d", rec.Code)
+	}
+}
+
+func seedMeasuredRemedySessions(j *chargingDeliveryJourney, placeID int64) {
+	j.t.Helper()
+	if _, err := j.db.Pool.Exec(j.ctx, `
+		INSERT INTO charging_sessions
+		  (id, vehicle_id, geofence_id, started_at, ended_at, start_soc_pct, end_soc_pct,
+		   charger_type, cable_type, total_energy_added_wh, start_lat, start_lng)
+		SELECT n, 7, $1, $2::timestamptz - n*INTERVAL '1 day' - INTERVAL '4 hours',
+		       $2::timestamptz - n*INTERVAL '1 day', 25, 80, 'AC', 'NACS', 44000, 47.1, -122.1
+		FROM generate_series(1,2) n`, placeID, j.now); err != nil {
+		j.t.Fatal(err)
+	}
+	if _, err := j.db.Pool.Exec(j.ctx, `
+		INSERT INTO charging_telemetry
+		SELECT c.vehicle_id, c.id, point, 500 + 44000 * EXTRACT(EPOCH FROM (point-c.started_at)) /
+		  EXTRACT(EPOCH FROM (c.ended_at-c.started_at)), NULL
+		FROM charging_sessions c
+		CROSS JOIN LATERAL generate_series(c.started_at,c.ended_at,INTERVAL '5 minutes') point`); err != nil {
+		j.t.Fatal(err)
+	}
+}
+
+func TestSlowChargingPushRequiresQualifiedSiteAndActualAdjustmentHeadroom(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	createMeasuredChargingTables(t, j.db)
+	j.enroll("subject-a", "https://push.example.invalid/device-a")
+	plan := testPlan(j.now)
+	plan.DepartureAt = j.now.Add(6 * time.Hour)
+	rec := j.request(http.MethodPost, "/smart-charging/plans", "subject-a", plan)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create slow-charge plan: %d %s", rec.Code, rec.Body)
+	}
+	j.live.setChargeState("Charging")
+	j.live.values["BatteryLevel"].Raw = 35.0
+	for name, value := range map[string]float64{
+		"NominalFullPackEnergyKwh": 80000,
+		"ChargeLimitSoc":           80,
+		"ACChargingPower":          1440,
+		"ChargerVoltage":           240,
+		"ChargerPhases":            1,
+		"ChargeCurrentRequest":     6,
+		"ChargeCurrentRequestMax":  32,
+	} {
+		j.live.values[name] = &signal.Value{Raw: value}
+	}
+	for range 6 {
+		j.advance(j.now.Add(time.Minute))
+		j.process()
+	}
+	cards, err := j.readiness.ListCandidates(j.ctx, "subject-a", nil, j.now, 10)
+	if err != nil || len(cards) != 1 || cards[0].Decision.Kind != readiness.DecisionSlowCharging {
+		t.Fatalf("credible shortfall must stay available in app: %+v, %v", cards, err)
+	}
+	if calls, _ := j.sender.last(); calls != 1 {
+		t.Fatalf("vehicle's current request maximum alone allowed a push: %d messages", calls)
+	}
+	seedMeasuredRemedySessions(j, 9)
+	j.live.values["ChargeCurrentRequest"].Raw = 10.0
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 1 {
+		t.Fatalf("available power did not track the vehicle's request: %d messages", calls)
+	}
+	j.live.values["ChargeCurrentRequest"].Raw = 6.0
+	if _, err := j.db.Pool.Exec(j.ctx, `UPDATE charging_telemetry SET ac_charging_energy_in_wh=ac_charging_energy_in_wh*1.25`); err != nil {
+		t.Fatal(err)
+	}
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 1 {
+		t.Fatalf("gross input ceiling passed despite insufficient net charge at that ceiling: %d messages", calls)
+	}
+	if _, err := j.db.Pool.Exec(j.ctx, `UPDATE charging_telemetry SET ac_charging_energy_in_wh=ac_charging_energy_in_wh/1.25`); err != nil {
+		t.Fatal(err)
+	}
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	if calls, _ := j.sender.last(); calls != 2 {
+		t.Fatalf("corroborated actionable power adjustment did not send one push: %d messages", calls)
+	}
+	if rec := j.claim("subject-a", j.claimToken()); rec.Code != http.StatusOK {
+		t.Fatalf("current slow-charge claim: %d %s", rec.Code, rec.Body)
 	}
 }
 
@@ -608,7 +889,7 @@ func TestChangedDecisionCannotBeClaimedOrDispatched(t *testing.T) {
 	plan := j.savePlan()
 	j.process()
 	token := j.claimToken()
-	candidate, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID)
+	candidate, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID, readiness.DecisionPlugIn)
 	if err != nil || candidate == nil {
 		t.Fatalf("find original candidate: %+v, %v", candidate, err)
 	}
@@ -696,7 +977,7 @@ func TestPersonalChargingPoolExhaustionCancelsAndRecovers(t *testing.T) {
 			if err := j.delivery.SetChargingEnabled(j.ctx, "subject-a", deviceID, true); err != nil {
 				t.Fatal(err)
 			}
-			candidate, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID)
+			candidate, err := j.readiness.FindCandidate(j.ctx, "subject-a", plan.VehicleID, plan.ID, readiness.DecisionPlugIn)
 			if err != nil || candidate == nil {
 				t.Fatalf("find candidate: %+v, %v", candidate, err)
 			}

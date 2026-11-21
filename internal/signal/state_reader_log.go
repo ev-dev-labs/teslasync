@@ -497,8 +497,13 @@ func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields [
 	// Mirrors the pattern in State() but constrained to the requested
 	// signal set so the planner can pick the (vehicle_id, field, ts)
 	// composite index for a tight backward scan.
-	const seedQuery = `SELECT DISTINCT ON (field) field,
-       value_kind, str_value, bool_value, int_value, float_value, time_value
+	seedQuery := `SELECT DISTINCT ON (field) field,
+       value_kind, str_value, bool_value, int_value, float_value, time_value`
+	trackSeed := opts.TrackSourceTime && opts.IncludeInitialState
+	if trackSeed {
+		seedQuery += `, ts, source_emitted_at`
+	}
+	seedQuery += `
 FROM signal_log
 WHERE vehicle_id = $1 AND ts <= $2 AND field = ANY($3)
 ORDER BY field, ts DESC`
@@ -515,6 +520,8 @@ ORDER BY field, ts DESC`
 	}
 
 	seed := make(map[string]SignalValue, len(signals))
+	seedEvents := make(map[string]time.Time)
+	seedSources := make(map[string]time.Time)
 	for seedRows.Next() {
 		var fld string
 		var kind int16
@@ -523,7 +530,13 @@ ORDER BY field, ts DESC`
 		var iv *int64
 		var fv *float64
 		var tv *time.Time
-		if err := seedRows.Scan(&fld, &kind, &sv, &bv, &iv, &fv, &tv); err != nil {
+		var eventAt time.Time
+		var sourceAt *time.Time
+		dest := []any{&fld, &kind, &sv, &bv, &iv, &fv, &tv}
+		if trackSeed {
+			dest = append(dest, &eventAt, &sourceAt)
+		}
+		if err := seedRows.Scan(dest...); err != nil {
 			seedRows.Close()
 			r.log.Error().
 				Err(err).
@@ -534,6 +547,12 @@ ORDER BY field, ts DESC`
 			return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
 		}
 		seed[fld] = r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv)
+		if trackSeed {
+			seedEvents[fld] = eventAt
+			if sourceAt != nil {
+				seedSources[fld] = *sourceAt
+			}
+		}
 	}
 	seedErr := seedRows.Err()
 	// Close the seed connection BEFORE issuing the window query so a
@@ -558,9 +577,13 @@ ORDER BY field, ts DESC`
 	// Window query: every emission in (from, to] for the requested
 	// signals, ordered ascending so forwardFold can stream events in
 	// chronological order without an in-memory sort.
-	const windowQuery = `SELECT ts, field,
+	query := `SELECT ts, field,
        value_kind, str_value, bool_value, int_value, float_value, time_value,
-       received_at
+       received_at`
+	if opts.TrackSourceTime {
+		query += `, source_emitted_at`
+	}
+	query += `
 FROM signal_log
 WHERE vehicle_id = $1 AND ts > $2 AND ts <= $3 AND field = ANY($4)
 ORDER BY ts ASC
@@ -570,7 +593,7 @@ LIMIT NULLIF($5, 0)`
 	if rawLimit > 0 {
 		rawLimit++
 	}
-	windowRows, err := r.pool.Query(ctx, windowQuery, vehicleID, from, to, signals, rawLimit)
+	windowRows, err := r.pool.Query(ctx, query, vehicleID, from, to, signals, rawLimit)
 	if err != nil {
 		r.log.Error().
 			Err(err).
@@ -583,6 +606,10 @@ LIMIT NULLIF($5, 0)`
 	defer windowRows.Close()
 
 	folder := newTimelineFolder(seed, fields, opts.CollapseBy, opts.MaxRows)
+	if opts.IncludeInitialState {
+		folder.groupTs, folder.grouping = from, true
+		folder.observedAt, folder.sourceTime = seedEvents, seedSources
+	}
 	rawEvents := 0
 	for windowRows.Next() {
 		rawEvents++
@@ -597,8 +624,12 @@ LIMIT NULLIF($5, 0)`
 		var iv *int64
 		var fv *float64
 		var tv *time.Time
-		var receivedAt *time.Time
-		if err := windowRows.Scan(&eventTs, &fld, &kind, &sv, &bv, &iv, &fv, &tv, &receivedAt); err != nil {
+		var receivedAt, sourceTime *time.Time
+		dest := []any{&eventTs, &fld, &kind, &sv, &bv, &iv, &fv, &tv, &receivedAt}
+		if opts.TrackSourceTime {
+			dest = append(dest, &sourceTime)
+		}
+		if err := windowRows.Scan(dest...); err != nil {
 			r.log.Error().
 				Err(err).
 				Int64("vehicle_id", vehicleID).
@@ -617,6 +648,7 @@ LIMIT NULLIF($5, 0)`
 			Signal:     fld,
 			Value:      r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv),
 			ReceivedAt: ingest,
+			SourceTime: sourceTime,
 		}) {
 			break
 		}

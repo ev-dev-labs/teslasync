@@ -34,6 +34,19 @@ func TestEvaluateChargingFeasibilityUsesFreshOptimisticPower(t *testing.T) {
 		t.Fatalf("unexpected feasibility decision: %+v", decision)
 	}
 
+	values["ACChargingPower"].Raw = 20000.0
+	values["ChargeLimitSoc"] = &signal.Value{Raw: 49.0, Timestamp: now}
+	if capped := Evaluate(plan, values, now, atSite); capped.Reason != ReasonEligible ||
+		capped.ArrivalLowPct != 4 || capped.ArrivalHighPct != 14 {
+		t.Fatalf("forecast ignored the observed charging cap: %+v", capped)
+	}
+	values["ChargeLimitSoc"].Raw = 35.0
+	if capped := Evaluate(plan, values, now, atSite); capped.ArrivalHighPct != 5 {
+		t.Fatalf("a cap below current charge cannot drain the battery: %+v", capped)
+	}
+	delete(values, "ChargeLimitSoc")
+	values["ACChargingPower"].Raw = 1000.0
+
 	tests := []struct {
 		name   string
 		change func(*Plan, map[string]*signal.Value, *time.Time)
@@ -122,7 +135,7 @@ func TestEvaluateDepartureWindow(t *testing.T) {
 			case domain.OverlapSoftware:
 				plan.SoftwareInstall = window
 			}
-			decision := Evaluate(plan, map[string]*signal.Value{"Gear": &tt.gear}, now, nil)
+			decision := evaluateDepartureWindow(plan, map[string]*signal.Value{"Gear": &tt.gear}, now)
 			if tt.want == "" {
 				if decision.Kind == domain.DecisionDepartureOverlap {
 					t.Fatalf("unexpected departure conflict: %+v", decision)

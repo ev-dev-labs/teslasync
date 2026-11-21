@@ -153,6 +153,8 @@ func main() {
 	log.Info().Msg("database connected")
 	stopSmartCharging := startSmartCharging(ctx, cfg, db)
 	defer stopSmartCharging()
+	stopLocalPlanningChecks := startLocalPlanningChecks(ctx, db, cfg.Auth.ForwardAuthHeader)
+	defer stopLocalPlanningChecks()
 
 	// ── Outbound api_call_logs sink ──────────────────────────────────
 	// The notification worker fires HTTP webhooks (Discord/Slack/ntfy/

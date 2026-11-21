@@ -129,11 +129,12 @@ func (r *Repository) SkipTrafficToday(ctx context.Context, subject string, vehic
 	})
 }
 
-func (r *Repository) VerifyTrafficCheck(ctx context.Context, check port.TrafficCheck) error {
+func (r *Repository) VerifyTrafficCheck(ctx context.Context, check port.TrafficCheck, now time.Time) error {
 	var allowed bool
-	if err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 `+claimedTrafficScope+`)`,
+	if err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 `+claimedTrafficScope+`
+		AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $7))`,
 		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
-		check.SettingsUpdatedAt, check.Consent.DepartureAt).Scan(&allowed); err != nil {
+		check.SettingsUpdatedAt, check.Consent.DepartureAt, now).Scan(&allowed); err != nil {
 		return fmt.Errorf("recheck claimed commute consent: %w", err)
 	}
 	if !allowed {
@@ -158,15 +159,18 @@ func (r *Repository) RecordTrafficDecision(
 		decision.AlternativeS, decision.ObservedAt, decision.ExpiresAt, now,
 		decision.ArrivalDeadlineAt, decision.LatestDepartureAt, decision.RouteEnergyOnly,
 	}, energy[:]...)
+	args = append(args, decision.UsualRouteLabel, decision.AlternativeRouteLabel)
 	tag, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO smart_commute_traffic_decisions
 		  (consent_id, departure_at, settings_updated_at, usual_s, alternative_s, observed_at, expires_at,
 		   arrival_deadline_at, latest_departure_at, route_energy_only, energy_expires_at, energy_outside_c,
 		   energy_fast_eta_s, energy_fast_count, energy_fast_low_wh, energy_fast_median_wh, energy_fast_high_wh,
-		   energy_saving_eta_s, energy_saving_count, energy_saving_low_wh, energy_saving_median_wh, energy_saving_high_wh)
+		   energy_saving_eta_s, energy_saving_count, energy_saving_low_wh, energy_saving_median_wh, energy_saving_high_wh,
+		   usual_route_label, alternative_route_label)
 		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14,
-		       $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+		       $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NULLIF($27, ''), NULLIF($28, '')
 		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($15::timestamptz IS NULL OR c.compare_route_energy)
+		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $11)
 		ON CONFLICT (consent_id) DO UPDATE SET
 		    departure_at = EXCLUDED.departure_at, settings_updated_at = EXCLUDED.settings_updated_at,
 		    usual_s = EXCLUDED.usual_s, alternative_s = EXCLUDED.alternative_s,
@@ -179,7 +183,8 @@ func (r *Repository) RecordTrafficDecision(
 		    energy_fast_high_wh = EXCLUDED.energy_fast_high_wh,
 		    energy_saving_eta_s = EXCLUDED.energy_saving_eta_s, energy_saving_count = EXCLUDED.energy_saving_count,
 		    energy_saving_low_wh = EXCLUDED.energy_saving_low_wh, energy_saving_median_wh = EXCLUDED.energy_saving_median_wh,
-		    energy_saving_high_wh = EXCLUDED.energy_saving_high_wh
+		    energy_saving_high_wh = EXCLUDED.energy_saving_high_wh,
+		    usual_route_label = EXCLUDED.usual_route_label, alternative_route_label = EXCLUDED.alternative_route_label
 		WHERE smart_commute_traffic_decisions.departure_at < EXCLUDED.departure_at`, args...)
 	if err != nil {
 		return false, fmt.Errorf("persist claimed commute comparison: %w", err)
@@ -197,12 +202,15 @@ func (r *Repository) ListTrafficDecisions(
 		       COALESCE(d.energy_outside_c, 0), COALESCE(d.energy_fast_eta_s, 0), COALESCE(d.energy_fast_count, 0),
 		       COALESCE(d.energy_fast_low_wh, 0), COALESCE(d.energy_fast_median_wh, 0), COALESCE(d.energy_fast_high_wh, 0),
 		       COALESCE(d.energy_saving_eta_s, 0), COALESCE(d.energy_saving_count, 0), COALESCE(d.energy_saving_low_wh, 0),
-		       COALESCE(d.energy_saving_median_wh, 0), COALESCE(d.energy_saving_high_wh, 0)
+		       COALESCE(d.energy_saving_median_wh, 0), 		       COALESCE(d.energy_saving_high_wh, 0), COALESCE(a.outcome, ''),
+		       COALESCE(d.usual_route_label, ''), COALESCE(d.alternative_route_label, '')
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
+		LEFT JOIN smart_commute_navigation_attempts a ON a.routine_id = r.id AND a.departure_at = d.departure_at
 		WHERE r.subject = $1 AND ($2::bigint IS NULL OR r.vehicle_id = $2)
 		  AND d.expires_at > $3 AND NOT o.skipped
+		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $3)
 		ORDER BY d.departure_at, r.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list current private commute comparisons: %w", err)
@@ -215,7 +223,8 @@ func (r *Repository) ListTrafficDecisions(
 			&item.UsualS, &item.AlternativeS, &item.ObservedAt, &item.ExpiresAt, &item.Origin.Latitude, &item.Origin.Longitude,
 			&item.ArrivalDeadlineAt, &item.LatestDepartureAt, &item.RouteEnergyOnly, &energyExpiry, &energy.OutsideC,
 			&energy.Fastest.ETAS, &energy.Fastest.DriveCount, &energy.Fastest.LowWh, &energy.Fastest.MedianWh, &energy.Fastest.HighWh,
-			&energy.Saving.ETAS, &energy.Saving.DriveCount, &energy.Saving.LowWh, &energy.Saving.MedianWh, &energy.Saving.HighWh)
+			&energy.Saving.ETAS, &energy.Saving.DriveCount, &energy.Saving.LowWh, &energy.Saving.MedianWh, &energy.Saving.HighWh,
+			&item.NavigationOutcome, &item.UsualRouteLabel, &item.AlternativeRouteLabel)
 		if err == nil && energyExpiry != nil {
 			energy.ExpiresAt = *energyExpiry
 			item.RouteEnergy = &energy

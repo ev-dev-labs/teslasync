@@ -138,6 +138,210 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_window_rain",
+		Description: "Notification worker checks consented outdoor parks and delivers a private window rain review",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/window_rain.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 4,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/window_rain.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_parked_closure",
+		Description: "Notification worker checks fresh post-park closure evidence and delivers a private review",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/parked_closure.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 4,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/parked_closure.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_parked_unlock",
+		Description: "Notification worker checks fresh post-park lock evidence for a consented place and delivers a private review",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/parked_unlock.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 4,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/parked_unlock.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_weekly_drive_efficiency",
+		Description: "Notification worker publishes measured weekly change on matched drives",
+		GlobPatterns: []string{
+			"cmd/notification-worker/weekly_drive_efficiency.go",
+			"internal/handler/v1/driveefficiency/handler.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/weekly_drive_efficiency.go",
+			"internal/handler/v1/driveefficiency/handler.go",
+		},
+	},
+	{
+		Name:        "smart_subscription_renewal",
+		Description: "Notification worker publishes private reviews before an explicitly recorded renewal date",
+		GlobPatterns: []string{
+			"cmd/notification-worker/subscription_renewal.go",
+			"internal/handler/v1/ownershipintel/subscription_renewal.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/subscription_renewal.go",
+			"internal/handler/v1/ownershipintel/subscription_renewal.go",
+		},
+	},
+	{
+		Name:        "smart_trip_packet",
+		Description: "Notification worker prepares private business trip packets from confirmed purpose and receipt references",
+		GlobPatterns: []string{
+			"cmd/notification-worker/trip_packet.go",
+			"internal/handler/v1/ownershipintel/trip_packet.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/trip_packet.go",
+			"internal/handler/v1/ownershipintel/trip_packet.go",
+		},
+	},
+	{
+		Name:        "smart_mileage_term_review",
+		Description: "Notification worker publishes private monthly allowance estimates from local drive odometers",
+		GlobPatterns: []string{
+			"cmd/notification-worker/mileage_term_review.go",
+			"internal/handler/v1/ownershipintel/mileage_term_review.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/mileage_term_review.go",
+			"internal/handler/v1/ownershipintel/mileage_term_review.go",
+		},
+	},
+	{
+		Name:        "smart_monthly_tariff_review",
+		Description: "Notification worker publishes private unchanged-schedule tariff replays from local station bills",
+		GlobPatterns: []string{
+			"cmd/notification-worker/monthly_tariff_review.go",
+			"internal/handler/v1/ownershipintel/monthly_tariff_review.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/monthly_tariff_review.go",
+			"internal/handler/v1/ownershipintel/monthly_tariff_review.go",
+		},
+	},
+	{
+		Name:        "smart_charging_cost_digest",
+		Description: "Notification worker publishes private monthly cost reviews from qualified local bills and driving records",
+		GlobPatterns: []string{
+			"cmd/notification-worker/charging_cost_digest.go",
+			"internal/handler/v1/ownershipintel/charging_cost_digest.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"cmd/notification-worker/charging_cost_digest.go",
+			"internal/handler/v1/ownershipintel/charging_cost_digest.go",
+		},
+	},
+	{
+		Name:        "smart_favorite_digest",
+		Description: "Notification worker publishes private weekly shortlists from qualified repeated vehicle playback",
+		GlobPatterns: []string{
+			"cmd/notification-worker/favorite_digest.go",
+			"internal/handler/v1/smartmedia/favorites.go",
+			"internal/database/smartmedia/favorites.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/favorite_digest.go",
+			"internal/handler/v1/smartmedia/favorites.go",
+			"internal/database/smartmedia/favorites.go",
+		},
+	},
+	{
+		Name:        "smart_capacity_digest",
+		Description: "Notification worker publishes private monthly estimates from matched battery charge evidence",
+		GlobPatterns: []string{
+			"cmd/notification-worker/capacity_digest.go",
+			"internal/handler/v1/smartreadiness/capacity_trend.go",
+			"internal/signal/state_reader_log.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/capacity_digest.go",
+			"internal/handler/v1/smartreadiness/capacity_trend.go",
+			"internal/signal/state_reader_log.go",
+		},
+	},
+	{
+		Name:        "smart_overnight_drain",
+		Description: "Notification worker evaluates consented local nights and publishes private morning reviews",
+		GlobPatterns: []string{
+			"cmd/notification-worker/overnight_drain.go",
+			"internal/handler/v1/smartreadiness/overnight_drain.go",
+			"internal/signal/state_reader_log.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/overnight_drain.go",
+			"internal/handler/v1/smartreadiness/overnight_drain.go",
+			"internal/signal/state_reader_log.go",
+		},
+	},
+	{
+		Name:        "smart_park_reserve",
+		Description: "Notification worker evaluates consented parked reserve and rechecks private delivery",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/park_reserve.go",
+			"internal/signal/state_reader_log.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/park_reserve.go",
+			"internal/signal/state_reader_log.go",
+		},
+	},
+	{
+		Name:        "smart_cabin_prep",
+		Description: "Notification worker evaluates consented cabin prep and rechecks private delivery",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/cabin_prep.go",
+			"internal/signal/state_reader_log.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/cabin_prep.go",
+			"internal/signal/state_reader_log.go",
+		},
+	},
+	{
 		Name:        "smart_public_charging_fee",
 		Description: "Notification worker evaluates reviewed public charging fee terms",
 		GlobPatterns: []string{
@@ -162,6 +366,66 @@ var flows = []flow{
 		RequiredFiles: []string{
 			"cmd/notification-worker/smart_charging.go",
 			"internal/handler/v1/smartreadiness/solar_charging.go",
+		},
+	},
+	{
+		Name:        "smart_warranty_distance",
+		Description: "Notification worker evaluates private, elected mileage reminders",
+		GlobPatterns: []string{
+			"cmd/notification-worker/warranty_reminders.go",
+			"internal/handler/v1/ownershipintel/warranty_reminders.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/warranty_reminders.go",
+			"internal/handler/v1/ownershipintel/warranty_reminders.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_trip_maintenance",
+		Description: "Notification worker checks private, documented trip maintenance intervals",
+		GlobPatterns: []string{
+			"cmd/notification-worker/trip_maintenance.go",
+			"internal/handler/v1/smartreadiness/trip_maintenance.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/trip_maintenance.go",
+			"internal/handler/v1/smartreadiness/trip_maintenance.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_climate_schedule",
+		Description: "Notification worker reviews explicitly consented scheduled climate outcomes",
+		GlobPatterns: []string{
+			"cmd/notification-worker/climate_schedule.go",
+			"internal/handler/v1/smartreadiness/climate_schedule.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/climate_schedule.go",
+			"internal/handler/v1/smartreadiness/climate_schedule.go",
+			"internal/database/database.go",
+		},
+	},
+	{
+		Name:        "smart_recall_watch",
+		Description: "Notification worker checks the public model-year recall catalog with private consent",
+		GlobPatterns: []string{
+			"cmd/notification-worker/recall_watch.go",
+			"internal/handler/v1/smartreadiness/recall_watch.go",
+			"internal/integrations/nhtsa/client.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"cmd/notification-worker/recall_watch.go",
+			"internal/handler/v1/smartreadiness/recall_watch.go",
 		},
 	},
 	{

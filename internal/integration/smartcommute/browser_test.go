@@ -17,6 +17,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	commutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 )
 
@@ -47,6 +49,7 @@ func TestPrivateCommuteBrowserJourney(t *testing.T) {
 func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 	requireCommuteBrowser(t)
 	t.Run("compare", func(t *testing.T) { runTrafficBrowserJourney(t, "compare") })
+	t.Run("wake_timeout", func(t *testing.T) { runTrafficBrowserJourney(t, "wake_timeout") })
 	t.Run("arrival_deadline", func(t *testing.T) { runTrafficBrowserJourney(t, "arrival_deadline") })
 	t.Run("route_energy", func(t *testing.T) { runTrafficBrowserJourney(t, "route_energy") })
 }
@@ -54,6 +57,12 @@ func TestPrivateCommuteTrafficBrowserJourney(t *testing.T) {
 func runTrafficBrowserJourney(t *testing.T, mode string) {
 	t.Helper()
 	withDeadline, withEnergy := mode == "arrival_deadline", mode == "route_energy"
+	withNavigation := !withDeadline && !withEnergy
+	navigationOptions := navigationFleetOptions{initialState: "online", replyStatus: http.StatusOK}
+	if mode == "wake_timeout" {
+		navigationOptions = navigationFleetOptions{initialState: "asleep", replyStatus: http.StatusRequestTimeout}
+	}
+	fleet := newNavigationFleetFixture(t, navigationOptions)
 	live := &energyLiveFixture{trafficLiveFixture: trafficLiveFixture{gear: "P"}}
 	var outbound atomic.Int64
 	var personalDelivery *smartdeliverysvc.Service
@@ -84,12 +93,16 @@ func runTrafficBrowserJourney(t *testing.T, mode string) {
 		}
 		outbound.Add(1)
 		return domain.TrafficComparison{
-			Usual:                 domain.TrafficEstimate{DurationS: usualS, FlowUpdatedAt: live.now.Add(-time.Minute)},
-			Alternative:           domain.TrafficEstimate{DurationS: alternativeS, FlowUpdatedAt: live.now.Add(-time.Minute)},
+			Usual:                 domain.TrafficEstimate{DurationS: usualS, FlowUpdatedAt: live.now.Add(-time.Minute), RouteLabel: "Synthetic Parkway"},
+			Alternative:           domain.TrafficEstimate{DurationS: alternativeS, FlowUpdatedAt: live.now.Add(-time.Minute), RouteLabel: "Synthetic Bypass"},
 			AlternativesQualified: query.RequireOfferedCoverage,
 		}, nil
 	})
-	f := newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
+	f := newFixtureWithServices(t, nil, func(repository *commutedb.Repository) smartcommutesvc.Option {
+		return smartcommutesvc.WithNavigation(repository, fleet.executor, func(ctx context.Context) bool {
+			return withNavigation && fleet.executor.Client.NavigationAllowed(ctx)
+		})
+	}, smartcommutesvc.WithTrafficLiveReader(live),
 		smartcommutesvc.WithTrafficEvaluator(source, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil),
 		smartcommutesvc.WithTrafficNotifier(func(ctx context.Context, subject string, consentID, routineID int64, departure time.Time) error {
 			return personalDelivery.NotifyCommute(ctx, subject, consentID, routineID, departure)
@@ -131,12 +144,32 @@ func runTrafficBrowserJourney(t *testing.T, mode string) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"drive": drive, "now": f.now, "outbound": outbound.Load(), "pushes": count, "latest_push": payload,
-				"mode": mode,
+				"mode":  mode,
+				"tesla": map[string]int32{"checks": fleet.checks.Load(), "wakes": fleet.wakes.Load(), "sends": fleet.sends.Load()},
 			})
 		case r.URL.Path == "/__fixture/traffic" && r.Method == http.MethodPost:
 			if _, err := f.commute.ProcessTrafficChecks(r.Context(), 5); err != nil {
 				t.Error(err)
 				http.Error(w, "synthetic traffic evaluation failed", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.URL.Path == "/__fixture/traffic/observed-departure" && r.Method == http.MethodPost:
+			var err error
+			if mode == "compare" {
+				var id int64
+				err = f.db.Pool.QueryRow(r.Context(), `
+					INSERT INTO drives (vehicle_id, started_at, ended_at) VALUES (42, $1, $2) RETURNING id`,
+					f.now.Add(-time.Hour), f.now.Add(-30*time.Second)).Scan(&id)
+				if err == nil {
+					err = drivedb.NewDriveRepo(f.db).ResumeForMerge(r.Context(), id)
+				}
+			} else {
+				_, err = f.db.Pool.Exec(r.Context(), `INSERT INTO drives (vehicle_id, started_at) VALUES (42, $1)`, f.now)
+			}
+			if err != nil {
+				t.Error(err)
+				http.Error(w, "could not record synthetic departure", http.StatusInternalServerError)
 				return
 			}
 			w.WriteHeader(http.StatusNoContent)
@@ -154,6 +187,9 @@ func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, nam
 		t.Fatal(err)
 	}
 	distRoot := filepath.Join(webRoot, "dist")
+	if dist := os.Getenv("TESLASYNC_SMART_COMMUTE_BROWSER_DIST"); dist != "" {
+		distRoot = dist
+	}
 	index := filepath.Join(distRoot, "index.html")
 	if _, err := os.Stat(index); err != nil {
 		t.Fatalf("build the frontend before running the browser journey: %v", err)
@@ -187,7 +223,7 @@ func runCommuteBrowserSpec(t *testing.T, f *fixture, synthetic http.Handler, nam
 	defer cancel()
 	args := []string{
 		filepath.Join("node_modules", "@playwright", "test", "cli.js"), "test",
-		filepath.Join("e2e", name),
+		filepath.ToSlash(filepath.Join("e2e", name)),
 		"--project=chromium-smoke", "--workers=1", "--retries=0", "--reporter=line",
 		"--output=" + filepath.Join(os.TempDir(), "teslasync-"+name+"-results"),
 	}

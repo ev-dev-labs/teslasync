@@ -37,6 +37,7 @@ type service interface {
 	SaveTrafficConsent(context.Context, string, domain.TrafficConsentInput) error
 	DeleteTrafficConsent(context.Context, string, int64, int64) error
 	SkipTrafficToday(context.Context, string, int64, int64) error
+	SendNavigation(context.Context, string, int64, domain.NavigationRequest) (domain.NavigationResult, error)
 }
 
 type Handler struct {
@@ -67,6 +68,7 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Put("/routines/{routineID}/traffic-consent", h.SaveTrafficConsent)
 		r.With(writeLimit).Delete("/routines/{routineID}/traffic-consent", h.DeleteTrafficConsent)
 		r.With(writeLimit).Post("/routines/{routineID}/traffic-skip", h.SkipTrafficToday)
+		r.With(writeLimit).Post("/routines/{routineID}/navigation", h.SendNavigation)
 	})
 }
 

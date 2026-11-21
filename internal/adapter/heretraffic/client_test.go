@@ -97,6 +97,7 @@ func TestCompareHEREWireContract(t *testing.T) {
 				t.Fatalf("compare error = %v, calls = %d; want %v, %d", err, calls.Load(), tt.want, tt.wantCalls)
 			}
 			if tt.want == nil && (comparison.Usual.DurationS != 2580 || comparison.Alternative.DurationS != 1740 ||
+				comparison.Usual.RouteLabel != "Synthetic Parkway, SR 1001" || comparison.Alternative.RouteLabel != "Synthetic Bypass, SR 1002" ||
 				len(comparison.OfferedRoutes) != 0 ||
 				!comparison.Usual.FlowUpdatedAt.Equal(now.Add(-time.Minute)) ||
 				!comparison.Alternative.FlowUpdatedAt.Equal(now.Add(-time.Minute))) {
@@ -205,18 +206,23 @@ func fixtureQuery(now time.Time) smartcommute.TrafficQuery {
 }
 
 func routeFixture(id, durationS int) string {
-	return fmt.Sprintf(`{"sections":[{
+	name := "Synthetic Parkway"
+	if id != 1001 {
+		name = "Synthetic Bypass"
+	}
+	return fmt.Sprintf(`{"routeLabels":[{"label_type":"Name","name":{"value":%q,"language":"en"}},
+		{"label_type":"RouteNumber","name":{"value":"SR %d"}}],"sections":[{
 		"type":"vehicle","polyline":"BG-6kmkDw1zwZqqG6xmBsgL5rGmwFgqZ_oEw1d",
 		"summary":{"duration":%d,"length":10000},
 		"refReplacements":{"0":"hrn:here:data::olp-here:rib-2:3217:","1":"here:cm:segment"},
 		"spans":[{"offset":0,"length":10000,"segmentRef":"$0:377894451:$1:%d#+0..1"}]
-	}]}`, durationS, id)
+	}]}`, name, id, durationS, id)
 }
 
 func assertRoutingRequest(t *testing.T, r *http.Request) {
 	t.Helper()
 	params := r.URL.Query()
-	if params.Get("departureTime") != "2026-04-07T12:00:00Z" || params.Get("return") != "polyline,summary" ||
+	if params.Get("departureTime") != "2026-04-07T12:00:00Z" || params.Get("return") != "polyline,summary,routeLabels" ||
 		params.Get("spans") != "segmentRef,length" || params.Get("transportMode") != "car" {
 		t.Errorf("unexpected routing contract for %s", r.URL.Path)
 	}

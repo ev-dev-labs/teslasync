@@ -13,6 +13,7 @@ import (
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -104,6 +105,9 @@ func TestAutomationRuntimeDispatchesTypedTriggerConditionAndAction(t *testing.T)
 	}
 	if history.created == nil || history.created.TriggerType != models.AutomationStepKindTriggerSchedule {
 		t.Fatalf("history trigger = %#v", history.created)
+	}
+	if history.climate != nil {
+		t.Fatal("direct evaluation with a schedule snapshot must not record a scheduler receipt")
 	}
 }
 
@@ -211,6 +215,7 @@ func (s *runtimeAutomationStore) IncrementExecution(context.Context, int64, bool
 
 type runtimeHistoryStore struct {
 	created *automationmodel.AutomationHistory
+	climate *automationmodel.ScheduledClimateReceipt
 }
 
 func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.AutomationHistory) error {
@@ -221,7 +226,8 @@ func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.Autom
 	return nil
 }
 
-func (s *runtimeHistoryStore) Complete(context.Context, int64, string, *string, int) error {
+func (s *runtimeHistoryStore) Complete(_ context.Context, _ int64, _ string, _ *string, _ int, _ time.Time, climate *automationmodel.ScheduledClimateReceipt) error {
+	s.climate = climate
 	return nil
 }
 
@@ -253,4 +259,62 @@ func (r *typedActionRecorder) ExecuteTyped(_ context.Context, _ *int64, payload 
 	}
 	r.typedCalled = true
 	return json.RawMessage(`{"ok":true}`), nil
+}
+
+func TestScheduledClimateReceiptRequiresExactAcceptedOutcomeAndCurrentSchedule(t *testing.T) {
+	target := int64(7)
+	revision := time.Date(2026, 11, 3, 0, 0, 0, 0, time.UTC)
+	fired := trigger.ScheduleFire{AutomationID: 1, Revision: revision, FiredAt: revision.Add(8 * time.Hour),
+		Trigger: models.AutomationStepTriggerSchedule{StepID: 2, CronExpr: "0 8 * * 2", Timezone: "UTC"}}
+
+	type scenario struct {
+		name   string
+		change func(*models.AutomationFull, *trigger.ScheduleFire, *action.ActionResult)
+	}
+	for _, tt := range []scenario{
+		{name: "accepted for this vehicle"},
+		{name: "accepted only for another vehicle", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Output = json.RawMessage(`[{"vehicle_id":15,"command":"hvac_on","success":true}]`)
+		}},
+		{name: "ambiguous duplicate vehicle", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Output = json.RawMessage(`[{"vehicle_id":7,"command":"hvac_on","success":true},{"vehicle_id":7,"command":"hvac_on","success":true}]`)
+		}},
+		{name: "command timed out", change: func(_ *models.AutomationFull, _ *trigger.ScheduleFire, r *action.ActionResult) {
+			r.Success, r.Error = false, "deadline exceeded"
+		}},
+		{name: "edited since registration", change: func(a *models.AutomationFull, _ *trigger.ScheduleFire, _ *action.ActionResult) {
+			a.UpdatedAt = a.UpdatedAt.Add(time.Minute)
+		}},
+		{name: "different typed schedule step", change: func(_ *models.AutomationFull, newer *trigger.ScheduleFire, _ *action.ActionResult) {
+			newer.Trigger.StepID++
+		}},
+		{name: "manual invocation", change: func(_ *models.AutomationFull, newer *trigger.ScheduleFire, _ *action.ActionResult) {
+			*newer = trigger.ScheduleFire{}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			schedule := fired.Trigger
+			rule := models.AutomationFull{
+				Automation: models.Automation{ID: 1, VehicleID: &target, UpdatedAt: revision},
+				Triggers:   []any{&schedule},
+				Actions:    []any{&models.AutomationAction{CommandName: "hvac_on"}},
+			}
+			result := action.ActionResult{ActionType: "command", Success: true,
+				Output: json.RawMessage(`[{"vehicle_id":15,"command":"hvac_on","success":true},{"vehicle_id":7,"command":"hvac_on","success":true}]`)}
+			firing := fired
+			if tt.change != nil {
+				tt.change(&rule, &firing, &result)
+			}
+			got := scheduledClimateReceipt(&rule, firing, []action.ActionResult{result})
+			if tt.change != nil {
+				if got != nil {
+					t.Fatalf("unattributable result was recorded: %+v", got)
+				}
+				return
+			}
+			if got == nil || got.VehicleID != target || !got.FiredAt.Equal(fired.FiredAt) || !got.Revision.Equal(revision) {
+				t.Fatalf("matched outcome not recorded for exact target: %+v", got)
+			}
+		})
+	}
 }

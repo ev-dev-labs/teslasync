@@ -27,8 +27,15 @@ func createPublicFeeEvidenceTables(t *testing.T, db *database.DB) {
 	if _, err := db.Pool.Exec(t.Context(), `
 		CREATE TABLE charging_sessions (
 		  id bigint PRIMARY KEY, vehicle_id bigint NOT NULL, geofence_id bigint,
-		  started_at timestamptz NOT NULL, ended_at timestamptz);
-		CREATE TABLE signal_log (
+		  started_at timestamptz NOT NULL, ended_at timestamptz);`); err != nil {
+		t.Fatal(err)
+	}
+	createPublicFeeSignals(t, db)
+}
+
+func createPublicFeeSignals(t *testing.T, db *database.DB) {
+	t.Helper()
+	if _, err := db.Pool.Exec(t.Context(), `CREATE TABLE signal_log (
 		  ts timestamptz NOT NULL, vehicle_id bigint NOT NULL, field text NOT NULL,
 		  value_kind smallint NOT NULL, int_value bigint, float_value double precision,
 		  PRIMARY KEY (vehicle_id, ts, field));`); err != nil {

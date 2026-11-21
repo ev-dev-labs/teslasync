@@ -53,6 +53,7 @@ func (p smartChargingProvider) Recommendations(
 		var scheduledStartAt *time.Time
 		var scheduledPowerCeilingW *float64
 		if overlap := row.Decision.DepartureOverlap; overlap != nil {
+			sourceKey = fmt.Sprintf("charging_plan_overlap:%d", row.Plan.ID)
 			title = "Service appointment overlaps your planned departure"
 			rationale = "The service window you entered includes the saved departure."
 			basis = []string{"User-entered service appointment and departure", "Fresh parked gear observation"}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -91,8 +92,8 @@ func (s *Service) CreateInvoice(
 	if request.PeriodStart.IsZero() || !request.PeriodEnd.After(request.PeriodStart) {
 		return nil, fmt.Errorf("%w: period_end must be after period_start", ErrInvalidInput)
 	}
-	if !requireNonNeg(request.BilledTotalMinor) {
-		return nil, fmt.Errorf("%w: billed_total_minor must not be negative", ErrInvalidInput)
+	if request.BilledTotalMinor == nil || !requireNonNeg(*request.BilledTotalMinor) {
+		return nil, fmt.Errorf("%w: billed_total_minor is required and must not be negative", ErrInvalidInput)
 	}
 	if len(request.Lines) == 0 {
 		return nil, fmt.Errorf("%w: at least one invoice line is required", ErrInvalidInput)
@@ -100,8 +101,18 @@ func (s *Service) CreateInvoice(
 	if len(request.Lines) > 500 {
 		return nil, fmt.Errorf("%w: an invoice cannot exceed 500 lines", ErrInvalidInput)
 	}
-	lines := make([]port.InvoiceLineRecord, 0, len(request.Lines))
+	billed := make([]domain.InvoiceLine, 0, len(request.Lines))
 	for index, line := range request.Lines {
+		if line.BilledTotalMinor == nil {
+			return nil, fmt.Errorf("%w: line %d is missing billed_total_minor", ErrInvalidInput, index+1)
+		}
+		billed = append(billed, invoiceLineFromInput(line))
+	}
+	if err := validateVarianceImport(subject, request, billed); err != nil {
+		return nil, err
+	}
+	lines := make([]port.InvoiceLineRecord, 0, len(request.Lines))
+	for index, line := range billed {
 		if line.OccurredAt.IsZero() {
 			return nil, fmt.Errorf("%w: line %d is missing occurred_at", ErrInvalidInput, index+1)
 		}
@@ -129,6 +140,8 @@ func (s *Service) CreateInvoice(
 			BilledIdleMinor:   line.BilledIdleMinor,
 			BilledTaxMinor:    line.BilledTaxMinor,
 			BilledTotalMinor:  line.BilledTotalMinor,
+			AmountCoverage:    line.AmountCoverage,
+			VarianceEvidence:  line.VarianceEvidence,
 		})
 	}
 	record, err := s.durable.CreateInvoice(ctx, subject, port.InvoiceRecord{
@@ -138,15 +151,36 @@ func (s *Service) CreateInvoice(
 		Currency:         currency,
 		PeriodStart:      request.PeriodStart.UTC(),
 		PeriodEnd:        request.PeriodEnd.UTC(),
-		BilledTotalMinor: request.BilledTotalMinor,
+		BilledTotalMinor: *request.BilledTotalMinor,
 		Status:           string(domain.InvoiceOpen),
 		Lines:            lines,
+		VarianceOptions:  request.VarianceOptions,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create invoice: %w", err)
 	}
 	invoice := invoiceToDomain(*record)
 	return &invoice, nil
+}
+
+func invoiceLineFromInput(in domain.InvoiceLineInput) domain.InvoiceLine {
+	line := domain.InvoiceLine{
+		LineRef: in.LineRef, OccurredAt: in.OccurredAt, Location: in.Location,
+		BilledEnergyWh: in.BilledEnergyWh, BilledTotalMinor: *in.BilledTotalMinor, VarianceEvidence: in.VarianceEvidence,
+	}
+	if in.BilledEnergyMinor != nil {
+		line.BilledEnergyMinor = *in.BilledEnergyMinor
+		line.AmountCoverage |= domain.InvoiceEnergyAmountKnown
+	}
+	if in.BilledIdleMinor != nil {
+		line.BilledIdleMinor = *in.BilledIdleMinor
+		line.AmountCoverage |= domain.InvoiceIdleAmountKnown
+	}
+	if in.BilledTaxMinor != nil {
+		line.BilledTaxMinor = *in.BilledTaxMinor
+		line.AmountCoverage |= domain.InvoiceTaxAmountKnown
+	}
+	return line
 }
 
 // DeleteInvoice removes a stored invoice and cascades its lines.
@@ -165,7 +199,7 @@ func (s *Service) DeleteInvoice(ctx context.Context, subject string, id int64) e
 func (s *Service) ReconcileInvoice(
 	ctx context.Context,
 	subject string,
-	invoiceID int64,
+	invoiceID, vehicleID int64,
 ) (*domain.ReconciliationReport, error) {
 	if invoiceID <= 0 {
 		return nil, fmt.Errorf("%w: invoice id must be positive", ErrInvalidInput)
@@ -174,11 +208,11 @@ func (s *Service) ReconcileInvoice(
 	if err != nil {
 		return nil, fmt.Errorf("get invoice: %w", err)
 	}
-	from := record.PeriodStart.Add(-2 * time.Hour)
-	to := record.PeriodEnd.Add(2 * time.Hour)
-	charges, err := s.source.ListCharges(ctx, record.VehicleID, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("list charging sessions: %w", err)
+	if vehicleID != 0 && record.VehicleID != vehicleID {
+		return nil, port.ErrNotFound
+	}
+	if (record.VarianceOptions != nil || record.ReviewCleared) && vehicleID == 0 {
+		return nil, fmt.Errorf("%w: vehicle_id is required for a private variance review", ErrInvalidInput)
 	}
 	disputes, err := s.durable.ListDisputes(ctx, subject, invoiceID)
 	if err != nil {
@@ -194,11 +228,47 @@ func (s *Service) ReconcileInvoice(
 		Evidence:        []domain.Evidence{},
 	}
 
-	medianRate := medianUnitRate(record.Lines)
 	consumed := map[int64]int{}
 	lines := append([]port.InvoiceLineRecord(nil), record.Lines...)
 	sort.SliceStable(lines, func(i, j int) bool { return lines[i].OccurredAt.Before(lines[j].OccurredAt) })
+	if record.ReviewCleared {
+		report.VarianceReview = &domain.InvoiceVarianceReview{State: "off", Findings: []domain.InvoiceVarianceFinding{}}
+		report.Quality = quality(domain.QualityInsufficient, 0, nil,
+			domain.Window{From: record.PeriodStart, To: record.PeriodEnd})
+		for _, line := range lines {
+			report.Lines = append(report.Lines, domain.ReconciledLine{
+				Line: invoiceLineToDomain(line), MatchState: domain.MatchUnmatched, VarianceReasons: []string{},
+			})
+			report.BilledTotalMinor += line.BilledTotalMinor
+			report.BilledEnergyWh += line.BilledEnergyWh
+		}
+		return report, nil
+	}
+	charges, err := invoiceCharges(ctx, s.source, *record)
+	if err != nil {
+		return nil, err
+	}
+	if record.VarianceOptions != nil {
+		report.VarianceReview, report.Lines = reviewInvoiceVariance(*record, lines, charges, len(disputes) > 0, s.now())
+		report.MatchedLineCount = report.VarianceReview.MatchedLines
+		report.UnmatchedLineCount = len(lines) - report.MatchedLineCount
+		for _, line := range lines {
+			report.BilledTotalMinor += line.BilledTotalMinor
+			report.BilledEnergyWh += line.BilledEnergyWh
+		}
+		coverage := float64(report.MatchedLineCount) / float64(maxInt(len(lines), 1)) * 100
+		report.Quality = quality(gradeQuality(report.MatchedLineCount, 1, maxInt(len(lines)*8/10, 1)), len(lines), &coverage,
+			domain.Window{From: record.PeriodStart, To: record.PeriodEnd, Days: int(record.PeriodEnd.Sub(record.PeriodStart).Hours() / 24)})
+		report.DisputePacketDigest, err = privateDisputeDigest(report.Invoice, report.Lines, report.VarianceReview)
+		if err != nil {
+			return nil, err
+		}
+		report.Evidence = append(report.Evidence, evidence("charging_sessions", domain.TimePointer(record.PeriodEnd),
+			domain.IntPointer(report.MatchedLineCount), "Completed sessions matched by time and site; invoice comparisons use independently entered meter readings, rates and fee breakdowns."))
+		return report, nil
+	}
 
+	medianRate := medianUnitRate(record.Lines)
 	varianceTotals := map[string]int64{}
 	varianceCounts := map[string]int{}
 	for _, line := range lines {
@@ -486,9 +556,40 @@ func (s *Service) CreateDispute(
 			continue
 		}
 		if _, known := varianceLabels[reason]; !known {
-			return nil, fmt.Errorf("%w: %q is not a recognised variance reason", ErrInvalidInput, reason)
+			return nil, fmt.Errorf("%w: unrecognised variance reason", ErrInvalidInput)
 		}
 		reasons = append(reasons, reason)
+	}
+	var gate *port.DisputeReviewGate
+	if request.VehicleID != 0 || request.ExpectedVersion != 0 || request.ExpectedDigest != "" {
+		if request.VehicleID < 1 || request.ExpectedVersion < 1 || len(request.ExpectedDigest) != sha256.Size*2 {
+			return nil, fmt.Errorf("%w: provide the complete private statement context", ErrInvalidInput)
+		}
+		if _, err := hex.DecodeString(request.ExpectedDigest); err != nil || !boundedAmount(request.ClaimedMinor) {
+			return nil, fmt.Errorf("%w: invalid private dispute confirmation", ErrInvalidInput)
+		}
+		gate = &port.DisputeReviewGate{
+			VehicleID: request.VehicleID,
+			Version:   request.ExpectedVersion,
+			Verify: func(ctx context.Context, invoice port.InvoiceRecord, source port.ChargeReader) error {
+				charges, err := invoiceCharges(ctx, source, invoice)
+				if err != nil {
+					return err
+				}
+				review, lines := reviewInvoiceVariance(invoice, invoice.Lines, charges, false, s.now())
+				if review.State != "review" {
+					return port.ErrInvoiceReviewChanged
+				}
+				digest, err := privateDisputeDigest(invoiceToDomain(invoice), lines, review)
+				if err != nil {
+					return err
+				}
+				if digest != request.ExpectedDigest {
+					return port.ErrInvoiceReviewChanged
+				}
+				return nil
+			},
+		}
 	}
 	record, err := s.durable.CreateDispute(ctx, subject, port.DisputeRecord{
 		InvoiceID:    invoiceID,
@@ -497,7 +598,7 @@ func (s *Service) CreateDispute(
 		Reasons:      reasons,
 		Note:         note,
 		OpenedAt:     s.now(),
-	})
+	}, gate)
 	if err != nil {
 		return nil, fmt.Errorf("create dispute: %w", err)
 	}
@@ -523,6 +624,27 @@ func disputeDigest(record port.InvoiceRecord, report *domain.ReconciliationRepor
 		fmt.Fprintf(hasher, "%s:%s:%d;", line.Line.LineRef, line.MatchState, line.VarianceMinor)
 	}
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func privateDisputeDigest(invoice domain.ChargingInvoice, lines []domain.ReconciledLine, review *domain.InvoiceVarianceReview) (string, error) {
+	data, err := json.Marshal(struct {
+		Invoice domain.ChargingInvoice
+		Lines   []domain.ReconciledLine
+		Review  *domain.InvoiceVarianceReview
+	}{invoice, lines, review})
+	if err != nil {
+		return "", fmt.Errorf("encode private statement digest: %w", err)
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func invoiceCharges(ctx context.Context, source port.ChargeReader, invoice port.InvoiceRecord) ([]port.ChargeRecord, error) {
+	charges, err := source.ListCharges(ctx, invoice.VehicleID, invoice.PeriodStart.Add(-2*time.Hour), invoice.PeriodEnd.Add(2*time.Hour))
+	if err != nil {
+		return nil, fmt.Errorf("list charging sessions: %w", err)
+	}
+	return charges, nil
 }
 
 func appendUnique(values []string, value string) []string {
@@ -561,6 +683,8 @@ func invoiceToDomain(record port.InvoiceRecord) domain.ChargingInvoice {
 		Lines:            lines,
 		CreatedAt:        record.CreatedAt,
 		UpdatedAt:        record.UpdatedAt,
+		VarianceOptions:  record.VarianceOptions,
+		ReviewCleared:    record.ReviewCleared,
 	}
 }
 
@@ -575,6 +699,8 @@ func invoiceLineToDomain(record port.InvoiceLineRecord) domain.InvoiceLine {
 		BilledIdleMinor:   record.BilledIdleMinor,
 		BilledTaxMinor:    record.BilledTaxMinor,
 		BilledTotalMinor:  record.BilledTotalMinor,
+		AmountCoverage:    record.AmountCoverage,
+		VarianceEvidence:  record.VarianceEvidence,
 	}
 }
 

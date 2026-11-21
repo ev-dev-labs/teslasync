@@ -69,16 +69,51 @@ func (r *Repository) ListSitePerformanceSessions(
 ) ([]domain.SitePerformanceSession, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		WITH sessions AS MATERIALIZED (
-			SELECT c.id, c.vehicle_id, c.started_at, c.ended_at, c.start_soc_pct, c.end_soc_pct, c.charger_type, c.cable_type
+			SELECT c.id, c.vehicle_id, c.started_at, c.ended_at, c.start_soc_pct, c.end_soc_pct,
+			  c.charger_type, c.cable_type, c.start_lat, c.start_lng
 		`+activeSitePerformanceScope+`
 			JOIN charging_sessions c ON c.vehicle_id = p.vehicle_id AND c.geofence_id = p.place_id
 			WHERE p.subject = $1 AND p.vehicle_id = $2 AND p.place_id = $3 AND p.enabled_at = $4
 			  AND p.place_updated_at = $5 AND c.started_at >= $6::timestamptz - INTERVAL '91 days'
 			  AND c.ended_at <= $6 AND c.ended_at > c.started_at
 			ORDER BY c.ended_at DESC, c.id DESC LIMIT 32
-		)
+		)`+measuredSessionMeters, subject, scope.VehicleID, scope.PlaceID, scope.EnabledAt, scope.PlaceUpdatedAt, now)
+	if err != nil {
+		return nil, fmt.Errorf("query measured site performance sessions: %w", err)
+	}
+	return readMeasuredSessions(rows)
+}
+
+func (r *Repository) ListChargeRemedySessions(
+	ctx context.Context, candidate port.Candidate, now time.Time,
+) ([]domain.SitePerformanceSession, error) {
+	p := candidate.Plan
+	rows, err := r.db.Pool.Query(ctx, `
+		WITH sessions AS MATERIALIZED (
+			SELECT c.id, c.vehicle_id, c.started_at, c.ended_at, c.start_soc_pct, c.end_soc_pct,
+			       c.charger_type, c.cable_type, c.start_lat, c.start_lng
+			FROM smart_charging_plans p
+			JOIN vehicles v ON v.id = p.vehicle_id AND v.archived_at IS NULL
+			JOIN geofences g ON g.id = p.charging_place_id AND g.enabled AND NOT g.needs_review
+			  AND g.archived_at IS NULL AND g.is_charging_location AND g.updated_at = $5
+			JOIN charging_sessions c ON c.vehicle_id = p.vehicle_id AND c.geofence_id = p.charging_place_id
+			WHERE p.id = $1 AND p.subject = $2 AND p.vehicle_id = $3 AND p.version = $4
+			  AND p.enabled AND p.notify_at <= $6 AND p.departure_at > $6::timestamptz + INTERVAL '30 minutes'
+			  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $6)
+			  AND c.started_at >= $6::timestamptz - INTERVAL '14 days'
+			  AND c.ended_at <= $6 AND c.ended_at > c.started_at
+			ORDER BY c.ended_at DESC, c.id DESC LIMIT 2
+		)`+measuredSessionMeters, p.ID, p.Subject, p.VehicleID, p.Version, candidate.PlaceUpdatedAt, now)
+	if err != nil {
+		return nil, fmt.Errorf("query measured charging remedy sessions: %w", err)
+	}
+	return readMeasuredSessions(rows)
+}
+
+const measuredSessionMeters = `
 		SELECT s.id, s.started_at, s.ended_at, COALESCE(s.start_soc_pct, -1), COALESCE(s.end_soc_pct, -1),
-		       COALESCE(s.charger_type, ''), COALESCE(s.cable_type, ''), COALESCE(meter_wh, 0)
+		       COALESCE(s.charger_type, ''), COALESCE(s.cable_type, ''), COALESCE(meter_wh, 0),
+		       s.start_lat, s.start_lng
 		FROM sessions s
 		LEFT JOIN LATERAL (
 			WITH steps AS (
@@ -100,18 +135,17 @@ func (r *Repository) ListSitePerformanceSessions(
 			)
 			SELECT MIN(delta_wh) AS meter_wh FROM channels HAVING COUNT(*) = 1
 		) meter ON true
-		ORDER BY s.ended_at DESC, s.id DESC`, subject, scope.VehicleID, scope.PlaceID, scope.EnabledAt, scope.PlaceUpdatedAt, now)
-	if err != nil {
-		return nil, fmt.Errorf("query measured site performance sessions: %w", err)
-	}
+		ORDER BY s.ended_at DESC, s.id DESC`
+
+func readMeasuredSessions(rows pgx.Rows) ([]domain.SitePerformanceSession, error) {
 	result, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.SitePerformanceSession, error) {
 		var session domain.SitePerformanceSession
 		err := row.Scan(&session.ID, &session.StartedAt, &session.EndedAt, &session.StartSocPct, &session.EndSocPct,
-			&session.Charger, &session.Cable, &session.DeliveredWh)
+			&session.Charger, &session.Cable, &session.DeliveredWh, &session.StartLatitude, &session.StartLongitude)
 		return session, err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read measured site performance sessions: %w", err)
+		return nil, fmt.Errorf("scan measured charging sessions: %w", err)
 	}
 	return result, nil
 }

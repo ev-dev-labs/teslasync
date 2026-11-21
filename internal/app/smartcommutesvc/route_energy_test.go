@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/driveevidence"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -73,15 +74,15 @@ func TestMeasuredRouteEnergyRequiresFreshNumericPairs(t *testing.T) {
 	}
 	middle := start.Add(15 * time.Second)
 	rows := []signal.TimelineRow{pair(start, start, 30), pair(middle, middle, -15)}
-	if got := measuredRouteEnergy(rows, start, end); got.CoveredS != 30 || got.DrawWh != 50 || got.RegenWh != 25 {
+	if got := driveevidence.IntegratePackEnergy(rows, start, end); got.CoveredS != 30 || got.DrawWh != 50 || got.RegenWh != 25 {
 		t.Fatalf("complete pairs did not preserve draw and regen: %+v", got)
 	}
 	rows[1] = pair(middle, start, -15)
-	if got := measuredRouteEnergy(rows, start, end); got.CoveredS != 20 {
+	if got := driveevidence.IntegratePackEnergy(rows, start, end); got.CoveredS != 20 {
 		t.Fatalf("new current incorrectly extended stale voltage coverage: %+v", got)
 	}
 	rows[1] = pair(middle, middle, true)
-	if got := measuredRouteEnergy(rows, start, end); got.CoveredS != 15 {
+	if got := driveevidence.IntegratePackEnergy(rows, start, end); got.CoveredS != 15 {
 		t.Fatalf("invalid boolean counted as measured current: %+v", got)
 	}
 }

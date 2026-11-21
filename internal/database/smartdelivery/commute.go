@@ -29,6 +29,21 @@ func reserveBudget(ctx context.Context, tx pgx.Tx, deviceID int64, now time.Time
 			UNION ALL
 			SELECT created_at FROM smart_push_public_fee_deliveries
 			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_cabin_prep_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_park_reserve_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_window_rain_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_parked_closure_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
+			UNION ALL
+			SELECT created_at FROM smart_push_parked_unlock_deliveries
+			WHERE device_id=$1 AND created_at >= $2::timestamptz - INTERVAL '24 hours'
 		) attempts`, deviceID, now).Scan(&count, &latest); err != nil {
 		return false, fmt.Errorf("read personal push budget: %w", err)
 	}
@@ -104,14 +119,17 @@ func (r *Repository) LockCommute(
 	candidate := domain.CommuteDelivery{Occurrence: occurrence}
 	var deviceID int64
 	var ciphertext string
+	var checkAt time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT dev.id, dev.subscription_ciphertext, r.vehicle_id, r.origin_latitude, r.origin_longitude, d.expires_at
+		SELECT dev.id, dev.subscription_ciphertext, r.vehicle_id, r.origin_latitude, r.origin_longitude, d.expires_at,
+		       o.departure_at - make_interval(secs => c.lead_s)
 		`+commuteDeliveryScope+`
 		JOIN smart_push_devices dev ON dev.subject=r.subject AND dev.verified_at IS NOT NULL AND dev.commute_enabled
 		WHERE r.subject=$1 AND c.id=$2 AND r.id=$3 AND d.departure_at=$4 AND d.expires_at > $5
+		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $5)
 		FOR SHARE OF dev, r, s, v, c, d, o`,
 		subject, occurrence.ConsentID, occurrence.RoutineID, occurrence.DepartureAt, now).Scan(
-		&deviceID, &ciphertext, &candidate.VehicleID, &candidate.Origin.Latitude, &candidate.Origin.Longitude, &candidate.ExpiresAt)
+		&deviceID, &ciphertext, &candidate.VehicleID, &candidate.Origin.Latitude, &candidate.Origin.Longitude, &candidate.ExpiresAt, &checkAt)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -121,7 +139,7 @@ func (r *Repository) LockCommute(
 	}
 	return &commuteLease{
 		dispatchLease: dispatchLease{repository: r, tx: tx, ciphertext: ciphertext},
-		candidate:     candidate, deviceID: deviceID,
+		candidate:     candidate, deviceID: deviceID, checkAt: checkAt,
 	}, nil
 }
 
@@ -129,9 +147,19 @@ type commuteLease struct {
 	dispatchLease
 	candidate domain.CommuteDelivery
 	deviceID  int64
+	checkAt   time.Time
 }
 
 func (l *commuteLease) Candidate() domain.CommuteDelivery { return l.candidate }
+
+func (l *commuteLease) Departed(ctx context.Context, now time.Time) (bool, error) {
+	var departed bool
+	if err := l.tx.QueryRow(ctx, `SELECT smart_commute_drive_started($1, $2, $3)`,
+		l.candidate.VehicleID, l.checkAt, now).Scan(&departed); err != nil {
+		return false, fmt.Errorf("recheck departure before personal commute delivery: %w", err)
+	}
+	return departed, nil
+}
 
 func (l *commuteLease) Reserve(ctx context.Context, hash []byte, now time.Time) (bool, error) {
 	var reserved bool
@@ -170,7 +198,8 @@ const commuteClaimScope = commuteDeliveryScope + `
 	JOIN smart_push_devices dev ON dev.id=a.device_id
 	WHERE a.token_hash=$1 AND dev.subject=$2 AND r.subject=$2 AND dev.verified_at IS NOT NULL AND dev.commute_enabled
 	  AND a.status IN ('dispatching','accepted','unknown') AND a.claimed_at IS NULL AND a.revoked_at IS NULL
-	  AND a.expires_at > $3 AND d.expires_at > $3`
+	  AND a.expires_at > $3 AND d.expires_at > $3
+	  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $3)`
 
 func (r *Repository) FindCommuteDelivery(
 	ctx context.Context, subject string, hash []byte, now time.Time,

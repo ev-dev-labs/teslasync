@@ -208,6 +208,24 @@ func (r *Repository) SavePlan(
 				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
 				plan.DepartureOverlapPush))
 		} else {
+			// Electing an earlier check preserves the trip evidence's consent version.
+			if plan.ExpectedCheckAt != nil {
+				var version int64
+				var checkAt time.Time
+				err := tx.QueryRow(ctx, `
+					SELECT version, notify_at FROM smart_charging_plans
+					WHERE id=$1 AND subject=$2 AND vehicle_id=$3 FOR UPDATE`,
+					plan.ID, subject, plan.VehicleID).Scan(&version, &checkAt)
+				if errors.Is(err, pgx.ErrNoRows) {
+					return port.ErrNotFound
+				}
+				if err != nil {
+					return fmt.Errorf("check charging plan edit revision: %w", err)
+				}
+				if version != plan.Version || !checkAt.Equal(*plan.ExpectedCheckAt) {
+					return port.ErrPlanChanged
+				}
+			}
 			saved, err = scanPlan(tx.QueryRow(ctx, `
 				UPDATE smart_charging_plans p
 				SET charging_place_id=$4, enabled=$5, notify_at=$6, departure_at=$7,
@@ -230,10 +248,7 @@ func (r *Repository) SavePlan(
 				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
 				plan.DepartureOverlapPush))
 			if err == nil {
-				_, err = tx.Exec(ctx, `DELETE FROM smart_charging_decisions WHERE plan_id = $1`, plan.ID)
-			}
-			if err == nil {
-				_, err = tx.Exec(ctx, `DELETE FROM smart_charging_slow_samples WHERE plan_id = $1`, plan.ID)
+				err = clearReadinessDecisions(ctx, tx, plan.ID)
 			}
 		}
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -284,14 +299,19 @@ func (r *Repository) SnoozePlan(
 		if err != nil {
 			return fmt.Errorf("snooze charging readiness plan: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM smart_charging_decisions WHERE plan_id=$1`, id); err != nil {
+		if err := clearReadinessDecisions(ctx, tx, id); err != nil {
 			return fmt.Errorf("clear snoozed charging readiness decision: %w", err)
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM smart_charging_slow_samples WHERE plan_id=$1`, id); err != nil {
-			return fmt.Errorf("clear snoozed charging feasibility samples: %w", err)
 		}
 		return nil
 	})
+}
+
+func clearReadinessDecisions(ctx context.Context, tx pgx.Tx, id int64) error {
+	_, err := tx.Exec(ctx, `
+		WITH cleared_charging AS (DELETE FROM smart_charging_decisions WHERE plan_id=$1),
+		  cleared_conflict AS (DELETE FROM smart_charging_departure_conflicts WHERE plan_id=$1)
+		DELETE FROM smart_charging_slow_samples WHERE plan_id=$1`, id)
+	return err
 }
 
 func (r *Repository) ClaimDue(ctx context.Context, now time.Time, sharedOpenMode bool) (*port.Claim, error) {
@@ -327,7 +347,7 @@ func (r *Repository) ClaimDue(ctx context.Context, now time.Time, sharedOpenMode
 }
 
 func (r *Repository) FinishClaim(
-	ctx context.Context, claim port.Claim, decision domain.Decision, now time.Time,
+	ctx context.Context, claim port.Claim, decision, overlap domain.Decision, now time.Time,
 ) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var next *time.Time
@@ -345,6 +365,19 @@ func (r *Repository) FinishClaim(
 		}
 		if err != nil {
 			return fmt.Errorf("finish charging readiness claim: %w", err)
+		}
+		if overlap.Reason == domain.ReasonEligible && now.Before(overlap.ExpiresAt) {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO smart_charging_departure_conflicts (plan_id, observed_at, expires_at, evaluated_at)
+				VALUES ($1,$2,$3,$4)
+				ON CONFLICT (plan_id) DO UPDATE SET observed_at=EXCLUDED.observed_at,
+				  expires_at=EXCLUDED.expires_at, evaluated_at=EXCLUDED.evaluated_at`,
+				id, overlap.ObservedAt, overlap.ExpiresAt, now)
+		} else {
+			_, err = tx.Exec(ctx, `DELETE FROM smart_charging_departure_conflicts WHERE plan_id=$1`, id)
+		}
+		if err != nil {
+			return fmt.Errorf("persist departure conflict decision: %w", err)
 		}
 		waiting := false
 		if decision.Reason == domain.ReasonEligible && decision.Kind == domain.DecisionSlowCharging {
@@ -394,13 +427,13 @@ func (r *Repository) FinishClaim(
 func (r *Repository) ListCandidates(
 	ctx context.Context, subject string, vehicleID *int64, now time.Time, limit int,
 ) ([]port.Candidate, error) {
-	return r.listCandidates(ctx, subject, vehicleID, nil, now, limit)
+	return r.listCandidates(ctx, subject, vehicleID, nil, "", now, limit)
 }
 
 func (r *Repository) FindCandidate(
-	ctx context.Context, subject string, vehicleID, planID int64, now time.Time,
+	ctx context.Context, subject string, vehicleID, planID int64, kind domain.DecisionKind, now time.Time,
 ) (*port.Candidate, error) {
-	candidates, err := r.listCandidates(ctx, subject, &vehicleID, &planID, now, 1)
+	candidates, err := r.listCandidates(ctx, subject, &vehicleID, &planID, kind, now, 1)
 	if err != nil || len(candidates) == 0 {
 		return nil, err
 	}
@@ -408,14 +441,14 @@ func (r *Repository) FindCandidate(
 }
 
 func (r *Repository) listCandidates(
-	ctx context.Context, subject string, vehicleID, planID *int64, now time.Time, limit int,
+	ctx context.Context, subject string, vehicleID, planID *int64, kind domain.DecisionKind, now time.Time, limit int,
 ) ([]port.Candidate, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT `+planColumns+`, d.battery_pct, d.arrival_low_pct, d.arrival_high_pct,
 		       d.observed_at, d.expires_at, v.display_name, g.name, g.updated_at,
 		       d.kind
 		FROM smart_charging_plans p
-		JOIN smart_charging_decisions d ON d.plan_id=p.id
+		JOIN smart_charging_candidate_decisions d ON d.plan_id=p.id
 		LEFT JOIN smart_charging_slow_samples s ON s.plan_id=p.id AND s.plan_version=p.version
 		  AND s.last_seen_at=d.evaluated_at
 		  AND s.first_seen_at <= d.evaluated_at - INTERVAL '5 minutes'
@@ -425,9 +458,9 @@ func (r *Repository) listCandidates(
 		WHERE p.subject=$1 AND p.enabled AND ($2::bigint IS NULL OR p.vehicle_id=$2)
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $3)
 		  AND d.expires_at > $3 AND p.departure_at > $3::timestamptz + INTERVAL '30 minutes'
-		  AND ((d.kind = 'slow_charging') = (s.plan_id IS NOT NULL))
-		  AND ($5::bigint IS NULL OR p.id=$5)
-		ORDER BY p.departure_at, p.id LIMIT $4`, subject, vehicleID, now, limit, planID)
+		  AND (d.kind <> 'slow_charging' OR s.plan_id IS NOT NULL)
+		  AND ($5::bigint IS NULL OR p.id=$5) AND ($6 = '' OR d.kind=$6)
+		ORDER BY p.departure_at, p.id, d.kind LIMIT $4`, subject, vehicleID, now, limit, planID, kind)
 	if err != nil {
 		return nil, fmt.Errorf("list charging readiness decisions: %w", err)
 	}

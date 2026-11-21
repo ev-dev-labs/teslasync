@@ -41,11 +41,12 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		return nil, fmt.Errorf("begin personal charging dispatch: %w", err)
 	}
 	var ciphertext string
+	// Both readiness decision writers lock the parent plan before updating evidence.
 	err = tx.QueryRow(ctx, `
 		SELECT dev.subscription_ciphertext
 		FROM smart_push_devices dev
 		JOIN smart_charging_plans p ON p.id=$2
-		JOIN smart_charging_decisions decision ON decision.plan_id=p.id
+		JOIN smart_charging_candidate_decisions decision ON decision.plan_id=p.id
 		JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		JOIN geofences g ON g.id=p.charging_place_id AND g.enabled
 		  AND NOT g.needs_review AND g.archived_at IS NULL AND g.is_charging_location
@@ -55,13 +56,13 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $7)
 		  AND decision.expires_at > $7 AND g.updated_at=$8 AND decision.kind=$9
 		  AND ($9 <> 'departure_overlap' OR p.departure_overlap_push)
-		  AND (($9 = 'slow_charging') = EXISTS (
+		  AND ($9 <> 'slow_charging' OR EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
 		      AND s.last_seen_at=decision.evaluated_at
 		      AND s.first_seen_at <= decision.evaluated_at - INTERVAL '5 minutes'
 		  ))
-		FOR SHARE OF dev, p, v, g, decision`,
+		FOR SHARE OF dev, p, v, g`,
 		attempt.DeviceID, attempt.PlanID, attempt.Subject, attempt.VehicleID, attempt.PlanVersion,
 		attempt.DepartureAt, attempt.CreatedAt, attempt.PlaceUpdatedAt, attempt.DecisionKind).Scan(&ciphertext)
 	if err != nil {
@@ -138,7 +139,7 @@ func (r *Repository) FindDelivery(
 		FROM smart_push_deliveries d
 		JOIN smart_push_devices dev ON dev.id=d.device_id
 		JOIN smart_charging_plans p ON p.id=d.plan_id
-		JOIN smart_charging_decisions decision ON decision.plan_id=p.id
+		JOIN smart_charging_candidate_decisions decision ON decision.plan_id=p.id
 		JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		JOIN geofences g ON g.id=p.charging_place_id AND g.enabled
 		  AND NOT g.needs_review AND g.archived_at IS NULL AND g.is_charging_location
@@ -151,7 +152,7 @@ func (r *Repository) FindDelivery(
 		  AND decision.expires_at > $3 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 		  AND g.updated_at=d.place_updated_at AND decision.kind=d.decision_kind
 		  AND (d.decision_kind <> 'departure_overlap' OR p.departure_overlap_push)
-		  AND ((d.decision_kind = 'slow_charging') = EXISTS (
+		  AND (d.decision_kind <> 'slow_charging' OR EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
 		      AND s.last_seen_at=decision.evaluated_at
@@ -173,12 +174,23 @@ func (r *Repository) ConsumeDelivery(
 ) (*domain.Notification, error) {
 	var notification domain.Notification
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var planID int64
+		// Read candidate evidence in a fresh snapshot after any in-flight plan evaluation.
 		err := tx.QueryRow(ctx, `
+			SELECT id FROM smart_charging_plans WHERE id=$1 AND subject=$2 AND version=$3 FOR SHARE`,
+			ref.PlanID, subject, ref.PlanVersion).Scan(&planID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return port.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock claimed charging plan: %w", err)
+		}
+		err = tx.QueryRow(ctx, `
 			SELECT dev.charging_title, dev.charging_body
 			FROM smart_push_deliveries d
 			JOIN smart_push_devices dev ON dev.id=d.device_id
 			JOIN smart_charging_plans p ON p.id=d.plan_id
-			JOIN smart_charging_decisions decision ON decision.plan_id=p.id
+			JOIN smart_charging_candidate_decisions decision ON decision.plan_id=p.id
 			JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 			JOIN geofences g ON g.id=p.charging_place_id AND g.enabled
 			  AND NOT g.needs_review AND g.archived_at IS NULL AND g.is_charging_location
@@ -193,14 +205,14 @@ func (r *Repository) ConsumeDelivery(
 			  AND g.updated_at=$7 AND d.place_updated_at=$7 AND d.decision_kind=$8
 			  AND decision.kind=$8
 			  AND ($8 <> 'departure_overlap' OR p.departure_overlap_push)
-			  AND (($8 = 'slow_charging') = EXISTS (
+			  AND ($8 <> 'slow_charging' OR EXISTS (
 			    SELECT 1 FROM smart_charging_slow_samples s
 			    WHERE s.plan_id=p.id AND s.plan_version=p.version
 			      AND s.last_seen_at=decision.evaluated_at
 			      AND s.first_seen_at <= decision.evaluated_at - INTERVAL '5 minutes'
 			  ))
-			FOR SHARE OF dev, p, v, g, decision FOR UPDATE OF d`,
-			ref.ID, subject, ref.PlanID, ref.VehicleID, ref.PlanVersion, now, ref.PlaceUpdatedAt, ref.DecisionKind).
+			FOR SHARE OF dev, v, g FOR UPDATE OF d`,
+			ref.ID, subject, planID, ref.VehicleID, ref.PlanVersion, now, ref.PlaceUpdatedAt, ref.DecisionKind).
 			Scan(&notification.Title, &notification.Body)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound

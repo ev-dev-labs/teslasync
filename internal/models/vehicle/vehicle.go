@@ -81,13 +81,14 @@ type VehicleState struct {
 
 // CommandLog records a vehicle command execution.
 type CommandLog struct {
-	ID        int64     `json:"id" db:"id"`
-	VehicleID int64     `json:"vehicle_id" db:"vehicle_id"`
-	Command   string    `json:"command" db:"command"`
-	Params    string    `json:"params,omitempty" db:"params"`
-	Status    string    `json:"status" db:"status"` // success, failed, pending
-	Error     string    `json:"error,omitempty" db:"error"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID              int64      `json:"id" db:"id"`
+	VehicleID       int64      `json:"vehicle_id" db:"vehicle_id"`
+	Command         string     `json:"command" db:"command"`
+	Params          string     `json:"params,omitempty" db:"params"`
+	Status          string     `json:"status" db:"status"` // success, failed, pending
+	Error           string     `json:"error,omitempty" db:"error"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	WakeRequestedAt *time.Time `json:"-" db:"wake_requested_at"`
 }
 
 // TirePressureSnapshot represents a point-in-time tire pressure reading.

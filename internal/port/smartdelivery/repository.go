@@ -46,6 +46,7 @@ type CommuteLease interface {
 	Candidate() domain.CommuteDelivery
 	Ciphertext() string
 	Reserve(context.Context, []byte, time.Time) (bool, error)
+	Departed(context.Context, time.Time) (bool, error)
 	Finish(context.Context, []byte, domain.DeliveryStatus) error
 	Close(context.Context) error
 }
@@ -56,9 +57,51 @@ type PublicFeeRepository interface {
 	ConsumePublicFeeDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
 }
 
-type PublicFeeLease interface {
+type PublicFeeLease = ExpiringDispatchLease
+
+type ExpiringDispatchLease interface {
 	Ciphertext() string
 	Reserve(context.Context, []byte, time.Time, time.Time) (bool, error)
 	Finish(context.Context, []byte, domain.DeliveryStatus) error
 	Close(context.Context) error
+}
+
+type CabinPrepRepository interface {
+	ListCabinPrepDeliveries(context.Context, time.Time, int) ([]domain.CabinPrepRef, error)
+	LockCabinPrep(context.Context, domain.CabinPrepRef, time.Time) (ExpiringDispatchLease, error)
+	FindCabinPrepDelivery(context.Context, string, []byte, time.Time) (*domain.CabinPrepRef, error)
+	ConsumeCabinPrepDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+	PruneCabinPrepDeliveries(context.Context, time.Time) error
+}
+
+type ParkReserveRepository interface {
+	ListParkReserveDeliveries(context.Context, time.Time, int) ([]domain.ParkReserveRef, error)
+	LockParkReserve(context.Context, domain.ParkReserveRef, time.Time) (ExpiringDispatchLease, error)
+	FindParkReserveDelivery(context.Context, string, []byte, time.Time) (*domain.ParkReserveRef, error)
+	ConsumeParkReserveDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+	PruneParkReserveDeliveries(context.Context, time.Time) error
+}
+
+type WindowRainRepository interface {
+	ListWindowRainDeliveries(context.Context, time.Time, int) ([]domain.WindowRainRef, error)
+	LockWindowRain(context.Context, domain.WindowRainRef, time.Time) (ExpiringDispatchLease, error)
+	FindWindowRainDelivery(context.Context, string, []byte, time.Time) (*domain.WindowRainRef, error)
+	ConsumeWindowRainDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+	PruneWindowRainDeliveries(context.Context, time.Time) error
+}
+
+type ParkedClosureRepository interface {
+	ListParkedClosureDeliveries(context.Context, time.Time, int) ([]domain.ParkedClosureRef, error)
+	LockParkedClosure(context.Context, domain.ParkedClosureRef, time.Time) (ExpiringDispatchLease, error)
+	FindParkedClosureDelivery(context.Context, string, []byte, time.Time) (*domain.ParkedClosureRef, error)
+	ConsumeParkedClosureDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+	PruneParkedClosureDeliveries(context.Context, time.Time) error
+}
+
+type ParkedUnlockRepository interface {
+	ListParkedUnlockDeliveries(context.Context, time.Time, int) ([]domain.ParkedUnlockRef, error)
+	LockParkedUnlock(context.Context, domain.ParkedUnlockRef, time.Time) (ExpiringDispatchLease, error)
+	FindParkedUnlockDelivery(context.Context, string, []byte, time.Time) (*domain.ParkedUnlockRef, error)
+	ConsumeParkedUnlockDelivery(context.Context, string, []byte, time.Time) (*domain.Notification, error)
+	PruneParkedUnlockDeliveries(context.Context, time.Time) error
 }

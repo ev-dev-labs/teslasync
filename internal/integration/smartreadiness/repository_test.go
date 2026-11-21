@@ -64,7 +64,10 @@ func testRepository(t *testing.T) (*readinessdb.Repository, *database.DB) {
 		CREATE TABLE geofences (
 		  id bigint PRIMARY KEY, name text NOT NULL, enabled boolean NOT NULL,
 		  needs_review boolean NOT NULL, archived_at timestamptz,
-		  is_charging_location boolean NOT NULL, updated_at timestamptz NOT NULL DEFAULT now()
+		  is_charging_location boolean NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(),
+		  created_at timestamptz NOT NULL DEFAULT now(), category text, origin text NOT NULL DEFAULT 'manual',
+		  alert_on_entry boolean NOT NULL DEFAULT false, alert_on_exit boolean NOT NULL DEFAULT false,
+		  polygon_wkt text NOT NULL DEFAULT ''
 		);
 		CREATE TABLE geofence_rates (
 		  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -85,6 +88,7 @@ func testRepository(t *testing.T) (*readinessdb.Repository, *database.DB) {
 func applyMigration(t *testing.T, db *database.DB, direction string) {
 	t.Helper()
 	names := []string{
+		"000242_journey",
 		"000259_smart_commute", "000260_smart_charging_readiness", "000261_smart_charging_slow_samples",
 		"000262_smart_charging_site_rate_consent", "000263_smart_personal_push",
 		"000264_smart_charging_trip_legs", "000265_smart_charging_scheduled_start",
@@ -96,6 +100,23 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000272_smart_commute_route_energy",
 		"000273_type_commute_route_energy_evidence",
 		"000274_smart_public_charging_fee_terms",
+		"000276_smart_trip_charging_stops",
+		"000277_smart_trip_reviews",
+		"000283_smart_cabin_prep",
+		"000285_smart_park_reserve",
+		"000286_smart_overnight_drain",
+		"000287_smart_capacity_trend",
+		"000288_smart_window_rain",
+		"000289_smart_parked_closure",
+		"000290_smart_parked_unlock",
+		"000291_smart_software_window",
+		"000292_smart_media_playlists",
+		"000293_smart_journey_soundtracks",
+		"000305_smart_commute_navigation_attempts",
+		"000307_smart_departure_conflict_delivery",
+		"000308_smart_trip_evidence_provenance",
+		"000310_smart_battery_evidence_fingerprints",
+		"000312_window_rain_park_anchor",
 	}
 	if direction == "down" {
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {
@@ -103,14 +124,19 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		}
 	}
 	for _, name := range names {
-		file := filepath.Join("..", "..", "..", "migrations", name+"."+direction+".sql")
-		content, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := db.Pool.Exec(context.Background(), string(content)); err != nil {
-			t.Fatalf("apply %s: %v", file, err)
-		}
+		applyReadinessMigration(t, db, name, direction)
+	}
+}
+
+func applyReadinessMigration(t *testing.T, db *database.DB, name, direction string) {
+	t.Helper()
+	file := filepath.Join("..", "..", "..", "migrations", name+"."+direction+".sql")
+	content, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(context.Background(), string(content)); err != nil {
+		t.Fatalf("apply %s: %v", file, err)
 	}
 }
 
@@ -151,16 +177,10 @@ func TestTripLegMigrationPreservesSlowEvidenceAndInvalidatesNewTokensOnRollback(
 	if err != nil {
 		t.Fatal(err)
 	}
+	applyReadinessMigration(t, db, "000307_smart_departure_conflict_delivery", "down")
 	run := func(direction string) {
 		t.Helper()
-		file := filepath.Join("..", "..", "..", "migrations", "000264_smart_charging_trip_legs."+direction+".sql")
-		content, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := db.Pool.Exec(ctx, string(content)); err != nil {
-			t.Fatalf("apply %s: %v", file, err)
-		}
+		applyReadinessMigration(t, db, "000264_smart_charging_trip_legs", direction)
 	}
 	run("down")
 	if _, err := db.Pool.Exec(ctx, `
@@ -219,7 +239,7 @@ func TestSnoozeRevokesCandidatesAndInFlightClaims(t *testing.T) {
 	if err != nil || claim == nil {
 		t.Fatalf("claim = %+v, %v", claim, err)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now); err != nil {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now); err != nil {
 		t.Fatal(err)
 	}
 	claim, err = repo.ClaimDue(ctx, now.Add(time.Minute), false)
@@ -233,7 +253,7 @@ func TestSnoozeRevokesCandidatesAndInFlightClaims(t *testing.T) {
 	if err := repo.SnoozePlan(ctx, "subject-a", 7, plan.ID, &until, now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now.Add(time.Minute)); !errors.Is(err, port.ErrClaimLost) {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now.Add(time.Minute)); !errors.Is(err, port.ErrClaimLost) {
 		t.Fatalf("stale claim finish = %v", err)
 	}
 	items, err := repo.ListCandidates(ctx, "subject-a", nil, now.Add(time.Minute), 10)
@@ -358,10 +378,10 @@ func TestConcurrentClaimsAndPrivateCandidates(t *testing.T) {
 	if claim == nil || claim.Plan.ID != plan.ID {
 		t.Fatalf("missing claim for saved plan: %+v", claim)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now); err != nil {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now); !errors.Is(err, port.ErrClaimLost) {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now); !errors.Is(err, port.ErrClaimLost) {
 		t.Fatalf("duplicate finish = %v, want claim lost", err)
 	}
 	items, err := repo.ListCandidates(ctx, "subject-a", nil, now, 10)
@@ -398,7 +418,7 @@ func TestRevocationAndExpiredLeaseInvalidateWork(t *testing.T) {
 	if err != nil || claim == nil {
 		t.Fatalf("claim = %+v, %v", claim, err)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now.Add(2*time.Minute)); !errors.Is(err, port.ErrClaimLost) {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now.Add(2*time.Minute)); !errors.Is(err, port.ErrClaimLost) {
 		t.Fatalf("expired lease finish = %v, want claim lost", err)
 	}
 	reclaimed, err := repo.ClaimDue(ctx, now.Add(2*time.Minute), false)
@@ -409,7 +429,7 @@ func TestRevocationAndExpiredLeaseInvalidateWork(t *testing.T) {
 	if _, err := repo.SavePlan(ctx, "subject-a", *plan, now.Add(2*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.FinishClaim(ctx, *reclaimed, testDecision(now), now.Add(2*time.Minute)); !errors.Is(err, port.ErrClaimLost) {
+	if err := repo.FinishClaim(ctx, *reclaimed, testDecision(now), domain.Decision{}, now.Add(2*time.Minute)); !errors.Is(err, port.ErrClaimLost) {
 		t.Fatalf("revoked claim finish = %v, want claim lost", err)
 	}
 	items, err := repo.ListCandidates(ctx, "subject-a", nil, now.Add(2*time.Minute), 10)
@@ -429,7 +449,7 @@ func TestNextMinuteClaimAfterWorkFinishes(t *testing.T) {
 	if err != nil || claim == nil {
 		t.Fatalf("initial claim = %+v, %v", claim, err)
 	}
-	if err := repo.FinishClaim(ctx, *claim, testDecision(now), now.Add(5*time.Second)); err != nil {
+	if err := repo.FinishClaim(ctx, *claim, testDecision(now), domain.Decision{}, now.Add(5*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	next, err := repo.ClaimDue(ctx, now.Add(time.Minute), false)

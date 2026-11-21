@@ -72,7 +72,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 		defer cancel()
 		_ = lease.Close(closeCtx)
 	}()
-	current, err := s.candidates.FindCandidate(ctx, attempt.Subject, attempt.VehicleID, attempt.PlanID)
+	current, err := s.candidates.FindCandidate(ctx, attempt.Subject, attempt.VehicleID, attempt.PlanID, candidate.Decision.Kind)
 	if err != nil {
 		return fmt.Errorf("recheck personal charging evidence: %w", err)
 	}
@@ -160,7 +160,7 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 	if err != nil {
 		return nil, err
 	}
-	candidate, err := s.candidates.FindCandidate(ctx, subject, ref.VehicleID, ref.PlanID)
+	candidate, err := s.candidates.FindCandidate(ctx, subject, ref.VehicleID, ref.PlanID, readiness.DecisionKind(ref.DecisionKind))
 	if err != nil {
 		return nil, fmt.Errorf("recheck claimed charging evidence: %w", err)
 	}
@@ -192,7 +192,7 @@ func allowsChargingDelivery(candidate readinessport.Candidate) bool {
 	case readiness.DecisionDepartureOverlap:
 		return candidate.Plan.DepartureOverlapPush
 	default:
-		return true
+		return !candidate.Decision.RequiresFeasibleRemedy(candidate.Plan) || candidate.Decision.FeasibleRemedy
 	}
 }
 

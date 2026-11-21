@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	"github.com/ev-dev-labs/teslasync/internal/adapter/openmeteo"
 	deliveryadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartdelivery"
 	smartadapter "github.com/ev-dev-labs/teslasync/internal/adapter/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
@@ -86,17 +87,31 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		readinessOptions = append(readinessOptions,
 			smartreadinesssvc.WithSolarCharging(readinessRepo, smartadapter.NewSolarEnergy(energyClient, solarConnections)))
 	}
-	service := smartreadinesssvc.New(readinessRepo, live, smartadapter.NewSites(geofencedb.NewGeofenceRepo(db)), readinessOptions...)
+	sites := smartadapter.NewSites(geofencedb.NewGeofenceRepo(db))
+	service := smartreadinesssvc.New(readinessRepo, live, sites, readinessOptions...)
+	cabinPrep := smartreadinesssvc.NewCabinPrep(readinessRepo,
+		smartreadinesssvc.NewCabinHistory(readinessRepo, signal.NewLogStateReader(db.Pool, log.Logger)), live, time.Now)
+	parkReserves := smartreadinesssvc.NewParkReserves(readinessRepo,
+		smartreadinesssvc.NewParkReserveHistory(readinessRepo, signal.NewLogStateReader(db.Pool, log.Logger)), live, time.Now)
+	quietHours := quiethoursdb.NewQuietHoursRepo(db)
+	windowRain := smartreadinesssvc.NewWindowRainWatches(readinessRepo, live, openmeteo.NewRainClient(nil, nil), quietHours, time.Now)
+	parkedClosures := smartreadinesssvc.NewParkedClosures(readinessRepo, smartreadinesssvc.NewParkedClosureHistory(readinessRepo, live), time.Now)
+	parkedUnlocks := smartreadinesssvc.NewParkedUnlocks(readinessRepo, readinessRepo, sites, live, time.Now)
 	deliveryRepo := deliverydb.NewRepository(db)
 	delivery = smartdeliverysvc.New(
 		deliveryRepo, encryptor,
 		deliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(service),
 		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, service),
+		smartdeliverysvc.WithCabinPrepDelivery(deliveryRepo, cabinPrep),
+		smartdeliverysvc.WithParkReserveDelivery(deliveryRepo, parkReserves),
+		smartdeliverysvc.WithWindowRainDelivery(deliveryRepo, windowRain),
+		smartdeliverysvc.WithParkedClosureDelivery(deliveryRepo, parkedClosures),
+		smartdeliverysvc.WithParkedUnlockDelivery(deliveryRepo, parkedUnlocks),
 		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, func(ctx context.Context, vehicleID int64, origin commute.Point, now time.Time) (bool, error) {
 			return smartcommutesvc.ParkedAtTrafficOrigin(ctx, live, vehicleID, origin, now)
 		}),
-		smartdeliverysvc.WithQuietHours(quiethoursdb.NewQuietHoursRepo(db)),
+		smartdeliverysvc.WithQuietHours(quietHours),
 		smartdeliverysvc.WithDeliveryObserver(metrics.RecordSmartPersonalPush),
 	)
 	workerCtx, cancel := context.WithCancel(ctx)
@@ -124,6 +139,21 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for workerCtx.Err() == nil {
+			if !tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader) {
+				if delivery.CabinPrepAvailable() {
+					runCabinPrepTick(workerCtx, cabinPrep, delivery)
+				}
+				runParkReserveTick(workerCtx, parkReserves, delivery)
+				if delivery.WindowRainAvailable() {
+					runWindowRainTick(workerCtx, windowRain, delivery)
+				}
+				if delivery.ParkedClosureAvailable() {
+					runParkedClosureTick(workerCtx, parkedClosures, delivery)
+				}
+				if delivery.ParkedUnlockAvailable() {
+					runParkedUnlockTick(workerCtx, parkedUnlocks, delivery)
+				}
+			}
 			if delivery.PublicFeeAvailable() {
 				runPublicFeeTick(workerCtx, service, delivery)
 			}
@@ -141,6 +171,86 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		<-solarDone
 		stopTraffic()
 		sharedCache.Close()
+	}
+}
+
+func runParkedUnlockTick(ctx context.Context, plans *smartreadinesssvc.ParkedUnlocks, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.parked_unlock_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	outcomes, err := plans.ProcessDue(ctx, 6)
+	for reason, count := range outcomes {
+		metrics.RecordParkedUnlock(string(reason), count)
+	}
+	if err = errors.Join(err, delivery.DeliverParkedUnlocks(ctx, 6)); err != nil {
+		span.RecordError(errors.New("parked unlock check failed"))
+		span.SetStatus(codes.Error, "parked unlock check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("parked unlock check failed")
+	}
+}
+
+func runParkedClosureTick(ctx context.Context, plans *smartreadinesssvc.ParkedClosures, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.parked_closure_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	outcomes, err := plans.ProcessDue(ctx, 6)
+	for reason, count := range outcomes {
+		metrics.RecordParkedClosure(string(reason), count)
+	}
+	if err = errors.Join(err, delivery.DeliverParkedClosures(ctx, 6)); err != nil {
+		span.RecordError(errors.New("parked closure check failed"))
+		span.SetStatus(codes.Error, "parked closure check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("parked closure check failed")
+	}
+}
+
+func runWindowRainTick(ctx context.Context, plans *smartreadinesssvc.WindowRainWatches, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.window_rain_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	outcomes, err := plans.ProcessDue(ctx, 2)
+	for reason, count := range outcomes {
+		metrics.RecordWindowRain(string(reason), count)
+	}
+	if err = errors.Join(err, delivery.DeliverWindowRain(ctx, 4)); err != nil {
+		span.RecordError(errors.New("window rain check failed"))
+		span.SetStatus(codes.Error, "window rain check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("window rain check failed")
+	}
+}
+
+func runParkReserveTick(ctx context.Context, plans *smartreadinesssvc.ParkReserves, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.park_reserve_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	outcomes, err := plans.ProcessDue(ctx, 6)
+	for reason, count := range outcomes {
+		metrics.RecordParkReserve(string(reason), count)
+	}
+	if err = errors.Join(err, delivery.DeliverParkReserve(ctx, 6)); err != nil {
+		span.RecordError(errors.New("park reserve check failed"))
+		span.SetStatus(codes.Error, "park reserve check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("park reserve check failed")
+	}
+}
+
+func runCabinPrepTick(ctx context.Context, cabin *smartreadinesssvc.CabinPrep, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.cabin_prep_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	outcomes, err := cabin.ProcessDue(ctx, 6)
+	for reason, count := range outcomes {
+		metrics.RecordCabinPrepLifecycle(string(reason), count)
+	}
+	if err = errors.Join(err, delivery.DeliverCabinPrep(ctx, 6)); err != nil {
+		span.RecordError(errors.New("cabin prep reminder check failed"))
+		span.SetStatus(codes.Error, "cabin prep reminder check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("cabin prep reminder check failed")
 	}
 }
 
