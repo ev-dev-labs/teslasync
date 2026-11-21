@@ -8,9 +8,10 @@ import previewOverlay from './__fixtures__/preview-overlay-invoker-preservation.
 import catalog from './en.json';
 import { producerProjection } from './producer-projection';
 import {
-  actualRepairSource as source, nativeRepairPredecessor, restoreKeyIdentitySource, restoreMobilePresentationSource, restoreNativeSourceRepair,
+  actualRepairSource as source, nativeRepairPredecessor, restoreKeyIdentitySource, restoreMobilePresentationSource, restoreNativeSourceRepair, restoreRepairDependency,
 } from './verified-native-source-repair-contract';
 import { restoreAppDesignSource } from './verified-widget-implementation-contract';
+import { restoreGridAccessSource } from './verified-grid-access-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const tooltip = 'web/src/components/ui/Tooltip.tsx';
@@ -167,7 +168,7 @@ describe('exact e1fb native source repair successor (not native certification)',
   });
 
   it('accepts only the exact shared-cell and touch-token successors of the pinned dependency', () => {
-    const current = source(touchTokens);
+    const current = restoreGridAccessSource(touchTokens, source(touchTokens));
     const heatmapAddition = "  heatmap: {\n    cell: 'rounded-[3px] border border-[var(--border-subtle)]',\n  },\n";
     const previous = current
       .replace(heatmapAddition, '')
@@ -182,8 +183,7 @@ describe('exact e1fb native source repair successor (not native certification)',
       current.replace(heatmapAddition, ''),
       current.replace(heatmapAddition, heatmapAddition.replace('3px', '4px')),
     ]) {
-      expect(() => restoreNativeSourceRepair(barrel, source(barrel), file =>
-        file === touchTokens ? stale : source(file))).toThrow('exact shared heatmap cell successor');
+      expect(() => restoreRepairDependency(touchTokens, stale)).toThrow('exact shared heatmap cell successor');
     }
     expect(nativeRepairPredecessor(barrel)).toBeTruthy();
   });

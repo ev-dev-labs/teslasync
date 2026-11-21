@@ -10,8 +10,10 @@ describe('isolated source-level foundation checks (not layout evidence)', () => 
     const css = readFileSync(resolve(sourceDirectory, 'mobile-grid-reference.css'), 'utf8');
     expect(css).toContain('container: mobile-grid-reference / inline-size');
     expect(css).toContain('@container mobile-grid-reference (width < 640px)');
-    expect(css).toContain('.mgr-mobile { display: none; }');
+    expect(css).toContain('.mgr-mobile:not([data-mobile-table]) { display: none; }');
     expect(css).toContain('.mgr-desktop { display: none; }');
+    expect(css).toContain('.mgr-mobile:not([data-mobile-table]) { display: block; }');
+    expect(css).toContain('[data-mobile-table].mgr-mobile {\n  --mgr-card-pad: var(--density-pad-y) var(--density-pad-x);');
     expect(css).toContain('.mgr-kv { height: 48px');
     expect(css).toContain('.mgr-progress { height: 5px; }');
     expect(css).toContain('--mgr-control-h: 40px');

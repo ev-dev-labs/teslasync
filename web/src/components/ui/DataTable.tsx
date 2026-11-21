@@ -711,8 +711,8 @@ export function DataTable<T>({
     }))
   }
   // Incoming rows are loaded evidence, not full server history or the current pagination slice.
-  const localFilterNoMatch = (candidateRows.length > 0 || typeof showMatchingCount === 'object'
-    && ('rangeTotal' in showMatchingCount ? showMatchingCount.rangeTotal : showMatchingCount.loaded) > 0)
+  const localFilterNoMatch = (data.length > 0 || typeof showMatchingCount === 'object'
+    && 'rangeTotal' in showMatchingCount && showMatchingCount.rangeTotal > 0)
     && filteredData.length === 0
   const noMatchMessage = callerNoMatchMessage ?? t('combobox.noResults', 'No results')
   const resetFiltersLabel = t('common.clearFilters', 'Clear filters')

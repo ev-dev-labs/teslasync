@@ -2,6 +2,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Route } from 'lucide-react';
+import { VisuallyHidden } from '@/components/a11y';
 import { Badge, Button, DataTable, Input, Select, Text, type Column, type PaginationProps } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
 import type { DriveGridScope } from '@/api/hooks/useDriveGrid';
@@ -169,7 +170,8 @@ export function DrivesEvidenceTable({
             onChange={(event) => onCollectionChange(event.target.value)}
             aria-label={t('drives.collections.aria', 'Filter drives by collection')}
             className="text-xs"
-            options={filterOptions(collectionPills)}
+            options={filterOptions(collectionPills.map(pill => pill.key === 'all'
+              ? { ...pill, label: t('drives.coll.allOption', 'All drives') } : pill))}
           />
         </div>
       ),
@@ -468,7 +470,7 @@ export function DrivesEvidenceTable({
         const status = driveReviewStatus(drive, anomalyDriveIds.has(drive.id));
         const warnings = driveWarnings(drive).join(' · ');
         return <Badge variant={status === 'recorded' ? 'success' : status === 'needsReview' ? 'warning' : 'info'}
-          size="sm" title={warnings || undefined}>{reviewLabels[status]}{warnings && <span className="sr-only">: {warnings}</span>}</Badge>;
+          size="sm" title={warnings || undefined}>{reviewLabels[status]}{warnings && <VisuallyHidden>: {warnings}</VisuallyHidden>}</Badge>;
       },
     },
     {

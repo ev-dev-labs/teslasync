@@ -387,8 +387,10 @@ describe('DashboardsPage', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(editor().value).toBe(''));
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    await waitFor(() => {
+      expect(editor().value).toBe('');
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
   });
 
   it('copies the TRIMMED JSON to the clipboard and shows a success callout', async () => {

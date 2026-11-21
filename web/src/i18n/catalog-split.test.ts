@@ -766,7 +766,7 @@ describe('checked-in locale artifacts', () => {
 
   it('keeps enlarged emptyState reachable through its real lazy namespace fallback', async () => {
     expect(JSON.stringify(catalog.emptyState).length).toBeGreaterThan(256)
-    const additional = ['maintenance', 'ownership', 'smartCharging', 'smartCommute', 'tireDifferentialDrift'] as const
+    const additional = ['maintenance', 'ownership', 'personalScope', 'smartCharging', 'smartCommute', 'tireDifferentialDrift'] as const
     expect(usageManifest.detailNamespaces.filter(namespace =>
       !additional.some(name => name === namespace))).toHaveLength(182)
     for (const namespace of additional) {

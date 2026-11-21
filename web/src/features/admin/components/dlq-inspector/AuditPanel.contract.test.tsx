@@ -110,7 +110,9 @@ describe('AuditPanel mobile field preservation', () => {
     // The column-menu trigger is a fixed-density icon button now (no md: density override).
     expect(screen.getByRole('button', { name: 'Reorder or hide columns' })).toHaveClass('h-9', 'w-9');
     expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toHaveClass('min-h-10');
-    const compact = screen.getByRole('radio', { name: 'Compact' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+    const menu = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
+    const compact = within(menu).getByRole('radio', { name: 'Compact' });
     expect(compact).toHaveClass('px-2', 'py-1');
     fireEvent.click(compact);
     expect(compact).toHaveAttribute('aria-checked', 'true');
@@ -223,10 +225,10 @@ describe('AuditPanel mobile field preservation', () => {
     resize(740);
     expect(view.container.querySelector('[data-mobile-table]')).toBeNull();
     const table = screen.getByRole('table', { name: 'dlq-audit' });
-    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual(fields);
+    expect(within(table).getAllByRole('columnheader').map(header => header.getAttribute('aria-label'))).toEqual(fields);
     for (const header of within(table).getAllByRole('columnheader')) expect(header).not.toHaveClass('hidden');
     for (const cell of within(table).getAllByRole('cell')) expect(cell).not.toHaveClass('hidden');
-    expect(within(table).getByText('fixture-trace-one')).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: 'fixture-trace-one' })).toBeInTheDocument();
   });
 
   it('retains loaded search and closes details when their row leaves the filtered view', async () => {

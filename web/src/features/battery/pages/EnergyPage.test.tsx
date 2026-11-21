@@ -462,7 +462,8 @@ describe('EnergyPage', () => {
     }, { timeout: 2_000 })
     expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
     expect(energyCallCount()).toBeGreaterThanOrEqual(1)
-    expect(screen.getByRole('button', { name: 'Saved views' })).toBeVisible()
+    const header = container.querySelector<HTMLElement>('[data-role="page-header"]')!
+    expect(within(header).getByRole('button', { name: 'Saved views' })).toBeVisible()
     // Workspace selection belongs to the shell's VehiclePicker, whose
     // combobox is named "Select vehicle". Table pagination is not a duplicate.
     expect(within(container).queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()

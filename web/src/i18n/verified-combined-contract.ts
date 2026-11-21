@@ -11,6 +11,7 @@ import { catalogBeforeAppDesign, catalogBeforeWidgetImplementation } from './ver
 import { catalogBeforeHorizontalNavigation } from './verified-horizontal-navigation-contract'
 import { catalogBeforeCommandBoard } from './verified-command-board-contract'
 import { catalogBeforeSmartNotifications } from './verified-smart-notifications-contract'
+import { catalogBeforeGridAccess } from './verified-grid-access-contract'
 import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -123,7 +124,7 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const beforeSmartNotifications = catalogBeforeSmartNotifications(catalog)
+  const beforeSmartNotifications = catalogBeforeSmartNotifications(catalogBeforeGridAccess(catalog))
   const beforeExternalAuth = catalogBeforeAppDesign(catalogBeforeHorizontalNavigation(catalogBeforeCommandBoard(beforeSmartNotifications)))
   expect(beforeExternalAuth.ratelimit, 'ratelimit').toEqual({
     appTitle: 'TeslaSync request limit reached',

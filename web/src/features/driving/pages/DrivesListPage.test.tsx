@@ -766,7 +766,7 @@ describe('DrivesListPage — collections', () => {
     const picker = openColumnTools('date');
     fireEvent.click(picker.getByRole('button', { name: 'Other conditions' }));
     const collection = within(picker.getByRole('combobox', { name: 'Filter drives by collection' }));
-    expect(collection.getByRole('option', { name: 'All (4)', selected: true })).toBeInTheDocument();
+    expect(collection.getByRole('option', { name: 'All drives (4)', selected: true })).toBeInTheDocument();
     expect(collection.getByRole('option', { name: 'Anomalies (1)' })).toBeInTheDocument();
     expect(collection.getByRole('option', { name: 'Tagged (0)' })).toBeDisabled();
     fireEvent.change(picker.getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'commutes' } });

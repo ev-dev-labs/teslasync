@@ -264,6 +264,23 @@ describe('DataTable filtered empty copy', () => {
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
   })
 
+  it('offers to clear server filters when no rows match a nonempty range', () => {
+    const onClearAllFilters = vi.fn()
+    const view = mount({ data: [], showMatchingCount: { matching: 0, rangeTotal: 2_232 }, onClearAllFilters,
+      mobilePresentation: presentation })
+    expect(screen.getByText('No results')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(onClearAllFilters).toHaveBeenCalledTimes(1)
+    resize(375)
+    expect(screen.getByText('No results')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(onClearAllFilters).toHaveBeenCalledTimes(2)
+    view.rerender(<DataTable columns={columns} data={[]} keyExtractor={row => row.id}
+      mobilePresentation={presentation} emptyMessage={cleanCopy}
+      showMatchingCount={{ matching: 0, rangeTotal: 0 }} onClearAllFilters={onClearAllFilters} />)
+    expect(screen.getByText(cleanCopy)).toBeVisible()
+  })
+
   it('preserves the default genuine empty wording', () => {
     render(<DataTable columns={columns} data={[]} keyExtractor={row => row.id} />)
     expect(screen.getByText('No data')).toBeInTheDocument()
@@ -299,7 +316,11 @@ describe('DataTable filtered empty copy', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.getByText('No results')).toBeInTheDocument()
     expect(screen.queryByText(cleanCopy)).not.toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Comfortable' })).toBeInTheDocument()
+    const layout = screen.getByRole('button', { name: 'Reorder or hide columns' })
+    fireEvent.click(layout)
+    expect(within(screen.getByRole('dialog', { name: 'Reorder or hide columns' }))
+      .getByRole('radio', { name: 'Comfortable' })).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(await screen.findByText('Alpha')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Rows per page' })).toHaveValue('1')

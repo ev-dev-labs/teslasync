@@ -1218,6 +1218,7 @@
       "overviewScopeNoComparison": "Aggregated returned drives in the selected window. These are not server-wide totals."
     },
     "coll": {
+      "allOption": "All drives",
       "allPill": "All",
       "anomalies": "Anomalies",
       "commutes": "Commutes",

@@ -8,6 +8,7 @@ import { producerProjection, projectionDigest } from './producer-projection';
 import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract';
 import { restoreCommandBoardSource } from './verified-command-board-contract';
 import { restoreSmartNotificationsSource } from './verified-smart-notifications-contract';
+import { restoreGridAccessSource } from './verified-grid-access-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const fingerprint = '358282a7f7b01b2dbd41b3b4a076ebb922fd69fcd667d8cfffffd79c6e169188';
@@ -75,7 +76,7 @@ const mobileTranslationRemovals: Record<string, string[]> = {
 export const actualRepairSource = (file: string): string =>
   readFileSync(resolve(process.cwd(), '..', file), 'utf8');
 
-function restoreRepairDependency(file: string, source: string): string {
+export function restoreRepairDependency(file: string, source: string): string {
   if (file !== touchTokenFile) return source;
   expect(hash(source), file + ': exact shared heatmap cell successor')
     .toBe('f798659dc9392ec7d651d0947d803b62f6fb02f6a8104442aa76060654d786f0');
@@ -240,7 +241,7 @@ export function restoreNativeSourceRepair(
   readDependency: (file: string) => string = actualRepairSource,
 ): string {
   expect(hash(JSON.stringify(repair)), 'pinned exact native source repair').toBe(fingerprint);
-  source = restoreSmartNotificationsSource(file, source);
+  source = restoreSmartNotificationsSource(file, restoreGridAccessSource(file, source));
   source = restoreCommandBoardSource(file, source);
   source = restoreHorizontalNavigationSource(file, source);
   source = restoreKeyIdentitySource(file, source);
@@ -254,10 +255,10 @@ export function restoreNativeSourceRepair(
   expect(currentProjection.calls, file + ': actual producer occurrences').toHaveLength(patch.currentCallCount);
   expect(projectionDigest(currentProjection), file + ': actual calls/defaults/options/origins/gates')
     .toBe(patch.currentProjectionSha256);
-  // Includes the new private producer, the additive barrel and its actual
-  // Tooltip implementation. These are never checked against restored bytes.
+  // Check the live dependencies before projecting exact, pinned successors
+  // back to the native repair checkpoint.
   for (const dependency of repair.dependencies) {
-    const actual = readDependency(dependency.file);
+    const actual = restoreGridAccessSource(dependency.file, readDependency(dependency.file));
     expect(hash(restoreRepairDependency(dependency.file, actual)), dependency.file + ': actual native repair dependency')
       .toBe(dependency.sha256);
   }

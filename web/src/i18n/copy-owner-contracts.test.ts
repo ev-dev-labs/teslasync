@@ -225,14 +225,18 @@ describe('five source-backed copy-owner contracts', () => {
     type HookInput = Parameters<typeof useDrivesListPageCollections>[0]
     type CopyInput = Pick<HookInput,
       't' | 'fsdFilter' | 'hasDrivePayload' | 'fsdDataAvailable'
-      | 'fsdByDriveID' | 'dateFilteredDrives' | 'anomalyDrives' | 'notableDrives'
-      | 'commuteDrives' | 'filteredDrives'> & { collection: HookInput['collection'] | 'unrecognized' }
+      | 'fsdByDriveID' | 'currentStats' | 'anomalyCount' | 'notableCount'
+      | 'commuteCount' | 'matchingTotal'> & { collection: HookInput['collection'] | 'unrecognized' }
     const useCopyCollections = useDrivesListPageCollections as
       (input: CopyInput) => ReturnType<typeof useDrivesListPageCollections>
     const input = {
       t: english.getFixedT('en'), collection, fsdFilter: 'all',
       hasDrivePayload: false, fsdDataAvailable: false, fsdByDriveID: new Map<number, DriveFsdInsight>(),
-      dateFilteredDrives: [], anomalyDrives: [], notableDrives: [], commuteDrives: [], filteredDrives: [],
+      currentStats: {
+        count: 0, totalDistanceM: 0, totalDurationS: 0, totalEnergyWh: 0, energyMeasuredCount: 0,
+        efficiencyMeasuredCount: 0, avgEfficiencyWhKm: null, topSpeedMps: null, longestDistanceM: null,
+      },
+      anomalyCount: 0, notableCount: 0, commuteCount: 0, matchingTotal: undefined,
     } satisfies CopyInput
     const { result } = renderHook(() => useCopyCollections(input))
     expect(result.current.collectionLabel).toBe('All')

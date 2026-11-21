@@ -1,0 +1,2301 @@
+{
+  "sources": [
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before": "a6013d4ff197eef2fa1dc25d8a41fa2211ef01c732187d0f7b31182b59154c2c",
+      "after": "4e627675d587e6a75c8e487eecb4622c4b5b3fb7536203bc2ae454d1f56869c5",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 4,
+          "count": 2,
+          "previous": [
+            "import { tableTokens } from '../../lib/tokens'",
+            "import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, GripVertical } from 'lucide-react'"
+          ]
+        },
+        {
+          "start": 18,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 25,
+          "count": 1,
+          "previous": [
+            "  selectedTableValueKeys, type TableRawValue, type TableValueSelections,"
+          ]
+        },
+        {
+          "start": 32,
+          "count": 2,
+          "previous": [
+            "import type { ExportScope } from '../forms/ListExportMenu'"
+          ]
+        },
+        {
+          "start": 35,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 56,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 163,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 180,
+          "count": 4,
+          "previous": []
+        },
+        {
+          "start": 239,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 245,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 248,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 350,
+          "count": 3,
+          "previous": []
+        },
+        {
+          "start": 365,
+          "count": 7,
+          "previous": []
+        },
+        {
+          "start": 436,
+          "count": 4,
+          "previous": []
+        },
+        {
+          "start": 449,
+          "count": 1,
+          "previous": [
+            "  onExport?: (format: 'csv' | 'json', rows: readonly T[], scope: ExportScope) => void | Promise<void>"
+          ]
+        },
+        {
+          "start": 531,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 533,
+          "count": 4,
+          "previous": [
+            "  sortKey,",
+            "  sortDir,",
+            "  onSort,"
+          ]
+        },
+        {
+          "start": 538,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 568,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 579,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 587,
+          "count": 4,
+          "previous": []
+        },
+        {
+          "start": 593,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 595,
+          "count": 1,
+          "previous": [
+            "  const [mobileActive, setMobileActive] = useState(false)"
+          ]
+        },
+        {
+          "start": 597,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 600,
+          "count": 4,
+          "previous": [
+            "  const observeFrame = mobileEnabled || rowGrouping?.actionsColumn != null"
+          ]
+        },
+        {
+          "start": 605,
+          "count": 1,
+          "previous": [
+            "    if (!observeFrame || !frameRef.current || typeof ResizeObserver === 'undefined') {",
+            "      setMobileActive(false)",
+            "      setCompactGroups(false)",
+            "      return",
+            "    }"
+          ]
+        },
+        {
+          "start": 609,
+          "count": 2,
+          "previous": [
+            "        setMobileActive(mobileEnabled && isMobileGridWidth(width))"
+          ]
+        },
+        {
+          "start": 612,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 622,
+          "count": 1,
+          "previous": [
+            "  }, [mobileEnabled, observeFrame])"
+          ]
+        },
+        {
+          "start": 627,
+          "count": 14,
+          "previous": []
+        },
+        {
+          "start": 658,
+          "count": 1,
+          "previous": [
+            "    return data.filter(row => valueColumns.every(column =>"
+          ]
+        },
+        {
+          "start": 666,
+          "count": 11,
+          "previous": [
+            "  }, [data, valueColumns, valueSelections, columns, localSearchEnabled, deferredLocalSearch])"
+          ]
+        },
+        {
+          "start": 685,
+          "count": 12,
+          "previous": []
+        },
+        {
+          "start": 713,
+          "count": 3,
+          "previous": [
+            "  const localFilterNoMatch = data.length > 0 && filteredData.length === 0"
+          ]
+        },
+        {
+          "start": 719,
+          "count": 0,
+          "previous": [
+            "    searchControls?.onChange('')"
+          ]
+        },
+        {
+          "start": 720,
+          "count": 8,
+          "previous": [
+            "    columns.forEach(column => column.onFilterClear?.())",
+            "    mobilePresentation?.onClear?.()"
+          ]
+        },
+        {
+          "start": 894,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 942,
+          "count": 7,
+          "previous": [
+            "  const selection = selectedKeys ?? []"
+          ]
+        },
+        {
+          "start": 952,
+          "count": 0,
+          "previous": [
+            "  const allRowKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor])"
+          ]
+        },
+        {
+          "start": 1062,
+          "count": 4,
+          "previous": [
+            "  const handleExport = useCallback(async (format: 'csv' | 'json', scope: ExportScope) => {",
+            "    const sourceRows = scope === 'selected' ? selectedRows : exportAll ? await exportAll() : filteredData"
+          ]
+        },
+        {
+          "start": 1070,
+          "count": 1,
+          "previous": [
+            "    const exportColumns = visibleColumns.flatMap(column => column.exportFields?.length"
+          ]
+        },
+        {
+          "start": 1101,
+          "count": 2,
+          "previous": [
+            "  }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow, onExport])"
+          ]
+        },
+        {
+          "start": 1108,
+          "count": 7,
+          "previous": [
+            "      visibleCount: exportAll ? undefined : filteredData.length,",
+            "      disabled: !exportAll && filteredData.length === 0 && selectedRows.length === 0,",
+            "      description: exportAll"
+          ]
+        },
+        {
+          "start": 1202,
+          "count": 11,
+          "previous": []
+        },
+        {
+          "start": 1314,
+          "count": 1,
+          "previous": [
+            "          <td data-app-part=\"table-cell\" className=\"w-12 min-w-12 p-0 text-center align-middle\">"
+          ]
+        },
+        {
+          "start": 1377,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 1600,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 1607,
+          "count": 1,
+          "previous": [
+            "    showColumnMenu ||"
+          ]
+        },
+        {
+          "start": 1610,
+          "count": 30,
+          "previous": [
+            "  const renderFilter = (key: string, label: string, filter?: ReactNode, filterActive?: boolean, onFilterClear?: () => void) =>"
+          ]
+        },
+        {
+          "start": 1641,
+          "count": 1,
+          "previous": [
+            "    <DataTableHeaderFilter key={key} label={label}"
+          ]
+        },
+        {
+          "start": 1644,
+          "count": 1,
+          "previous": [
+            "        setValueSelections(previous => {",
+            "          const next = { ...previous }",
+            "          delete next[key]",
+            "          return next",
+            "        })"
+          ]
+        },
+        {
+          "start": 1647,
+          "count": 1,
+          "previous": [
+            "      {valueOptions.has(key) ? (",
+            "        <DataTableValueFilter",
+            "          options={valueOptions.get(key) ?? []}",
+            "          selected={selectedTableValueKeys(valueSelections[key],",
+            "            (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))}",
+            "          onChange={values => {",
+            "            setPage(1)",
+            "            setValueSelections(previous => {",
+            "              const next = { ...previous }",
+            "              if (values == null) delete next[key]",
+            "              else next[key] = compactTableValueSelection(values,",
+            "                (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))",
+            "              return next",
+            "            })",
+            "          }}",
+            "          condition={filter}",
+            "          conditionActive={filterActive}",
+            "        />",
+            "      ) : filter}"
+          ]
+        },
+        {
+          "start": 1662,
+          "count": 1,
+          "previous": [
+            "      {col.sortable && onSort && <Button size=\"sm\" variant=\"secondary\" className=\"min-h-11\""
+          ]
+        },
+        {
+          "start": 1679,
+          "count": 55,
+          "previous": []
+        },
+        {
+          "start": 1745,
+          "count": 3,
+          "previous": [
+            "      data-app-table-frame=\"\" data-grid-frame=\"\" data-grid-variant={variant}>"
+          ]
+        },
+        {
+          "start": 1753,
+          "count": 2,
+          "previous": [
+            "          className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',"
+          ]
+        },
+        {
+          "start": 1757,
+          "count": 3,
+          "previous": [
+            "          density={densityControls}"
+          ]
+        },
+        {
+          "start": 1766,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 1774,
+          "count": 1,
+          "previous": [
+            "          actions={mobileControlsInToolbar ? <>"
+          ]
+        },
+        {
+          "start": 1776,
+          "count": 4,
+          "previous": [
+            "            <div className=\"flex w-full min-w-0 flex-wrap items-center gap-2\">{mobileControls}</div>",
+            "          </> : toolbarActions}"
+          ]
+        },
+        {
+          "start": 1787,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 1794,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 1801,
+          "count": 11,
+          "previous": [
+            "      {hasValueFilters && (",
+            "        <Text as=\"p\" size=\"xs\" color=\"muted\" role=\"status\" className=\"px-3 py-2\">",
+            "          {t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {",
+            "            filtered: filteredData.length, loaded: candidateRows.length,",
+            "          })}"
+          ]
+        },
+        {
+          "start": 1813,
+          "count": 19,
+          "previous": []
+        },
+        {
+          "start": 1834,
+          "count": 3,
+          "previous": [
+            "        <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>"
+          ]
+        },
+        {
+          "start": 1861,
+          "count": 1,
+          "previous": [
+            "            onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}"
+          ]
+        },
+        {
+          "start": 1870,
+          "count": 5,
+          "previous": [
+            "            controls={mobileControlsInToolbar ? null : mobileControls}"
+          ]
+        },
+        {
+          "start": 1880,
+          "count": 4,
+          "previous": [
+            "      )} style={wrapperStyle} data-grid-viewport=\"\">"
+          ]
+        },
+        {
+          "start": 1920,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 1950,
+          "count": 4,
+          "previous": [
+            "                const isDragOverTarget = headerReorderEnabled && dragOverKey === col.key"
+          ]
+        },
+        {
+          "start": 1960,
+          "count": 6,
+          "previous": [
+            "                    draggable={headerReorderEnabled || undefined}",
+            "                    onDragStart={headerReorderEnabled ? (e) => handleHeaderDragStart(col.key, e) : undefined}",
+            "                    onDragOver={headerReorderEnabled ? (e) => handleHeaderDragOver(col.key, e) : undefined}",
+            "                    onDragLeave={headerReorderEnabled ? () => handleHeaderDragLeave(col.key) : undefined}",
+            "                    onDrop={headerReorderEnabled ? (e) => handleHeaderDrop(col.key, e) : undefined}",
+            "                    onDragEnd={headerReorderEnabled ? handleHeaderDragEnd : undefined}"
+          ]
+        },
+        {
+          "start": 1967,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 1974,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 1976,
+          "count": 1,
+          "previous": [
+            "                      col.sortable && sortKey === col.key && 'text-[var(--text-primary)]',"
+          ]
+        },
+        {
+          "start": 1978,
+          "count": 1,
+          "previous": [
+            "                      headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',"
+          ]
+        },
+        {
+          "start": 1984,
+          "count": 1,
+          "previous": [
+            "                      col.sortable && (onSort || sortKey === col.key)"
+          ]
+        },
+        {
+          "start": 1998,
+          "count": 4,
+          "previous": [
+            "                    <div className={cn('flex gap-1', Boolean(col.headerAction) && 'flex-col',",
+            "                      col.align === 'right' && (col.headerAction ? 'items-end' : 'justify-end'),",
+            "                      col.align === 'center' && (col.headerAction ? 'items-center' : 'justify-center'))}>",
+            "                    <div className={cn('flex items-center gap-1',"
+          ]
+        },
+        {
+          "start": 2003,
+          "count": 1,
+          "previous": [
+            "                      {headerReorderEnabled && ("
+          ]
+        },
+        {
+          "start": 2012,
+          "count": 1,
+          "previous": [
+            "                      {col.sortable && onSort ? ("
+          ]
+        },
+        {
+          "start": 2017,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 2037,
+          "count": 1,
+          "previous": [
+            "                    {renderColumnFilter(col)}"
+          ]
+        },
+        {
+          "start": 2040,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 2068,
+          "count": 1,
+          "previous": [
+            "                      {localFilterNoMatch ? ("
+          ]
+        },
+        {
+          "start": 2073,
+          "count": 1,
+          "previous": [
+            "                      ) : emptyMessage}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/DataTableValueFilter.tsx",
+      "before": "9dfe4c0321117b91fa9ee0fd2a8d3b14e1ecececd7dfef0ad1341349b727390c",
+      "after": "d79bc52f285557a24214488bf1e735fa0fafc798db15b8fdee6215cd96ccf38f",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 19,
+          "count": 1,
+          "previous": [
+            "export function DataTableValueFilter({ options, selected, onChange, condition, conditionActive = false, conditionLabel, invalid = false }: {"
+          ]
+        },
+        {
+          "start": 27,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 50,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 114,
+          "count": 1,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "before": "1522eb71205cfddd4ff92fe6db8287242d0e597a6ae064c4d4fe370634f8394e",
+      "after": "63985f278ca129941949b24815cd11be064a9984bfaad87a1f4d52e4971cd2ce",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 0,
+          "count": 1,
+          "previous": [
+            "import { useEffect, useState, type ReactNode } from 'react'"
+          ]
+        },
+        {
+          "start": 32,
+          "count": 1,
+          "previous": [
+            "    badge: badge ? { label: badge.header, value: display(badge) } : undefined,"
+          ]
+        },
+        {
+          "start": 96,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 120,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 129,
+          "count": 1,
+          "previous": [
+            "          {presentation.inlineActions?.(row)}"
+          ]
+        },
+        {
+          "start": 137,
+          "count": 2,
+          "previous": [
+            "            aria-label={t('common.quickView', 'Quick view')}",
+            "            onClick={() => setDetailKey(key)}>{t('common.quickView', 'Quick view')}</Button>"
+          ]
+        },
+        {
+          "start": 196,
+          "count": 1,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/tableValueFilters.ts",
+      "before": "86f2e409fc1d93af04b6ed6c0823481eef1943592871cb0cb096ebaa0e2d2462",
+      "after": "bf77c8f586b89858f28b962f299a850bdd8f529de8402a6c02d699056b751088",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 73,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 83,
+          "count": 1,
+          "previous": [
+            "      group.count += 1;"
+          ]
+        },
+        {
+          "start": 86,
+          "count": 1,
+          "previous": [
+            "      groups.set(groupKey, { value: groupKey, label, count: 1, keys: [key], sortValue: value });"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIPolling.tsx",
+      "before": "361a812506753fb20ac7adcf28f549ce040875a6014fee2b9d6b6054a84c74dc",
+      "after": "5e5d930a7a80411426782e10c7991524f74e58a2dd0eee3646c86841be779779",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 1,
+          "count": 1,
+          "previous": [
+            "import { Toggle, Text, Button, HelpTooltip } from '@/components/ui';"
+          ]
+        },
+        {
+          "start": 11,
+          "count": 1,
+          "previous": [
+            "    totalCount, enabledCount, autoCount } = controller;"
+          ]
+        },
+        {
+          "start": 17,
+          "count": 2,
+          "previous": [
+            "          <div className=\"flex flex-wrap items-center gap-x-6 gap-y-3\">",
+            "            <div className=\"flex min-w-0 flex-wrap items-center gap-2\">"
+          ]
+        },
+        {
+          "start": 24,
+          "count": 1,
+          "previous": [
+            "                <Text as=\"p\" size=\"sm\" color=\"secondary\">"
+          ]
+        },
+        {
+          "start": 26,
+          "count": 3,
+          "previous": [
+            "                    ? t('fleetApi.polling.on', 'On') : t('fleetApi.polling.off', 'Off')}",
+            "                </Text>"
+          ]
+        },
+        {
+          "start": 38,
+          "count": 1,
+          "previous": [
+            "            <div className=\"flex min-w-0 flex-wrap items-center gap-2\">"
+          ]
+        },
+        {
+          "start": 43,
+          "count": 1,
+          "previous": [
+            "              <Text as=\"p\" size=\"sm\" color=\"secondary\" className={apiSuspended ? 'text-[var(--semantic-danger)]' : undefined}>"
+          ]
+        },
+        {
+          "start": 48,
+          "count": 1,
+          "previous": [
+            "              </Text>"
+          ]
+        },
+        {
+          "start": 67,
+          "count": 9,
+          "previous": [
+            "            <Text as=\"p\" size=\"sm\" color=\"muted\">",
+            "              {t('fleetApi.counts', '{{enabled}} of {{total}} endpoints allowed · {{auto}} auto-polled', {",
+            "                total: fmtInt(totalCount), enabled: fmtInt(enabledCount), auto: fmtInt(autoCount),",
+            "              })}",
+            "            </Text>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteActions.tsx",
+      "before": "a268c215c052e57def7fe27109e418ab59ed1147267b68f70f35fb74b3377890",
+      "after": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "removed": true,
+      "hunks": [
+        {
+          "start": 0,
+          "count": 0,
+          "previous": [
+            "import { useId } from 'react';",
+            "import { Toggle, Tooltip } from '@/components/ui';",
+            "import { VisuallyHidden } from '@/components/a11y';",
+            "import type { useFleetAPIPage } from '../../../hooks/useFleetAPIPage';"
+          ]
+        },
+        {
+          "start": 1,
+          "count": 0,
+          "previous": [
+            "type Props = { controller: ReturnType<typeof useFleetAPIPage>; kind: 'access' | 'auto' };",
+            "",
+            "export function FleetAPIRouteActions({ controller, kind }: Props) {",
+            "  const descriptionId = useId();",
+            "  const { t, pollingConfigMut, pollingConfig, pollingKnown, toggleAllAccess, toggleAllAuto,",
+            "    totalCount, enabledCount, autoCount, eligibleCount } = controller;",
+            "  if (!pollingKnown || !pollingConfig) return null;",
+            "",
+            "  const isAccess = kind === 'access';",
+            "  const selected = isAccess ? enabledCount : autoCount;",
+            "  const total = isAccess ? totalCount : eligibleCount;",
+            "  const mixed = selected > 0 && selected < total;",
+            "  const label = isAccess",
+            "    ? t('fleetApi.controls.bulkAccess', 'Allow all endpoints')",
+            "    : t('fleetApi.controls.bulkAuto', 'Auto-poll all eligible endpoints');",
+            "  const disabled = pollingConfigMut.isPending || (!isAccess && (!pollingConfig.auto_polling_enabled || total === 0));",
+            "  const hint = isAccess ? label : !pollingConfig.auto_polling_enabled",
+            "    ? t('fleetApi.controls.pausedHint', 'Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.')",
+            "    : total === 0 ? t('fleetApi.controls.noEligible', 'Allow an eligible endpoint before selecting auto-poll.')",
+            "      : t('fleetApi.controls.bulkHint', 'Auto-poll selects only enabled routes with a scheduled job.');",
+            "",
+            "  return (",
+            "    <>",
+            "      <Tooltip multiline content={hint}>",
+            "        <Toggle checked={total > 0 && selected === total} indeterminate={mixed}",
+            "          onChange={isAccess ? toggleAllAccess : toggleAllAuto} disabled={disabled}",
+            "          focusableWhenDisabled={!isAccess}",
+            "          aria-label={label} aria-describedby={mixed ? descriptionId : undefined} />",
+            "      </Tooltip>",
+            "      {mixed && <VisuallyHidden id={descriptionId}>{t('fleetApi.controls.partial', 'Some enabled')}</VisuallyHidden>}",
+            "    </>",
+            "  );",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteCatalog.tsx",
+      "before": "58ab437b7d53a243fbb7ef07bc3b9e46b1c8d5ba5fbf71c8dae47e0486f1a8f5",
+      "after": "a91a1f2ce9c069a07af92bf9169ec0bdb476dc1db6cc83d9eadb0f4125d7e6c3",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 0,
+          "count": 2,
+          "previous": [
+            "import { Badge } from '@/components/ui';"
+          ]
+        },
+        {
+          "start": 4,
+          "count": 4,
+          "previous": [
+            "import { FleetEndpointControls } from '../../FleetEndpointControls';",
+            "import type { useFleetAPIPage } from '../../../hooks/useFleetAPIPage';",
+            "import { FleetAPIGroupActions } from './FleetAPIGroupActions';",
+            "import { FleetAPIRouteActions } from './FleetAPIRouteActions';"
+          ]
+        },
+        {
+          "start": 17,
+          "count": 35,
+          "previous": [
+            "  const { t, fmtInt, search, setSearch, groupBy, pollingConfigMut, catalog,",
+            "    endpointGroups, groupLabel, toggleEndpoint, toggleAuto,",
+            "    categories, categoryLabel, selectedCategory, setSelectedCategory } = controller;"
+          ]
+        },
+        {
+          "start": 54,
+          "count": 85,
+          "previous": [
+            "    <div className=\"min-w-0 space-y-3\">",
+            "    <PillFilterBar semanticMode=\"filters\" ariaLabel={t('fleetApi.controls.categoryFilter', 'Route groups')}",
+            "      items={[{ key: 'all', label: t('fleetApi.controls.allRoutes', 'All routes') },",
+            "        ...categories.map(category => ({ key: category, label: categoryLabel(category) }))]}",
+            "      activeKey={selectedCategory} onChange={setSelectedCategory} />",
+            "    <FleetEndpointTable",
+            "      tableId=\"admin:fleet-endpoints\"",
+            "      endpoints={endpointGroups.flatMap(([, endpoints]) => endpoints)}",
+            "      candidates={catalog}",
+            "      access={pollingConfig.fleet_endpoints}",
+            "      auto={pollingConfig.auto_endpoints}",
+            "      pollingEnabled={pollingConfig.auto_polling_enabled}",
+            "      pending={pollingConfigMut.isPending}",
+            "      onEnable={toggleEndpoint}",
+            "      onAuto={toggleAuto}",
+            "      headerAccess={<FleetAPIRouteActions controller={controller} kind=\"access\" />}",
+            "      headerAuto={<FleetAPIRouteActions controller={controller} kind=\"auto\" />}",
+            "      toolbarActions={<FleetAPIViewOptions controller={controller} />}",
+            "      controls={{ search: {",
+            "        value: search,",
+            "        onChange: setSearch,",
+            "        ariaLabel: t('fleetApi.controls.search', 'Search API routes'),",
+            "        placeholder: t('fleetApi.controls.search', 'Search API routes'),",
+            "      } }}",
+            "      grouping={{",
+            "        key: endpoint => groupBy === 'category' ? endpoint.category : endpoint.method,",
+            "        label: groupLabel,",
+            "        resetKey: `${groupBy}:${selectedCategory}:${search}`,",
+            "        autoExpand: !!search.trim() || selectedCategory !== 'all',",
+            "        summary: (_, rows) => <Badge size=\"sm\" variant=\"info\">",
+            "          {t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}",
+            "        </Badge>,",
+            "        mobileSummary: (_, rows) => <Badge size=\"sm\" variant=\"info\"",
+            "          aria-label={t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}>",
+            "          {fmtInt(rows.length)}",
+            "        </Badge>,",
+            "        actionColumns: {",
+            "          access: group => <FleetEndpointControls",
+            "            access={<FleetAPIGroupActions controller={controller} group={group} kind=\"access\" />}",
+            "            autoPoll={catalog.some(endpoint => endpoint.pollable",
+            "              && (groupBy === 'category' ? endpoint.category : endpoint.method) === group)",
+            "              ? <FleetAPIGroupActions controller={controller} group={group} kind=\"auto\" /> : undefined} />,",
+            "        },",
+            "      }}",
+            "    />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/hooks/useFleetAPIPage.ts",
+      "before": "3935db457812b075af983c9c3edb87c18c7172ff9af5cfcacb0b45c7a883fef4",
+      "after": "f99e2e77f7fc4b09d6da2a23a03523e287b7041d7f54122b210348ce524647a1",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 7,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 18,
+          "count": 5,
+          "previous": [
+            "  const [selectedCategory, setSelectedCategory] = useState('all');",
+            "  const [groupBy, setGroupBy] = useState<'category' | 'method'>('category');",
+            "  const [sortBy, setSortBy] = useState<'name' | 'path' | 'method' | 'access' | 'auto'>('name');",
+            "  const [sortDescending, setSortDescending] = useState(false);"
+          ]
+        },
+        {
+          "start": 58,
+          "count": 1,
+          "previous": [
+            "  const catalog = pollingConfig?.endpoint_catalog ?? [];"
+          ]
+        },
+        {
+          "start": 60,
+          "count": 10,
+          "previous": [
+            "  const endpointGroups = useMemo(() => {",
+            "    const groups = new Map<string, FleetEndpoint[]>();",
+            "    for (const endpoint of catalog) {",
+            "      if (selectedCategory !== 'all' && endpoint.category !== selectedCategory) continue;",
+            "      const group = groupBy === 'category' ? endpoint.category : endpoint.method;",
+            "      if (normalizedSearch && !`${endpoint.key} ${endpoint.method} ${endpoint.path} ${endpoint.category}`.toLowerCase().includes(normalizedSearch)) {",
+            "        continue;",
+            "      }",
+            "      const entries = groups.get(group) ?? [];",
+            "      entries.push(endpoint);",
+            "      groups.set(group, entries);",
+            "    }",
+            "    const sortValue = (endpoint: FleetEndpoint): string | number => {",
+            "      switch (sortBy) {",
+            "        case 'path': return endpoint.path;",
+            "        case 'method': return endpoint.method;",
+            "        case 'access': return Number(!!pollingConfig?.fleet_endpoints[endpoint.key]);",
+            "        case 'auto': return Number(!!pollingConfig?.auto_endpoints[endpoint.key]);",
+            "        default: return endpoint.key;",
+            "      }",
+            "    };",
+            "    return [...groups.entries()].map(([group, endpoints]): [string, FleetEndpoint[]] => [",
+            "      group,",
+            "      endpoints.sort((a, b) => {",
+            "        const left = sortValue(a);",
+            "        const right = sortValue(b);",
+            "        const compared = typeof left === 'number' && typeof right === 'number'",
+            "          ? left - right : String(left).localeCompare(String(right));",
+            "        return (sortDescending ? -compared : compared) || a.key.localeCompare(b.key);",
+            "      }),",
+            "    ]);",
+            "  }, [catalog, groupBy, normalizedSearch, selectedCategory, sortBy, sortDescending, pollingConfig]);"
+          ]
+        },
+        {
+          "start": 76,
+          "count": 6,
+          "previous": [
+            "  const toggleEndpoint = (endpoint: FleetEndpoint) => {",
+            "    if (!pollingConfig) return;",
+            "    const enabled = pollingConfig.fleet_endpoints[endpoint.key];",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      fleet_endpoints: { ...pollingConfig.fleet_endpoints, [endpoint.key]: !enabled },",
+            "      auto_endpoints: enabled && endpoint.pollable",
+            "        ? { ...pollingConfig.auto_endpoints, [endpoint.key]: false }",
+            "        : pollingConfig.auto_endpoints,"
+          ]
+        },
+        {
+          "start": 83,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 86,
+          "count": 6,
+          "previous": [
+            "  const toggleAuto = (key: string) => {",
+            "    if (!pollingConfig?.auto_polling_enabled || !pollingConfig.fleet_endpoints[key]) return;",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      auto_endpoints: { ...pollingConfig.auto_endpoints, [key]: !pollingConfig.auto_endpoints[key] },",
+            "    });",
+            "  };",
+            "",
+            "  const toggleAllAccess = () => {",
+            "    if (!pollingConfig || catalog.length === 0) return;",
+            "    const enable = !catalog.every((endpoint) => pollingConfig.fleet_endpoints[endpoint.key]);",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      fleet_endpoints: Object.fromEntries(catalog.map((endpoint) => [endpoint.key, enable])),",
+            "      auto_endpoints: enable ? pollingConfig.auto_endpoints",
+            "        : Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable).map((endpoint) => [endpoint.key, false])),",
+            "    });",
+            "  };",
+            "",
+            "  const toggleGroupAccess = (group: string) => {",
+            "    if (!pollingConfig || pollingConfigMut.isPending) return;",
+            "    const endpoints = catalog.filter(endpoint => (groupBy === 'category' ? endpoint.category : endpoint.method) === group);",
+            "    if (!endpoints.length) return;",
+            "    const enable = !endpoints.every(endpoint => pollingConfig.fleet_endpoints[endpoint.key]);",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      fleet_endpoints: { ...pollingConfig.fleet_endpoints, ...Object.fromEntries(endpoints.map(endpoint => [endpoint.key, enable])) },",
+            "      auto_endpoints: enable ? pollingConfig.auto_endpoints : {",
+            "        ...pollingConfig.auto_endpoints,",
+            "        ...Object.fromEntries(endpoints.filter(endpoint => endpoint.pollable).map(endpoint => [endpoint.key, false])),",
+            "      },",
+            "    });",
+            "  };",
+            "",
+            "  const toggleAllAuto = () => {",
+            "    if (!pollingConfig?.auto_polling_enabled) return;",
+            "    const eligible = catalog.filter((endpoint) => endpoint.pollable && pollingConfig.fleet_endpoints[endpoint.key]);",
+            "    if (eligible.length === 0) return;",
+            "    const enable = !eligible.every((endpoint) => pollingConfig.auto_endpoints[endpoint.key]);",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      auto_endpoints: Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable)",
+            "        .map((endpoint) => [endpoint.key, enable && !!pollingConfig.fleet_endpoints[endpoint.key]])),",
+            "    });",
+            "  };",
+            "",
+            "  const toggleGroupAuto = (group: string) => {",
+            "    if (!pollingConfig?.auto_polling_enabled || pollingConfigMut.isPending) return;",
+            "    const eligible = catalog.filter(endpoint =>",
+            "      (groupBy === 'category' ? endpoint.category : endpoint.method) === group",
+            "      && endpoint.pollable && pollingConfig.fleet_endpoints[endpoint.key]);",
+            "    if (!eligible.length) return;",
+            "    const enable = !eligible.every(endpoint => pollingConfig.auto_endpoints[endpoint.key]);",
+            "    pollingConfigMut.mutate({",
+            "      ...pollingConfig,",
+            "      auto_endpoints: {",
+            "        ...pollingConfig.auto_endpoints,",
+            "        ...Object.fromEntries(eligible.map(endpoint => [endpoint.key, enable])),",
+            "      },",
+            "    });"
+          ]
+        },
+        {
+          "start": 104,
+          "count": 1,
+          "previous": [
+            "  const eligibleCount = catalog.filter((ep) => ep.pollable && pollingConfig?.fleet_endpoints[ep.key]).length;"
+          ]
+        },
+        {
+          "start": 118,
+          "count": 6,
+          "previous": [
+            "    categories, categoryLabel, selectedCategory, setSelectedCategory,",
+            "    fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/pages/FleetAPIPage.tsx",
+      "before": "7cb9c60fa8021073207d405db01eff4f1f184107a671d7b22409ed61907ba517",
+      "after": "4041bf90daa480b6a376a7c48c79dbe2c2cf4c84eeec326f3810e0d9fe1d42c4",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 1,
+          "count": 1,
+          "previous": [
+            " * FleetAPIPage — outbound Tesla Fleet API access and polling participation."
+          ]
+        },
+        {
+          "start": 22,
+          "count": 1,
+          "previous": [
+            "      subtitle={t('fleetApi.subtitle', 'Choose which Tesla Fleet API routes are available and which can be polled automatically')}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/DrivesEvidenceTable.tsx",
+      "before": "409a86d0e9b7c15471cbeeb1e6696a58e66cd6bc870c2bf4d52e132c712f2f6a",
+      "after": "2a924c1663769a8f61ab07ad1e0d31473b78021e8a67aa9ab7cfbdf0bd315f4a",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 3,
+          "count": 3,
+          "previous": [
+            "import { AlertTriangle, Eye } from 'lucide-react';",
+            "import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';"
+          ]
+        },
+        {
+          "start": 7,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 16,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 18,
+          "count": 1,
+          "previous": [
+            "import { DRIVE_VALUE_COLUMNS, driveColumnValue, driveStatusFlags, type DriveValueColumn, type DriveValueSelections } from './driveGridValues';"
+          ]
+        },
+        {
+          "start": 21,
+          "count": 1,
+          "previous": [
+            "export const DRIVE_GRID_SORT_KEYS = ['date', 'route', 'start', 'destination', 'distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'insideTemp', 'efficiency', 'grade', 'battery', 'startBattery', 'batteryUsed', 'energy', 'regen', 'score', 'cost', 'fsd'] as const;"
+          ]
+        },
+        {
+          "start": 23,
+          "count": 1,
+          "previous": [
+            "export type DriveGridFilterKey = 'start' | 'destination' | 'distance' | 'duration' | 'speed' | 'maxSpeed' | 'avgPower' | 'outsideTemp' | 'insideTemp' | 'grade' | 'battery' | 'startBattery' | 'batteryUsed' | 'energy' | 'regen' | 'score';"
+          ]
+        },
+        {
+          "start": 28,
+          "count": 3,
+          "previous": [
+            "  availableDrives: Drive[];"
+          ]
+        },
+        {
+          "start": 33,
+          "count": 1,
+          "previous": [
+            "  onValueSelectionChange: (column: DriveValueColumn, values: string[] | null) => void;"
+          ]
+        },
+        {
+          "start": 41,
+          "count": 0,
+          "previous": [
+            "  search: string;"
+          ]
+        },
+        {
+          "start": 42,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 46,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 50,
+          "count": 4,
+          "previous": []
+        },
+        {
+          "start": 71,
+          "count": 3,
+          "previous": [
+            "  toolbarHeading?: ReactNode;"
+          ]
+        },
+        {
+          "start": 79,
+          "count": 1,
+          "previous": [
+            "  drives, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,"
+          ]
+        },
+        {
+          "start": 81,
+          "count": 2,
+          "previous": [
+            "  search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange,"
+          ]
+        },
+        {
+          "start": 85,
+          "count": 2,
+          "previous": [
+            "  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading, controls, paginationControls,"
+          ]
+        },
+        {
+          "start": 96,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 105,
+          "count": 11,
+          "previous": [
+            "  const numberFilter = (key: Exclude<DriveGridFilterKey, 'grade' | 'start' | 'destination'>, label: string, unit: string) => ("
+          ]
+        },
+        {
+          "start": 130,
+          "count": 24,
+          "previous": []
+        },
+        {
+          "start": 157,
+          "count": 5,
+          "previous": [
+            "      defaultWidth: 210,",
+            "      minWidth: 190,",
+            "      render: (drive) => {",
+            "        const warnings = driveWarnings(drive).join(' · ');",
+            "        const date = formatDateTime(drive.startTs, { tz: timezone });",
+            "        return (",
+            "          <div className=\"flex min-w-0 items-center gap-2\">",
+            "            <Link",
+            "              className=\"truncate font-medium text-[var(--text-primary)] hover:underline focus-visible:underline\"",
+            "              title={date}",
+            "              to={`/drives/${drive.id}`}",
+            "            >",
+            "              {date}",
+            "            </Link>",
+            "            {drive.endTs == null && <Badge variant=\"success\" size=\"sm\" className=\"shrink-0\">{t('drives.inProgress', 'In progress')}</Badge>}",
+            "            {warnings && (",
+            "              <span title={warnings} className=\"shrink-0 text-amber-700 dark:text-amber-300\">",
+            "                <AlertTriangle className=\"h-3.5 w-3.5\" role=\"img\" aria-label={warnings} />",
+            "              </span>",
+            "            )}",
+            "          </div>",
+            "        );",
+            "      },",
+            "      filterActive: search !== '' || collection !== 'all',"
+          ]
+        },
+        {
+          "start": 165,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 172,
+          "count": 2,
+          "previous": [
+            "            options={[",
+            "              { value: 'all', label: t('drives.coll.allOption', 'All drives') },",
+            "              { value: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies') },",
+            "              { value: 'notable', label: t('drives.coll.notable', 'Notable') },",
+            "              { value: 'commutes', label: t('drives.coll.commutes', 'Commutes') },",
+            "              { value: 'tagged', label: t('drives.coll.tagged', 'Tagged'), disabled: true },",
+            "            ]}"
+          ]
+        },
+        {
+          "start": 188,
+          "count": 1,
+          "previous": [
+            "        filter: (",
+            "          <Input",
+            "            size=\"sm\"",
+            "            value={filters[key]}",
+            "            onChange={(event) => onFilterChange(key, event.target.value)}",
+            "            aria-label={t('drives.grid.locationFilter', 'Filter {{location}}', { location: label })}",
+            "            placeholder={t('drives.grid.contains', 'Contains')}",
+            "          />",
+            "        ),"
+          ]
+        },
+        {
+          "start": 201,
+          "count": 1,
+          "previous": [
+            "      defaultWidth: 145,"
+          ]
+        },
+        {
+          "start": 206,
+          "count": 1,
+          "previous": [
+            "      render: (drive) => drive.distanceM > 0 ? fmtNumber(toDistanceDisplay(drive.distanceM)) : '—',"
+          ]
+        },
+        {
+          "start": 212,
+          "count": 1,
+          "previous": [
+            "      defaultWidth: 135,"
+          ]
+        },
+        {
+          "start": 357,
+          "count": 1,
+          "previous": [
+            "      defaultWidth: 155,"
+          ]
+        },
+        {
+          "start": 391,
+          "count": 1,
+          "previous": [
+            "          options={[",
+            "            { value: 'all', label: t('drives.fsdFilter.all', 'All FSD data') },",
+            "            { value: 'reported', label: t('drives.fsdFilter.reported', 'FSD') },",
+            "            { value: 'high', label: t('drives.fsdFilter.high', 'High confidence') },",
+            "            { value: 'estimated', label: t('drives.fsdFilter.estimated', 'Estimated') },",
+            "            { value: 'ambiguous', label: t('drives.fsdFilter.ambiguous', 'Ambiguous') },",
+            "            { value: 'unknown', label: t('drives.fsdFilter.unknown', 'Unknown') },",
+            "          ]}"
+          ]
+        },
+        {
+          "start": 461,
+          "count": 13,
+          "previous": [
+            "      defaultVisible: false,",
+            "      defaultWidth: 250,",
+            "      render: (drive) => [",
+            "        drive.endTs == null ? t('drives.inProgress', 'In progress') : '',",
+            "        ...driveWarnings(drive),",
+            "      ].filter(Boolean).join(' · ') || '—',"
+          ]
+        },
+        {
+          "start": 478,
+          "count": 1,
+          "previous": [
+            "      defaultWidth: 80,"
+          ]
+        },
+        {
+          "start": 490,
+          "count": 1,
+          "previous": [
+            "          <Eye className=\"h-4 w-4\" aria-hidden=\"true\" />"
+          ]
+        },
+        {
+          "start": 494,
+          "count": 1,
+          "previous": [
+            "  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt]);"
+          ]
+        },
+        {
+          "start": 530,
+          "count": 2,
+          "previous": [
+            "      if (!key) return column;",
+            "      const options = buildTableFilterValues(availableDrives,",
+            "        drive => driveColumnValue(drive, key, fsdByDriveID, anomalyDriveIds, fsdAvailable),",
+            "        value => label(key, typeof value === 'boolean' ? String(value) : value));"
+          ]
+        },
+        {
+          "start": 534,
+          "count": 1,
+          "previous": [
+            "        : key === 'start' || key === 'destination'"
+          ]
+        },
+        {
+          "start": 536,
+          "count": 1,
+          "previous": [
+            "          : key === 'grade' || key === 'efficiency' || key === 'fsd'"
+          ]
+        },
+        {
+          "start": 539,
+          "count": 0,
+          "previous": [
+            "      const selection = valueSelections[key];",
+            "      const selected = selectedTableValueKeys(selection, options.flatMap((option) => option.keys ?? [option.value]));"
+          ]
+        },
+        {
+          "start": 541,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 544,
+          "count": 1,
+          "previous": [
+            "        filterActive: Boolean(column.filterActive || valueSelections[key] != null || invalidValueSelection),"
+          ]
+        },
+        {
+          "start": 547,
+          "count": 7,
+          "previous": [
+            "          <DataTableValueFilter",
+            "            options={options}",
+            "            selected={selected}",
+            "            onChange={(values) => onValueSelectionChange(key, values)}"
+          ]
+        },
+        {
+          "start": 558,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 563,
+          "count": 2,
+          "previous": [
+            "  }, [columns, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,",
+            "    fsdByDriveID, fsdAvailable, anomalyDriveIds, statusLabels, t, timezone, toDistanceDisplay, distanceUnit, toSpeedDisplay, speedUnit,"
+          ]
+        },
+        {
+          "start": 574,
+          "count": 4,
+          "previous": [
+            "        toolbarHeading={toolbarHeading}"
+          ]
+        },
+        {
+          "start": 600,
+          "count": 36,
+          "previous": []
+        },
+        {
+          "start": 637,
+          "count": 3,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drives-orchestrator/DrivesEvidenceHeading.tsx",
+      "before": "0a5aa0869f2caf2ef73599d20663b559debbce0d8839ea526005aa1bc3474ec3",
+      "after": "beb7d918cd741b018df26ade50edc167061d89d0775662308577b704bc446a9e",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 5,
+          "count": 1,
+          "previous": [
+            "  't' | 'hasDrivePayload' | 'fmtCompact' | 'sortedDrives' | 'desktopEvidence'"
+          ]
+        },
+        {
+          "start": 9,
+          "count": 1,
+          "previous": [
+            "  t, hasDrivePayload, fmtCompact, sortedDrives, desktopEvidence,"
+          ]
+        },
+        {
+          "start": 18,
+          "count": 1,
+          "previous": [
+            "          ({hasDrivePayload ? fmtCompact(sortedDrives.length) : '—'})"
+          ]
+        },
+        {
+          "start": 21,
+          "count": 1,
+          "previous": [
+            "      {sortedDrives.length > 0 && ("
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drives-orchestrator/DrivesEvidenceSection.tsx",
+      "before": "f9c38fcd8b9ca079c212be01964147551fd5e39295077cb05d87a9884d8ff38a",
+      "after": "1bde2e6e9ae85d9906e7f89c63321ac7f3bc8c55cb6d90799ab7f29ea415d94e",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 2,
+          "count": 1,
+          "previous": [
+            "import { QueryError, Skeleton } from '@/components/feedback';"
+          ]
+        },
+        {
+          "start": 5,
+          "count": 1,
+          "previous": [
+            "import { DrivesDesktopEvidence } from './DrivesDesktopEvidence';",
+            "import { DrivesMobileEvidence } from './DrivesMobileEvidence';"
+          ]
+        },
+        {
+          "start": 13,
+          "count": 3,
+          "previous": [
+            "    t, desktopEvidence, isDrivesLoading, dateFilteredDrives, tableControls,",
+            "    drivesState, refetchDrives, paginatedDrives, bulkSelected,",
+            "    filteredDrives, clearBulk, bulkDriveActions,"
+          ]
+        },
+        {
+          "start": 17,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 24,
+          "count": 1,
+          "previous": [
+            "      {(!desktopEvidence || isDrivesLoading || dateFilteredDrives.length === 0) && ("
+          ]
+        },
+        {
+          "start": 27,
+          "count": 1,
+          "previous": [
+            "      {desktopEvidence && dateFilteredDrives.length === 0 && <TableToolbar {...tableControls} />}"
+          ]
+        },
+        {
+          "start": 29,
+          "count": 3,
+          "previous": [
+            "      {drivesState.fatalError ? (",
+            "        <QueryError error={drivesState.fatalError} onRetry={() => { void refetchDrives(); }} />",
+            "      ) : isDrivesLoading ? (",
+            "        <div className=\"space-y-3\">",
+            "          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className=\"h-20\" />)}",
+            "        </div>",
+            "      ) : paginatedDrives.length > 0 || (desktopEvidence && dateFilteredDrives.length > 0) ? ("
+          ]
+        },
+        {
+          "start": 35,
+          "count": 1,
+          "previous": [
+            "            total={filteredDrives.length}"
+          ]
+        },
+        {
+          "start": 44,
+          "count": 1,
+          "previous": [
+            "          {desktopEvidence",
+            "            ? <DrivesDesktopEvidence {...model} />",
+            "            : <DrivesMobileEvidence {...model} />}"
+          ]
+        },
+        {
+          "start": 46,
+          "count": 6,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drives-orchestrator/DrivesStickySummary.tsx",
+      "before": "7b86725823261903489b2769e90b0197f73e3c80898e9b3f6bac74511be16612",
+      "after": "de66bd7d9c8877163386eab4814c67b7d5f7f89067b1acff8a43d80dd3384389",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 5,
+          "count": 2,
+          "previous": [
+            "  't' | 'periodLabel' | 'collectionLabel' | 'hasDrivePayload'",
+            "  | 'fmtCompact' | 'filteredDrives' | 'avgGrade'>;"
+          ]
+        },
+        {
+          "start": 9,
+          "count": 1,
+          "previous": [
+            "  t, periodLabel, collectionLabel, hasDrivePayload, fmtCompact, filteredDrives, avgGrade,"
+          ]
+        },
+        {
+          "start": 25,
+          "count": 1,
+          "previous": [
+            "      <Text as=\"span\" size=\"xs\" color=\"secondary\">{hasDrivePayload ? fmtCompact(filteredDrives.length) : '—'} {t('drives.results', 'results')}</Text>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drives-orchestrator/DrivesTrendAnalysis.tsx",
+      "before": "fd03674f563ecdbbc445c856a0e9b74451b1acd45a3d37b08e0c056334c5e14c",
+      "after": "56d5af71912137306fc4520c072ffcfde2ae6888740dfa3565812397fa0da19a",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 9,
+          "count": 1,
+          "previous": [
+            "  't' | 'anomalyDrives' | 'collection' | 'setUrlBatch' | 'drivesState'"
+          ]
+        },
+        {
+          "start": 15,
+          "count": 1,
+          "previous": [
+            "  t, anomalyDrives, collection, setUrlBatch, drivesState, refetchDrives,"
+          ]
+        },
+        {
+          "start": 20,
+          "count": 1,
+          "previous": [
+            "  const anomalyFooter = anomalyDrives.length > 0 && collection !== 'anomalies' ? ("
+          ]
+        },
+        {
+          "start": 30,
+          "count": 2,
+          "previous": [
+            "        count: anomalyDrives.length,",
+            "        noun: anomalyDrives.length === 1"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drives-orchestrator/drivesListHighlights.ts",
+      "before": "16db1d46e08b67c62f920baa8fc3cb50545a02c77c96f9c7593ee86ca18c0731",
+      "after": "0796bdcb711925686c1603753ebb7e104ad26007607b9d489aa90e30f2be9cb9",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 4,
+          "count": 1,
+          "previous": [
+            "import type { useDrivesListPageFilters } from '../../hooks/useDrivesListPageFilters';"
+          ]
+        },
+        {
+          "start": 7,
+          "count": 1,
+          "previous": [
+            "  & ReturnType<typeof useDrivesListPageFilters>;"
+          ]
+        },
+        {
+          "start": 11,
+          "count": 1,
+          "previous": [
+            "    currentStats, dateFilteredDrives, t, fmtInt, toSpeedDisplay, speedUnit,"
+          ]
+        },
+        {
+          "start": 22,
+          "count": 1,
+          "previous": [
+            "      value: dateFilteredDrives.some((drive) => drive.maxSpeedMps != null && Number.isFinite(drive.maxSpeedMps))"
+          ]
+        },
+        {
+          "start": 29,
+          "count": 1,
+          "previous": [
+            "      value: `${fmtNumber(toDistanceDisplay(currentStats.longest?.distanceM ?? 0))} ${distanceUnit}`,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/hooks/useDrivesListPage.ts",
+      "before": "8cc3f1e12217393e513ca2814d7e22bc9cba611cc93502760e96263f0d660cff",
+      "after": "7d9f8caf45bcc3201161dcccc13a70a5ed0a1943c0c4fcee4d019de8432902b7",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 0,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 9,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 14,
+          "count": 2,
+          "previous": [
+            "  const input = { ...data, ...filters };"
+          ]
+        },
+        {
+          "start": 23,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 31,
+          "count": 1,
+          "previous": [
+            "    narrative, highlightRows, previewFrom, previewTo,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/hooks/useDrivesListPageCollections.ts",
+      "before": "8333397808e21e0399676e850e9745f7c8ce2c3e032a67d17ff8f9d3993f017e",
+      "after": "fbeaac51acd42e77189e529902bf0608e8bdae16d4bb5d0b98aa6d841ebe270a",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 5,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 8,
+          "count": 1,
+          "previous": [
+            "  & ReturnType<typeof useDrivesListPageFilters>;"
+          ]
+        },
+        {
+          "start": 12,
+          "count": 2,
+          "previous": [
+            "    t, hasDrivePayload, fsdDataAvailable, fsdByDriveID, dateFilteredDrives,",
+            "    anomalyDrives, notableDrives, commuteDrives, collection, fsdFilter, filteredDrives,"
+          ]
+        },
+        {
+          "start": 15,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 19,
+          "count": 4,
+          "previous": [
+            "    { key: 'all',       label: t('drives.coll.allPill', 'All'),             count: hasDrivePayload ? dateFilteredDrives.length : undefined },",
+            "    { key: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies'), count: hasDrivePayload ? anomalyDrives.length : undefined },",
+            "    { key: 'notable',   label: t('drives.coll.notable', 'Notable'),     count: hasDrivePayload ? notableDrives.length : undefined },",
+            "    { key: 'commutes',  label: t('drives.coll.commutes', 'Commutes'),   count: hasDrivePayload ? commuteDrives.length : undefined },"
+          ]
+        },
+        {
+          "start": 24,
+          "count": 1,
+          "previous": [
+            "  ], [t, hasDrivePayload, dateFilteredDrives.length, anomalyDrives.length, notableDrives.length, commuteDrives.length]);"
+          ]
+        },
+        {
+          "start": 27,
+          "count": 2,
+          "previous": [
+            "    const count = (predicate: (insight: DriveFsdInsight | undefined) => boolean) =>",
+            "      fsdDataAvailable && hasDrivePayload ? dateFilteredDrives.reduce(",
+            "        (total, drive) => total + (predicate(fsdByDriveID.get(drive.id)) ? 1 : 0),",
+            "        0,",
+            "      ) : undefined;"
+          ]
+        },
+        {
+          "start": 33,
+          "count": 1,
+          "previous": [
+            "        count: hasDrivePayload ? dateFilteredDrives.length : undefined,"
+          ]
+        },
+        {
+          "start": 68,
+          "count": 1,
+          "previous": [
+            "  }, [dateFilteredDrives, hasDrivePayload, fsdByDriveID, fsdDataAvailable, t]);"
+          ]
+        },
+        {
+          "start": 79,
+          "count": 1,
+          "previous": [
+            "      ? [{ key: 'combined', label: `${collectionLabel} + ${fsdFilterLabel}`, count: filteredDrives.length }]"
+          ]
+        },
+        {
+          "start": 88,
+          "count": 1,
+          "previous": [
+            "  return { collectionLabel, fsdFilterLabel, filterPills, activeFilterKey };"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/hooks/useDrivesListPageData.ts",
+      "before": "540cb51c922f767e87406d6bc8d88281febd440335115844a8ffe9310896390a",
+      "after": "898b77535483f082cb116c23539f891cb3b1ee5984f214427c39b26ef6be8273",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 5,
+          "count": 1,
+          "previous": [
+            "import { useDrives } from '@/api/hooks/useDriving';"
+          ]
+        },
+        {
+          "start": 20,
+          "count": 1,
+          "previous": [
+            "import { priorPeriod, shiftDayKey } from '@/lib/drivesAggregation';"
+          ]
+        },
+        {
+          "start": 22,
+          "count": 1,
+          "previous": [
+            "import { DRIVES_FETCH_LIMIT, FSD_MAX_RANGE_DAYS, inclusiveDateKeySpan } from '../components/drives-orchestrator/drivesListConstants';"
+          ]
+        },
+        {
+          "start": 25,
+          "count": 1,
+          "previous": [
+            "  const { fmtNumber, fmtInt, fmtCompact } = useNumberFormatting();"
+          ]
+        },
+        {
+          "start": 33,
+          "count": 1,
+          "previous": [
+            "  const { vehicleId } = useSelectedVehicle();"
+          ]
+        },
+        {
+          "start": 36,
+          "count": 2,
+          "previous": [
+            "  /* Selected range. Read before the data hook because it scopes the request:",
+            "   * the API applies a 50-row default page, so filtering client-side alone",
+            "   * capped this page at the 50 newest drives regardless of the chosen range",
+            "   * or page size. */",
+            "  const { start: startDate, end: endDate, presetId: rangePresetId } = useRangeState({"
+          ]
+        },
+        {
+          "start": 52,
+          "count": 11,
+          "previous": [
+            "  /* Fetch window. It has to reach back over the prior period as well, because",
+            "   * the delta comparison below is computed from drives that fall *before* the",
+            "   * selected range. Both ends are padded by a day: the API filters on UTC",
+            "   * while this page buckets drives by the vehicle's local day, so an exact",
+            "   * window would drop rows the tz-aware filter should keep. */",
+            "  const fetchWindow = useMemo(() => ({",
+            "    start: shiftDayKey(priorRange?.start ?? startDate, -1) ?? undefined,",
+            "    end: shiftDayKey(endDate, 1) ?? undefined,",
+            "    limit: DRIVES_FETCH_LIMIT,",
+            "  }), [priorRange, startDate, endDate]);",
+            "",
+            "  const drivesQuery = useDrives(vehicleIdStr, fetchWindow);",
+            "  const { data: drives, refetch: refetchDrives } = drivesQuery;",
+            "  const hasDrivePayload = Array.isArray(drives);",
+            "  /* Refresh failures retain rows. Initial failures stay in source-local",
+            "   * recovery panels so the independent FSD source remains reachable. */"
+          ]
+        },
+        {
+          "start": 64,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 75,
+          "count": 2,
+          "previous": [
+            "    start: startDate,",
+            "    end: endDate,"
+          ]
+        },
+        {
+          "start": 78,
+          "count": 1,
+          "previous": [
+            "  }), [vehicleId, startDate, endDate]);",
+            "",
+            "  /* A full page back means the range almost certainly holds more drives than",
+            "   * one request can carry. Say so rather than silently showing a subset. */",
+            "  const truncated = (drives?.length ?? 0) >= DRIVES_FETCH_LIMIT;",
+            "",
+            "  /* Active vehicle's IANA timezone — every \"what day is this drive?\"",
+            " * decision on this page must use this rather than the browser's local",
+            " * zone, otherwise late-night drives appear under the wrong day in the",
+            " * grouped list, the chart shows ghost bars on the next UTC day, and",
+            " * the period stats undercount/overcount drives near the boundary. */",
+            "  const { tz } = useDateFormat();",
+            "  const fsdRange = useMemo(",
+            "    () => calendarRangeToInstants({",
+            "      startDate,",
+            "      endDate,",
+            "      timezone: tz,",
+            "    }),",
+            "    [startDate, endDate, tz],",
+            "  );"
+          ]
+        },
+        {
+          "start": 82,
+          "count": 2,
+          "previous": [
+            "    fsdRange.startInstant,",
+            "    fsdRange.endInstantExclusive,"
+          ]
+        },
+        {
+          "start": 147,
+          "count": 2,
+          "previous": [
+            "    fmtNumber, fmtInt, fmtCompact, t, navigate, savedView, desktopEvidence,",
+            "    vehicleId, startDate, endDate, priorRange, isAllTime, drives, drivesQuery,"
+          ]
+        },
+        {
+          "start": 150,
+          "count": 1,
+          "previous": [
+            "    previewDrive, setPreviewDrive, exportScope, truncated, tz,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "before": "f798659dc9392ec7d651d0947d803b62f6fb02f6a8104442aa76060654d786f0",
+      "after": "f6af3fbc606d53a6dcde39b8d988d24894e524fd1c73cb03f122b4e55b0835e0",
+      "removed": false,
+      "hunks": [
+        {
+          "start": 59,
+          "count": 0,
+          "previous": [
+            "} as const",
+            "",
+            "// ── Table styling tokens ──",
+            "//",
+            "// Includes sticky-header, selection-row, bulk-bar, resizer-handle, and",
+            "// expanded-row tokens used by DataTable's optional features.",
+            "",
+            "export const tableTokens = {",
+            "  frame: 'min-w-0 max-w-full space-y-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-3 shadow-e1',",
+            "  toolbar: 'flex flex-wrap items-center justify-between gap-2',",
+            "  wrapper: 'w-full border-collapse text-sm text-[var(--text-primary)]',",
+            "  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] text-xs normal-case tracking-normal',",
+            "  headCell: 'px-4 py-3.5 text-left font-semibold',",
+            "  body: 'divide-y divide-[var(--border-subtle)]',",
+            "  row: 'align-middle even:bg-[var(--surface-2)] hover:!bg-[var(--control-bg-hover)] transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--text-secondary)]',",
+            "  cell: 'px-4 py-3.5',",
+            "  /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */",
+            "  scrollContainer: 'relative overflow-auto rounded-panel border border-[var(--border-default)]',",
+            "  /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel",
+            "   *  surface so rows scrolling underneath don't bleed through. z-20 keeps the",
+            "   *  sticky thead above selected-row z-10 hover states. */",
+            "  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-2)] backdrop-blur-sm',",
+            "  /** Visual treatment for selected rows. */",
+            "  rowSelected: '!bg-[var(--control-bg)] [&>td:first-child]:shadow-[inset_3px_0_0_var(--theme-primary)]',",
+            "  groupStart: 'border-l border-[var(--border-subtle)]',",
+            "  semantic: '[&_thead]:border-b [&_thead]:border-[var(--border-default)] [&_thead]:bg-[var(--surface-2)] [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_th]:normal-case [&_th]:tracking-normal [&_th]:text-[var(--text-secondary)] [&_td]:px-3 [&_td]:py-2 [&_tbody_tr]:align-middle [&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border-subtle)] [&_tbody_tr:nth-child(even)]:bg-[var(--surface-2)] [&_tbody_tr:hover]:bg-[var(--control-bg-hover)] [&_tbody_tr:focus-within]:bg-[var(--control-bg-hover)]',",
+            "  /** Container for the bulk-action toolbar that appears above the table. */",
+            "  bulkBar:",
+            "    'flex flex-wrap items-center gap-2 px-3 py-2 mb-2 rounded-lg ' +",
+            "    'border border-[var(--border-default)] bg-[var(--control-bg)] text-sm text-[var(--text-primary)]',",
+            "  /** Width of the leading checkbox/chevron columns. */",
+            "  leadingColWidth: 'w-10',",
+            "  /** The drag handle on the right edge of resizable column headers. */",
+            "  resizer:",
+            "    'absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none ' +",
+            "    'opacity-0 hover:opacity-100 hover:bg-[var(--text-muted)] transition-opacity ' +",
+            "    'focus-visible:opacity-100 focus-visible:bg-[var(--text-secondary)] outline-none',",
+            "  /** Cell holding `renderExpanded` content under an expanded row. */",
+            "  expandedCell:",
+            "    'px-4 py-3 bg-[var(--surface-2)] border-l-2 border-[var(--border-default)]',"
+          ]
+        }
+      ]
+    }
+  ],
+  "copy": [
+    {
+      "path": [
+        "common",
+        "any"
+      ],
+      "current": "Any"
+    },
+    {
+      "path": [
+        "table",
+        "filter",
+        "rangeRowCount"
+      ],
+      "current": "{{matching}} matching / {{total}} in range"
+    },
+    {
+      "path": [
+        "table",
+        "grid"
+      ],
+      "current": {
+        "columnTools": "Filter & sort",
+        "column": "Column",
+        "filterBy": "Filter by column",
+        "allColumns": "All columns",
+        "quickFilter": "Filter {{column}} by value",
+        "sortBy": "Sort by",
+        "ascending": "Ascending",
+        "descending": "Descending",
+        "sortAscending": "Sort ascending",
+        "sortDescending": "Sort descending",
+        "clearColumn": "Clear {{column}} filter",
+        "savedViews": "Saved views",
+        "savedViewsHelp": "Save search, filters and layout in this browser. Rows and selections are not saved.",
+        "viewName": "View name",
+        "saveView": "Save current view",
+        "viewNameUsed": "A view with this name already exists.",
+        "viewLimit": "Remove a saved view before adding another.",
+        "viewStorageError": "This browser could not store your views.",
+        "removeViewNamed": "Remove saved view {{name}}",
+        "removeView": "Remove",
+        "compareSelected": "Compare selected",
+        "matchingExport": "Matching ({{count}})",
+        "fullExport": "Full catalog ({{count}})",
+        "exportScopes": "Choose matching rows, the full loaded catalog, or your selection."
+      }
+    },
+    {
+      "path": [
+        "fleetApi",
+        "subtitle"
+      ],
+      "current": "Choose which Tesla Fleet API routes are available for manual requests, automatic polling, and Smart Features",
+      "previous": "Choose which Tesla Fleet API routes are available and which can be polled automatically"
+    },
+    {
+      "path": [
+        "fleetApi",
+        "controls",
+        "smart"
+      ],
+      "current": "Smart Features"
+    },
+    {
+      "path": [
+        "fleetApi",
+        "controls",
+        "smartFor"
+      ],
+      "current": "Smart Features: {{method}} {{path}}"
+    },
+    {
+      "path": [
+        "fleetApi",
+        "controls",
+        "allowBeforeSmart"
+      ],
+      "current": "Allow this endpoint before enabling it for Smart Features."
+    },
+    {
+      "path": [
+        "fleetApi",
+        "controls",
+        "smartHint"
+      ],
+      "current": "Permit Smart Features to call this endpoint when their own setup and consent allow it."
+    },
+    {
+      "path": [
+        "fleetApi",
+        "controls",
+        "smartDescription"
+      ],
+      "current": "Smart Features access is off by default and independent of auto-polling. Turning off Access also clears Smart Features permission. Allowing an endpoint does not turn on a feature."
+    },
+    {
+      "path": [
+        "fleetApi",
+        "redesign"
+      ],
+      "current": {
+        "bulkTitle": "Edit endpoint permissions",
+        "editScope": "{{scope}} · Routes: {{count}}",
+        "backToEdit": "Back to edits",
+        "apply": "Apply changes",
+        "review": "Review changes",
+        "keep": "Leave unchanged",
+        "disable": "Disable",
+        "clearDependent": "Disabling Access also removes Smart Features and Auto-poll selections.",
+        "changeCount": "{{label}}: {{count}} changed",
+        "smartSkipped": "Smart Features skipped (no Access): {{count}}",
+        "autoSkipped": "Auto-poll skipped (no Access): {{count}}",
+        "autoUnsupported": "Routes without Auto-poll support: {{count}}",
+        "writeWarning": "New write permissions: {{count}}. Review the routes before applying.",
+        "affected": "Routes that will change",
+        "applyFailed": "Changes were not saved. Review the current settings and try again.",
+        "blocked": "Blocked",
+        "noAccess": "No access",
+        "unknown": "Unknown",
+        "onDemand": "On demand only",
+        "scheduled": "Scheduled",
+        "selectedPaused": "Selected · paused",
+        "selected": "Selected",
+        "editWhilePaused": "Scheduling is paused. You can still change this selection.",
+        "noGrouping": "No grouping",
+        "commute": "Smart Commute",
+        "commuteHelp": "Allow connectivity and navigation for route dispatch. Wake vehicle is optional.",
+        "solar": "Solar charging",
+        "solarHelp": "Allow site information and live status to evaluate solar charging conditions.",
+        "backup": "Backup charging watch",
+        "backupHelp": "Allow live status for outage monitoring. Site information is needed when connecting a new site.",
+        "featureGuides": "Smart Features guides",
+        "guideConsent": "Feature setup and consent are separate. Features that only use collected telemetry do not need Fleet API access.",
+        "showGuideRoutes": "Show {{feature}} routes",
+        "clearGuide": "Clear guide filter",
+        "showRoutes": "Show routes",
+        "routesUnavailable": "No matching routes on this server.",
+        "smartAllowed": "Smart allowed",
+        "pollable": "Pollable",
+        "commandReview": "Command review",
+        "editSelection": "Edit selected",
+        "editCatalog": "Edit all routes",
+        "policyHelp": "Access comes first. Smart Features and Auto-poll are independent. Turning off Access clears both. Allowing a route does not turn on a feature.",
+        "legacyHelp": "Access comes first. Turning off Access clears Auto-poll. This server does not publish Smart Features permissions.",
+        "quickViews": "Quick views",
+        "allCategories": "All categories",
+        "commandHelp": "Shows every write operation, including POST and DELETE.",
+        "editGroupNamed": "Edit all {{group}} routes",
+        "editGroup": "Edit group",
+        "paused": "Paused",
+        "accessCount": "Access: {{enabled}} of {{total}}",
+        "smartCount": "Smart Features: {{total}} allowed",
+        "autoCount": "Auto-poll: {{total}} selected"
+      }
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "route"
+      ],
+      "current": "Route"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "dayOrTime"
+      ],
+      "current": "Day or time"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "filterCount"
+      ],
+      "current": "{{label}} ({{count}})"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "unknownRoute"
+      ],
+      "current": "Unknown route"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "needsReview"
+      ],
+      "current": "Needs review"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "recorded"
+      ],
+      "current": "Recorded"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "statusFilter"
+      ],
+      "current": "Filter drive status"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "selectMatching_one"
+      ],
+      "current": "Select {{count}} matching"
+    },
+    {
+      "path": [
+        "drives",
+        "grid",
+        "selectMatching_other"
+      ],
+      "current": "Select {{count}} matching"
+    },
+    {
+      "path": [
+        "drives",
+        "truncated"
+      ],
+      "previous": "Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.",
+      "beforeKey": "sortRecent"
+    },
+    {
+      "path": [
+        "tireDifferentialDrift",
+        "coldReview"
+      ],
+      "current": {
+        "title": "Cold tire checks",
+        "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
+        "open": "Review cold checks",
+        "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
+        "offline": "Reconnect to review your saved cold checks.",
+        "off": "Off. Save a confirmed cold gauge check to start a series.",
+        "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
+        "add": "Record a cold gauge check",
+        "observed": "Reading time ({{zone}})",
+        "ambient": "Ambient temperature ({{unit}})",
+        "wheel": "{{wheel}} ({{unit}})",
+        "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.",
+        "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
+        "save": "Save cold check",
+        "remove": "Turn off and clear readings",
+        "removeMessage": "Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+        "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
+        "failure": "Could not change the series. Refresh, check the selected vehicle, and try again.",
+        "cardTitle": "Check one tire manually",
+        "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+        "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+        "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning."
+      },
+      "previous": {
+        "title": "Private cold tire checks",
+        "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
+        "open": "Review private cold checks",
+        "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
+        "signIn": "This private review requires verified sign-in.",
+        "offline": "Reconnect to review your saved cold checks.",
+        "off": "Off. Save a confirmed cold gauge check to start an independent private series.",
+        "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
+        "add": "Record a cold gauge check",
+        "observed": "Reading time ({{zone}})",
+        "ambient": "Ambient temperature ({{unit}})",
+        "wheel": "{{wheel}} ({{unit}})",
+        "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings privately on this server.",
+        "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
+        "save": "Save private cold check",
+        "remove": "Turn off and clear readings",
+        "removeMessage": "Delete these private gauge readings and their decision? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+        "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
+        "failure": "Could not change your private series. Refresh and verify your sign-in and vehicle.",
+        "cardTitle": "Check one tire manually",
+        "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+        "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+        "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning."
+      }
+    },
+    {
+      "path": [
+        "personalScope",
+        "sharedReview"
+      ],
+      "current": "Without sign-in, anyone with access to TeslaSync can view and manage this review."
+    },
+    {
+      "path": [
+        "personalScope",
+        "unavailable"
+      ],
+      "current": "This installation’s access mode could not be verified. Refresh and try again."
+    }
+  ]
+}

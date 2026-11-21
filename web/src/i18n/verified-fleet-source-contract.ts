@@ -5,11 +5,16 @@ import { expect } from 'vitest'
 import patches from './__fixtures__/verified-fleet-source-patches.json'
 import { restoreAppDesignSource, restorePreAppDesignWidgetSource } from './verified-widget-implementation-contract'
 import externalAuthPatches from './__fixtures__/verified-external-auth-source-patches.json'
+import { gridAccessRemovedSource } from './verified-grid-access-contract'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 
 export function readFleetCurrentSource(file: string): string {
   const path = resolve(process.cwd(), '..', file)
+  if (gridAccessRemovedSource(file)) {
+    expect(existsSync(path), file + ': removed grid producer').toBe(false)
+    return ''
+  }
   const externalAuthPatch = externalAuthPatches.find(entry => entry.file === file)
   if (externalAuthPatch?.after === null) {
     expect(existsSync(path), file + ': retired external-auth producer').toBe(false)

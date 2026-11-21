@@ -98,9 +98,14 @@ const ALTERNATIVE_EXPORT_SURFACES = [
     ],
   },
   {
-    file: 'features/driving/components/drives-orchestrator/DrivesDesktopEvidence.tsx',
+    file: 'features/driving/components/drives-orchestrator/DrivesGridEvidence.tsx',
     label: 'Drive history export controls',
-    markers: ['controls={tableControls}'],
+    markers: ['<DrivesEvidenceTable', 'controls={tableControls}'],
+  },
+  {
+    file: 'features/driving/components/DrivesEvidenceTable.tsx',
+    label: 'Drive history grid export controls',
+    markers: ['<DataTable', 'controls={controls}'],
   },
   {
     file: 'features/charging/pages/ChargingListPage.tsx',

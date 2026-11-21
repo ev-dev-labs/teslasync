@@ -93,7 +93,9 @@ describe('fleet operation table captions', () => {
     expect(within(table).getByText(testCase.content)).toBeInTheDocument();
     fireEvent.click(within(table).getByRole('button', { name: testCase.action }));
     expect(callbacks.onEdit).toHaveBeenCalledWith(testCase.item);
-    fireEvent.click(screen.getByRole('radio', { name: 'Compact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+    const menu = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
+    fireEvent.click(within(menu).getByRole('radio', { name: 'Compact' }));
     expect(localStorage.getItem(`teslasync.table.${testCase.tableId}.density`)).toBe(JSON.stringify('compact'));
   });
 });

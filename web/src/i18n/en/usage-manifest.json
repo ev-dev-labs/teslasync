@@ -26117,6 +26117,7 @@
       "drives.brief.measuredEnergyScope",
       "drives.brief.overviewScope",
       "drives.brief.overviewScopeNoComparison",
+      "drives.coll.allOption",
       "drives.coll.allPill",
       "drives.coll.anomalies",
       "drives.coll.commutes",

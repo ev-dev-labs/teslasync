@@ -806,8 +806,12 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
     expect(card.parentElement).toHaveAttribute('data-card-layout-aligned', 'true');
     const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!;
     const body = card.querySelector<HTMLElement>('[data-card-content]')!;
-    expect(header.querySelector('[role="radiogroup"]')).not.toBeNull();
-    expect(body.querySelector('[role="radiogroup"]')).toBeNull();
+    const layout = within(header).getByRole('button', { name: 'Reorder or hide columns' });
+    expect(within(body).queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    fireEvent.click(layout);
+    const menu = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
+    expect(within(menu).getByRole('radiogroup', { name: 'List density' })).toBeVisible();
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(body.querySelector('[data-grid-frame]')).not.toBeNull();
     await waitFor(() => expect(within(analysis).getByRole('heading', { name: 'State distribution' })).toBeVisible());
   });

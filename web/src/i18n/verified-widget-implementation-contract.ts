@@ -21,6 +21,7 @@ import tableEmptyViewport from './__fixtures__/table-empty-viewport-preservation
 import settingsPreviewInvoker from './__fixtures__/settings-preview-invoker-preservation.json';
 import previewChartQuery from './__fixtures__/preview-chart-query-preservation.json';
 import { nativeRepairPredecessor, restoreNativeSourceRepair } from './verified-native-source-repair-contract';
+import { restoreGridAccessSource } from './verified-grid-access-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
@@ -233,7 +234,8 @@ export function restoreTableNoMatchSource(
   if (!patch) return source;
   expect(hash(source), file + ': reviewed no-match source').toBe(patch.after);
   for (const endpoint of tableNoMatch.sources) {
-    expect(hash(restoreTableEmptyViewportSource(endpoint.file, readDependency(endpoint.file), readDependency)),
+    const endpointSource = restoreGridAccessSource(endpoint.file, readDependency(endpoint.file));
+    expect(hash(restoreTableEmptyViewportSource(endpoint.file, endpointSource, readDependency)),
       endpoint.file + ': actual caller/API pair').toBe(endpoint.after);
   }
   for (const dependency of tableNoMatch.dependencies) {
