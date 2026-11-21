@@ -121,6 +121,8 @@ const LIVE_ONLY_MUTATIONS = {
   'hooks/useSmartCommute.ts': ['useSmartCommuteChange', 'useSmartCommuteTrafficPreview', 'useSmartCommuteNavigation'],
   'hooks/useSmartCharging.ts': ['useSmartChargingChange'],
   'hooks/useSmartBackupCharging.ts': ['useSmartBackupChargingChange'],
+  'hooks/useSharedChargerPlanning.ts': ['useSharedChargerChange'],
+  'hooks/useSharedTripPlanning.ts': ['useSharedTripChange'],
   'hooks/useSmartSolar.ts': ['useSmartSolarChange'],
   'hooks/useTripChargingStops.ts': ['useTripStopChange'],
   'hooks/useTripMaintenance.ts': ['useTripMaintenanceChange'],

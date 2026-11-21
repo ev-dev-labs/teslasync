@@ -14,6 +14,8 @@ import { SmartChargingSitePerformance } from './SmartChargingSitePerformance'
 import { SmartChargingPublicFee } from './SmartChargingPublicFee'
 import { SmartChargingSolar } from './SmartChargingSolar'
 import { SmartBackupCharging } from './SmartBackupCharging'
+import { SharedChargerPlanning } from './SharedChargerPlanning'
+import { SharedTripPlanning } from './SharedTripPlanning'
 
 interface Props {
   active: boolean
@@ -35,7 +37,7 @@ export function SmartChargingSettings({ active }: Props) {
   const vehicleId = vehicle?.id ?? null
   const query = useSmartCharging(scope, vehicleId, active && !identity.isFetching && !identity.isError)
   const state = useDataState(query)
-  const placesQuery = useGeofencesFull(false, active && scope != null && vehicleId != null)
+  const placesQuery = useGeofencesFull(false, active && (scope?.mode === 'forward_auth' || (scope != null && vehicleId != null)))
   const placeState = useDataState(placesQuery)
   const change = useSmartChargingChange(scope, vehicleId)
   const accessDenied = isApiError(query.error) &&
@@ -75,24 +77,32 @@ export function SmartChargingSettings({ active }: Props) {
       ) : !scope ? (
         <DataStateNotice state="unavailable" title={t('smartCharging.identityMissing', 'Identity unavailable')}
           message={t('smartCharging.identityMissingDescription', 'Your authentication provider did not supply a verified identity.')} />
-      ) : vehicleState.fatalError ? (
-        <QueryError error={vehicleState.fatalError} onRetry={() => void vehicles.refetch()} />
-      ) : !vehicleState.hasData ? (
-        <Skeleton lines={2} />
       ) : (
         <>
-          <StaleRefreshWarning state={vehicleState} label={t('smartCharging.vehicle', 'Vehicle')} />
-          <Select label={t('smartCharging.vehicle', 'Vehicle')} value={vehicleId == null ? '' : String(vehicleId)}
-            placeholder={t('smartCharging.selectVehicle', 'Select a vehicle')}
-            options={(vehicles.data ?? []).map((item) => ({ value: String(item.id), label: item.display_name }))}
-            onChange={(event) => selectVehicle(event.target.value)} />
+          {vehicleState.fatalError ? (
+            <QueryError error={vehicleState.fatalError} onRetry={() => void vehicles.refetch()} />
+          ) : !vehicleState.hasData ? (
+            <Skeleton lines={2} />
+          ) : (
+            <>
+              <StaleRefreshWarning state={vehicleState} label={t('smartCharging.vehicle', 'Vehicle')} />
+              <Select label={t('smartCharging.vehicle', 'Vehicle')} value={vehicleId == null ? '' : String(vehicleId)}
+                placeholder={t('smartCharging.selectVehicle', 'Select a vehicle')}
+                options={(vehicles.data ?? []).map((item) => ({ value: String(item.id), label: item.display_name }))}
+                onChange={(event) => selectVehicle(event.target.value)} />
+            </>
+          )}
           {scope.mode === 'open' && (
             <Text as="p" variant="bodySm">{t('personalScope.sharedPlans', 'Without sign-in, anyone with access to TeslaSync can view and manage these plans.')}</Text>
           )}
-          {requested && !vehicle && (
+          <SharedChargerPlanning active={active} scope={scope} vehicles={vehicles.data ?? []} places={places}
+            disabled={!operationalMode.canWrite}
+            choicesUnavailable={formDisabled || vehicleState.status !== 'ok' || vehicles.isFetching} />
+          <SharedTripPlanning scope={scope} />
+          {vehicleState.hasData && requested && !vehicle && (
             <Text as="p" variant="bodySm">{t('smartCharging.vehicleUnavailable', 'That vehicle is unavailable. Select a vehicle explicitly; no other vehicle was selected.')}</Text>
           )}
-          {vehicleId == null ? (
+          {!vehicleState.hasData ? null : vehicleId == null ? (
             <Text as="p" variant="bodySm">{t('smartCharging.chooseVehicle', 'Choose the vehicle whose charging plans you want to manage.')}</Text>
           ) : accessDenied ? (
             <QueryError error={query.error} onRetry={() => void query.refetch()} />

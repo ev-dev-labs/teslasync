@@ -4,7 +4,7 @@ import checkpoint from './__fixtures__/verified-smart-notifications.json'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned Smart Notifications delta')
-  .toBe('015e1142f250c8d444121de4e3a099b1434cbd27dff29694fa886ef8521e7570')
+  .toBe('c65bb5974219b6f66cf635988d02665b278d08b9283b3d5e44f388e30fc1a92e')
 
 export function restoreSmartNotificationsSource(file: string, source: string): string {
   const patch = checkpoint.sources.find(entry => entry.file === file)

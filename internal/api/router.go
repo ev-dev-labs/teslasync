@@ -1227,6 +1227,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader)
 	smartChargingRepo := smartreadinessdb.NewRepository(db)
 	operators := tsauth.NewOperatorAccess(cfg.Auth.ForwardAuthHeader, cfg.Auth.OperatorSubjects)
+	sharedChargerHandler := smartreadinesshandler.NewSharedChargerHandler(
+		smartreadinesssvc.NewSharedChargerService(smartChargingRepo, func(ctx context.Context, subject string) (bool, error) {
+			return operators.Allows(ctx, subject), nil
+		}, time.Now), cfg.Auth.ForwardAuthHeader)
+	sharedTripHandler := smartreadinesshandler.NewSharedTripHandler(
+		smartreadinesssvc.NewSharedTripService(smartChargingRepo, liveSignalStore, operators.Allows, time.Now), cfg.Auth.ForwardAuthHeader)
 	smartChargingOptions := []smartreadinesssvc.Option{
 		smartreadinesssvc.WithSitePerformance(smartChargingRepo),
 		smartreadinesssvc.WithPublicFees(smartChargingRepo),
@@ -4080,6 +4086,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartCommuteHandler.MountRoutes(r)
 		smartDeliveryHandler.MountRoutes(r)
 		smartChargingHandler.MountRoutes(r)
+		sharedChargerHandler.MountRoutes(r)
+		sharedTripHandler.MountRoutes(r)
 		smartMediaHandler.MountRoutes(r)
 		favoriteDigestsHandler.MountRoutes(r)
 		r.Get("/analytics/route-efficiency/weekly-digest", weeklyEfficiency.Review)

@@ -2549,6 +2549,300 @@ paths:
       responses:
         "204": { description: The selected watch was removed. }
         "404": { description: No such watch for the signed-in principal and selected vehicle. }
+  /smart-charging/shared-chargers:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+    get:
+      operationId: listSharedChargerPlanning
+      summary: List the current browser subject's charger plans and invitations
+      tags: [Charging]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 32 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        "200":
+          description: Private, non-cacheable owner refs and exact-subject invitations. No other subjects or confirmation inputs are returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [can_manage, owned, invitations]
+                    properties:
+                      can_manage: { type: boolean }
+                      owned: { type: array, items: { $ref: "#/components/schemas/SharedChargerOwnedPlan" } }
+                      invitations:
+                        type: array
+                        items:
+                          allOf:
+                            - { $ref: "#/components/schemas/SharedChargerOwnedPlan" }
+                            - type: object
+                              required: [vehicle_id, place_updated_at, reminder_offered, confirmed]
+                              properties:
+                                vehicle_id: { type: integer, format: int64 }
+                                place_updated_at: { type: string, format: date-time }
+                                reminder_offered: { type: boolean }
+                                confirmed: { type: boolean }
+        "409": { description: The expected principal no longer matches the browser. }
+    post:
+      operationId: authorizeSharedCharger
+      summary: Authorize two vehicle nominations at one reviewed charger
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedChargerAuthorization"
+      responses:
+        "201": { $ref: "#/components/responses/SharedChargerSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The reviewed charger revision or an active vehicle was not found. }
+        "409": { description: This charger already has an active plan, or the identity has changed. }
+
+  /smart-charging/shared-chargers/{planID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+    put:
+      operationId: reviseSharedCharger
+      summary: Replace the exact plan revision and clear both confirmations
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedChargerAuthorization"
+      responses:
+        "200": { $ref: "#/components/responses/SharedChargerSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision or reviewed charger is unavailable. }
+        "409": { description: A swap was already published, another active plan exists, or the identity has changed. }
+    delete:
+      operationId: revokeSharedCharger
+      summary: Revoke the exact owned revision and withdraw advice and its reminder
+      tags: [Charging]
+      responses:
+        "204": { description: Revoked without changing any vehicle or charging schedule. }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision is unavailable. }
+
+  /smart-charging/shared-chargers/{planID}/vehicles/{vehicleID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+      - { name: vehicleID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    put:
+      operationId: confirmSharedChargerVehicle
+      summary: Confirm this browser subject's nominated vehicle for the current plan
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [available_at, departure_at, energy_needed_wh, conservative_power_w, already_plugged]
+              properties:
+                available_at: { type: string, format: date-time }
+                departure_at: { type: string, format: date-time }
+                energy_needed_wh: { type: number, minimum: 0 }
+                conservative_power_w: { type: number, minimum: 0, exclusiveMinimum: true }
+                already_plugged: { type: boolean }
+                accept_reminder: { type: boolean, default: false }
+      responses:
+        "204": { description: The vehicle's plan-specific declaration and consent were recorded. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: The exact revision and nomination are unavailable for this subject. }
+        "409": { description: Already confirmed, or the identity has changed. }
+    delete:
+      operationId: withdrawSharedChargerVehicle
+      summary: Withdraw this nomination and end the shared plan
+      tags: [Charging]
+      responses:
+        "204": { description: Advice and pending reminder withdrawn without changing either vehicle. }
+        "404": { description: The exact revision and nomination are unavailable for this subject. }
+
+  /smart-charging/shared-chargers/{planID}/card:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+    get:
+      operationId: readSharedChargerCard
+      summary: Read the feasible order and any due private reminder
+      tags: [Charging]
+      responses:
+        "200":
+          description: Private, non-cacheable advice. The card is null without two current confirmations, eligible evidence, and a confirmed viewer. Only the chosen opted-in participant can see the due reminder.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [card, reminder]
+                    properties:
+                      card: { $ref: "#/components/schemas/SharedChargerCard" }
+                      reminder: { $ref: "#/components/schemas/SharedChargerReminder" }
+        "409": { description: The expected principal no longer matches the browser. }
+
+  /smart-charging/shared-trips:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+    get:
+      operationId: listSharedTripPlanning
+      summary: List the exact browser subject's shared departures and invitations
+      tags: [Charging]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        "200":
+          description: Private, non-cacheable owner refs and exact-subject invitations. Subjects and confirmation evidence are never returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [can_manage, owned, invitations]
+                    properties:
+                      can_manage: { type: boolean }
+                      owned: { type: array, items: { $ref: "#/components/schemas/SharedTripRef" } }
+                      invitations:
+                        type: array
+                        items:
+                          type: object
+                          required: [trip_id, revision, vehicle_id, entry_version, departure_at, consent_expires_at]
+                          properties:
+                            trip_id: { type: integer, format: int64, minimum: 1 }
+                            revision: { type: integer, format: int64, minimum: 1 }
+                            vehicle_id: { type: integer, format: int64, minimum: 1 }
+                            entry_version: { type: integer, format: int64, minimum: 1 }
+                            departure_at: { type: string, format: date-time }
+                            consent_expires_at: { type: string, format: date-time, nullable: true }
+    post:
+      operationId: createSharedTrip
+      summary: Authorize exact vehicle invitations for an explicitly shared departure
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedTripDraft"
+      responses:
+        "201": { $ref: "#/components/responses/SharedTripSaved" }
+        "403": { description: A trusted operator browser is required. }
+
+  /smart-charging/shared-trips/{tripID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+    put:
+      operationId: replaceSharedTrip
+      summary: Replace the exact owned revision and require all participants to reconfirm
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedTripDraft"
+      responses:
+        "200": { $ref: "#/components/responses/SharedTripSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision is unavailable. }
+    delete:
+      operationId: cancelSharedTrip
+      summary: Cancel the exact owned departure revision
+      tags: [Charging]
+      parameters:
+        - { name: revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: The departure and invitations are withdrawn. }
+        "404": { description: The exact owned revision is unavailable. }
+
+  /smart-charging/shared-trips/{tripID}/vehicles/{vehicleID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+      - { name: vehicleID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    put:
+      operationId: confirmSharedTripVehicle
+      summary: Confirm or update the signed-in participant's exact nomination
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [revision, entry_version, trip_use_low_pct, trip_use_high_pct, reserve_pct, schedule_clear, maintenance_clear]
+              properties:
+                revision: { type: integer, format: int64, minimum: 1 }
+                entry_version: { type: integer, format: int64, minimum: 1 }
+                trip_use_low_pct: { type: number, minimum: 0, maximum: 100 }
+                trip_use_high_pct: { type: number, minimum: 0, maximum: 100 }
+                reserve_pct: { type: number, minimum: 0, maximum: 100 }
+                schedule_clear: { type: boolean }
+                maintenance_clear: { type: boolean }
+      responses:
+        "204": { description: Scoped consent and estimates saved for this nomination. }
+        "404": { description: The exact nomination is unavailable. }
+    delete:
+      operationId: withdrawSharedTripVehicle
+      summary: Revoke consent for one exact vehicle nomination
+      tags: [Charging]
+      parameters:
+        - { name: revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: entry_version, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: This nomination and its consent are withdrawn. }
+        "404": { description: The exact nomination is unavailable. }
+
+  /smart-charging/shared-trips/{tripID}/comparison:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+    get:
+      operationId: readSharedTripComparison
+      summary: Read the requested departure's current share-safe comparison
+      tags: [Charging]
+      responses:
+        "200":
+          description: Private and non-cacheable. Comparison is null when fewer than two current eligible vehicles can be compared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [comparison]
+                    properties:
+                      comparison:
+                        type: object
+                        nullable: true
+                        required: [id, revision, departure_at, expires_at, options]
+                        properties:
+                          id: { type: integer, format: int64, minimum: 1 }
+                          revision: { type: integer, format: int64, minimum: 1 }
+                          departure_at: { type: string, format: date-time }
+                          expires_at: { type: string, format: date-time }
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: object
+                              required: [vehicle_id, return_low_pct, return_high_pct, reserve_pct, observed_at, expires_at]
+                              properties:
+                                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                                return_low_pct: { type: number, minimum: 0, maximum: 100 }
+                                return_high_pct: { type: number, minimum: 0, maximum: 100 }
+                                reserve_pct: { type: number, minimum: 0, maximum: 100 }
+                                observed_at: { type: string, format: date-time }
+                                expires_at: { type: string, format: date-time }
+        "404": { description: No current consent for this browser subject and departure. }
+
   /smart-charging/plans:
     post:
       operationId: createSmartChargingPlan
@@ -7947,6 +8241,27 @@ paths:
 # ═══════════════════════════════════════════════════════════════════════
 components:
   parameters:
+    sharedPlanningPrincipal:
+      name: X-TeslaSync-Expected-Principal
+      in: header
+      required: true
+      description: Current browser identity race guard, not an authentication credential.
+      schema: { type: string }
+    sharedChargerPlanID:
+      name: planID
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    sharedChargerRevision:
+      name: revision
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    sharedTripID:
+      name: tripID
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
     privateTrackDriveID:
       name: driveID
       in: path
@@ -8106,6 +8421,52 @@ components:
         minimum: 0
 
   requestBodies:
+    SharedTripDraft:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [departure_at, nominations]
+            properties:
+              revision: { type: integer, format: int64, minimum: 1, description: Required on replacement and omitted on creation. }
+              departure_at: { type: string, format: date-time }
+              nominations:
+                type: array
+                minItems: 2
+                maxItems: 16
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [vehicle_id, subject]
+                  properties:
+                    vehicle_id: { type: integer, format: int64, minimum: 1 }
+                    subject: { type: string, minLength: 1, maxLength: 256, description: Exact verified subject. At most 256 UTF-8 bytes. }
+    SharedChargerAuthorization:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [place_id, place_updated_at, participants, expires_at]
+            properties:
+              place_id: { type: integer, format: int64, minimum: 1 }
+              place_updated_at: { type: string, format: date-time }
+              expires_at: { type: string, format: date-time }
+              reminder_vehicle_id: { type: integer, format: int64, minimum: 0, default: 0, description: "One nominated vehicle, or zero to offer no reminder." }
+              participants:
+                type: array
+                minItems: 2
+                maxItems: 2
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [vehicle_id, subject]
+                  properties:
+                    vehicle_id: { type: integer, format: int64, minimum: 1 }
+                    subject: { type: string, minLength: 1, maxLength: 256, description: Exact verified subject. At most 256 UTF-8 bytes. }
     PrivateBatteryReviewPlan:
       required: true
       content:
@@ -8142,6 +8503,29 @@ components:
                 maxLength: 1000
 
   responses:
+    SharedTripSaved:
+      description: Scoped departure created or revised. No vehicle command or schedule change was made.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: "#/components/schemas/SharedTripRef" }
+    SharedChargerSaved:
+      description: Private plan revision saved. No vehicle command or schedule change was made.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [id, revision]
+                properties:
+                  id: { type: integer, format: int64, minimum: 1 }
+                  revision: { type: integer, format: int64, minimum: 1 }
     PrivateBatteryReviewChanged:
       description: Plan, review, or signed-in identity changed. Refresh and confirm again; do not retry an old write automatically.
     AutomationHistory:
@@ -8287,6 +8671,51 @@ components:
             category: internal
 
   schemas:
+    SharedTripRef:
+      type: object
+      required: [id, revision, departure_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        departure_at: { type: string, format: date-time }
+    SharedChargerOwnedPlan:
+      type: object
+      required: [id, revision, place_id, expires_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        place_id: { type: integer, format: int64, minimum: 1 }
+        expires_at: { type: string, format: date-time }
+    SharedChargerSlot:
+      type: object
+      required: [vehicle_id, starts_at, ends_at]
+      properties:
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+    SharedChargerCard:
+      type: object
+      nullable: true
+      required: [id, revision, place_id, expires_at, first, second, swap_at, evaluated_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        place_id: { type: integer, format: int64, minimum: 1 }
+        expires_at: { type: string, format: date-time }
+        first: { $ref: "#/components/schemas/SharedChargerSlot" }
+        second: { $ref: "#/components/schemas/SharedChargerSlot" }
+        swap_at: { type: string, format: date-time }
+        evaluated_at: { type: string, format: date-time }
+    SharedChargerReminder:
+      type: object
+      nullable: true
+      required: [id, revision, vehicle_id, swap_at, expires_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        swap_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
     PrivateFavoriteRecording:
       type: object
       required: [key, title, artist, source, duration_s]

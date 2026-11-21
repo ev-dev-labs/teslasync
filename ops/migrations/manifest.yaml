@@ -1380,3 +1380,31 @@ migrations:
     irreversible_justification: A down/up round trip cannot safely reconstruct which rule revision a historical execution actually evaluated.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 316
+    name: smart_shared_charger
+    forward_compatible: true
+    forward_compatibility_notes: Adds private charger plan, consent, and reminder tables that older binaries do not use.
+    rollback_notes: Leave the tables in place on application rollback. Explicit down removes only the scoped plans, confirmations, and single in-app occurrences.
+    expected_duration: A brief schema change with no backfill.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Foreign keys briefly lock vehicles and geofences. New indexes and checks are built on empty tables.
+    reversible: false
+    irreversible_justification: Explicit down drops shared charger plans and participant confirmations; they must never be reconstructed without consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 317
+    name: smart_shared_trip
+    forward_compatible: true
+    forward_compatibility_notes: Adds scoped plans and consent entries without changing existing trip or vehicle data.
+    rollback_notes: Leave the tables when rolling back the app. Explicit down drops comparison scopes and consent entries only.
+    expected_duration: A brief schema change with no backfill.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: The vehicle foreign key takes a brief referenced-table lock. New indexes and checks are built on empty tables.
+    reversible: false
+    irreversible_justification: Explicit down removes scoped trip grants and confirmation evidence; require new consent if re-enabled.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

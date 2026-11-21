@@ -1077,6 +1077,36 @@ provider or vehicle writes and no external push. Use
 PostgreSQL. Leave migration `000302` applied for application rollback.
 Its down script removes renewal settings and occurrence metadata only.
 
+### Shared household charger and trip planning
+
+In **Settings → Smart Charging**, verified browsers can review their own
+invitations. Set `TESLASYNC_SMART_OPERATOR_SUBJECTS` to the exact sign-in identities that
+may authorize vehicles for a reviewed charger or an explicitly shared
+departure. An operator can invite a participant, but cannot confirm on their
+behalf. App tokens, open mode, and impersonation cannot join either plan.
+
+- **Shared charger:** Select a reviewed charging place, nominate two active
+  vehicles, then have each participant confirm the same revision, charging
+  window, needed energy, conservative power, and plugged-in state. The card
+  appears only when the vehicles compete and a feasible order remains. If the
+  operator nominates a reminder recipient and that participant separately
+  opts in, the worker can display one private in-app swap reminder. It never
+  sends a command or broadcasts to the household.
+- **Shared trip:** Nominate the vehicles for one departure. Each participant
+  confirms a conservative trip energy range, reserve, vehicle availability,
+  and maintenance clearance. Two eligible vehicles with fresh battery
+  observations are required to compare; confirmed participants see only the
+  eligible vehicle IDs and return ranges, not itineraries or service records.
+  The comparison does not reserve a vehicle or change any schedule.
+
+Use synthetic accounts and vehicles, not real travel data, to test these
+flows locally. Withdraw a vehicle or cancel the plan to revoke access; a
+revision requires fresh participant confirmations. Remove operators from
+`TESLASYNC_SMART_OPERATOR_SUBJECTS` to stop new authorization, and cancel any existing
+plans that should end. To roll back the features, restore the previous
+application and worker before reverting migrations `000317` and `000316`;
+the down migrations delete the corresponding private plan data.
+
 ### Repeated automation failures
 
 Set `TESLASYNC_SMART_OPERATOR_SUBJECTS` in Compose, or

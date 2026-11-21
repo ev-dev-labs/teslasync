@@ -81,6 +81,8 @@ beforeEach(() => {
     if (path === '/system/auth-mode') return { mode: identityMode, subject: 'synthetic-a' }
     if (path === '/vehicles') return [{ id: 42, display_name: 'Synthetic A' }, { id: 43, display_name: 'Synthetic B' }]
     if (path === '/geofences') return places
+    if (path.startsWith('/smart-charging/shared-chargers?')) return { data: { can_manage: false, owned: [], invitations: [] } }
+    if (path.startsWith('/smart-charging/shared-trips?')) return { data: { can_manage: false, owned: [], invitations: [] } }
     if (path.startsWith('/smart-charging/solar?')) return { data: { available: false, plan: null, decision: null } }
     if (path.startsWith('/smart-charging/backup-charging?')) return { data: { available: false, connected: false, active: false, watch: null, decision: null } }
     if (path === '/smart-charging/public-fee-terms?vehicle_id=42') {
@@ -157,6 +159,48 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('private charging readiness settings', () => {
+  it('lets both participants withdraw when the vehicle list fails', async () => {
+    const defaultRequest = requestMock.getMockImplementation()
+    const charger = '/smart-charging/shared-chargers'
+    const trip = '/smart-charging/shared-trips'
+    const chargerWithdrawal = `${charger}/12/vehicles/42?revision=2`
+    const tripWithdrawal = `${trip}/17/vehicles/42?revision=3&entry_version=4`
+    let chargerInvited = true
+    let tripInvited = true
+    requestMock.mockImplementation(async (path: string, options?: RequestInit) => {
+      if (path === '/vehicles') throw new ApiError('Vehicle list unavailable', 503)
+      if (path.startsWith(`${charger}?`)) return { data: { can_manage: false, owned: [],
+        invitations: chargerInvited ? [{
+          id: 12, vehicle_id: 42, revision: 2, place_id: 9, place_updated_at: place.updated_at,
+          expires_at: '2026-03-08T12:00:00Z', reminder_offered: true, confirmed: true,
+        }] : [],
+      } }
+      if (path.startsWith(`${charger}/12/card?`)) return { data: { card: null, reminder: null } }
+      if (path.startsWith(`${trip}?`)) return { data: { can_manage: false, owned: [],
+        invitations: tripInvited ? [{
+          trip_id: 17, vehicle_id: 42, revision: 3, entry_version: 4, departure_at: '2026-03-08T12:00:00Z',
+          consent_expires_at: null,
+        }] : [],
+      } }
+      if (options?.method === 'DELETE' && path === chargerWithdrawal) { chargerInvited = false; return }
+      if (options?.method === 'DELETE' && path === tripWithdrawal) { tripInvited = false; return }
+      return defaultRequest?.(path, options)
+    })
+
+    renderSettings()
+    fireEvent.click(await screen.findByRole('button', { name: 'Withdraw from plan' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'End shared plan' }))
+    await screen.findByText(/No active invitations on this page/)
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw vehicle' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Withdraw vehicle' }))
+    await screen.findByText(/No upcoming shared departures/)
+    for (const path of [chargerWithdrawal, tripWithdrawal]) {
+      expect(requestMock).toHaveBeenCalledWith(path, expect.objectContaining({
+        method: 'DELETE', headers: { 'X-TeslaSync-Expected-Principal': 'subject:synthetic-a' },
+      }))
+    }
+  })
+
   it('only enables a reviewed public fee after two explicit confirmations and removes the decision when revoked', async () => {
     renderSettings('/settings/smart-charging?vehicle_id=42&fee_session_id=51#public-fee')
     const region = within(await screen.findByRole('region', { name: 'Public charging fee reminders' }))

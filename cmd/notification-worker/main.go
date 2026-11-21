@@ -155,6 +155,8 @@ func main() {
 	defer stopSmartCharging()
 	stopLocalPlanningChecks := startLocalPlanningChecks(ctx, db, cfg.Auth.ForwardAuthHeader)
 	defer stopLocalPlanningChecks()
+	stopSharedPlanningChecks := startSharedPlanningChecks(ctx, db, cfg.Auth.ForwardAuthHeader)
+	defer stopSharedPlanningChecks()
 
 	// ── Outbound api_call_logs sink ──────────────────────────────────
 	// The notification worker fires HTTP webhooks (Discord/Slack/ntfy/

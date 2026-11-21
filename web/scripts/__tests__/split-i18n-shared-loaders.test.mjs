@@ -32,7 +32,7 @@ test('every current route root and dependency closure matches the original inlin
   const loaders = readFileSync(join(sourceRoot, 'lib', 'routeLoaders.ts'), 'utf8')
   const imports = new Map([...loaders.matchAll(/export const (\w+) = \(\) => import\('([^']+)'\)/g)]
     .map(([, name, specifier]) => [name, specifier.replace(/^\.\.\//, './')]))
-  assert.equal(imports.size, 126)
+  assert.equal(imports.size, 128)
   const inline = app.replace(/^import \* as routeLoaders from '\.\/lib\/routeLoaders'\r?\n/m, '')
     .replace(/lazy\(routeLoaders\.(\w+)\)/g, (_, name) => {
       assert.ok(imports.has(name), `missing original module for ${name}`)
@@ -63,6 +63,16 @@ test('inline conditional and named export adapters remain exhaustive', () => {
   `
   assert.deepEqual(routeBundlePaths(app, new Set([...bundles, 'onboarding'])),
     { '/drives': 'driving', '/tasks': 'onboarding' })
+})
+
+test('charging readiness loads its sharing copy without adding it to other settings routes', () => {
+  const routeBundle = manifest.routeBundles['/settings/smart-charging']
+  assert.notEqual(routeBundle, manifest.routeBundles['/settings'])
+  const locale = JSON.parse(readFileSync(join(sourceRoot, 'i18n', 'en', `locale-${routeBundle}.json`), 'utf8'))
+  assert.ok(locale.smartCharging.sharedCharger.title)
+  assert.ok(locale.smartCharging.sharedTrip.title)
+  assert.ok(!manifest.featureRequiredKeys.settings.includes('smartCharging.sharedTrip.title'))
+  assert.ok(!manifest.featureRequiredKeys.settings.includes('smartCharging.sharedCharger.title'))
 })
 
 for (const declaration of [
