@@ -19,7 +19,7 @@ import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
-import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
+import { CookieConsentBannerHost } from '../feedback/CookieConsentBannerHost'
 import {
   TOUR_START_EVENT,
   TOURS,
@@ -1333,7 +1333,7 @@ export default function Layout() {
           recorded a decision. Mounted last so the bottom-of-screen
           banner sits above every sticky surface but below modal
           dialogs the user is interacting with. */}
-      <CookieConsentBanner />
+      <CookieConsentBannerHost />
       </div>
       </WorkspaceScopeProvider>
       </BreadcrumbOverridesProvider>

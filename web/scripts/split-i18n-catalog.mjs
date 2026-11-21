@@ -89,6 +89,8 @@ function shellSourceClosure() {
     // This lazy root can auto-open on any route, including a cold NotFound.
     // Only its translated UI is inlined; release-note content remains lazy.
     join(SOURCE_ROOT, 'components', 'feedback', 'ChangelogModal.tsx'),
+    // The consent prompt can auto-open on any route when the operator opts in.
+    join(SOURCE_ROOT, 'components', 'feedback', 'CookieConsentBanner.tsx'),
   ]
   // `import x from './en/shell.json'` resolves to a real file, so the raw
   // closure contains JSON assets. Parsing generated catalogs as TypeScript

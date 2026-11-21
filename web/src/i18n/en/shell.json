@@ -438,6 +438,7 @@
       "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
       "decline": "Decline non-essential",
       "hideDetails": "Hide details",
+      "loading": "Loading privacy choices...",
       "manage": "Manage preferences",
       "title": "Cookies & analytics"
     },

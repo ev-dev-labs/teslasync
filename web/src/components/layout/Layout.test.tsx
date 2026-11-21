@@ -254,6 +254,7 @@ vi.mock('@/api/hooks/useAuthMode', () => ({
 }))
 vi.mock('@/api/hooks/useSettings', () => ({
   useSettings: () => ({ data: { completed_tours: [] }, isFetched: true }),
+  useVersionInfo: () => ({ data: { require_cookie_consent: false } }),
   settingsKeys: { settings: ['settings'] },
 }))
 
