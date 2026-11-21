@@ -1,0 +1,2 @@
+DROP TABLE smart_monthly_tariff_digests;
+DROP TABLE smart_monthly_tariff_plans;

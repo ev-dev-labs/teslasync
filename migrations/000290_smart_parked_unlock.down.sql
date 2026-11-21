@@ -1,0 +1,2 @@
+DROP TABLE smart_push_parked_unlock_deliveries;
+DROP TABLE smart_parked_unlock_plans;

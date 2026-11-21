@@ -1,0 +1,3 @@
+ALTER TABLE smart_trip_review_adjustments DROP COLUMN arrival_observed_at;
+ALTER TABLE smart_trip_reviews DROP COLUMN explicit_arrival_baseline;
+ALTER TABLE smart_trip_stop_scopes DROP COLUMN approved_place_count;
