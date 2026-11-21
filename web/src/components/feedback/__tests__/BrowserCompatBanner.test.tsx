@@ -52,9 +52,9 @@ describe('BrowserCompatBanner', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the warning banner with the missing feature names', () => {
+  it('loads the warning banner on demand with the missing feature names', async () => {
     render(<BrowserCompatBanner testHookMissing={['BroadcastChannel', 'CSS :has()']} />)
-    const banner = screen.getByTestId('browser-compat-banner')
+    const banner = await screen.findByTestId('browser-compat-banner')
     expect(banner).toBeInTheDocument()
     expect(banner.getAttribute('data-missing')).toBe('BroadcastChannel, CSS :has()')
     expect(screen.getByTestId('browser-compat-banner-body').textContent).toContain(
@@ -62,12 +62,11 @@ describe('BrowserCompatBanner', () => {
     )
   })
 
-  it('surfaces a dismiss control that hides the banner and persists the choice', () => {
+  it('surfaces a dismiss control that hides the banner and persists the choice', async () => {
     const { rerender } = render(<BrowserCompatBanner testHookMissing={['BroadcastChannel']} />)
-    expect(screen.getByTestId('browser-compat-banner')).toBeInTheDocument()
 
     // The dismiss X is the only <button> inside the banner.
-    const banner = screen.getByTestId('browser-compat-banner')
+    const banner = await screen.findByTestId('browser-compat-banner')
     const dismiss = banner.querySelector('button')
     expect(dismiss).not.toBeNull()
     fireEvent.click(dismiss as HTMLButtonElement)
@@ -89,7 +88,7 @@ describe('BrowserCompatBanner', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('reappears once localStorage is cleared (user resets the browser)', () => {
+  it('reappears once localStorage is cleared (user resets the browser)', async () => {
     globalThis.localStorage.setItem(COMPAT_WARNING_STORAGE_KEY, '1')
     const { rerender } = render(
       <BrowserCompatBanner testHookMissing={['BroadcastChannel']} />,
@@ -100,15 +99,15 @@ describe('BrowserCompatBanner', () => {
     rerender(<BrowserCompatBanner testHookMissing={['BroadcastChannel']} />)
     // The dismissed state lives in component state, not in detection,
     // so a remount with cleared storage re-checks isCompatWarningDismissed().
-    const { container } = render(
+    render(
       <BrowserCompatBanner testHookMissing={['BroadcastChannel']} />,
     )
-    expect(container.querySelector('[data-testid="browser-compat-banner"]')).not.toBeNull()
+    expect(await screen.findByTestId('browser-compat-banner')).toBeInTheDocument()
   })
 
-  it('uses role=status with polite live region so screen readers are not interrupted', () => {
+  it('uses role=status with polite live region so screen readers are not interrupted', async () => {
     render(<BrowserCompatBanner testHookMissing={['BroadcastChannel']} />)
-    const banner = screen.getByTestId('browser-compat-banner')
+    const banner = await screen.findByTestId('browser-compat-banner')
     expect(banner.getAttribute('role')).toBe('status')
     expect(banner.getAttribute('aria-live')).toBe('polite')
   })
