@@ -120,6 +120,7 @@ export function RecommendationDetails({
       'actionCenter.provenance.status_incidents',
       'System incident history',
     ),
+    user_recorded: t('actionCenter.provenance.user_recorded', 'User-recorded evidence'),
     tesla_battery_passport_ledger: t(
       'actionCenter.provenance.tesla_battery_passport_ledger',
       'Issued battery Passports',

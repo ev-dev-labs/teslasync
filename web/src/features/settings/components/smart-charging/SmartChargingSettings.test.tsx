@@ -24,6 +24,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
 import { ApiError } from '@/api/client'
 import { personalIdentityKey } from '@/api/hooks/usePersonalIdentity'
 import { smartChargingKeys } from '@/api/hooks/useSmartCharging'
+import { matchesReviewedPlaceRevision } from './reviewedPlaceRevision'
 import { SmartChargingSettings } from './SmartChargingSettings'
 
 const place: Geofence = {
@@ -32,6 +33,13 @@ const place: Geofence = {
   alert_on_exit: false, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
   latitude: 0, longitude: 0, radius: 1,
 }
+it('keeps an unchanged reviewed place across wire offsets but rejects a newer revision within the same millisecond', () => {
+  const reviewed = [{ ...place, updated_at: '2026-03-08T03:00:00.123456-07:00' }]
+  expect(matchesReviewedPlaceRevision(reviewed, 9, '2026-03-08T10:00:00.123456Z')).toBe(true)
+  expect(matchesReviewedPlaceRevision(reviewed, 9, '2026-03-08T10:00:00.123457Z')).toBe(false)
+  expect(matchesReviewedPlaceRevision(reviewed, 9, '2026-03-08T10:00:00.123456-07:00')).toBe(false)
+})
+
 let plans: SmartChargingPlan[]
 let latestStarts: SmartChargingLatestStart[]
 let places: Geofence[]
@@ -116,13 +124,21 @@ beforeEach(() => {
     if (path === '/smart-charging/plans?vehicle_id=43&limit=100&offset=0') return { data: [] }
     if (path === '/smart-charging/plans' && options?.method === 'POST') {
       const input = JSON.parse(String(options.body)) as SmartChargingPlanInput
-      plans = [{ ...input, id: 8, snoozed_until: null, created_at: '2026-03-07T12:00:00Z', updated_at: '2026-03-07T12:00:00Z' }]
+      plans = [{ ...input, id: 8, version: 1, snoozed_until: null, created_at: '2026-03-07T12:00:00Z', updated_at: '2026-03-07T12:00:00Z' }]
       return { data: plans[0] }
     }
     if (path === '/smart-charging/plans/8' && options?.method === 'PUT') {
-      const input = JSON.parse(String(options.body)) as SmartChargingPlanInput
-      plans = plans.map((plan) => ({ ...plan, ...input }))
+      const { expected_version, expected_check_at, ...input } = JSON.parse(String(options.body)) as
+        SmartChargingPlanInput & { expected_version: number; expected_check_at: string }
+      expect(expected_version).toBe(plans[0].version)
+      expect(expected_check_at).toBe(plans[0].notify_at)
+      plans = plans.map((plan) => ({ ...plan, ...input, version: expected_version + 1 }))
       return { data: plans[0] }
+    }
+    if (path === '/smart-charging/plans/8' && options?.method === 'PATCH') {
+      const input = JSON.parse(String(options.body)) as { check_at: string }
+      plans = plans.map((plan) => ({ ...plan, notify_at: input.check_at }))
+      return undefined
     }
     if (path === '/smart-charging/plans/8/snooze' && options?.method === 'POST') {
       const input = JSON.parse(String(options.body)) as { duration_s: number }
@@ -311,7 +327,7 @@ describe('private charging readiness settings', () => {
 
   it('shows conditional leg projections and lets the user update the destination charge', async () => {
     plans = [{
-      id: 8, vehicle_id: 42, charging_place_id: 9, enabled: true,
+      id: 8, version: 1, vehicle_id: 42, charging_place_id: 9, enabled: true,
       notify_at: '2026-03-07T12:00:00Z', departure_at: '2026-03-08T00:00:00Z',
       trip_use_low_pct: 40, trip_use_high_pct: 55, reserve_pct: 20, snoozed_until: null,
       trip_legs: {
@@ -435,7 +451,7 @@ describe('private charging readiness settings', () => {
     vi.mocked(Date.now).mockReturnValue(Date.parse('2026-10-30T12:00:00Z'))
     timeZone = 'America/Los_Angeles'
     plans = [{
-      id: 8, vehicle_id: 42, charging_place_id: 9, enabled: true,
+      id: 8, version: 1, vehicle_id: 42, charging_place_id: 9, enabled: true,
       notify_at: '2026-10-31T17:00:00Z', departure_at: '2026-11-01T09:30:00Z',
       trip_use_low_pct: 35, trip_use_high_pct: 45, reserve_pct: 20, snoozed_until: null,
       created_at: '2026-10-30T12:00:00Z', updated_at: '2026-10-30T12:00:00Z',
@@ -566,6 +582,76 @@ describe('private charging readiness settings', () => {
     expect(request?.[1]).toMatchObject({
       cache: 'no-store', headers: { 'X-TeslaSync-Expected-Principal': 'subject:synthetic-a' },
     })
+  })
+
+  it('lets the owner elect an earlier readiness check without changing the intended charging schedule', async () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-10-31T12:00:00Z'))
+    timeZone = 'America/Los_Angeles'
+    plans = [{
+      id: 8, version: 3, vehicle_id: 42, charging_place_id: 9, enabled: true,
+      notify_at: '2026-11-01T10:00:00Z', departure_at: '2026-11-01T14:00:00Z',
+      trip_use_low_pct: 35, trip_use_high_pct: 45, reserve_pct: 20, snoozed_until: null,
+      scheduled_start: { at: '2026-11-01T10:30:00Z', time_zone: timeZone },
+      created_at: '2026-10-31T12:00:00Z', updated_at: '2026-10-31T12:00:00Z',
+    }]
+    latestStarts = [{
+      plan_id: 8, plan_version: 3, vehicle_id: 42, status: 'estimate',
+      required_low_pct: 15, required_high_pct: 25, charging_power_w: 10000,
+      earliest_safe_start_at: '2026-11-01T09:45:00Z', latest_safe_start_at: '2026-11-01T11:00:00Z',
+      earlier_check_at: '2026-11-01T09:30:00Z',
+      observed_at: '2026-10-31T12:00:00Z', expires_at: '2026-10-31T12:02:00Z',
+    }]
+    const { client } = renderSettings()
+    const updates = () => requestMock.mock.calls.filter(([path, options]) =>
+      path === '/smart-charging/plans/8' && options?.method === 'PATCH')
+    const action = await screen.findByRole('button', { name: 'Review an earlier reminder time' })
+    await waitFor(() => expect(action).toBeEnabled())
+    fireEvent.click(action)
+    expect(screen.getByLabelText(/Check from/)).toHaveValue('2026-11-01T01:30')
+    expect(screen.getByText('America/Los_Angeles (2026-11-01T09:30:00Z UTC)')).toBeInTheDocument()
+    expect(updates()).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(updates()).toHaveLength(0)
+    expect(action).toHaveFocus()
+    fireEvent.click(action)
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-10-31T12:02:01Z'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save earlier check' }))
+    expect(updates()).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-10-31T12:00:00Z'))
+    await act(async () => { await client.invalidateQueries({ queryKey: smartChargingKeys.all }) })
+    fireEvent.click(await screen.findByRole('button', { name: 'Review an earlier reminder time' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save earlier check' }))
+    await waitFor(() => expect(updates()).toHaveLength(1))
+    expect(JSON.parse(String(updates()[0][1].body))).toEqual({
+      vehicle_id: 42, expected_version: 3, expected_check_at: '2026-11-01T10:00:00Z',
+      check_at: '2026-11-01T09:30:00Z', preview_expires_at: '2026-10-31T12:02:00Z',
+    })
+    expect(plans[0].scheduled_start).toEqual({ at: '2026-11-01T10:30:00Z', time_zone: timeZone })
+  })
+
+  it.each([
+    ['already checked earlier', '2026-03-07T17:00:00Z', 3, '2026-03-07T12:02:00Z'],
+    ['a superseded estimate', '2026-03-07T19:00:00Z', 2, '2026-03-07T12:02:00Z'],
+    ['expired evidence', '2026-03-07T19:00:00Z', 3, '2026-03-07T11:59:00Z'],
+  ])('does not propose a new reminder for %s', async (_label, notifyAt, estimateVersion, expiresAt) => {
+    plans = [{
+      id: 8, version: 3, vehicle_id: 42, charging_place_id: 9, enabled: true,
+      notify_at: notifyAt, departure_at: '2026-03-08T00:00:00Z',
+      trip_use_low_pct: 35, trip_use_high_pct: 45, reserve_pct: 20, snoozed_until: null,
+      created_at: '2026-03-07T12:00:00Z', updated_at: '2026-03-07T12:00:00Z',
+    }]
+    latestStarts = [{
+      plan_id: 8, plan_version: estimateVersion, vehicle_id: 42, status: 'estimate',
+      required_low_pct: 15, required_high_pct: 25, charging_power_w: 10000,
+      earliest_safe_start_at: '2026-03-07T18:30:00Z', latest_safe_start_at: '2026-03-07T20:30:00Z',
+      earlier_check_at: '2026-03-07T18:15:00Z',
+      observed_at: '2026-03-07T11:58:00Z', expires_at: expiresAt,
+    }]
+    renderSettings()
+    const results = within(await screen.findByRole('region', { name: 'Latest safe start estimates' }))
+    expect(await results.findByText(/Departure 2026-03-08/)).toBeInTheDocument()
+    expect(results.queryByRole('button', { name: 'Review an earlier reminder time' })).not.toBeInTheDocument()
   })
 
   it('shows a currency-specific price comparison and removes it when live evidence expires', async () => {

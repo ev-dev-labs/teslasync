@@ -29,6 +29,7 @@ import {
 } from '../components/true-cost';
 import { TrueCostSavingsEnvelope } from '../components/operationalbrief-n-z/TrueCostSavingsEnvelope';
 import { TrueCostEvidenceLedger } from '../components/operationalbrief-n-z/TrueCostEvidenceLedger';
+import { ChargingCostDigestPanel } from '../components/true-cost/ChargingCostDigestPanel';
 import { TrueCostFixedLedger, TrueCostLayoutSlot } from '../components/true-cost-modernization';
 import { analyzeTrueCost } from '../lib/trueCost';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -135,6 +136,10 @@ export default function TrueCostPage() {
     {
       id: 'monthly-directory', size: 'full',
       content: evidenceSlot('monthly-directory', 0.1, <TrueCostMonthlyDirectory {...sectionProps} />),
+    },
+    {
+      id: 'charging-cost-digest', size: 'full',
+      content: evidenceSlot('charging-cost-digest', 0.105, <ChargingCostDigestPanel vehicleId={vehicleId ?? null} />),
     },
     {
       id: 'assumptions', size: 'full',

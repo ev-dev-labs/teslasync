@@ -51,6 +51,34 @@
       "empty": "Select a journey to manage its lifecycle and plans.",
       "loadFailed": "Journey details could not be loaded."
     },
+    "soundtrack": {
+      "title": "Journey soundtrack",
+      "description": "Review what actually played on this completed journey. This does not identify a listener, contact a music service or send a notification.",
+      "open": "Open private soundtrack review",
+      "vehicle": "Select this journey’s vehicle to review its soundtrack.",
+      "signIn": "Sign in to review this soundtrack privately.",
+      "offline": "Reconnect to view or change this soundtrack review.",
+      "off": "Off. Confirm to read playback evidence for this journey.",
+      "unmatched": "This journey does not have a supported completed time window.",
+      "changed": "The journey time window changed. Confirm it again before reviewing playback.",
+      "expired": "This review expired. Only recent completed journeys can be reviewed.",
+      "paused": "Review paused.",
+      "snoozed": "Review snoozed until {{time}}.",
+      "missing": "No track could be confirmed inside a matched completed drive. Nothing was substituted.",
+      "limit": "This journey has too much playback data to review safely. No partial track list is shown.",
+      "coverage": "Confirmed playback in {{observed}} of {{matched}} matched drives. Tracks are shown in observed order; gaps may remain.",
+      "enable": "Enable private review",
+      "reconfirm": "Confirm review again",
+      "enableDetail": "Read recorded media from matched drives in this exact journey and display supported tracks privately? Nothing leaves TeslaSync.",
+      "window": "Completed journey: {{start}} to {{end}}.",
+      "expires": "Review ends {{time}}.",
+      "tracks": "Observed soundtrack",
+      "played": "Playback observed from {{start}} to {{end}}.",
+      "clear": "Turn off and clear review",
+      "clearDetail": "Delete your review preference? The underlying drive and media history stays unchanged.",
+      "pause": "Pause review",
+      "snooze": "Snooze review for one day"
+    },
     "transition": {
       "start": "Start",
       "pause": "Pause",
@@ -870,6 +898,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -948,6 +983,13 @@
     }
   },
   "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    },
     "grid": {
       "positionHeading": "Position"
     }
@@ -990,6 +1032,11 @@
       "summaryDays_one": "{{count}} day",
       "summaryDays_other": "{{count}} days",
       "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -1151,6 +1198,34 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -1384,6 +1459,9 @@
       "unnamed": "(unnamed)"
     }
   },
+  "guard": {
+    "sentryActive": "Sentry mode active"
+  },
   "helix": {
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
@@ -1525,6 +1603,11 @@
       "mapLabel": "Route playback map"
     }
   },
+  "media": {
+    "privateReview": {
+      "refreshRequired": "Private playback details are hidden until the current review is verified."
+    }
+  },
   "mqttSseInspector": {
     "aiExplainer": {
       "badge": "Helix",
@@ -1663,6 +1746,17 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
   },
   "powerDashboards": {
     "aiDrafter": {
@@ -2021,6 +2115,10 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "timeMachine": {
     "ageFresh": "Fresh"
   },
@@ -2268,6 +2366,29 @@
       "title": "Explain the recent vampire drain"
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicles": {
     "aiPaintPreview": {
       "badge": "Helix",
@@ -2314,7 +2435,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

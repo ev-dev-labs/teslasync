@@ -57,7 +57,11 @@ export interface SmartCommuteSnapshot {
   routines: SmartCommuteRoutine[] | null
   traffic_available?: boolean
   traffic_decisions?: SmartCommuteTrafficDecision[] | null
+  navigation_available?: boolean
 }
+
+export type SmartCommuteNavigationOutcome =
+  'accepted' | 'rejected' | 'delivery_unknown' | 'expired' | 'not_sent' | 'wake_required' | 'wake_permission_required'
 
 export interface SmartCommuteTrafficDecision {
   occurrence_id: string
@@ -69,12 +73,15 @@ export interface SmartCommuteTrafficDecision {
   departure_at: string
   usual_s: number
   alternative_s: number
+  usual_route_label?: string
+  alternative_route_label?: string
   observed_at: string
   expires_at: string
   arrival_deadline_at?: string
   latest_departure_at?: string
   route_energy?: SmartCommuteRouteEnergy
   route_energy_only?: boolean
+  navigation_outcome?: SmartCommuteNavigationOutcome
 }
 
 export interface SmartCommuteRouteEnergy {

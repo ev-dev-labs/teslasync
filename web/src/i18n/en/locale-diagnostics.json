@@ -217,6 +217,56 @@
     }
   },
   "serviceEvidencePack": {
+    "privateCase": {
+      "add": "Save private note",
+      "addTitle": "Record evidence",
+      "cardBasis": "User-recorded case evidence, not a diagnosis",
+      "cardLimit": "Nothing is sent to a service provider. Review the export before sharing it.",
+      "cardRationale": "You opened this case and recorded evidence for this vehicle.",
+      "cardSummary": "Choose which recorded details and timestamps to include in a local export.",
+      "cardTitle": "Review your private service case",
+      "changed": "The case changed. Review the current case before trying again.",
+      "description": "Keep your own service notes for the selected vehicle. Select and redact evidence before downloading; nothing is sent to a service provider.",
+      "detail": "Recorded detail",
+      "download": "Download requested. Nothing was shared.",
+      "empty": "No notes yet. Add evidence before preparing an export.",
+      "export": "Download reviewed JSON",
+      "failure": "Could not change your private case. Check your sign-in, timestamps and connection.",
+      "full": "This case has 20 notes. Delete an unused note to make room.",
+      "includeDetail": "Include detail",
+      "includeTime": "Include timestamp",
+      "invalidTime": "Use a time no more than 14 days before this case opened, and not in the future.",
+      "kind": "Evidence type",
+      "kinds": {
+        "condition": "Observed condition",
+        "firmware": "Firmware",
+        "warning": "Warning",
+        "work": "Recorded work"
+      },
+      "label": "Private case title",
+      "off": "Off. No private case is open for this vehicle.",
+      "offline": "Reconnect to review your private service case.",
+      "open": "Review private service case",
+      "opened": "Opened {{when}}",
+      "preview": "Preview selected evidence",
+      "previewHint": "Review the exact details below before downloading. This JSON contains user-recorded evidence only. Download saves a local file; it does not share it.",
+      "previewTitle": "Reviewed export contents",
+      "provenance": "These notes are user-recorded, not verified vehicle data or a diagnosis. Do not enter VINs, addresses, contact details or account information.",
+      "removeCase": "Delete private case",
+      "removeCasePrompt": "Delete this private case and its notes? Source vehicle records and any downloaded files will not change.",
+      "removeNote": "Delete note",
+      "removeNotePrompt": "Permanently remove this note from the case?",
+      "rename": "Rename case",
+      "review": "Select and redact evidence",
+      "reviewFailed": "Could not prepare the selected evidence. Check your connection, then preview again.",
+      "reviewHint": "Nothing is selected by default. Include only the fields you intend to share. The case title and application identifiers are never exported; selected free text is included as written.",
+      "save": "Save private case",
+      "signIn": "Private service cases require verified sign-in.",
+      "start": "Open private case",
+      "title": "Private service case",
+      "vehicle": "Select a vehicle in the workspace picker to open a service case.",
+      "when": "Observation time ({{zone}})"
+    },
     "errors": {
       "cryptoUnavailable": "This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.",
       "generic": "Something went wrong while generating the pack. Please try again."
@@ -832,6 +882,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -913,6 +970,15 @@
       "upperBound": "Upper bound"
     }
   },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "dashcam": {
     "reconstruction": {
       "pointCount": "{{count}} sample(s)"
@@ -941,6 +1007,11 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -1102,6 +1173,34 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -1321,6 +1420,9 @@
       "title": "Suggest a geofence for this location",
       "unnamed": "(unnamed)"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "helix": {
     "ariaLabel": "Helix",
@@ -1576,6 +1678,17 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
   },
   "powerDashboards": {
     "aiDrafter": {
@@ -1837,6 +1950,8 @@
     }
   },
   "teslaOnly": {
+    "door": "Door",
+    "window": "Window",
     "workbench": {
       "recorded": "Actually recorded",
       "requested": "Requested window"
@@ -2088,6 +2203,29 @@
       "title": "Explain the recent vampire drain"
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicles": {
     "aiPaintPreview": {
       "badge": "Helix",
@@ -2134,7 +2272,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

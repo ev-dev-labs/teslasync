@@ -1,6 +1,7 @@
 import { type FormEvent, useId, useMemo, useRef, useState } from 'react';
 import { FileWarning, Gavel, Receipt, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { isApiError } from '@/api/client';
 import {
   useChargingInvoices,
   useCreateDispute,
@@ -8,13 +9,15 @@ import {
   useDeleteInvoice,
   useReconciliationReport,
 } from '@/api/hooks/useOwnership';
+import { personalScope, usePersonalIdentity, type PersonalScope } from '@/api/hooks/usePersonalIdentity';
 import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Pagination, Text, Textarea, IconButton } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Pagination, Text, Textarea, IconButton, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,7 +27,8 @@ import { downloadCSV, downloadJSON, objectsToCSV, type CsvCellValue } from '@/li
 
 import type {
   ChargingInvoice,
-  InvoiceLine,
+  InvoiceLineInput,
+  InvoiceVarianceOptions,
   ReconciledLine,
   UninvoicedSession,
   VarianceBucket,
@@ -36,25 +40,38 @@ import {
   OwnershipPanel,
   VerdictBadge,
 } from '../components';
+import { InvoiceEvidenceEditor } from '../components/InvoiceEvidenceEditor';
+import { InvoiceReviewOptionsFields } from '../components/InvoiceReviewOptionsFields';
+import { InvoiceVarianceCard } from '../components/InvoiceVarianceCard';
 import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
-import { formatCurrencyMinor, formatPct, formatSpan, toDateInput } from '../formatters';
+import { formatCurrencyMinor, formatPct, formatSpan } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
 import { severityTokens } from '@/lib/tokens';
 
-function blankLine(): InvoiceLine {
+type InvoiceLineDraft = Omit<InvoiceLineInput, 'billed_total_minor'> & { billed_total_minor: number | null };
+
+function blankLine(): InvoiceLineDraft {
   return {
     id: 0,
     line_ref: '',
     occurred_at: new Date().toISOString(),
     location: '',
     billed_energy_wh: 0,
-    billed_energy_minor: 0,
-    billed_idle_minor: 0,
-    billed_tax_minor: 0,
-    billed_total_minor: 0,
+    billed_energy_minor: null,
+    billed_idle_minor: null,
+    billed_tax_minor: null,
+    billed_total_minor: null,
   };
+}
+
+function statementDay(instant: string): string {
+  return isoUtcToLocalDatetimeInput(instant).slice(0, 10);
+}
+
+function statementMidnight(day: string): string {
+  return day ? localDatetimeInputToIso(`${day}T00:00`) ?? '' : '';
 }
 
 function exportSourceRows(
@@ -69,6 +86,7 @@ function exportSourceRows(
 interface InvoiceTarget {
   id: number;
   vehicleId: number;
+  strict: boolean;
 }
 
 interface DisputeTarget extends InvoiceTarget {
@@ -77,7 +95,22 @@ interface DisputeTarget extends InvoiceTarget {
   digest: string;
 }
 
+function invoiceTarget(invoice: ChargingInvoice): InvoiceTarget {
+  return {
+    id: invoice.id, vehicleId: invoice.vehicle_id,
+    strict: invoice.variance_options != null || invoice.variance_review_cleared === true,
+  };
+}
+
 export default function ChargingReconciliationPage() {
+  const identity = usePersonalIdentity();
+  const scope = personalScope(identity.data);
+  const scopeKey = scope?.mode === 'forward_auth' ? `subject:${scope.subject}` : scope?.mode ?? 'unknown';
+  return <ChargingReconciliationWorkspace key={scopeKey} scope={scope}
+    canOptIn={scope?.mode === 'forward_auth' && !identity.isError} />;
+}
+
+function ChargingReconciliationWorkspace({ scope, canOptIn }: { scope: PersonalScope | null; canOptIn: boolean }) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
@@ -107,19 +140,24 @@ export default function ChargingReconciliationPage() {
     provider: '',
     invoice_ref: '',
     currency: 'USD',
-    period_start: new Date(Date.now() - 30 * 86400000).toISOString(),
-    period_end: new Date().toISOString(),
-    billed_total_minor: 0 as number | null,
+    period_start: statementMidnight(statementDay(new Date(Date.now() - 30 * 86400000).toISOString())),
+    period_end: statementMidnight(statementDay(new Date().toISOString())),
+    billed_total_minor: null as number | null,
     lines: [blankLine()],
+    variance_options: undefined as InvoiceVarianceOptions | undefined,
   });
   const [dispute, setDispute] = useState({ claimed_minor: 0 as number | null, note: '', reasons: [] as string[] });
 
   usePageTitle(t('ownership.reconcile.title', 'Charging invoice reconciliation'));
 
-  const invoicesQuery = useChargingInvoices(vehicleId, 50, registerOffset);
-  const reportQuery = useReconciliationReport(activeInvoice);
-  const create = useCreateInvoice();
-  const remove = useDeleteInvoice();
+  const invoicesQuery = useChargingInvoices(vehicleId, 50, registerOffset, scope);
+  const reportInScope = activeTarget != null
+    && (!activeTarget.strict || (canOptIn && activeTarget.vehicleId === vehicleId));
+  const reportQuery = useReconciliationReport(reportInScope ? activeInvoice : null, scope,
+    activeTarget?.strict ? activeTarget.vehicleId : undefined);
+  const reportState = useDataState(reportQuery);
+  const create = useCreateInvoice(scope);
+  const remove = useDeleteInvoice(scope);
   const { confirm, dialogProps } = useConfirm();
   const latest = useRef({ vehicleId, activeTarget, draft, dispute, importOpen, disputeOpen, disputeTarget });
   latest.current = { vehicleId, activeTarget, draft, dispute, importOpen, disputeOpen, disputeTarget };
@@ -150,7 +188,7 @@ export default function ChargingReconciliationPage() {
       },
     });
   };
-  const openDispute = useCreateDispute(disputeTarget?.id ?? null);
+  const openDispute = useCreateDispute(disputeTarget?.id ?? null, scope);
 
   const invoices = useMemo(() => invoicesQuery.data?.items ?? [], [invoicesQuery.data?.items]);
   const exportInvoices = (format: 'csv' | 'json') => {
@@ -167,27 +205,34 @@ export default function ChargingReconciliationPage() {
     if (format === 'csv') downloadCSV('charging-invoices', objectsToCSV(rows));
     else downloadJSON('charging-invoices', rows);
   };
-  const report = reportQuery.data?.invoice.id === activeInvoice
-    && reportQuery.data.invoice.vehicle_id === activeTarget?.vehicleId
-    ? reportQuery.data : undefined;
-  const latestReport = useRef(report);
-  latestReport.current = report;
+  const reportAccessLost = isApiError(reportQuery.error) &&
+    ([401, 403, 404].includes(reportQuery.error.status) || reportQuery.error.code === 'IDENTITY_CHANGED');
+  const report = reportInScope && !reportAccessLost && reportState.data?.invoice.id === activeInvoice
+    && reportState.data.invoice.vehicle_id === activeTarget?.vehicleId
+    ? reportState.data : undefined;
   const selectedRegisterInvoice = invoices.find((row) => row.id === activeInvoice);
+  const latestDisputeReport = useRef({ report, registerVersion: selectedRegisterInvoice?.version });
+  latestDisputeReport.current = { report, registerVersion: selectedRegisterInvoice?.version };
+  const strictReport = report != null && invoiceTarget(report.invoice).strict;
   const reportCurrent = report != null && activeTarget?.vehicleId === vehicleId
+    && (!strictReport || (canOptIn && reportState.status === 'ok'
+      && !reportState.isRefreshing && !reportState.isRefreshBlocked))
     && (selectedRegisterInvoice == null || selectedRegisterInvoice.version === report.invoice.version);
-  const disputeCurrent = reportCurrent && disputeTarget != null
+  const canOpenDispute = reportCurrent && (!strictReport || report.variance_review?.state === 'review');
+  const disputeCurrent = canOpenDispute && disputeTarget != null
     && disputeTarget.id === activeInvoice && disputeTarget.vehicleId === vehicleId
+    && disputeTarget.strict === strictReport
     && disputeTarget.currency === report.invoice.currency
     && disputeTarget.version === report.invoice.version
     && disputeTarget.digest === report.dispute_packet_digest;
-  const latestDisputeCurrent = useRef(disputeCurrent);
-  latestDisputeCurrent.current = disputeCurrent;
   const contextMessage = (target: string) => t(
     'annotation.contextChanged',
     'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.',
     { target },
   );
-  const varianceDescription = `${t('ownership.reconcile.line.billed', 'Billed')} − ${t('ownership.reconcile.line.expected', 'Expected')} = ${t('ownership.reconcile.stat.variance', 'Net variance')}. ${t('ownership.reconcile.unsupported.tax', 'Tax and idle-fee legality, which vary by site contract')}`;
+  const varianceDescription = strictReport
+    ? t('ownership.reconcile.review.auditBasis', 'Based on the entered statement and independent evidence. Missing comparisons do not support a recovery estimate.')
+    : `${t('ownership.reconcile.line.billed', 'Billed')} − ${t('ownership.reconcile.line.expected', 'Expected')} = ${t('ownership.reconcile.stat.variance', 'Net variance')}. ${t('ownership.reconcile.unsupported.tax', 'Tax and idle-fee legality, which vary by site contract')}`;
   const exportContext = report ? {
     currency: report.invoice.currency,
     invoice_id: report.invoice.id,
@@ -209,17 +254,24 @@ export default function ChargingReconciliationPage() {
     () => report?.uninvoiced_sessions ?? [],
     [report?.uninvoiced_sessions],
   );
-  const allocationUnsupported = draft.lines.some((line) =>
-    line.billed_total_minor !== line.billed_energy_minor + line.billed_idle_minor + line.billed_tax_minor);
+  const allocationUnsupported = draft.variance_options == null && draft.lines.some((line) => line.billed_total_minor != null &&
+    line.billed_total_minor !== (line.billed_energy_minor ?? 0) + (line.billed_idle_minor ?? 0) + (line.billed_tax_minor ?? 0));
+  const canImportDraft = draft.variance_options == null
+    || (canOptIn && draft.variance_options.material_amount_minor > 0);
+  const patchLine = (index: number, patch: Partial<InvoiceLineInput>) => {
+    setDraft((current) => ({ ...current, lines: current.lines.map((line, i) => i === index ? { ...line, ...patch } : line) }));
+  };
 
   const submitInvoice = (event: FormEvent) => {
     event.preventDefault();
     const form = event.currentTarget;
     if (!(form instanceof HTMLFormElement) || !form.reportValidity()) return;
-    if (importing.current || create.isPending || allocationUnsupported || importVehicleId == null
+    if (importing.current || create.isPending || allocationUnsupported || !canImportDraft || importVehicleId == null
       || vehicleId !== importVehicleId || draft.billed_total_minor == null
       || !draft.period_start || !draft.period_end
-      || draft.period_start > draft.period_end) return;
+      || draft.period_start >= draft.period_end) return;
+    const importLines = draft.lines.filter((line): line is InvoiceLineInput => line.billed_total_minor != null);
+    if (importLines.length !== draft.lines.length) return;
     const submittedDraft = draft;
     const targetVehicle = importVehicleId;
     const activation = importActivation.current;
@@ -227,7 +279,7 @@ export default function ChargingReconciliationPage() {
     const selected = activeTarget;
     importing.current = true;
     create.mutate(
-      { ...draft, billed_total_minor: draft.billed_total_minor, vehicle_id: targetVehicle },
+      { ...draft, lines: importLines, billed_total_minor: draft.billed_total_minor, vehicle_id: targetVehicle },
       {
         onSuccess: (created) => {
           if (created.vehicle_id !== targetVehicle || latest.current.vehicleId !== targetVehicle
@@ -236,8 +288,8 @@ export default function ChargingReconciliationPage() {
             || importActivation.current !== activation || workspaceRevision.current !== workspace) return;
           setImportOpen(false);
           setImportVehicleId(null);
-          setActiveTarget({ id: created.id, vehicleId: created.vehicle_id });
-          setDraft((current) => ({ ...current, invoice_ref: '', lines: [blankLine()] }));
+          setActiveTarget(invoiceTarget(created));
+          setDraft((current) => ({ ...current, invoice_ref: '', lines: [blankLine()], variance_options: undefined }));
         },
         onSettled: () => { importing.current = false; },
       },
@@ -262,13 +314,17 @@ export default function ChargingReconciliationPage() {
         note: dispute.note,
         reasons: dispute.reasons,
         confirmed: true,
+        ...(target.strict ? {
+          vehicle_id: target.vehicleId, expected_version: target.version, expected_digest: target.digest,
+        } : {}),
       },
       {
         onSuccess: (created) => {
-          const currentReport = latestReport.current;
+          const { report: currentReport, registerVersion } = latestDisputeReport.current;
+          const currentPacket = currentReport?.dispute_packet_digest === target.digest
+            || (target.strict && currentReport?.variance_review?.state === 'handled'
+              && currentReport.disputes?.some((item) => item.id === created.id));
           if (created.invoice_id !== target.id || latest.current.vehicleId !== target.vehicleId
-            || !latestDisputeCurrent.current
-            || latest.current.activeTarget?.id !== target.id
             || latest.current.activeTarget !== selected
             || latest.current.disputeTarget !== target
             || latest.current.dispute !== submittedDraft || !latest.current.disputeOpen
@@ -276,7 +332,8 @@ export default function ChargingReconciliationPage() {
             || workspaceRevision.current !== workspace
             || currentReport?.invoice.version !== target.version
             || currentReport.invoice.currency !== target.currency
-            || currentReport.dispute_packet_digest !== target.digest) return;
+            || (registerVersion != null && registerVersion !== target.version)
+            || !currentPacket) return;
           setDisputeOpen(false);
           setDisputeTarget(null);
           setDispute({ claimed_minor: 0, note: '', reasons: [] });
@@ -342,7 +399,7 @@ export default function ChargingReconciliationPage() {
             size="sm"
             className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
             wrapLabel
-            onClick={() => setActiveTarget({ id: row.id, vehicleId: row.vehicle_id })}
+            onClick={() => setActiveTarget(invoiceTarget(row))}
           >
             {t('ownership.reconcile.invoice.audit', 'Audit')}
           </Button>
@@ -382,9 +439,9 @@ export default function ChargingReconciliationPage() {
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.match_state} />
           {row.ambiguous && row.match_state !== 'ambiguous' && <VerdictBadge value="ambiguous" />}
-          <Text as="span" variant="caption" className="tabular-nums">
+          {!strictReport && <Text as="span" variant="caption" className="tabular-nums">
             {formatPct(row.match_confidence_pct)}
-          </Text>
+          </Text>}
         </div>
       ),
       sortable: true,
@@ -457,9 +514,9 @@ export default function ChargingReconciliationPage() {
       key: 'variance',
       header: t('ownership.reconcile.line.variance', 'Variance'),
       align: 'right',
-      filterValue: (row) => row.variance_minor,
-      filterValueLabel: (_value, row) => money(row.variance_minor),
-      render: (row) => (
+      filterValue: (row) => strictReport ? null : row.variance_minor,
+      filterValueLabel: (_value, row) => money(strictReport ? null : row.variance_minor),
+      render: (row) => !strictReport && (
         <span
           className={cn('tabular-nums', row.variance_minor > 0 ? severityTokens.critical.fg : row.variance_minor < 0 ? severityTokens.success.fg : undefined)}
         >
@@ -605,11 +662,11 @@ export default function ChargingReconciliationPage() {
     >
       <AlertBanner
         variant="info"
-        title={t('ownership.reconcile.notice.title', 'Your telemetry is the reference')}
+        title={t('ownership.reconcile.review.noticeTitle', 'A difference is not proof of overbilling')}
       >
         {t(
-          'ownership.reconcile.notice.body',
-          'Lines are matched on start time and delivered energy, then scored. A line only becomes disputable when the measured session disagrees beyond tolerance — never merely because it was unmatched.',
+          'ownership.reconcile.review.noticeBody',
+          'A charging estimate may not measure the same energy as a station meter. A private statement check is optional at import and uses independent readings, applicable flat rates, and itemized fees.',
         )}
       </AlertBanner>
       {activeTarget != null && activeTarget.vehicleId !== vehicleId && (
@@ -692,26 +749,26 @@ export default function ChargingReconciliationPage() {
                 <Input
                   type="date"
                   label={t('ownership.reconcile.form.periodStart', 'Period start')}
-                  value={toDateInput(draft.period_start)}
+                  value={statementDay(draft.period_start)}
                   required
-                  max={toDateInput(draft.period_end) || undefined}
+                  max={statementDay(draft.period_end) || undefined}
                   onChange={(event) =>
                     setDraft((current) => ({
                       ...current,
-                      period_start: event.target.value ? `${event.target.value}T00:00:00.000Z` : '',
+                      period_start: statementMidnight(event.target.value),
                     }))
                   }
                 />
                 <Input
                   type="date"
-                  label={t('ownership.reconcile.form.periodEnd', 'Period end')}
-                  value={toDateInput(draft.period_end)}
+                  label={t('ownership.reconcile.form.periodEndExclusive', 'Period end (exclusive)')}
+                  value={statementDay(draft.period_end)}
                   required
-                  min={toDateInput(draft.period_start) || undefined}
+                  min={statementDay(draft.period_start) || undefined}
                   onChange={(event) =>
                     setDraft((current) => ({
                       ...current,
-                      period_end: event.target.value ? `${event.target.value}T00:00:00.000Z` : '',
+                      period_end: statementMidnight(event.target.value),
                     }))
                   }
                 />
@@ -725,6 +782,24 @@ export default function ChargingReconciliationPage() {
                     setDraft((current) => ({ ...current, billed_total_minor: value }))
                   }
                 />
+              </div>
+
+              <div className="space-y-3">
+                <Toggle label={t('ownership.reconcile.review.enable', 'Enable private statement check for this import')}
+                  disabled={!canOptIn} checked={draft.variance_options != null}
+                  onChange={(checked) => setDraft((current) => ({
+                    ...current,
+                    variance_options: checked ? { material_amount_minor: 0, complete_statement: false } : undefined,
+                    lines: checked ? current.lines : current.lines.map((line) => ({ ...line, variance_evidence: undefined })),
+                  }))} />
+                <Text as="p" variant="caption">
+                  {canOptIn
+                    ? t('ownership.reconcile.review.consent', 'Compare only this statement and this vehicle’s completed sessions. Results are private, never pushed, and removed with the imported statement.')
+                    : t('ownership.reconcile.review.identity', 'Private statement checks require a verified sign-in. Ordinary statement import is unchanged.')}
+                </Text>
+                {draft.variance_options && <InvoiceReviewOptionsFields currency={draft.currency}
+                  locale={units.unitPrefs.locale} options={draft.variance_options}
+                  onChange={(options) => setDraft((current) => ({ ...current, variance_options: options }))} />}
               </div>
 
               <div className="space-y-3">
@@ -819,6 +894,7 @@ export default function ChargingReconciliationPage() {
                         value={line.billed_total_minor}
                         currency={draft.currency}
                         locale={units.unitPrefs.locale}
+                        required
                         onChange={(value) =>
                           setDraft((current) => ({
                             ...current,
@@ -826,13 +902,17 @@ export default function ChargingReconciliationPage() {
                               itemIndex === index
                                 ? {
                                     ...item,
-                                    billed_total_minor: value ?? 0,
+                                    billed_total_minor: value,
                                   }
                                 : item,
                             ),
                           }))
                         }
                       />
+                    </div>
+                    <div className="mt-3">
+                      <InvoiceEvidenceEditor line={line} currency={draft.currency} locale={units.unitPrefs.locale}
+                        enabled={draft.variance_options != null} onChange={(patch) => patchLine(index, patch)} />
                     </div>
                   </div>
                 ))}
@@ -844,7 +924,7 @@ export default function ChargingReconciliationPage() {
               >
                 <Text variant="code">billed_energy_minor / billed_idle_minor / billed_tax_minor</Text>
               </AlertBanner>}
-              <Button type="submit" className="min-h-11 md:min-h-0" wrapLabel loading={create.isPending} disabled={allocationUnsupported || vehicleId == null || importVehicleId !== vehicleId}>
+              <Button type="submit" className="min-h-11 md:min-h-0" wrapLabel loading={create.isPending} disabled={allocationUnsupported || !canImportDraft || vehicleId == null || importVehicleId !== vehicleId}>
                 {t('ownership.reconcile.form.save', 'Import and reconcile')}
               </Button>
               <MutationError error={create.error} />
@@ -908,11 +988,13 @@ export default function ChargingReconciliationPage() {
         </OwnershipPanel>
       </FadeIn>
 
+      {report?.variance_review && <InvoiceVarianceCard report={report} fresh={reportCurrent} scope={scope} />}
+
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.reconcile.audit.title', 'Reconciliation result')}
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope && activeInvoice != null}
           description={varianceDescription}
           empty={!report}
           preserveSummary
@@ -925,7 +1007,7 @@ export default function ChargingReconciliationPage() {
             title={t('ownership.reconcile.brief.title', 'Statement amounts and variance')}
             description={varianceDescription}
             scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
-            source={reportQuery} enabled={activeInvoice != null}
+            source={reportQuery} enabled={reportInScope}
             window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
             metrics={[
               {
@@ -937,20 +1019,20 @@ export default function ChargingReconciliationPage() {
               {
                 occurrenceId: 'expected', metricId: 'currency',
                 label: t('ownership.reconcile.stat.expected', 'Expected from telemetry'),
-                rawValue: report?.expected_total_minor,
+                rawValue: strictReport ? undefined : report?.expected_total_minor,
                 display: specialistDisplay(money),
               },
               {
                 occurrenceId: 'variance', metricId: 'currency',
                 label: t('ownership.reconcile.stat.variance', 'Net variance'),
-                rawValue: report?.net_variance_minor,
+                rawValue: strictReport ? undefined : report?.net_variance_minor,
                 display: specialistDisplay(money),
                 tone: (report?.net_variance_minor ?? 0) > 0 ? 'critical' : 'positive',
               },
               {
                 occurrenceId: 'recoverable', metricId: 'currency',
                 label: t('ownership.reconcile.stat.recoverable', 'Disputable amount'),
-                rawValue: report?.recoverable_minor,
+                rawValue: strictReport ? undefined : report?.recoverable_minor,
                 display: specialistDisplay(money),
                 tone: (report?.recoverable_minor ?? 0) > 0 ? 'warning' : 'default',
               },
@@ -961,7 +1043,7 @@ export default function ChargingReconciliationPage() {
               title={t('ownership.reconcile.energyBrief.title', 'Statement matching and energy')}
               description={t('ownership.reconcile.energyBrief.description', 'Matched and unmatched lines remain separate; measured energy is retained beside the energy variance.')}
               scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
-              source={reportQuery} enabled={activeInvoice != null}
+              source={reportQuery} enabled={reportInScope}
               window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
               metrics={[
                 {
@@ -987,9 +1069,9 @@ export default function ChargingReconciliationPage() {
                 {
                   occurrenceId: 'energyVariance', metricId: 'energy',
                   label: t('ownership.reconcile.stat.energyVariance', 'Energy variance'),
-                  rawValue: report?.energy_variance_wh,
+                  rawValue: strictReport ? undefined : report?.energy_variance_wh,
                   display: specialistDisplay(units.formatEnergy),
-                  context: report?.measured_energy_wh == null ? '—' : units.formatEnergy(report.measured_energy_wh),
+                  context: strictReport || report?.measured_energy_wh == null ? '—' : units.formatEnergy(report.measured_energy_wh),
                 },
               ]}
             />
@@ -998,10 +1080,11 @@ export default function ChargingReconciliationPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
+        <div id="invoice-line-audit" tabIndex={-1} className="scroll-mt-24">
         <OwnershipPanel
           title={t('ownership.reconcile.lines.title', 'Line-by-line audit')}
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope}
           empty={lines.length === 0}
           emptyMessage={t(
             'ownership.reconcile.lines.empty',
@@ -1019,7 +1102,7 @@ export default function ChargingReconciliationPage() {
               displayValue: (row, key) => {
                 switch (key) {
                   case 'ref': return row.line.line_ref || t('ownership.reconcile.line.unnamed', 'Unnamed line');
-                  case 'variance': return money(row.variance_minor);
+                  case 'variance': return strictReport ? null : money(row.variance_minor);
                   case 'billedEnergy': return units.formatEnergy(row.line.billed_energy_wh);
                   case 'measuredEnergy': return row.measured_energy_wh == null ? null : units.formatEnergy(row.measured_energy_wh);
                   default: return null;
@@ -1036,14 +1119,14 @@ export default function ChargingReconciliationPage() {
               location: row.line.location,
               occurred_at: row.line.occurred_at,
               match_state: row.match_state,
-              match_confidence_pct: row.match_confidence_pct,
+              match_confidence_pct: strictReport ? null : row.match_confidence_pct,
               billed_energy_wh: row.line.billed_energy_wh,
               measured_energy_wh: row.measured_energy_wh,
               energy_delta_pct: row.energy_delta_pct,
               time_delta_s: row.time_delta_s,
               billed_total_minor: row.line.billed_total_minor,
               expected_cost_minor: row.expected_cost_minor,
-              variance_minor: row.variance_minor,
+              variance_minor: strictReport ? null : row.variance_minor,
               recoverable: row.recoverable,
               variance_reasons: row.variance_reasons,
               ...exportContext,
@@ -1054,13 +1137,14 @@ export default function ChargingReconciliationPage() {
             })))}
           />
         </OwnershipPanel>
+        </div>
       </FadeIn>
 
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.reconcile.buckets.title', 'Variance attribution')}
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope}
           description={t(
             'ownership.reconcile.buckets.subtitle',
             'Every currency unit of disagreement is assigned a cause, so a dispute never rests on "the number looks wrong".',
@@ -1111,7 +1195,7 @@ export default function ChargingReconciliationPage() {
         <OwnershipPanel
           title={t('ownership.reconcile.uninvoiced.title', 'Sessions the provider never billed')}
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope}
           description={t(
             'ownership.reconcile.uninvoiced.subtitle',
             'Measured sessions inside the billing period with no matching line. Usually free or home charging — occasionally a statement that is genuinely incomplete.',
@@ -1160,7 +1244,7 @@ export default function ChargingReconciliationPage() {
         <OwnershipPanel
           title={t('ownership.reconcile.dispute.title', 'Dispute desk')}
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope}
           editing={disputeOpen}
           description={t(
             'ownership.reconcile.dispute.subtitle',
@@ -1180,12 +1264,16 @@ export default function ChargingReconciliationPage() {
               icon={<Icon icon={Gavel} />}
               aria-expanded={disputeOpen}
               aria-controls={disputeOpen ? disputeEditorId : undefined}
-              disabled={!reportCurrent && !disputeOpen}
+              disabled={!canOpenDispute && !disputeOpen}
               onClick={() => {
                 disputeActivation.current += 1;
+                if (disputeOpen && disputeTarget?.strict && !disputeCurrent) {
+                  setDisputeTarget(null);
+                }
                 if (!disputeOpen && disputeTarget == null && report != null) {
                   setDisputeTarget({
                     id: report.invoice.id, vehicleId: report.invoice.vehicle_id,
+                    strict: strictReport,
                     currency: report.invoice.currency, version: report.invoice.version,
                     digest: report.dispute_packet_digest,
                   });
@@ -1247,7 +1335,9 @@ export default function ChargingReconciliationPage() {
                 </div>
               </div>
               <Textarea
-                label={t('ownership.reconcile.dispute.note', 'Note to the provider')}
+                label={disputeTarget?.strict
+                  ? t('ownership.reconcile.review.localNote', 'Note for this local dispute')
+                  : t('ownership.reconcile.dispute.note', 'Note to the provider')}
                 value={dispute.note}
                 rows={3}
                 onChange={(event) =>
@@ -1299,7 +1389,7 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.3}>
         <EvidencePanel
           source={reportQuery}
-          sourceEnabled={activeInvoice != null}
+          sourceEnabled={reportInScope}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[

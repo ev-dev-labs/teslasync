@@ -1,0 +1,131 @@
+{
+  "maintenance": {
+    "aiPredictive": {
+      "title": "Helix maintenance advisor",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "button": "Predict maintenance",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle first."
+    },
+    "itemProgress": "{{name}} service progress",
+    "recallWatch": {
+      "title": "Private recall watch",
+      "description": "Review recent U.S. NHTSA campaigns by model year. This watch cannot check VIN applicability or completion. It posts private cards only, never push alerts.",
+      "open": "Review private recall watch",
+      "vehicle": "Select a vehicle in the workspace picker to set up a recall watch.",
+      "signIn": "This private watch requires verified sign-in.",
+      "enabled": "Private recall watch saved",
+      "disabled": "Private recall watch cleared",
+      "failure": "Could not change your recall watch. Refresh and verify your sign-in and vehicle.",
+      "model": "Tesla model",
+      "choose": "Choose the exact model",
+      "year": "Model year",
+      "confirmModel": "I verified this model and model year for the selected vehicle.",
+      "confirmProvider": "Check the U.S. NHTSA catalog once a day. Send only Tesla, the model and the model year; never send my VIN or driving history.",
+      "editHint": "Saving replaces the previous watch and clears its saved matches.",
+      "save": "Save private recall watch",
+      "campaign": "NHTSA campaign {{campaign}}",
+      "applicability": "Matches your recorded {{year}} {{model}}. An open recall for this VIN is not confirmed.",
+      "basis": "NHTSA received the report on {{reported}}. Last checked {{checked}}.",
+      "remedy": "Published remedy: {{remedy}}",
+      "verify": "Verify VIN on Tesla’s site",
+      "limit": "Verify your VIN separately. The public catalog cannot confirm whether this car is affected or whether the remedy is complete.",
+      "remove": "Turn off and clear recall watch",
+      "offline": "Reconnect to review your private recall watch.",
+      "off": "Off. Turn on a watch for your selected vehicle.",
+      "active": "Watching {{year}} {{model}}.",
+      "lastCheck": "Last successful check: {{when}}.",
+      "unavailable": "NHTSA could not be checked. Any visible matches are from the last successful check; none confirms VIN status.",
+      "waiting": "Waiting for the first catalog check. You can close the browser.",
+      "empty": "No current model-year matches to review. This does not mean your VIN has no open recalls.",
+      "hint": "Only recent public model-year matches appear here. Check your VIN separately by entering it yourself on Tesla’s site.",
+      "edit": "Edit recall watch",
+      "start": "Set up recall watch",
+      "conflict": "The watch changed. Review the current setup before trying again.",
+      "removeMessage": "Stop future checks and delete these private matches? Existing vehicle and service records will not change."
+    },
+    "title": "Maintenance",
+    "subtitle": "Service schedule, records, and upcoming maintenance",
+    "kpis": "Maintenance summary",
+    "kpi": {
+      "total": "Total items",
+      "overdue": "Overdue",
+      "soon": "Due soon",
+      "healthy": "Healthy",
+      "completed": "Completed",
+      "categories": "Categories"
+    },
+    "schedule": "Schedule",
+    "refresh": "Refresh maintenance data",
+    "itemsTitle": "Maintenance items",
+    "filterCategory": "Filter by category",
+    "sortBy": "Sort items",
+    "allCategories": "All categories",
+    "sort": {
+      "status": "Status",
+      "name": "Name",
+      "dueDate": "Due date",
+      "category": "Category"
+    },
+    "status": {
+      "good": "Good",
+      "soon": "Due soon",
+      "overdue": "Overdue",
+      "completed": "Completed"
+    },
+    "due": "Due",
+    "noItemsTitle": "No maintenance items",
+    "noItemsFiltered": "No items match the selected category. Try a different filter.",
+    "noItems": "No maintenance items found for this vehicle.",
+    "clearFilterCta": "Clear filter",
+    "projectionsTitle": "Service projections",
+    "noProjections": "No upcoming service projections available.",
+    "costTitle": "Estimated annual cost",
+    "totalSpent": "Total spent",
+    "annualEst": "Annual est.",
+    "perYear": "/yr",
+    "avgService": "Avg / service",
+    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
+    "noCost": "No cost data available yet. Log service records to see cost estimates.",
+    "categoryTitle": "Maintenance by category",
+    "noCategory": "No maintenance items to categorize yet.",
+    "items": "items",
+    "recordsTitle": "Service records",
+    "noRecords": "No service records logged yet.",
+    "noRecordsShort": "No service records found.",
+    "inspectRecord": "Inspect service record",
+    "preview": {
+      "eyebrow": "Service evidence",
+      "title": "Service record",
+      "recordId": "Record ID",
+      "completed": "Completed"
+    },
+    "cost": {
+      "methodology": "Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record."
+    },
+    "details": {
+      "createdAt": "Created",
+      "id": "Item ID",
+      "sourceStatus": "Source status",
+      "lastDate": "Last service date",
+      "dueDistance": "Due odometer",
+      "lastDistance": "Last service odometer",
+      "distanceInterval": "Distance interval",
+      "monthInterval": "Month interval",
+      "title": "Service interval and metadata"
+    },
+    "sources": {
+      "refreshBlocked": "Refresh is paused. Retained data remains available."
+    },
+    "summary": {
+      "provenance": "Counts use all returned maintenance items, before category filtering."
+    },
+    "col": {
+      "date": "Date",
+      "description": "Description",
+      "mileage": "Mileage",
+      "cost": "Cost",
+      "provider": "Provider"
+    }
+  }
+}

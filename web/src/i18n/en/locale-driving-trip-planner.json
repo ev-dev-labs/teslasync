@@ -1539,6 +1539,11 @@
       "title": "Helix natural-language filter"
     }
   },
+  "smartCharging": {
+    "stopComparison": {
+      "title": "Compare reviewed charging stops"
+    }
+  },
   "softwareUpdates": {
     "aiNarration": {
       "badge": "Helix",

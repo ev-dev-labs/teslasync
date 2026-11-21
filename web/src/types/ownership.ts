@@ -260,6 +260,49 @@ export interface TariffSimulationResponse {
 // ---------------------------------------------------------------------------
 
 export type InvoiceStatus = 'open' | 'reconciled' | 'disputed' | 'settled';
+export type MeterBoundary = 'station' | 'battery';
+
+export interface InvoiceVarianceEvidence {
+  billed_boundary?: MeterBoundary;
+  meter?: {
+    observed_boundary: MeterBoundary;
+    observed_energy_wh: number;
+    max_loss_wh?: number;
+  };
+  rate?: {
+    boundary: MeterBoundary;
+    amount_minor: number;
+    energy_wh: number;
+  };
+  other_fees_minor?: number;
+}
+
+export interface InvoiceVarianceOptions {
+  material_amount_minor: number;
+  complete_statement: boolean;
+}
+
+export interface InvoiceVarianceReview {
+  state: 'off' | 'review' | 'handled' | 'insufficient' | 'no_material_difference';
+  matched_lines: number;
+  comparable_lines: number;
+  unexplained_statement_minor?: number;
+  findings: {
+    line_id: number;
+    session_id?: number;
+    session_started_at?: string;
+    assessment: {
+      expected_energy_lower_wh?: number;
+      expected_energy_upper_wh?: number;
+      unexplained_energy_wh?: number;
+      expected_energy_minor?: number;
+      unexplained_rate_minor?: number;
+      components_total_minor?: number;
+      unexplained_total_minor?: number;
+    };
+  }[];
+}
+
 export type MatchState =
   | 'exact'
   | 'probable'
@@ -278,6 +321,13 @@ export interface InvoiceLine {
   billed_idle_minor: number;
   billed_tax_minor: number;
   billed_total_minor: number;
+  variance_evidence?: InvoiceVarianceEvidence;
+}
+
+export interface InvoiceLineInput extends Omit<InvoiceLine, 'billed_energy_minor' | 'billed_idle_minor' | 'billed_tax_minor'> {
+  billed_energy_minor: number | null;
+  billed_idle_minor: number | null;
+  billed_tax_minor: number | null;
 }
 
 export interface ChargingInvoice {
@@ -295,7 +345,13 @@ export interface ChargingInvoice {
   lines: InvoiceLine[] | null;
   created_at: string;
   updated_at: string;
+  variance_options?: InvoiceVarianceOptions;
+  variance_review_cleared?: boolean;
 }
+
+export type InvoiceReviewChange =
+  | { kind: 'clear'; version: number }
+  | { kind: 'save'; version: number; options: InvoiceVarianceOptions; lines: InvoiceLine[] };
 
 export interface CreateInvoiceRequest {
   vehicle_id: number;
@@ -305,7 +361,8 @@ export interface CreateInvoiceRequest {
   period_start: string;
   period_end: string;
   billed_total_minor: number;
-  lines: InvoiceLine[];
+  lines: InvoiceLineInput[];
+  variance_options?: InvoiceVarianceOptions;
 }
 
 export interface ReconciledLine {
@@ -359,10 +416,14 @@ export interface CreateDisputeRequest {
   reasons: string[];
   note: string;
   confirmed: boolean;
+  vehicle_id?: number;
+  expected_version?: number;
+  expected_digest?: string;
 }
 
 export interface ReconciliationReport {
   invoice: ChargingInvoice;
+  variance_review?: InvoiceVarianceReview;
   lines: ReconciledLine[] | null;
   uninvoiced_sessions: UninvoicedSession[] | null;
   variance_buckets: VarianceBucket[] | null;
@@ -515,6 +576,7 @@ export interface Warranty {
   provider: string;
   start_at: string;
   start_odometer_m: number;
+  start_odometer_known?: boolean;
   term_s: number;
   term_distance_m: number;
   capacity_floor_pct: number | null;
@@ -531,7 +593,8 @@ export interface CreateWarrantyRequest {
   label: string;
   provider: string;
   start_at: string;
-  start_odometer_m: number;
+  start_odometer_m: number | null;
+  zero_start_odometer_confirmed?: boolean;
   term_s: number;
   term_distance_m: number;
   capacity_floor_pct: number | null;
@@ -585,7 +648,7 @@ export interface WarrantyCoverage {
   observed_pace_m_per_s: number | null;
   time_expiry_at: string;
   distance_expiry_at: string | null;
-  projected_expiry_at: string;
+  projected_expiry_at: string | null;
   binding_limit: string;
   capacity_retention_pct: number | null;
   capacity_floor_breach_at: string | null;

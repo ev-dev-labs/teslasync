@@ -7,6 +7,7 @@ import {
 
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import { BatteryDegradationStats, DegradationGrid } from '../components/battery-degradation-modernization';
+import { CapacityDigestPanel } from '../components/battery-degradation-modernization/CapacityDigestPanel';
 import type { BatteryDegradationHealth } from '../components/battery-degradation-modernization/BatteryDegradationStats';
 import { capacityEvidence, observationEvidence, driveDropEvidence, predictionIntervalEvidence, batteryNumber, batteryCount, batteryStress, healthMessageText } from '../components/battery-degradation-modernization/BatteryDegradationStats';
 
@@ -941,9 +942,11 @@ export default function BatteryDegradationPage() {
         </DegradationGrid>
       </FadeIn>
 
+      <CapacityDigestPanel vehicleId={activeId} />
+
       {/* ── 6 · Detail: Degradation history table ────────── */}
       <FadeIn delay={0.25}>
-        <LayoutCard title={t('battery.degradation.history', 'Degradation history')}>
+        <LayoutCard title={t('battery.degradation.history', 'Degradation history')} titleId="battery-degradation-history">
           {initialLoading ? (
             <Skeleton height={240} />
           ) : fatalError ? (

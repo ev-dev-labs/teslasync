@@ -30,6 +30,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useRangeState } from '@/hooks/useRangeState';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
+import { ColdTireReviewPanel } from '../components/ColdTireReviewPanel';
 
 const CORNER_FALLBACK: Record<TireCorner, string> = {
   fl: 'Front left', fr: 'Front right', rl: 'Rear left', rr: 'Rear right',
@@ -116,6 +117,7 @@ export default function TireDifferentialDriftPage() {
       )}
       query={historyQuery}
     >
+      <ColdTireReviewPanel vehicleId={vehicleId} />
       {/* 1 — KPI band */}
       <FadeIn>
         <LayoutCard title={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>

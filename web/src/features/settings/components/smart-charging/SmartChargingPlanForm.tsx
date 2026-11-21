@@ -22,10 +22,13 @@ interface Props {
   onCancel: () => void
 }
 
-export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSave, onCancel }: Props) {
+export function SmartChargingPlanForm({
+  vehicleId, plan, places, disabled, onSave, onCancel,
+}: Props) {
   const { t } = useTranslation()
   const { tz } = useDateFormat('user')
-  const initialNotify = plan ? toZonedDatetimeStr(new Date(plan.notify_at), tz) : ''
+  const initialNotifyAt = plan?.notify_at
+  const initialNotify = initialNotifyAt ? toZonedDatetimeStr(new Date(initialNotifyAt), tz) : ''
   const initialDeparture = plan ? toZonedDatetimeStr(new Date(plan.departure_at), tz) : ''
   const initialStart = plan?.scheduled_start ? toZonedDatetimeStr(new Date(plan.scheduled_start.at), tz) : ''
   const initialService = formatWindow(plan?.service_appointment, tz)
@@ -72,7 +75,8 @@ export function SmartChargingPlanForm({ vehicleId, plan, places, disabled, onSav
   }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const notify = resolveTime(draft.notify, initialNotify, plan?.notify_at)
+    if (disabled) return
+    const notify = resolveTime(draft.notify, initialNotify, initialNotifyAt)
     const departure = resolveTime(draft.departure, initialDeparture, plan?.departure_at)
     const service = resolveWindow(draft.service, initialService, plan?.service_appointment, departure)
     const install = resolveWindow(draft.install, initialInstall, plan?.software_install, departure)

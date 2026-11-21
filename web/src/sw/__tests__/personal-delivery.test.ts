@@ -125,4 +125,81 @@ describe('personal delivery worker', () => {
     await click('/settings')
     expect(openWindow).toHaveBeenCalledExactlyOnceWith('/settings/smart-charging?vehicle_id=7')
   })
+
+  it('requires the cabin estimate notification to keep its original vehicle and review anchor', async () => {
+    const destination = '/preconditioning-effectiveness?vehicle_id=7&cabin_vehicle_id=7#cabin-prep-reminder'
+    const mismatched = destination.replace('cabin_vehicle_id=7', 'cabin_vehicle_id=8')
+    for (const url of [mismatched, destination]) {
+      fetchMock.mockResolvedValueOnce({
+        ok: true, json: async () => ({ data: { title: 'Cabin prep', body: 'Review the estimate', url } }),
+      })
+      await push({ kind: 'cabin-prep', token })
+      await click(url)
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/smart-delivery/deliveries/claim',
+      expect.objectContaining({ body: JSON.stringify({ token, kind: 'cabin-prep' }) }))
+    expect(showNotification).toHaveBeenCalledExactlyOnceWith('Cabin prep', {
+      body: 'Review the estimate', badge: '/icons/badge-72.png', data: { url: destination },
+    })
+    expect(openWindow).toHaveBeenCalledExactlyOnceWith(destination)
+  })
+
+  it('only displays and opens a same-vehicle Park Reserve notification with a plan revision', async () => {
+    const destination = '/vampire-drain?vehicle_id=7&park_vehicle_id=7&park_plan_id=42#park-reserve'
+    for (const url of [destination.replace('park_vehicle_id=7', 'park_vehicle_id=8'),
+      destination.replace('&park_plan_id=42', ''), `https://other.example${destination}`, destination]) {
+      fetchMock.mockResolvedValueOnce({
+        ok: true, json: async () => ({ data: { title: 'Park reserve', body: 'Review the estimate', url } }),
+      })
+      await push({ kind: 'park-reserve', token })
+      await click(url)
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/smart-delivery/deliveries/claim',
+      expect.objectContaining({ body: JSON.stringify({ token, kind: 'park-reserve' }) }))
+    expect(showNotification).toHaveBeenCalledExactlyOnceWith('Park reserve', {
+      body: 'Review the estimate', badge: '/icons/badge-72.png', data: { url: destination },
+    })
+    expect(openWindow).toHaveBeenCalledExactlyOnceWith(destination)
+  })
+
+  it('only displays a window rain alert for the exact watch and vehicle, after a private claim', async () => {
+    const destination = '/security-access?vehicle_id=7&rain_vehicle_id=7&rain_plan_id=42#window-rain'
+    fetchMock.mockResolvedValueOnce({ ok: false })
+    await push({ kind: 'window-rain', token })
+    expect(showNotification).not.toHaveBeenCalled()
+    for (const url of [destination.replace('rain_vehicle_id=7', 'rain_vehicle_id=8'),
+      destination.replace('&rain_plan_id=42', ''), destination.replace('#window-rain', '#other'), destination]) {
+      fetchMock.mockResolvedValueOnce({
+        ok: true, json: async () => ({ data: { title: 'Check the window', body: 'Possible rain nearby', url } }),
+      })
+      await push({ kind: 'window-rain', token })
+      await click(url)
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/smart-delivery/deliveries/claim',
+      expect.objectContaining({ body: JSON.stringify({ token, kind: 'window-rain' }) }))
+    expect(showNotification).toHaveBeenCalledExactlyOnceWith('Check the window', {
+      body: 'Possible rain nearby', badge: '/icons/badge-72.png', data: { url: destination },
+    })
+    expect(openWindow).toHaveBeenCalledExactlyOnceWith(destination)
+  })
+
+  it.each(['closure', 'unlock'])('only displays and opens a scoped parked %s alert', async (family) => {
+    const kind = `parked-${family}`
+    const destination = `/security-access?vehicle_id=7&${family}_vehicle_id=7&${family}_plan_id=42&${family}_park_id=19#${kind}`
+    for (const url of [destination.replace(`${family}_vehicle_id=7`, `${family}_vehicle_id=8`),
+      destination.replace(`&${family}_park_id=19`, ''), destination.replace(`&${family}_plan_id=42`, ''),
+      `https://other.example${destination}`, destination]) {
+      fetchMock.mockResolvedValueOnce({
+        ok: true, json: async () => ({ data: { title: 'Check the parked vehicle', body: 'Review TeslaSync', url } }),
+      })
+      await push({ kind, token })
+      await click(url)
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/smart-delivery/deliveries/claim',
+      expect.objectContaining({ body: JSON.stringify({ token, kind }) }))
+    expect(showNotification).toHaveBeenCalledExactlyOnceWith('Check the parked vehicle', {
+      body: 'Review TeslaSync', badge: '/icons/badge-72.png', data: { url: destination },
+    })
+    expect(openWindow).toHaveBeenCalledExactlyOnceWith(destination)
+  })
 })

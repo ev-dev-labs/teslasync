@@ -34,6 +34,9 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
 import { VehicleSourcePause } from '../components/VehicleSourcePause';
+import { PrivatePlaylistPanel } from '../components/media-player-modernization/PrivatePlaylistPanel';
+import { EpisodeReviewPanel } from '../components/media-player-modernization/EpisodeReviewPanel';
+import { FavoriteDigestPanel } from '../components/media-player-modernization/FavoriteDigestPanel';
 import {
   MediaSlot, MediaStats, finiteReading, playbackProgress,
 } from '../components/media-player-modernization';
@@ -506,6 +509,9 @@ export default function MediaPlayerPage() {
           </MediaSlot> },
         ]} />
         </section>
+        <PrivatePlaylistPanel vehicleId={vehicleId} />
+        <EpisodeReviewPanel vehicleId={vehicleId} />
+        <FavoriteDigestPanel vehicleId={vehicleId} />
       </FadeIn>
 
       {/* ── Row 2 — KPI band ─────────────────────────────────── */}

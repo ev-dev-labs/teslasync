@@ -6,7 +6,7 @@ import { Button, ErrorText, Input, Select, Text, Toggle } from '@/components/ui'
 import { currencyFractionDigits, formatCurrencyValue, parseCurrencyText } from '@/lib/currencyFormat'
 import { refreshPersonalDeliveryWorker } from '@/lib/personalPush'
 import type { SmartPublicFeeTerms, SmartPublicFeeTermsInput } from '@/types/smartCharging'
-import { usePersonalBrowser } from '../personal-delivery/usePersonalBrowser'
+import { usePersonalBrowser } from '@/hooks/usePersonalBrowser'
 
 export type PublicFeePlace = { id: number; name: string; updated_at: string }
 

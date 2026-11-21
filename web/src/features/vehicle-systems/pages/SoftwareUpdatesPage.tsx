@@ -36,6 +36,7 @@ import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/ho
 import { type CadencePoint } from '../components/SoftwareUpdateCadenceChart';
 import { SoftwareCadenceCard } from '../components/software-updates-modernization/SoftwareCadenceCard';
 import { SoftwareHistoryItem } from '../components/software-updates-modernization/SoftwareHistoryItem';
+import { SoftwareWindowPanel } from '../components/software-updates-modernization/SoftwareWindowPanel';
 import { observedCount, softwareSourceState } from '../components/software-updates-modernization/presenter';
 import { SoftwareUpdateStatusBreakdown } from '../components/SoftwareUpdateStatusBreakdown';
 import { getUpdateStatus } from '../components/softwareUpdateStatus';
@@ -224,6 +225,8 @@ export default function SoftwareUpdatesPage() {
           ) : !source.available && !isLoading ? retryContent ?? unavailableContent : undefined}
         />
       </FadeIn>
+
+      <SoftwareWindowPanel vehicleId={vehicleId} />
 
       {/* 2 — Cadence chart + status breakdown ─────────────────────── */}
       <FadeIn delay={0.1}>

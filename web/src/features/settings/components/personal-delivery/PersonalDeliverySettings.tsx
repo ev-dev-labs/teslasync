@@ -13,7 +13,7 @@ import { useDataState } from '@/hooks/useDataState'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { personalPushSupported, refreshPersonalDeliveryWorker } from '@/lib/personalPush'
 import { PersonalDeliveryDeviceRow } from './PersonalDeliveryDeviceRow'
-import { usePersonalBrowser } from './usePersonalBrowser'
+import { usePersonalBrowser } from '@/hooks/usePersonalBrowser'
 
 interface Props {
   active: boolean

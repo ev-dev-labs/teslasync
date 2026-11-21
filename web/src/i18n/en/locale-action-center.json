@@ -73,7 +73,14 @@
       "charging_site_performance": "Charging site performance",
       "smart_commute": "Smart Commute",
       "system_health": "System health",
-      "vehicle_readiness": "Vehicle readiness"
+      "vehicle_readiness": "Vehicle readiness",
+      "warranty_distance": "Warranty mileage",
+      "trip_maintenance": "Trip maintenance",
+      "cold_tire_drift": "Cold tire checks",
+      "recall_watch": "Recall watch",
+      "service_case": "Service case",
+      "climate_schedule": "Scheduled climate",
+      "subscription_renewal": "Subscription renewals"
     },
     "state": {
       "open": "Open",
@@ -100,6 +107,7 @@
       "fleet_maintenance_work_orders": "Fleet maintenance work orders",
       "signal_log": "Telemetry history",
       "status_incidents": "System incident history",
+      "user_recorded": "User-recorded evidence",
       "tesla_battery_passport_ledger": "Issued battery passports",
       "method": "Ranked from persisted evidence without synthetic substitutes."
     },
@@ -608,6 +616,16 @@
     },
     "unknown": "Unknown"
   },
+  "maintenance": {
+    "recallWatch": {
+      "applicability": "Matches your recorded {{year}} {{model}}. An open recall for this VIN is not confirmed.",
+      "basis": "NHTSA received the report on {{reported}}. Last checked {{checked}}.",
+      "campaign": "NHTSA campaign {{campaign}}",
+      "limit": "Verify your VIN separately. The public catalog cannot confirm whether this car is affected or whether the remedy is complete.",
+      "open": "Review private recall watch",
+      "remedy": "Published remedy: {{remedy}}"
+    }
+  },
   "operationalMode": {
     "actionCenterDisabled": {
       "title": "Inbox actions are read-only"
@@ -653,6 +671,36 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "ownership": {
+    "subscription": {
+      "renewal": {
+        "cardBasis": "Owner-confirmed renewal date and stored subscription terms.",
+        "cardLimit": "Observed activity does not prove subscription use. No renewal or cancellation is made automatically.",
+        "cardSummary": "Check the recorded price and observed activity before the renewal date.",
+        "open": "Open private renewal review",
+        "ready": "Review the recorded subscription renewal"
+      }
+    },
+    "warranty": {
+      "mileage": {
+        "actionTitle": "Review the approaching warranty distance limit",
+        "basis": "{{remaining}} remained at the last recorded odometer reading. The estimate uses {{days}} observation days from {{from}} to {{through}} and the terms you entered.",
+        "limitation": "This is an estimated range, not a coverage decision. Check the original terms and current odometer before contacting the warranty provider.",
+        "open": "Review warranty terms",
+        "range": "At the recent recorded pace, the distance limit may arrive between {{earliest}} and {{latest}}, before the calendar term ends on {{term}}."
+      }
+    }
+  },
+  "preconditioningEffectiveness": {
+    "scheduledClimate": {
+      "cardBasis": "Accepted scheduled command for this vehicle, observed HVAC changes and parked telemetry",
+      "cardLimit": "The observed time window does not explain why climate ran or what happened later.",
+      "cardRationale": "Review whether this schedule still fits your routine. Nothing changes automatically.",
+      "cardTitle": "Review a recurring climate schedule",
+      "open": "Review scheduled climate",
+      "summary": "Climate started near {{count}} matching scheduled runs with no observed drive in the next 90 minutes."
+    }
   },
   "problemReport": {
     "context": {
@@ -734,6 +782,16 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "serviceEvidencePack": {
+    "privateCase": {
+      "cardBasis": "User-recorded case evidence, not a diagnosis",
+      "cardLimit": "Nothing is sent to a service provider. Review the export before sharing it.",
+      "cardRationale": "You opened this case and recorded evidence for this vehicle.",
+      "cardSummary": "Choose which recorded details and timestamps to include in a local export.",
+      "cardTitle": "Review your private service case",
+      "open": "Review private service case"
+    }
+  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {
@@ -813,6 +871,13 @@
     },
     "title": "Charging readiness",
     "tripActionContext": "Battery {{battery}}% at {{place}}. Departure: {{departure}}.",
+    "tripMaintenance": {
+      "cardBasis": "Recorded odometer: {{current}} on {{observed}}. You entered a service at {{serviced}} on {{serviceDate}}, an interval of {{interval}}, and a trip estimate of {{tripLow}} to {{tripHigh}}.",
+      "cardLimitation": "This compares your trip estimate with the interval you recorded. It does not assess vehicle condition or book service.",
+      "cardSummary": "{{service}} is due at {{due}}. The trip on {{departure}} would put the estimated odometer between {{low}} and {{high}}.",
+      "cardTitle": "Review maintenance before your trip",
+      "open": "Review maintenance"
+    },
     "tripProjectionLimitation": "These are estimates, not measurements. A 0% bound may mean a leg cannot be completed.",
     "tripReviewRationale": "Even the lower entered trip-use estimates cannot meet the reserve by charging only at the selected place.",
     "tripReviewSummary": "Battery {{battery}}% at {{place}}. Review a charging stop or record planned destination charging. Departure: {{departure}}.",
@@ -906,6 +971,21 @@
   "timeline": {
     "empty": "No timeline entries yet.",
     "label": "Timeline"
+  },
+  "tireDifferentialDrift": {
+    "coldReview": {
+      "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+      "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning.",
+      "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+      "cardTitle": "Check one tire manually",
+      "open": "Review private cold checks"
+    },
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    }
   },
   "toast": {
     "admin": {

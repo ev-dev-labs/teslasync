@@ -3,6 +3,7 @@ import { isApiError, request } from '../client'
 import { actionCenterKeys } from './useActionCenter'
 import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity'
 import type {
+  SmartCommuteNavigationOutcome,
   SmartCommuteRoutineInput,
   SmartCommuteSettings,
   SmartCommuteSnapshot,
@@ -34,6 +35,36 @@ export function useSmartCommute(
     gcTime: 0,
     refetchOnWindowFocus: 'always',
     refetchInterval: (query) => query.state.data?.data.traffic_decisions?.length ? 15_000 : false,
+  })
+}
+
+export function useSmartCommuteNavigation(scope: PersonalScope, vehicleId: number, routineId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { occurrence_id: string; address: string; wake_confirmed: boolean }) => {
+      if (scope.mode !== 'forward_auth') throw new Error('Smart Commute navigation requires a verified operator')
+      const { data } = await request<{ data: { outcome: SmartCommuteNavigationOutcome } }>(
+        `/smart-commute/routines/${routineId}/navigation`, {
+          method: 'POST', requiresLiveMode: true, cache: 'no-store', signal: AbortSignal.timeout(55_000),
+          headers: expectedPrincipalHeader(scope),
+          body: JSON.stringify({ ...input, vehicle_id: vehicleId, confirmed: true }),
+        },
+      )
+      return data.outcome
+    },
+    gcTime: 0,
+    networkMode: 'always',
+    retry: false,
+    onSuccess: (outcome) => {
+      if (outcome !== 'wake_required' && outcome !== 'wake_permission_required') {
+        void queryClient.invalidateQueries({ queryKey: smartCommuteKeys.snapshot(scope, vehicleId) })
+      }
+    },
+    onError: (error) => {
+      if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: personalIdentityKey })
+      }
+    },
   })
 }
 

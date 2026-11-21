@@ -15,8 +15,54 @@ function isPublicFeeReview(url) {
     /^[1-9]\d*$/.test(url.searchParams.get('fee_session_id') ?? '')
 }
 
+function isCabinPrepReview(url) {
+  const vehicle = url.searchParams.get('vehicle_id')
+  return url.pathname === '/preconditioning-effectiveness' && url.hash === '#cabin-prep-reminder' &&
+    /^[1-9]\d*$/.test(vehicle ?? '') && url.searchParams.get('cabin_vehicle_id') === vehicle
+}
+
+function isParkReserveReview(url) {
+  const vehicle = url.searchParams.get('vehicle_id')
+  return url.pathname === '/vampire-drain' && url.hash === '#park-reserve' &&
+    /^[1-9]\d*$/.test(vehicle ?? '') && url.searchParams.get('park_vehicle_id') === vehicle &&
+    /^[1-9]\d*$/.test(url.searchParams.get('park_plan_id') ?? '')
+}
+
+function isWindowRainReview(url) {
+  const vehicle = url.searchParams.get('vehicle_id')
+  return url.pathname === '/security-access' && url.hash === '#window-rain' &&
+    /^[1-9]\d*$/.test(vehicle ?? '') && url.searchParams.get('rain_vehicle_id') === vehicle &&
+    /^[1-9]\d*$/.test(url.searchParams.get('rain_plan_id') ?? '')
+}
+
+function isParkedClosureReview(url) {
+  return isParkedSecurityReview(url, 'parked-closure', 'closure')
+}
+
+function isParkedUnlockReview(url) {
+  return isParkedSecurityReview(url, 'parked-unlock', 'unlock')
+}
+
+function isParkedSecurityReview(url, anchor, prefix) {
+  const vehicle = url.searchParams.get('vehicle_id')
+  return url.pathname === '/security-access' && url.hash === `#${anchor}` &&
+    /^[1-9]\d*$/.test(vehicle ?? '') && url.searchParams.get(`${prefix}_vehicle_id`) === vehicle &&
+    /^[1-9]\d*$/.test(url.searchParams.get(`${prefix}_plan_id`) ?? '') &&
+    /^[1-9]\d*$/.test(url.searchParams.get(`${prefix}_park_id`) ?? '')
+}
+
+const privateReviews = new Map([
+  ['commute', isCommuteComparison],
+  ['public-fee', isPublicFeeReview],
+  ['cabin-prep', isCabinPrepReview],
+  ['park-reserve', isParkReserveReview],
+  ['window-rain', isWindowRainReview],
+  ['parked-closure', isParkedClosureReview],
+  ['parked-unlock', isParkedUnlockReview],
+])
+
 function pathForNotification(url) {
-  return `${url.pathname}${url.search}${isPublicFeeReview(url) ? url.hash : ''}`
+  return `${url.pathname}${url.search}${[...privateReviews.values()].some(check => check(url)) ? url.hash : ''}`
 }
 
 self.addEventListener('push', (event) => {
@@ -32,7 +78,7 @@ self.addEventListener('push', (event) => {
     let path
     if (payload.kind === 'verify' && Number.isSafeInteger(payload.device_id) && payload.device_id > 0) {
       path = `/api/v1/smart-delivery/devices/${payload.device_id}/verify`
-    } else if (['charging', 'commute', 'public-fee'].includes(payload.kind)) {
+    } else if (payload.kind === 'charging' || privateReviews.has(payload.kind)) {
       path = '/api/v1/smart-delivery/deliveries/claim'
     } else {
       return
@@ -45,7 +91,7 @@ self.addEventListener('push', (event) => {
         redirect: 'error',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload.kind === 'commute' || payload.kind === 'public-fee'
+        body: JSON.stringify(privateReviews.has(payload.kind)
           ? { token: payload.token, kind: payload.kind }
           : { token: payload.token }),
       })
@@ -55,8 +101,7 @@ self.addEventListener('push', (event) => {
       if (typeof notification?.title !== 'string' || typeof notification?.body !== 'string' ||
         typeof notification?.url !== 'string') return
       const url = new URL(notification.url, self.location.origin)
-      const allowed = payload.kind === 'commute' ? isCommuteComparison(url)
-        : payload.kind === 'public-fee' ? isPublicFeeReview(url) : isChargingDestination(url)
+      const allowed = (privateReviews.get(payload.kind) ?? isChargingDestination)(url)
       if (url.origin !== self.location.origin || !allowed) return
       await self.registration.showNotification(notification.title, {
         body: notification.body,
@@ -75,7 +120,7 @@ self.addEventListener('notificationclick', (event) => {
     try {
       const url = new URL(event.notification.data?.url, self.location.origin)
       if (url.origin === self.location.origin &&
-        (isChargingDestination(url) || isCommuteComparison(url) || isPublicFeeReview(url))) {
+        (isChargingDestination(url) || [...privateReviews.values()].some(check => check(url)))) {
         await self.clients.openWindow(pathForNotification(url))
       }
     } catch {

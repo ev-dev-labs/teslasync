@@ -14,10 +14,13 @@ test('reviewed commute checks deliver only the intended private decision', async
   const fixture = await request.get('/__fixture/traffic')
   expect(fixture.ok()).toBe(true)
   const { drive, now, mode } = await fixture.json() as {
-    drive: { id: number }; now: string; mode: 'compare' | 'arrival_deadline' | 'route_energy';
+    drive: { id: number }; now: string; mode: 'compare' | 'wake_timeout' | 'arrival_deadline' | 'route_energy';
   }
   const withDeadline = mode === 'arrival_deadline'
   const withEnergy = mode === 'route_energy'
+  const withNavigation = !withDeadline && !withEnergy
+  const asleep = mode === 'wake_timeout'
+  const theme = asleep ? 'dark' : 'light'
   const owner = 'synthetic-traffic-owner'
   const foreignSubject = 'other-synthetic-user'
   const origin = process.env.E2E_BASE_URL
@@ -27,16 +30,20 @@ test('reviewed commute checks deliver only the intended private decision', async
   const getTraffic = async () => {
     const result = await request.get('/__fixture/traffic')
     expect(result.ok()).toBe(true)
-    return await result.json() as { outbound: number; pushes: number; latest_push: { kind: string; token: string } | null }
+    return await result.json() as {
+      outbound: number; pushes: number; latest_push: { kind: string; token: string } | null;
+      tesla: { checks: number; wakes: number; sends: number };
+    }
   }
   await context.grantPermissions(['notifications'], { origin })
   await setSession(owner)
   await installSyntheticSubscription(page, 'commute')
   const writes: string[] = []
   async function prepare(tab: Page, subject: string) {
+    if (asleep) await tab.setViewportSize({ width: 390, height: 844 })
     await tab.clock.setFixedTime(new Date(now))
-    await seedBrowserState(tab, 'light', '/settings/smart-commute', { allowServiceWorkers: true })
-    const api = await installApiMocks(tab, 'populated', 'light')
+    await seedBrowserState(tab, theme, '/settings/smart-commute', { allowServiceWorkers: true })
+    const api = await installApiMocks(tab, 'populated', theme)
     if (!api) throw new Error('Missing isolated API fixtures')
     await tab.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
       json: { mode: 'forward_auth', subject_header: 'X-Test-Subject', subject, capabilities: {} },
@@ -46,7 +53,7 @@ test('reviewed commute checks deliver only the intended private decision', async
       return fulfillApiFixture(route, api, {
         json: {
           scope: createHash('sha256').update(`forward_auth:${subject}`).digest('hex'),
-          pack_id: 'v6', app_wide: true,
+          pack_id: asleep ? 'blueprint' : 'v6', app_wide: true,
         },
       })
     })
@@ -125,6 +132,7 @@ test('reviewed commute checks deliver only the intended private decision', async
   const result = await getTraffic()
   expect(result.outbound).toBe(withDeadline ? 2 : 1)
   expect(result.pushes).toBe(withEnergy ? 1 : 2)
+  expect(result.tesla).toEqual({ checks: 0, wakes: 0, sends: 0 })
   if (!withEnergy) {
     expect(result.latest_push?.kind).toBe('commute')
     expect(Object.keys(result.latest_push ?? {}).sort()).toEqual(['kind', 'token'])
@@ -148,7 +156,7 @@ test('reviewed commute checks deliver only the intended private decision', async
     : 'A faster route is available before your departure', { exact: true })).toBeVisible()
   await following.getByRole('button', { name: 'Compare routes', exact: true }).click()
   if (withDeadline) {
-    await expect(following.getByText('Alternative route: 46 min', { exact: true })).toBeVisible()
+    await expect(following.getByText('Alternative route: 46 min via Synthetic Bypass', { exact: true })).toBeVisible()
     await expect(following.getByText(/Faster alternative|Estimated saving/)).toHaveCount(0)
     await expect(following.getByText(/Estimated latest departure:.*7:52.*Your arrival deadline:.*8:38/i)).toBeVisible()
   } else if (withEnergy) {
@@ -157,7 +165,8 @@ test('reviewed commute checks deliver only the intended private decision', async
     await expect(following.getByText(/do not measure or guarantee energy use on your next trip/)).toBeVisible()
     await expect(following.getByText(/Faster alternative|Estimated saving/)).toHaveCount(0)
   } else {
-    await expect(following.getByText('Faster alternative: 29 min', { exact: true })).toBeVisible()
+    await expect(following.getByText('Usual route: 43 min via Synthetic Parkway', { exact: true })).toBeVisible()
+    await expect(following.getByText('Faster alternative: 29 min via Synthetic Bypass', { exact: true })).toBeVisible()
     await expect(following.getByText('Estimated saving: 14 min', { exact: true })).toBeVisible()
   }
   await expect(following.getByText('Synthetic office · Synthetic vehicle A', { exact: true })).toBeVisible()
@@ -172,9 +181,62 @@ test('reviewed commute checks deliver only the intended private decision', async
   const foreignAPI = await prepare(foreign, foreignSubject)
   await foreign.goto(link)
   await expect(foreign.getByText(/This comparison is no longer available/)).toBeVisible()
-  await expect(foreign.getByText(/Faster alternative|Estimated latest departure|Lower-energy alternative/)).toHaveCount(0)
+  await expect(foreign.getByText(/Synthetic Parkway|Synthetic Bypass|Faster alternative|Estimated latest departure|Lower-energy alternative/)).toHaveCount(0)
+  await expect(foreign.getByRole('button', { name: /Send Synthetic office/ })).toHaveCount(0)
   await assertMockApiComplete(foreign, foreignAPI, { preserveServiceWorkers: true })
   await foreign.close()
+
+  const actionLabel = 'Send Synthetic office to Synthetic vehicle A'
+  const send = following.getByRole('button', { name: actionLabel, exact: true })
+  if (withNavigation) {
+    const address = '100 Synthetic Office Way'
+    const dialog = following.getByRole('dialog', { name: actionLabel })
+    const confirmAddress = dialog.getByLabel('Destination address')
+    const check = dialog.getByRole('button', { name: 'Check vehicle connection' })
+    const allowWake = dialog.getByRole('button', { name: asleep ? 'Wake and send' : 'Allow wake and send', exact: true })
+    const navWrites = () => writes.filter(write => write.endsWith('/navigation'))
+    await send.press('Enter')
+    await expect(dialog).toContainText('Confirm the destination address for Synthetic office.')
+    await expect(dialog).toContainText('calculates its own route, not the HERE alternative.')
+    await expect(check).toBeDisabled()
+    expect(navWrites()).toEqual([])
+    expect((await getTraffic()).tesla).toEqual({ checks: 0, wakes: 0, sends: 0 })
+    await confirmAddress.fill(address)
+    await check.press('Enter')
+    await expect(allowWake).toBeVisible()
+    await expect(dialog).toContainText(asleep ? 'Tesla reports the vehicle is asleep.' : 'Tesla reports the vehicle is online.')
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).press('Enter')
+    await expect(send).toBeFocused()
+    expect((await getTraffic()).tesla).toEqual({ checks: 1, wakes: 0, sends: 0 })
+
+    await send.press('Enter')
+    await expect(confirmAddress).toHaveValue('')
+    await confirmAddress.fill(address)
+    await check.press('Enter')
+    await allowWake.press('Enter')
+    await expect(dialog).toHaveCount(0)
+    const outcome = asleep ? /Delivery could not be confirmed/ : /Tesla accepted the destination/
+    await expect(following.getByText(outcome)).toBeVisible()
+    await expect(following.getByText(address, { exact: true })).toHaveCount(0)
+    await expect(send).toHaveCount(0)
+    expect((await getTraffic()).tesla).toEqual({ checks: 3, wakes: asleep ? 1 : 0, sends: 1 })
+    expect(navWrites()).toHaveLength(3)
+
+    await following.reload()
+    await expect(following.getByText(outcome)).toBeVisible()
+    await expect(send).toHaveCount(0)
+    expect((await getTraffic()).tesla).toEqual({ checks: 3, wakes: asleep ? 1 : 0, sends: 1 })
+    expect(navWrites()).toHaveLength(3)
+
+    expect((await request.post('/__fixture/traffic/observed-departure')).status()).toBe(204)
+    await following.reload()
+    await expect(following.getByText(/This comparison is no longer available/)).toBeVisible()
+    await expect(send).toHaveCount(0)
+    expect((await getTraffic()).tesla).toEqual({ checks: 3, wakes: asleep ? 1 : 0, sends: 1 })
+    expect(navWrites()).toHaveLength(3)
+  } else {
+    await expect(send).toHaveCount(0)
+  }
 
   await following.getByRole('button', { name: 'Skip today', exact: true }).click()
   await expect(following.getByText(/This comparison is no longer available/)).toBeVisible()

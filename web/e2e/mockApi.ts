@@ -1619,8 +1619,8 @@ export async function seedBrowserState(
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
   await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState, disableServiceWorker }) => {
-    // Blank teardown documents have no origin-backed storage to seed.
-    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    // Shell storage is only seeded in the top-level app, never in provider frames.
+    if (window.top !== window || (location.protocol !== 'http:' && location.protocol !== 'https:')) return;
     // Hermetic runs block workers; disable the capability instead of giving
     // Workbox an undefined registration that looks like a production failure.
     if (disableServiceWorker && !Reflect.deleteProperty(Navigator.prototype, 'serviceWorker')) {

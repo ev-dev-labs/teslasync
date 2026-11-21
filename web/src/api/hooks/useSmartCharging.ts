@@ -65,7 +65,8 @@ export function useSmartChargingLatestStarts(
 
 export type SmartChargingChange =
   | { kind: 'create'; plan: SmartChargingPlanInput }
-  | { kind: 'update'; id: number; plan: SmartChargingPlanInput }
+  | { kind: 'update'; id: number; plan: SmartChargingPlanInput; version: number; previous: string }
+  | { kind: 'earlierCheck'; id: number; version: number; previous: string; checkAt: string; expiresAt: string }
   | { kind: 'snooze'; id: number; durationS: number }
   | { kind: 'delete'; id: number }
   | { kind: 'sitePerformance'; placeId: number | null }
@@ -138,7 +139,16 @@ export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: n
           })
         case 'update':
           return request<void>(`/smart-charging/plans/${change.id}`, {
-            ...options, method: 'PUT', body: JSON.stringify(change.plan),
+            ...options, method: 'PUT', body: JSON.stringify({
+              ...change.plan, expected_version: change.version, expected_check_at: change.previous,
+            }),
+          })
+        case 'earlierCheck':
+          return request<void>(`/smart-charging/plans/${change.id}`, {
+            ...options, method: 'PATCH', body: JSON.stringify({
+              vehicle_id: vehicleId, expected_version: change.version, expected_check_at: change.previous,
+              check_at: change.checkAt, preview_expires_at: change.expiresAt,
+            }),
           })
         case 'snooze':
           return request<void>(`/smart-charging/plans/${change.id}/snooze`, {
@@ -167,6 +177,9 @@ export function useSmartChargingChange(scope: PersonalScope | null, vehicleId: n
     onError: (error) => {
       if (isApiError(error) && error.code === 'IDENTITY_CHANGED') {
         void queryClient.invalidateQueries({ queryKey: personalIdentityKey })
+      }
+      if (isApiError(error) && error.code === 'PLAN_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: smartChargingKeys.all })
       }
     },
     onSuccess: async () => {

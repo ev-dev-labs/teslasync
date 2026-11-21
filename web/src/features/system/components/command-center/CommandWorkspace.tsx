@@ -237,6 +237,8 @@ function CommandWorkspaceSession({
                 : 'columns-1 gap-3 md:columns-2 lg:columns-3'}>
                 {visibleGroups.filter(group => group.lead === lead).map(group => (
                   <GlassPanel key={group.id} role="region" aria-label={t(group.labelKey, group.fallback)}
+                    id={group.id === 'climate' ? 'climate-controls' : undefined}
+                    tabIndex={group.id === 'climate' ? -1 : undefined}
                     data-command-card={group.id}
                     className={cn('@container/controls min-w-0 space-y-3 p-3 sm:p-4',
                       group.id === 'access' && 'md:col-span-2 lg:col-span-1',

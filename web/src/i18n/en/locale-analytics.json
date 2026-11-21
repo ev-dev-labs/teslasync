@@ -1096,6 +1096,49 @@
     "odometerOverTimeAria": "Odometer readings over time"
   },
   "mileageBudget": {
+    "review": {
+      "title": "Monthly mileage review",
+      "description": "Check your actual lease or total-distance reimbursement allowance each month. Off by default. This private review does not send push notifications or contact a provider.",
+      "open": "Open monthly mileage review",
+      "signIn": "Sign in to review an allowance privately.",
+      "vehicle": "Select a vehicle to review its allowance.",
+      "setup": "Set up monthly mileage review",
+      "first": "First day of the term",
+      "end": "First day after the term",
+      "zone": "Term time zone",
+      "zoneHint": "Use the IANA time zone for the term dates, such as America/New_York.",
+      "opening": "Recorded odometer at term start",
+      "allowance": "Distance allowed over the entire term",
+      "minimum": "Minimum projected overage to review",
+      "consent": "These are my recorded terms for this vehicle. Use its odometer history to check my allowance each month.",
+      "confirm": "Confirm private mileage review",
+      "offline": "Reconnect to view or change the monthly mileage review.",
+      "clear": "Turn off and clear mileage review",
+      "clearDetail": "Stop checks and clear these private terms and estimates? Your drives and browser-local budget will be kept.",
+      "off": "Off. No monthly allowance check is scheduled.",
+      "paused": "Paused. No new odometer history is checked.",
+      "active": "Active. A private mileage review is ready.",
+      "ended": "No further monthly check fits within these term dates.",
+      "quiet": "Active. On-budget, dismissed and insufficient-evidence results stay quiet.",
+      "waiting": "Learning. Waiting for the first scheduled check.",
+      "next": "Next check: {{date}}.",
+      "range": "{{lower}} to {{upper}}",
+      "finding": "Projected distance exceeds this allowance",
+      "period": "Entered term (end excluded)",
+      "observed": "Odometer distance used",
+      "allowedSoFar": "Pro-rated allowance at that reading",
+      "projected": "Estimated end-of-term distance",
+      "overage": "Estimated distance over the allowance",
+      "why_one": "Why this? Even the slower pace exceeds your threshold. The range uses {{count}} day with odometer readings, from {{from}} to {{to}}, and your entered opening odometer.",
+      "why_other": "Why this? Even the slower pace exceeds your threshold. The range uses {{count}} days with odometer readings, from {{from}} to {{to}}, and your entered opening odometer.",
+      "limits": "This estimates total vehicle distance, not reimbursable distance or any penalty. Changes in driving can change the result.",
+      "drives": "Review recorded drives",
+      "dismiss": "Dismiss this mileage estimate",
+      "cancel": "Cancel mileage review changes",
+      "resume": "Resume mileage review",
+      "edit": "Edit allowance terms",
+      "pause": "Pause mileage review"
+    },
     "chartAria": "Cumulative driven distance against the pro-rata allowance, by month",
     "brief": {
       "description": "Observed term distance, budget pace, and bounded projections from returned drive history.",
@@ -1408,6 +1451,47 @@
   "tco": {
     "title": "Lifetime operating cost",
     "subtitle": "Evidence-backed recorded charging versus modeled gasoline operating cost",
+    "costDigest": {
+      "title": "Monthly charging cost change",
+      "description": "Compare recorded bills from two completed months in one currency. This private review is off by default and never sends a push or contacts a provider.",
+      "open": "Review monthly charging costs",
+      "signIn": "Sign in to review charging costs privately.",
+      "vehicle": "Select a vehicle to review its monthly charging costs.",
+      "offline": "Reconnect to view or change the charging cost review.",
+      "off": "Off. No monthly cost check is scheduled.",
+      "paused": "Paused. No new history is checked.",
+      "active": "Active. A private monthly comparison is ready.",
+      "waiting": "Active. There is no current comparison. Insufficient coverage, small changes and dismissed reviews stay quiet.",
+      "checked": "Last checked: {{date}}.",
+      "openSessions": "Review charging sessions",
+      "dismiss": "Dismiss this monthly comparison",
+      "cancel": "Cancel monthly review changes",
+      "setup": "Set up monthly review",
+      "resume": "Resume monthly review",
+      "edit": "Edit monthly review",
+      "pause": "Pause monthly review",
+      "clear": "Turn off and clear monthly review",
+      "clearDetail": "Stop monthly checks and remove the settings and comparison? Original charging bills and driving records will not be changed.",
+      "zone": "Review time zone",
+      "zoneHint": "Use a time zone such as America/New_York or UTC. The review runs at 9 AM on the second day of each month.",
+      "currency": "Currency used on your charging bills",
+      "threshold": "Minimum material cost change",
+      "amountInvalid": "Enter a positive amount in whole billing increments within the allowed range.",
+      "consent": "Review local driving and charging bills for this vehicle each month.",
+      "confirm": "Confirm private monthly review",
+      "findings": "What changed across the two months?",
+      "periods": "Prior month: {{from}} up to {{recent}}. Recent month: {{recent}} up to {{through}}. Time zone: {{zone}}. Amounts in {{currency}}. Expires {{expires}}.",
+      "coverage": "{{priced}} of {{all}} observed sessions had a usable bill. {{compared}} were compared; {{spend}} known spend, {{comparableSpend}} in the comparison. Recorded distance: {{distance}}.",
+      "priorCoverage": "Prior month coverage",
+      "currentCoverage": "Recent month coverage",
+      "knownChange": "Change in known spend",
+      "distance": "Recorded distance",
+      "intensity": "Billed energy per recorded distance",
+      "mix": "Charging-site mix",
+      "price": "Effective billed price, including known fees",
+      "residual": "Unattributed known spend and rounding",
+      "why": "Why this? Bills at {{sites}} comparable sites changed materially. The breakdown is an estimate on those bills, not proof of cause or driving efficiency. Unknown costs and other currencies are not included."
+    },
     "modernization": {
       "evidence": {
         "title": "Operating-cost evidence"
@@ -2305,6 +2389,17 @@
         "title": "Suggest a geofence-aware automation",
         "triggersLabel": "Triggers",
         "unnamed": "(unnamed)"
+      },
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
       }
     }
   },
@@ -2655,6 +2750,11 @@
       "title": "Suggest a preheat or precool schedule"
     }
   },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
   "costAnalysis": {
     "aiNarrative": {
       "badge": "Helix",
@@ -2669,6 +2769,7 @@
         "unverified": "Unverified"
       },
       "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
         "noObservation": "No verified observation time for this vehicle",
         "observed": "Last real observation {{age}}"
       }
@@ -2685,6 +2786,7 @@
   "date": {
     "preset": {
       "all": "All time",
+      "label": "Quick date range",
       "last1y": "Last year",
       "last24h": "Last 24 hours",
       "last30": "Last 30 days",
@@ -2697,6 +2799,25 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "loadingCalendar": "Loading calendar…",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -2861,6 +2982,34 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -3058,6 +3207,19 @@
       "title": "Helix triage advisor"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "freshness": {
     "seconds": "{{s}}s ago"
   },
@@ -3090,6 +3252,9 @@
       "title": "Suggest a geofence for this location",
       "unnamed": "(unnamed)"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "helix": {
     "ariaLabel": "Helix",
@@ -3253,6 +3418,17 @@
         "previewLabel": "Proposed patch (review before saving):",
         "suggestButton": "Suggest tuning",
         "title": "Suggest lower-noise tuning"
+      },
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
       }
     },
     "inbox": {
@@ -3323,6 +3499,17 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
   },
   "playground": {
     "validation": {
@@ -3408,6 +3595,27 @@
   "productPreferences": {
     "defaultVehicle": {
       "unavailable": "Unavailable vehicle {{id}}"
+    },
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
     }
   },
   "provenance": {
@@ -3575,6 +3783,19 @@
       "title": "Helix FSM narrator"
     }
   },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
   "tempImpact": {
     "aiNarrative": {
       "badge": "Helix",
@@ -3583,6 +3804,10 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
   },
   "timeMachine": {
     "ageFresh": "Fresh"
@@ -3907,7 +4132,27 @@
     }
   },
   "vehicleHero": {
-    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness."
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
   },
   "vehicles": {
     "aiPaintPreview": {
@@ -3955,6 +4200,7 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   }
 }

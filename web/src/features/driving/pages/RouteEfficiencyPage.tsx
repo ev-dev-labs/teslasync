@@ -8,6 +8,7 @@ import { GlassPanel, Pagination, PanelTitle, Icon } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { WeeklyDriveEfficiencyPanel } from '../components/weekly-drive-efficiency/WeeklyDriveEfficiencyPanel';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
@@ -135,6 +136,7 @@ export default function RouteEfficiencyPage() {
       query={routeQuery}
     >
       <StaleRefreshWarning state={routeState} label={t('routeEfficiency.title', 'Route Efficiency')} />
+      <WeeklyDriveEfficiencyPanel vehicleId={vehicleId} />
       {/* 1 — KPI band */}
       <FadeIn>
         <SectionErrorBoundary name="RouteEfficiencySummary">

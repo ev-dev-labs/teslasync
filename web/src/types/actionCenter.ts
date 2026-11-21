@@ -1,5 +1,10 @@
 import type { SmartChargingSitePerformanceReview, SmartChargingTripProjection, SmartDepartureWindow, SmartSolarDecision } from './smartCharging';
 import type { SmartCommuteRouteEnergy } from './smartCommute';
+import type { WarrantyDistanceProjection } from './warrantyReminders';
+import type { TripMaintenanceProjection } from './smartTripMaintenance';
+import type { ColdTireDrift } from './coldTireReview';
+import type { RecallCampaignMatch } from './recallWatch';
+import type { ClimateScheduleEvidence } from './climateScheduleReview';
 
 export type ActionCenterSourceFeature =
   | 'active_alerts'
@@ -13,7 +18,14 @@ export type ActionCenterSourceFeature =
   | 'smart_charging'
   | 'smart_commute'
   | 'system_health'
-  | 'vehicle_readiness';
+  | 'vehicle_readiness'
+  | 'warranty_distance'
+  | 'trip_maintenance'
+  | 'cold_tire_drift'
+  | 'recall_watch'
+  | 'service_case'
+  | 'climate_schedule'
+  | 'subscription_renewal';
 
 export type ActionCenterPriority = 'critical' | 'high' | 'medium' | 'low';
 export type ActionCenterSeverity = 'critical' | 'warning' | 'info';
@@ -105,6 +117,11 @@ export interface ActionCenterEvidence {
   };
   site_performance?: SmartChargingSitePerformanceReview;
   solar_surplus?: SmartSolarDecision;
+  warranty_distance?: WarrantyDistanceProjection;
+  trip_maintenance?: TripMaintenanceProjection;
+  cold_tire_drift?: ColdTireDrift;
+  recall_watch_match?: RecallCampaignMatch;
+  climate_schedule?: ClimateScheduleEvidence;
 }
 
 export interface ActionCenterProjectedImpact {

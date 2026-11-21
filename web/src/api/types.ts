@@ -3768,6 +3768,7 @@ export interface AuthModeResponse {
    * the proxy stripped the header for this specific request.
    */
   subject?: string | null
+  impersonating?: boolean
   /**
    * Operator-supplied free text — typically the upstream IdP's
    * brand name. The SPA renders this verbatim in the

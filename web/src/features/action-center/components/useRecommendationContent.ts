@@ -3,6 +3,10 @@ import { formatCommuteClock, useCommuteRouteEnergyDisplay, useCommuteWeekdays } 
 import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay';
 import { useSitePerformanceDisplay } from '@/lib/sitePerformanceDisplay';
 import { useSolarChargingDisplay } from '@/lib/solarChargingDisplay';
+import { formatWarrantyReminder } from '@/lib/warrantyReminderDisplay';
+import { formatTripMaintenance } from '@/lib/tripMaintenanceDisplay';
+import { useColdTireDisplay } from '@/lib/coldTireDisplay';
+import { formatRecallWatchMatch } from '@/lib/recallWatchDisplay';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -12,9 +16,9 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const { t } = useTranslation();
   const weekdays = useCommuteWeekdays();
   const displayEnergy = useCommuteRouteEnergyDisplay();
-  const { formatDateTime } = useDateFormat('user');
-  const { fmtNumber } = useNumberFormatting();
-  const { formatPower } = useUnits();
+  const { formatDateTime, formatDate } = useDateFormat('user');
+  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatPower, formatDistance } = useUnits();
   const displayProjection = useTripProjectionDisplay();
   const performance = useSitePerformanceDisplay(recommendation.source_feature === 'charging_site_performance'
     ? recommendation.evidence.find((item) => item.kind === 'site_performance')?.site_performance
@@ -29,6 +33,108 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const solar = useSolarChargingDisplay(recommendation.source_feature === 'smart_charging'
     ? recommendation.evidence.find((item) => item.kind === 'solar_surplus')?.solar_surplus
     : undefined);
+  const warranty = recommendation.source_feature === 'warranty_distance'
+    ? recommendation.evidence.find((item) => item.kind === 'warranty_distance')?.warranty_distance
+    : undefined;
+  const maintenance = recommendation.source_feature === 'trip_maintenance'
+    ? recommendation.evidence.find((item) => item.kind === 'trip_maintenance')?.trip_maintenance
+    : undefined;
+  const coldTire = useColdTireDisplay(recommendation.source_feature === 'cold_tire_drift'
+    ? recommendation.evidence.find((item) => item.kind === 'cold_tire_drift')?.cold_tire_drift
+    : undefined);
+  const recall = recommendation.source_feature === 'recall_watch'
+    ? recommendation.evidence.find((item) => item.kind === 'recall_watch_match')?.recall_watch_match
+    : undefined;
+  const scheduledClimate = recommendation.evidence.find(item => item.climate_schedule)?.climate_schedule;
+  if (recommendation.source_feature === 'subscription_renewal') {
+    const basis = t('ownership.subscription.renewal.cardBasis', 'Owner-confirmed renewal date and stored subscription terms.');
+    return {
+      ...recommendation,
+      title: t('ownership.subscription.renewal.ready', 'Review the recorded subscription renewal'),
+      summary: t('ownership.subscription.renewal.cardSummary', 'Check the recorded price and observed activity before the renewal date.'),
+      rationale: basis,
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.kind === 'subscription_renewal' ? { ...item, summary: basis } : item),
+      limitations: [t('ownership.subscription.renewal.cardLimit', 'Observed activity does not prove subscription use. No renewal or cancellation is made automatically.')],
+    };
+  }
+  if (recommendation.source_feature === 'climate_schedule' && scheduledClimate) {
+    const basis = t('preconditioningEffectiveness.scheduledClimate.cardBasis', 'Accepted scheduled command for this vehicle, observed HVAC changes and parked telemetry');
+    return {
+      ...recommendation,
+      title: t('preconditioningEffectiveness.scheduledClimate.cardTitle', 'Review a recurring climate schedule'),
+      summary: t('preconditioningEffectiveness.scheduledClimate.summary', 'Climate started near {{count}} matching scheduled runs with no observed drive in the next 90 minutes.', {
+        count: (scheduledClimate.run_times ?? []).length,
+      }),
+      rationale: t('preconditioningEffectiveness.scheduledClimate.cardRationale', 'Review whether this schedule still fits your routine. Nothing changes automatically.'),
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.climate_schedule ? { ...item, summary: basis } : item),
+      limitations: [t('preconditioningEffectiveness.scheduledClimate.cardLimit', 'The observed time window does not explain why climate ran or what happened later.')],
+    };
+  }
+  if (recommendation.source_feature === 'service_case') {
+    const basis = t('serviceEvidencePack.privateCase.cardBasis', 'User-recorded case evidence, not a diagnosis');
+    return {
+      ...recommendation,
+      title: t('serviceEvidencePack.privateCase.cardTitle', 'Review your private service case'),
+      summary: t('serviceEvidencePack.privateCase.cardSummary', 'Choose which recorded details and timestamps to include in a local export.'),
+      rationale: t('serviceEvidencePack.privateCase.cardRationale', 'You opened this case and recorded evidence for this vehicle.'),
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.kind === 'service_case' ? { ...item, summary: basis } : item),
+      limitations: [t('serviceEvidencePack.privateCase.cardLimit', 'Nothing is sent to a service provider. Review the export before sharing it.')],
+    };
+  }
+  if (recall) {
+    const display = formatRecallWatchMatch(recall, t, formatDate);
+    return {
+      ...recommendation,
+      title: display.title,
+      summary: display.applicability,
+      rationale: display.basis,
+      confidence: { ...recommendation.confidence, basis: [display.basis] },
+      evidence: recommendation.evidence.map(item => item.recall_watch_match ? {
+        ...item,
+        summary: t('maintenance.recallWatch.remedy', 'Published remedy: {{remedy}}', { remedy: recall.remedy }),
+      } : item),
+      limitations: [t('maintenance.recallWatch.limit', 'Verify your VIN separately. The public catalog cannot confirm whether this car is affected or whether the remedy is complete.')],
+    };
+  }
+  if (coldTire) {
+    return {
+      ...recommendation,
+      title: coldTire.title,
+      summary: coldTire.summary,
+      rationale: coldTire.basis,
+      confidence: { ...recommendation.confidence, basis: [coldTire.basis] },
+      evidence: recommendation.evidence.map((item) => item.cold_tire_drift ? { ...item, summary: coldTire.basis } : item),
+      limitations: [coldTire.limitation],
+    };
+  }
+  if (maintenance) {
+    const display = formatTripMaintenance(maintenance, t, formatDateTime, formatDistance);
+    return {
+      ...recommendation,
+      title: display.title,
+      summary: display.summary,
+      rationale: display.basis,
+      confidence: { ...recommendation.confidence, basis: [display.basis] },
+      evidence: recommendation.evidence.map((item) => item.trip_maintenance ? { ...item, summary: display.basis } : item),
+      limitations: [display.limitation],
+    };
+  }
+  if (warranty) {
+    const display = formatWarrantyReminder(warranty, t, formatDate, fmtInt, formatDistance);
+    return {
+      ...recommendation,
+      title: display.title,
+      summary: display.summary,
+      rationale: display.basis,
+      confidence: { ...recommendation.confidence, basis: [display.basis] },
+      evidence: recommendation.evidence.map((item) =>
+        item.warranty_distance ? { ...item, summary: `${item.summary}. ${display.basis}` } : item),
+      limitations: [display.limitation],
+    };
+  }
   if (solar) {
     return {
       ...recommendation,

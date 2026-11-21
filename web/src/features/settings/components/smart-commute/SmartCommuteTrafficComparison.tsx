@@ -1,15 +1,20 @@
 import { useTranslation } from 'react-i18next'
+import type { PersonalScope } from '@/api/hooks/usePersonalIdentity'
 import { PanelTitle, Text } from '@/components/ui'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useCommuteRouteEnergyDisplay } from '@/lib/smartCommuteDisplay'
 import type { SmartCommuteTrafficDecision } from '@/types/smartCommute'
+import { SmartCommuteNavigation } from './SmartCommuteNavigation'
 
 interface Props {
   decisions: SmartCommuteTrafficDecision[]
   requestedOccurrence: string | null
+  scope: PersonalScope
+  navigationAvailable: boolean
+  navigationDisabled: boolean
 }
 
-export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence }: Props) {
+export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, scope, navigationAvailable, navigationDisabled }: Props) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
   const displayEnergy = useCommuteRouteEnergyDisplay()
@@ -40,10 +45,14 @@ export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence }
             <>
               <Text as="p" variant="bodySm">{t('smartCommute.traffic.usualEta', 'Usual route: {{minutes}} min', {
                 minutes: Math.round(decision.usual_s / 60),
-              })}</Text>
+              })}
+                {decision.usual_route_label && <> {t('smartCommute.traffic.viaRoute', 'via {{route}}', { route: decision.usual_route_label })}</>}
+              </Text>
               <Text as="p" variant="bodySm">{decision.alternative_s < decision.usual_s
                 ? t('smartCommute.traffic.alternativeEta', 'Faster alternative: {{minutes}} min', { minutes: Math.round(decision.alternative_s / 60) })
-                : t('smartCommute.traffic.deadline.alternativeEta', 'Alternative route: {{minutes}} min', { minutes: Math.round(decision.alternative_s / 60) })}</Text>
+                : t('smartCommute.traffic.deadline.alternativeEta', 'Alternative route: {{minutes}} min', { minutes: Math.round(decision.alternative_s / 60) })}
+                {decision.alternative_route_label && <> {t('smartCommute.traffic.viaRoute', 'via {{route}}', { route: decision.alternative_route_label })}</>}
+              </Text>
               {decision.alternative_s < decision.usual_s && (
                 <Text as="p" variant="bodySm">{t('smartCommute.traffic.saving', 'Estimated saving: {{minutes}} min', {
                   minutes: Math.round((decision.usual_s - decision.alternative_s) / 60),
@@ -72,6 +81,11 @@ export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence }
             observed: formatDateTime(decision.observed_at), departure: formatDateTime(decision.departure_at),
           })}</Text>
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.')}</Text>
+          {scope.mode === 'forward_auth' && !decision.route_energy_only && !decision.arrival_deadline_at &&
+            (navigationAvailable || decision.navigation_outcome) && (
+              <SmartCommuteNavigation decision={decision} scope={scope}
+                available={navigationAvailable} disabled={navigationDisabled} />
+            )}
         </article>
         )
       })}

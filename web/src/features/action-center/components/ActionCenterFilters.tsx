@@ -58,6 +58,13 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
     { value: 'smart_charging', label: t('actionCenter.source.smart_charging', 'Charging readiness') },
     { value: 'charging_site_performance', label: t('actionCenter.source.charging_site_performance', 'Charging site performance') },
     { value: 'smart_commute', label: t('actionCenter.source.smart_commute', 'Smart Commute') },
+    { value: 'warranty_distance', label: t('actionCenter.source.warranty_distance', 'Warranty mileage') },
+    { value: 'trip_maintenance', label: t('actionCenter.source.trip_maintenance', 'Trip maintenance') },
+    { value: 'cold_tire_drift', label: t('actionCenter.source.cold_tire_drift', 'Cold tire checks') },
+    { value: 'recall_watch', label: t('actionCenter.source.recall_watch', 'Recall watch') },
+    { value: 'service_case', label: t('actionCenter.source.service_case', 'Service case') },
+    { value: 'climate_schedule', label: t('actionCenter.source.climate_schedule', 'Scheduled climate') },
+    { value: 'subscription_renewal', label: t('actionCenter.source.subscription_renewal', 'Subscription renewals') },
     { value: 'system_health', label: t('actionCenter.source.system_health', 'System health') },
     {
       value: 'vehicle_readiness',

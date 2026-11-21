@@ -58,6 +58,7 @@ export interface SmartChargingLatestStart {
   charging_power_w: number
   earliest_safe_start_at?: string
   latest_safe_start_at?: string
+  earlier_check_at?: string
   observed_at?: string
   expires_at?: string
   trip_projection?: SmartChargingTripProjection

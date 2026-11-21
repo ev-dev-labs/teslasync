@@ -136,6 +136,10 @@ describe('WarrantyCommandPage — mobile table preservation', () => {
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+vi.mock('@/api/hooks/usePersonalIdentity', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/usePersonalIdentity')>('@/api/hooks/usePersonalIdentity'),
+  usePersonalIdentity: () => ({ data: { mode: 'open' } }),
+}));
 vi.mock('@/api/hooks/useOwnership', async () => {
   const actual =
     await vi.importActual<typeof import('@/api/hooks/useOwnership')>('@/api/hooks/useOwnership');
@@ -479,6 +483,25 @@ describe('WarrantyCommandPage — editor scope and completion ownership', () => 
 });
 
 describe('WarrantyCommandPage — saved date preferences', () => {
+  it('distinguishes an undetermined limit from a calendar end', () => {
+    const overview = makeOverview();
+    const warranty = { ...overview.coverages[0].warranty, term_distance_m: 81_000_000, start_odometer_known: false };
+    overview.coverages[0] = {
+      ...overview.coverages[0], warranty, status: 'undetermined', active: false,
+      binding_limit: 'undetermined', projected_expiry_at: null, claim_window_closing_s: null,
+    };
+    mockOverview.mockReturnValue(makeQuery(overview));
+    mockWarranties.mockReturnValue(makeQuery({ items: [warranty] }));
+    renderPage();
+
+    const burnDown = card('Coverage burn-down');
+    expect(burnDown).toHaveTextContent('Coverage undetermined');
+    expect(burnDown).toHaveTextContent('Starting odometer not recorded');
+    expect(burnDown).toHaveTextContent('Calendar term ends');
+    expect(burnDown).not.toHaveTextContent('Projected end');
+    expect(burnDown).not.toHaveTextContent('Claim window closes in');
+  });
+
   it.each([
     ['de-DE', 'America/Los_Angeles', '2026-01-01T00:30:00Z', '31.'],
     ['fr-FR', 'Asia/Tokyo', '2026-01-01T23:30:00Z', '2'],
@@ -699,7 +722,7 @@ describe('WarrantyCommandPage — confirm-gated delete', () => {
     expect(card('Coverage posture')).toHaveTextContent('$123.45');
     expect(screen.getByText('complete-warranty-digest')).toBeInTheDocument();
     expect(mockOverview).toHaveBeenCalledWith(7);
-    expect(mockWarranties).toHaveBeenCalledWith(7);
+    expect(mockWarranties).toHaveBeenCalledWith(7, { mode: 'open' });
     expect(mockClaim().mutate).not.toHaveBeenCalled();
   });
 
@@ -1034,9 +1057,14 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     const save = screen.getByRole('button', { name: 'Save coverage' });
     fireEvent.submit(save.closest('form')!);
     expect(mockCreate().mutate).toHaveBeenCalledWith(expect.objectContaining({
-      vehicle_id: 7, label: 'Entered contract', start_odometer_m: 0,
+      vehicle_id: 7, label: 'Entered contract', start_odometer_m: null, zero_start_odometer_confirmed: false,
       term_s: 1460 * 86400, term_distance_m: 80467, capacity_floor_pct: null,
       deductible_minor: 0, currency: 'USD',
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+    fireEvent.change(screen.getByLabelText('Odometer at start'), { target: { value: '0' } });
+    fireEvent.submit(save.closest('form')!);
+    expect(mockCreate().mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      start_odometer_m: 0, zero_start_odometer_confirmed: true,
     }), expect.objectContaining({ onSuccess: expect.any(Function) }));
     const row = screen.getByText('Battery Shield').closest('tr')!;
     fireEvent.click(within(row).getByRole('button', { name: 'Claim' }));

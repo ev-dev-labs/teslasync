@@ -179,7 +179,21 @@ export function RecommendationCard({
             >
               {recommendation.evidence.some((item) => item.commute_traffic)
                 ? t('smartCommute.traffic.comparison', 'Compare routes')
-                : t('actionCenter.action.navigate', 'Open source')}
+                : recommendation.source_feature === 'warranty_distance'
+                  ? t('ownership.warranty.mileage.open', 'Review warranty terms')
+                  : recommendation.source_feature === 'trip_maintenance'
+                    ? t('smartCharging.tripMaintenance.open', 'Review maintenance')
+                    : recommendation.source_feature === 'cold_tire_drift'
+                      ? t('tireDifferentialDrift.coldReview.open', 'Review private cold checks')
+                      : recommendation.source_feature === 'recall_watch'
+                        ? t('maintenance.recallWatch.open', 'Review private recall watch')
+                        : recommendation.source_feature === 'service_case'
+                          ? t('serviceEvidencePack.privateCase.open', 'Review private service case')
+                          : recommendation.source_feature === 'climate_schedule'
+                            ? t('preconditioningEffectiveness.scheduledClimate.open', 'Review scheduled climate')
+                            : recommendation.source_feature === 'subscription_renewal'
+                              ? t('ownership.subscription.renewal.open', 'Open private renewal review')
+                              : t('actionCenter.action.navigate', 'Open source')}
             </Button>
           )}
         </div>

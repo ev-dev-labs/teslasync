@@ -5,24 +5,43 @@ import type { Geofence } from '@/api/types'
 import type { PersonalScope } from '@/api/hooks/usePersonalIdentity'
 import { useSmartChargingLatestStarts, type SmartChargingChange } from '@/api/hooks/useSmartCharging'
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
-import { Button, ConfirmDialog, PanelTitle, Text } from '@/components/ui'
+import { Button, ConfirmDialog, ErrorText, Input, PanelTitle, Text } from '@/components/ui'
 import { useDataState } from '@/hooks/useDataState'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { useUnits } from '@/hooks/useUnits'
 import { currencyFractionDigits, formatCurrencyValue } from '@/lib/currencyFormat'
+import { toZonedDatetimeStr } from '@/lib/dateConvert'
 import { useTripProjectionDisplay } from '@/lib/smartChargingDisplay'
-import type { SmartChargingPlan, SmartChargingPlanInput } from '@/types/smartCharging'
+import type { SmartChargingLatestStart, SmartChargingPlan, SmartChargingPlanInput } from '@/types/smartCharging'
 import { SmartChargingPlanForm } from './SmartChargingPlanForm'
+import { TripStopComparison } from './TripStopComparison'
+import { TripPlanReview } from './TripPlanReview'
+import { TripMaintenance } from './TripMaintenance'
 
 interface Props {
   scope: PersonalScope
   vehicleId: number
   plans: SmartChargingPlan[]
   places: Geofence[]
+  reviewedPlaces: Geofence[]
   disabled: boolean
   formDisabled: boolean
   onChange: (change: SmartChargingChange) => Promise<boolean>
+}
+
+type EarlierCheck = { checkAt: string; version: number; previous: string; expiresAt: string }
+type PlanEditor = 'new' | { planId: number; version: number; previous: string; reminder?: EarlierCheck }
+
+function earlierCheckAt(plan: SmartChargingPlan, estimate: SmartChargingLatestStart, now: number) {
+  if (!plan.enabled || plan.version == null || plan.version !== estimate.plan_version ||
+    plan.vehicle_id !== estimate.vehicle_id || estimate.status !== 'estimate' ||
+    (plan.snoozed_until && Date.parse(plan.snoozed_until) > now) ||
+    !estimate.expires_at || !(Date.parse(estimate.expires_at) > now)) return null
+
+  const checkAt = Date.parse(estimate.earlier_check_at ?? '')
+  if (!estimate.earlier_check_at || !(now < checkAt && checkAt < Date.parse(plan.notify_at))) return null
+  return { checkAt: estimate.earlier_check_at, version: plan.version, previous: plan.notify_at, expiresAt: estimate.expires_at }
 }
 
 function planInput(plan: SmartChargingPlan): SmartChargingPlanInput {
@@ -39,40 +58,64 @@ function planInput(plan: SmartChargingPlan): SmartChargingPlanInput {
   }
 }
 
-export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, formDisabled, onChange }: Props) {
+export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPlaces, disabled, formDisabled, onChange }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime, tz } = useDateFormat('user')
   const { fmtNumber } = useNumberFormatting()
   const { formatEnergy, formatPower, unitPrefs } = useUnits()
   const displayProjection = useTripProjectionDisplay()
   const locale = unitPrefs.locale ?? 'en-US'
-  const [editing, setEditing] = useState<number | 'new' | null>(null)
+  const [editing, setEditing] = useState<PlanEditor | null>(null)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [clock, setClock] = useState(Date.now)
   const formRef = useRef<HTMLDivElement>(null)
+  const reminderTrigger = useRef<{ element: HTMLButtonElement; planId: number } | null>(null)
+  const editButtons = useRef(new Map<number, HTMLButtonElement>())
   const activePlans = plans.some((plan) => plan.enabled)
   const latestStartsQuery = useSmartChargingLatestStarts(scope, vehicleId, activePlans)
   const latestStartsState = useDataState(latestStartsQuery)
   const latestStarts = latestStartsQuery.data ?? []
   useEffect(() => {
     if (editing != null) formRef.current?.focus()
+    else if (reminderTrigger.current) {
+      const { element, planId } = reminderTrigger.current
+      const target = element.isConnected ? element : editButtons.current.get(planId)
+      target?.focus()
+      reminderTrigger.current = null
+    }
   }, [editing])
   useEffect(() => {
     const now = Date.now()
     const pending = (latestStartsQuery.data ?? [])
       .map((estimate) => estimate.expires_at == null ? NaN : Date.parse(estimate.expires_at))
+      .concat(editing && editing !== 'new' && editing.reminder
+        ? [Date.parse(editing.reminder.expiresAt), Date.parse(editing.reminder.checkAt)] : [])
       .filter((expiry) => Number.isFinite(expiry) && expiry > now)
     if (pending.length === 0) return
     const timer = window.setTimeout(() => setClock(Date.now()), Math.min(...pending) - now + 1)
     return () => window.clearTimeout(timer)
-  }, [latestStartsQuery.data, clock])
-  const selected = editing == null || editing === 'new' ? null : plans.find((plan) => plan.id === editing) ?? null
-  const save = (plan: SmartChargingPlanInput) => selected
-    ? onChange({ kind: 'update', id: selected.id, plan })
-    : onChange({ kind: 'create', plan })
+  }, [latestStartsQuery.data, clock, editing])
+  const selected = editing == null || editing === 'new' ? null : plans.find((plan) => plan.id === editing.planId) ?? null
+  const reminder = editing && editing !== 'new' ? editing.reminder : undefined
+  const reminderChanged = reminder != null && (selected?.version !== reminder.version ||
+    selected?.notify_at !== reminder.previous || Date.parse(reminder.expiresAt) <= Math.max(clock, Date.now()) ||
+    Date.parse(reminder.checkAt) <= Math.max(clock, Date.now()))
+  const saveEarlier = async () => {
+    if (!selected || !reminder || disabled || formDisabled || reminderChanged ||
+      Date.now() >= Math.min(Date.parse(reminder.checkAt), Date.parse(reminder.expiresAt))) return
+    if (await onChange({ kind: 'earlierCheck', id: selected.id, ...reminder })) setEditing(null)
+  }
+  const edit = (plan: SmartChargingPlan) => {
+    if (plan.version != null) setEditing({ planId: plan.id, version: plan.version, previous: plan.notify_at })
+  }
+  const save = (plan: SmartChargingPlanInput) => {
+    if (editing === 'new') return onChange({ kind: 'create', plan })
+    if (!editing || !selected) return Promise.resolve(false)
+    return onChange({ kind: 'update', id: selected.id, plan, version: editing.version, previous: editing.previous })
+  }
 
   return (
-    <section className="space-y-4" aria-label={t('smartCharging.plans', 'Your charging plans')}>
+    <section id="trip-stops" className="space-y-4" aria-label={t('smartCharging.plans', 'Your charging plans')}>
       <PanelTitle>{t('smartCharging.plans', 'Your charging plans')}</PanelTitle>
       {activePlans && (
         <section className="space-y-3" aria-label={t('smartCharging.latestStartTitle', 'Latest safe start estimates')}>
@@ -100,6 +143,7 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
                 const expired = Number.isFinite(expiry) && expiry <= now
                 const snoozed = plan.snoozed_until != null && Date.parse(plan.snoozed_until) > now
                 const planMatches = plan.version == null || estimate.plan_version == null || plan.version === estimate.plan_version
+                const proposedReminder = latestStartsState.status === 'ok' ? earlierCheckAt(plan, estimate, now) : null
                 const comparison = planMatches && !expired && Number.isFinite(expiry) && plan.enabled && !snoozed &&
                   plan.compare_site_rates && estimate.status === 'estimate' ? estimate.cost_comparison : undefined
                 const projection = planMatches && !expired && Number.isFinite(expiry) && plan.enabled && !snoozed &&
@@ -149,6 +193,18 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
                       {t('smartCharging.planHeading', 'Departure {{when}}', { when: formatDateTime(plan.departure_at) })}
                     </Text>
                     <Text as="p" variant="bodySm">{content}</Text>
+                    {proposedReminder && (
+                      <Button type="button" variant="secondary" className="min-h-11"
+                        disabled={disabled || formDisabled || latestStartsState.isRefreshing || editing != null}
+                        onClick={(event) => {
+                          const current = earlierCheckAt(plan, estimate, Date.now())
+                          if (!current) return
+                          reminderTrigger.current = { element: event.currentTarget, planId: plan.id }
+                          setEditing({ planId: plan.id, version: current.version, previous: current.previous, reminder: current })
+                        }}>
+                        {t('smartCharging.reviewEarlierReminder', 'Review an earlier reminder time')}
+                      </Button>
+                    )}
                     {projection && (
                       <div className="space-y-1">
                         <Text as="p" variant="bodySm">{projection.summary}</Text>
@@ -157,7 +213,7 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
                         ))}
                         <div className="flex flex-wrap gap-3">
                           <Button type="button" variant="secondary" className="min-h-11"
-                            disabled={disabled || formDisabled} onClick={() => setEditing(plan.id)}>
+                            disabled={disabled || formDisabled || plan.version == null} onClick={() => edit(plan)}>
                             {t('smartCharging.recordDestinationCharge', 'Record or update destination charging')}
                           </Button>
                           <Link to={`/trip-planner?vehicle_id=${vehicleId}`} className="text-theme-accent underline underline-offset-2">
@@ -282,13 +338,19 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
               </Text>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" className="min-h-11" disabled={disabled || formDisabled}
-                onClick={() => setEditing(plan.id)}>
+              <Button type="button" variant="secondary" className="min-h-11" disabled={disabled || formDisabled || plan.version == null}
+                ref={(element) => { if (element) editButtons.current.set(plan.id, element); else editButtons.current.delete(plan.id) }}
+                onClick={() => edit(plan)}>
                 {t('smartCharging.edit', 'Edit')}
               </Button>
               <Button type="button" variant="secondary" className="min-h-11"
-                disabled={disabled || (!plan.enabled && (expired || !place || formDisabled))}
-                onClick={() => void onChange({ kind: 'update', id: plan.id, plan: { ...planInput(plan), enabled: !plan.enabled } })}>
+                disabled={disabled || plan.version == null || (!plan.enabled && (expired || !place || formDisabled))}
+                onClick={() => {
+                  if (plan.version != null) void onChange({
+                    kind: 'update', id: plan.id, version: plan.version, previous: plan.notify_at,
+                    plan: { ...planInput(plan), enabled: !plan.enabled },
+                  })
+                }}>
                 {plan.enabled ? t('smartCharging.pause', 'Pause') : t('smartCharging.resume', 'Resume')}
               </Button>
               {plan.enabled && !expired && (
@@ -302,6 +364,9 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
                 {t('smartCharging.delete', 'Delete plan')}
               </Button>
             </div>
+            <TripStopComparison scope={scope} plan={plan} places={reviewedPlaces} disabled={disabled} placesUnavailable={formDisabled} />
+            <TripPlanReview scope={scope} plan={plan} places={reviewedPlaces} disabled={disabled} placesUnavailable={formDisabled} />
+            <TripMaintenance scope={scope} plan={plan} disabled={disabled} />
           </article>
         )
       })}
@@ -312,8 +377,28 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, disabled, 
         </Button>
       ) : (
         <div ref={formRef} tabIndex={-1}>
-          <SmartChargingPlanForm key={String(editing)} vehicleId={vehicleId} plan={selected} places={places}
-            disabled={disabled || formDisabled} onSave={save} onCancel={() => setEditing(null)} />
+          {reminder ? <div className="space-y-3">
+            <PanelTitle>{t('smartCharging.reviewEarlierReminder', 'Review an earlier reminder time')}</PanelTitle>
+            <Input type="datetime-local" readOnly label={t('smartCharging.notifyAt', 'Check from')}
+              value={toZonedDatetimeStr(new Date(reminder.checkAt), tz)}
+              hint={tz === 'UTC' ? tz : t('smartCharging.earlierReminderTimeZone', '{{zone}} ({{instant}} UTC)', {
+                zone: tz, instant: formatDateTime(reminder.checkAt, { tz: 'UTC' }),
+              })} />
+            <Text as="p" variant="bodySm">
+              {t('smartCharging.earlierReminderScope', 'Only this plan’s check time will change. A push still needs a verified charging device and a timely issue. Nothing changes on the vehicle.')}
+            </Text>
+            {reminderChanged && <ErrorText role="alert">
+              {t('smartCharging.earlierReminderChanged', 'This preview expired or the plan changed. Close it and refresh the estimate.')}
+            </ErrorText>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" className="min-h-11" disabled={disabled || formDisabled || reminderChanged}
+                onClick={() => void saveEarlier()}>{t('smartCharging.saveEarlierReminder', 'Save earlier check')}</Button>
+              <Button type="button" variant="ghost" className="min-h-11" onClick={() => setEditing(null)}>
+                {t('common.cancel', 'Cancel')}
+              </Button>
+            </div>
+          </div> : <SmartChargingPlanForm key={editing === 'new' ? editing : editing.planId} vehicleId={vehicleId}
+            plan={selected} places={places} disabled={disabled || formDisabled} onSave={save} onCancel={() => setEditing(null)} />}
         </div>
       )}
       <ConfirmDialog open={deleting != null} variant="danger" confirmDisabled={disabled}

@@ -117,7 +117,9 @@ export function SmartCommuteSettings({ active }: Props) {
               <SmartCommuteControls settings={settings} stateLabel={status} disabled={disabled}
                 busy={change.isPending} trafficAvailable={state.data?.traffic_available === true} onChange={apply} />
               <SmartCommuteTrafficComparison decisions={state.data?.traffic_decisions ?? []}
-                requestedOccurrence={requestedOccurrence} />
+                requestedOccurrence={requestedOccurrence} scope={scope}
+                navigationAvailable={state.data?.navigation_available === true}
+                navigationDisabled={disabled || state.isRefreshBlocked || vehicleState.isRefreshBlocked} />
               <SmartCommuteRoutines vehicleId={vehicleId} timeZone={settings.time_zone || browserTimeZone()}
                 scope={scope} canSetUpTraffic={Boolean(state.data?.traffic_available && settings.enabled && settings.local_analysis_enabled && !settings.paused)}
                 enabled={settings.enabled} disabled={disabled} routines={routines} onChange={apply} />

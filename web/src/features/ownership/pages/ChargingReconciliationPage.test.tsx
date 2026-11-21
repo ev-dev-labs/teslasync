@@ -42,6 +42,10 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+vi.mock('@/api/hooks/usePersonalIdentity', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/usePersonalIdentity')>('@/api/hooks/usePersonalIdentity'),
+  usePersonalIdentity: () => ({ data: { mode: 'forward_auth', subject: 'synthetic-invoice-owner' } }),
+}));
 vi.mock('@/lib/csvExport', async () => {
   const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport');
   return { ...actual, downloadCSV: vi.fn(), downloadJSON: vi.fn() };
@@ -86,6 +90,7 @@ const mockDispute = useCreateDispute as unknown as ReturnType<typeof vi.fn<() =>
 const mockCreate = useCreateInvoice as unknown as ReturnType<typeof vi.fn<() => ReturnType<typeof makeMutation>>>;
 const mockRemove = useDeleteInvoice as unknown as ReturnType<typeof vi.fn<() => ReturnType<typeof makeMutation>>>;
 const mockReport = useReconciliationReport as unknown as ReturnType<typeof vi.fn>;
+const signedIn = { mode: 'forward_auth', subject: 'synthetic-invoice-owner' };
 
 function makeInvoice(overrides: Partial<ChargingInvoice> = {}): ChargingInvoice {
   return {
@@ -279,7 +284,7 @@ describe('ChargingReconciliationPage — native design ownership', () => {
         { target: { value: 'Original second draft line' } });
       expect(within(editors[0]).getByRole('spinbutton', { name: 'Billed energy (Wh)' })).toHaveValue(0);
       expect(energy).toHaveValue(12500);
-      expect(within(editors[1]).getByRole('spinbutton', { name: 'Line total' })).toHaveValue(0);
+      expect(within(editors[1]).getByRole('spinbutton', { name: 'Line total required' })).toHaveValue(null);
       const body = editors[1].querySelector('[data-app-record-slot="body"]')!;
       expect(body).toHaveClass('grid', 'gap-3', 'md:grid-cols-2', 'xl:grid-cols-5');
       expect(body.querySelectorAll('input')).toHaveLength(5);
@@ -362,6 +367,61 @@ describe('ChargingReconciliationPage — native design ownership', () => {
 });
 
 describe('ChargingReconciliationPage — confirm-gated delete', () => {
+  it('only shows private findings in the authorized vehicle context', () => {
+    const report = makeReport();
+    report.invoice.variance_options = { material_amount_minor: 100, complete_statement: true };
+    report.variance_review = {
+      state: 'review', matched_lines: 1, comparable_lines: 1, findings: [], unexplained_statement_minor: 100,
+    };
+    mockInvoices.mockReturnValue(makeQuery({ items: [report.invoice] }));
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage();
+    selectInvoice();
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, 7);
+    expect(screen.getByRole('heading', { name: 'Check the unexplained difference' })).toBeVisible();
+    expect(screen.getByText(/not a finding of overbilling/i)).toBeVisible();
+
+    mockSelected.mockReturnValue({ vehicleId: 8, vehicles: [], setVehicleId: vi.fn() });
+    view.rerenderPage();
+    expect(mockReport).toHaveBeenLastCalledWith(null, signedIn, 7);
+    expect(screen.queryByRole('heading', { name: 'Check the unexplained difference' })).not.toBeInTheDocument();
+  });
+
+  it('retains the comparison but fences the private claim during refresh and submits only the current packet', () => {
+    const mutate = vi.fn();
+    mockDispute.mockReturnValue(makeMutation({ mutate }));
+    const report = makeReport();
+    report.invoice.variance_options = { material_amount_minor: 100, complete_statement: true };
+    report.variance_review = {
+      state: 'review', matched_lines: 1, comparable_lines: 1, findings: [], unexplained_statement_minor: 100,
+    };
+    report.recoverable_minor = 0;
+    mockInvoices.mockReturnValue(makeQuery({ items: [report.invoice] }));
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Open dispute' }));
+    const amount = screen.getByRole('spinbutton', { name: 'Amount claimed required' });
+    const form = amount.closest('form')!;
+    fireEvent.change(amount, { target: { value: '100' } });
+
+    mockReport.mockReturnValue({ ...makeQuery(report), isFetching: true });
+    view.rerenderPage();
+    expect(screen.getByRole('heading', { name: 'Check the unexplained difference' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
+    fireEvent.submit(form);
+    expect(mutate).not.toHaveBeenCalled();
+
+    mockReport.mockReturnValue(makeQuery(report));
+    view.rerenderPage();
+    fireEvent.submit(form);
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate.mock.calls[0][0]).toMatchObject({
+      claimed_minor: 100, confirmed: true, vehicle_id: 7,
+      expected_version: report.invoice.version, expected_digest: report.dispute_packet_digest,
+    });
+  });
+
   it.each(['CSV', 'JSON'] as const)('exports all fourteen original line fields as %s with null/zero/array fidelity', async (format) => {
     const report = makeReport();
     report.lines![1] = makeLine({
@@ -557,8 +617,8 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       period_start: '2026-01-01', period_end: '2026-01-31',
       billed_total_minor: 1250, currency: 'USD', line_count: 2, status: 'open',
     }]);
-    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
-    expect(mockReport).toHaveBeenLastCalledWith(null);
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0, signedIn);
+    expect(mockReport).toHaveBeenLastCalledWith(null, signedIn, undefined);
     expect(mockCreate().mutate).not.toHaveBeenCalled();
     expect(mockRemove().mutate).not.toHaveBeenCalled();
     expect(mockDispute().mutate).not.toHaveBeenCalled();
@@ -622,8 +682,8 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       },
     ]);
     expect(refetch).not.toHaveBeenCalled();
-    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
-    expect(mockReport).toHaveBeenLastCalledWith(null);
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0, signedIn);
+    expect(mockReport).toHaveBeenLastCalledWith(null, signedIn, undefined);
   });
 
   it('retains the complete source schema when the billed display column is hidden', async () => {
@@ -733,7 +793,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(within(desk).getByRole('button', { name: 'Retry' }));
     expect(reportRefetch).toHaveBeenCalledOnce();
     expect(invoiceRefetch).not.toHaveBeenCalled();
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     expect(mockDispute().mutate).not.toHaveBeenCalled();
   });
 
@@ -782,7 +842,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledOnce();
-    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0, signedIn);
   });
 
   it('keeps the import action and audit prerequisites reachable after an initial register failure', () => {
@@ -807,7 +867,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     const table = row?.closest('table');
     expect(table).not.toBeNull();
     expect(within(table!).queryByRole('button', { name: /^Filter / })).not.toBeInTheDocument();
-    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0, signedIn);
   });
 
   it('opens a danger confirm naming the invoice instead of deleting on click', () => {
@@ -902,8 +962,8 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     selectInvoice();
     mockSelected.mockReturnValue({ vehicleId: 8 });
     view.rerenderPage();
-    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0);
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0, signedIn);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     expect(card('Line-by-line audit')).toHaveTextContent('Unknown price line');
     expect(screen.getByRole('button', { name: 'Open dispute' })).toBeDisabled();
     expect(screen.getByText(/This form belongs to #7 \/ #1/)).toBeInTheDocument();
@@ -930,6 +990,9 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Draft A' } });
+    for (const name of ['Statement total required', 'Line total required']) {
+      fireEvent.change(screen.getByRole('spinbutton', { name }), { target: { value: '0' } });
+    }
     mockSelected.mockReturnValue({ vehicleId: 8 });
     view.rerenderPage();
     expect(screen.getByRole('button', { name: 'Import and reconcile' })).toBeDisabled();
@@ -948,7 +1011,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       mutate.mock.calls[0][1].onSettled();
     });
     expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toHaveValue('Newer draft edit');
-    expect(mockReport).toHaveBeenLastCalledWith(null);
+    expect(mockReport).toHaveBeenLastCalledWith(null, signedIn, undefined);
   });
 
   it('keeps selected evidence on delete rejection and never clears a newer selected invoice on success', async () => {
@@ -960,14 +1023,14 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(removeButton('INV-001'));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     expect(card('Dispute desk')).toHaveTextContent('full-dispute-packet-digest-with-no-truncation');
     mockRemove.mockReturnValue(makeMutation({ mutate, error: new Error('Delete rejected') }));
     view.rerenderPage();
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     fireEvent.click(within(screen.getByText('INV-002').closest('tr')!).getByRole('button', { name: 'Audit' }));
     act(() => mutate.mock.calls[0][1].onSuccess());
-    expect(mockReport).toHaveBeenLastCalledWith(2);
+    expect(mockReport).toHaveBeenLastCalledWith(2, signedIn, undefined);
   });
 
   it('retains a newer audit and the import draft when an earlier import succeeds', () => {
@@ -979,6 +1042,9 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Pending import' } });
+    for (const name of ['Statement total required', 'Line total required']) {
+      fireEvent.change(screen.getByRole('spinbutton', { name }), { target: { value: '0' } });
+    }
     fireEvent.submit(screen.getByRole('textbox', { name: 'Provider required' }).closest('form')!);
     expect(mutate).toHaveBeenCalledOnce();
     selectInvoice();
@@ -986,7 +1052,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       mutate.mock.calls[0][1].onSuccess(makeInvoice({ id: 9, invoice_ref: 'Pending import' }));
       mutate.mock.calls[0][1].onSettled();
     });
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toHaveValue('Pending import');
   });
 
@@ -1003,7 +1069,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     mockSelected.mockReturnValue({ vehicleId: 7 });
     view.rerenderPage();
     act(() => mutate.mock.calls[0][1].onSuccess());
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
   });
 
   it('clears the same selected invoice only after successful deletion', async () => {
@@ -1014,9 +1080,9 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(removeButton('INV-001'));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
-    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
     act(() => mutate.mock.calls[0][1].onSuccess());
-    expect(mockReport).toHaveBeenLastCalledWith(null);
+    expect(mockReport).toHaveBeenLastCalledWith(null, signedIn, undefined);
   });
 
   it('pins a dispute amount, currency, reasons and note instead of silently retargeting another audit', () => {
@@ -1032,7 +1098,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     mockReport.mockReturnValue(makeQuery(next));
     fireEvent.click(within(screen.getByText('INV-002').closest('tr')!).getByRole('button', { name: 'Audit' }));
     view.rerenderPage();
-    expect(mockDispute).toHaveBeenLastCalledWith(1);
+    expect(mockDispute).toHaveBeenLastCalledWith(1, signedIn);
     expect(screen.getByRole('spinbutton', { name: 'Amount claimed required' })).toHaveValue(123);
     expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toHaveValue('Invoice A claim');
     expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
@@ -1078,9 +1144,19 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
     const total = screen.getByRole('spinbutton', { name: 'Statement total required' });
-    fireEvent.change(total, { target: { value: '' } });
+    const lineTotal = screen.getByRole('spinbutton', { name: 'Line total required' });
     expect(total).toHaveValue(null);
+    expect(lineTotal).toHaveValue(null);
+    fireEvent.change(total, { target: { value: '0' } });
+    fireEvent.change(lineTotal, { target: { value: '0' } });
+    expect(total).toBeValid();
+    expect(lineTotal).toBeValid();
+    fireEvent.change(total, { target: { value: '' } });
+    fireEvent.change(lineTotal, { target: { value: '' } });
+    expect(total).toHaveValue(null);
+    expect(lineTotal).toHaveValue(null);
     expect(total).toBeInvalid();
+    expect(lineTotal).toBeInvalid();
     const start = screen.getByLabelText(/Period start/);
     const end = screen.getByLabelText(/Period end/);
     fireEvent.change(start, { target: { value: '' } });
@@ -1122,7 +1198,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Actual total only' } });
-    const amount = screen.getByRole('spinbutton', { name: 'Line total' });
+    const amount = screen.getByRole('spinbutton', { name: 'Line total required' });
     fireEvent.change(amount, { target: { value: '1000' } });
     expect(amount).toHaveValue(1000);
     expect(card('Provider statements')).toHaveTextContent('Explicitly not computed');
@@ -1161,7 +1237,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(panel).toHaveTextContent('1 matching / 1 loaded rows');
     expect(panel).toHaveTextContent('Showing 1–50 of 81');
     fireEvent.click(within(panel).getByRole('button', { name: 'Next page' }));
-    expect(mockInvoices).toHaveBeenLastCalledWith(7, 50, 50);
+    expect(mockInvoices).toHaveBeenLastCalledWith(7, 50, 50, signedIn);
     mockInvoices.mockReturnValue(makeQuery({ items: [makeInvoice({ id: 51, invoice_ref: 'INV-051' })], total: 81, limit: 50, offset: 50 }));
     view.rerenderPage();
     expect(panel).toHaveTextContent('Showing 51–81 of 81');
@@ -1169,7 +1245,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(within(panel).getByRole('button', { name: 'Previous page' })).toBeEnabled();
     mockSelected.mockReturnValue({ vehicleId: 8 });
     view.rerenderPage();
-    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0);
+    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0, signedIn);
   });
 
   it('describes signed variance as billed minus expected rather than adjudicated debt', () => {
@@ -1252,7 +1328,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       expect(within(statements).getAllByRole('button', { name: 'Audit' })).toHaveLength(2);
       expect(within(statements).getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
       fireEvent.click(within(statements).getAllByRole('button', { name: 'Audit' })[0]);
-      expect(mockReport).toHaveBeenLastCalledWith(1);
+      expect(mockReport).toHaveBeenLastCalledWith(1, signedIn, undefined);
       expect(view.container.querySelectorAll('[data-mobile-table]')).toHaveLength(4);
       expect(view.container.querySelector('[data-grid-frame] table')).toBeNull();
       expect(view.container.querySelectorAll('[data-grid-variant="embedded"]')).toHaveLength(4);
@@ -1322,7 +1398,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       expect(within(card('Provider statements')).getByText('INV-002 · GridCo')).toBeInTheDocument();
       expect(within(card('Variance attribution')).getByText('Observed energy overcharge')).toBeInTheDocument();
       expect(within(card('Sessions the provider never billed')).getByText('Unbilled site')).toBeInTheDocument();
-      expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+      expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0, signedIn);
       expect(mockCreate().mutate).not.toHaveBeenCalled();
       expect(mockRemove().mutate).not.toHaveBeenCalled();
       expect(mockDispute().mutate).not.toHaveBeenCalled();

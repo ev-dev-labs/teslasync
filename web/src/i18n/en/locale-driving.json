@@ -512,6 +512,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -588,6 +595,15 @@
       "title": "Narrate the charging-cost forecast"
     }
   },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "dataRepair": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -626,6 +642,11 @@
       "summaryDays_one": "{{count}} day",
       "summaryDays_other": "{{count}} days",
       "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -788,6 +809,34 @@
       }
     }
   },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
+  },
   "draft": {
     "discardDraft": "Discard draft",
     "restored": "Draft restored from {{when}}.",
@@ -909,6 +958,7 @@
       "title": "Energy ledger"
     },
     "loading": "Loading drive detail",
+    "localEvidence": "Local evidence view. External map tiles are not loaded.",
     "max": "Max",
     "maxPower": "Max power",
     "maxRegen": "Max regen",
@@ -1072,6 +1122,43 @@
     "tirePressureAria": "Front and rear tire pressure lines over the drive timeline",
     "tirePressureRange": "{{wheel}} pressure range",
     "title": "Drive details",
+    "trackReview": {
+      "changed": "The drive timestamps changed. Choose the time again.",
+      "clear": "Turn off and clear lookup",
+      "clearDetail": "Clear the private lookup, save outcome and authorization without deleting source history or any saved track?",
+      "connect": "Authorize Spotify library",
+      "connectDetail": "Authorize saving one matching track to your personal Spotify library. This permission is separate from playlists and does not start playback.",
+      "connected": "Spotify library authorization is active for this lookup.",
+      "connectionFailed": "Spotify library authorization was not completed. No track was saved.",
+      "denied": "This private lookup is no longer available for the current sign-in or vehicle.",
+      "description": "Look up one moment in this drive using locally recorded playback. No listening history is shared or sent as a notification.",
+      "disconnect": "Disconnect Spotify library",
+      "disconnectDetail": "Remove the library authorization for this review. A track already saved stays in Spotify.",
+      "evidence": "Selected time {{selected}}. Playback observed from {{start}} to {{end}}.",
+      "expired": "This private lookup expired. Select a time to look it up again.",
+      "limit": "There was too much playback data to verify this moment.",
+      "link": "Exact Spotify track link",
+      "localOnly": "Library save needs a supported Spotify recording with known duration and a configured connector. The lookup stays local.",
+      "lookup": "Look up this time",
+      "mismatch": "The Spotify link could not be matched to the observed recording. Nothing was saved.",
+      "missing": "No track could be confirmed at that time. Nearby tracks were not substituted.",
+      "observed": "Recorded playback matched this time.",
+      "off": "Off. Choose a moment to look up a track.",
+      "offline": "Reconnect to view or change this track lookup.",
+      "offset": "Seconds after the start of this drive",
+      "open": "Open private track lookup",
+      "rejected": "Spotify rejected the save.",
+      "save": "Save track to Spotify library",
+      "saveDetail": "Send the selected track ID to Spotify, verify the recording, and add it to your personal library if it matches? This will not play music.",
+      "saved": "Spotify confirmed the track was saved to your library.",
+      "saving": "Spotify save is in progress. Do not retry.",
+      "signIn": "Sign in to look up this track privately.",
+      "title": "What was playing?",
+      "unknown": "Spotify did not confirm the save. Check your library before trying again; TeslaSync will not retry.",
+      "unmatched": "This time cannot be attributed to one supported completed drive.",
+      "vehicle": "Open a completed drive to look up a track.",
+      "window": "Drive from {{start}} to {{end}}."
+    },
     "tripCost": "Trip cost",
     "usableSoc": "Usable SOC",
     "vehicle": "Vehicle",
@@ -1529,6 +1616,9 @@
       "unnamed": "(unnamed)"
     }
   },
+  "guard": {
+    "sentryActive": "Sentry mode active"
+  },
   "helix": {
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
@@ -1663,6 +1753,11 @@
     "routePlayback": {
       "empty": "No GPS points to replay for this route.",
       "mapLabel": "Route playback map"
+    }
+  },
+  "media": {
+    "privateReview": {
+      "refreshRequired": "Private playback details are hidden until the current review is verified."
     }
   },
   "mqttSseInspector": {
@@ -1848,6 +1943,17 @@
       "onTrack": "On track",
       "review": "Review recommended"
     }
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
   },
   "physicsLedger": {
     "drive": {
@@ -2212,6 +2318,10 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "timeMachine": {
     "ageFresh": "Fresh"
   },
@@ -2458,6 +2568,29 @@
       "title": "Explain the recent vampire drain"
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicles": {
     "aiPaintPreview": {
       "badge": "Helix",
@@ -2504,7 +2637,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

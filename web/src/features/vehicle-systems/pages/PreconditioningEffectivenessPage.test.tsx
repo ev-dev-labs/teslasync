@@ -6,6 +6,7 @@ import {
   within,
 } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import {
   afterEach,
@@ -303,10 +304,12 @@ function excludedEvidence(): {
 }
 
 function renderPage() {
+  const client = new QueryClient();
   return render(
     <MemoryRouter initialEntries={['/preconditioning-effectiveness']}>
       <PreconditioningEffectivenessPage />
     </MemoryRouter>,
+    { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> },
   );
 }
 

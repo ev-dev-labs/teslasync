@@ -27,6 +27,7 @@ import { LiveTripPanel } from './LiveTripPanel';
 import { ReplanPanel } from './ReplanPanel';
 import { ArrivalPanel } from './ArrivalPanel';
 import { ReportPanel } from './ReportPanel';
+import { JourneySoundtrackPanel } from './JourneySoundtrackPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -531,6 +532,9 @@ function VehicleJourneyPanel({ vehicleId, draft, setDraft }: {
             ) : null}
             {detail.session.status === 'completed' || detail.session.status === 'aborted' ? (
               <ReportPanel session={detail.session} />
+            ) : null}
+            {detail.session.status === 'completed' ? (
+              <JourneySoundtrackPanel journeyId={detail.session.id} vehicleId={vehicleId} />
             ) : null}
           </div>
         )}

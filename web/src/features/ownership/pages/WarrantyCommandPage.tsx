@@ -9,6 +9,7 @@ import {
   useWarranties,
   useWarrantyOverview,
 } from '@/api/hooks/useOwnership';
+import { personalScope, usePersonalIdentity } from '@/api/hooks/usePersonalIdentity';
 import { AlertBanner } from '@/components/feedback';
 import { MetricBar } from '@/components/data-display';
 
@@ -41,6 +42,7 @@ import {
 } from '../components';
 import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
+import { WarrantyMileagePanel } from '../components/WarrantyMileagePanel';
 import {
   daysToSeconds,
   formatCurrencyMinor,
@@ -99,6 +101,7 @@ const COVERAGE_STATUS_LABELS = {
   active: (t: TFunction) => t('ownership.verdict.active', 'Active'),
   expiring: (t: TFunction) => t('ownership.warranty.status.expiring', 'Expiring'),
   expired: (t: TFunction) => t('ownership.verdict.expired', 'Expired'),
+  undetermined: (t: TFunction) => t('ownership.warranty.status.undetermined', 'Coverage undetermined'),
 };
 
 function enumLabel(value: string, labels: Record<string, (t: TFunction) => string>, t: TFunction): string {
@@ -151,7 +154,7 @@ export default function WarrantyCommandPage() {
     label: '',
     provider: '',
     start_at: new Date().toISOString(),
-    start_odometer_m: 0,
+    start_odometer_m: null as number | null,
     term_days: 1460,
     term_distance_m: 80467,
     capacity_floor_pct: null as number | null,
@@ -188,7 +191,8 @@ export default function WarrantyCommandPage() {
   usePageTitle(t('ownership.warranty.navTitle', 'Warranty command'));
 
   const overviewQuery = useWarrantyOverview(vehicleId);
-  const warrantiesQuery = useWarranties(vehicleId);
+  const identity = usePersonalIdentity();
+  const warrantiesQuery = useWarranties(vehicleId, identity.isError ? undefined : personalScope(identity.data));
   const create = useCreateWarranty();
   const remove = useDeleteWarranty();
   const createClaim = useCreateWarrantyClaim();
@@ -261,6 +265,7 @@ export default function WarrantyCommandPage() {
         provider: draft.provider,
         start_at: draft.start_at,
         start_odometer_m: draft.start_odometer_m,
+        zero_start_odometer_confirmed: draft.start_odometer_m === 0,
         term_s: daysToSeconds(draft.term_days),
         term_distance_m: draft.term_distance_m,
         capacity_floor_pct: draft.capacity_floor_pct,
@@ -423,7 +428,9 @@ export default function WarrantyCommandPage() {
             {formatDateTime(row.start_at)}
           </Text>
           <Text as="p" variant="caption">
-            {units.formatDistance(row.start_odometer_m)}
+            {row.start_odometer_known === false
+              ? t('ownership.warranty.row.unknownOdometer', 'Starting odometer not recorded')
+              : units.formatDistance(row.start_odometer_m)}
           </Text>
         </div>
       ),
@@ -533,26 +540,37 @@ export default function WarrantyCommandPage() {
             when: formatDateTime(coverage.time_expiry_at),
           })}
         />
-        <UsageBar
-          label={t('ownership.warranty.card.distance', 'Distance consumed')}
-          pct={coverage.distance_used_pct}
-          hint={t('ownership.warranty.card.distanceHint', '{{remaining}} remaining', {
-            remaining: units.formatDistance(Math.max(0, coverage.distance_remaining_m)),
-          })}
-        />
+        {coverage.binding_limit === 'undetermined'
+          ? <div>
+            <Text as="p" variant="caption">{t('ownership.warranty.card.distance', 'Distance consumed')}</Text>
+            <Text as="p" variant="bodySm">
+              {coverage.warranty.start_odometer_known === false
+                ? t('ownership.warranty.row.unknownOdometer', 'Starting odometer not recorded')
+                : t('ownership.warranty.card.unknownCurrentOdometer', 'Usable current odometer not available')}
+            </Text>
+          </div>
+          : <UsageBar
+            label={t('ownership.warranty.card.distance', 'Distance consumed')}
+            pct={coverage.distance_used_pct}
+            hint={t('ownership.warranty.card.distanceHint', '{{remaining}} remaining', {
+              remaining: units.formatDistance(Math.max(0, coverage.distance_remaining_m)),
+            })}
+          />}
         <div>
           <Text as="span" variant="caption">
             {t('ownership.warranty.card.binding', 'Binding limit')}
           </Text>
           <p className="mt-1">
             <Badge variant={coverage.binding_limit === 'distance' ? 'warning' : 'info'}>
-              {enumLabel(coverage.binding_limit, BINDING_LABELS, t)}
+              {coverage.binding_limit === 'undetermined'
+                ? t('common.unknown', 'Unknown')
+                : enumLabel(coverage.binding_limit, BINDING_LABELS, t)}
             </Badge>
           </p>
           <Text as="p" variant="caption">
-            {t('ownership.warranty.card.projected', 'Projected end {{when}}', {
-              when: formatDateTime(coverage.projected_expiry_at),
-            })}
+            {coverage.binding_limit === 'undetermined'
+              ? t('ownership.warranty.card.calendarEnd', 'Calendar term ends {{when}}', { when: formatDateTime(coverage.time_expiry_at) })
+              : t('ownership.warranty.card.projected', 'Projected end {{when}}', { when: formatDateTime(coverage.projected_expiry_at) })}
           </Text>
           {coverage.observed_pace_m_per_s != null ? (
             <Text as="p" variant="caption">
@@ -693,6 +711,8 @@ export default function WarrantyCommandPage() {
         </OwnershipPanel>
       </FadeIn>
 
+      <WarrantyMileagePanel identity={identity} register={warrantiesQuery} vehicleId={vehicleId} />
+
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.warranty.readiness.title', 'Claim readiness checklist')}
@@ -811,10 +831,12 @@ export default function WarrantyCommandPage() {
                 label={t('ownership.warranty.form.startOdo', 'Odometer at start')}
                 value={draft.start_odometer_m}
                 siUnit="m"
-                displayHint={units.formatDistance(draft.start_odometer_m)}
+                displayHint={draft.start_odometer_m == null
+                  ? t('ownership.warranty.form.startOdoHint', 'Leave blank if unknown. Enter 0 only if the warranty started at zero distance.')
+                  : units.formatDistance(draft.start_odometer_m)}
                 min={0}
                 onChange={(value) =>
-                  setDraft((current) => ({ ...current, start_odometer_m: value ?? 0 }))
+                  setDraft((current) => ({ ...current, start_odometer_m: value }))
                 }
               />
               <Input
@@ -902,7 +924,9 @@ export default function WarrantyCommandPage() {
               displayValue: (row, key) => {
                 switch (key) {
                   case 'label': return `${row.label} · ${row.provider} · ${enumLabel(row.kind, KIND_LABELS, t)}`;
-                  case 'start': return `${formatDateTime(row.start_at)} · ${units.formatDistance(row.start_odometer_m)}`;
+                  case 'start': return `${formatDateTime(row.start_at)} · ${row.start_odometer_known === false
+                    ? t('ownership.warranty.row.unknownOdometer', 'Starting odometer not recorded')
+                    : units.formatDistance(row.start_odometer_m)}`;
                   case 'term': return `${formatSpan(row.term_s)} · ${units.formatDistance(row.term_distance_m)}`;
                   case 'floor': return row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—';
                   case 'deductible': return formatCurrencyMinor(row.deductible_minor, row.currency, units.unitPrefs.locale);

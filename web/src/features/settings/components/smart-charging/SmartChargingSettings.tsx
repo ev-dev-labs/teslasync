@@ -42,8 +42,8 @@ export function SmartChargingSettings({ active }: Props) {
       query.error.code === 'IDENTITY_CHANGED')
   const disabled = !operationalMode.canWrite || identity.isFetching || identity.isError ||
     state.status !== 'ok' || query.isFetching || vehicleState.status !== 'ok' || vehicles.isFetching || change.isPending
-  const places = (placesQuery.data ?? []).filter((place) =>
-    place.enabled && !place.needs_review && !place.archived_at && place.is_charging_location)
+  const reviewedPlaces = (placesQuery.data ?? []).filter((place) => place.enabled && !place.needs_review && !place.archived_at)
+  const places = reviewedPlaces.filter((place) => place.is_charging_location)
   const formDisabled = placeState.status !== 'ok' || placesQuery.isFetching
 
   const selectVehicle = (value: string) => {
@@ -127,7 +127,7 @@ export function SmartChargingSettings({ active }: Props) {
                 </>
               )}
               <SmartChargingPlans scope={scope} vehicleId={vehicleId} plans={state.data ?? []} places={places}
-                disabled={disabled} formDisabled={formDisabled} onChange={apply} />
+                reviewedPlaces={reviewedPlaces} disabled={disabled} formDisabled={formDisabled} onChange={apply} />
               <SmartChargingSitePerformance scope={scope} vehicleId={vehicleId} places={places}
                 disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
                 placesUnavailable={formDisabled} />
