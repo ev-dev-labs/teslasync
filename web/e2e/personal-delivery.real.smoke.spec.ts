@@ -63,6 +63,12 @@ async function installFixtures(page: Page, subject: string, theme: 'dark' | 'lig
     } else {
       expect(headers['x-teslasync-expected-principal']).toBe(`subject:${subject}`)
     }
+    if (route.request().method() === 'GET' &&
+      ['/api/v1/smart-charging/shared-chargers', '/api/v1/smart-charging/shared-trips'].includes(url.pathname)) {
+      // Shared planning is exercised by its own mounted journeys, not this server.
+      await fulfillApiFixture(route, api, { json: { data: { can_manage: false, owned: [], invitations: [] } } })
+      return
+    }
     await forwardLocalApiFixture(route, api, headers)
   })
   return api
@@ -149,9 +155,14 @@ for (const variant of deliveryLayouts) {
     const title = 'Vehicle charging is drawing from household backup'
     const reviewPath = '/settings/smart-charging?vehicle_id=7#backup-charging'
     const writes: string[] = []
+    const applicationErrors: Array<{ name: string; message: string; route: string }> = []
     context.on('request', request => {
       const { pathname } = new URL(request.url())
       if (pathname.startsWith('/api/v1/') && request.method() !== 'GET') writes.push(`${request.method()} ${pathname}`)
+      if (pathname === '/api/v1/web-errors' && request.method() === 'POST') {
+        const { name, message, route } = request.postDataJSON()
+        applicationErrors.push({ name, message, route })
+      }
     })
     await page.setViewportSize({ width: variant.width, height: variant.height })
     await context.grantPermissions(['notifications'], { origin })
@@ -250,6 +261,7 @@ for (const variant of deliveryLayouts) {
     await expect(card).toHaveCount(0)
     expect(await latest(next)).toEqual(push)
     await assertMockApiComplete(next, nextApi, { preserveServiceWorkers: true })
+    expect(applicationErrors).toEqual([])
     const appBookkeeping = new Set(['POST /api/v1/pinned', 'POST /api/v1/web-vitals'])
     expect(writes.filter(write => !write.includes('/smart-delivery/') && !appBookkeeping.has(write))).toEqual([
       'POST /api/v1/smart-charging/backup-charging',
