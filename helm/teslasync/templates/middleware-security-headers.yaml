@@ -15,4 +15,18 @@ spec:
     permissionsPolicy: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()"
     stsSeconds: 63072000
     stsIncludeSubdomains: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "teslasync.fullname" . }}-spotify-bridge-headers
+  namespace: {{ .Values.ingressRoute.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+spec:
+  headers:
+    contentTypeNosniff: true
+    referrerPolicy: "no-referrer"
+    stsSeconds: 63072000
+    stsIncludeSubdomains: true
 {{- end }}

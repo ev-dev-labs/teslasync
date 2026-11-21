@@ -1047,6 +1047,12 @@ webPush:
   # Must be a `mailto:` URL or an https:// URL.
   subject: ""
 
+spotifyPlaylists:
+  # Optional public Spotify OAuth client ID for private playlists. No client secret.
+  clientId: ""
+  # Registered same-origin HTTPS URI ending in /api/v1/media/spotify/callback.
+  redirectUri: ""
+
 smartCommute:
   # Confirm that your HERE agreement permits background Routing and Traffic Flow
   # comparisons for this use and short-lived retention of the resulting ETAs.

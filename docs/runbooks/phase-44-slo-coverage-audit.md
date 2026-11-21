@@ -20,23 +20,43 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
   - `/api/v1/ai/usage/spend-insights`
   - `/api/v1/analytics/battery-health`
   - `/api/v1/analytics/fsd`
+  - `/api/v1/analytics/mileage-budget/review`
+  - `/api/v1/analytics/route-efficiency/weekly-digest`
+  - `/api/v1/analytics/tco/charging-cost-digest`
+  - `/api/v1/auth/browser-login`
+  - `/api/v1/battery/capacity-digest`
+  - `/api/v1/battery/overnight-drain-review`
   - `/api/v1/benchmarks/privacy`
   - `/api/v1/benchmarks/privacy/consent`
   - `/api/v1/benchmarks/releases`
+  - `/api/v1/charging/park-reserve`
+  - `/api/v1/climate/cabin-prep`
+  - `/api/v1/climate/scheduled-review`
   - `/api/v1/drives/{driveID}/road-anomalies`
   - `/api/v1/fleet-ops/utilization-forecast`
+  - `/api/v1/media/episode-review`
+  - `/api/v1/media/favorite-digest`
+  - `/api/v1/media/journey-soundtrack/{journeyID}`
   - `/api/v1/notifications/report`
+  - `/api/v1/ownership/trip-packet`
+  - `/api/v1/service-intelligence/recall-watch`
   - `/api/v1/service-intelligence/vehicles/{vehicleID}`
+  - `/api/v1/settings/widget-design-pack`
   - `/api/v1/signals/{vehicleID}/transport-agreement`
+  - `/api/v1/software-updates/window-review`
+  - `/api/v1/subscription-roi/renewal`
   - `/api/v1/system/api-usage`
   - `/api/v1/system/api-usage/history`
+  - `/api/v1/tariff-lab/monthly-review`
+  - `/api/v1/tire-pressure/cold-checks`
   - `/api/v1/vehicles/states`
   - `/api/v1/vehicles/{vehicleID}/state`
+  - `/api/v1/warranty-command/warranties/{warrantyID}/reminder`
   - `/api/v1/web-vitals`
 
 ## Findings
 
-All 274 user-facing routes are covered.
+All 273 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -72,6 +92,7 @@ All 274 user-facing routes are covered.
 | `/analytics/regen` | transitive (api_availability) |
 | `/analytics/route-efficiency` | transitive (api_availability) |
 | `/analytics/route-efficiency/detail` | transitive (api_availability) |
+| `/analytics/route-efficiency/weekly-digest` | transitive (api_availability) |
 | `/analytics/sleep` | transitive (api_availability) |
 | `/analytics/speed-profile` | transitive (api_availability) |
 | `/analytics/tco` | transitive (api_availability) |
@@ -93,6 +114,7 @@ All 274 user-facing routes are covered.
 | `/battery/cells` | transitive (api_availability) |
 | `/battery/projected-range` | transitive (api_availability) |
 | `/bill-variance` | transitive (api_availability) |
+| `/browser-login` | transitive (api_availability) |
 | `/callback` | transitive (api_availability) |
 | `/candidates` | transitive (api_availability) |
 | `/carbon/intensity` | transitive (api_availability) |
@@ -138,7 +160,6 @@ All 274 user-facing routes are covered.
 | `/energy` | transitive (api_availability) |
 | `/energy-history` | transitive (api_availability) |
 | `/energy/flow` | transitive (api_availability) |
-| `/enroll` | transitive (api_availability) |
 | `/enterprise-roles` | transitive (api_availability) |
 | `/env-check` | transitive (api_availability) |
 | `/error-vins` | transitive (api_availability) |
@@ -174,7 +195,6 @@ All 274 user-facing routes are covered.
 | `/map-config` | transitive (api_availability) |
 | `/mark-read` | transitive (api_availability) |
 | `/mark-unread` | transitive (api_availability) |
-| `/matrix` | transitive (api_availability) |
 | `/message-placeholders` | transitive (api_availability) |
 | `/message-presets` | transitive (api_availability) |
 | `/message-preview` | transitive (api_availability) |
@@ -256,6 +276,7 @@ All 274 user-facing routes are covered.
 | `/settings/export` | transitive (api_availability) |
 | `/settings/polling-config` | transitive (api_availability) |
 | `/settings/suspend-api` | transitive (api_availability) |
+| `/settings/widget-design-pack` | transitive (api_availability) |
 | `/shares` | transitive (api_availability) |
 | `/signals/available` | transitive (api_availability) |
 | `/signals/stats` | transitive (api_availability) |
@@ -274,7 +295,6 @@ All 274 user-facing routes are covered.
 | `/stream` | transitive (api_availability) |
 | `/subscribe` | transitive (api_availability) |
 | `/subscriptions` | transitive (api_availability) |
-| `/sudo` | transitive (api_availability) |
 | `/suggestions` | transitive (api_availability) |
 | `/summary` | transitive (api_availability) |
 | `/telemetry` | transitive (api_availability) |
@@ -299,7 +319,6 @@ All 274 user-facing routes are covered.
 | `/url` | transitive (api_availability) |
 | `/users/me/activity` | transitive (api_availability) |
 | `/vampire` | transitive (api_availability) |
-| `/verify` | transitive (api_availability) |
 | `/version` | transitive (api_availability) |
 | `/warranty` | transitive (api_availability) |
 | `/watch` | transitive (api_availability) |

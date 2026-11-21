@@ -59,6 +59,129 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `cmd/notification-worker/smart_charging.go`
   - `internal/database/database.go`
 
+## Notification worker checks consented outdoor parks and delivers a private window rain review — `smart_window_rain`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 4)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartdelivery/handler.go`
+  - `internal/handler/v1/smartreadiness/window_rain.go`
+
+## Notification worker checks fresh post-park closure evidence and delivers a private review — `smart_parked_closure`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 4)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartdelivery/handler.go`
+  - `internal/handler/v1/smartreadiness/parked_closure.go`
+
+## Notification worker checks fresh post-park lock evidence for a consented place and delivers a private review — `smart_parked_unlock`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 4)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartdelivery/handler.go`
+  - `internal/handler/v1/smartreadiness/parked_unlock.go`
+
+## Notification worker publishes measured weekly change on matched drives — `smart_weekly_drive_efficiency`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/weekly_drive_efficiency.go`
+  - `internal/handler/v1/driveefficiency/handler.go`
+
+## Notification worker publishes private reviews before an explicitly recorded renewal date — `smart_subscription_renewal`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/subscription_renewal.go`
+  - `internal/handler/v1/ownershipintel/subscription_renewal.go`
+
+## Notification worker prepares private business trip packets from confirmed purpose and receipt references — `smart_trip_packet`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/trip_packet.go`
+  - `internal/handler/v1/ownershipintel/trip_packet.go`
+
+## Notification worker publishes private monthly allowance estimates from local drive odometers — `smart_mileage_term_review`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/mileage_term_review.go`
+  - `internal/handler/v1/ownershipintel/mileage_term_review.go`
+
+## Notification worker publishes private unchanged-schedule tariff replays from local station bills — `smart_monthly_tariff_review`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/monthly_tariff_review.go`
+  - `internal/handler/v1/ownershipintel/monthly_tariff_review.go`
+
+## Notification worker publishes private monthly cost reviews from qualified local bills and driving records — `smart_charging_cost_digest`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/notification-worker/charging_cost_digest.go`
+  - `internal/handler/v1/ownershipintel/charging_cost_digest.go`
+
+## Notification worker publishes private weekly shortlists from qualified repeated vehicle playback — `smart_favorite_digest`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/favorite_digest.go`
+  - `internal/database/smartmedia/favorites.go`
+  - `internal/handler/v1/smartmedia/favorites.go`
+
+## Notification worker publishes private monthly estimates from matched battery charge evidence — `smart_capacity_digest`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/capacity_digest.go`
+  - `internal/handler/v1/smartreadiness/capacity_trend.go`
+  - `internal/signal/state_reader_log.go`
+
+## Notification worker evaluates consented local nights and publishes private morning reviews — `smart_overnight_drain`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/overnight_drain.go`
+  - `internal/handler/v1/smartreadiness/overnight_drain.go`
+  - `internal/signal/state_reader_log.go`
+
+## Notification worker evaluates consented parked reserve and rechecks private delivery — `smart_park_reserve`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/handler/v1/smartreadiness/park_reserve.go`
+  - `internal/signal/state_reader_log.go`
+
+## Notification worker evaluates consented cabin prep and rechecks private delivery — `smart_cabin_prep`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/handler/v1/smartreadiness/cabin_prep.go`
+  - `internal/signal/state_reader_log.go`
+
 ## Notification worker evaluates reviewed public charging fee terms — `smart_public_charging_fee`
 
 - Status: **OK**
@@ -75,6 +198,43 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `cmd/notification-worker/smart_charging.go`
   - `internal/handler/v1/smartreadiness/solar_charging.go`
   - `internal/tesla/auth_energy.go`
+
+## Notification worker evaluates private, elected mileage reminders — `smart_warranty_distance`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/warranty_reminders.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/ownershipintel/warranty_reminders.go`
+
+## Notification worker checks private, documented trip maintenance intervals — `smart_trip_maintenance`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/trip_maintenance.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartreadiness/trip_maintenance.go`
+
+## Notification worker reviews explicitly consented scheduled climate outcomes — `smart_climate_schedule`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/climate_schedule.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartreadiness/climate_schedule.go`
+
+## Notification worker checks the public model-year recall catalog with private consent — `smart_recall_watch`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/recall_watch.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartreadiness/recall_watch.go`
+  - `internal/integrations/nhtsa/client.go`
 
 ## Notification worker evaluates private, consented commute traffic — `smart_commute_traffic`
 
