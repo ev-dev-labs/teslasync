@@ -9,6 +9,7 @@ import { producerProjection, projectionDigest, type ProducerProjection } from '.
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract'
+import { restoreSmartNotificationsSource } from './verified-smart-notifications-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -1411,8 +1412,8 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
       expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
       if ('dependencies' in checkpoint) for (const dependency of checkpoint.dependencies ?? []) {
-        const bytes = restoreHorizontalNavigationSource(dependency.file,
-          readFileSync(resolve(process.cwd(), '..', dependency.file), 'utf8'))
+        const source = readFileSync(resolve(process.cwd(), '..', dependency.file), 'utf8')
+        const bytes = restoreHorizontalNavigationSource(dependency.file, restoreSmartNotificationsSource(dependency.file, source))
         expect(createHash('sha256').update(bytes).digest('hex'), dependency.file).toBe(dependency.sha256)
       }
       return

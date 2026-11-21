@@ -204,19 +204,30 @@ describe('deferred English resources', () => {
   it('batches concurrent resource notifications without changing the language', async () => {
     const languageChanged = vi.fn()
     const resourcesAdded = vi.fn()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     i18n.on('languageChanged', languageChanged)
     i18n.store.on('added', resourcesAdded)
 
-    await Promise.all([
-      loadEnglishNamespace('ownership'),
-      loadEnglishNamespace('ai'),
-      loadEnglishNamespace('batteryPassport'),
-    ])
+    try {
+      const loads = Promise.all([
+        loadEnglishNamespace('ownership'),
+        loadEnglishNamespace('ai'),
+        loadEnglishNamespace('batteryPassport'),
+      ])
+      // Separate chunk-import latency from the one flush window being tested.
+      await vi.dynamicImportSettled()
+      expect(resourcesAdded).not.toHaveBeenCalled()
+      await vi.runOnlyPendingTimersAsync()
+      await loads
 
-    expect(languageChanged).not.toHaveBeenCalled()
-    expect(resourcesAdded).toHaveBeenCalledTimes(1)
-    i18n.off('languageChanged', languageChanged)
-    i18n.store.off('added', resourcesAdded)
+      expect(languageChanged).not.toHaveBeenCalled()
+      expect(resourcesAdded).toHaveBeenCalledTimes(1)
+    } finally {
+      i18n.off('languageChanged', languageChanged)
+      i18n.store.off('added', resourcesAdded)
+      flushPendingEnglishResourcesForTest()
+      vi.useRealTimers()
+    }
   })
 
   it('does not let a steady trickle of loads postpone the batched flush', async () => {

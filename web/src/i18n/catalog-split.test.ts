@@ -766,7 +766,14 @@ describe('checked-in locale artifacts', () => {
 
   it('keeps enlarged emptyState reachable through its real lazy namespace fallback', async () => {
     expect(JSON.stringify(catalog.emptyState).length).toBeGreaterThan(256)
-    expect(usageManifest.detailNamespaces).toHaveLength(182)
+    const additional = ['maintenance', 'ownership', 'smartCharging', 'smartCommute', 'tireDifferentialDrift'] as const
+    expect(usageManifest.detailNamespaces.filter(namespace =>
+      !additional.some(name => name === namespace))).toHaveLength(182)
+    for (const namespace of additional) {
+      expect(usageManifest.detailNamespaces).toContain(namespace)
+      expect(usageManifest.namespaceFallbackBundles[namespace]).toBe(`detail-${namespace}`)
+      expect(emitted.get(`detail-${namespace}`)).toEqual({ [namespace]: catalog[namespace] })
+    }
     // The shared automation hook now localizes copy names; its namespace needs
     // the same independently loadable fallback as other shared producers.
     expect(usageManifest.detailNamespaces).toContain('automations')
