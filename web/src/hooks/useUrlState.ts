@@ -265,13 +265,14 @@ export function useUrlBatch(): (
   updates: UrlBatchUpdate,
   options?: UrlBatchSetOptions,
 ) => void {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { hash } = useLocation();
+  const location = useLocation();
+  const pending = useRef<{ location: typeof location; search: string } | null>(null);
 
   return useCallback(
     (updates, options) => {
-      const next = new URLSearchParams(params);
+      // Router history may already be updated while the previous UI is still rendered.
+      const next = new URLSearchParams(pending.current?.location === location ? pending.current.search : location.search);
       for (const [key, value] of Object.entries(updates)) {
         if (value == null || value === '') {
           next.delete(key);
@@ -279,11 +280,13 @@ export function useUrlBatch(): (
           next.set(key, value);
         }
       }
+      const search = next.toString();
+      pending.current = { location, search };
       navigate(
-        { search: next.toString(), hash },
+        { search, hash: location.hash },
         { replace: !options?.push },
       );
     },
-    [params, navigate, hash],
+    [location, navigate],
   );
 }

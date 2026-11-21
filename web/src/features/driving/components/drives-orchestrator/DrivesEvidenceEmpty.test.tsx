@@ -12,8 +12,7 @@ import { DrivesEvidenceSection } from './DrivesEvidenceSection'
 vi.unmock('react-i18next')
 vi.mock('./DrivesEvidenceHeading', () => ({ DrivesEvidenceHeading: () => null }))
 vi.mock('./DrivesEvidenceNotices', () => ({ DrivesEvidenceNotices: () => null }))
-vi.mock('./DrivesDesktopEvidence', () => ({ DrivesDesktopEvidence: () => 'Desktop evidence' }))
-vi.mock('./DrivesMobileEvidence', () => ({ DrivesMobileEvidence: () => 'Mobile evidence' }))
+vi.mock('./DrivesGridEvidence', () => ({ DrivesGridEvidence: () => 'Drive grid' }))
 
 const english = createInstance()
 type Props = Parameters<typeof DrivesEvidenceEmpty>[0]
@@ -89,14 +88,14 @@ describe('DrivesEvidenceEmpty scalar title regression', () => {
 
   it.each(['empty', 'loading', 'error', 'populated'] as const)(
     'renders the existing section %s boundary with installed i18next', state => {
-      const refetchDrives = vi.fn()
+      const refetchPage = vi.fn()
       const model = {
         t: english.getFixedT('en'), collection: 'all', fsdFilter: 'all', hasValueFilters: false,
         setUrlBatch: vi.fn(), desktopEvidence: false, isDrivesLoading: state === 'loading',
-        dateFilteredDrives: [], tableControls: {}, refetchDrives,
-        drivesState: { fatalError: state === 'error' ? new Error('Drive source unavailable') : null },
+        currentStats: { count: state === 'populated' ? 1 : 0 }, tableControls: {}, refetchPage,
+        pageState: { fatalError: state === 'error' ? new Error('Drive source unavailable') : null },
         paginatedDrives: state === 'populated' ? [{ id: 1 }] : [],
-        bulkSelected: new Set(), filteredDrives: [], clearBulk: vi.fn(), bulkDriveActions: [],
+        bulkSelected: new Set(), clearBulk: vi.fn(), bulkDriveActions: [],
       } as unknown as Parameters<typeof DrivesEvidenceSection>[0]['model']
       const { container } = render(
         <I18nextProvider i18n={english}>
@@ -114,9 +113,9 @@ describe('DrivesEvidenceEmpty scalar title regression', () => {
         if (state === 'error') {
           expect(screen.getByRole('alert')).toBeInTheDocument()
           fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-          expect(refetchDrives).toHaveBeenCalledOnce()
+          expect(refetchPage).toHaveBeenCalledOnce()
         }
-        if (state === 'populated') expect(screen.getByText('Mobile evidence')).toBeInTheDocument()
+        if (state === 'populated') expect(screen.getByText('Drive grid')).toBeInTheDocument()
       }
     },
   )

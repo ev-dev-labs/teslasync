@@ -62,6 +62,23 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(table.locator('tbody td[data-column-key="cost"]').last()).toHaveText('—');
         await expect(table.locator('tbody td[data-column-key="power"]').last()).toHaveText('—');
         await expect(table.getByRole('button', { name: / filter$/ })).toHaveCount(9);
+        if (width >= 1440) {
+          const filters = table.locator('thead [data-grid-inline-filter] > button');
+          await expect(filters).toHaveCount(9);
+          const bounds = await filters.evaluateAll(nodes => nodes.map(node => {
+            const { top, bottom } = node.getBoundingClientRect();
+            return { top, bottom };
+          }));
+          for (const edge of ['top', 'bottom'] as const) {
+            const positions = bounds.map(rect => rect[edge]);
+            expect(Math.max(...positions) - Math.min(...positions), `${edge} edges of column filters`).toBeLessThanOrEqual(1);
+          }
+          const headerAndRow = await table.evaluate(node => ({
+            headerBottom: node.querySelector('thead')!.getBoundingClientRect().bottom,
+            firstRowTop: node.querySelector('tbody tr')!.getBoundingClientRect().top,
+          }));
+          expect(headerAndRow.firstRowTop).toBeGreaterThanOrEqual(headerAndRow.headerBottom - 1);
+        }
         await expect(history.getByText(/cover up to 500 loaded sessions/)).toBeVisible();
         const link = table.locator('a[href="/charging/201"]');
         await expect(link).toBeVisible();

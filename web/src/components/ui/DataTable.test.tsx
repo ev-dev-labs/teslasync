@@ -42,6 +42,15 @@ function getHeaderOrder(container: HTMLElement): string[] {
   )
 }
 
+function openColumns(scope: HTMLElement = document.body) {
+  fireEvent.click(within(scope).getByRole('button', { name: 'Reorder or hide columns' }))
+  return within(screen.getByRole('dialog', { name: 'Reorder or hide columns' }))
+}
+
+function closeColumns() {
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Reorder or hide columns' })).getByRole('button', { name: 'Done' }))
+}
+
 beforeEach(() => {
   window.localStorage.clear()
   setGlobalLocale('en-US')
@@ -64,15 +73,16 @@ describe('DataTable — standard toolbar controls', () => {
     const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!
     const summary = card.querySelector<HTMLElement>('[data-card-slot="summary"]')!
     const body = card.querySelector<HTMLElement>('[data-card-content]')!
-    expect(within(header).getByRole('radiogroup', { name: 'List density' })).toBeVisible()
+    expect(within(header).getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible()
     expect(within(header).getByRole('button', { name: 'Export list' })).toBeVisible()
     expect(within(summary).getByRole('searchbox', { name: 'Search returned transitions' })).toBeVisible()
     expect(within(summary).getByText('Only returned transition rows')).toBeVisible()
     expect(within(body).queryByRole('radiogroup')).toBeNull()
     expect(within(body).queryByRole('searchbox')).toBeNull()
     expect(within(body).getByText('Alpha')).toBeVisible()
-    fireEvent.click(within(header).getByRole('radio', { name: 'Comfortable' }))
+    fireEvent.click(openColumns(header).getByRole('radio', { name: 'Comfortable' }))
     expect(densityChange).toHaveBeenCalledWith('comfortable')
+    closeColumns()
     fireEvent.click(within(header).getByRole('button', { name: 'Export list' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
     expect(csv).toHaveBeenCalledWith('visible')
@@ -81,9 +91,9 @@ describe('DataTable — standard toolbar controls', () => {
   it('retains inline controls when card placement is requested outside a card owner', () => {
     render(<DataTable cardLayout tableId="test:unhosted-slots" columns={REORDER_COLS} data={ROWS}
       keyExtractor={row => row.id} />)
-    expect(screen.getByRole('radiogroup', { name: 'List density' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Export list' })).toBeVisible()
     expect(screen.getByText('Alpha')).toBeVisible()
+    expect(openColumns().getByRole('radiogroup', { name: 'List density' })).toBeVisible()
   })
 
   it('protects the required mobile identity from individual and bulk column hiding, including saved layouts', () => {
@@ -104,6 +114,20 @@ describe('DataTable — standard toolbar controls', () => {
     expect(screen.getByText('Alpha')).toBeInTheDocument()
   })
 
+  it('keeps the pinned identity first when a stored layout puts it after other columns', () => {
+    localStorage.setItem('teslasync.table.test:pinned.columns', JSON.stringify({
+      order: ['status', 'id', 'name'], hidden: [],
+    }))
+    const columns = REORDER_COLS.map(column => ({ ...column, pinned: column.key === 'name' }))
+    const view = render(<DataTable tableId="test:pinned" columns={columns} data={ROWS} keyExtractor={row => row.id} />)
+    expect(getHeaderOrder(view.container)).toEqual(['name', 'status', 'id'])
+    const menu = openColumns()
+    expect(menu.getByRole('button', { name: 'Move Name down' })).toBeDisabled()
+    expect(menu.getByRole('button', { name: 'Move Status up' })).toBeDisabled()
+    fireEvent.click(menu.getByRole('button', { name: 'Move ID up' }))
+    expect(getHeaderOrder(view.container)).toEqual(['name', 'id', 'status'])
+  })
+
   it('removes redundant embedded framing while preserving table controls and rows', () => {
     const view = render(<DataTable variant="embedded" tableId="test:embedded" columns={REORDER_COLS}
       data={ROWS} keyExtractor={row => row.id} />);
@@ -112,7 +136,8 @@ describe('DataTable — standard toolbar controls', () => {
     expect(frame).not.toHaveClass('border', 'rounded-xl', 'shadow-e1');
     expect(screen.getByRole('columnheader', { name: /Name/ })).toBeInTheDocument();
     expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'List density' })).toBeInTheDocument();
+    expect(openColumns().getByRole('radiogroup', { name: 'List density' })).toBeInTheDocument();
+    closeColumns()
     view.rerender(<DataTable tableId="test:embedded" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />);
     expect(frame).toHaveAttribute('data-grid-variant', 'standalone');
     expect(frame).toHaveClass('border', 'rounded-xl', 'shadow-e1');
@@ -121,6 +146,7 @@ describe('DataTable — standard toolbar controls', () => {
   it('offers persistent per-table density without changing untouched global density', async () => {
     document.body.dataset.density = 'compact'
     const view = render(<DataTable tableId="test:density" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    openColumns()
     expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-d-pad-y')
     expect(localStorage.getItem('teslasync.table.test:density.density')).toBeNull()
@@ -134,6 +160,7 @@ describe('DataTable — standard toolbar controls', () => {
     expect(document.body.dataset.density).toBe('compact')
     view.unmount()
     render(<DataTable tableId="test:density" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    openColumns()
     expect(screen.getByRole('radio', { name: 'Comfortable' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-3.5')
     delete document.body.dataset.density
@@ -141,6 +168,7 @@ describe('DataTable — standard toolbar controls', () => {
 
   it('uses existing explicit density as the initial baseline and isolates stable table ids', () => {
     const view = render(<DataTable tableId="test:first" density="compact" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    openColumns()
     expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true')
     fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
     view.rerender(<DataTable tableId="test:second" density="compact" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
@@ -154,7 +182,7 @@ describe('DataTable — standard toolbar controls', () => {
     expect(screen.getByText('Bravo')).toBeInTheDocument()
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('button', { name: /Export|Download CSV/ })).toBeNull()
-    expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1)
+    expect(openColumns().getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1)
   })
 
   it('delegates controlled search and density instead of filtering or duplicating controls', async () => {
@@ -168,6 +196,7 @@ describe('DataTable — standard toolbar controls', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search all server results' }), { target: { value: 'Alpha' } })
     await waitFor(() => expect(onSearch).toHaveBeenCalledWith('Alpha'))
     expect(screen.getByText('Charlie')).toBeInTheDocument()
+    openColumns()
     expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1)
     fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
     expect(onDensity).toHaveBeenCalledWith('comfortable')
@@ -357,7 +386,7 @@ describe('DataTable — reusable value filters', () => {
     expect(container.querySelector('th[data-column-key=status]')).toHaveClass('border-l')
     expect(container.querySelector('td[data-column-key=status]')).toHaveClass('border-l')
     expect(container.querySelector('td[data-column-key=id]')).toHaveClass('text-right', 'tabular-nums')
-    expect(container.querySelector('tr[aria-selected=true]')).toHaveClass('!bg-[var(--control-bg)]')
+    expect(container.querySelector('tr[aria-selected=true]')).toHaveAttribute('data-selected', 'true')
     expect(screen.queryByRole('heading', { name: 'machine:opaque' })).toBeNull()
   })
 })

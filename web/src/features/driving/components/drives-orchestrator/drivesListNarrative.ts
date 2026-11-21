@@ -1,26 +1,23 @@
 import type { OperationalNarrative } from '@/types/operationalNarrative';
-import { getEfficiency } from '@/lib/drivesAggregation';
+import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import type { useDrivesListPageData } from '../../hooks/useDrivesListPageData';
-import type { useDrivesListPageFilters } from '../../hooks/useDrivesListPageFilters';
+import type { useDrivesListRange } from '../../hooks/useDrivesListRange';
 import type { useDrivesListPageSummary } from '../../hooks/useDrivesListPageSummary';
 
 type NarrativeInput = ReturnType<typeof useDrivesListPageData>
-  & ReturnType<typeof useDrivesListPageFilters>
+  & ReturnType<typeof useDrivesListRange>
   & ReturnType<typeof useDrivesListPageSummary>;
 
 export function buildDrivesListNarrative(input: NarrativeInput): OperationalNarrative {
   const {
     t, fmtNumber, toDistanceDisplay, distanceUnit, toEfficiencyDisplay,
-    efficiencyUnit, anomalyDrives, dateFilteredDrives, anomalyDriveIds,
+    efficiencyUnit, anomalyCount, narrativeEvidence: sourceEvidence,
     currentStats, efficiencyMovementPct, driveAttention, missingEfficiencyCount,
     routeContextCount,
   } = input;
-  const narrativeSourceDrives =
-    anomalyDrives.length > 0 ? anomalyDrives : dateFilteredDrives;
-  const narrativeEvidence: OperationalNarrative['evidence'] = narrativeSourceDrives
-    .slice(0, 5)
+  const narrativeEvidence: OperationalNarrative['evidence'] = sourceEvidence
     .map((drive) => {
-      const efficiency = getEfficiency(drive);
+      const efficiency = getEnergyIntensityWhPerKm(drive.distanceM, drive.energyUsedWh);
       return {
         id: `drive-${drive.id}`,
         summary: t(
@@ -43,7 +40,7 @@ export function buildDrivesListNarrative(input: NarrativeInput): OperationalNarr
         provenance: {
           source: t('operations.drives.historySource', 'Drive history'),
           recordId: String(drive.id),
-          method: anomalyDriveIds.has(drive.id)
+          method: drive.anomalous
             ? t(
                 'operations.drives.narrative.exceptionMethod',
                 'Measured energy intensity matched the deterministic exception grade.',
@@ -66,7 +63,7 @@ export function buildDrivesListNarrative(input: NarrativeInput): OperationalNarr
           currentStats.avgEfficiencyWhKm == null
             ? t('operations.drives.narrative.efficiencyMissing', 'efficiency unavailable')
             : `${fmtNumber(toEfficiencyDisplay(currentStats.avgEfficiencyWhKm))} ${efficiencyUnit}`,
-        exceptions: anomalyDrives.length,
+        exceptions: anomalyCount,
       },
     ),
     whyItMatters: t(

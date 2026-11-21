@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useDrives } from '@/api/hooks/useDriving';
+import { useDriveGridOverview } from '@/api/hooks/useDriveGrid';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -18,12 +18,12 @@ import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI, convertPowerFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { isAllTimeRange } from '@/lib/datePresets';
-import { priorPeriod, shiftDayKey } from '@/lib/drivesAggregation';
+import { priorPeriod } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { DRIVES_FETCH_LIMIT, FSD_MAX_RANGE_DAYS, inclusiveDateKeySpan } from '../components/drives-orchestrator/drivesListConstants';
+import { FSD_MAX_RANGE_DAYS, inclusiveDateKeySpan } from '../components/drives-orchestrator/drivesListConstants';
 
 export function useDrivesListPageData() {
-  const { fmtNumber, fmtInt, fmtCompact } = useNumberFormatting();
+  const { fmtNumber, fmtInt, fmtCompact, locale, precision } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('drives.title', 'Drive History'));
@@ -31,14 +31,11 @@ export function useDrivesListPageData() {
   const desktopEvidence = useMediaQuery('(min-width: 1024px)');
 
   /* Data hooks */
-  const { vehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicle } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  /* Selected range. Read before the data hook because it scopes the request:
-   * the API applies a 50-row default page, so filtering client-side alone
-   * capped this page at the 50 newest drives regardless of the chosen range
-   * or page size. */
-  const { start: startDate, end: endDate, presetId: rangePresetId } = useRangeState({
+  const { tz } = useDateFormat();
+  const { start: startDate, end: endDate, startInstant, endInstantExclusive, presetId: rangePresetId } = useRangeState({
     persistKey: 'drives.list.range',
   });
   // All time has no meaningful prior window: mirroring an equal-length
@@ -53,23 +50,19 @@ export function useDrivesListPageData() {
     [isAllTime, startDate, endDate],
   );
 
-  /* Fetch window. It has to reach back over the prior period as well, because
-   * the delta comparison below is computed from drives that fall *before* the
-   * selected range. Both ends are padded by a day: the API filters on UTC
-   * while this page buckets drives by the vehicle's local day, so an exact
-   * window would drop rows the tz-aware filter should keep. */
-  const fetchWindow = useMemo(() => ({
-    start: shiftDayKey(priorRange?.start ?? startDate, -1) ?? undefined,
-    end: shiftDayKey(endDate, 1) ?? undefined,
-    limit: DRIVES_FETCH_LIMIT,
-  }), [priorRange, startDate, endDate]);
-
-  const drivesQuery = useDrives(vehicleIdStr, fetchWindow);
-  const { data: drives, refetch: refetchDrives } = drivesQuery;
-  const hasDrivePayload = Array.isArray(drives);
-  /* Refresh failures retain rows. Initial failures stay in source-local
-   * recovery panels so the independent FSD source remains reachable. */
+  const gridScope = useMemo(() => ({ start: startInstant, end: endInstantExclusive, timezone: tz }), [startInstant, endInstantExclusive, tz]);
+  const priorStart = useMemo(() => {
+    if (!priorRange) return undefined;
+    if (rangePresetId === 'live' || rangePresetId === '6h' || rangePresetId === '24h') {
+      const start = Date.parse(startInstant);
+      return new Date(start - (Date.parse(endInstantExclusive) - start)).toISOString();
+    }
+    return calendarRangeToInstants({ startDate: priorRange.start, endDate: priorRange.end, timezone: tz }).startInstant;
+  }, [priorRange, rangePresetId, startInstant, endInstantExclusive, tz]);
+  const drivesQuery = useDriveGridOverview(vehicleId ?? null, gridScope, priorStart);
+  const { refetch: refetchDrives } = drivesQuery;
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const hasDrivePayload = drivesState.data != null;
   const isDrivesLoading = drivesState.status === 'initial';
   const [previewDrive, setPreviewDrive] = useState<Drive | null>(null);
 
@@ -80,34 +73,15 @@ export function useDrivesListPageData() {
    * user can see. */
   const exportScope = useMemo(() => ({
     vehicleId: vehicleId ?? null,
-    start: startDate,
-    end: endDate,
+    start: startInstant,
+    end: endInstantExclusive,
     filters: { format: 'csv' },
-  }), [vehicleId, startDate, endDate]);
-
-  /* A full page back means the range almost certainly holds more drives than
-   * one request can carry. Say so rather than silently showing a subset. */
-  const truncated = (drives?.length ?? 0) >= DRIVES_FETCH_LIMIT;
-
-  /* Active vehicle's IANA timezone — every "what day is this drive?"
- * decision on this page must use this rather than the browser's local
- * zone, otherwise late-night drives appear under the wrong day in the
- * grouped list, the chart shows ghost bars on the next UTC day, and
- * the period stats undercount/overcount drives near the boundary. */
-  const { tz } = useDateFormat();
-  const fsdRange = useMemo(
-    () => calendarRangeToInstants({
-      startDate,
-      endDate,
-      timezone: tz,
-    }),
-    [startDate, endDate, tz],
-  );
+  }), [vehicleId, startInstant, endInstantExclusive]);
   const fsdRangeSupported = inclusiveDateKeySpan(startDate, endDate) <= FSD_MAX_RANGE_DAYS;
   const fsdQuery = useFsdInsightsRange(
     fsdRangeSupported ? vehicleIdStr : undefined,
-    fsdRange.startInstant,
-    fsdRange.endInstantExclusive,
+    startInstant,
+    endInstantExclusive,
     tz,
   );
   const { refetch: refetchFsd } = fsdQuery;
@@ -171,10 +145,10 @@ export function useDrivesListPageData() {
   const { formatEnergyCost, costPerKwh, formatCurrency } = useFormatting();
 
   return {
-    fmtNumber, fmtInt, fmtCompact, t, navigate, savedView, desktopEvidence,
-    vehicleId, startDate, endDate, priorRange, isAllTime, drives, drivesQuery,
+    fmtNumber, fmtInt, fmtCompact, locale, precision, t, navigate, savedView, desktopEvidence,
+    vehicleId, vehicleName: vehicle?.displayName, startDate, endDate, priorRange, isAllTime, drivesQuery,
     refetchDrives, hasDrivePayload, drivesState, isDrivesLoading,
-    previewDrive, setPreviewDrive, exportScope, truncated, tz,
+    previewDrive, setPreviewDrive, exportScope, gridScope, tz,
     fsdRangeSupported, refetchFsd, fsdState, fsdDataAvailable, fsdByDriveID,
     handlePullToRefresh, unitPrefs, formatEnergy, toDistanceDisplay,
     distanceUnit, speedUnit, efficiencyUnit, toSpeedDisplay,

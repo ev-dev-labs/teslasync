@@ -606,32 +606,8 @@ html[data-status-bar='off'] {
   animation: scale-in 0.2s ease-out forwards;
 }
 
-/* ─── Bolt spinner draw animation ───────────────────────────────────────────
- * Self-drawing lightning bolt used by web/src/components/feedback/Spinner.tsx.
- * The stroke draws the bolt outline first (0% → 30%), the fill snaps in
- * (30% → 55%), holds (55% → 80%), then both fade out as the dash-offset
- * runs negative (80% → 100%). No decorative shadow is needed for busy feedback.
- *
- * The path uses `pathLength="100"` so the keyframes are unit-agnostic and
- * survive viewBox tweaks.
- *
- * Reduced-motion: Spinner.tsx consults useMotionPreference() and renders
- * a static, fully-filled bolt when reduce=true. The
- * global reduced-motion safety net at the end of this file cannot land
- * the draw animation on a meaningful idle frame.
- */
-@keyframes boltDraw {
-  0%   { stroke-dashoffset: 100;  fill-opacity: 0;   opacity: 0.15; }
-  30%  { stroke-dashoffset: 0;    fill-opacity: 0;   opacity: 1; }
-  55%  { stroke-dashoffset: 0;    fill-opacity: 1;   opacity: 1; }
-  80%  { stroke-dashoffset: 0;    fill-opacity: 1;   opacity: 0.9; }
-  100% { stroke-dashoffset: -100; fill-opacity: 0;   opacity: 0; }
-}
 .spinner-bolt-glow {
   filter: none;
-}
-.spinner-bolt-draw {
-  animation: boltDraw 2s ease-in-out infinite;
 }
 
 /* Glass panel glow on active states */

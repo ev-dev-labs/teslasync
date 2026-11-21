@@ -1,32 +1,41 @@
-import { Route } from 'lucide-react';
-import { SectionTitle, Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { QueryError, Skeleton } from '@/components/feedback';
 import { DrivesEvidenceTable } from '../DrivesEvidenceTable';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
 type Props = Pick<DrivesListPageController,
-  'paginatedDrives' | 'dateFilteredDrives' | 'valueFilter' | 'changeValueSelection'
+  'paginatedDrives' | 'currentStats' | 'hasDrivePayload' | 'gridScope' | 'valueFilter' | 'changeValueSelection'
   | 'clearValueFilter' | 'bulkSelected' | 'setBulkSelected' | 'setPreviewDrive'
-  | 'sortBy' | 'effectiveSortDirection' | 'sortGrid' | 'search' | 'collection'
+  | 'sortBy' | 'effectiveSortDirection' | 'sortGrid' | 'collection'
   | 'setUrlBatch' | 'fsdFilter' | 'gridFilters' | 'changeGridFilter'
   | 'toDistanceDisplay' | 'toSpeedDisplay' | 'toEfficiencyDisplay' | 'toTemperatureDisplay'
   | 'toPowerDisplay' | 'formatEnergy' | 'formatEnergyCost' | 'distanceUnit'
   | 'speedUnit' | 'efficiencyUnit' | 'unitPrefs' | 'tz' | 'fsdDataAvailable'
-  | 'fsdByDriveID' | 'anomalyDriveIds' | 'safePage' | 'pageSize' | 'sortedDrives'
-  | 'setPage' | 't' | 'fmtCompact' | 'tableControls'>;
+  | 'fsdByDriveID' | 'anomalyDriveIds' | 'safePage' | 'pageSize' | 'matchingTotal'
+  | 'setPage' | 't' | 'tableControls' | 'vehicleId' | 'vehicleName'
+  | 'driveStatus' | 'viewContext' | 'restoreView' | 'clearGridFilters'
+  | 'collectionPills' | 'fsdPills' | 'pageState' | 'refetchPage'
+  | 'canSelectMatching' | 'selectAllMatching' | 'matchingIsPending'>;
 
-export function DrivesDesktopEvidence({
-  paginatedDrives, dateFilteredDrives, valueFilter, changeValueSelection, clearValueFilter,
+export function DrivesGridEvidence({
+  paginatedDrives, currentStats, hasDrivePayload, gridScope, valueFilter, changeValueSelection, clearValueFilter,
   bulkSelected, setBulkSelected, setPreviewDrive, sortBy, effectiveSortDirection,
-  sortGrid, search, collection, setUrlBatch, fsdFilter, gridFilters, changeGridFilter,
+  sortGrid, collection, setUrlBatch, fsdFilter, gridFilters, changeGridFilter,
   toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay,
   toPowerDisplay, formatEnergy, formatEnergyCost, distanceUnit, speedUnit,
   efficiencyUnit, unitPrefs, tz, fsdDataAvailable, fsdByDriveID, anomalyDriveIds,
-  safePage, pageSize, sortedDrives, setPage, t, fmtCompact, tableControls,
+  safePage, pageSize, matchingTotal, setPage, t, tableControls,
+  vehicleId, vehicleName, driveStatus, viewContext, restoreView, clearGridFilters,
+  collectionPills, fsdPills, pageState, refetchPage, canSelectMatching, selectAllMatching, matchingIsPending,
 }: Props) {
+  const setDriveStatus = (value: string) => setUrlBatch({ grid_status: value === 'all' ? null : value, page: null });
   return (
     <DrivesEvidenceTable
       drives={paginatedDrives}
-      availableDrives={dateFilteredDrives}
+      gridScope={gridScope}
+      rangeTotal={hasDrivePayload ? currentStats.count : undefined}
+      emptyContent={pageState.fatalError ? <QueryError error={pageState.fatalError} onRetry={() => { void refetchPage(); }} />
+        : pageState.status === 'initial' ? <Skeleton className="h-24" /> : undefined}
       valueSelections={valueFilter.selections}
       invalidValueSelection={valueFilter.invalid}
       onValueSelectionChange={changeValueSelection}
@@ -37,14 +46,19 @@ export function DrivesDesktopEvidence({
       sortBy={sortBy}
       sortDir={effectiveSortDirection}
       onSort={sortGrid}
-      search={search}
       collection={collection}
+      collectionPills={collectionPills}
       onCollectionChange={(value) => setUrlBatch({ coll: value === 'all' ? null : value, fsd: null, page: null })}
-      onDriveFilterClear={() => setUrlBatch({ q: null, coll: null, page: null })}
+      onDriveFilterClear={() => setUrlBatch({ grid_date: null, coll: null, page: null })}
       fsdFilter={fsdFilter}
+      fsdPills={fsdPills}
       onFsdFilterChange={(value) => setUrlBatch({ fsd: value === 'all' ? null : value, coll: null, page: null })}
       filters={gridFilters}
       onFilterChange={changeGridFilter}
+      vehicleId={vehicleId}
+      vehicleName={vehicleName}
+      driveStatus={driveStatus}
+      onDriveStatusChange={setDriveStatus}
       toDistanceDisplay={toDistanceDisplay}
       toSpeedDisplay={toSpeedDisplay}
       toEfficiencyDisplay={toEfficiencyDisplay}
@@ -61,22 +75,19 @@ export function DrivesDesktopEvidence({
       fsdAvailable={fsdDataAvailable}
       fsdByDriveID={fsdByDriveID}
       anomalyDriveIds={anomalyDriveIds}
-      paginationControls={{
+      paginationControls={matchingTotal == null ? undefined : {
         page: safePage,
         pageSize,
-        total: sortedDrives.length,
+        total: matchingTotal,
         onPageChange: setPage,
         onPageSizeChange: (size) => setUrlBatch({ size: String(size), page: null }),
       }}
-      toolbarHeading={(
-        <SectionTitle className="flex items-center gap-2">
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
-            <Route className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          </span>
-          {t('drives.driveEvidence', 'Drive evidence')}
-          <Badge variant="neutral" size="sm" className="tabular-nums">{fmtCompact(sortedDrives.length)}</Badge>
-        </SectionTitle>
-      )}
+      matchingActions={canSelectMatching && <Button variant="ghost" size="sm" wrapLabel className="min-h-9"
+        disabled={matchingIsPending} onClick={selectAllMatching}>
+        {t('drives.grid.selectMatching', 'Select {{count}} matching', { count: matchingTotal })}
+      </Button>}
+      savedViews={{ context: viewContext, onRestore: restoreView }}
+      onClearAllFilters={clearGridFilters}
       controls={tableControls}
     />
   );

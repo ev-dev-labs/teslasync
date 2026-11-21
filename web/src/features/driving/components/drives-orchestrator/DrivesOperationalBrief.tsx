@@ -6,14 +6,14 @@ import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
 type Props = Pick<DrivesListPageController,
   't' | 'isDrivesLoading' | 'hasDrivePayload' | 'drivesState' | 'refetchDrives'
-  | 'currentStats' | 'anomalyDrives' | 'missingEfficiencyCount' | 'narrative'
+  | 'currentStats' | 'anomalyCount' | 'missingEfficiencyCount' | 'narrative'
   | 'datePresetLabel' | 'startDate' | 'endDate' | 'fmtCompact' | 'distanceUnit'
   | 'distMi' | 'efficiencyUnit' | 'avgEffDisp' | 'fmtInt' | 'efficiencyMovementValue'
   | 'efficiencyMovementTone' | 'routeContextCount' | 'driveAttention' | 'navigate'>;
 
 export function DrivesOperationalBrief({
   t, isDrivesLoading, hasDrivePayload, drivesState, refetchDrives,
-  currentStats, anomalyDrives, missingEfficiencyCount, narrative,
+  currentStats, anomalyCount, missingEfficiencyCount, narrative,
   datePresetLabel, startDate, endDate, fmtCompact, distanceUnit, distMi,
   efficiencyUnit, avgEffDisp, fmtInt, efficiencyMovementValue,
   efficiencyMovementTone, routeContextCount, driveAttention, navigate,
@@ -37,14 +37,14 @@ export function DrivesOperationalBrief({
         statusLabel={
           currentStats.count === 0
             ? t('operations.status.awaitingData', 'Awaiting data')
-            : anomalyDrives.length > 0 || missingEfficiencyCount > 0
+            : anomalyCount > 0 || missingEfficiencyCount > 0
               ? t('operations.status.review', 'Review recommended')
               : t('operations.status.onTrack', 'On track')
         }
         statusTone={
           currentStats.count === 0
             ? 'neutral'
-            : anomalyDrives.length > 0 || missingEfficiencyCount > 0
+            : anomalyCount > 0 || missingEfficiencyCount > 0
               ? 'warning'
               : 'success'
         }
@@ -99,7 +99,7 @@ export function DrivesOperationalBrief({
             ),
             tone: avgEffDisp == null
               ? 'neutral'
-              : anomalyDrives.length > 0
+              : anomalyCount > 0
                 ? 'warning'
                 : 'success',
           },
@@ -116,12 +116,12 @@ export function DrivesOperationalBrief({
           {
             key: 'exceptions',
             label: t('drives.decision.exceptions', 'Efficiency exceptions'),
-            value: fmtCompact(anomalyDrives.length),
+            value: fmtCompact(anomalyCount),
             detail: t(
               'operations.drives.exceptionDetail',
               'Measured drives in the high energy-intensity grade.',
             ),
-            tone: anomalyDrives.length > 0 ? 'warning' : 'success',
+            tone: anomalyCount > 0 ? 'warning' : 'success',
           },
           {
             key: 'route-context',

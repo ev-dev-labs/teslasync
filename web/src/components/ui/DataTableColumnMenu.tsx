@@ -40,6 +40,7 @@ interface ColumnDescriptor {
   /** When true, the column cannot be hidden (e.g. selection / expand columns).
    *  Reorder is unaffected. */
   required?: boolean
+  pinned?: boolean
   /** Default visibility for the "Reset" computation. Defaults to true. */
   defaultVisible?: boolean
 }
@@ -56,6 +57,7 @@ interface DataTableColumnMenuProps {
    *  reorder list. */
   toggleable?: boolean
   trigger?: (open: () => void) => ReactNode
+  displayControls?: ReactNode
   className?: string
 }
 
@@ -67,6 +69,7 @@ export function DataTableColumnMenu({
   reorderable = true,
   toggleable = true,
   trigger,
+  displayControls,
   className,
 }: DataTableColumnMenuProps) {
   const { t } = useTranslation()
@@ -137,9 +140,9 @@ export function DataTableColumnMenu({
     const base = ensureLayout()
     const currentOrder = effectiveColumnOrder(safeColumns, base)
     const fromIndex = currentOrder.indexOf(key)
-    if (fromIndex < 0) return
+    if (fromIndex < 0 || colByKey.get(key)?.pinned) return
     const toIndex = fromIndex + direction
-    if (toIndex < 0 || toIndex >= currentOrder.length) return
+    if (toIndex < 0 || toIndex >= currentOrder.length || colByKey.get(currentOrder[toIndex])?.pinned) return
     const nextOrder = moveColumn(currentOrder, key, toIndex)
     onChange({ order: nextOrder, hidden: base.hidden.slice() })
   }
@@ -158,6 +161,7 @@ export function DataTableColumnMenu({
 
       <Modal open={open} onClose={() => setOpen(false)} title={triggerLabel} size="sm"
         footer={<Button variant="secondary" className="min-h-11" onClick={() => setOpen(false)}>{t('Done', 'Done')}</Button>}>
+        {displayControls && <div className="mb-3 border-b border-[var(--border-subtle)] pb-3">{displayControls}</div>}
         <div
           data-testid="datatable-column-menu"
         >
@@ -203,8 +207,8 @@ export function DataTableColumnMenu({
               const isHidden = effectiveHidden.has(key)
               const checked = !isHidden
               const checkboxDisabled = col.required || (checked && visibleCount <= 1)
-              const upDisabled = idx === 0
-              const downDisabled = idx === orderedKeys.length - 1
+              const upDisabled = col.pinned || idx === 0 || colByKey.get(orderedKeys[idx - 1])?.pinned
+              const downDisabled = col.pinned || idx === orderedKeys.length - 1
               return (
                 <li key={col.key}>
                   <div

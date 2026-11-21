@@ -1,6 +1,6 @@
 import { forwardRef, type TableHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
-import { tableTokens } from '@/lib/tokens';
+import { tableTokens } from './tableTokens';
 
 export interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
   /** An enclosing panel already owns the surface; keep only semantic row dividers. */

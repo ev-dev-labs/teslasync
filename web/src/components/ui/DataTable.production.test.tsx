@@ -185,6 +185,54 @@ describe('DataTable production pipeline contracts', () => {
     expect({ ...localStorage }).toEqual(baselineStorage)
   })
 
+  it('sorts and filters a hidden loaded column from the compact picker, then restores it from a saved view', async () => {
+    const props = {
+      columns: columns.map(column => column.key === 'amount'
+        ? { ...column, defaultVisible: false, filterValue: (row: Row) => row.amount, sortValue: (row: Row) => row.amount }
+        : column),
+      mobilePresentation: { ...presentation, columnToolsInPicker: true },
+      enableValueFilters: true, savedViews: true,
+    }
+    const view = mount(props)
+    resize(375)
+    fireEvent.click(screen.getByRole('button', { name: 'Filter & sort' }))
+    const tools = screen.getByRole('dialog', { name: 'Filter & sort' })
+    fireEvent.change(within(tools).getByRole('combobox', { name: 'Column' }), { target: { value: 'amount' } })
+    fireEvent.click(within(tools).getByRole('button', { name: 'Sort ascending' }))
+    fireEvent.click(within(tools).getByRole('button', { name: 'Sort descending' }))
+    fireEvent.click(within(tools).getByRole('checkbox', { name: '—' }))
+    fireEvent.click(within(tools).getByRole('button', { name: 'Done' }))
+    const titles = (root: HTMLElement) => Array.from(root.querySelectorAll('[data-card-label]'), node => node.textContent)
+    expect(titles(view.container)).toEqual(['Last record', 'Numeric zero'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Saved views' }))
+    const dialog = screen.getByRole('dialog', { name: 'Saved views' })
+    fireEvent.change(await within(dialog).findByRole('textbox', { name: 'View name' }), { target: { value: 'Recorded amounts' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save current view' }))
+    view.unmount()
+
+    const restored = mount(props)
+    resize(375)
+    fireEvent.click(screen.getByRole('button', { name: 'Saved views' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Recorded amounts' }))
+    expect(titles(restored.container)).toEqual(['Last record', 'Numeric zero'])
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Amount filter' }))
+    expect(titles(restored.container)).toEqual(['Last record', 'Numeric zero', 'String zero'])
+  })
+
+  it('exports matching, selected and complete loaded rows independently of page and hidden columns', async () => {
+    mount({ data: [rows[0], rows[2]], filterData: rows, includeFullExport: true,
+      exportColumns: 'all', exportFilename: 'explicit-scopes',
+      pagination: { defaultPageSize: 1, pageSizeOptions: [1] },
+      selectable: 'multi', selectedKeys: [2], onSelectionChange: vi.fn() })
+    await exportAs('JSON', 'Matching (2)')
+    expect(vi.mocked(downloadJSON).mock.lastCall?.[1]).toMatchObject([{ name: rows[0].name }, { name: rows[2].name }])
+    await exportAs('JSON', 'Selected (1)')
+    expect(vi.mocked(downloadJSON).mock.lastCall?.[1]).toMatchObject([{ name: rows[2].name }])
+    await exportAs('JSON', 'Full catalog (3)')
+    expect(vi.mocked(downloadJSON).mock.lastCall?.[1]).toMatchObject(rows.map(({ name, secret }) => ({ name, secret })))
+  })
+
   it('uses the allocated container rather than viewport width and observes opt-in removal', () => {
     vi.stubGlobal('innerWidth', 1920)
     const view = mount()

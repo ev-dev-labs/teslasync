@@ -745,7 +745,11 @@ paths:
     get:
       operationId: listDrives
       summary: List drives
-      description: Returns a paginated list of drive sessions.
+      description: |
+        Without `view`, returns the existing array of drive sessions.
+        The optional history views require `start` and `end`. For RFC 3339
+        timestamps, start is inclusive and end is exclusive. Date-only bounds
+        cover whole UTC days.
       tags: [Drives]
       parameters:
         - name: vehicle_id
@@ -766,15 +770,82 @@ paths:
             type: integer
             default: 0
             minimum: 0
+          description: Row offset. For `view=page`, use a multiple of the page size.
+        - name: start
+          in: query
+          schema: { type: string }
+        - name: end
+          in: query
+          schema: { type: string }
+        - name: view
+          in: query
+          schema:
+            type: string
+            enum: [page, overview, values, ids]
+          description: |
+            `page` returns `items`, the exact matching `total`, and the resolved
+            one-based `page`. `overview` returns unfiltered range statistics and
+            evidence independently of pagination. `values` returns distinct
+            values and counts for one column. `ids` returns matching drive IDs,
+            up to the 500-ID bulk-action limit.
+        - name: timezone
+          in: query
+          schema: { type: string, default: UTC }
+          description: IANA time zone for history grouping and date filters.
+        - name: prior_start
+          in: query
+          schema: { type: string, format: date-time }
+          description: Optional start of the comparison period for `view=overview`, ending at `start`.
+        - name: field
+          in: query
+          schema: { type: string }
+          description: Column to enumerate for `view=values`.
+        - name: grid
+          in: query
+          schema: { type: string }
+          description: JSON-encoded sorting and filtering for `page` and `ids`; numeric conditions use canonical units.
       responses:
         "200":
-          description: List of drives
+          description: Drive array or history view
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Drive"
+                anyOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Drive"
+                  - type: object
+                    required: [items, total, page]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Drive"
+                      total: { type: integer, minimum: 0 }
+                      page: { type: integer, minimum: 1 }
+                  - type: object
+                    required: [current, prior, days, evidence, anomaly_count, notable_count, commute_count, route_context_count]
+                    properties:
+                      current: { type: object }
+                      prior: { type: object, nullable: true }
+                      days: { type: array, items: { type: object } }
+                      evidence: { type: array, items: { type: object } }
+                      anomaly_count: { type: integer }
+                      notable_count: { type: integer }
+                      commute_count: { type: integer }
+                      route_context_count: { type: integer }
+                  - type: array
+                    items:
+                      type: object
+                      required: [value, count]
+                      properties:
+                        value:
+                          anyOf:
+                            - { type: string, nullable: true }
+                            - { type: number }
+                        count: { type: integer, minimum: 1 }
+                  - type: array
+                    items: { type: integer, format: int64 }
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":

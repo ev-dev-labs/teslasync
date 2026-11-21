@@ -157,57 +157,37 @@ export function readLegacyVisibleLayout(
  *    layout that's now stale), fall back to the default-visible set so
  *    the table never renders zero columns.
  */
-export function applyColumnLayout<C extends { key: string; defaultVisible?: boolean; required?: boolean }>(
+export function applyColumnLayout<C extends { key: string; defaultVisible?: boolean; required?: boolean; pinned?: boolean }>(
   columns: readonly C[],
   layout: ColumnLayout | null,
 ): C[] {
-  if (!layout) {
-    return columns.filter((c) => c.required || c.defaultVisible !== false)
-  }
-  const knownKeys = new Set(columns.map((c) => c.key))
-  const hiddenSet = new Set(layout.hidden.filter((k) => knownKeys.has(k)))
-  for (const column of columns) {
-    if (column.defaultVisible === false && !layout.order.includes(column.key)) {
-      hiddenSet.add(column.key)
-    }
-    if (column.required) hiddenSet.delete(column.key)
-  }
-  const orderedKeys: string[] = []
-  const seen = new Set<string>()
-  for (const k of layout.order) {
-    if (knownKeys.has(k) && !seen.has(k)) {
-      orderedKeys.push(k)
-      seen.add(k)
-    }
-  }
-  for (const c of columns) {
-    if (!seen.has(c.key)) {
-      orderedKeys.push(c.key)
-      seen.add(c.key)
-    }
-  }
-  const visibleKeys = orderedKeys.filter((k) => !hiddenSet.has(k))
-  if (visibleKeys.length === 0) {
-    return columns.filter((c) => c.required || c.defaultVisible !== false)
-  }
+  const orderedKeys = effectiveColumnOrder(columns, layout)
   const byKey = new Map(columns.map((c) => [c.key, c] as const))
-  return visibleKeys.map((k) => byKey.get(k)).filter((c): c is C => Boolean(c))
+  const orderedColumns = orderedKeys.flatMap((key) => {
+    const column = byKey.get(key)
+    return column ? [column] : []
+  })
+  if (!layout) {
+    return orderedColumns.filter((c) => c.required || c.defaultVisible !== false)
+  }
+  const hidden = new Set(layout.hidden)
+  const configured = new Set(layout.order)
+  const visible = orderedColumns.filter(c =>
+    c.required || (!hidden.has(c.key) && (c.defaultVisible !== false || configured.has(c.key))))
+  return visible.length ? visible : applyColumnLayout(columns, null)
 }
 
 /** Build the full ordered key list (visible + hidden) the menu uses to
  *  render rows in their effective layout order. Mirrors the order rules
  *  used by `applyColumnLayout` but doesn't drop hidden keys. */
-export function effectiveColumnOrder<C extends { key: string }>(
+export function effectiveColumnOrder<C extends { key: string; pinned?: boolean }>(
   columns: readonly C[],
   layout: ColumnLayout | null,
 ): string[] {
-  if (!layout || layout.order.length === 0) {
-    return columns.map((c) => c.key)
-  }
   const knownKeys = new Set(columns.map((c) => c.key))
-  const ordered: string[] = []
-  const seen = new Set<string>()
-  for (const k of layout.order) {
+  const ordered = columns.filter(c => c.pinned).map(c => c.key)
+  const seen = new Set(ordered)
+  for (const k of layout?.order ?? []) {
     if (knownKeys.has(k) && !seen.has(k)) {
       ordered.push(k)
       seen.add(k)

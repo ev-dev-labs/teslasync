@@ -229,6 +229,7 @@
     "resultsCountOne": "1 result"
   },
   "common": {
+    "any": "Any",
     "clearSearch": "Clear search",
     "invalidNumber": "Enter a valid number",
     "unitListHint": "Separate values with semicolons",
@@ -2152,6 +2153,7 @@
       "invalidValues": "This saved value filter is invalid. Clear it to reset.",
       "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
       "noValues": "No matching values",
+      "rangeRowCount": "{{matching}} matching / {{total}} in range",
       "resetSearch": "Clear search",
       "searchValues": "Search values",
       "selectShown": "Select all shown values",
@@ -2160,6 +2162,24 @@
       "values": "Available values"
     },
     "genericName": "Data table",
+    "grid": {
+      "allColumns": "All columns",
+      "ascending": "Ascending",
+      "clearColumn": "Clear {{column}} filter",
+      "column": "Column",
+      "columnTools": "Filter & sort",
+      "compareSelected": "Compare selected",
+      "descending": "Descending",
+      "exportScopes": "Choose matching rows, the full loaded catalog, or your selection.",
+      "filterBy": "Filter by column",
+      "fullExport": "Full catalog ({{count}})",
+      "matchingExport": "Matching ({{count}})",
+      "quickFilter": "Filter {{column}} by value",
+      "savedViews": "Saved views",
+      "sortAscending": "Sort ascending",
+      "sortBy": "Sort by",
+      "sortDescending": "Sort descending"
+    },
     "search": {
       "loadedRows": "Search loaded rows"
     },

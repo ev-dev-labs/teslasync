@@ -1,34 +1,57 @@
-import { createElement, useState, useEffect, useCallback, useMemo } from 'react';
+import { createElement, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { GitCompareArrows, Trash2 } from 'lucide-react';
 import { type BulkAction } from '@/components/data-display';
 import { useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { DRIVE_GRID_MAX_SELECTION, getMatchingDriveIds } from '@/api/hooks/useDriveGrid';
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { useDrivesListPageData } from './useDrivesListPageData';
 import type { useDrivesListPageFilters } from './useDrivesListPageFilters';
 
-type SelectionInput = Pick<ReturnType<typeof useDrivesListPageData>, 't' | 'navigate'>
-  & Pick<ReturnType<typeof useDrivesListPageFilters>, 'filteredDrives'>;
+type SelectionInput = Pick<ReturnType<typeof useDrivesListPageData>, 't' | 'navigate' | 'vehicleId' | 'gridScope'>
+  & Pick<ReturnType<typeof useDrivesListPageFilters>, 'matchingTotal' | 'matchingGrid'>;
 
-export function useDrivesListPageSelection({ filteredDrives, t, navigate }: SelectionInput) {
-  /* ---- Bulk selection ---- */
-  const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set());
+const NO_SELECTION = new Set<number>();
+
+export function useDrivesListPageSelection({ matchingTotal, matchingGrid, vehicleId, gridScope, t, navigate }: SelectionInput) {
+  const scope = JSON.stringify([vehicleId, gridScope, matchingGrid]);
+  const [selection, setSelection] = useState({ scope, ids: NO_SELECTION });
+  const [action, setAction] = useState<{ scope: string; pending: boolean; error: Error | null }>();
+  const activeRequest = useRef<AbortController | null>(null);
+  const bulkSelected = selection.scope === scope ? selection.ids : NO_SELECTION;
+  const setBulkSelected = useCallback((ids: Set<number>) => {
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+    setAction(undefined);
+    setSelection({ scope, ids });
+  }, [scope]);
+  const clearBulk = useCallback(() => setBulkSelected(NO_SELECTION), [setBulkSelected]);
   useEffect(() => {
-    setBulkSelected(prev => {
-      if (prev.size === 0) return prev;
-      const visible = new Set(filteredDrives.map(d => d.id));
-      const next = new Set<number>();
-      prev.forEach(id => { if (visible.has(id)) next.add(id); });
-      return next.size === prev.size ? prev : next;
-    });
-  }, [filteredDrives]);
-  const toggleDriveSelected = useCallback((id: number, on: boolean) => {
-    setBulkSelected(prev => {
-      const next = new Set(prev);
-      if (on) next.add(id); else next.delete(id);
-      return next;
-    });
-  }, []);
-  const clearBulk = useCallback(() => setBulkSelected(new Set()), []);
+    setSelection(current => current.scope === scope ? current : { scope, ids: NO_SELECTION });
+    return () => {
+      activeRequest.current?.abort();
+      activeRequest.current = null;
+    };
+  }, [scope]);
+  const canSelectMatching = vehicleId != null && matchingTotal != null
+    && matchingTotal <= DRIVE_GRID_MAX_SELECTION && matchingTotal > bulkSelected.size;
+  const matchingIsPending = action?.scope === scope && action.pending;
+  const matchingError = action?.scope === scope ? action.error : null;
+  const selectAllMatching = async () => {
+    if (!canSelectMatching || activeRequest.current) return;
+    const request = new AbortController();
+    activeRequest.current = request;
+    setAction({ scope, pending: true, error: null });
+    try {
+      const ids = await getMatchingDriveIds(vehicleId, gridScope, matchingGrid, request.signal);
+      if (request.signal.aborted) return;
+      setSelection({ scope, ids: new Set(ids) });
+      setAction(undefined);
+    } catch (error) {
+      if (!request.signal.aborted) setAction({ scope, pending: false, error: error instanceof Error ? error : new Error(String(error)) });
+    } finally {
+      if (activeRequest.current === request) activeRequest.current = null;
+    }
+  };
   const bulkDeleteDrivesMut = useBulkDeleteDrives();
   const bulkDriveActions = useMemo<BulkAction[]>(() => [
     {
@@ -58,6 +81,7 @@ export function useDrivesListPageSelection({ filteredDrives, t, navigate }: Sele
         description: t('bulk.deleteConfirmDescription', 'This cannot be undone.'),
         confirmLabel: t('common.delete', 'Delete'),
       },
+      disabled: bulkSelected.size > DRIVE_GRID_MAX_SELECTION,
       onClick: async (ids) => {
         await bulkDeleteDrivesMut.mutateAsync(ids.map(Number));
         clearBulk();
@@ -65,5 +89,6 @@ export function useDrivesListPageSelection({ filteredDrives, t, navigate }: Sele
     },
   ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk, navigate]);
 
-  return { bulkSelected, setBulkSelected, toggleDriveSelected, clearBulk, bulkDriveActions };
+  return { bulkSelected, setBulkSelected, clearBulk, bulkDriveActions,
+    canSelectMatching, selectAllMatching, matchingIsPending, matchingError };
 }

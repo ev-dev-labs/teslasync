@@ -4,8 +4,6 @@ export const FSD_FILTERS = ['all', 'reported', 'high', 'estimated', 'ambiguous',
 export type FsdFilter = typeof FSD_FILTERS[number];
 export const TREND_METRICS = ['drives', 'distance', 'score', 'efficiency', 'cost'] as const;
 
-/** Rows fetched per request. The API rejects anything above 1,000. */
-export const DRIVES_FETCH_LIMIT = 1000;
 export const FSD_MAX_RANGE_DAYS = 366;
 
 export function inclusiveDateKeySpan(start: string, end: string): number {

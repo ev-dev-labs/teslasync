@@ -164,6 +164,30 @@ func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
 }
 
 func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error) {
+	return r.listVehicleDrives(ctx, vehicleID, limit, offset, startTime, endTime, false)
+}
+
+func (r *DriveRepo) HistoryPage(ctx context.Context, vehicleID int64, limit, offset int, start, endExclusive time.Time) ([]*drivemodel.Drive, error) {
+	return r.listVehicleDrives(ctx, vehicleID, limit, offset, start, endExclusive, true)
+}
+
+// HistoryRange is an internal range read for server-side analytics and filtering.
+func (r *DriveRepo) HistoryRange(ctx context.Context, vehicleID int64, start, endExclusive time.Time) ([]*drivemodel.Drive, error) {
+	return r.listVehicleDrives(ctx, vehicleID, 0, 0, start, endExclusive, true)
+}
+
+func (r *DriveRepo) HistoryCount(ctx context.Context, vehicleID int64, start, endExclusive time.Time) (int, error) {
+	ctx, span := tracing.DBSpan(ctx, "count", "drives", tracing.VehicleID(vehicleID))
+	defer span.End()
+	var total int
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT count(*) FROM drives WHERE vehicle_id=$1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, endExclusive).Scan(&total)
+	tracing.EndSpan(span, err)
+	return total, err
+}
+
+func (r *DriveRepo) listVehicleDrives(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time, exclusiveEnd bool) ([]*drivemodel.Drive, error) {
 	ctx, span := tracing.DBSpan(ctx, "select", "drives", tracing.VehicleID(vehicleID))
 	defer span.End()
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE vehicle_id=$1`
@@ -175,14 +199,21 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 		argIdx++
 	}
 	if !endTime.IsZero() {
-		query += fmt.Sprintf(" AND started_at <= $%d", argIdx)
+		if exclusiveEnd {
+			query += fmt.Sprintf(" AND started_at < $%d", argIdx)
+		} else {
+			query += fmt.Sprintf(" AND started_at <= $%d", argIdx)
+		}
 		args = append(args, endTime)
 		argIdx++
 	}
 	// ID is a deterministic tie-breaker for sessions with the same
 	// telemetry timestamp, keeping offset pagination stable between requests.
-	query += fmt.Sprintf(" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
-	args = append(args, limit, offset)
+	query += " ORDER BY started_at DESC, id DESC"
+	if limit > 0 || !exclusiveEnd {
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+		args = append(args, limit, offset)
+	}
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

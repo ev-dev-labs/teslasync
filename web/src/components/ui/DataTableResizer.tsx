@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { tableTokens } from '@/lib/tokens'
+import { tableTokens } from './tableTokens'
 
 /**
  * Pointer capture lets a drag continue when the pointer leaves the resize

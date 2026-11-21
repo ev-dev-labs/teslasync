@@ -5,16 +5,22 @@ import { useSettings, useToggleAPISuspend, usePollingConfig, useUpdatePollingCon
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
+import { keepFleetPermissions, planFleetPermissions, type FleetPermission } from '../lib/fleetEndpointPolicy';
+
+const emptyCatalog: FleetEndpoint[] = [];
+export type FleetGrouping = 'category' | 'method' | 'none';
+export type FleetRouteScope = 'all' | 'smart' | 'pollable' | 'blocked' | 'commands';
 
 export function useFleetAPIPage() {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('fleetApi.title', 'Fleet API'));
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [groupBy, setGroupBy] = useState<'category' | 'method'>('category');
-  const [sortBy, setSortBy] = useState<'name' | 'path' | 'method' | 'access' | 'auto'>('name');
-  const [sortDescending, setSortDescending] = useState(false);
+  const [category, setCategory] = useState('all');
+  const [groupBy, setGroupBy] = useState<FleetGrouping>('category');
+  const [routeScope, setRouteScope] = useState<FleetRouteScope>('all');
+  const [guide, setGuide] = useState('');
+  const [queryReset, setQueryReset] = useState(0);
 
   const settingsQuery = useSettings();
   const pollingQuery = usePollingConfig();
@@ -50,126 +56,40 @@ export function useFleetAPIPage() {
   const pollingConfig = pollingQuery.data;
   const version = versionQuery.data;
 
-  const catalog = pollingConfig?.endpoint_catalog ?? [];
+  const catalog = pollingConfig?.endpoint_catalog ?? emptyCatalog;
   const normalizedSearch = search.trim().toLowerCase();
-  const endpointGroups = useMemo(() => {
-    const groups = new Map<string, FleetEndpoint[]>();
-    for (const endpoint of catalog) {
-      if (selectedCategory !== 'all' && endpoint.category !== selectedCategory) continue;
-      const group = groupBy === 'category' ? endpoint.category : endpoint.method;
-      if (normalizedSearch && !`${endpoint.key} ${endpoint.method} ${endpoint.path} ${endpoint.category}`.toLowerCase().includes(normalizedSearch)) {
-        continue;
-      }
-      const entries = groups.get(group) ?? [];
-      entries.push(endpoint);
-      groups.set(group, entries);
-    }
-    const sortValue = (endpoint: FleetEndpoint): string | number => {
-      switch (sortBy) {
-        case 'path': return endpoint.path;
-        case 'method': return endpoint.method;
-        case 'access': return Number(!!pollingConfig?.fleet_endpoints[endpoint.key]);
-        case 'auto': return Number(!!pollingConfig?.auto_endpoints[endpoint.key]);
-        default: return endpoint.key;
-      }
-    };
-    return [...groups.entries()].map(([group, endpoints]): [string, FleetEndpoint[]] => [
-      group,
-      endpoints.sort((a, b) => {
-        const left = sortValue(a);
-        const right = sortValue(b);
-        const compared = typeof left === 'number' && typeof right === 'number'
-          ? left - right : String(left).localeCompare(String(right));
-        return (sortDescending ? -compared : compared) || a.key.localeCompare(b.key);
-      }),
-    ]);
-  }, [catalog, groupBy, normalizedSearch, selectedCategory, sortBy, sortDescending, pollingConfig]);
+  const matchingRoutes = useMemo(() => catalog.filter(endpoint => {
+    const allowed = pollingConfig?.fleet_endpoints[endpoint.key];
+    return (category === 'all' || endpoint.category === category)
+      && (routeScope !== 'smart' || (allowed && pollingConfig?.smart_endpoints?.[endpoint.key]))
+      && (routeScope !== 'pollable' || endpoint.pollable)
+      && (routeScope !== 'blocked' || !allowed)
+      && (routeScope !== 'commands' || endpoint.method !== 'GET')
+      && (!normalizedSearch || `${endpoint.key} ${endpoint.key.replace(/[._]/g, ' ')} ${endpoint.method} ${endpoint.path} ${endpoint.category}`
+        .toLowerCase().includes(normalizedSearch));
+  }), [catalog, category, normalizedSearch, pollingConfig, routeScope]);
   const categories = [...new Set(catalog.map(endpoint => endpoint.category))];
   const categoryLabel = (category: string) => t(`fleetApi.categories.${category.toLowerCase().replace(/ /g, '')}`, category);
   const groupLabel = (group: string) => groupBy === 'category'
     ? categoryLabel(group)
     : group;
 
-  const toggleEndpoint = (endpoint: FleetEndpoint) => {
-    if (!pollingConfig) return;
-    const enabled = pollingConfig.fleet_endpoints[endpoint.key];
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      fleet_endpoints: { ...pollingConfig.fleet_endpoints, [endpoint.key]: !enabled },
-      auto_endpoints: enabled && endpoint.pollable
-        ? { ...pollingConfig.auto_endpoints, [endpoint.key]: false }
-        : pollingConfig.auto_endpoints,
-    });
-  };
-
-  const toggleAuto = (key: string) => {
-    if (!pollingConfig?.auto_polling_enabled || !pollingConfig.fleet_endpoints[key]) return;
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      auto_endpoints: { ...pollingConfig.auto_endpoints, [key]: !pollingConfig.auto_endpoints[key] },
-    });
-  };
-
-  const toggleSmart = (key: string) => {
-    if (!pollingConfig?.smart_endpoints || !pollingConfig.fleet_endpoints[key] || pollingConfigMut.isPending) return;
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      smart_endpoints: { ...pollingConfig.smart_endpoints, [key]: !pollingConfig.smart_endpoints[key] },
-    });
-  };
-
-  const toggleAllAccess = () => {
-    if (!pollingConfig || catalog.length === 0) return;
-    const enable = !catalog.every((endpoint) => pollingConfig.fleet_endpoints[endpoint.key]);
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      fleet_endpoints: Object.fromEntries(catalog.map((endpoint) => [endpoint.key, enable])),
-      auto_endpoints: enable ? pollingConfig.auto_endpoints
-        : Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable).map((endpoint) => [endpoint.key, false])),
-    });
-  };
-
-  const toggleGroupAccess = (group: string) => {
+  const changePermission = (key: string, permission: FleetPermission) => {
     if (!pollingConfig || pollingConfigMut.isPending) return;
-    const endpoints = catalog.filter(endpoint => (groupBy === 'category' ? endpoint.category : endpoint.method) === group);
-    if (!endpoints.length) return;
-    const enable = !endpoints.every(endpoint => pollingConfig.fleet_endpoints[endpoint.key]);
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      fleet_endpoints: { ...pollingConfig.fleet_endpoints, ...Object.fromEntries(endpoints.map(endpoint => [endpoint.key, enable])) },
-      auto_endpoints: enable ? pollingConfig.auto_endpoints : {
-        ...pollingConfig.auto_endpoints,
-        ...Object.fromEntries(endpoints.filter(endpoint => endpoint.pollable).map(endpoint => [endpoint.key, false])),
-      },
+    const enabled = permission === 'access' ? pollingConfig.fleet_endpoints[key]
+      : permission === 'smart' ? pollingConfig.smart_endpoints?.[key] : pollingConfig.auto_endpoints[key];
+    const plan = planFleetPermissions(pollingConfig, [key], {
+      ...keepFleetPermissions, [permission]: enabled ? 'disable' : 'enable',
     });
+    if (plan.changed.length) pollingConfigMut.mutate(plan.config);
   };
 
-  const toggleAllAuto = () => {
-    if (!pollingConfig?.auto_polling_enabled) return;
-    const eligible = catalog.filter((endpoint) => endpoint.pollable && pollingConfig.fleet_endpoints[endpoint.key]);
-    if (eligible.length === 0) return;
-    const enable = !eligible.every((endpoint) => pollingConfig.auto_endpoints[endpoint.key]);
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      auto_endpoints: Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable)
-        .map((endpoint) => [endpoint.key, enable && !!pollingConfig.fleet_endpoints[endpoint.key]])),
-    });
-  };
-
-  const toggleGroupAuto = (group: string) => {
-    if (!pollingConfig?.auto_polling_enabled || pollingConfigMut.isPending) return;
-    const eligible = catalog.filter(endpoint =>
-      (groupBy === 'category' ? endpoint.category : endpoint.method) === group
-      && endpoint.pollable && pollingConfig.fleet_endpoints[endpoint.key]);
-    if (!eligible.length) return;
-    const enable = !eligible.every(endpoint => pollingConfig.auto_endpoints[endpoint.key]);
-    pollingConfigMut.mutate({
-      ...pollingConfig,
-      auto_endpoints: {
-        ...pollingConfig.auto_endpoints,
-        ...Object.fromEntries(eligible.map(endpoint => [endpoint.key, enable])),
-      },
-    });
+  const resetRouteQuery = () => {
+    setCategory('all');
+    setRouteScope('all');
+    setSearch('');
+    setGuide('');
+    setQueryReset(value => value + 1);
   };
 
   const configuredEndpoints = [
@@ -182,7 +102,7 @@ export function useFleetAPIPage() {
   const totalCount = catalog.length;
   const enabledCount = catalog.filter((ep) => pollingConfig?.fleet_endpoints[ep.key]).length;
   const autoCount = catalog.filter((ep) => ep.pollable && pollingConfig?.fleet_endpoints[ep.key] && pollingConfig.auto_endpoints[ep.key]).length;
-  const eligibleCount = catalog.filter((ep) => ep.pollable && pollingConfig?.fleet_endpoints[ep.key]).length;
+  const smartCount = catalog.filter(ep => pollingConfig?.fleet_endpoints[ep.key] && pollingConfig.smart_endpoints?.[ep.key]).length;
 
   const apiSuspended = settings?.api_suspended ?? false;
   const apiStatusKnown = !!settings;
@@ -196,7 +116,11 @@ export function useFleetAPIPage() {
 
 
   return {
-    categories, categoryLabel, selectedCategory, setSelectedCategory,
-    fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleSmart, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints
+    categories, categoryLabel, category, setCategory,
+    fmtInt, t, search, setSearch, groupBy, setGroupBy, routeScope, setRouteScope, guide, setGuide, resetRouteQuery, queryReset,
+    settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut,
+    pollingConfigMut, settings, pollingConfig, version, catalog, matchingRoutes, groupLabel, changePermission,
+    configuredEndpoints, totalCount, enabledCount, autoCount, smartCount, apiSuspended, apiStatusKnown, pollingKnown,
+    versionLabel, configuredEndpointMap, hasConfiguredEndpoints,
   };
 }

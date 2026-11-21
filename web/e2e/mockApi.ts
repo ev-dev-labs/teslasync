@@ -6,6 +6,7 @@ import type { PinnedItem } from '../src/api/types';
 import type { ThemeId } from '../src/components/ui/ThemeProvider';
 import { closeMockSseServer, ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
+import { driveGridResponse } from './driveGridFixture';
 
 export const closeMockApiFixtures = closeMockSseServer;
 
@@ -587,7 +588,8 @@ export function resolveApiFixture(
     const value = scenario === 'partial'
       ? { ...drive, end_ts: null, end_address: null, energy_used_wh: null, score: null, live: true }
       : { ...drive, updated_at: observedAt };
-    return matched(listFor(scenario, value));
+    return matched(driveGridResponse(listFor(scenario, value), new URLSearchParams(path.split('?')[1]),
+      fsdInsightsFixture(scenario).drive_analytics?.contributing_drives));
   }
   if (path.startsWith('/drives/score')) {
     return matched(scenario === 'empty'

@@ -3,7 +3,7 @@ import { type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { tableTokens } from '@/lib/tokens'
+import { tableTokens } from './tableTokens'
 import { Icon } from './Icon'
 import { Text } from './Typography'
 

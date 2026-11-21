@@ -20,6 +20,9 @@ export interface ListExportMenuProps {
   selectedCount?: number;
   /** Number of visible (filtered) rows — used for the All… count. */
   visibleCount?: number;
+  /** When provided, callers support a separate unfiltered scope. */
+  fullCount?: number;
+  onExportAll?: (format: 'csv' | 'json') => void | Promise<void>;
   /** Disable the trigger (e.g. while data is loading or empty). */
   disabled?: boolean;
   className?: string;
@@ -27,6 +30,7 @@ export interface ListExportMenuProps {
 }
 
 export type ExportScope = 'visible' | 'selected';
+export type GridExportScope = ExportScope | 'all';
 
 /**
  * `ListExportMenu` — CSV / JSON export with optional scope toggle.
@@ -50,6 +54,8 @@ export function ListExportMenu({
   onExportJson,
   selectedCount = 0,
   visibleCount,
+  fullCount,
+  onExportAll,
   disabled = false,
   className,
   testId,
@@ -58,7 +64,7 @@ export function ListExportMenu({
   const toast = useOptionalToast();
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<'csv' | 'json' | null>(null);
-  const [scope, setScope] = useState<ExportScope>(
+  const [scope, setScope] = useState<GridExportScope>(
     selectedCount > 0 ? 'selected' : 'visible',
   );
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -72,7 +78,7 @@ export function ListExportMenu({
     if (!open || disabled || exporting) return;
     // The portalled popover is initially hidden while its position is measured.
     const frame = requestAnimationFrame(() => {
-      const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]');
+      const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not(:disabled)');
       items?.[focusLastRef.current ? items.length - 1 : 0]?.focus();
       focusLastRef.current = false;
     });
@@ -97,18 +103,21 @@ export function ListExportMenu({
     ? t('listExport.disabledTooltip', 'No data to export')
     : t('listExport.menuLabel', 'Export list');
 
-  const visibleLabel = visibleCount != null
+  const visibleLabel = fullCount != null
+    ? t('table.grid.matchingExport', 'Matching ({{count}})', { count: visibleCount ?? 0 })
+    : visibleCount != null
     ? t('listExport.visibleWithCount', 'Visible ({{count}})', { count: visibleCount })
     : t('listExport.visible', 'Visible');
   const selectedLabel = t('listExport.selectedWithCount', 'Selected ({{count}})', {
     count: selectedCount,
   });
+  const matchingEmpty = fullCount != null && scope === 'visible' && visibleCount === 0;
 
   const runExport = useCallback((
     format: 'csv' | 'json',
     exportAction: (scope: ExportScope) => void | Promise<void>,
   ) => {
-    if (exporting) return;
+    if (exporting || matchingEmpty) return;
     close();
     setExporting(format);
     const handleError = (error: unknown) => {
@@ -120,7 +129,7 @@ export function ListExportMenu({
       );
     };
     try {
-      const pending = exportAction(scope);
+      const pending = scope === 'all' ? onExportAll?.(format) : exportAction(scope);
       if (pending) {
         void pending
           .catch(handleError)
@@ -132,7 +141,7 @@ export function ListExportMenu({
       handleError(error);
       setExporting(null);
     }
-  }, [close, exporting, scope, t, toast]);
+  }, [close, exporting, matchingEmpty, onExportAll, scope, t, toast]);
 
   const handleCsv = useCallback(() => {
     void runExport('csv', onExportCsv);
@@ -190,7 +199,7 @@ export function ListExportMenu({
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) close();
           }}
           onKeyDown={(event) => {
-            const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]'));
+            const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not(:disabled)'));
             const index = items.findIndex((item) => item === document.activeElement);
             let next: number;
             if (event.key === 'ArrowDown') next = (index + 1) % items.length;
@@ -202,7 +211,7 @@ export function ListExportMenu({
             items[next]?.focus();
           }}
         >
-          {selectedCount > 0 && (
+          {(selectedCount > 0 || (fullCount != null && onExportAll)) && (
             <fieldset
               className="mb-2 min-w-0 border-b border-[var(--border-subtle)] pb-2"
               role="group"
@@ -218,12 +227,17 @@ export function ListExportMenu({
                 label={visibleLabel}
                 testId={testId ? `${testId}-scope-visible` : undefined}
               />
-              <ScopeRadio
+              {selectedCount > 0 && <ScopeRadio
                 checked={scope === 'selected'}
                 onChange={() => setScope('selected')}
                 label={selectedLabel}
                 testId={testId ? `${testId}-scope-selected` : undefined}
-              />
+              />}
+              {fullCount != null && onExportAll && <ScopeRadio
+                checked={scope === 'all'}
+                onChange={() => setScope('all')}
+                label={t('table.grid.fullExport', 'Full catalog ({{count}})', { count: fullCount })}
+              />}
             </fieldset>
           )}
           <Button
@@ -233,6 +247,7 @@ export function ListExportMenu({
             variant="ghost"
             size="sm"
             onClick={handleCsv}
+            disabled={matchingEmpty}
             data-testid={testId ? `${testId}-csv` : undefined}
             className={cn(
               '!h-auto min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9',
@@ -250,6 +265,7 @@ export function ListExportMenu({
             variant="ghost"
             size="sm"
             onClick={handleJson}
+            disabled={matchingEmpty}
             data-testid={testId ? `${testId}-json` : undefined}
             className={cn(
               '!h-auto min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9',

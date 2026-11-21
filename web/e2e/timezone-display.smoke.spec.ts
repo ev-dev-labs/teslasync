@@ -9,6 +9,7 @@ import {
   waitForHarnessReady,
 } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { driveGridResponse } from './driveGridFixture';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires hermetic mock build');
 
@@ -57,7 +58,7 @@ async function installZone(page: Page, zone: string) {
     }),
   );
   await page.route('**/api/v1/drives?*', (route) =>
-    fulfillApiFixture(route, mocks, { json: [midnightDrive] }),
+    fulfillApiFixture(route, mocks, { json: driveGridResponse([midnightDrive], new URL(route.request().url()).searchParams) }),
   );
   await page.route('**/api/v1/vehicle-states/timeline?*', (route) =>
     fulfillApiFixture(route, mocks, { json: timelineTransitions }),

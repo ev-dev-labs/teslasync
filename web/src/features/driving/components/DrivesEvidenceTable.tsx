@@ -1,9 +1,10 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Eye } from 'lucide-react';
-import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
+import { ChevronRight, Route } from 'lucide-react';
+import { Badge, Button, DataTable, Input, Select, Text, type Column, type PaginationProps } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
+import type { DriveGridScope } from '@/api/hooks/useDriveGrid';
 import type { TableControls } from '@/components/forms';
 import {formatDateTime} from '@/lib/dateFormat'
 import {formatDurationMinutes} from '@/lib/dateConvert';
@@ -12,21 +13,24 @@ import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import { DriveGridMetric } from './DriveGridMetric';
+import { DriveEvidenceValueFilter } from './DriveEvidenceValueFilter';
 import { driveAverageSpeed, driveBattery } from './driveGridMetrics';
-import { DRIVE_VALUE_COLUMNS, driveColumnValue, driveStatusFlags, type DriveValueColumn, type DriveValueSelections } from './driveGridValues';
+import { DRIVE_REVIEW_STATUSES, DRIVE_VALUE_COLUMNS, driveReviewStatus, driveRouteLabel, driveStatusFlags, type DriveReviewStatus, type DriveValueColumn, type DriveValueSelections } from './driveGridValues';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-export const DRIVE_GRID_SORT_KEYS = ['date', 'route', 'start', 'destination', 'distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'insideTemp', 'efficiency', 'grade', 'battery', 'startBattery', 'batteryUsed', 'energy', 'regen', 'score', 'cost', 'fsd'] as const;
+export const DRIVE_GRID_SORT_KEYS = ['date', 'route', 'start', 'destination', 'distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'insideTemp', 'efficiency', 'grade', 'battery', 'startBattery', 'batteryUsed', 'energy', 'regen', 'score', 'cost', 'fsd', 'status'] as const;
 export type DriveGridSortKey = typeof DRIVE_GRID_SORT_KEYS[number];
-export type DriveGridFilterKey = 'start' | 'destination' | 'distance' | 'duration' | 'speed' | 'maxSpeed' | 'avgPower' | 'outsideTemp' | 'insideTemp' | 'grade' | 'battery' | 'startBattery' | 'batteryUsed' | 'energy' | 'regen' | 'score';
+export type DriveGridFilterKey = 'route' | 'date' | 'start' | 'destination' | 'distance' | 'duration' | 'speed' | 'maxSpeed' | 'avgPower' | 'outsideTemp' | 'insideTemp' | 'grade' | 'battery' | 'startBattery' | 'batteryUsed' | 'energy' | 'regen' | 'score';
 export type DriveGridFilters = Record<DriveGridFilterKey, string>;
 
 interface DrivesEvidenceTableProps {
   drives: Drive[];
-  availableDrives: Drive[];
+  gridScope: DriveGridScope;
+  rangeTotal?: number;
+  emptyContent?: ReactNode;
   valueSelections: DriveValueSelections;
   invalidValueSelection: boolean;
-  onValueSelectionChange: (column: DriveValueColumn, values: string[] | null) => void;
+  onValueSelectionChange: (column: DriveValueColumn, values: string[] | null, available: string[]) => void;
   onValueFilterClear: (column: DriveValueColumn) => void;
   selectedIds: Set<number>;
   onSelectionChange: (ids: Set<number>) => void;
@@ -34,14 +38,19 @@ interface DrivesEvidenceTableProps {
   sortBy: DriveGridSortKey;
   sortDir: 'asc' | 'desc';
   onSort: (key: DriveGridSortKey) => void;
-  search: string;
   collection: string;
+  collectionPills: ReadonlyArray<{ key: string; label: string; count?: number; disabled?: boolean }>;
   onCollectionChange: (value: string) => void;
   onDriveFilterClear: () => void;
   fsdFilter: string;
+  fsdPills: DrivesEvidenceTableProps['collectionPills'];
   onFsdFilterChange: (value: string) => void;
   filters: DriveGridFilters;
   onFilterChange: (key: DriveGridFilterKey, value: string) => void;
+  driveStatus: 'all' | DriveReviewStatus;
+  onDriveStatusChange: (value: string) => void;
+  vehicleName?: string;
+  vehicleId: number | null;
   toDistanceDisplay: (meters: number) => number;
   toSpeedDisplay: (metersPerSecond: number) => number;
   toEfficiencyDisplay: (whPerKm: number) => number;
@@ -59,18 +68,22 @@ interface DrivesEvidenceTableProps {
   fsdByDriveID: ReadonlyMap<number, DriveFsdInsight>;
   anomalyDriveIds: ReadonlySet<number>;
   toolbarActions?: ReactNode;
-  toolbarHeading?: ReactNode;
+  matchingActions?: ReactNode;
+  savedViews: { context: string; onRestore: (context: string) => void };
+  onClearAllFilters: () => void;
   controls?: TableControls;
   paginationControls?: PaginationProps;
 }
 
 export function DrivesEvidenceTable({
-  drives, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
+  drives, gridScope, rangeTotal, emptyContent, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   selectedIds, onSelectionChange, onPreview, sortBy, sortDir, onSort,
-  search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange,
+  collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange,
+  driveStatus, onDriveStatusChange, vehicleName, vehicleId,
   toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost,
   distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit,
-  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading, controls, paginationControls,
+  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions,
+  matchingActions, savedViews, onClearAllFilters, controls, paginationControls,
 }: DrivesEvidenceTableProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -80,11 +93,26 @@ export function DrivesEvidenceTable({
     highSpeed: t('drives.highSpeed', 'High speed'),
     highEnergyUse: t('drives.highEnergyUse', 'High energy use'),
   }), [t]);
+  const reviewLabels = useMemo(() => ({
+    recorded: t('drives.grid.recorded', 'Recorded'),
+    needsReview: t('drives.grid.needsReview', 'Needs review'),
+    inProgress: statusLabels.inProgress,
+  }), [t, statusLabels]);
   const driveWarnings = useCallback((drive: Drive) =>
     driveStatusFlags(drive, anomalyDriveIds.has(drive.id))
       .filter((flag) => flag !== 'inProgress').map((flag) => statusLabels[flag]),
   [anomalyDriveIds, statusLabels]);
-  const numberFilter = (key: Exclude<DriveGridFilterKey, 'grade' | 'start' | 'destination'>, label: string, unit: string) => (
+  const filterOptions = (pills: DrivesEvidenceTableProps['collectionPills']) =>
+    pills.map(({ key, label, count, disabled }) => ({
+      value: key,
+      label: count == null ? label : t('drives.grid.filterCount', '{{label}} ({{count}})', { label, count }),
+      disabled,
+    }));
+  const textFilter = (key: 'route' | 'date' | 'start' | 'destination', label: string, placeholder: string) => (
+    <Input size="sm" value={filters[key]} onChange={event => onFilterChange(key, event.target.value)}
+      aria-label={t('drives.grid.locationFilter', 'Filter {{location}}', { location: label })} placeholder={placeholder} />
+  );
+  const numberFilter = (key: Exclude<DriveGridFilterKey, 'grade' | 'route' | 'date' | 'start' | 'destination'>, label: string, unit: string) => (
     <Input
       size="sm"
       type="number"
@@ -99,49 +127,49 @@ export function DrivesEvidenceTable({
   );
   const columns = useMemo<Column<Drive>[]>(() => [
     {
+      key: 'route',
+      header: t('drives.grid.route', 'Route'),
+      sortable: true,
+      pinned: true,
+      required: true,
+      defaultWidth: 250,
+      minWidth: 150,
+      filterActive: filters.route !== '',
+      filter: textFilter('route', t('drives.grid.route', 'Route'), t('drives.grid.contains', 'Contains')),
+      render: (drive) => {
+        const route = driveRouteLabel(drive) ?? t('drives.grid.unknownRoute', 'Unknown route');
+        return <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-shape-sm bg-[var(--surface-2)] text-[var(--text-secondary)]">
+            <Route className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <Link className="block truncate font-semibold text-[var(--text-primary)] hover:underline focus-visible:underline"
+              title={route} aria-label={`${route} · ${formatDateTime(drive.startTs, { tz: timezone })}`} to={`/drives/${drive.id}`}>{route}</Link>
+            {drive.vehicleId === vehicleId && vehicleName && <Text size="xs" color="muted" className="block truncate">{vehicleName}</Text>}
+          </div>
+        </div>;
+      },
+    },
+    {
       key: 'date',
       header: t('drives.grid.dateTime', 'Date / time'),
       sortable: true,
-      defaultWidth: 210,
-      minWidth: 190,
-      render: (drive) => {
-        const warnings = driveWarnings(drive).join(' · ');
-        const date = formatDateTime(drive.startTs, { tz: timezone });
-        return (
-          <div className="flex min-w-0 items-center gap-2">
-            <Link
-              className="truncate font-medium text-[var(--text-primary)] hover:underline focus-visible:underline"
-              title={date}
-              to={`/drives/${drive.id}`}
-            >
-              {date}
-            </Link>
-            {drive.endTs == null && <Badge variant="success" size="sm" className="shrink-0">{t('drives.inProgress', 'In progress')}</Badge>}
-            {warnings && (
-              <span title={warnings} className="shrink-0 text-amber-700 dark:text-amber-300">
-                <AlertTriangle className="h-3.5 w-3.5" role="img" aria-label={warnings} />
-              </span>
-            )}
-          </div>
-        );
-      },
-      filterActive: search !== '' || collection !== 'all',
+      defaultWidth: 195,
+      minWidth: 160,
+      render: (drive) => formatDateTime(drive.startTs, { tz: timezone }),
+      quickFilter: textFilter('date', t('drives.grid.dateTime', 'Date / time'), t('drives.grid.dayOrTime', 'Day or time')),
+      filterActive: collection !== 'all' || filters.date !== '',
       onFilterClear: onDriveFilterClear,
       filter: (
         <div className="space-y-1.5">
+          {textFilter('date', t('drives.grid.dateTime', 'Date / time'), t('drives.grid.dayOrTime', 'Day or time'))}
           <Select
             size="sm"
             value={collection}
             onChange={(event) => onCollectionChange(event.target.value)}
             aria-label={t('drives.collections.aria', 'Filter drives by collection')}
             className="text-xs"
-            options={[
-              { value: 'all', label: t('drives.coll.allOption', 'All drives') },
-              { value: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies') },
-              { value: 'notable', label: t('drives.coll.notable', 'Notable') },
-              { value: 'commutes', label: t('drives.coll.commutes', 'Commutes') },
-              { value: 'tagged', label: t('drives.coll.tagged', 'Tagged'), disabled: true },
-            ]}
+            options={filterOptions(collectionPills)}
           />
         </div>
       ),
@@ -156,15 +184,7 @@ export function DrivesEvidenceTable({
         minWidth: 120,
         filterActive: filters[key] !== '',
         onFilterClear: () => onFilterChange(key, ''),
-        filter: (
-          <Input
-            size="sm"
-            value={filters[key]}
-            onChange={(event) => onFilterChange(key, event.target.value)}
-            aria-label={t('drives.grid.locationFilter', 'Filter {{location}}', { location: label })}
-            placeholder={t('drives.grid.contains', 'Contains')}
-          />
-        ),
+        filter: textFilter(key, label, t('drives.grid.contains', 'Contains')),
         render: (drive) => {
           const location = endpointLabel(key === 'start'
             ? { address: drive.startAddress, lat: drive.startLat, lon: drive.startLon }
@@ -177,18 +197,18 @@ export function DrivesEvidenceTable({
       key: 'distance',
       header: `${t('drives.distance', 'Distance')} (${distanceUnit})`,
       sortable: true,
-      defaultWidth: 145,
+      defaultWidth: 125,
       align: 'right',
       filterActive: filters.distance !== '',
       onFilterClear: () => onFilterChange('distance', ''),
       filter: numberFilter('distance', t('drives.distance', 'Distance'), distanceUnit),
-      render: (drive) => drive.distanceM > 0 ? fmtNumber(toDistanceDisplay(drive.distanceM)) : '—',
+      render: (drive) => drive.distanceM > 0 ? `${fmtNumber(toDistanceDisplay(drive.distanceM))} ${distanceUnit}` : '—',
     },
     {
       key: 'duration',
       header: t('drives.duration', 'Duration'),
       sortable: true,
-      defaultWidth: 135,
+      defaultWidth: 115,
       align: 'right',
       filterActive: filters.duration !== '',
       onFilterClear: () => onFilterChange('duration', ''),
@@ -333,7 +353,7 @@ export function DrivesEvidenceTable({
       key: 'energy',
       header: t('drives.grid.energy', 'Energy'),
       sortable: true,
-      defaultWidth: 155,
+      defaultWidth: 135,
       align: 'right',
       filterActive: filters.energy !== '',
       onFilterClear: () => onFilterChange('energy', ''),
@@ -367,14 +387,7 @@ export function DrivesEvidenceTable({
           aria-label={t('drives.fsdFilter.aria', 'Filter drives by FSD evidence')}
           disabled={!fsdAvailable}
           className="text-xs"
-          options={[
-            { value: 'all', label: t('drives.fsdFilter.all', 'All FSD data') },
-            { value: 'reported', label: t('drives.fsdFilter.reported', 'FSD') },
-            { value: 'high', label: t('drives.fsdFilter.high', 'High confidence') },
-            { value: 'estimated', label: t('drives.fsdFilter.estimated', 'Estimated') },
-            { value: 'ambiguous', label: t('drives.fsdFilter.ambiguous', 'Ambiguous') },
-            { value: 'unknown', label: t('drives.fsdFilter.unknown', 'Unknown') },
-          ]}
+          options={filterOptions(fsdPills)}
         />
       ),
       render: (drive) => {
@@ -444,17 +457,24 @@ export function DrivesEvidenceTable({
     {
       key: 'status',
       header: t('drives.grid.status', 'Status'),
-      defaultVisible: false,
-      defaultWidth: 250,
-      render: (drive) => [
-        drive.endTs == null ? t('drives.inProgress', 'In progress') : '',
-        ...driveWarnings(drive),
-      ].filter(Boolean).join(' · ') || '—',
+      sortable: true,
+      defaultWidth: 150,
+      filterActive: driveStatus !== 'all',
+      filter: <Select size="sm" value={driveStatus} onChange={event => onDriveStatusChange(event.target.value)}
+        aria-label={t('drives.grid.statusFilter', 'Filter drive status')}
+        options={[{ value: 'all', label: t('common.any', 'Any') },
+          ...DRIVE_REVIEW_STATUSES.map(value => ({ value, label: reviewLabels[value] }))]} />,
+      render: (drive) => {
+        const status = driveReviewStatus(drive, anomalyDriveIds.has(drive.id));
+        const warnings = driveWarnings(drive).join(' · ');
+        return <Badge variant={status === 'recorded' ? 'success' : status === 'needsReview' ? 'warning' : 'info'}
+          size="sm" title={warnings || undefined}>{reviewLabels[status]}{warnings && <span className="sr-only">: {warnings}</span>}</Badge>;
+      },
     },
     {
       key: 'actions',
       header: t('drives.grid.preview', 'Preview'),
-      defaultWidth: 80,
+      fixedWidth: 64,
       align: 'center',
       render: (drive) => (
         <Button
@@ -466,11 +486,11 @@ export function DrivesEvidenceTable({
           title={t('drives.quickView', 'Quick view drive')}
           onClick={() => onPreview(drive)}
         >
-          <Eye className="h-4 w-4" aria-hidden="true" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
       ),
     },
-  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt]);
+  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt, vehicleId, vehicleName, reviewLabels, driveStatus, onDriveStatusChange, anomalyDriveIds]);
 
   const valueColumns = useMemo<Column<Drive>[]>(() => {
     const label = (key: DriveValueColumn, value: string | number | null): string => {
@@ -506,39 +526,41 @@ export function DrivesEvidenceTable({
     };
     return columns.map((column) => {
       const key = DRIVE_VALUE_COLUMNS.find((item) => item === column.key);
-      if (!key) return column;
-      const options = buildTableFilterValues(availableDrives,
-        drive => driveColumnValue(drive, key, fsdByDriveID, anomalyDriveIds, fsdAvailable),
-        value => label(key, typeof value === 'boolean' ? String(value) : value));
+      if (!key || vehicleId == null) return column;
+      const valuesEnabled = key !== 'fsd' || fsdAvailable;
       const conditionLabel = key === 'date'
         ? t('table.filter.otherConditions', 'Other conditions')
-        : key === 'start' || key === 'destination'
+        : key === 'start' || key === 'destination' || key === 'route'
           ? t('table.filter.textCondition', 'Text condition')
-          : key === 'grade' || key === 'efficiency' || key === 'fsd'
+          : key === 'grade' || key === 'efficiency' || key === 'fsd' || key === 'status'
             ? t('table.filter.conditions', 'Conditions')
             : t('table.filter.numberCondition', 'Number condition');
-      const selection = valueSelections[key];
-      const selected = selectedTableValueKeys(selection, options.flatMap((option) => option.keys ?? [option.value]));
       return {
         ...column,
+        defaultVisible: ['route', 'date', 'distance', 'duration', 'energy', 'status'].includes(key),
+        quickFilter: column.quickFilter ?? column.filter,
         groupStart: key === 'startBattery' || key === 'energy' || key === 'fsd',
-        filterActive: Boolean(column.filterActive || valueSelections[key] != null || invalidValueSelection),
+        filterActive: Boolean(column.filterActive || valuesEnabled && valueSelections[key] != null || invalidValueSelection),
         onFilterClear: () => onValueFilterClear(key),
         filter: (
-          <DataTableValueFilter
-            options={options}
-            selected={selected}
-            onChange={(values) => onValueSelectionChange(key, values)}
+          <DriveEvidenceValueFilter
+            vehicleId={vehicleId}
+            scope={gridScope}
+            field={key}
+            selection={valueSelections[key]}
+            labelFor={value => label(key, value)}
+            onChange={(values, available) => onValueSelectionChange(key, values, available)}
             condition={column.filter}
             conditionActive={column.filterActive}
             conditionLabel={conditionLabel}
             invalid={invalidValueSelection}
+            valuesEnabled={valuesEnabled}
           />
         ),
       };
     });
-  }, [columns, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
-    fsdByDriveID, fsdAvailable, anomalyDriveIds, statusLabels, t, timezone, toDistanceDisplay, distanceUnit, toSpeedDisplay, speedUnit,
+  }, [columns, gridScope, vehicleId, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
+    fsdAvailable, statusLabels, t, timezone, toDistanceDisplay, distanceUnit, toSpeedDisplay, speedUnit,
     toPowerDisplay, powerUnit, toTemperatureDisplay, temperatureUnit, toEfficiencyDisplay, efficiencyUnit, formatEnergy, formatEnergyCost, fmtNumber, fmtInt]);
 
   return (
@@ -548,7 +570,10 @@ export function DrivesEvidenceTable({
         tableId="drives:evidence"
         caption={t('drives.driveEvidence', 'Drive evidence')}
         toolbarActions={toolbarActions}
-        toolbarHeading={toolbarHeading}
+        matchingActions={matchingActions}
+        onClearAllFilters={onClearAllFilters}
+        savedViews={savedViews}
+        showMatchingCount={paginationControls && rangeTotal != null ? { matching: paginationControls.total, rangeTotal } : false}
         controls={controls}
         paginationControls={paginationControls}
         columns={valueColumns}
@@ -571,7 +596,46 @@ export function DrivesEvidenceTable({
           const next = DRIVE_GRID_SORT_KEYS.find((item) => item === key);
           if (next) onSort(next);
         }}
+        mobilePresentation={{
+          cardMaxWidth: 780,
+          roles: { route: 'title', date: 'meta', distance: 'primary', duration: 'meta', energy: 'meta', status: 'badge' },
+          displayValue: (drive, key) => {
+            switch (key) {
+              case 'route': return driveRouteLabel(drive) ?? t('drives.grid.unknownRoute', 'Unknown route');
+              case 'date': return formatDateTime(drive.startTs, { tz: timezone });
+              case 'distance': return drive.distanceM > 0 ? `${fmtNumber(toDistanceDisplay(drive.distanceM))} ${distanceUnit}` : null;
+              case 'duration': return formatDurationMinutes(drive.durationS / 60);
+              case 'energy': return drive.energyUsedWh != null && drive.energyUsedWh > 0 ? formatEnergy(drive.energyUsedWh) : null;
+              case 'status': return reviewLabels[driveReviewStatus(drive, anomalyDriveIds.has(drive.id))];
+              default: return null;
+            }
+          },
+          badgeVariant: drive => {
+            const status = driveReviewStatus(drive, anomalyDriveIds.has(drive.id));
+            return status === 'recorded' ? 'success' : status === 'needsReview' ? 'warning' : 'info';
+          },
+          rowHref: drive => `/drives/${drive.id}`,
+          inlineActions: drive => {
+            const insight = fsdByDriveID.get(drive.id);
+            const fsdColumn = valueColumns.find(column => column.key === 'fsd');
+            return fsdAvailable && fsdColumn && insight && insight.confidence !== 'unknown' && insight.fsd_distance_m != null
+              ? <div className="flex items-center gap-1.5">
+                <Text size="xs" color="muted">{fsdColumn.header}</Text>
+                {fsdColumn.render(drive)}
+              </div>
+              : null;
+          },
+          onQuickView: onPreview,
+          quickViewLabel: t('drives.quickView', 'Quick view drive'),
+          showRowCount: false,
+          columnToolsInPicker: true,
+          compactRows: true,
+        }}
+        emptyContent={emptyContent}
         emptyMessage={invalidValueSelection
+          ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')
+          : t('drives.grid.empty', 'No drives match these filters')}
+        noMatchMessage={invalidValueSelection
           ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')
           : t('drives.grid.empty', 'No drives match these filters')}
         className="border-[var(--border-subtle)] shadow-none [&_tbody_td]:whitespace-nowrap"

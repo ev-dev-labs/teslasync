@@ -37,7 +37,7 @@ function mount(drives: Drive[] = activity, overrides: Partial<Props> = {}) {
     t: english.getFixedT('en'), isDrivesLoading: false, hasDrivePayload: true,
     drivesState: deriveDataState({ data: drives, isSuccess: true }, { provenance: 'historical' }),
     refetchDrives: vi.fn<Props['refetchDrives']>(), currentStats,
-    anomalyDrives: [completed],
+    anomalyCount: drives.some(drive => drive.id === completed.id) ? 1 : 0,
     missingEfficiencyCount: currentStats.count - currentStats.efficiencyMeasuredCount,
     narrative: {
       whatChanged: 'Two activities include an ongoing drive.',
@@ -129,7 +129,7 @@ describe('DrivesOperationalBrief count caption regression', () => {
 
   it('preserves measured empty count zero rather than unknown or unavailable', () => {
     mount([], {
-      anomalyDrives: [], distMi: 0, routeContextCount: 0, driveAttention: [],
+      anomalyCount: 0, distMi: 0, routeContextCount: 0, driveAttention: [],
       efficiencyMovementValue: 'No baseline', efficiencyMovementTone: 'neutral',
     });
     expect(value('drives')).toHaveTextContent(/^0$/);
@@ -145,7 +145,7 @@ describe('DrivesOperationalBrief count caption regression', () => {
 
   it('keeps formatted measured efficiency zero distinct from missing efficiency', () => {
     const { props } = mount([{ ...completed, energyUsedWh: 2 }], {
-      anomalyDrives: [], distMi: 10, driveAttention: [],
+      anomalyCount: 0, distMi: 10, driveAttention: [],
       efficiencyMovementValue: 'Stable', efficiencyMovementTone: 'neutral',
     });
     expect(props.currentStats.avgEfficiencyWhKm).toBe(0.2);
@@ -158,7 +158,7 @@ describe('DrivesOperationalBrief count caption regression', () => {
   });
 
   it('preserves mixed activity count two when energy evidence is unknown', () => {
-    const { props } = mount([{ ...completed, energyUsedWh: null }, ongoing], { anomalyDrives: [] });
+    const { props } = mount([{ ...completed, energyUsedWh: null }, ongoing], { anomalyCount: 0 });
     expect(props.currentStats.avgEfficiencyWhKm).toBeNull();
     expect(value('drives')).toHaveTextContent(/^2$/);
     expectGroup('Drives', 'Drives in the selected analysis window, including ongoing activity.');

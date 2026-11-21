@@ -1,0 +1,99 @@
+:where([data-grid-frame]) {
+  --grid-hover: color-mix(in srgb, var(--theme-accent) 6%, var(--surface-1));
+  --grid-selected: var(--control-bg);
+}
+
+[data-grid-toolbar] {
+  background-color: var(--surface-1);
+}
+
+[data-grid-heading] {
+  background: linear-gradient(110deg, color-mix(in srgb, var(--theme-accent) 5%, var(--surface-1)), var(--surface-1) 68%);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+
+[data-grid-inline-filter] {
+  font-weight: normal;
+}
+
+[data-grid-inline-filter] :is(input, select) {
+  font-size: inherit;
+}
+
+[data-grid-viewport] > table > thead > tr > th:where([aria-sort="ascending"], [aria-sort="descending"]) {
+  box-shadow: inset 0 2px var(--theme-accent);
+}
+
+[data-grid-viewport] > table > tbody > tr:where(:nth-child(even)) {
+  background-color: var(--surface-2);
+}
+
+[data-grid-viewport] > table > tbody > tr:where([data-row-group]) {
+  background-color: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+}
+
+[data-grid-viewport] > table > tbody > tr:where([data-selected]) {
+  background-color: var(--grid-selected);
+}
+
+[data-grid-viewport] > table > tbody > tr:where(:hover, :focus-within):not(:where([data-row-group], [data-selected])) {
+  background-color: var(--grid-hover);
+}
+
+[data-grid-viewport] > table > thead button[data-grid-sort-active] {
+  color: var(--text-primary);
+}
+
+:where([data-grid-frame][data-grid-pinned]) [data-grid-viewport] > table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+:where([data-grid-frame][data-grid-pinned]) [data-grid-viewport] > table > tbody > tr + tr > td {
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+[data-grid-frame][data-grid-pinned] :is(td, th):where([data-grid-selection], [data-grid-identity]) {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+}
+
+[data-grid-frame][data-grid-pinned] th:where([data-grid-selection], [data-grid-identity]) {
+  background-color: var(--app-grid-header, var(--surface-2));
+}
+
+[data-grid-frame][data-grid-pinned][data-grid-selectable] :is(td, th)[data-grid-identity] {
+  inset-inline-start: 3rem;
+}
+
+[data-grid-frame][data-grid-pinned] td:where([data-grid-selection], [data-grid-identity]) {
+  background-color: var(--surface-1);
+}
+
+[data-grid-frame][data-grid-pinned] tr:where(:nth-child(even)) > td:where([data-grid-selection], [data-grid-identity]) {
+  background-color: var(--surface-2);
+}
+
+[data-grid-frame][data-grid-pinned] tr:where(:hover, :focus-within) > td:where([data-grid-selection], [data-grid-identity]) {
+  background-color: var(--grid-hover);
+}
+
+[data-grid-frame][data-grid-pinned] tr:where([data-selected]) > td:where([data-grid-selection], [data-grid-identity]) {
+  background-color: var(--grid-selected);
+}
+
+[data-grid-frame][data-grid-pinned] :is(td, th)[data-grid-identity] {
+  border-inline-end: 1px solid var(--border-default);
+}
+
+@media (forced-colors: active) {
+  [data-grid-viewport] > table > thead > tr > th:where([aria-sort="ascending"], [aria-sort="descending"]) {
+    text-decoration: underline;
+  }
+
+  [data-grid-frame][data-grid-pinned] :is(td, th):where([data-grid-selection], [data-grid-identity]) {
+    background-color: Canvas;
+  }
+}

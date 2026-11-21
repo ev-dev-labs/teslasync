@@ -3,11 +3,11 @@ import { Text } from '@/components/ui';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
 type Props = Pick<DrivesListPageController,
-  't' | 'periodLabel' | 'collectionLabel' | 'hasDrivePayload'
-  | 'fmtCompact' | 'filteredDrives' | 'avgGrade'>;
+  't' | 'periodLabel' | 'collectionLabel'
+  | 'fmtCompact' | 'matchingTotal' | 'avgGrade'>;
 
 export function DrivesStickySummary({
-  t, periodLabel, collectionLabel, hasDrivePayload, fmtCompact, filteredDrives, avgGrade,
+  t, periodLabel, collectionLabel, fmtCompact, matchingTotal, avgGrade,
 }: Props) {
   return (
     <PageHeaderSticky
@@ -23,7 +23,7 @@ export function DrivesStickySummary({
       <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
       <Text as="span" size="xs" color="primary" weight="medium" className="min-w-0 break-words">{collectionLabel}</Text>
       <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
-      <Text as="span" size="xs" color="secondary">{hasDrivePayload ? fmtCompact(filteredDrives.length) : '—'} {t('drives.results', 'results')}</Text>
+      <Text as="span" size="xs" color="secondary">{matchingTotal != null ? fmtCompact(matchingTotal) : '—'} {t('drives.results', 'results')}</Text>
       {avgGrade.label !== '—' && (
         <>
           <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>

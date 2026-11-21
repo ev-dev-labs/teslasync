@@ -4,15 +4,15 @@ import { formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { useDrivesListPageData } from './useDrivesListPageData';
-import type { useDrivesListPageFilters } from './useDrivesListPageFilters';
+import type { useDrivesListRange } from './useDrivesListRange';
 
 type SummaryInput = ReturnType<typeof useDrivesListPageData>
-  & ReturnType<typeof useDrivesListPageFilters>;
+  & ReturnType<typeof useDrivesListRange>;
 
 export function useDrivesListPageSummary(input: SummaryInput) {
   const {
     startDate, endDate, t, priorRange, isAllTime, toDistanceDisplay, toEfficiencyDisplay,
-    costPerKwh, fmtNumber, currentStats, priorStats, dateFilteredDrives, anomalyDrives,
+    costPerKwh, fmtNumber, currentStats, priorStats, routeContextCount, anomalyCount,
   } = input;
 
   /* ---- Period labels for the comparison header ---- */
@@ -72,17 +72,6 @@ export function useDrivesListPageSummary(input: SummaryInput) {
   const priorTotalCost = costPerKwh != null && priorStats && priorStats.energyMeasuredCount > 0
     ? (priorStats.totalEnergyWh / 1_000) * costPerKwh
     : null;
-  const routeContextCount = dateFilteredDrives.filter((drive) => {
-    const hasStart = Boolean(
-      drive.startAddress
-      || (drive.startLat != null && drive.startLon != null),
-    );
-    const hasEnd = Boolean(
-      drive.endAddress
-      || (drive.endLat != null && drive.endLon != null),
-    );
-    return hasStart && hasEnd;
-  }).length;
   const missingEfficiencyCount = Math.max(
     0,
     currentStats.count - currentStats.efficiencyMeasuredCount,
@@ -119,15 +108,15 @@ export function useDrivesListPageSummary(input: SummaryInput) {
   }
 
   const driveAttention: OperationalAttention[] = [];
-  if (anomalyDrives.length > 0) {
+  if (anomalyCount > 0) {
     driveAttention.push({
       key: 'drive-anomalies',
-      title: anomalyDrives.length === 1
+      title: anomalyCount === 1
         ? t('operations.drives.anomalyTitle_one', '1 energy-intensity exception')
         : t(
             'operations.drives.anomalyTitle_other',
             '{{count}} energy-intensity exceptions',
-            { count: anomalyDrives.length },
+            { count: anomalyCount },
           ),
       description: t(
         'operations.drives.anomalyDescription',

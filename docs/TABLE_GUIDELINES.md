@@ -4,9 +4,14 @@
 Phase-40 / Prompt 25 extended it with optional column visibility, resizing,
 sticky header, row selection, bulk actions, and row expansion. All new props
 are opt-in except that persistent DataTables now default to shared column
-controls. The shared default
-presentation is a theme-neutral frame, wrapping toolbar, restrained headers,
-alternating rows, and selected-row marker. Caller-supplied `className` styling
+controls. There is one shared design: an optional collection heading, a
+wrapping query row, a matching scope when known, and a contained grid with its
+footer outside the scroll viewport. On wider grids, supported filters are
+editable below column headings and sortable columns are also reachable from
+the query row. Narrow grids use the same query/selection state and the compact
+filter and sort picker; mapped tables use the shared record cards. The frame
+inherits the active app design pack, display mode, accent, typography, and
+density. Caller-supplied `className` styling
 remains on the scroll viewport; use it for intentional specialized layouts,
 not copies of generic descendant chrome.
 
@@ -65,8 +70,9 @@ props; semantic Table matrices never acquire interactive column controls.
 Mobile allow-lists, default hidden columns, and persisted layouts are unchanged.
 Column menus now announce "Reorder or hide columns" when both controls are
 enabled; tests and help text must account for that intentional default change.
-Sortable buttons require both `Column.sortable` and a caller-owned `onSort`;
-the shared component does not invent local or server sorting.
+Sortable buttons use `Column.sortable` and a caller-owned `onSort`, or a
+`Column.sortValue` accessor for a fully loaded collection. Never use the
+accessor as a substitute for server sorting.
 
 When `tableId` is set, relevant controls persist their preferences:
 
@@ -74,6 +80,12 @@ When `tableId` is set, relevant controls persist their preferences:
 - `teslasync.table.${tableId}.visible` — legacy visible-key array, retained for compatibility
 - `teslasync.table.${tableId}.widths`  — JSON map of `{ [key]: pxWidth }`
 - `teslasync.table.${tableId}.page-size` — validated client page size
+- `teslasync.table.${tableId}.views` — explicitly saved, browser-local views
+
+Saved views restore supported search, sort, value filters, and column layout.
+They do not capture rows, selection, or server mutations. Set `savedViews`
+explicitly when adapting caller-owned query preferences; use `savedViews={false}`
+when search terms or filter values should not be written to browser storage.
 
 Choose a stable `tableId` once and never rename it (renames orphan the
 user's preferences). New IDs should be scoped, e.g. `drives:evidence` or
@@ -92,6 +104,10 @@ The callback owns serialization and downloads; rejected promises use the
 existing export-menu error surface. Without this callback, `exportRow` and
 `Column.exportValue` retain the default visible-column projection.
 Explicit `controls.exports` still takes precedence and owns its own scope.
+For a fully loaded catalog, `includeFullExport` offers matching, selected, and
+full catalog scopes. Use `exportColumns="all"` only if every supplied column
+is safe to export even when hidden. Use explicit, read-only `comparison`
+accessors for any selectable table that supports comparing two or three rows.
 
 Every `Column<T>` accepts these optional fields in addition to the original
 `{ key, header, render, sortable, className }`:
@@ -103,11 +119,13 @@ Every `Column<T>` accepts these optional fields in addition to the original
 | `defaultWidth`    | Initial width in px (or `'auto'`). User drags persist over this.                         |
 | `minWidth` / `maxWidth` | Clamp values used by the resize handle.                                            |
 | `align`           | `'left'` (default) / `'center'` / `'right'`. Right-align numeric columns.                |
-| `filter`          | Shared controls displayed in a popover opened by the column header's filter icon. |
+| `filter`          | Caller-owned filter. On wide grids it is available below the heading; use `quickFilter` to split a direct editor from the advanced popover. |
+| `quickFilter`     | Optional direct editor that updates the same filter state as the advanced control. |
 | `filterActive` / `onFilterClear` | Indicate an applied filter and supply its Clear action. |
 | `filterValue` | Canonical `string \| number \| boolean \| null` accessor for opt-in local value filtering. Use raw SI readings, not formatted display units. |
 | `filterValueLabel` | Optional `(value, row) => string` display formatter, applied only to the checkbox label. |
 | `groupStart` | Subtle divider before a column group, in both its header and cells, including after reordering. |
+| `pinned` | Keeps the identity column first and beside row selection during horizontal scrolling. |
 
 ## Shared loaded-row value filters
 
@@ -116,7 +134,9 @@ default is `false`. Columns with `filterValue` receive a searchable
 `DataTableValueFilter` inside their header popover. Other columns retain existing
 `filter` behavior. A column with both forms keeps its legacy conditions inside
 an Accordion. Clear removes the local value choice and calls `onFilterClear`
-for the caller-owned condition.
+for the caller-owned condition. The shared **Filter & sort** picker exposes
+the same values for hidden columns and mobile cards; clear an applied local
+filter directly from its chip.
 
 `filterData` optionally supplies the full **loaded** candidate collection,
 independent of caller-owned search/conditions in `data`. Counts are occurrences
@@ -136,6 +156,8 @@ The same preservation applies when search or replacing-page data limits the
 current collection: select-all adds only its matching keys, and deselect-all
 removes only those keys. Neither operation clears selections owned by other
 pages. Explicit Clear selection still clears the complete selection.
+Use `pruneSelectionOnFilter` for permission or other bulk-edit workflows that
+must discard no-longer-matching rows. Collapsing a group does not filter it.
 
 The opt-in `mobilePresentation` uses that same DataTable pipeline. Its reveal
 limit is independent of desktop pagination; revealing more mobile records must
