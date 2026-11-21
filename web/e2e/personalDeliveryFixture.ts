@@ -5,9 +5,10 @@ export async function installSyntheticSubscription(page: Page, name: string) {
     if (!('PushManager' in window)) return
     const endpoint = `https://push.example.invalid/device-${device}`
     const key = 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM'
+    const auth = btoa(String.fromCharCode(...new Uint8Array(16))).replace(/=+$/, '')
     const makeSubscription = () => ({
       endpoint,
-      toJSON: () => ({ endpoint, keys: { p256dh: key, auth: 'tBHItJI5svbpez7KI4CCXg' } }),
+      toJSON: () => ({ endpoint, keys: { p256dh: key, auth } }),
       unsubscribe: async () => { sessionStorage.removeItem('synthetic-personal-push'); return true },
     })
     Object.defineProperty(PushManager.prototype, 'getSubscription', {

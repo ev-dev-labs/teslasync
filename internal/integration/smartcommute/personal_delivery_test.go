@@ -2,6 +2,7 @@ package smartcommute_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -298,7 +299,8 @@ func enrollCommuteBrowser(t *testing.T, f *fixture, sender *capturedPush, subjec
 	const root = "/api/v1/smart-delivery/devices"
 	enrollment := f.request(t, http.MethodPost, root, subject, map[string]any{
 		"subscription": delivery.Subscription{
-			Endpoint: "https://push.example.invalid/" + name, P256DH: sender.PublicKey(), Auth: "tBHItJI5svbpez7KI4CCXg",
+			Endpoint: "https://push.example.invalid/" + name, P256DH: sender.PublicKey(),
+			Auth: base64.RawURLEncoding.EncodeToString(make([]byte, 16)),
 		},
 		"texts": delivery.Texts{
 			VerificationTitle: "TeslaSync", VerificationBody: "This browser is ready.",
