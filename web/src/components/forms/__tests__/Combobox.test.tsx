@@ -372,6 +372,28 @@ describe('Combobox', () => {
     expect(screen.getByText('Pineapple')).toBeInTheDocument();
   });
 
+  it('async options: recovers when the loader throws before returning a promise', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadOptions = vi.fn<(query: string, signal: AbortSignal) => Promise<Item[]>>()
+        .mockImplementationOnce(() => { throw new Error('Options unavailable'); })
+        .mockResolvedValue([{ id: 'mango', name: 'Mango' }]);
+      render(<Harness asyncOptions={loadOptions} />);
+      const input = screen.getByRole('combobox', { name: /fruit/i });
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'm' } });
+      await act(async () => { vi.advanceTimersByTime(250); });
+      expect(screen.queryByRole('status', { name: /loading/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'No results' })).toHaveAttribute('aria-disabled', 'true');
+
+      fireEvent.change(input, { target: { value: 'ma' } });
+      await act(async () => { vi.advanceTimersByTime(250); });
+      expect(screen.getByRole('option', { name: 'Mango' })).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('clear button resets the value and input text', () => {
     const onChange = vi.fn();
     render(<Harness initial={ITEMS[0]} onChange={onChange} />);
