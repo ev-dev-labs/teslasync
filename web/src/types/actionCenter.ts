@@ -126,6 +126,10 @@ export interface ActionCenterEvidence {
   recall_watch_match?: RecallCampaignMatch;
   climate_schedule?: ClimateScheduleEvidence;
   automation_failure?: { name: string; failure_count: number };
+  upstream_incident?: {
+    feed: 'here_import' | 'here_routes' | 'here_flow';
+    transition: 'outage' | 'recovery';
+  };
 }
 
 export interface ActionCenterProjectedImpact {

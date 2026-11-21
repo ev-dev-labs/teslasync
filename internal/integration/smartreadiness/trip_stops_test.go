@@ -15,8 +15,10 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	readiness "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
+	commute "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 type controlledStopRouter struct {
@@ -211,6 +213,33 @@ func TestTripStopComparisonRequiresCurrentPrivateConsentAndQualifiedHistory(t *t
 		result.Stops[0].ExpectedWaitS != 60 || result.Stops[0].DetourM != 8000 || result.Stops[0].StationArrivalWh != 13750 ||
 		result.Stops[0].WaitSampleCount != 8 || result.Stops[0].ChargeSampleCount != 3 || provider.calls.Load() != 3 {
 		t.Fatalf("saved comparison missing qualified evidence: %+v (%d calls)", result, provider.calls.Load())
+	}
+	health := dbobs.NewEstimateHealth(db, "")
+	for _, feed := range []commute.EstimateFeed{commute.HEREFlow, commute.HERERoutes} {
+		attempt, err := health.BeginEstimate(t.Context(), feed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := health.FinishEstimate(t.Context(), feed, attempt, false); err != nil {
+			t.Fatal(err)
+		}
+		if data := read(path, "owner"); (data.Result != nil) != (feed == commute.HEREFlow) || provider.calls.Load() != 3 {
+			t.Fatalf("outage for %s did not only suppress dependent estimates: %+v (%d calls)", feed, data, provider.calls.Load())
+		}
+	}
+	if _, err := db.Pool.Exec(t.Context(), `
+		UPDATE here_estimate_health SET next_probe_at = CLOCK_TIMESTAMP() WHERE feed = 'here_routes'`); err != nil {
+		t.Fatal(err)
+	}
+	probe, err := health.BeginEstimate(t.Context(), commute.HERERoutes)
+	if err != nil || !probe.Recovery {
+		t.Fatalf("expected a fresh road recovery attempt: %+v, %v", probe, err)
+	}
+	if err := health.FinishEstimate(t.Context(), commute.HERERoutes, probe, true); err != nil {
+		t.Fatal(err)
+	}
+	if data := read(path, "owner"); data.Result != nil || provider.calls.Load() != 3 {
+		t.Fatalf("recovery resurrected the stale road estimate: %+v (%d calls)", data, provider.calls.Load())
 	}
 	request(http.MethodPost, path, "owner", nil, http.StatusConflict)
 	request(http.MethodPut, path, "owner", body, http.StatusNoContent)

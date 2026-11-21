@@ -1227,6 +1227,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader)
 	smartChargingRepo := smartreadinessdb.NewRepository(db)
 	operators := tsauth.NewOperatorAccess(cfg.Auth.ForwardAuthHeader, cfg.Auth.OperatorSubjects)
+	incidentRecipient := operators.IncidentRecipient(cfg.Auth.IncidentSubject)
 	sharedChargerHandler := smartreadinesshandler.NewSharedChargerHandler(
 		smartreadinesssvc.NewSharedChargerService(smartChargingRepo, func(ctx context.Context, subject string) (bool, error) {
 			return operators.Allows(ctx, subject), nil
@@ -1255,7 +1256,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	smartChargingService := smartreadinesssvc.New(smartChargingRepo, liveSignalStore, smartSites, smartChargingOptions...)
 	var stopRouter smartreadinesssvc.StopRouter
 	if cfg.SmartCommute.HasLicensedTraffic() {
-		if here, err := heretraffic.New(cfg.SmartCommute.HEREAPIKey); err == nil {
+		if here, err := heretraffic.New(cfg.SmartCommute.HEREAPIKey,
+			heretraffic.WithEstimateHealth(dbobs.NewEstimateHealth(db, incidentRecipient))); err == nil {
 			stopRouter = here
 		}
 	}
@@ -1341,6 +1343,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartreadinesshandler.WithOvernightDrain(overnightDrain),
 		smartreadinesshandler.WithCapacityTrend(capacityDigest))
 	smartDeliveryHandler := smartdeliveryhandler.NewHandler(smartDeliveryService, cfg.Auth.ForwardAuthHeader)
+	actionCenterSources := actioncenterdb.NewSourceRepository(db)
 	actionCenterOptions := []actioncentersvc.Option{
 		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
 		actioncentersvc.WithSmartCommute(smartCommuteService),
@@ -1353,6 +1356,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		actioncentersvc.WithRecallWatch(recallWatch),
 		actioncentersvc.WithServiceCases(serviceCases, metrics.RecordServiceCaseEvent),
 		actioncentersvc.WithClimateScheduleReviews(climateScheduleReviews),
+		actioncentersvc.WithOperatorIncidentNotices(actionCenterSources, incidentRecipient),
 	}
 	if operators.Enabled() {
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithAutomationFailureGroups(
@@ -1365,7 +1369,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 	actionCenterService := actioncentersvc.New(
-		actioncenterdb.NewSourceRepository(db),
+		actionCenterSources,
 		actioncenterdb.NewStateRepository(db),
 		actionCenterOptions...,
 	)

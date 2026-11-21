@@ -124,17 +124,25 @@ test('private notification browser gate uses real handlers and a disposable data
   assert.equal(job.needs, 'browser-build');
   assert.ok(job.services.postgres);
   assert.ok(job.steps.some(step => step.with?.name === 'e2e-app' && step.with?.path === 'web/dist'));
-  const run = job.steps.find(step => step.run?.includes('TestPrivate(Commute|CommuteTraffic|Charging|PersonalDelivery)BrowserJourney'));
+  const run = job.steps.find(step => step.env?.TESLASYNC_SMART_COMMUTE_BROWSER);
   assert.ok(run);
   assert.equal(run.env.TESLASYNC_SMART_COMMUTE_BROWSER, '1');
   assert.equal(run.env.TESLASYNC_SMART_CHARGING_BROWSER, '1');
+  assert.equal(run.env.TESLASYNC_SMART_INCIDENT_BROWSER, '1');
   assert.match(run.env.TESLASYNC_SMART_COMMUTE_TEST_DSN, /127\.0\.0\.1:5432\/teslasync_smart_test/);
   assert.match(run.run, /^xvfb-run -a go test -race/);
   assert.match(run.run, /\.\/internal\/integration\/smartreadiness/);
+  const selector = new RegExp(run.run.match(/-run '([^']+)'/)[1]);
+  for (const name of ['PrivateCommute', 'PrivateCommuteTraffic', 'PrivateCharging', 'PrivatePersonalDelivery', 'HEREIncident']) {
+    assert.ok(selector.test(`Test${name}BrowserJourney`), `browser gate must run ${name}`);
+  }
   const paths = browser.on.push.paths;
   for (const path of [
     'internal/adapter/heretraffic/**',
+    'internal/api/status/**',
     'internal/app/smartdeliverysvc/**',
+    'internal/database/actioncenter/**',
+    'internal/database/observability/**',
     'internal/database/smartdelivery/**',
     'internal/handler/v1/smartdelivery/**',
     'internal/domain/smartcommute/**',
@@ -151,6 +159,7 @@ test('private notification browser gate uses real handlers and a disposable data
     'migrations/000272_smart_commute_route_energy.*.sql',
     'migrations/000273_type_commute_route_energy_evidence.*.sql',
     'migrations/000274_smart_public_charging_fee_terms.*.sql',
+    'migrations/000318_here_estimate_health.*.sql',
   ]) assert.ok(paths.includes(path), `private delivery changes must trigger the browser gate: ${path}`);
 });
 

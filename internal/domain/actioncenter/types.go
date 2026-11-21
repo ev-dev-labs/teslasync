@@ -222,6 +222,11 @@ type CommuteTrafficEvidence struct {
 	RouteEnergyOnly   bool                                `json:"route_energy_only,omitempty"`
 }
 
+type UpstreamIncidentEvidence struct {
+	Feed       string `json:"feed"`
+	Transition string `json:"transition"`
+}
+
 type EvidenceItem struct {
 	ID                string                                    `json:"id"`
 	Kind              string                                    `json:"kind"`
@@ -241,6 +246,7 @@ type EvidenceItem struct {
 	RecallWatchMatch  *smartreadiness.RecallCampaignMatch       `json:"recall_watch_match,omitempty"`
 	ClimateSchedule   *smartreadiness.ClimateScheduleEvidence   `json:"climate_schedule,omitempty"`
 	AutomationFailure *AutomationFailureEvidence                `json:"automation_failure,omitempty"`
+	UpstreamIncident  *UpstreamIncidentEvidence                 `json:"upstream_incident,omitempty"`
 }
 
 type ImpactRiskLevel string

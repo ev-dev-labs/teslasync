@@ -48,6 +48,29 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const scheduledClimate = recommendation.evidence.find(item => item.climate_schedule)?.climate_schedule;
   const backup = recommendation.evidence.find(item => item.kind === 'backup_charging')?.backup_charging;
   const failure = recommendation.evidence.find(item => item.kind === 'automation_failure')?.automation_failure;
+  const incident = recommendation.evidence.find(item => item.upstream_incident)?.upstream_incident;
+  if (recommendation.source_feature === 'system_health' && incident) {
+    const feed = incident.feed === 'here_import'
+      ? t('actionCenter.estimateIncident.import', 'HERE route import')
+      : incident.feed === 'here_routes'
+        ? t('actionCenter.estimateIncident.routing', 'HERE road routing')
+        : t('actionCenter.estimateIncident.flow', 'HERE traffic flow');
+    const recovered = incident.transition === 'recovery';
+    const basis = t('actionCenter.estimateIncident.basis', 'A direct provider response verified this change in availability.');
+    const summary = recovered
+      ? t('actionCenter.estimateIncident.resumed', 'A fresh, usable response from {{feed}} verified recovery. Predictions using this feed can resume.', { feed })
+      : t('actionCenter.estimateIncident.paused', '{{feed}} reported that it was unavailable. Predictions using this feed pause until a fresh, usable response is verified.', { feed });
+    return {
+      ...recommendation,
+      title: recovered
+        ? t('actionCenter.estimateIncident.recoveryTitle', 'Estimates resumed: {{feed}}', { feed })
+        : t('actionCenter.estimateIncident.outageTitle', 'Estimates paused: {{feed}}', { feed }),
+      summary, rationale: basis,
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.upstream_incident ? { ...item, summary } : item),
+      limitations: [t('actionCenter.estimateIncident.limit', 'This notice does not indicate a vehicle fault or start a vehicle command.')],
+    };
+  }
   if (recommendation.source_feature === 'automation_failure' && failure) {
     const basis = t('actionCenter.automationFailure.basis', 'Counts separate completed runs with a failed or partial outcome, not retries within one run.');
     return {

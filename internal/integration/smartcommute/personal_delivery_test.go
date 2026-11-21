@@ -17,12 +17,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
+	observabilitydb "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	commutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	delivery "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
+	commuteport "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 	deliveryport "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/go-chi/chi/v5"
 )
@@ -118,12 +120,21 @@ func attachCommuteDelivery(t *testing.T, f *fixture, live *trafficLiveFixture, s
 
 func TestCommutePushClaimsAndSuppression(t *testing.T) {
 	tests := []string{"accepted", "opt_out", "revoked", "stale", "moving", "reparked", "departed_during_dispatch",
-		"expired", "replaced_device", "quiet", "unknown", "charging_cooldown"}
+		"expired", "replaced_device", "quiet", "unknown", "charging_cooldown", "outage_before_dispatch", "outage_after_reservation"}
 	for _, scenario := range tests {
 		t.Run(scenario, func(t *testing.T) {
 			testCommuteDelivery(t, scenario)
 		})
 	}
+}
+
+func interruptHEREFlow(ctx context.Context, f *fixture) error {
+	health := observabilitydb.NewEstimateHealth(f.db, "")
+	attempt, err := health.BeginEstimate(ctx, commuteport.HEREFlow)
+	if err != nil {
+		return err
+	}
+	return health.FinishEstimate(ctx, commuteport.HEREFlow, attempt, false)
 }
 
 func testCommuteDelivery(t *testing.T, scenario string) {
@@ -148,13 +159,27 @@ func testCommuteDelivery(t *testing.T, scenario string) {
 	f = newFixture(t, smartcommutesvc.WithTrafficLiveReader(live),
 		smartcommutesvc.WithTrafficEvaluator(source, func(context.Context, string, time.Time) (bool, error) { return false, nil }, nil),
 		smartcommutesvc.WithTrafficNotifier(func(ctx context.Context, subject string, consentID, routineID int64, departure time.Time) error {
-			if scenario == "departed_during_dispatch" {
-				f.now = f.now.Add(90 * time.Second)
-				live.now = f.now
+			if scenario == "outage_before_dispatch" {
+				if err := interruptHEREFlow(ctx, f); err != nil {
+					return err
+				}
+			}
+			if scenario == "departed_during_dispatch" || scenario == "outage_after_reservation" {
+				if scenario == "departed_during_dispatch" {
+					f.now = f.now.Add(90 * time.Second)
+					live.now = f.now
+				}
 				reads := 0
-				live.beforeRead = func(context.Context) error {
+				live.beforeRead = func(ctx context.Context) error {
 					reads++
 					if reads == 2 {
+						if scenario == "outage_after_reservation" {
+							var status string
+							if err := f.db.Pool.QueryRow(ctx, `SELECT status FROM smart_push_commute_deliveries`).Scan(&status); err != nil || status != "dispatching" {
+								t.Fatalf("interruption must happen after reservation, got %q: %v", status, err)
+							}
+							return interruptHEREFlow(ctx, f)
+						}
 						recordTrafficDeparture(t, f)
 					}
 					return nil
@@ -208,14 +233,25 @@ func testCommuteDelivery(t *testing.T, scenario string) {
 		}
 	}
 	count, payload := sender.latest()
-	if scenario == "opt_out" || scenario == "quiet" || scenario == "charging_cooldown" || scenario == "departed_during_dispatch" {
+	if scenario == "opt_out" || scenario == "quiet" || scenario == "charging_cooldown" ||
+		scenario == "departed_during_dispatch" || scenario == "outage_before_dispatch" || scenario == "outage_after_reservation" {
 		if count != baseline {
 			t.Fatal("a suppressed commute arrived at the push transport")
 		}
-		if scenario == "departed_during_dispatch" {
+		if scenario == "departed_during_dispatch" || scenario == "outage_after_reservation" {
 			var state string
 			if err := f.db.Pool.QueryRow(ctx, `SELECT status FROM smart_push_commute_deliveries`).Scan(&state); err != nil || state != "failed" {
-				t.Fatalf("departure after reservation did not abort the pending push: %q, %v", state, err)
+				t.Fatalf("ineligibility after reservation did not abort the pending push: %q, %v", state, err)
+			}
+		}
+		if scenario == "outage_before_dispatch" || scenario == "outage_after_reservation" {
+			var active bool
+			if err := f.db.Pool.QueryRow(ctx, `SELECT incident_id IS NOT NULL FROM here_estimate_health WHERE feed = 'here_flow'`).Scan(&active); err != nil || !active {
+				t.Fatalf("the delivery was not tested during a persisted outage: %t, %v", active, err)
+			}
+			rows, err := f.commute.ListTrafficDecisions(ctx, subject, nil, f.now, 10)
+			if err != nil || len(rows) != 0 {
+				t.Fatalf("previous decision remained visible during outage: %v, %v", rows, err)
 			}
 		}
 		return

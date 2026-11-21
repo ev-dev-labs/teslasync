@@ -120,6 +120,7 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 		"000273_type_commute_route_energy_evidence.up.sql",
 		"000305_smart_commute_navigation_attempts.up.sql",
 		"000306_smart_commute_comparison_evidence.up.sql",
+		"000318_here_estimate_health.up.sql",
 	} {
 		content, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", file))
 		if err != nil {

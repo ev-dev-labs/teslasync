@@ -440,7 +440,7 @@ var smartCommuteTrafficEvaluations = promauto.NewCounterVec(prometheus.CounterOp
 
 func RecordSmartCommuteTraffic(reason string) {
 	switch reason {
-	case "eligible", "duplicate_or_skipped", "expired_or_revoked", "quiet_hours", "not_at_origin", "provider_unqualified", "not_material_or_stale":
+	case "eligible", "duplicate_or_skipped", "expired_or_revoked", "quiet_hours", "not_at_origin", "provider_unqualified", "upstream_paused", "not_material_or_stale":
 		smartCommuteTrafficEvaluations.WithLabelValues(reason).Inc()
 	}
 }

@@ -46,7 +46,7 @@ type CommuteLease interface {
 	Candidate() domain.CommuteDelivery
 	Ciphertext() string
 	Reserve(context.Context, []byte, time.Time) (bool, error)
-	Departed(context.Context, time.Time) (bool, error)
+	DispatchEligible(context.Context, time.Time) (bool, error)
 	Finish(context.Context, []byte, domain.DeliveryStatus) error
 	Close(context.Context) error
 }

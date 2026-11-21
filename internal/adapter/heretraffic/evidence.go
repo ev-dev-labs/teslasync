@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 const (
@@ -182,11 +184,22 @@ type flowResponse struct {
 				Segments []flowSegment `json:"segments"`
 			} `json:"segmentRef"`
 		} `json:"location"`
-		CurrentFlow struct {
-			flowQuality
-			SubSegments []flowQuality `json:"subSegments"`
-		} `json:"currentFlow"`
+		CurrentFlow flowReading `json:"currentFlow"`
 	} `json:"results"`
+}
+
+type flowReading struct {
+	flowQuality
+	SubSegments []flowQuality `json:"subSegments"`
+}
+
+func (flow flowReading) evidence() (live, closed bool) {
+	live, closed = flow.usable(), flow.closed()
+	for _, sub := range flow.SubSegments {
+		live = live && sub.usable()
+		closed = closed || sub.closed()
+	}
+	return live, closed
 }
 
 type flowQuality struct {
@@ -222,7 +235,11 @@ func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Contex
 		request := flowRequest{LocationReferencing: []string{"segmentRef"}}
 		request.In.Type, request.In.Segments = "segmentRef", refs
 		var response flowResponse
-		if err := c.call(ctx, authorize, http.MethodPost, c.trafficURL+"/flow", nil, request, &response); err != nil {
+		if err := c.call(ctx, authorize, http.MethodPost, c.trafficURL+"/flow", nil, request, &response,
+			port.HEREFlow, func(attempt port.EstimateAttempt) bool {
+				return response.SourceUpdated.After(attempt.OutageAt) &&
+					freshRequestedFlow(response, refs, c.now().UTC())
+			}); err != nil {
 			return time.Time{}, nil, err
 		}
 		now := c.now().UTC()
@@ -233,11 +250,7 @@ func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Contex
 			observedAt = response.SourceUpdated.UTC()
 		}
 		for _, result := range response.Results {
-			isLive, isClosed := result.CurrentFlow.usable(), result.CurrentFlow.closed()
-			for _, sub := range result.CurrentFlow.SubSegments {
-				isLive = isLive && sub.usable()
-				isClosed = isClosed || sub.closed()
-			}
+			isLive, isClosed := result.CurrentFlow.evidence()
 			for _, raw := range result.Location.SegmentRef.Segments {
 				ref := parseSegmentRef(raw.Ref, response.Replacements)
 				if ref.key == "" {
@@ -259,6 +272,32 @@ func (c *Client) liveCoverage(ctx context.Context, authorize func(context.Contex
 		covered[i] = routeCovers(route, live, closed)
 	}
 	return observedAt, covered, nil
+}
+
+func freshRequestedFlow(response flowResponse, refs []flowSegment, now time.Time) bool {
+	if response.SourceUpdated.After(now) || !response.SourceUpdated.After(now.Add(-flowFreshness)) {
+		return false
+	}
+	requested := make(map[string][]segmentRef, len(refs))
+	for _, ref := range refs {
+		if parsed := parseSegmentRef(ref.Ref, nil); parsed.key != "" {
+			requested[parsed.key] = append(requested[parsed.key], parsed)
+		}
+	}
+	for _, result := range response.Results {
+		if live, _ := result.CurrentFlow.evidence(); !live {
+			continue
+		}
+		for _, raw := range result.Location.SegmentRef.Segments {
+			ref := parseSegmentRef(raw.Ref, response.Replacements)
+			for _, want := range requested[ref.key] {
+				if ref.from <= want.from && ref.to >= want.to {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func routeCovers(route routeEstimate, live, closed map[string][]segmentRef) bool {

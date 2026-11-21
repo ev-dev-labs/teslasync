@@ -288,6 +288,7 @@ func (r *Repository) ReadStopComparison(
 		JOIN smart_trip_stop_results res ON res.scope_id = s.id
 		JOIN geofences g ON g.id = res.place_id
 		`+stopScopeWhere+` AND s.id = $5 AND s.result_expires_at > $4
+		  AND here_estimates_usable(s.last_compared_at, 'here_routes')
 		ORDER BY res.rank`, key.PlanID, key.Subject, key.VehicleID, now, scopeID)
 	if err != nil {
 		return nil, fmt.Errorf("read saved trip stop comparison: %w", err)
@@ -316,6 +317,7 @@ func (r *Repository) SaveStopComparison(
 		tag, err := tx.Exec(ctx, `UPDATE smart_trip_stop_scopes target
 			SET last_compared_at = $4, result_expires_at = $6
 			WHERE target.id = $5 AND target.last_compared_at IS NULL
+			AND here_estimates_usable($4::timestamptz, 'here_routes')
 			AND EXISTS (SELECT 1 FROM smart_trip_stop_check_limits lim WHERE lim.plan_id = target.plan_id AND lim.next_check_at > $4)
 			AND EXISTS (SELECT 1 `+stopScopeFrom+stopScopeWhere+` AND s.id = target.id)`,
 			key.PlanID, key.Subject, key.VehicleID, result.ComparedAt, scopeID, result.ExpiresAt)

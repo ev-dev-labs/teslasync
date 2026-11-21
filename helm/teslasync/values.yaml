@@ -962,6 +962,9 @@ config:
   # -- Comma-separated exact ForwardAuth subjects eligible for Smart Notifications operator advice.
   # Empty disables operator advice. This does not grant administrator access to other routes.
   smartOperatorSubjects: ""
+  # -- One exact allowlisted subject for private upstream outage and recovery notices.
+  # Empty disables notices; confirmed outages still pause estimates.
+  smartIncidentSubject: ""
 
   # ── Auth-mode contract — Phase 46 / Prompt 57 ────────────────────────
   # Free-text hint surfaced verbatim by /system/auth-mode and rendered

@@ -1408,3 +1408,17 @@ migrations:
     irreversible_justification: Explicit down removes scoped trip grants and confirmation evidence; require new consent if re-enabled.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 318
+    name: here_estimate_health
+    forward_compatible: true
+    forward_compatibility_notes: Adds private provider-health tables and a predicate without changing the existing shared incident schema.
+    rollback_notes: Older binaries cannot read the private notices but do not enforce the new estimate fences. Stop readers before explicit down.
+    expected_duration: A brief schema change; two new tables, three initial feed rows, and no existing data rewrite.
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Schema objects and indexes are new. No existing table is locked for a rewrite.
+    reversible: false
+    irreversible_justification: Explicit down drops private upstream transition history and recovery fencing; prior outages cannot be reconstructed.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

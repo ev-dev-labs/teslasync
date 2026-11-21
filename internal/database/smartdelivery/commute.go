@@ -122,17 +122,19 @@ func (r *Repository) LockCommute(
 	candidate := domain.CommuteDelivery{Occurrence: occurrence}
 	var deviceID int64
 	var ciphertext string
-	var checkAt time.Time
+	var checkAt, observedAt time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT dev.id, dev.subscription_ciphertext, r.vehicle_id, r.origin_latitude, r.origin_longitude, d.expires_at,
-		       o.departure_at - make_interval(secs => c.lead_s)
+		       o.departure_at - make_interval(secs => c.lead_s), d.observed_at
 		`+commuteDeliveryScope+`
 		JOIN smart_push_devices dev ON dev.subject=r.subject AND dev.verified_at IS NOT NULL AND dev.commute_enabled
 		WHERE r.subject=$1 AND c.id=$2 AND r.id=$3 AND d.departure_at=$4 AND d.expires_at > $5
+		  AND here_estimates_usable(d.observed_at)
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $5)
 		FOR SHARE OF dev, r, s, v, c, d, o`,
 		subject, occurrence.ConsentID, occurrence.RoutineID, occurrence.DepartureAt, now).Scan(
-		&deviceID, &ciphertext, &candidate.VehicleID, &candidate.Origin.Latitude, &candidate.Origin.Longitude, &candidate.ExpiresAt, &checkAt)
+		&deviceID, &ciphertext, &candidate.VehicleID, &candidate.Origin.Latitude, &candidate.Origin.Longitude,
+		&candidate.ExpiresAt, &checkAt, &observedAt)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -142,26 +144,28 @@ func (r *Repository) LockCommute(
 	}
 	return &commuteLease{
 		dispatchLease: dispatchLease{repository: r, tx: tx, ciphertext: ciphertext},
-		candidate:     candidate, deviceID: deviceID, checkAt: checkAt,
+		candidate:     candidate, deviceID: deviceID, checkAt: checkAt, observedAt: observedAt,
 	}, nil
 }
 
 type commuteLease struct {
 	dispatchLease
-	candidate domain.CommuteDelivery
-	deviceID  int64
-	checkAt   time.Time
+	candidate  domain.CommuteDelivery
+	deviceID   int64
+	checkAt    time.Time
+	observedAt time.Time
 }
 
 func (l *commuteLease) Candidate() domain.CommuteDelivery { return l.candidate }
 
-func (l *commuteLease) Departed(ctx context.Context, now time.Time) (bool, error) {
-	var departed bool
-	if err := l.tx.QueryRow(ctx, `SELECT smart_commute_drive_started($1, $2, $3)`,
-		l.candidate.VehicleID, l.checkAt, now).Scan(&departed); err != nil {
-		return false, fmt.Errorf("recheck departure before personal commute delivery: %w", err)
+func (l *commuteLease) DispatchEligible(ctx context.Context, now time.Time) (bool, error) {
+	var eligible bool
+	if err := l.tx.QueryRow(ctx, `
+		SELECT NOT smart_commute_drive_started($1, $2, $3) AND here_estimates_usable($4)`,
+		l.candidate.VehicleID, l.checkAt, now, l.observedAt).Scan(&eligible); err != nil {
+		return false, fmt.Errorf("recheck departure and upstream estimates before personal commute delivery: %w", err)
 	}
-	return departed, nil
+	return eligible, nil
 }
 
 func (l *commuteLease) Reserve(ctx context.Context, hash []byte, now time.Time) (bool, error) {
@@ -202,6 +206,7 @@ const commuteClaimScope = commuteDeliveryScope + `
 	WHERE a.token_hash=$1 AND dev.subject=$2 AND r.subject=$2 AND dev.verified_at IS NOT NULL AND dev.commute_enabled
 	  AND a.status IN ('dispatching','accepted','unknown') AND a.claimed_at IS NULL AND a.revoked_at IS NULL
 	  AND a.expires_at > $3 AND d.expires_at > $3
+	  AND here_estimates_usable(d.observed_at)
 	  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $3)`
 
 func (r *Repository) FindCommuteDelivery(

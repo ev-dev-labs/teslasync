@@ -1126,6 +1126,32 @@ history date filter. It does not expose action payloads or error text on
 the card, send a push, retry anything, or change the rule. A later
 completed non-failure or a rule revision clears the streak.
 
+### Upstream estimate interruptions
+
+When an already-authorized HERE request reports an uncached service
+unavailability response, TeslaSync pauses predictions that use that feed
+until an eligible request verifies fresh, usable evidence. A sleeping
+vehicle, missing credentials, a timeout, or missing traffic coverage is not
+an outage. HERE routing, route import, and traffic flow are tracked
+separately. Local recommendations that do not need the interrupted feed
+continue. Nothing polls a vehicle or calls the provider solely to test health.
+
+To receive the private notices, set `TESLASYNC_SMART_INCIDENT_SUBJECT`
+in Compose or `config.smartIncidentSubject` in Helm to one exact
+ForwardAuth subject already listed in `TESLASYNC_SMART_OPERATOR_SUBJECTS`
+or `config.smartOperatorSubjects`. The same identity must be configured
+for API and worker. If it is unset or no longer allowed, prediction safety
+still applies but no notice is delivered. Open mode and app tokens do not
+receive these notices. Action Center records one outage and one recovery
+notice per incident, with no push or shared status notice.
+
+Apply migration `000318` before starting the API and worker with this feature.
+Leave the additive migration applied if rolling the binaries back; older
+versions do not display the private notices or enforce the prediction fence.
+If a known outage is still active, disable licensed HERE requests before
+rolling back. Rolling down the migration explicitly removes the stored HERE
+outage and recovery facts.
+
 ### Private weekly drive efficiency
 
 On **Route Efficiency → Private weekly drive efficiency**, sign in, select

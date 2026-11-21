@@ -13,12 +13,162 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	ready "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 const (
 	testKey = "synthetic-here-key"
 	fromRef = "hrn:here:data::olp-here:rib-2:3217::377894451:here:cm:segment:"
 )
+
+func TestHEREOutageRequiresExplicitUnavailableAndFreshFlowRecovery(t *testing.T) {
+	now := time.Date(2026, 4, 7, 11, 45, 0, 0, time.UTC)
+	var flowStatus atomic.Int32
+	flowStatus.Store(http.StatusUnauthorized)
+	var cached, stale, malformed, oppositeDirection atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v8/import":
+			fmt.Fprintf(w, `{"routes":[%s]}`, routeFixture(1001, 2580))
+		case "/v8/routes":
+			if r.URL.Query().Get("departureTime") == "any" {
+				fmt.Fprintf(w, `{"routes":[{"sections":[{"type":"vehicle","transport":{"mode":"car"},
+					"departure":%s,"arrival":%s,
+					"travelSummary":{"length":160000,"baseDuration":7200}}]}]}`,
+					roadEndpointFixture("47,-122"), roadEndpointFixture("48,-121"))
+				return
+			}
+			fmt.Fprintf(w, `{"routes":[%s,%s]}`, routeFixture(1001, 2580), routeFixture(1002, 1740))
+		case "/v7/flow":
+			if cached.Load() {
+				w.Header().Set("Age", "180")
+			}
+			code := int(flowStatus.Load())
+			w.WriteHeader(code)
+			if code == http.StatusOK {
+				if malformed.Load() {
+					fmt.Fprint(w, "{")
+					return
+				}
+				updated := now.Add(-time.Minute)
+				if stale.Load() {
+					updated = now.Add(-3 * time.Minute)
+				}
+				direction := "#+0..1"
+				if oppositeDirection.Load() {
+					direction = "#-0..1"
+				}
+				fmt.Fprintf(w, `{"sourceUpdated":%q,"results":[%s,%s]}`, updated.Format(time.RFC3339),
+					flowRouteFixture(fromRef+"1001"+direction), flowRouteFixture(fromRef+"1002"+direction))
+			}
+		default:
+			t.Errorf("unexpected provider path %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	client := fixtureClient(t, srv.URL, now)
+	health := &testEstimateHealth{now: now}
+	client.health = health
+	var timedOut atomic.Bool
+	transport := client.httpClient.Transport
+	client.httpClient.Transport = fixtureRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v7/flow" && timedOut.Load() {
+			return nil, context.DeadlineExceeded
+		}
+		return transport.RoundTrip(r)
+	})
+	allow := func(context.Context) error { return nil }
+	compare := func() error {
+		_, err := client.Compare(t.Context(), fixtureQuery(now), allow)
+		return err
+	}
+	if err := compare(); err == nil || health.unavailable != 0 {
+		t.Fatalf("authorization failure triggered outage: %v, %d", err, health.unavailable)
+	}
+	timedOut.Store(true)
+	if err := compare(); err == nil || errors.Is(err, port.ErrEstimatesPaused) || health.unavailable != 0 {
+		t.Fatalf("timeout triggered an outage: %v, %d", err, health.unavailable)
+	}
+	timedOut.Store(false)
+	flowStatus.Store(http.StatusServiceUnavailable)
+	cached.Store(true)
+	if err := compare(); err == nil || health.unavailable != 0 {
+		t.Fatalf("cached unavailable response triggered outage: %v, %d", err, health.unavailable)
+	}
+	cached.Store(false)
+	if _, err := client.Compare(t.Context(), fixtureQuery(now), func(context.Context) error {
+		return context.Canceled
+	}); !errors.Is(err, context.Canceled) || health.unavailable != 0 {
+		t.Fatalf("unconsented traffic demand observed provider failure: %v, %d", err, health.unavailable)
+	}
+	if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.unavailable != 1 {
+		t.Fatalf("verified Flow outage did not pause estimates: %v, %d", err, health.unavailable)
+	}
+	if legs, err := client.stopRoadLegs(t.Context(), []ready.RoutePoint{
+		{Latitude: 47, Longitude: -122}, {Latitude: 48, Longitude: -121},
+	}, allow); err != nil || len(legs) != 1 {
+		t.Fatalf("unaffected route-only estimate failed: %+v, %v", legs, err)
+	}
+	for _, status := range []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusTooManyRequests, http.StatusBadGateway} {
+		flowStatus.Store(int32(status))
+		if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.recoveries != 0 || health.unavailable != 1 {
+			t.Fatalf("unknown replay status %d changed the existing outage: %v, %d/%d", status, err, health.unavailable, health.recoveries)
+		}
+	}
+	flowStatus.Store(http.StatusOK)
+	malformed.Store(true)
+	if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.recoveries != 0 {
+		t.Fatalf("malformed Flow data recovered outage: %v, %d", err, health.recoveries)
+	}
+	malformed.Store(false)
+	stale.Store(true)
+	if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.recoveries != 0 {
+		t.Fatalf("pre-outage Flow data recovered outage: %v, %d", err, health.recoveries)
+	}
+	stale.Store(false)
+	oppositeDirection.Store(true)
+	if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.recoveries != 0 {
+		t.Fatalf("Flow evidence for the opposite direction recovered outage: %v, %d", err, health.recoveries)
+	}
+	oppositeDirection.Store(false)
+	cached.Store(true)
+	if err := compare(); !errors.Is(err, port.ErrEstimatesPaused) || health.recoveries != 0 {
+		t.Fatalf("cached Flow data recovered outage: %v, %d", err, health.recoveries)
+	}
+	cached.Store(false)
+	if err := compare(); err != nil || health.recoveries != 1 {
+		t.Fatalf("fresh Flow data did not resume estimates: %v, %d", err, health.recoveries)
+	}
+}
+
+type fixtureRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f fixtureRoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+type testEstimateHealth struct {
+	now                     time.Time
+	unavailable, recoveries int
+}
+
+func (h *testEstimateHealth) BeginEstimate(_ context.Context, feed port.EstimateFeed) (port.EstimateAttempt, error) {
+	attempt := port.EstimateAttempt{StartedAt: h.now}
+	if feed == port.HEREFlow && h.unavailable > h.recoveries {
+		attempt.OutageAt, attempt.Recovery = h.now.Add(-2*time.Minute), true
+	}
+	return attempt, nil
+}
+
+func (h *testEstimateHealth) FinishEstimate(_ context.Context, feed port.EstimateFeed, attempt port.EstimateAttempt, available bool) error {
+	if feed == port.HEREFlow {
+		if !available {
+			h.unavailable++
+		} else if attempt.Recovery {
+			h.recoveries++
+		}
+	}
+	return nil
+}
 
 func TestCompareHEREWireContract(t *testing.T) {
 	now := time.Date(2026, 4, 7, 11, 45, 0, 0, time.UTC)

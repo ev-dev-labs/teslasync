@@ -89,6 +89,17 @@
       "summary": "{{rule}} recorded {{runs}} failed or partial runs in a row.",
       "open": "Open latest execution"
     },
+    "estimateIncident": {
+      "import": "HERE route import",
+      "routing": "HERE road routing",
+      "flow": "HERE traffic flow",
+      "basis": "A direct provider response verified this change in availability.",
+      "resumed": "A fresh, usable response from {{feed}} verified recovery. Predictions using this feed can resume.",
+      "paused": "{{feed}} reported that it was unavailable. Predictions using this feed pause until a fresh, usable response is verified.",
+      "recoveryTitle": "Estimates resumed: {{feed}}",
+      "outageTitle": "Estimates paused: {{feed}}",
+      "limit": "This notice does not indicate a vehicle fault or start a vehicle command."
+    },
     "state": {
       "open": "Open",
       "acknowledged": "Acknowledged",

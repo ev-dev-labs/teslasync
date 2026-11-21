@@ -129,6 +129,10 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		return s.observeTrafficSuppression(authErr)
 	}
 	if err != nil {
+		if errors.Is(err, port.ErrEstimatesPaused) {
+			s.recordTraffic("upstream_paused")
+			return nil
+		}
 		s.recordTraffic("provider_unqualified")
 		return nil
 	}
@@ -147,6 +151,10 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 			}, guarded)
 			if authErr != nil {
 				return s.observeTrafficSuppression(authErr)
+			}
+			if errors.Is(err, port.ErrEstimatesPaused) {
+				s.recordTraffic("upstream_paused")
+				return nil
 			}
 			now = s.now()
 			if err == nil {

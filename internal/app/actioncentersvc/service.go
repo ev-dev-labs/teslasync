@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -57,10 +59,11 @@ type ActionRequest struct {
 }
 
 type Service struct {
-	providers []provider
-	source    port.SourceReader
-	states    port.StateRepository
-	now       func() time.Time
+	providers        []provider
+	source           port.SourceReader
+	states           port.StateRepository
+	now              func() time.Time
+	incidentOperator string
 }
 
 type Option func(*Service)
@@ -138,7 +141,7 @@ func (s *Service) List(
 	subject string,
 	filter ListFilter,
 ) (*domain.Response, error) {
-	if strings.TrimSpace(subject) == "" || len(subject) > 512 {
+	if !validActionCenterSubject(subject) {
 		return nil, fmt.Errorf("%w: subject is required", ErrInvalidInput)
 	}
 	normalizeFilter(&filter)
@@ -146,16 +149,25 @@ func (s *Service) List(
 	recommendations, statuses := s.generate(ctx, subject, filter, now)
 
 	ids := make([]string, 0, len(recommendations))
+	var incidentIDs []string
 	for i := range recommendations {
-		ids = append(ids, recommendations[i].ID)
+		if isOperatorIncident(recommendations[i]) {
+			incidentIDs = append(incidentIDs, recommendations[i].ID)
+		} else {
+			ids = append(ids, recommendations[i].ID)
+		}
 	}
-	states, err := s.states.ListStates(ctx, subject, ids)
+	states, events, err := s.loadRecommendationState(ctx, subject, ids)
 	if err != nil {
-		return nil, fmt.Errorf("load action center states: %w", err)
+		return nil, err
 	}
-	events, err := s.states.ListRecentEvents(ctx, subject, ids, 3)
-	if err != nil {
-		return nil, fmt.Errorf("load action center outcomes: %w", err)
+	if len(incidentIDs) > 0 {
+		privateStates, privateEvents, err := s.loadRecommendationState(ctx, incidentStateSubject(subject), incidentIDs)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(states, privateStates)
+		maps.Copy(events, privateEvents)
 	}
 
 	filtered := make([]domain.Recommendation, 0, len(recommendations))
@@ -193,6 +205,43 @@ func (s *Service) List(
 	}, nil
 }
 
+func (s *Service) loadRecommendationState(ctx context.Context, subject string, ids []string) (
+	map[string]domain.CurrentState, map[string][]domain.ActionEvent, error,
+) {
+	states, err := s.states.ListStates(ctx, subject, ids)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load action center states: %w", err)
+	}
+	events, err := s.states.ListRecentEvents(ctx, subject, ids, 3)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load action center outcomes: %w", err)
+	}
+	if states == nil {
+		states = make(map[string]domain.CurrentState)
+	}
+	if events == nil {
+		events = make(map[string][]domain.ActionEvent)
+	}
+	return states, events, nil
+}
+
+func isOperatorIncident(recommendation domain.Recommendation) bool {
+	return recommendation.SourceFeature == domain.SourceSystemHealth &&
+		slices.ContainsFunc(recommendation.Evidence, func(item domain.EvidenceItem) bool {
+			return item.UpstreamIncident != nil
+		})
+}
+
+func incidentStateSubject(subject string) string {
+	// Older readers cannot address this audit namespace through ForwardAuth.
+	sum := sha256.Sum256([]byte(subject))
+	return "\x1fhere:" + hex.EncodeToString(sum[:])
+}
+
+func validActionCenterSubject(subject string) bool {
+	return strings.TrimSpace(subject) != "" && len(subject) <= 512 && !strings.ContainsRune(subject, '\x1f')
+}
+
 func (s *Service) ApplyAction(
 	ctx context.Context,
 	subject string,
@@ -225,6 +274,9 @@ func (s *Service) ApplyAction(
 	snoozedUntil := request.SnoozedUntil
 	if request.Action != domain.ActionSnooze {
 		snoozedUntil = nil
+	}
+	if isOperatorIncident(*recommendation) {
+		subject = incidentStateSubject(subject)
 	}
 	state, event, err := s.states.Transition(ctx, port.TransitionRequest{
 		Subject:          subject,
@@ -259,7 +311,7 @@ func (s *Service) History(
 	subject, recommendationID string,
 	limit, offset int,
 ) (*domain.HistoryPage, error) {
-	if strings.TrimSpace(subject) == "" || len(subject) > 512 ||
+	if !validActionCenterSubject(subject) ||
 		!validRecommendationID(recommendationID) {
 		return nil, fmt.Errorf("%w: invalid history request", ErrInvalidInput)
 	}
@@ -271,6 +323,15 @@ func (s *Service) History(
 	}
 	if offset < 0 {
 		offset = 0
+	}
+	if operatorNoticesAllowed(ctx, s.incidentOperator, subject) {
+		page, err := s.states.ListHistory(ctx, incidentStateSubject(subject), recommendationID, limit, offset)
+		if err != nil {
+			return nil, fmt.Errorf("list private incident history: %w", err)
+		}
+		if page.Total > 0 {
+			return page, nil
+		}
 	}
 	page, err := s.states.ListHistory(ctx, subject, recommendationID, limit, offset)
 	if err != nil {
@@ -594,7 +655,7 @@ func transitionFor(action domain.ActionType) ([]domain.State, domain.State) {
 }
 
 func validateAction(subject string, request ActionRequest, now time.Time) error {
-	if strings.TrimSpace(subject) == "" || len(subject) > 512 ||
+	if !validActionCenterSubject(subject) ||
 		!validRecommendationID(request.RecommendationID) {
 		return fmt.Errorf("%w: invalid subject or recommendation ID", ErrInvalidInput)
 	}

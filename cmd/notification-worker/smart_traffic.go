@@ -10,6 +10,7 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	commutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
 	"github.com/ev-dev-labs/teslasync/internal/domain/personal"
@@ -28,7 +29,9 @@ func startSmartTraffic(ctx context.Context, cfg *config.Config, db *database.DB,
 	if !cfg.SmartCommute.HasLicensedTraffic() {
 		return func() {}
 	}
-	source, err := heretraffic.New(cfg.SmartCommute.HEREAPIKey)
+	operators := tsauth.NewOperatorAccess(cfg.Auth.ForwardAuthHeader, cfg.Auth.OperatorSubjects)
+	source, err := heretraffic.New(cfg.SmartCommute.HEREAPIKey,
+		heretraffic.WithEstimateHealth(dbobs.NewEstimateHealth(db, operators.IncidentRecipient(cfg.Auth.IncidentSubject))))
 	if err != nil {
 		log.Warn().Msg("smart commute traffic disabled: HERE setup is incomplete")
 		return func() {}

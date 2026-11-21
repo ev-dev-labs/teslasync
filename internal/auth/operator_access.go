@@ -28,6 +28,13 @@ func (a OperatorAccess) Enabled() bool {
 	return len(a.subjects) > 0
 }
 
+func (a OperatorAccess) IncidentRecipient(subject string) string {
+	if _, ok := a.subjects[subject]; ok && len(subject) <= 512 {
+		return subject
+	}
+	return ""
+}
+
 func (a OperatorAccess) Allows(ctx context.Context, subject string) bool {
 	if _, ok := a.subjects[subject]; !ok || IsImpersonating(ctx) {
 		return false

@@ -120,6 +120,7 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000312_window_rain_park_anchor",
 		"000313_smart_charging_early_stop",
 		"000314_smart_backup_charging",
+		"000318_here_estimate_health",
 	}
 	if direction == "down" {
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {

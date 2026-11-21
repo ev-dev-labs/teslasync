@@ -30,6 +30,7 @@ func readNavigationOccurrence(
 		LEFT JOIN smart_commute_navigation_attempts a ON a.routine_id = r.id AND a.departure_at = d.departure_at
 		WHERE r.subject = $1 AND r.vehicle_id = $2 AND r.id = $3
 		  AND d.observed_at <= $4 AND d.expires_at > $4 AND NOT o.skipped
+		  AND here_estimates_usable(d.observed_at)
 		  AND d.arrival_deadline_at IS NULL AND NOT d.route_energy_only
 		  AND d.usual_s - d.alternative_s >= c.min_savings_s
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $4)

@@ -40,23 +40,32 @@ type Client struct {
 	routingURL string
 	trafficURL string
 	now        func() time.Time
+	health     port.EstimateHealth
 }
 
 var _ port.TrafficSource = (*Client)(nil)
 
-func New(apiKey string) (*Client, error) {
+func New(apiKey string, options ...func(*Client)) (*Client, error) {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
 		return nil, ErrInvalidInput
 	}
-	return &Client{
+	c := &Client{
 		apiKey: apiKey, routingURL: routingBase, trafficURL: trafficBase, now: time.Now,
 		httpClient: &http.Client{
 			Timeout:       10 * time.Second,
 			Transport:     httputil.NewPrivateTransport(http.DefaultTransport),
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		},
-	}, nil
+	}
+	for _, option := range options {
+		option(c)
+	}
+	return c, nil
+}
+
+func WithEstimateHealth(health port.EstimateHealth) func(*Client) {
+	return func(c *Client) { c.health = health }
 }
 
 // Compare rechecks permission immediately before each external call. The caller
@@ -85,7 +94,13 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 	if err := c.call(ctx, authorize, http.MethodPost, c.routingURL+"/import", params,
 		struct {
 			Trace []waypoint `json:"trace"`
-		}{points}, &baseline); err != nil {
+		}{points}, &baseline, port.HEREImport, func(_ port.EstimateAttempt) bool {
+			if len(baseline.Routes) != 1 || len(baseline.Notices) != 0 {
+				return false
+			}
+			_, valid := qualifyRoute(baseline.Routes[0])
+			return valid
+		}); err != nil {
 		return domain.TrafficComparison{}, err
 	}
 	if len(baseline.Routes) != 1 || len(baseline.Notices) > 0 {
@@ -99,7 +114,18 @@ func (c *Client) Compare(ctx context.Context, query domain.TrafficQuery, authori
 	params.Set("destination", coordinateParam(points[len(points)-1]))
 	params.Set("alternatives", "2")
 	var routes routingResponse
-	if err := c.call(ctx, authorize, http.MethodGet, c.routingURL+"/routes", params, nil, &routes); err != nil {
+	if err := c.call(ctx, authorize, http.MethodGet, c.routingURL+"/routes", params, nil, &routes,
+		port.HERERoutes, func(_ port.EstimateAttempt) bool {
+			if len(routes.Routes) == 0 || len(routes.Routes) > 3 || len(routes.Notices) > 0 {
+				return false
+			}
+			for _, route := range routes.Routes {
+				if _, valid := qualifyRoute(route); valid {
+					return true
+				}
+			}
+			return false
+		}); err != nil {
 		return domain.TrafficComparison{}, err
 	}
 	if len(routes.Routes) > 3 || len(routes.Notices) > 0 {
@@ -166,7 +192,7 @@ func inRange(value, min, max float64) bool {
 }
 
 func (c *Client) call(ctx context.Context, authorize func(context.Context) error, method, endpoint string,
-	query url.Values, body any, result any) error {
+	query url.Values, body any, result any, feed port.EstimateFeed, fresh func(port.EstimateAttempt) bool) error {
 	if query == nil {
 		query = make(url.Values)
 	}
@@ -184,16 +210,30 @@ func (c *Client) call(ctx context.Context, authorize func(context.Context) error
 		return ErrInvalidInput
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Cache-Control", "no-store")
+	req.Header.Set("Cache-Control", "no-cache, no-store")
 	if reader != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if err := authorize(ctx); err != nil {
 		return err
 	}
+	var attempt port.EstimateAttempt
+	track := c.health != nil
+	if track {
+		attempt, err = c.health.BeginEstimate(ctx, feed)
+		if err != nil {
+			return fmt.Errorf("check upstream estimate availability: %w", errors.Join(port.ErrEstimatesPaused, err))
+		}
+		if err := authorize(ctx); err != nil {
+			return err
+		}
+	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		// http.Client errors include the request URL, which contains the API key.
+		if attempt.Recovery {
+			return port.ErrEstimatesPaused
+		}
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -201,11 +241,50 @@ func (c *Client) call(ctx context.Context, authorize func(context.Context) error
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if track && resp.StatusCode == http.StatusServiceUnavailable && responseNotCached(resp) {
+			if err := c.health.FinishEstimate(ctx, feed, attempt, false); err != nil {
+				return fmt.Errorf("record upstream estimate outage: %w", errors.Join(port.ErrEstimatesPaused, err))
+			}
+			return port.ErrEstimatesPaused
+		}
+		if attempt.Recovery {
+			return port.ErrEstimatesPaused
+		}
 		return fmt.Errorf("HERE request returned HTTP %d", resp.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil || len(data) > maxResponseBytes || json.Unmarshal(data, result) != nil {
+		if attempt.Recovery {
+			return port.ErrEstimatesPaused
+		}
 		return errors.New("invalid HERE response")
 	}
+	if track {
+		valid := fresh(attempt)
+		if !responseNotCached(resp) {
+			return port.ErrEstimatesPaused
+		}
+		if valid {
+			if err := c.health.FinishEstimate(ctx, feed, attempt, true); err != nil {
+				return fmt.Errorf("record fresh upstream estimate: %w", errors.Join(port.ErrEstimatesPaused, err))
+			}
+		} else if attempt.Recovery {
+			return port.ErrEstimatesPaused
+		}
+	}
 	return nil
+}
+
+func responseNotCached(resp *http.Response) bool {
+	age := strings.TrimSpace(resp.Header.Get("Age"))
+	if age != "" && age != "0" {
+		return false
+	}
+	for _, header := range []string{"Cache-Status", "X-Cache", "CF-Cache-Status"} {
+		value := strings.ToLower(resp.Header.Get(header))
+		if strings.Contains(value, "hit") || strings.Contains(value, "stale") {
+			return false
+		}
+	}
+	return true
 }

@@ -9,6 +9,7 @@ import (
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 const (
@@ -99,15 +100,30 @@ func (c *Client) stopRoadLegs(
 		params.Set("via", roadPointParameter(points[1]))
 	}
 	var response roadResponse
-	if err := c.call(ctx, authorize, http.MethodGet, c.routingURL+"/routes", params, nil, &response); err != nil {
+	var legs []domain.RoadLeg
+	if err := c.call(ctx, authorize, http.MethodGet, c.routingURL+"/routes", params, nil, &response,
+		port.HERERoutes, func(_ port.EstimateAttempt) bool {
+			legs = qualifyRoadLegs(points, response)
+			return len(legs) > 0
+		}); err != nil {
 		return nil, err
 	}
-	if len(response.Notices) != 0 || len(response.Routes) != 1 {
+	if c.health == nil {
+		legs = qualifyRoadLegs(points, response)
+	}
+	if len(legs) == 0 {
 		return nil, ErrInsufficientEvidence
+	}
+	return legs, nil
+}
+
+func qualifyRoadLegs(points []domain.RoutePoint, response roadResponse) []domain.RoadLeg {
+	if len(response.Notices) != 0 || len(response.Routes) != 1 {
+		return nil
 	}
 	route := response.Routes[0]
 	if len(route.Notices) != 0 || len(route.Sections) != len(points)-1 {
-		return nil, ErrInsufficientEvidence
+		return nil
 	}
 	legs := make([]domain.RoadLeg, 0, len(route.Sections))
 	for i, section := range route.Sections {
@@ -115,11 +131,11 @@ func (c *Client) stopRoadLegs(
 			section.Travel.LengthM <= 0 || section.Travel.LengthM > 3_000_000 ||
 			section.Travel.BaseDurationS <= 0 || section.Travel.BaseDurationS > 3*24*3600 ||
 			!section.Departure.matches(points[i]) || !section.Arrival.matches(points[i+1]) {
-			return nil, ErrInsufficientEvidence
+			return nil
 		}
 		legs = append(legs, domain.RoadLeg{DistanceM: section.Travel.LengthM, DurationS: section.Travel.BaseDurationS})
 	}
-	return legs, nil
+	return legs
 }
 
 func roadPointParameter(point domain.RoutePoint) string {

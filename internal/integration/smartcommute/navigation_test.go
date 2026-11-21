@@ -289,6 +289,19 @@ func TestNavigationRechecksConsentAfterConnectivity(t *testing.T) {
 	}
 }
 
+func TestNavigationRechecksOutageAfterConnectivity(t *testing.T) {
+	var f *fixture
+	fleet := newNavigationFleetFixture(t, navigationFleetOptions{initialState: "online", replyStatus: http.StatusOK,
+		beforeStatus: func(ctx context.Context) error { return interruptHEREFlow(ctx, f) }})
+	f, _, decision := newNavigationFixture(t, fleet)
+	outcome := navigationResult(t, navigationRequest(f.router, decision.RoutineID, navigationOwner, "subject:"+navigationOwner,
+		domain.NavigationRequest{VehicleID: 42, OccurrenceID: decision.OccurrenceID, Address: navigationAddress, Confirmed: true}))
+	if outcome != domain.NavigationExpired || fleet.checks.Load() != 1 || fleet.wakes.Load()+fleet.sends.Load() != 0 {
+		t.Fatalf("outage after connectivity allowed navigation: %s (%d checks, %d wakes, %d sends)",
+			outcome, fleet.checks.Load(), fleet.wakes.Load(), fleet.sends.Load())
+	}
+}
+
 type navigationBudget struct {
 	beforeCommand func(context.Context) error
 	beforeWake    func(context.Context) error

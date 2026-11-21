@@ -6,6 +6,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
+	commutep "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 )
 
 const latestBatteryHealthQuery = `
@@ -241,6 +242,33 @@ func (r *SourceRepository) ListOpenSystemIncidents(
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate action center system incidents: %w", err)
+	}
+	return items, nil
+}
+
+func (r *SourceRepository) ListOperatorIncidentNotices(
+	ctx context.Context, subject string, since time.Time, limit int,
+) ([]commutep.EstimateIncident, error) {
+	rows, err := r.q.Query(ctx, `
+		SELECT id, feed, started_at, resolved_at
+		FROM here_estimate_incidents
+		WHERE operator_subject <> '' AND operator_subject = $1 AND (resolved_at IS NULL OR resolved_at > $2)
+		ORDER BY (resolved_at IS NOT NULL), COALESCE(resolved_at, started_at) DESC, id DESC
+		LIMIT $3`, subject, since, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list private HERE estimate incidents: %w", err)
+	}
+	defer rows.Close()
+	items := make([]commutep.EstimateIncident, 0)
+	for rows.Next() {
+		var item commutep.EstimateIncident
+		if err := rows.Scan(&item.ID, &item.Feed, &item.StartedAt, &item.ResolvedAt); err != nil {
+			return nil, fmt.Errorf("scan private HERE estimate incident: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate private HERE estimate incidents: %w", err)
 	}
 	return items, nil
 }

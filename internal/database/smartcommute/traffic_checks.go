@@ -170,6 +170,7 @@ func (r *Repository) RecordTrafficDecision(
 		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14,
 		       $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NULLIF($27, ''), NULLIF($28, '')
 		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($15::timestamptz IS NULL OR c.compare_route_energy)
+		  AND here_estimates_usable($9::timestamptz)
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $11)
 		ON CONFLICT (consent_id) DO UPDATE SET
 		    departure_at = EXCLUDED.departure_at, settings_updated_at = EXCLUDED.settings_updated_at,
@@ -210,6 +211,7 @@ func (r *Repository) ListTrafficDecisions(
 		LEFT JOIN smart_commute_navigation_attempts a ON a.routine_id = r.id AND a.departure_at = d.departure_at
 		WHERE r.subject = $1 AND ($2::bigint IS NULL OR r.vehicle_id = $2)
 		  AND d.expires_at > $3 AND NOT o.skipped
+		  AND here_estimates_usable(d.observed_at)
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $3)
 		ORDER BY d.departure_at, r.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {

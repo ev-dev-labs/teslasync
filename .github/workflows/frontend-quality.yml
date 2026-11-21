@@ -21,12 +21,15 @@ on:
       - 'cmd/routetemplategen/**'
       - 'cmd/notification-worker/**'
       - 'internal/api/webvitals/routetemplates_gen.go'
+      - 'internal/api/status/**'
       - 'internal/adapter/heretraffic/**'
       - 'internal/adapter/smartdelivery/**'
       - 'internal/app/actioncentersvc/**'
       - 'internal/app/smartcommutesvc/**'
       - 'internal/app/smartdeliverysvc/**'
       - 'internal/app/smartreadinesssvc/**'
+      - 'internal/database/actioncenter/**'
+      - 'internal/database/observability/**'
       - 'internal/database/smartcommute/**'
       - 'internal/database/smartdelivery/**'
       - 'internal/database/smartreadiness/**'
@@ -61,6 +64,7 @@ on:
       - 'migrations/000272_smart_commute_route_energy.*.sql'
       - 'migrations/000273_type_commute_route_energy_evidence.*.sql'
       - 'migrations/000274_smart_public_charging_fee_terms.*.sql'
+      - 'migrations/000318_here_estimate_health.*.sql'
       - '.github/workflows/frontend-quality.yml'
       - '.github/scripts/ci_workflows.test.mjs'
       - '.github/scripts/playwright-duration-shards.mjs'
@@ -210,8 +214,9 @@ jobs:
         env:
           TESLASYNC_SMART_COMMUTE_BROWSER: '1'
           TESLASYNC_SMART_CHARGING_BROWSER: '1'
+          TESLASYNC_SMART_INCIDENT_BROWSER: '1'
           TESLASYNC_SMART_COMMUTE_TEST_DSN: postgres://test:test@127.0.0.1:5432/teslasync_smart_test?sslmode=disable
-        run: xvfb-run -a go test -race -p=1 -count=1 -run '^TestPrivate(Commute|CommuteTraffic|Charging|PersonalDelivery)BrowserJourney$' -v ./internal/integration/smartcommute ./internal/integration/smartreadiness
+        run: xvfb-run -a go test -race -p=1 -count=1 -run '^Test(Private(Commute|CommuteTraffic|Charging|PersonalDelivery)|HEREIncident)BrowserJourney$' -v ./internal/integration/smartcommute ./internal/integration/smartreadiness
 
   chromium-tests:
     name: Chromium ${{ matrix.name }}
