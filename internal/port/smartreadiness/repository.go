@@ -92,6 +92,7 @@ type Repository interface {
 	AdvanceCheck(context.Context, EarlierCheckPlan, time.Time, time.Time, time.Time) error
 	ListSiteRateWindows(context.Context, []int64, time.Time, time.Time) ([]domain.SiteRateWindow, error)
 	ListChargeRemedySessions(context.Context, Candidate, time.Time) ([]domain.SitePerformanceSession, error)
+	PriorInterruptedChargingPower(context.Context, domain.Plan, time.Time, time.Time) (float64, error)
 	SavePlan(context.Context, string, domain.Plan, time.Time) (*domain.Plan, error)
 	DeletePlan(context.Context, string, int64, int64) error
 	SnoozePlan(context.Context, string, int64, int64, *time.Time, time.Time) error

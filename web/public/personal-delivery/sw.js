@@ -15,6 +15,12 @@ function isPublicFeeReview(url) {
     /^[1-9]\d*$/.test(url.searchParams.get('fee_session_id') ?? '')
 }
 
+function isBackupChargingReview(url) {
+  return url.pathname === '/settings/smart-charging' && url.hash === '#backup-charging' &&
+    /^[1-9]\d*$/.test(url.searchParams.get('vehicle_id') ?? '') &&
+    /^[1-9]\d*$/.test(url.searchParams.get('backup_watch_id') ?? '')
+}
+
 function isCabinPrepReview(url) {
   const vehicle = url.searchParams.get('vehicle_id')
   return url.pathname === '/preconditioning-effectiveness' && url.hash === '#cabin-prep-reminder' &&
@@ -54,6 +60,7 @@ function isParkedSecurityReview(url, anchor, prefix) {
 const privateReviews = new Map([
   ['commute', isCommuteComparison],
   ['public-fee', isPublicFeeReview],
+  ['backup-charging', isBackupChargingReview],
   ['cabin-prep', isCabinPrepReview],
   ['park-reserve', isParkReserveReview],
   ['window-rain', isWindowRainReview],

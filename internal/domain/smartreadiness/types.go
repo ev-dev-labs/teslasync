@@ -3,6 +3,8 @@ package smartreadiness
 
 import "time"
 
+const EarlyStopCheckInterval = 15 * time.Second
+
 type Plan struct {
 	ID                   int64            `json:"id"`
 	VehicleID            int64            `json:"vehicle_id"`
@@ -14,6 +16,7 @@ type Plan struct {
 	ServiceAppointment   *DepartureWindow `json:"service_appointment,omitempty"`
 	SoftwareInstall      *DepartureWindow `json:"software_install,omitempty"`
 	DepartureOverlapPush bool             `json:"departure_overlap_push"`
+	EarlyStopWatch       bool             `json:"early_stop_watch"`
 	TripUseLowPct        float64          `json:"trip_use_low_pct"`
 	TripUseHighPct       float64          `json:"trip_use_high_pct"`
 	TripLegs             *TripLegs        `json:"trip_legs,omitempty"`
@@ -99,6 +102,7 @@ const (
 	DecisionTripReview       DecisionKind = "trip_review"
 	DecisionScheduleConflict DecisionKind = "schedule_conflict"
 	DecisionDepartureOverlap DecisionKind = "departure_overlap"
+	DecisionEarlyStop        DecisionKind = "early_stop"
 )
 
 type Decision struct {
@@ -111,6 +115,7 @@ type Decision struct {
 	CurrentLimit     *ChargingCurrentLimit
 	TripProjection   *TripProjection
 	DepartureOverlap *DepartureOverlap
+	InterruptedAt    *time.Time
 	ObservedAt       time.Time
 	ExpiresAt        time.Time
 	FeasibleRemedy   bool

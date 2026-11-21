@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 	"google.golang.org/protobuf/proto"
@@ -349,6 +350,25 @@ func (j *trackJourney) playbackPipeline() *normalize.Pipeline {
 			PRIMARY KEY(vehicle_id,ts));`)
 	j.exec(`UPDATE vehicles SET vin=$1 WHERE id=7`, playbackFixtureVIN)
 	p := j.db.Pool
+	r := testTelemetryRouter(j.t, p)
+	client, enc := newSpotifyFixtureClient(j.t, j.provider)
+	repo, now := mediadb.NewRepository(j.db), func() time.Time { return j.now }
+	pipeline := normalize.New(unithistory.NewRepo(p, nil), r, zerolog.Nop())
+	webhook := telemetry.NewHandler(j.db, nil, nil, 0, nil)
+	webhook.SetPipeline(pipeline)
+	j.t.Cleanup(webhook.Shutdown)
+	mux := chi.NewRouter()
+	mux.Route("/api/v1", func(r chi.Router) {
+		mediahandler.NewHandler(smartmediasvc.NewReviews(repo, client, enc, now), smartmediasvc.NewSoundtracks(repo, now),
+			smartmediasvc.NewTrackReviews(repo, client, enc, now), nil, "X-Test-Subject").MountRoutes(r)
+		r.Post("/telemetry/", webhook.TelemetryIngest)
+	})
+	j.router = mux
+	return pipeline
+}
+
+func testTelemetryRouter(t *testing.T, p *pgxpool.Pool) *router.Router {
+	t.Helper()
 	r, err := router.New(map[router.Destination]router.Writer{
 		router.DestPositions:         writers.NewPositionsWriter(p),
 		router.DestClimateSnapshot:   writers.NewClimateWriter(p),
@@ -364,22 +384,9 @@ func (j *trackJourney) playbackPipeline() *normalize.Pipeline {
 		router.DestUnitHistory:       writers.NewUnitHistoryWriter(),
 	})
 	if err != nil {
-		j.t.Fatal(err)
+		t.Fatal(err)
 	}
-	client, enc := newSpotifyFixtureClient(j.t, j.provider)
-	repo, now := mediadb.NewRepository(j.db), func() time.Time { return j.now }
-	pipeline := normalize.New(unithistory.NewRepo(p, nil), r, zerolog.Nop())
-	webhook := telemetry.NewHandler(j.db, nil, nil, 0, nil)
-	webhook.SetPipeline(pipeline)
-	j.t.Cleanup(webhook.Shutdown)
-	mux := chi.NewRouter()
-	mux.Route("/api/v1", func(r chi.Router) {
-		mediahandler.NewHandler(smartmediasvc.NewReviews(repo, client, enc, now), smartmediasvc.NewSoundtracks(repo, now),
-			smartmediasvc.NewTrackReviews(repo, client, enc, now), nil, "X-Test-Subject").MountRoutes(r)
-		r.Post("/telemetry/", webhook.TelemetryIngest)
-	})
-	j.router = mux
-	return pipeline
+	return r
 }
 
 func (j *trackJourney) alignPlaybackToHTTPReceipt() {

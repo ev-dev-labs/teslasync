@@ -47,9 +47,10 @@ func (s *solarTestProvider) ReadObservation(_ context.Context, _ string, siteID 
 func testSolarDatabase(t *testing.T) (*readinessdb.Repository, *database.DB, *readinessdb.SolarEnergyConnectionRepository) {
 	t.Helper()
 	repo, db := testRepository(t)
-	applySolarMigration(t, db, "up")
+	applyReadinessMigration(t, db, "000314_smart_backup_charging", "down")
 	applySolarMigration(t, db, "down")
 	applySolarMigration(t, db, "up")
+	applyReadinessMigration(t, db, "000314_smart_backup_charging", "up")
 	enc, err := crypto.New("synthetic-test-encryption-key")
 	if err != nil {
 		t.Fatal(err)

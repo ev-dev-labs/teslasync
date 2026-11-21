@@ -100,6 +100,7 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000272_smart_commute_route_energy",
 		"000273_type_commute_route_energy_evidence",
 		"000274_smart_public_charging_fee_terms",
+		"000275_smart_solar_charging",
 		"000276_smart_trip_charging_stops",
 		"000277_smart_trip_reviews",
 		"000283_smart_cabin_prep",
@@ -117,6 +118,8 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000308_smart_trip_evidence_provenance",
 		"000310_smart_battery_evidence_fingerprints",
 		"000312_window_rain_park_anchor",
+		"000313_smart_charging_early_stop",
+		"000314_smart_backup_charging",
 	}
 	if direction == "down" {
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {

@@ -43,6 +43,8 @@ type Handler struct {
 	headerName         string
 	solar              solarCharging
 	energy             solarConnections
+	backup             backupCharging
+	backupReady        func() bool
 	stops              tripStopService
 	reviews            tripReviewService
 	maintenance        tripMaintenanceService
@@ -176,6 +178,9 @@ func (h *Handler) MountRoutes(r chi.Router) {
 		r.With(writeLimit).Put("/plans/{planID}/maintenance", h.TripMaintenance)
 		r.With(writeLimit).Delete("/plans/{planID}/maintenance", h.TripMaintenance)
 		r.Get("/solar", h.SolarSettings)
+		r.Get("/backup-charging", h.BackupCharging)
+		r.With(writeLimit).Post("/backup-charging", h.BackupCharging)
+		r.With(writeLimit).Delete("/backup-charging", h.BackupCharging)
 		r.With(writeLimit).Put("/solar", h.SaveSolarConsent)
 		r.With(writeLimit).Delete("/solar", h.RevokeSolarConsent)
 		r.With(writeLimit).Post("/solar/connection", h.StartEnergyConnection)
@@ -236,6 +241,7 @@ type planRequest struct {
 	ServiceAppointment   *domain.DepartureWindow `json:"service_appointment"`
 	SoftwareInstall      *domain.DepartureWindow `json:"software_install"`
 	DepartureOverlapPush bool                    `json:"departure_overlap_push"`
+	EarlyStopWatch       bool                    `json:"early_stop_watch"`
 	TripUseLowPct        *float64                `json:"trip_use_low_pct"`
 	TripUseHighPct       *float64                `json:"trip_use_high_pct"`
 	TripLegs             *tripLegsRequest        `json:"trip_legs"`
@@ -279,6 +285,7 @@ func (request planRequest) plan(id int64) (domain.Plan, error) {
 		ScheduledStart: request.ScheduledStart, ServiceAppointment: request.ServiceAppointment,
 		SoftwareInstall:      request.SoftwareInstall,
 		DepartureOverlapPush: request.DepartureOverlapPush,
+		EarlyStopWatch:       request.EarlyStopWatch,
 		TripUseLowPct:        *request.TripUseLowPct, TripUseHighPct: *request.TripUseHighPct, TripLegs: legs,
 		ReservePct: *request.ReservePct, CompareSiteRates: request.CompareSiteRates != nil && *request.CompareSiteRates,
 		Version: request.ExpectedVersion, ExpectedCheckAt: request.ExpectedCheckAt,

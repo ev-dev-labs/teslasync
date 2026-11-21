@@ -72,6 +72,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		}
 	}
 	var solarConnections *smartreadinesssvc.SolarEnergyConnections
+	var backupEnergy *smartadapter.SolarEnergy
 	if encryptor != nil && cfg.Tesla.ClientID != "" {
 		readConfig := config.TeslaConfig{
 			ClientID: cfg.Tesla.ClientID, BaseURL: cfg.Tesla.BaseURL, Timeout: cfg.Tesla.Timeout,
@@ -84,11 +85,18 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		}
 		solarConnections = smartreadinesssvc.NewSolarEnergyConnections(
 			readinessdb.NewSolarEnergyConnectionRepository(db, encryptor), smartadapter.NewTeslaSolarAuthorization(energyClient))
+		backupEnergy = smartadapter.NewSolarEnergy(energyClient, solarConnections)
 		readinessOptions = append(readinessOptions,
-			smartreadinesssvc.WithSolarCharging(readinessRepo, smartadapter.NewSolarEnergy(energyClient, solarConnections)))
+			smartreadinesssvc.WithSolarCharging(readinessRepo, backupEnergy))
 	}
 	sites := smartadapter.NewSites(geofencedb.NewGeofenceRepo(db))
 	service := smartreadinesssvc.New(readinessRepo, live, sites, readinessOptions...)
+	var backup *smartreadinesssvc.BackupCharging
+	var backupCandidates smartdeliverysvc.BackupCandidates
+	if backupEnergy != nil && !tsauth.IsOpenMode(cfg.Auth.ForwardAuthHeader) {
+		backup = smartreadinesssvc.NewBackupCharging(readinessRepo, live, sites, true, backupEnergy, time.Now)
+		backupCandidates = backup
+	}
 	cabinPrep := smartreadinesssvc.NewCabinPrep(readinessRepo,
 		smartreadinesssvc.NewCabinHistory(readinessRepo, signal.NewLogStateReader(db.Pool, log.Logger)), live, time.Now)
 	parkReserves := smartreadinesssvc.NewParkReserves(readinessRepo,
@@ -103,6 +111,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		deliveryadapter.NewWebPush(cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject),
 		smartdeliverysvc.WithChargingCandidates(service),
 		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, service),
+		smartdeliverysvc.WithBackupDelivery(deliveryRepo, backupCandidates),
 		smartdeliverysvc.WithCabinPrepDelivery(deliveryRepo, cabinPrep),
 		smartdeliverysvc.WithParkReserveDelivery(deliveryRepo, parkReserves),
 		smartdeliverysvc.WithWindowRainDelivery(deliveryRepo, windowRain),
@@ -116,6 +125,13 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 	)
 	workerCtx, cancel := context.WithCancel(ctx)
 	stopTraffic := startSmartTraffic(workerCtx, cfg, db, live, delivery.NotifyCommute)
+	readinessDone := make(chan struct{})
+	go func() {
+		defer close(readinessDone)
+		ticker := time.NewTicker(domain.EarlyStopCheckInterval)
+		defer ticker.Stop()
+		runSmartChargingLoop(workerCtx, service, ticker.C)
+	}()
 	solarDone := make(chan struct{})
 	go func() {
 		defer close(solarDone)
@@ -126,6 +142,9 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		defer ticker.Stop()
 		for workerCtx.Err() == nil {
 			runSolarChargingTick(workerCtx, service, solarConnections)
+			if backup != nil && delivery.BackupDeliveryAvailable() {
+				runBackupChargingTick(workerCtx, backup, delivery)
+			}
 			select {
 			case <-workerCtx.Done():
 				return
@@ -157,7 +176,6 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 			if delivery.PublicFeeAvailable() {
 				runPublicFeeTick(workerCtx, service, delivery)
 			}
-			runSmartChargingTick(workerCtx, service)
 			select {
 			case <-workerCtx.Done():
 				return
@@ -169,6 +187,7 @@ func startSmartCharging(ctx context.Context, cfg *config.Config, db *database.DB
 		cancel()
 		<-done
 		<-solarDone
+		<-readinessDone
 		stopTraffic()
 		sharedCache.Close()
 	}
@@ -269,6 +288,20 @@ func runSolarChargingTick(ctx context.Context, service *smartreadinesssvc.Servic
 	}
 }
 
+func runBackupChargingTick(ctx context.Context, backup *smartreadinesssvc.BackupCharging, delivery *smartdeliverysvc.Service) {
+	ctx, span := workerTracer().Start(ctx, "notification.backup_charging_tick")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	checked, err := backup.ProcessBackupCharging(ctx, 3, delivery.NotifyBackupCharging)
+	span.SetAttributes(attribute.Int("notification.backup_charging.checked", checked))
+	if err = errors.Join(err, delivery.PruneBackupCharging(ctx)); err != nil {
+		span.RecordError(errors.New("backup charging check failed"))
+		span.SetStatus(codes.Error, "backup charging check failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Msg("backup charging check failed")
+	}
+}
+
 func runPublicFeeTick(ctx context.Context, service *smartreadinesssvc.Service, delivery *smartdeliverysvc.Service) {
 	ctx, span := workerTracer().Start(ctx, "notification.public_charging_fee_tick")
 	defer span.End()
@@ -287,6 +320,17 @@ func runPublicFeeTick(ctx context.Context, service *smartreadinesssvc.Service, d
 func smartChargingEnabled(cfg *config.Config) bool {
 	return cfg.Redis.Enabled &&
 		!strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local")
+}
+
+func runSmartChargingLoop(ctx context.Context, processor smartChargingProcessor, ticks <-chan time.Time) {
+	for ctx.Err() == nil {
+		runSmartChargingTick(ctx, processor)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticks:
+		}
+	}
 }
 
 func runSmartChargingTick(ctx context.Context, processor smartChargingProcessor) {

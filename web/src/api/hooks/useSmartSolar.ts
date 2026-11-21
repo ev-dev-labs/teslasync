@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SmartSolarDecision } from '@/types/smartCharging'
 import { isApiError, request } from '../client'
 import { actionCenterKeys } from './useActionCenter'
+import { smartBackupKeys } from './useSmartBackupCharging'
 import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity'
 
 interface SolarSettings {
@@ -75,6 +76,7 @@ export function useSmartSolarChange(scope: PersonalScope, vehicleId: number) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: solarKey(scope) }),
           queryClient.invalidateQueries({ queryKey: actionCenterKeys.lists }),
+          queryClient.invalidateQueries({ queryKey: smartBackupKeys.all(scope) }),
         ])
       }
     },

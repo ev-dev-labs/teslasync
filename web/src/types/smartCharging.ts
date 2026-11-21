@@ -27,6 +27,7 @@ export interface SmartChargingPlanInput {
   service_appointment?: SmartDepartureWindow
   software_install?: SmartDepartureWindow
   departure_overlap_push?: boolean
+  early_stop_watch?: boolean
   trip_use_low_pct: number
   trip_use_high_pct: number
   trip_legs?: SmartChargingTripLegs

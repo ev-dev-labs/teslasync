@@ -51,6 +51,7 @@ function planInput(plan: SmartChargingPlan): SmartChargingPlanInput {
     trip_use_high_pct: plan.trip_use_high_pct, reserve_pct: plan.reserve_pct,
     compare_site_rates: plan.compare_site_rates ?? false,
     departure_overlap_push: plan.departure_overlap_push ?? false,
+    ...(plan.early_stop_watch ? { early_stop_watch: true } : {}),
     ...(plan.scheduled_start ? { scheduled_start: plan.scheduled_start } : {}),
     ...(plan.service_appointment ? { service_appointment: plan.service_appointment } : {}),
     ...(plan.software_install ? { software_install: plan.software_install } : {}),
@@ -397,7 +398,7 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
                 {t('common.cancel', 'Cancel')}
               </Button>
             </div>
-          </div> : <SmartChargingPlanForm key={editing === 'new' ? editing : editing.planId} vehicleId={vehicleId}
+          </div> : <SmartChargingPlanForm key={editing === 'new' ? editing : editing.planId} vehicleId={vehicleId} personal={scope.mode === 'forward_auth'}
             plan={selected} places={places} disabled={disabled || formDisabled} onSave={save} onCancel={() => setEditing(null)} />}
         </div>
       )}

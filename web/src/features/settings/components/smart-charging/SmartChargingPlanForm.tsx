@@ -18,12 +18,13 @@ interface Props {
   plan: SmartChargingPlan | null
   places: Geofence[]
   disabled: boolean
+  personal: boolean
   onSave: (plan: SmartChargingPlanInput) => Promise<boolean>
   onCancel: () => void
 }
 
 export function SmartChargingPlanForm({
-  vehicleId, plan, places, disabled, onSave, onCancel,
+  vehicleId, plan, places, disabled, personal, onSave, onCancel,
 }: Props) {
   const { t } = useTranslation()
   const { tz } = useDateFormat('user')
@@ -41,6 +42,7 @@ export function SmartChargingPlanForm({
     service: initialService,
     install: initialInstall,
     overlapPush: plan?.departure_overlap_push ?? false,
+    earlyStopWatch: plan?.early_stop_watch ?? false,
     powerCeiling: plan?.scheduled_start?.power_ceiling_w == null ? '' : String(plan.scheduled_start.power_ceiling_w),
     low: plan ? String(plan.trip_use_low_pct) : '',
     high: plan ? String(plan.trip_use_high_pct) : '',
@@ -127,6 +129,7 @@ export function SmartChargingPlanForm({
       ...(service ? { service_appointment: service } : {}),
       ...(install ? { software_install: install } : {}),
       departure_overlap_push: Boolean((service || install) && draft.overlapPush),
+      ...(personal && draft.earlyStopWatch ? { early_stop_watch: true } : {}),
       trip_use_low_pct: low, trip_use_high_pct: high, reserve_pct: reserve,
       compare_site_rates: draft.compareSiteRates,
       ...(draft.separateLegs ? { trip_legs: {
@@ -213,6 +216,14 @@ export function SmartChargingPlanForm({
       <Toggle label={t('smartCharging.enablePlan', 'Enable readiness checks for this plan')}
         checked={draft.enabled} disabled={disabled}
         onChange={(enabled) => setDraft({ ...draft, enabled })} />
+      {personal && <div className="space-y-2">
+        <Toggle label={t('smartCharging.earlyStopWatch', 'Watch for early charging interruptions')}
+          checked={draft.earlyStopWatch} disabled={disabled}
+          onChange={(earlyStopWatch) => setDraft({ ...draft, earlyStopWatch })} />
+        <Text as="p" variant="bodySm">
+          {t('smartCharging.earlyStopWatchHint', 'Check recent charging signals for this plan. A private push requires verified personal charging delivery. This does not start charging or diagnose a fault.')}
+        </Text>
+      </div>}
       <div className="space-y-2">
         <Toggle label={t('smartCharging.compareSiteRates', 'Compare costs using verified place prices')}
           checked={draft.compareSiteRates} disabled={disabled || !draft.place}

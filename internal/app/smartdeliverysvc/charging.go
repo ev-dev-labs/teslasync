@@ -60,8 +60,9 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 		Subject: candidate.Plan.Subject, DeviceID: deviceID, PlanID: candidate.Plan.ID,
 		VehicleID: candidate.Plan.VehicleID, PlanVersion: candidate.Plan.Version,
 		PlaceUpdatedAt: candidate.PlaceUpdatedAt, DecisionKind: string(candidate.Decision.Kind),
-		DepartureAt: candidate.Plan.DepartureAt,
-		TokenHash:   tokenHash[:], CreatedAt: now, ExpiresAt: candidate.Decision.ExpiresAt,
+		InterruptedAt: candidate.Decision.InterruptedAt,
+		DepartureAt:   candidate.Plan.DepartureAt,
+		TokenHash:     tokenHash[:], CreatedAt: now, ExpiresAt: candidate.Decision.ExpiresAt,
 	}
 	lease, err := s.repository.LockCharging(ctx, attempt)
 	if err != nil || lease == nil {
@@ -79,6 +80,7 @@ func (s *Service) notifyChargingDevice(ctx context.Context, candidate readinessp
 	now = s.now().UTC()
 	if current == nil || !allowsChargingDelivery(*current) || current.Plan.Version != attempt.PlanVersion ||
 		current.Decision.Kind != candidate.Decision.Kind || !current.PlaceUpdatedAt.Equal(attempt.PlaceUpdatedAt) ||
+		!sameInterruption(current.Decision.InterruptedAt, attempt.InterruptedAt) ||
 		!now.Before(current.Decision.ExpiresAt) || !now.Before(attempt.ExpiresAt) {
 		s.record("suppressed")
 		return nil
@@ -167,6 +169,7 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 	now = s.now().UTC()
 	if candidate == nil || !allowsChargingDelivery(*candidate) || candidate.Plan.Version != ref.PlanVersion ||
 		string(candidate.Decision.Kind) != ref.DecisionKind ||
+		!sameInterruption(candidate.Decision.InterruptedAt, ref.InterruptedAt) ||
 		!candidate.PlaceUpdatedAt.Equal(ref.PlaceUpdatedAt) || !now.Before(candidate.Decision.ExpiresAt) {
 		return nil, port.ErrNotFound
 	}
@@ -177,11 +180,18 @@ func (s *Service) ClaimCharging(ctx context.Context, subject, token string) (*do
 	if quiet {
 		return nil, port.ErrNotFound
 	}
-	result, err := s.repository.ConsumeDelivery(ctx, subject, *ref, now)
+	result, err := s.repository.ConsumeDelivery(ctx, subject, *ref, candidate.Decision.ExpiresAt, s.now)
 	if err == nil {
 		s.record("claimed")
 	}
 	return result, err
+}
+
+func sameInterruption(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
 }
 
 func allowsChargingDelivery(candidate readinessport.Candidate) bool {
@@ -191,6 +201,8 @@ func allowsChargingDelivery(candidate readinessport.Candidate) bool {
 		return false
 	case readiness.DecisionDepartureOverlap:
 		return candidate.Plan.DepartureOverlapPush
+	case readiness.DecisionEarlyStop:
+		return candidate.Plan.EarlyStopWatch && candidate.Decision.InterruptedAt != nil
 	default:
 		return !candidate.Decision.RequiresFeasibleRemedy(candidate.Plan) || candidate.Decision.FeasibleRemedy
 	}

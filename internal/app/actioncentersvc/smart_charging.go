@@ -66,6 +66,14 @@ func (p smartChargingProvider) Recommendations(
 			summary = fmt.Sprintf("Review the window from %s to %s before the planned departure at %s.",
 				overlap.StartsAt.Format(time.RFC3339), overlap.EndsAt.Format(time.RFC3339), row.Plan.DepartureAt.Format(time.RFC3339))
 			limitations = []string{"The window is entered by you, not verified against a service or vehicle schedule. No schedule was changed."}
+		} else if row.Decision.Kind == readiness.DecisionEarlyStop && row.Decision.InterruptedAt != nil {
+			path = fmt.Sprintf("/vehicles/%d#vehicle-systems", row.Plan.VehicleID)
+			title = "Inspect charging before your planned departure"
+			rationale = "The parked, connected vehicle reported no power after charging. It may now miss your planned reserve."
+			summary = fmt.Sprintf("Charging power was lost at %s. If charging does not resume, %.0f%% at departure may not be enough.",
+				row.Decision.InterruptedAt.Format(time.RFC3339), row.Decision.BatteryPct)
+			basis = append(basis, "Attested charging-to-no-power transition and preceding measured AC power")
+			limitations = append(limitations, "The observations do not identify the cause of the interruption.")
 		} else if row.Decision.Kind == readiness.DecisionSlowCharging {
 			evidenceKind = "charging_feasibility"
 			title = "Charging may not be ready before your trip"
@@ -109,7 +117,7 @@ func (p smartChargingProvider) Recommendations(
 				row.Decision.BatteryPct, row.PlaceName)
 		}
 		if projection := row.Decision.TripProjection; projection != nil {
-			if row.Decision.Kind != readiness.DecisionTripReview && scheduledStartAt == nil {
+			if row.Decision.Kind != readiness.DecisionTripReview && row.Decision.Kind != readiness.DecisionEarlyStop && scheduledStartAt == nil {
 				summary = fmt.Sprintf("Battery %.0f%% at %s.", row.Decision.BatteryPct, row.PlaceName)
 				if chargingPowerW != nil {
 					summary += fmt.Sprintf(" Measured charging power is %.0f W.", *chargingPowerW)
@@ -164,7 +172,7 @@ func (p smartChargingProvider) Recommendations(
 				ReservePct: row.Plan.ReservePct, ChargingPowerW: chargingPowerW,
 				CurrentLimit: row.Decision.CurrentLimit, TripProjection: row.Decision.TripProjection,
 				DepartureAt: row.Plan.DepartureAt, ScheduledStartAt: scheduledStartAt,
-				ScheduledPowerCeilingW: scheduledPowerCeilingW,
+				ScheduledPowerCeilingW: scheduledPowerCeilingW, InterruptedAt: row.Decision.InterruptedAt,
 			}
 		}
 		items = append(items, domain.Candidate{

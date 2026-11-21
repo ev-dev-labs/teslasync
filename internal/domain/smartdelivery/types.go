@@ -49,6 +49,7 @@ type ChargingAttempt struct {
 	PlanVersion    int64
 	PlaceUpdatedAt time.Time
 	DecisionKind   string
+	InterruptedAt  *time.Time
 	DepartureAt    time.Time
 	TokenHash      []byte
 	CreatedAt      time.Time
@@ -62,6 +63,7 @@ type DeliveryRef struct {
 	PlanVersion    int64
 	PlaceUpdatedAt time.Time
 	DecisionKind   string
+	InterruptedAt  *time.Time
 }
 
 type CommuteOccurrence struct {

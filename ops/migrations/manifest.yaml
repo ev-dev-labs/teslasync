@@ -1338,3 +1338,31 @@ migrations:
     irreversible_justification: Existing active watches lose their coarse location and require fresh outdoor consent. Down does not recreate those locations or watches.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 313
+    name: smart_charging_early_stop
+    forward_compatible: true
+    forward_compatibility_notes: Adds default-off consent, nullable interruption evidence and a distinct occurrence family. Older binaries ignore the new consent and cannot dispatch early-stop advice.
+    rollback_notes: Prefer application rollback with schema retained. Explicit down withdraws early-stop tokens and clears this opt-in without changing other plans or attempts.
+    expected_duration: A few seconds on private decision and attempt tables; depends on index size and available locks.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Schema constraints take exclusive locks; the private delivery occurrence index is rebuilt.
+    reversible: false
+    irreversible_justification: Explicit down intentionally discards early-stop consent, evidence and delivery attempts.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 314
+    name: smart_backup_charging
+    forward_compatible: true
+    forward_compatibility_notes: Creates empty opt-in watch and delivery tables. Older binaries do not write either table.
+    rollback_notes: Retain empty or inactive tables on application rollback; explicit down removes private watches and invalidates their tokens.
+    expected_duration: A few seconds under normal lock availability on referenced tables.
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: New tables and indexes are empty; foreign keys and the device-consent trigger briefly lock referenced tables.
+    reversible: false
+    irreversible_justification: Explicit down drops private outage watches and delivery attempts; they must not be reconstructed automatically.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

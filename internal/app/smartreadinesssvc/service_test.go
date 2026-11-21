@@ -31,6 +31,9 @@ type stubRepository struct {
 func (*stubRepository) ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error) {
 	return []domain.Plan{}, nil
 }
+func (*stubRepository) PriorInterruptedChargingPower(context.Context, domain.Plan, time.Time, time.Time) (float64, error) {
+	return 0, nil
+}
 func (r *stubRepository) ListActivePlans(_ context.Context, subject string, vehicleID int64, _ time.Time, _ int) ([]domain.Plan, error) {
 	r.activeCalls++
 	if r.revokeActive && r.activeCalls > 1 {

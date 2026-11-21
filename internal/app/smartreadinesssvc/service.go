@@ -205,6 +205,9 @@ func (s *Service) SavePlan(ctx context.Context, subject string, plan domain.Plan
 	if plan.ServiceAppointment == nil && plan.SoftwareInstall == nil {
 		plan.DepartureOverlapPush = false
 	}
+	if s.sharedOpenMode {
+		plan.EarlyStopWatch = false
+	}
 	if start := plan.ScheduledStart; start != nil {
 		if !validScheduledStart(start, plan) {
 			return nil, fmt.Errorf("%w: invalid dated charging start or time zone", ErrInvalidInput)
@@ -319,7 +322,7 @@ func (s *Service) FindCandidate(
 		return nil, err
 	}
 	decision := decisionForKind(kind, charging, overlap)
-	if decision.Reason != domain.ReasonEligible || decision.Kind != kind {
+	if decision.Reason != domain.ReasonEligible || decision.Kind != kind || !sameEarlyStop(decision, candidate.Decision) {
 		return nil, nil
 	}
 	current, err := s.repository.FindCandidate(ctx, subject, vehicleID, planID, kind, s.now().UTC())
@@ -328,6 +331,7 @@ func (s *Service) FindCandidate(
 	}
 	if current == nil || current.Plan.Version != candidate.Plan.Version ||
 		current.Decision.Kind != decision.Kind || !current.PlaceUpdatedAt.Equal(candidate.PlaceUpdatedAt) ||
+		!sameEarlyStop(decision, current.Decision) ||
 		!s.now().UTC().Before(decision.ExpiresAt) {
 		return nil, nil
 	}
@@ -367,7 +371,7 @@ func (s *Service) ListCandidates(
 			evaluations[row.Plan.ID] = evaluation
 		}
 		decision := decisionForKind(row.Decision.Kind, evaluation.charging, evaluation.overlap)
-		if decision.Reason == domain.ReasonEligible && decision.Kind == row.Decision.Kind {
+		if decision.Reason == domain.ReasonEligible && decision.Kind == row.Decision.Kind && sameEarlyStop(decision, row.Decision) {
 			row.Decision = decision
 			eligible = append(eligible, row)
 		}
@@ -398,7 +402,7 @@ func (s *Service) ListCandidates(
 	result := eligible[:0]
 	for _, row := range eligible {
 		if latest, ok := versions[decisionKey{row.Plan.ID, row.Decision.Kind}]; ok && latest.Plan.Version == row.Plan.Version &&
-			latest.PlaceUpdatedAt.Equal(row.PlaceUpdatedAt) && verifiedAt.Before(row.Decision.ExpiresAt) {
+			latest.PlaceUpdatedAt.Equal(row.PlaceUpdatedAt) && sameEarlyStop(row.Decision, latest.Decision) && verifiedAt.Before(row.Decision.ExpiresAt) {
 			result = append(result, row)
 		}
 	}
@@ -427,14 +431,21 @@ func (s *Service) evaluate(ctx context.Context, plan domain.Plan, candidate *por
 	if candidate != nil && candidate.Decision.Kind == domain.DecisionDepartureOverlap {
 		return domain.Decision{}, overlap, nil
 	}
-	decision := Evaluate(plan, values, now, func(lat, lon float64) bool {
+	atChargingSite := func(lat, lon float64) bool {
 		if plan.ChargingPlaceID == nil {
 			return false
 		}
 		var contains bool
 		contains, siteErr = s.sites.Contains(ctx, *plan.ChargingPlaceID, lat, lon)
 		return contains
-	})
+	}
+	decision, err := s.evaluateEarlyStop(ctx, plan, values, now, atChargingSite)
+	if err != nil {
+		return domain.Decision{}, domain.Decision{}, err
+	}
+	if decision.Reason != domain.ReasonEligible {
+		decision = Evaluate(plan, values, now, atChargingSite)
+	}
 	if siteErr != nil {
 		return domain.Decision{}, domain.Decision{}, fmt.Errorf("check charging readiness place: %w", siteErr)
 	}

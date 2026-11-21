@@ -1278,6 +1278,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 	distributedSmartLive := cfg.Redis.Enabled && !strings.EqualFold(strings.TrimSpace(cfg.FleetTelemetry.LiveSignalStoreMode), "local")
+	backupCharging := smartreadinesssvc.NewBackupCharging(smartChargingRepo, liveSignalStore, smartSites,
+		distributedSmartLive && solarConnections.CanConnect(), nil, time.Now)
 	var softwareWindowLive smartreadinesssvc.LiveSignals
 	if distributedSmartLive {
 		softwareWindowLive = liveSignalStore
@@ -1297,6 +1299,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartdeliverysvc.WithChargingCandidates(smartChargingService),
 		smartdeliverysvc.WithCommuteDelivery(deliveryRepo, commuteOriginCheck),
 		smartdeliverysvc.WithPublicFeeDelivery(deliveryRepo, smartChargingService),
+		smartdeliverysvc.WithBackupDelivery(deliveryRepo, backupCharging),
 		smartdeliverysvc.WithCabinPrepDelivery(deliveryRepo, cabinPrep),
 		smartdeliverysvc.WithParkReserveDelivery(deliveryRepo, parkReserves),
 		smartdeliverysvc.WithWindowRainDelivery(deliveryRepo, windowRainDelivery),
@@ -1311,6 +1314,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	smartChargingHandler := smartreadinesshandler.NewHandler(smartChargingService, cfg.Auth.ForwardAuthHeader,
 		smartreadinesshandler.WithSolarCharging(smartChargingService, solarConnections),
+		smartreadinesshandler.WithBackupCharging(backupCharging, func() bool {
+			return distributedSmartLive && solarConnections.CanConnect() && smartDeliveryService.BackupDeliveryAvailable()
+		}),
 		smartreadinesshandler.WithTripStops(tripStops),
 		smartreadinesshandler.WithTripReviews(smartreadinesssvc.NewTripReviews(smartChargingRepo, time.Now)),
 		smartreadinesshandler.WithTripMaintenance(tripMaintenance),
@@ -1342,6 +1348,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	if solarConnections.CanConnect() {
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
+		if distributedSmartLive && smartDeliveryService.BackupDeliveryAvailable() {
+			actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithBackupCharging(backupCharging))
+		}
 	}
 	actionCenterService := actioncentersvc.New(
 		actioncenterdb.NewSourceRepository(db),

@@ -38,6 +38,7 @@ type service interface {
 	ClaimWindowRain(context.Context, string, string) (*domain.Notification, error)
 	ClaimParkedClosure(context.Context, string, string) (*domain.Notification, error)
 	ClaimParkedUnlock(context.Context, string, string) (*domain.Notification, error)
+	ClaimBackupCharging(context.Context, string, string) (*domain.Notification, error)
 	SetChargingEnabled(context.Context, string, int64, bool) error
 	SetCommuteEnabled(context.Context, string, int64, bool, domain.Copy) error
 	DeleteDevice(context.Context, string, int64) error
@@ -102,6 +103,8 @@ func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {
 		notification, err = h.service.ClaimParkedClosure(ctx, subject, request.Token)
 	case "parked-unlock":
 		notification, err = h.service.ClaimParkedUnlock(ctx, subject, request.Token)
+	case "backup-charging":
+		notification, err = h.service.ClaimBackupCharging(ctx, subject, request.Token)
 	default:
 		err = smartdeliverysvc.ErrInvalidInput
 	}

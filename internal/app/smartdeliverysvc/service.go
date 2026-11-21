@@ -63,6 +63,8 @@ type Service struct {
 	closurePlans ParkedClosureCandidates
 	unlockRepo   port.ParkedUnlockRepository
 	unlockPlans  ParkedUnlockCandidates
+	backupRepo   port.BackupRepository
+	backupSource BackupCandidates
 	quietHours   QuietHours
 	observe      func(string)
 }

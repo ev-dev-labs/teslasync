@@ -155,6 +155,23 @@ var flows = []flow{
 		},
 	},
 	{
+		Name:        "smart_backup_charging",
+		Description: "Notification worker checks private backup charging and delivers an authorized review",
+		GlobPatterns: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/backup_charging.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+		MinSpanFiles: 4,
+		RequiredFiles: []string{
+			"cmd/notification-worker/smart_charging.go",
+			"internal/handler/v1/smartreadiness/backup_charging.go",
+			"internal/handler/v1/smartdelivery/handler.go",
+			"internal/database/database.go",
+		},
+	},
+	{
 		Name:        "smart_parked_closure",
 		Description: "Notification worker checks fresh post-park closure evidence and delivers a private review",
 		GlobPatterns: []string{

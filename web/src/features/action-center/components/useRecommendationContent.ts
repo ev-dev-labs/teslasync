@@ -46,6 +46,21 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     ? recommendation.evidence.find((item) => item.kind === 'recall_watch_match')?.recall_watch_match
     : undefined;
   const scheduledClimate = recommendation.evidence.find(item => item.climate_schedule)?.climate_schedule;
+  const backup = recommendation.evidence.find(item => item.kind === 'backup_charging')?.backup_charging;
+  if (backup) {
+    const basis = t('smartCharging.backup.cardBasis', 'Your outage and circuit confirmations, two Tesla Energy meter readings, and vehicle charging telemetry.');
+    const summary = t('smartCharging.backup.evidence', 'Two consistent readings after your outage confirmation show {{vehicle}} of vehicle charging and at least {{minimum}} coming from the home battery. This is a conservative estimate from the site meters, not a backup runtime forecast.', {
+      vehicle: formatPower(backup.vehicle_power_w), minimum: formatPower(backup.minimum_battery_to_load_w),
+    });
+    return {
+      ...recommendation,
+      title: t('smartCharging.backup.reviewTitle', 'Vehicle charging is drawing from household backup'),
+      summary, rationale: basis,
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.kind === 'backup_charging' ? { ...item, summary } : item),
+      limitations: [t('smartCharging.backup.cardLimit', 'This estimate is not a backup runtime forecast. Nothing changes automatically.')],
+    };
+  }
   if (recommendation.source_feature === 'subscription_renewal') {
     const basis = t('ownership.subscription.renewal.cardBasis', 'Owner-confirmed renewal date and stored subscription terms.');
     return {
@@ -185,6 +200,28 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   }
   if (charging) {
     const projection = charging.trip_projection ? displayProjection(charging.trip_projection, charging.reserve_pct) : undefined;
+    if (charging.kind === 'early_stop' && charging.interrupted_at) {
+      const basis = t('smartCharging.earlyStopBasis', 'Observed charging, then no power while connected at the selected place.');
+      const summary = [
+        t('smartCharging.earlyStopSummary', 'At {{stopped}}, the vehicle reported no charging power. If charging does not resume, {{battery}}% may not be enough for your {{departure}} departure.', {
+          stopped: formatDateTime(charging.interrupted_at), battery: fmtNumber(charging.battery_pct),
+          departure: formatDateTime(charging.departure_at),
+        }),
+        projection?.summary,
+      ].filter(Boolean).join(' ');
+      return {
+        ...recommendation,
+        title: t('smartCharging.earlyStopTitle', 'Inspect charging before your planned departure'),
+        summary,
+        rationale: basis,
+        confidence: { ...recommendation.confidence, basis: [basis, t('smartCharging.actionBasisEstimate', 'Trip consumption and reserve were entered by you')] },
+        evidence: recommendation.evidence.map(item => item.charging_readiness ? { ...item, summary } : item),
+        limitations: [
+          t('smartCharging.earlyStopLimitation', 'This does not identify why charging stopped. Check the vehicle or charger in person; TeslaSync does not restart charging.'),
+          ...(projection?.assumptions ?? []),
+        ],
+      };
+    }
     if (charging.kind === 'schedule_conflict' && charging.scheduled_start_at) {
       const { scheduled_power_ceiling_w: powerCeiling } = charging;
       const context = {

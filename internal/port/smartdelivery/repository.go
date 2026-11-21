@@ -25,7 +25,7 @@ type Repository interface {
 	ListChargingDevices(context.Context, string) ([]int64, error)
 	LockCharging(context.Context, domain.ChargingAttempt) (DispatchLease, error)
 	FindDelivery(context.Context, string, []byte, time.Time) (*domain.DeliveryRef, error)
-	ConsumeDelivery(context.Context, string, domain.DeliveryRef, time.Time) (*domain.Notification, error)
+	ConsumeDelivery(ctx context.Context, subject string, ref domain.DeliveryRef, deadline time.Time, clock func() time.Time) (*domain.Notification, error)
 }
 
 type DispatchLease interface {

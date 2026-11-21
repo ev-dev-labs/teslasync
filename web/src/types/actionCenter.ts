@@ -83,7 +83,7 @@ export interface ActionCenterRecurringDriveEvidence {
 
 export interface ActionCenterChargingReadinessEvidence {
   plan_id: number;
-  kind?: 'plug_in' | 'slow_charging' | 'trip_review' | 'schedule_conflict';
+  kind?: 'plug_in' | 'slow_charging' | 'trip_review' | 'schedule_conflict' | 'early_stop';
   place_name: string;
   battery_pct: number;
   arrival_low_pct: number;
@@ -95,6 +95,7 @@ export interface ActionCenterChargingReadinessEvidence {
   departure_at: string;
   scheduled_start_at?: string;
   scheduled_power_ceiling_w?: number;
+  interrupted_at?: string;
 }
 
 export interface ActionCenterEvidence {
@@ -117,6 +118,7 @@ export interface ActionCenterEvidence {
   };
   site_performance?: SmartChargingSitePerformanceReview;
   solar_surplus?: SmartSolarDecision;
+  backup_charging?: { vehicle_power_w: number; minimum_battery_to_load_w: number; observed_at: string; expires_at: string };
   warranty_distance?: WarrantyDistanceProjection;
   trip_maintenance?: TripMaintenanceProjection;
   cold_tire_drift?: ColdTireDrift;

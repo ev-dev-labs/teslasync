@@ -169,6 +169,57 @@ func (j *chargingDeliveryJourney) request(method, path, subject string, body any
 	return rec
 }
 
+func (j *chargingDeliveryJourney) claimAfterLockWait(
+	lockQuery, claimQueryMatch string, claim func() *httptest.ResponseRecorder, advance func(),
+) *httptest.ResponseRecorder {
+	j.t.Helper()
+	lock, err := j.db.Pool.Begin(j.ctx)
+	if err != nil {
+		j.t.Fatal(err)
+	}
+	defer func() { _ = lock.Rollback(j.ctx) }()
+	if _, err := lock.Exec(j.ctx, lockQuery); err != nil {
+		j.t.Fatal(err)
+	}
+	var blocker int32
+	if err := lock.QueryRow(j.ctx, `SELECT pg_backend_pid()`).Scan(&blocker); err != nil {
+		j.t.Fatal(err)
+	}
+	response := make(chan *httptest.ResponseRecorder, 1)
+	go func() { response <- claim() }()
+	wait, cancel := context.WithTimeout(j.ctx, 5*time.Second)
+	defer cancel()
+	for {
+		var blocked bool
+		err := j.db.Pool.QueryRow(wait, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE
+			$1=ANY(pg_blocking_pids(pid)) AND query LIKE $2)`, blocker, claimQueryMatch).Scan(&blocked)
+		if err != nil {
+			j.t.Fatalf("claim did not wait for final delivery lock: %v", err)
+		}
+		if blocked {
+			break
+		}
+		select {
+		case <-wait.Done():
+			j.t.Fatal("claim did not reach final delivery lock")
+		case early := <-response:
+			j.t.Fatalf("claim did not wait for delivery lock: %d %s", early.Code, early.Body)
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	advance()
+	if err := lock.Commit(j.ctx); err != nil {
+		j.t.Fatal(err)
+	}
+	select {
+	case rec := <-response:
+		return rec
+	case <-j.ctx.Done():
+		j.t.Fatal("claim did not finish")
+		return nil
+	}
+}
+
 func (j *chargingDeliveryJourney) enroll(subject, endpoint string) int64 {
 	j.t.Helper()
 	sub := domain.Subscription{
@@ -875,12 +926,12 @@ type changingDeliveryRepository struct {
 }
 
 func (r changingDeliveryRepository) ConsumeDelivery(
-	ctx context.Context, subject string, ref domain.DeliveryRef, now time.Time,
+	ctx context.Context, subject string, ref domain.DeliveryRef, deadline time.Time, clock func() time.Time,
 ) (*domain.Notification, error) {
 	if err := r.beforeConsume(); err != nil {
 		return nil, err
 	}
-	return r.Repository.ConsumeDelivery(ctx, subject, ref, now)
+	return r.Repository.ConsumeDelivery(ctx, subject, ref, deadline, clock)
 }
 
 func TestChangedDecisionCannotBeClaimedOrDispatched(t *testing.T) {

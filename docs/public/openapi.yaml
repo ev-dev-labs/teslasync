@@ -2499,6 +2499,72 @@ paths:
         "204": { description: The imported statement and related local data were removed; telemetry and provider records are unchanged. }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /smart-charging/backup-charging:
+    get:
+      summary: Read the signed-in person's backup charging watch and unexpired evidence
+      parameters:
+        - in: query
+          name: vehicle_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "200":
+          description: Setup availability, read-only Tesla Energy connection status and local connection_revision when connected, server-authoritative active status, and nullable watch and decision. The decision includes observed and expiry timestamps, vehicle power in watts, and a conservative lower-bound estimate of home battery draw in watts.
+        "403": { description: A verified signed-in principal is required. }
+    post:
+      summary: Start a one-hour watch for an explicitly confirmed utility outage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [vehicle_id, connection_revision, place_id, place_updated_at, device_id, device_updated_at, same_backup_circuit_confirmed, utility_outage_confirmed]
+              properties:
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                connection_revision: { type: integer, format: int64, minimum: 1 }
+                place_id: { type: integer, format: int64, minimum: 1 }
+                place_updated_at: { type: string, format: date-time }
+                device_id: { type: integer, format: int64, minimum: 1 }
+                device_updated_at: { type: string, format: date-time, description: Revision of the verified browser selected during confirmation. }
+                same_backup_circuit_confirmed: { type: boolean, enum: [true] }
+                utility_outage_confirmed: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: Watch started; no provider write or vehicle command is made. }
+        "400": { description: Missing or invalid input or confirmation. }
+        "404": { description: The reviewed connection, place, vehicle, or verified recipient is unavailable, or a watch already exists. }
+        "503": { description: Read-only Tesla Energy or personal delivery is unavailable. }
+    delete:
+      summary: Remove the exact watch and withdraw pending recommendations
+      parameters:
+        - in: query
+          name: vehicle_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+        - in: query
+          name: watch_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "204": { description: The selected watch was removed. }
+        "404": { description: No such watch for the signed-in principal and selected vehicle. }
+  /smart-charging/plans:
+    post:
+      operationId: createSmartChargingPlan
+      summary: Create a charging readiness plan for a selected vehicle and place
+      tags: [Charging]
+      description: Creates a local plan only. Interruption monitoring is off by default and requires a verified sign-in; personal charging push enrollment is separate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmartChargingPlanInput" }
+      responses:
+        "201": { description: The charging readiness plan was saved. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /smart-charging/plans/{planID}:
     put:
       operationId: replaceSmartChargingPlan
@@ -2512,18 +2578,13 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [vehicle_id, enabled, notify_at, departure_at, trip_use_low_pct, trip_use_high_pct, reserve_pct, expected_version, expected_check_at]
-              properties:
-                vehicle_id: { type: integer, format: int64, minimum: 1 }
-                enabled: { type: boolean }
-                notify_at: { type: string, format: date-time }
-                departure_at: { type: string, format: date-time }
-                trip_use_low_pct: { type: number, minimum: 0, maximum: 100 }
-                trip_use_high_pct: { type: number, minimum: 0, maximum: 100 }
-                reserve_pct: { type: number, minimum: 0, maximum: 100 }
-                expected_version: { type: integer, format: int64, minimum: 1 }
-                expected_check_at: { type: string, format: date-time }
+              allOf:
+                - $ref: "#/components/schemas/SmartChargingPlanInput"
+                - type: object
+                  required: [expected_version, expected_check_at]
+                  properties:
+                    expected_version: { type: integer, format: int64, minimum: 1 }
+                    expected_check_at: { type: string, format: date-time }
       responses:
         "200": { description: The updated plan. }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -9262,6 +9323,23 @@ components:
           properties:
             material_amount_minor: { type: integer, format: int64, minimum: 1, maximum: 1000000000000 }
             complete_statement: { type: boolean, default: false, description: Every line entered and no omitted adjustments or credits. }
+
+    SmartChargingPlanInput:
+      type: object
+      required: [vehicle_id, enabled, notify_at, departure_at, trip_use_low_pct, trip_use_high_pct, reserve_pct]
+      properties:
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        charging_place_id: { type: integer, format: int64, minimum: 1, description: Required when creating or enabling a plan. }
+        enabled: { type: boolean }
+        notify_at: { type: string, format: date-time }
+        departure_at: { type: string, format: date-time }
+        trip_use_low_pct: { type: number, minimum: 0, maximum: 100 }
+        trip_use_high_pct: { type: number, minimum: 0, maximum: 100 }
+        reserve_pct: { type: number, minimum: 0, maximum: 100 }
+        early_stop_watch:
+          type: boolean
+          default: false
+          description: For a verified signed-in subject, use recent charging evidence during this plan's readiness window. False or omitted disables this check. Personal push enrollment is separate.
 
     ChargingInvoiceRecord:
       allOf:

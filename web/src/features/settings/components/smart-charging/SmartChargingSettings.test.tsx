@@ -82,6 +82,7 @@ beforeEach(() => {
     if (path === '/vehicles') return [{ id: 42, display_name: 'Synthetic A' }, { id: 43, display_name: 'Synthetic B' }]
     if (path === '/geofences') return places
     if (path.startsWith('/smart-charging/solar?')) return { data: { available: false, plan: null, decision: null } }
+    if (path.startsWith('/smart-charging/backup-charging?')) return { data: { available: false, connected: false, active: false, watch: null, decision: null } }
     if (path === '/smart-charging/public-fee-terms?vehicle_id=42') {
       if (options?.method === 'DELETE') {
         publicFee = null

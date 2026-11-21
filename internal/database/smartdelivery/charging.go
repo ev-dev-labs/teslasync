@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
@@ -55,7 +56,9 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		  AND p.notify_at <= $7 AND p.departure_at > $7::timestamptz + INTERVAL '30 minutes'
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $7)
 		  AND decision.expires_at > $7 AND g.updated_at=$8 AND decision.kind=$9
+		  AND decision.interrupted_at IS NOT DISTINCT FROM $10::timestamptz
 		  AND ($9 <> 'departure_overlap' OR p.departure_overlap_push)
+		  AND ($9 <> 'early_stop' OR p.early_stop_watch)
 		  AND ($9 <> 'slow_charging' OR EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
@@ -64,7 +67,7 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		  ))
 		FOR SHARE OF dev, p, v, g`,
 		attempt.DeviceID, attempt.PlanID, attempt.Subject, attempt.VehicleID, attempt.PlanVersion,
-		attempt.DepartureAt, attempt.CreatedAt, attempt.PlaceUpdatedAt, attempt.DecisionKind).Scan(&ciphertext)
+		attempt.DepartureAt, attempt.CreatedAt, attempt.PlaceUpdatedAt, attempt.DecisionKind, attempt.InterruptedAt).Scan(&ciphertext)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -90,15 +93,21 @@ func (l *dispatchLease) Reserve(ctx context.Context, attempt domain.ChargingAtte
 		if err != nil || !allowed {
 			return err
 		}
+		if attempt.InterruptedAt != nil {
+			active, checkErr := readinessdb.EarlyStopUnchanged(ctx, tx, attempt.VehicleID, *attempt.InterruptedAt, attempt.CreatedAt)
+			if checkErr != nil || !active {
+				return checkErr
+			}
+		}
 		var id int64
 		err = tx.QueryRow(ctx, `
 			INSERT INTO smart_push_deliveries
 			  (device_id, plan_id, plan_version, departure_at, place_updated_at, decision_kind,
-			   token_hash, status, created_at, expires_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,'dispatching',$8,$9)
+			   token_hash, status, created_at, expires_at, interrupted_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,'dispatching',$8,$9,$10)
 			ON CONFLICT DO NOTHING RETURNING id`,
 			attempt.DeviceID, attempt.PlanID, attempt.PlanVersion, attempt.DepartureAt,
-			attempt.PlaceUpdatedAt, attempt.DecisionKind, attempt.TokenHash, attempt.CreatedAt, attempt.ExpiresAt).Scan(&id)
+			attempt.PlaceUpdatedAt, attempt.DecisionKind, attempt.TokenHash, attempt.CreatedAt, attempt.ExpiresAt, attempt.InterruptedAt).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -135,7 +144,7 @@ func (r *Repository) FindDelivery(
 ) (*domain.DeliveryRef, error) {
 	var ref domain.DeliveryRef
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT d.id, p.id, p.vehicle_id, p.version, d.place_updated_at, d.decision_kind
+		SELECT d.id, p.id, p.vehicle_id, p.version, d.place_updated_at, d.decision_kind, d.interrupted_at
 		FROM smart_push_deliveries d
 		JOIN smart_push_devices dev ON dev.id=d.device_id
 		JOIN smart_charging_plans p ON p.id=d.plan_id
@@ -151,7 +160,9 @@ func (r *Repository) FindDelivery(
 		  AND d.status IN ('dispatching','accepted','unknown') AND d.expires_at > $3
 		  AND decision.expires_at > $3 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 		  AND g.updated_at=d.place_updated_at AND decision.kind=d.decision_kind
+		  AND decision.interrupted_at IS NOT DISTINCT FROM d.interrupted_at
 		  AND (d.decision_kind <> 'departure_overlap' OR p.departure_overlap_push)
+		  AND (d.decision_kind <> 'early_stop' OR p.early_stop_watch)
 		  AND (d.decision_kind <> 'slow_charging' OR EXISTS (
 		    SELECT 1 FROM smart_charging_slow_samples s
 		    WHERE s.plan_id=p.id AND s.plan_version=p.version
@@ -159,7 +170,7 @@ func (r *Repository) FindDelivery(
 		      AND s.first_seen_at <= decision.evaluated_at - INTERVAL '5 minutes'
 		  ))`,
 		tokenHash, subject, now).Scan(
-		&ref.ID, &ref.PlanID, &ref.VehicleID, &ref.PlanVersion, &ref.PlaceUpdatedAt, &ref.DecisionKind)
+		&ref.ID, &ref.PlanID, &ref.VehicleID, &ref.PlanVersion, &ref.PlaceUpdatedAt, &ref.DecisionKind, &ref.InterruptedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -170,7 +181,7 @@ func (r *Repository) FindDelivery(
 }
 
 func (r *Repository) ConsumeDelivery(
-	ctx context.Context, subject string, ref domain.DeliveryRef, now time.Time,
+	ctx context.Context, subject string, ref domain.DeliveryRef, deadline time.Time, clock func() time.Time,
 ) (*domain.Notification, error) {
 	var notification domain.Notification
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
@@ -185,8 +196,10 @@ func (r *Repository) ConsumeDelivery(
 		if err != nil {
 			return fmt.Errorf("lock claimed charging plan: %w", err)
 		}
+		var persistedDeadline time.Time
 		err = tx.QueryRow(ctx, `
-			SELECT dev.charging_title, dev.charging_body
+			SELECT dev.charging_title, dev.charging_body,
+			  LEAST(d.expires_at,decision.expires_at,p.departure_at-INTERVAL '30 minutes')
 			FROM smart_push_deliveries d
 			JOIN smart_push_devices dev ON dev.id=d.device_id
 			JOIN smart_charging_plans p ON p.id=d.plan_id
@@ -204,7 +217,10 @@ func (r *Repository) ConsumeDelivery(
 			  AND decision.expires_at > $6 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 			  AND g.updated_at=$7 AND d.place_updated_at=$7 AND d.decision_kind=$8
 			  AND decision.kind=$8
+			  AND d.interrupted_at IS NOT DISTINCT FROM $9::timestamptz
+			  AND decision.interrupted_at IS NOT DISTINCT FROM d.interrupted_at
 			  AND ($8 <> 'departure_overlap' OR p.departure_overlap_push)
+			  AND ($8 <> 'early_stop' OR p.early_stop_watch)
 			  AND ($8 <> 'slow_charging' OR EXISTS (
 			    SELECT 1 FROM smart_charging_slow_samples s
 			    WHERE s.plan_id=p.id AND s.plan_version=p.version
@@ -212,13 +228,26 @@ func (r *Repository) ConsumeDelivery(
 			      AND s.first_seen_at <= decision.evaluated_at - INTERVAL '5 minutes'
 			  ))
 			FOR SHARE OF dev, v, g FOR UPDATE OF d`,
-			ref.ID, subject, planID, ref.VehicleID, ref.PlanVersion, now, ref.PlaceUpdatedAt, ref.DecisionKind).
-			Scan(&notification.Title, &notification.Body)
+			ref.ID, subject, planID, ref.VehicleID, ref.PlanVersion, clock().UTC(), ref.PlaceUpdatedAt, ref.DecisionKind, ref.InterruptedAt).
+			Scan(&notification.Title, &notification.Body, &persistedDeadline)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("lock personal charging delivery: %w", err)
+		}
+		if ref.InterruptedAt != nil {
+			active, checkErr := readinessdb.EarlyStopUnchanged(ctx, tx, ref.VehicleID, *ref.InterruptedAt, clock().UTC())
+			if checkErr != nil {
+				return checkErr
+			}
+			if !active {
+				return port.ErrNotFound
+			}
+		}
+		now := clock().UTC()
+		if !now.Before(persistedDeadline) || !now.Before(deadline) {
+			return port.ErrNotFound
 		}
 		if _, err := tx.Exec(ctx, `UPDATE smart_push_deliveries SET claimed_at=$2 WHERE id=$1`, ref.ID, now); err != nil {
 			return fmt.Errorf("consume personal charging delivery: %w", err)

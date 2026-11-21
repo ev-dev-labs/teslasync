@@ -13,6 +13,7 @@ import { SmartChargingPlans } from './SmartChargingPlans'
 import { SmartChargingSitePerformance } from './SmartChargingSitePerformance'
 import { SmartChargingPublicFee } from './SmartChargingPublicFee'
 import { SmartChargingSolar } from './SmartChargingSolar'
+import { SmartBackupCharging } from './SmartBackupCharging'
 
 interface Props {
   active: boolean
@@ -52,6 +53,7 @@ export function SmartChargingSettings({ active }: Props) {
     else next.delete('vehicle_id')
     next.delete('fee_session_id')
     next.delete('solar')
+    next.delete('backup_watch_id')
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
   }
   const apply = async (input: SmartChargingChange) => {
@@ -135,6 +137,9 @@ export function SmartChargingSettings({ active }: Props) {
                 disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
                 placesUnavailable={formDisabled} />
               <SmartChargingSolar scope={scope} vehicleId={vehicleId} places={places}
+                disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
+                placesUnavailable={formDisabled} />
+              <SmartBackupCharging scope={scope} vehicleId={vehicleId} places={places}
                 disabled={!operationalMode.canWrite || vehicleState.status !== 'ok' || vehicles.isFetching}
                 placesUnavailable={formDisabled} />
             </div>

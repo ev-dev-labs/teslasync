@@ -201,6 +201,7 @@ type ChargingReadinessEvidence struct {
 	DepartureAt            time.Time                            `json:"departure_at"`
 	ScheduledStartAt       *time.Time                           `json:"scheduled_start_at,omitempty"`
 	ScheduledPowerCeilingW *float64                             `json:"scheduled_power_ceiling_w,omitempty"`
+	InterruptedAt          *time.Time                           `json:"interrupted_at,omitempty"`
 }
 
 type DepartureOverlapEvidence struct {
@@ -231,6 +232,7 @@ type EvidenceItem struct {
 	CommuteTraffic    *CommuteTrafficEvidence                   `json:"commute_traffic,omitempty"`
 	SitePerformance   *smartreadiness.SitePerformanceReview     `json:"site_performance,omitempty"`
 	SolarSurplus      *smartreadiness.SolarSurplusDecision      `json:"solar_surplus,omitempty"`
+	BackupCharging    *smartreadiness.BackupChargingSample      `json:"backup_charging,omitempty"`
 	WarrantyDistance  *ownershipintel.WarrantyDistanceReminder  `json:"warranty_distance,omitempty"`
 	TripMaintenance   *smartreadiness.TripMaintenanceProjection `json:"trip_maintenance,omitempty"`
 	ColdTireDrift     *smartreadiness.ColdTireDrift             `json:"cold_tire_drift,omitempty"`

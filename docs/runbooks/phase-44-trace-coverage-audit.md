@@ -69,6 +69,16 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `internal/handler/v1/smartdelivery/handler.go`
   - `internal/handler/v1/smartreadiness/window_rain.go`
 
+## Notification worker checks private backup charging and delivers an authorized review — `smart_backup_charging`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 4)
+- Matched files:
+  - `cmd/notification-worker/smart_charging.go`
+  - `internal/database/database.go`
+  - `internal/handler/v1/smartdelivery/handler.go`
+  - `internal/handler/v1/smartreadiness/backup_charging.go`
+
 ## Notification worker checks fresh post-park closure evidence and delivers a private review — `smart_parked_closure`
 
 - Status: **OK**

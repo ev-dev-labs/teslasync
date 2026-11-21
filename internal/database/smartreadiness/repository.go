@@ -25,7 +25,7 @@ const (
 		p.outbound_use_low_pct, p.outbound_use_high_pct, p.return_use_low_pct,
 		p.return_use_high_pct, p.destination_charge_pct, p.scheduled_start_at, p.scheduled_start_time_zone,
 		p.scheduled_power_ceiling_w, p.service_starts_at, p.service_ends_at,
-		p.software_starts_at, p.software_ends_at, p.departure_overlap_push`
+		p.software_starts_at, p.software_ends_at, p.departure_overlap_push, p.early_stop_watch`
 )
 
 type Repository struct {
@@ -199,14 +199,14 @@ func (r *Repository) SavePlan(
 				   outbound_use_low_pct, outbound_use_high_pct, return_use_low_pct, return_use_high_pct,
 				   destination_charge_pct, next_check_at, created_at, updated_at, scheduled_start_at, scheduled_start_time_zone,
 				   scheduled_power_ceiling_w, service_starts_at, service_ends_at, software_starts_at, software_ends_at,
-				   departure_overlap_push)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$18,$19,$20,$21,$22,$23,$24,$25)
+				   departure_overlap_push, early_stop_watch)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
 				RETURNING `+planColumns,
 				subject, plan.VehicleID, plan.ChargingPlaceID, plan.Enabled, plan.NotifyAt,
 				plan.DepartureAt, plan.TripUseLowPct, plan.TripUseHighPct, plan.ReservePct,
 				plan.CompareSiteRates, outboundLow, outboundHigh, returnLow, returnHigh, destinationCharge, next, now,
 				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
-				plan.DepartureOverlapPush))
+				plan.DepartureOverlapPush, plan.EarlyStopWatch))
 		} else {
 			// Electing an earlier check preserves the trip evidence's consent version.
 			if plan.ExpectedCheckAt != nil {
@@ -238,7 +238,7 @@ func (r *Repository) SavePlan(
 				    return_use_high_pct=$17, destination_charge_pct=$18,
 				    scheduled_start_at=$19, scheduled_start_time_zone=$20, scheduled_power_ceiling_w=$21,
 				    service_starts_at=$22, service_ends_at=$23, software_starts_at=$24, software_ends_at=$25, departure_overlap_push=$26,
-				    lease_token=NULL, lease_until=NULL,
+				    early_stop_watch=$27, lease_token=NULL, lease_until=NULL,
 				    version=version+1, updated_at=$13
 				WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3
 				RETURNING `+planColumns,
@@ -246,7 +246,7 @@ func (r *Repository) SavePlan(
 				plan.DepartureAt, plan.TripUseLowPct, plan.TripUseHighPct, plan.ReservePct,
 				plan.CompareSiteRates, next, now, outboundLow, outboundHigh, returnLow, returnHigh, destinationCharge,
 				scheduledAt, scheduledZone, powerCeilingW, serviceStartsAt, serviceEndsAt, softwareStartsAt, softwareEndsAt,
-				plan.DepartureOverlapPush))
+				plan.DepartureOverlapPush, plan.EarlyStopWatch))
 			if err == nil {
 				err = clearReadinessDecisions(ctx, tx, plan.ID)
 			}
@@ -351,7 +351,11 @@ func (r *Repository) FinishClaim(
 ) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var next *time.Time
-		checkAt := now.UTC().Truncate(time.Minute).Add(time.Minute)
+		interval := time.Minute
+		if claim.Plan.EarlyStopWatch {
+			interval = domain.EarlyStopCheckInterval
+		}
+		checkAt := now.UTC().Truncate(interval).Add(interval)
 		if decision.Reason != domain.ReasonExpired && checkAt.Before(claim.Plan.DepartureAt.Add(-30*time.Minute)) {
 			next = &checkAt
 		}
@@ -409,14 +413,15 @@ func (r *Repository) FinishClaim(
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO smart_charging_decisions
-			  (plan_id, battery_pct, arrival_low_pct, arrival_high_pct, observed_at, expires_at, evaluated_at, kind)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+			  (plan_id, battery_pct, arrival_low_pct, arrival_high_pct, observed_at, expires_at, evaluated_at, kind, interrupted_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 			ON CONFLICT (plan_id) DO UPDATE SET
 			  battery_pct=EXCLUDED.battery_pct, arrival_low_pct=EXCLUDED.arrival_low_pct,
 			  arrival_high_pct=EXCLUDED.arrival_high_pct, observed_at=EXCLUDED.observed_at,
-			  expires_at=EXCLUDED.expires_at, evaluated_at=EXCLUDED.evaluated_at, kind=EXCLUDED.kind`,
+			  expires_at=EXCLUDED.expires_at, evaluated_at=EXCLUDED.evaluated_at, kind=EXCLUDED.kind,
+			  interrupted_at=EXCLUDED.interrupted_at`,
 			id, decision.BatteryPct, decision.ArrivalLowPct, decision.ArrivalHighPct,
-			decision.ObservedAt, decision.ExpiresAt, now, decision.Kind)
+			decision.ObservedAt, decision.ExpiresAt, now, decision.Kind, decision.InterruptedAt)
 		if err != nil {
 			return fmt.Errorf("persist charging readiness decision: %w", err)
 		}
@@ -446,7 +451,7 @@ func (r *Repository) listCandidates(
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT `+planColumns+`, d.battery_pct, d.arrival_low_pct, d.arrival_high_pct,
 		       d.observed_at, d.expires_at, v.display_name, g.name, g.updated_at,
-		       d.kind
+		       d.kind, d.interrupted_at
 		FROM smart_charging_plans p
 		JOIN smart_charging_candidate_decisions d ON d.plan_id=p.id
 		LEFT JOIN smart_charging_slow_samples s ON s.plan_id=p.id AND s.plan_version=p.version
@@ -472,7 +477,7 @@ func (r *Repository) listCandidates(
 			&candidate.Decision.BatteryPct, &candidate.Decision.ArrivalLowPct,
 			&candidate.Decision.ArrivalHighPct, &candidate.Decision.ObservedAt,
 			&candidate.Decision.ExpiresAt, &candidate.VehicleName, &candidate.PlaceName,
-			&candidate.PlaceUpdatedAt, &candidate.Decision.Kind)
+			&candidate.PlaceUpdatedAt, &candidate.Decision.Kind, &candidate.Decision.InterruptedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan charging readiness decision: %w", err)
 		}
@@ -504,7 +509,7 @@ func scanPlanInto(row pgx.Row, plan *domain.Plan, extras ...any) error {
 		&plan.NotifyAt, &plan.DepartureAt, &plan.TripUseLowPct, &plan.TripUseHighPct,
 		&plan.ReservePct, &plan.CompareSiteRates, &plan.SnoozedUntil, &plan.CreatedAt, &plan.UpdatedAt, &plan.Version,
 		&outboundLow, &outboundHigh, &returnLow, &returnHigh, &destinationCharge, &scheduledAt, &scheduledZone, &powerCeilingW,
-		&serviceStartsAt, &serviceEndsAt, &softwareStartsAt, &softwareEndsAt, &plan.DepartureOverlapPush,
+		&serviceStartsAt, &serviceEndsAt, &softwareStartsAt, &softwareEndsAt, &plan.DepartureOverlapPush, &plan.EarlyStopWatch,
 	}
 	if err := row.Scan(append(dest, extras...)...); err != nil {
 		return err
