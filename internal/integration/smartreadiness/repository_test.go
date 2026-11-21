@@ -180,6 +180,7 @@ func TestTripLegMigrationPreservesSlowEvidenceAndInvalidatesNewTokensOnRollback(
 	if err != nil {
 		t.Fatal(err)
 	}
+	applyReadinessMigration(t, db, "000313_smart_charging_early_stop", "down")
 	applyReadinessMigration(t, db, "000307_smart_departure_conflict_delivery", "down")
 	run := func(direction string) {
 		t.Helper()

@@ -664,9 +664,10 @@ func TestDepartureOverlapCoexistsWithChargingAndFencesBothDeliveryFamilies(t *te
 	if rec := j.claim("subject-a", token); rec.Code != http.StatusOK {
 		t.Fatalf("owner conflict claim: %d %s", rec.Code, rec.Body)
 	}
-	for _, direction := range []string{"down", "up"} {
-		applyReadinessMigration(t, j.db, "000307_smart_departure_conflict_delivery", direction)
-	}
+	applyReadinessMigration(t, j.db, "000313_smart_charging_early_stop", "down")
+	applyReadinessMigration(t, j.db, "000307_smart_departure_conflict_delivery", "down")
+	applyReadinessMigration(t, j.db, "000307_smart_departure_conflict_delivery", "up")
+	applyReadinessMigration(t, j.db, "000313_smart_charging_early_stop", "up")
 	j.advance(j.now.Add(time.Hour))
 	j.process()
 	if calls, _ := j.sender.last(); calls != 3 {
@@ -959,10 +960,13 @@ func TestChangedDecisionCannotBeClaimedOrDispatched(t *testing.T) {
 	}
 	setSlowDecision := func() error {
 		_, err := j.db.Pool.Exec(j.ctx, `
+			WITH changed AS (
+				UPDATE smart_charging_decisions SET kind='slow_charging' WHERE plan_id=$1
+				RETURNING plan_id, evaluated_at
+			)
 			INSERT INTO smart_charging_slow_samples (plan_id,plan_version,first_seen_at,last_seen_at)
-			SELECT p.id,p.version,d.evaluated_at - INTERVAL '5 minutes',d.evaluated_at
-			FROM smart_charging_plans p JOIN smart_charging_decisions d ON d.plan_id=p.id
-			WHERE p.id=$1`, plan.ID)
+			SELECT p.id,p.version,changed.evaluated_at - INTERVAL '5 minutes',changed.evaluated_at
+			FROM changed JOIN smart_charging_plans p ON p.id=changed.plan_id`, plan.ID)
 		return err
 	}
 	enc, err := crypto.New("synthetic-test-encryption-key")
@@ -990,7 +994,11 @@ func TestChangedDecisionCannotBeClaimedOrDispatched(t *testing.T) {
 		_ = lease.Close(j.ctx)
 		t.Fatal("dispatch locked a decision whose kind had changed")
 	}
-	if _, err := j.db.Pool.Exec(j.ctx, `DELETE FROM smart_charging_slow_samples WHERE plan_id=$1`, plan.ID); err != nil {
+	if _, err := j.db.Pool.Exec(j.ctx, `
+		WITH restored AS (
+			UPDATE smart_charging_decisions SET kind='plug_in' WHERE plan_id=$1 RETURNING plan_id
+		)
+		DELETE FROM smart_charging_slow_samples WHERE plan_id IN (SELECT plan_id FROM restored)`, plan.ID); err != nil {
 		t.Fatal(err)
 	}
 	racing.beforeConsume = func() error {
