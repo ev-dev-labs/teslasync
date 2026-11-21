@@ -112,6 +112,9 @@ func decodePayload(p *ftproto.Payload) []Atomic {
 		fieldName, value, err := protomodel.DecodeDatum(datum)
 		if errors.Is(err, protomodel.ErrInvalid) {
 			invalidValuesTotal.WithLabelValues(fieldName).Inc()
+			if unavailable, ok := UnavailableMediaText(fieldName); ok {
+				out = append(out, Atomic{Field: fieldName, Value: unavailable, EmittedAt: emittedAt, VehicleID: vin})
+			}
 			continue
 		}
 		if errors.Is(err, protomodel.ErrUnsetValue) {
@@ -151,6 +154,19 @@ func decodePayload(p *ftproto.Payload) []Atomic {
 		out[i].SourceEmittedAt = sourceEmittedAt
 	}
 	return out
+}
+
+// UnavailableMediaText keeps explicit loss of media identity in the change
+// feed using existing text/status values, rather than the previous recording.
+func UnavailableMediaText(field string) (string, bool) {
+	switch field {
+	case "MediaNowPlayingTitle", "MediaNowPlayingArtist", "MediaPlaybackSource":
+		return "", true
+	case "MediaPlaybackStatus":
+		return "Unknown", true
+	default:
+		return "", false
+	}
 }
 
 // payloadSourceEmittedAt returns source-time evidence only for a present,
