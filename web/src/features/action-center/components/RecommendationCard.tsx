@@ -184,7 +184,7 @@ export function RecommendationCard({
                   : recommendation.source_feature === 'trip_maintenance'
                     ? t('smartCharging.tripMaintenance.open', 'Review maintenance')
                     : recommendation.source_feature === 'cold_tire_drift'
-                      ? t('tireDifferentialDrift.coldReview.open', 'Review private cold checks')
+                      ? t('tireDifferentialDrift.coldReview.open', 'Review cold checks')
                       : recommendation.source_feature === 'recall_watch'
                         ? t('maintenance.recallWatch.open', 'Review private recall watch')
                         : recommendation.source_feature === 'service_case'

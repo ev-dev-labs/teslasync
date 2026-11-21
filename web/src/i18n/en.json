@@ -34816,25 +34816,24 @@
       "scope": "Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings."
     },
     "coldReview": {
-      "title": "Private cold tire checks",
+      "title": "Cold tire checks",
       "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
-      "open": "Review private cold checks",
+      "open": "Review cold checks",
       "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
-      "signIn": "This private review requires verified sign-in.",
       "offline": "Reconnect to review your saved cold checks.",
-      "off": "Off. Save a confirmed cold gauge check to start an independent private series.",
+      "off": "Off. Save a confirmed cold gauge check to start a series.",
       "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
       "add": "Record a cold gauge check",
       "observed": "Reading time ({{zone}})",
       "ambient": "Ambient temperature ({{unit}})",
       "wheel": "{{wheel}} ({{unit}})",
-      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings privately on this server.",
+      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.",
       "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
-      "save": "Save private cold check",
+      "save": "Save cold check",
       "remove": "Turn off and clear readings",
-      "removeMessage": "Delete these private gauge readings and their decision? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+      "removeMessage": "Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
       "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
-      "failure": "Could not change your private series. Refresh and verify your sign-in and vehicle.",
+      "failure": "Could not change the series. Refresh, check the selected vehicle, and try again.",
       "cardTitle": "Check one tire manually",
       "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
       "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
@@ -36895,7 +36894,9 @@
   },
   "personalScope": {
     "sharedRoutines": "Without sign-in, anyone with access to TeslaSync can view and manage these routines.",
-    "sharedPlans": "Without sign-in, anyone with access to TeslaSync can view and manage these plans."
+    "sharedPlans": "Without sign-in, anyone with access to TeslaSync can view and manage these plans.",
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
   },
   "smartCharging": {
     "title": "Charging readiness",

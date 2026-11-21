@@ -1,0 +1,8 @@
+{
+  "personalScope": {
+    "sharedRoutines": "Without sign-in, anyone with access to TeslaSync can view and manage these routines.",
+    "sharedPlans": "Without sign-in, anyone with access to TeslaSync can view and manage these plans.",
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  }
+}

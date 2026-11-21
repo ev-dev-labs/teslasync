@@ -4,11 +4,10 @@ import { isApiError, request } from '../client';
 import { actionCenterKeys } from './useActionCenter';
 import { expectedPrincipalHeader, personalIdentityKey, type PersonalScope } from './usePersonalIdentity';
 
-type Scope = Extract<PersonalScope, { mode: 'forward_auth' }>;
 type Change = { kind: 'append'; seriesId: number; reading: ColdTireReading } | { kind: 'remove'; seriesId: number };
-const reviewKey = (scope: Scope, vehicle: number) => ['cold-tire-review', scope, vehicle] as const;
+const reviewKey = (scope: PersonalScope, vehicle: number) => ['cold-tire-review', scope, vehicle] as const;
 
-export function useColdTireReview(scope: Scope, vehicle: number) {
+export function useColdTireReview(scope: PersonalScope, vehicle: number) {
   return useQuery({
     queryKey: reviewKey(scope, vehicle),
     queryFn: async ({ signal }) => {
@@ -23,7 +22,7 @@ export function useColdTireReview(scope: Scope, vehicle: number) {
   });
 }
 
-export function useColdTireChange(scope: Scope, vehicle: number) {
+export function useColdTireChange(scope: PersonalScope, vehicle: number) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (change: Change) => request<void>(

@@ -1006,7 +1006,7 @@
       "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning.",
       "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
       "cardTitle": "Check one tire manually",
-      "open": "Review private cold checks"
+      "open": "Review cold checks"
     },
     "corner": {
       "fl": "Front left",

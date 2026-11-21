@@ -26,9 +26,6 @@ func (coldTireDriftProvider) SourceFeature() domain.SourceFeature {
 }
 
 func (p coldTireDriftProvider) Recommendations(ctx context.Context, filter ListFilter, now time.Time) ([]domain.Candidate, error) {
-	if filter.SharedOpenMode {
-		return nil, nil
-	}
 	rows, err := p.reader.List(ctx, filter.subject, filter.VehicleID, now, providerLimit)
 	if err != nil {
 		return nil, err

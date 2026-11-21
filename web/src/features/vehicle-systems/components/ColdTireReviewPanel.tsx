@@ -5,13 +5,12 @@ import { PrivateVehicleReviewPanel } from '@/components/vehicles';
 export function ColdTireReviewPanel({ vehicleId }: { vehicleId: number | null }) {
   const { t } = useTranslation();
   return (
-    <PrivateVehicleReviewPanel anchor="cold-tire-review" vehicleId={vehicleId}
-      title={t('tireDifferentialDrift.coldReview.title', 'Private cold tire checks')}
+    <PrivateVehicleReviewPanel anchor="cold-tire-review" vehicleId={vehicleId} allowSharedOpen
+      title={t('tireDifferentialDrift.coldReview.title', 'Cold tire checks')}
       description={t('tireDifferentialDrift.coldReview.description', 'Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.')}
-      openLabel={t('tireDifferentialDrift.coldReview.open', 'Review private cold checks')}
-      vehiclePrompt={t('tireDifferentialDrift.coldReview.vehicle', 'Select a vehicle in the workspace picker to record cold checks.')}
-      signInPrompt={t('tireDifferentialDrift.coldReview.signIn', 'This private review requires verified sign-in.')}>
-      {props => <ColdTireReview key={`${props.scope.subject}:${props.vehicleId}`} {...props} />}
+      openLabel={t('tireDifferentialDrift.coldReview.open', 'Review cold checks')}
+      vehiclePrompt={t('tireDifferentialDrift.coldReview.vehicle', 'Select a vehicle in the workspace picker to record cold checks.')}>
+      {props => <ColdTireReview key={`${props.scope.mode}:${props.scope.mode === 'forward_auth' ? props.scope.subject : ''}:${props.vehicleId}`} {...props} />}
     </PrivateVehicleReviewPanel>
   );
 }

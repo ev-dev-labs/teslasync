@@ -4214,6 +4214,10 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",

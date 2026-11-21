@@ -3266,6 +3266,10 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -3599,19 +3603,18 @@
       "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
       "cardTitle": "Check one tire manually",
       "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
-      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings privately on this server.",
+      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.",
       "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
-      "failure": "Could not change your private series. Refresh and verify your sign-in and vehicle.",
+      "failure": "Could not change the series. Refresh, check the selected vehicle, and try again.",
       "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
       "observed": "Reading time ({{zone}})",
-      "off": "Off. Save a confirmed cold gauge check to start an independent private series.",
+      "off": "Off. Save a confirmed cold gauge check to start a series.",
       "offline": "Reconnect to review your saved cold checks.",
-      "open": "Review private cold checks",
+      "open": "Review cold checks",
       "remove": "Turn off and clear readings",
-      "removeMessage": "Delete these private gauge readings and their decision? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
-      "save": "Save private cold check",
-      "signIn": "This private review requires verified sign-in.",
-      "title": "Private cold tire checks",
+      "removeMessage": "Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+      "save": "Save cold check",
+      "title": "Cold tire checks",
       "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
       "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
       "wheel": "{{wheel}} ({{unit}})"

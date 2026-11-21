@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 )
@@ -36,7 +37,11 @@ func NewColdTireChecks(repo port.ColdTireRepository, now func() time.Time) *Cold
 }
 
 func validColdTireScope(scope port.ColdTireScope) bool {
-	return scope.VehicleID > 0 && privatePlanningSubject(scope.Subject)
+	return scope.VehicleID > 0 && validColdTireSubject(scope.Subject)
+}
+
+func validColdTireSubject(subject string) bool {
+	return subject == personal.OpenSubject || privatePlanningSubject(subject)
 }
 
 func (s *ColdTireChecks) Read(ctx context.Context, scope port.ColdTireScope) (domain.ColdTireReview, error) {
@@ -69,7 +74,7 @@ func (s *ColdTireChecks) Delete(ctx context.Context, scope port.ColdTireScope, s
 }
 
 func (s *ColdTireChecks) List(ctx context.Context, subject string, vehicleID *int64, now time.Time, limit int) ([]port.ColdTireCandidate, error) {
-	if !privatePlanningSubject(subject) {
+	if !validColdTireSubject(subject) {
 		return nil, nil
 	}
 	return s.repo.ListColdTireDrift(ctx, subject, vehicleID, now, min(max(limit, 1), 50))

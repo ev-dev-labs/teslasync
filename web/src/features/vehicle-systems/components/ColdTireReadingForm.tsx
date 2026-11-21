@@ -67,13 +67,13 @@ export function ColdTireReadingForm({ disabled, onSave, onCancel }: Props) {
         ))}
       </div>
       <Checkbox checked={consent} onChange={setConsent} disabled={disabled}
-        label={t('tireDifferentialDrift.coldReview.consent', 'I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings privately on this server.')} />
+        label={t('tireDifferentialDrift.coldReview.consent', 'I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.')} />
       {invalid && <ErrorText role="alert">
         {t('tireDifferentialDrift.coldReview.invalid', 'Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.')}
       </ErrorText>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" className="min-h-11" wrapLabel disabled={disabled || !consent}>
-          {t('tireDifferentialDrift.coldReview.save', 'Save private cold check')}
+          {t('tireDifferentialDrift.coldReview.save', 'Save cold check')}
         </Button>
         <Button type="button" className="min-h-11" variant="secondary" onClick={onCancel} disabled={disabled}>
           {t('common.cancel', 'Cancel')}

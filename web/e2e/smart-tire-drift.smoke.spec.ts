@@ -8,15 +8,19 @@ import {
 test.afterAll(async () => { await closeMockApiFixtures(); });
 
 for (const variant of [
-  { width: 1440, height: 900, theme: 'light', pack: 'v6' },
-  { width: 390, height: 844, theme: 'dark', pack: 'blueprint' },
+  { width: 1440, height: 900, theme: 'light', pack: 'v6', mode: 'forward_auth' },
+  { width: 390, height: 844, theme: 'dark', pack: 'blueprint', mode: 'forward_auth' },
+  { width: 390, height: 844, theme: 'dark', pack: 'blueprint', mode: 'open' },
 ] as const) {
-  test(`cold gauge drift appears only for its owner and can be cleared: ${variant.theme} ${variant.pack}`, async ({ page }) => {
+  test(`cold gauge drift is scoped and can be cleared: ${variant.mode} ${variant.theme} ${variant.pack}`, async ({ page }) => {
     test.skip(process.env.SMART_TIRE_REAL_BACKEND !== '1', 'Requires the mounted handlers and disposable PostgreSQL');
     test.setTimeout(150_000);
     await page.setViewportSize({ width: variant.width, height: variant.height });
     const owner = `synthetic-cold-review-${variant.width}`;
-    const headers = { 'x-test-subject': owner, 'x-teslasync-expected-principal': `subject:${owner}` };
+    const expectedPrincipal = variant.mode === 'open' ? 'open' : `subject:${owner}`;
+    const headers: Record<string, string> = variant.mode === 'open'
+      ? { 'x-synthetic-auth-mode': 'open' }
+      : { 'x-test-subject': owner };
     const url = '/tire-differential-drift?vehicle_id=7';
     const endpoint = '/api/v1/tire-pressure/cold-checks';
     const inbox = '/action-center?vehicle_id=7&source_feature=cold_tire_drift';
@@ -24,19 +28,20 @@ for (const variant of [
     const api = await installApiMocks(page, 'populated', variant.theme);
     if (!api) throw new Error('Missing isolated API fixtures');
     await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
-      json: { mode: 'forward_auth', subject_header: 'X-Test-Subject', subject: owner, capabilities: {} },
+      json: variant.mode === 'open' ? { mode: 'open', capabilities: {} }
+        : { mode: 'forward_auth', subject_header: 'X-Test-Subject', subject: owner, capabilities: {} },
     }));
     await page.route(path => path.pathname === '/api/v1/settings/widget-design-pack' && !path.search, route => {
       if (route.request().method() !== 'GET') return route.fallback();
       return fulfillApiFixture(route, api, {
-        json: { scope: createHash('sha256').update(`forward_auth:${owner}`).digest('hex'), pack_id: variant.pack, app_wide: true },
+        json: { scope: createHash('sha256').update(variant.mode === 'open' ? 'open' : `forward_auth:${owner}`).digest('hex'), pack_id: variant.pack, app_wide: true },
       });
     });
     await page.route(path => path.pathname === '/api/v1/tire-pressure' || path.pathname === '/api/v1/tire-pressure/latest',
       route => fulfillApiFixture(route, api, { json: [] }));
     await page.route(path => path.pathname === endpoint || path.pathname.startsWith('/api/v1/action-center'), route => {
       const request = route.request();
-      expect(request.headers()['x-teslasync-expected-principal']).toBe(`subject:${owner}`);
+      expect(request.headers()['x-teslasync-expected-principal']).toBe(expectedPrincipal);
       return forwardLocalApiFixture(route, api, { ...request.headers(), ...headers });
     });
     const writes: string[] = [];
@@ -48,9 +53,10 @@ for (const variant of [
     });
     await page.goto(url);
     await waitForHarnessReady(page, api);
-    const panel = page.getByRole('region', { name: 'Private cold tire checks' });
-    await panel.getByRole('button', { name: 'Review private cold checks' }).press('Enter');
+    const panel = page.getByRole('region', { name: 'Cold tire checks' });
+    await panel.getByRole('button', { name: 'Review cold checks' }).press('Enter');
     await expect(panel.getByText(/^Off\./)).toBeVisible();
+    await expect(panel.getByText(/anyone with access to TeslaSync/)).toHaveCount(variant.mode === 'open' ? 1 : 0);
     const add = panel.getByRole('button', { name: 'Record a cold gauge check' });
     const common = [2.70, 2.78, 2.74, 2.82, 2.76];
     const drop = [0, 0.04, 0.09, 0.17, 0.23];
@@ -63,7 +69,7 @@ for (const variant of [
       await panel.getByLabel('Front right (bar)').fill(common[i].toFixed(2));
       await panel.getByLabel('Rear left (bar)').fill((common[i] - 0.09).toFixed(2));
       await panel.getByLabel('Rear right (bar)').fill((common[i] - 0.08).toFixed(2));
-      const save = panel.getByRole('button', { name: 'Save private cold check' });
+      const save = panel.getByRole('button', { name: 'Save cold check' });
       await expect(save).toBeDisabled();
       await panel.getByRole('checkbox', { name: /I used the same gauge/ }).press('Space');
       await save.click();
@@ -82,7 +88,7 @@ for (const variant of [
     await waitForHarnessReady(page, api);
     await expect(page.getByText('Check one tire manually', { exact: true })).toHaveCount(1);
     await expect(page.getByText(/Front left fell by at least/)).toBeVisible();
-    await page.getByRole('button', { name: 'Review private cold checks' }).click();
+    await page.getByRole('button', { name: 'Review cold checks' }).click();
     await expect(page).toHaveURL(/\/tire-differential-drift\?vehicle_id=7#cold-tire-review$/);
     await expect(panel.getByText(/Front left fell by at least/)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

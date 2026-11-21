@@ -51,7 +51,15 @@ func TestPrivateColdTireBrowserJourney(t *testing.T) {
 		applyWarrantyFixtureMigration(t, db, name)
 	}
 	now := time.Now().UTC().Truncate(time.Second)
-	router := coldTireTestRouter(repo, db, "X-Test-Subject", func() time.Time { return now })
+	clock := func() time.Time { return now }
+	signedIn, open := coldTireTestRouter(repo, db, "X-Test-Subject", clock), coldTireTestRouter(repo, db, "", clock)
+	router := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Synthetic-Auth-Mode") == "open" {
+			open.ServeHTTP(w, r)
+			return
+		}
+		signedIn.ServeHTTP(w, r)
+	})
 	runPrivatePlanningBrowser(t, router, "", nil, "smart-tire-drift.smoke.spec.ts", "SMART_TIRE_REAL_BACKEND=1", nil)
 }
 
@@ -88,18 +96,18 @@ func TestColdTireReviewPersistsOnlyScopedRepeatedDrift(t *testing.T) {
 		}
 		return resp
 	}
-	read := func(subject string) domain.ColdTireReview {
+	read := func(router http.Handler, subject string) domain.ColdTireReview {
 		t.Helper()
 		var decoded struct{ Data domain.ColdTireReview }
-		if err := json.Unmarshal(call(closed, http.MethodGet, endpoint, subject, nil, 200).Body.Bytes(), &decoded); err != nil {
+		if err := json.Unmarshal(call(router, http.MethodGet, endpoint, subject, nil, 200).Body.Bytes(), &decoded); err != nil {
 			t.Fatal(err)
 		}
 		return decoded.Data
 	}
-	list := func(subject string) []actiondomain.Recommendation {
+	list := func(router http.Handler, subject string) []actiondomain.Recommendation {
 		t.Helper()
 		var decoded actiondomain.Response
-		if err := json.Unmarshal(call(closed, http.MethodGet, inbox, subject, nil, 200).Body.Bytes(), &decoded); err != nil {
+		if err := json.Unmarshal(call(router, http.MethodGet, inbox, subject, nil, 200).Body.Bytes(), &decoded); err != nil {
 			t.Fatal(err)
 		}
 		return decoded.Items
@@ -121,48 +129,64 @@ func TestColdTireReviewPersistsOnlyScopedRepeatedDrift(t *testing.T) {
 			ColdGaugeConfirmed: true,
 		}}
 	}
-	if initial := read(owner); initial.SeriesID != 0 || initial.Drift != nil || len(list(owner)) != 0 {
+	if initial := read(closed, owner); initial.SeriesID != 0 || initial.Drift != nil || len(list(closed, owner)) != 0 {
 		t.Fatalf("private cold gauge review was not off: %+v", initial)
 	}
 	first := makeSample(0, false, 0)
-	call(open, http.MethodPost, endpoint, "", first, 403)
+	call(closed, http.MethodPost, endpoint, "", first, 401)
+	call(open, http.MethodPost, endpoint, owner, first, 409)
 	first.ColdGaugeConfirmed = false
 	call(closed, http.MethodPost, endpoint, owner, first, 400)
-	for _, subject := range []string{owner, other} {
+	fill := func(router http.Handler, subject string, peerOnly bool) {
+		t.Helper()
 		var seriesID int64
 		for i := range 5 {
-			input := makeSample(i, subject == other, seriesID)
-			call(closed, http.MethodPost, endpoint, subject, input, 204)
-			seriesID = read(subject).SeriesID
-			if i < 4 && len(list(subject)) != 0 {
+			call(router, http.MethodPost, endpoint, subject, makeSample(i, peerOnly, seriesID), 204)
+			seriesID = read(router, subject).SeriesID
+			if i < 4 && len(list(router, subject)) != 0 {
 				t.Fatal("fewer than five comparable readings published a decision")
 			}
 		}
 	}
-	review, items := read(owner), list(owner)
+	fill(closed, owner, false)
+	fill(closed, other, true)
+	review, items := read(closed, owner), list(closed, owner)
 	if review.Drift == nil || review.Drift.Corner != domain.TireFrontLeft || review.Drift.RelativeDropPa != 13_000 ||
 		len(items) != 1 || items[0].NavigationPath == nil || *items[0].NavigationPath != "/tire-differential-drift?vehicle_id=7#cold-tire-review" ||
-		read(other).Drift != nil || len(list(other)) != 0 {
+		read(closed, other).Drift != nil || len(list(closed, other)) != 0 {
 		t.Fatalf("private repeated-drift decision was not isolated from peer-only inputs: %+v, %+v", review, items)
+	}
+	if initial := read(open, ""); initial.SeriesID != 0 || initial.Drift != nil || len(list(open, "")) != 0 {
+		t.Fatalf("open mode exposed a signed-in review: %+v", initial)
+	}
+	fill(open, "", false)
+	shared, sharedItems := read(open, ""), list(open, "")
+	if shared.SeriesID == 0 || shared.SeriesID == review.SeriesID || shared.Drift == nil ||
+		len(sharedItems) != 1 || sharedItems[0].ID == items[0].ID || len(list(closed, other)) != 0 {
+		t.Fatalf("installation review is missing or not scoped separately: %+v, %+v", shared, sharedItems)
+	}
+	call(open, http.MethodDelete, fmt.Sprintf("%s&series_id=%d", endpoint, shared.SeriesID), "", nil, 204)
+	if read(open, "").SeriesID != 0 || len(list(open, "")) != 0 {
+		t.Fatal("clearing the installation review did not remove its recommendation")
 	}
 	call(closed, http.MethodPost, endpoint, owner, makeSample(4, false, review.SeriesID), 409)
 	deletePath := fmt.Sprintf("%s&series_id=%d", endpoint, review.SeriesID)
 	call(closed, http.MethodDelete, deletePath, other, nil, 204)
-	if got := list(owner); len(got) != 1 || got[0].ID != items[0].ID {
+	if got := list(closed, owner); len(got) != 1 || got[0].ID != items[0].ID {
 		t.Fatal("duplicate reading or foreign revoke changed the owner's decision")
 	}
 	now = now.Add(72 * time.Hour)
-	if read(owner).Drift != nil || len(list(owner)) != 0 {
+	if read(closed, owner).Drift != nil || len(list(closed, owner)) != 0 {
 		t.Fatal("stale gauge evidence remained actionable")
 	}
 	call(closed, http.MethodDelete, deletePath, owner, nil, 204)
 	call(closed, http.MethodPost, endpoint, owner, makeSample(4, false, review.SeriesID), 409)
-	if reset := read(owner); reset.SeriesID != 0 || reset.ReadingCount != 0 {
+	if reset := read(closed, owner); reset.SeriesID != 0 || reset.ReadingCount != 0 {
 		t.Fatalf("a stale write restored removed review consent: %+v", reset)
 	}
 	applyWarrantyFixtureMigration(t, db, "000280_smart_cold_tire_reviews.down")
 	applyWarrantyFixtureMigration(t, db, "000280_smart_cold_tire_reviews.up")
-	if read(other).SeriesID != 0 {
+	if read(closed, other).SeriesID != 0 {
 		t.Fatal("explicit down retained derived cold tire observations")
 	}
 }

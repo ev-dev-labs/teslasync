@@ -12,7 +12,7 @@ import { useColdTireDisplay } from '@/lib/coldTireDisplay';
 import { ColdTireReadingForm } from './ColdTireReadingForm';
 
 interface Props {
-  scope: Extract<PersonalScope, { mode: 'forward_auth' }>;
+  scope: PersonalScope;
   vehicleId: number;
   identityPending: boolean;
 }
@@ -58,13 +58,13 @@ export function ColdTireReview({ scope, vehicleId, identityPending }: Props) {
     : <Skeleton lines={2} />;
   return (
     <div className="space-y-3">
-      <StaleRefreshWarning state={source} label={t('tireDifferentialDrift.coldReview.title', 'Private cold tire checks')} />
+      <StaleRefreshWarning state={source} label={t('tireDifferentialDrift.coldReview.title', 'Cold tire checks')} />
       {display ? <>
         <Text as="p" variant="bodySm" weight="semibold">{display.summary}</Text>
         <Text as="p" variant="bodySm">{display.basis}</Text>
         <Text as="p" variant="bodySm">{display.limitation}</Text>
       </> : <Text as="p" variant="bodySm" role="status">{data.series_id === 0
-        ? t('tireDifferentialDrift.coldReview.off', 'Off. Save a confirmed cold gauge check to start an independent private series.')
+        ? t('tireDifferentialDrift.coldReview.off', 'Off. Save a confirmed cold gauge check to start a series.')
         : t('tireDifferentialDrift.coldReview.waiting', 'No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.', {
           checks: fmtInt(data.reading_count),
         })}</Text>}
@@ -93,9 +93,9 @@ export function ColdTireReview({ scope, vehicleId, identityPending }: Props) {
       </div>}
       {change.isError && <ErrorText role="alert">{conflict
         ? t('tireDifferentialDrift.coldReview.conflict', 'The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.')
-        : t('tireDifferentialDrift.coldReview.failure', 'Could not change your private series. Refresh and verify your sign-in and vehicle.')}</ErrorText>}
+        : t('tireDifferentialDrift.coldReview.failure', 'Could not change the series. Refresh, check the selected vehicle, and try again.')}</ErrorText>}
       <ConfirmDialog open={dialog} title={remove} confirmLabel={remove} cancelLabel={t('common.cancel', 'Cancel')}
-        message={t('tireDifferentialDrift.coldReview.removeMessage', 'Delete these private gauge readings and their decision? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.')}
+        message={t('tireDifferentialDrift.coldReview.removeMessage', 'Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.')}
         confirmDisabled={busy} onCancel={() => setDialog(false)} onConfirm={() => {
           if (busy) return;
           setDialog(false);

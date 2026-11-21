@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { isApiError } from '@/api/client';
 import { personalScope, usePersonalIdentity, type PersonalScope } from '@/api/hooks/usePersonalIdentity';
@@ -9,10 +10,14 @@ import { Button } from '../ui/Button';
 import { Text } from '../ui/Typography';
 import { useDataState } from '@/hooks/useDataState';
 
-export interface PrivateVehicleReviewScope {
-  scope: Extract<PersonalScope, { mode: 'forward_auth' }>;
+interface VehicleReviewScope {
+  scope: PersonalScope;
   vehicleId: number;
   identityPending: boolean;
+}
+
+export interface PrivateVehicleReviewScope extends VehicleReviewScope {
+  scope: Extract<PersonalScope, { mode: 'forward_auth' }>;
 }
 
 interface Props {
@@ -22,11 +27,15 @@ interface Props {
   description: string;
   openLabel: string;
   vehiclePrompt: string;
-  signInPrompt: string;
-  children: (props: PrivateVehicleReviewScope) => ReactNode;
 }
 
-export function PrivateVehicleReviewPanel({ anchor, vehicleId, title, description, openLabel, vehiclePrompt, signInPrompt, children }: Props) {
+type ScopePolicy =
+  | { allowSharedOpen: true; children: (props: VehicleReviewScope) => ReactNode }
+  | { allowSharedOpen?: false; signInPrompt: string; children: (props: PrivateVehicleReviewScope) => ReactNode };
+
+export function PrivateVehicleReviewPanel(props: Props & ScopePolicy) {
+  const { anchor, vehicleId, title, description, openLabel, vehiclePrompt } = props;
+  const { t } = useTranslation();
   const { hash, key } = useLocation();
   const linked = hash === `#${anchor}`;
   const [expanded, setExpanded] = useState(linked);
@@ -36,6 +45,24 @@ export function PrivateVehicleReviewPanel({ anchor, vehicleId, title, descriptio
   const state = useDataState(identity);
   const scope = personalScope(state.data);
   const denied = isApiError(identity.error) && [401, 403].includes(identity.error.status);
+  const identityPending = state.status !== 'ok' || identity.isFetching;
+
+  function renderReview(id: number) {
+    if (props.allowSharedOpen) {
+      if (!scope) return <Text as="p" variant="bodySm">
+        {t('personalScope.unavailable', 'This installation’s access mode could not be verified. Refresh and try again.')}
+      </Text>;
+      return <>
+        {scope.mode === 'open' && <Text as="p" variant="bodySm">
+          {t('personalScope.sharedReview', 'Without sign-in, anyone with access to TeslaSync can view and manage this review.')}
+        </Text>}
+        {props.children({ scope, vehicleId: id, identityPending })}
+      </>;
+    }
+    return scope?.mode === 'forward_auth'
+      ? props.children({ scope, vehicleId: id, identityPending })
+      : <Text as="p" variant="bodySm">{props.signInPrompt}</Text>;
+  }
 
   useEffect(() => {
     if (linked) {
@@ -55,8 +82,7 @@ export function PrivateVehicleReviewPanel({ anchor, vehicleId, title, descriptio
             {vehicleId == null ? <Text as="p" variant="bodySm">{vehiclePrompt}</Text>
               : denied || state.fatalError ? <QueryError error={state.fatalError ?? identity.error} onRetry={state.retry ?? undefined} />
               : !state.hasData ? <Skeleton lines={2} />
-              : scope?.mode !== 'forward_auth' ? <Text as="p" variant="bodySm">{signInPrompt}</Text>
-              : children({ scope, vehicleId, identityPending: state.status !== 'ok' || identity.isFetching })}
+              : renderReview(vehicleId)}
           </div>}
         </div>
       </LayoutCard>

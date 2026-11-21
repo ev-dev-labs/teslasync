@@ -732,10 +732,6 @@
     "temperature": "Temperature",
     "typography": "Typography"
   },
-  "personalScope": {
-    "sharedRoutines": "Without sign-in, anyone with access to TeslaSync can view and manage these routines.",
-    "sharedPlans": "Without sign-in, anyone with access to TeslaSync can view and manage these plans."
-  },
   "quickActions": {
     "aria": "Settings shortcuts",
     "title": "Quick actions"
@@ -2604,6 +2600,11 @@
     "redMulticoat": "Red Multi-Coat",
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
+  },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "sharedRoutines": "Without sign-in, anyone with access to TeslaSync can view and manage these routines.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
   },
   "powerDashboards": {
     "aiDrafter": {

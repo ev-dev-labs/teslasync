@@ -105,11 +105,13 @@ ForwardAuth is optional. With verified sign-in, derived plans, routines, and
 devices are separate by account. Without sign-in, people who can access that
 installation share its plans, routines, and device settings.
 
-### Optional private cold tire checks
+### Optional cold tire checks
 
-Select your vehicle on **Tire differential drift → Private cold tire checks**.
-With verified sign-in, choose **Record a cold gauge check** to start a private
-series. It is off until you save a confirmed check. Use all four tires measured
+Select your vehicle on **Tire differential drift → Cold tire checks** and
+choose **Record a cold gauge check**. With ForwardAuth, the series belongs
+to the signed-in account. In open mode, the series and its Action Center card
+are shared by this installation; account-scoped readings remain separate.
+It is off until you save a confirmed check. Use all four tires measured
 with the same gauge in comparable conditions before driving. Enter the actual
 reading time and ambient temperature; separate readings by at least 18 hours.
 Start over if you adjust pressure or rotate or replace a wheel. Existing TPMS
@@ -119,17 +121,17 @@ The server evaluates when you save a reading, with no background provider
 request, push, or vehicle wake. It requires five comparable checks spanning at
 least seven days, a fresh observation, and a repeated drop of one wheel
 relative to the other three. Common shifts, a one-off step, insufficient or
-stale observations, and ambiguous two-wheel changes do not publish. The private
+stale observations, and ambiguous two-wheel changes do not publish. The
 Action Center card links back to the evidence and expires 72 hours after the
 last reading. It does not diagnose a leak, choose a pressure target, or replace
 the vehicle's warnings.
 
 Only the last 30 days are used; older rows are pruned the next time you save.
-**Turn off and clear readings** removes the private series and its card without
+**Turn off and clear readings** removes the scoped series and its card without
 changing telemetry, existing alerts, or vehicle settings. Test with
 `TestColdTireReviewPersistsOnlyScopedRepeatedDrift` on disposable PostgreSQL.
 Migration `000280` may stay applied on application rollback; rolling it down
-explicitly deletes only private gauge checks and projections.
+explicitly deletes only cold gauge checks and projections.
 
 ### Optional private recall watch
 

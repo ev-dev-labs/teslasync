@@ -397,17 +397,20 @@ STATUS: APPROVED (PA)
 DATE: 2026-04-25
 
 DECISION:
-  Auth is provider-agnostic via FORWARD_AUTH_HEADER env var. Works with Authentik,
-  Authelia, oauth2-proxy, Keycloak. Empty header = dev mode (no auth).
+  Auth is optional and provider-agnostic via the FORWARD_AUTH_HEADER env var.
+  Self-hosters may use Authentik, Authelia, oauth2-proxy, Keycloak, or no
+  provider. An empty header selects open mode, including in production.
 
 RULES:
-  ✅ All /api/v1/* routes protected by ForwardAuthMiddleware
+  ✅ Apply ForwardAuthMiddleware to /api/v1/* when ForwardAuth is configured
   ✅ SSE /api/v1/events uses same ForwardAuth (no separate JWT)
   ✅ Nginx must explicitly forward the auth header to backend
   ✅ Webhook + share endpoints use token-based auth (exempt from ForwardAuth)
   ✅ The external provider owns browser login, passwords, MFA and session expiry
   ✅ Every user admitted by that provider is a trusted operator; restrict entry upstream
-  ✅ Personal preferences use verified identity; native/API keys keep their own scopes
+  ✅ Installation-scoped features work in open mode and disclose their shared scope
+  ✅ Account-scoped data uses verified identity and is never exposed in open mode
+  ✅ Native/API keys keep their own scopes; self-hosters control ingress access
   ✅ Destructive UI actions confirm intent without an application password or MFA token
   ✅ /api/v1/auth/browser-login is a protected, uncached top-level handoff with local return paths
   ✅ Strip client-supplied identity headers and prevent direct backend bypass

@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
-	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/handler/v1/personal"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -31,10 +30,6 @@ func (h *Handler) ColdTireReview(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 	subject, ok := personal.Subject(w, r, h.headerName, "private cold tire review")
 	if !ok {
-		return
-	}
-	if subject == personaldomain.OpenSubject {
-		httputil.RespondError(w, http.StatusForbidden, "PERSONAL_SCOPE_REQUIRED", "cold tire review requires verified sign-in")
 		return
 	}
 	vehicleID, err := positiveID(r.URL.Query().Get("vehicle_id"))
