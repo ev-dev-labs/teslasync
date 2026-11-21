@@ -1131,6 +1131,8 @@
       "requiresAuth",
       "savedViews",
       "shortcuts",
+      "smartCharging",
+      "smartCommute",
       "sourceLayer",
       "tagInput",
       "timeMachine",

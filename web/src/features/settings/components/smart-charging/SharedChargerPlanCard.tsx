@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSharedChargerCard, type SharedChargerRef, type SharedChargerScope } from '@/api/hooks/useSharedChargerPlanning'
 import { QueryError, Skeleton } from '@/components/feedback'
-import { GlassPanel, PanelTitle, Text } from '@/components/ui'
+import { Stack } from '@/components/layout'
+import { GlassPanel, PanelTitle, Subhead, Text } from '@/components/ui'
 import { useDateFormat } from '@/hooks/useDateFormat'
 
 interface Props {
@@ -71,15 +72,15 @@ export function SharedChargerPlanCard({ scope, plan, confirmed, vehicleName }: P
           : t('smartCharging.sharedCharger.needsConfirmation', 'Confirm your vehicle to take part. An order appears only after both vehicles confirm and a handoff is needed and feasible.')}
       </Text>}
       {reminder && (
-        <GlassPanel padding="md" className="space-y-2">
-          <PanelTitle>{t('smartCharging.sharedCharger.reminderTitle', 'Your private swap reminder')}</PanelTitle>
+        <Stack as="section" gap={2} className="border-t border-[var(--border-default)] pt-3">
+          <Subhead>{t('smartCharging.sharedCharger.reminderTitle', 'Your private swap reminder')}</Subhead>
           <Text as="p" variant="bodySm">
             {t('smartCharging.sharedCharger.reminderMessage', 'The handoff for {{vehicle}} was planned for {{swap}}. If both participants are ready, coordinate it manually. This reminder expires at {{expires}}.', {
               vehicle: vehicleName(reminder.vehicle_id), swap: formatDateTime(reminder.swap_at),
               expires: formatDateTime(reminder.expires_at),
             })}
           </Text>
-        </GlassPanel>
+        </Stack>
       )}
     </GlassPanel>
   )
