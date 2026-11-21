@@ -468,6 +468,8 @@ describe('DataExportPage — Project Apex elevation', () => {
   });
 
   it('keeps populated history usable while the vehicle and column sources are unresolved', async () => {
+    let resolveVehicles!: (vehicles: Vehicle[]) => void;
+    vehiclesPending = new Promise(resolve => { resolveVehicles = resolve; });
     mockedRequest.mockImplementation((url: string, opts?: ReqOpts) =>
       url.startsWith('/exports/columns') ? new Promise(() => {}) : routeRequest(url, opts));
     const { queryClient } = renderPage('/data-export', client => {
@@ -479,12 +481,12 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start export' })).toBeDisabled();
 
-    act(() => {
-      queryClient.setQueryData(['vehicles'], []);
+    await act(async () => {
+      resolveVehicles([]);
       queryClient.setQueryData(['export-columns', 'drives'], { type: 'drives', supports_selection: true, columns: [] });
     });
     expect(await screen.findByText('No export columns are available for this data type.')).toBeInTheDocument();
-    expect(screen.getAllByText('No vehicles available')).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByText('No vehicles available')).toHaveLength(2));
     expect(screen.getByRole('table')).toBeInTheDocument();
     queryClient.clear();
   });
