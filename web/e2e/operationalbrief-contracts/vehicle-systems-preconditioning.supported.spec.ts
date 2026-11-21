@@ -252,28 +252,52 @@ function fulfilledCount(mocks: MockApiController, path: string) {
   return mocks.requests.filter(request => request.path === path && request.disposition === 'fulfilled').length;
 }
 
+async function openMatchedEvidence(
+  page: Page, theme: 'light' | 'dark', width: number, temperature: TemperaturePreference,
+) {
+  const { mocks, climateReads } = await setup(page, theme, width, temperature);
+  let driveReads = 0;
+  await page.route(url => url.pathname === '/api/v1/drives', async route => {
+    checkRequest(route, { vehicle_id: '7', limit: '1000' });
+    driveReads += 1;
+    await fulfillApiFixture(route, mocks, { json: matchedDepartures });
+  });
+  const diagnostics = monitorPage(page);
+  await page.goto(preconditioningPath);
+  await waitForHarnessReady(page, mocks);
+  await expectThemeApplied(page, theme);
+  return { mocks, diagnostics, climateReads, driveReads: () => driveReads };
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 1440] as const) {
     for (const temperature of ['C', 'F'] as const) {
-      test(`preconditioning publishes only cold matched support and preserves real charts Review Refresh ${width} ${theme} ${temperature}`, async ({ page }) => {
-        const { mocks, climateReads } = await setup(page, theme, width, temperature);
-        let driveReads = 0;
-        await page.route(url => url.pathname === '/api/v1/drives', async route => {
-          checkRequest(route, { vehicle_id: '7', limit: '1000' });
-          driveReads += 1;
-          await fulfillApiFixture(route, mocks, { json: matchedDepartures });
-        });
-        const diagnostics = monitorPage(page);
-        await page.goto(preconditioningPath);
-        await waitForHarnessReady(page, mocks);
-        await expectThemeApplied(page, theme);
+      test(`preconditioning publishes only cold matched support and preserves real charts Initial ${width} ${theme} ${temperature}`, async ({ page }) => {
+        const { mocks, diagnostics } = await openMatchedEvidence(page, theme, width, temperature);
         await matchedEvidence(page, temperature);
+        await assertMockApiComplete(page, mocks);
+        await expectNoHorizontalOverflow(page);
+        await expectNoRuntimeFailures(diagnostics);
+      });
+
+      test(`preconditioning publishes only cold matched support and preserves real charts Review ${width} ${theme} ${temperature}`, async ({ page }) => {
+        const { mocks, diagnostics } = await openMatchedEvidence(page, theme, width, temperature);
+        await reading(page.getByTestId('preconditioning-evidence'), 'classified-departures', '3');
+        await reading(page.getByTestId('preconditioning-confidence-summary'), 'confidence-4', '2.08%');
         await review(page, page.getByTestId('preconditioning-evidence'));
         await review(page, page.getByTestId('preconditioning-confidence-summary'));
-        const before = { climate: climateReads(), drives: driveReads };
+        await assertMockApiComplete(page, mocks);
+        await expectNoHorizontalOverflow(page);
+        await expectNoRuntimeFailures(diagnostics);
+      });
+
+      test(`preconditioning publishes only cold matched support and preserves real charts Refresh ${width} ${theme} ${temperature}`, async ({ page }) => {
+        const { mocks, diagnostics, climateReads, driveReads } = await openMatchedEvidence(page, theme, width, temperature);
+        await reading(page.getByTestId('preconditioning-evidence'), 'classified-departures', '3');
+        const before = { climate: climateReads(), drives: driveReads() };
         await page.getByRole('button', { name: 'Refresh evidence', exact: true }).click();
         await expect.poll(climateReads).toBeGreaterThan(before.climate);
-        await expect.poll(() => driveReads).toBeGreaterThan(before.drives);
+        await expect.poll(driveReads).toBeGreaterThan(before.drives);
         await waitForHarnessReady(page, mocks);
         await matchedEvidence(page, temperature);
         expect(fulfilledCount(mocks, '/api/v1/climate')).toBeGreaterThanOrEqual(2);
