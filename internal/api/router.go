@@ -1348,14 +1348,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		actioncentersvc.WithServiceCases(serviceCases, metrics.RecordServiceCaseEvent),
 		actioncentersvc.WithClimateScheduleReviews(climateScheduleReviews),
 	}
-	if solarConnections.CanConnect() {
-		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
-		if distributedSmartLive && smartDeliveryService.BackupDeliveryAvailable() {
-			actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithBackupCharging(backupCharging))
 	if operators.Enabled() {
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithAutomationFailureGroups(
 			automationdb.NewAutomationHistoryRepo(db), operators.Allows))
 	}
+	if solarConnections.CanConnect() {
+		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
+		if distributedSmartLive && smartDeliveryService.BackupDeliveryAvailable() {
+			actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithBackupCharging(backupCharging))
 		}
 	}
 	actionCenterService := actioncentersvc.New(
