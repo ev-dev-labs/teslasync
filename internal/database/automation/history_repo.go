@@ -81,33 +81,37 @@ func (r *AutomationHistoryRepo) Create(ctx context.Context, h *automationmodel.A
 		triggered_at, trigger_type, trigger_snapshot,
 		conditions_met, conditions_snapshot,
 		actions_executed, actions_total, actions_succeeded, actions_failed,
-		status, error, fsm_state
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		status, error, fsm_state, completed_at, duration_ms, automation_revision
+	) VALUES ($1,$2,$3,$4,$5,COALESCE($6,'{}'::jsonb),$7,COALESCE($8,'[]'::jsonb),
+		COALESCE($9,'[]'::jsonb),$10,$11,$12,$13,$14,$15,$16,$17,$18)
 	RETURNING id, created_at`
 	return r.db.Pool.QueryRow(ctx, query,
 		h.AutomationID, h.AutomationName, h.VehicleID,
 		h.TriggeredAt, h.TriggerType, h.TriggerSnapshot,
 		h.ConditionsMet, h.ConditionsSnapshot,
 		h.ActionsExecuted, h.ActionsTotal, h.ActionsSucceeded, h.ActionsFailed,
-		h.Status, h.Error, h.FSMState,
+		h.Status, h.Error, h.FSMState, h.CompletedAt, h.DurationMs, h.AutomationRevision,
 	).Scan(&h.ID, &h.CreatedAt)
 }
 
-// Complete updates an execution record with final status and timing.
-func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int, completedAt time.Time, climate *automationmodel.ScheduledClimateReceipt) error {
-	const complete = `UPDATE automation_history SET status=$2, error=$3, duration_ms=$4, completed_at=$5 WHERE id=$1`
-	args := []any{id, status, errMsg, durationMs, completedAt}
+func (r *AutomationHistoryRepo) Complete(ctx context.Context, h *automationmodel.AutomationHistory, climate *automationmodel.ScheduledClimateReceipt) error {
+	const complete = `UPDATE automation_history
+		SET status=$2, error=$3, duration_ms=$4, completed_at=$5,
+			actions_executed=COALESCE($6,'[]'::jsonb), actions_total=$7, actions_succeeded=$8, actions_failed=$9
+		WHERE id=$1`
+	args := []any{h.ID, h.Status, h.Error, h.DurationMs, h.CompletedAt, h.ActionsExecuted,
+		h.ActionsTotal, h.ActionsSucceeded, h.ActionsFailed}
 	query := complete
-	if climate != nil && status == "success" {
+	if climate != nil && h.Status == "success" {
 		query = `WITH executed AS (` + complete + ` RETURNING id,automation_id,triggered_at)
 			INSERT INTO smart_climate_schedule_receipts (plan_id,history_id,fired_at)
-			SELECT p.id,h.id,$8
+			SELECT p.id,h.id,$12
 			  FROM executed h JOIN automations a ON a.id=h.automation_id
 			  JOIN smart_climate_schedule_plans p ON p.automation_id=a.id AND p.vehicle_id=a.vehicle_id
 			  JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
-			 WHERE a.enabled AND a.vehicle_id=$6 AND a.updated_at=$7 AND p.schedule_revision=$7
-			   AND p.enabled_at<=$8 AND h.triggered_at BETWEEN $8::timestamptz AND $8::timestamptz+INTERVAL '5 seconds'
-			   AND $5::timestamptz BETWEEN h.triggered_at AND ($8::timestamptz+INTERVAL '3 minutes')
+			 WHERE a.enabled AND a.vehicle_id=$10 AND a.updated_at=$11 AND p.schedule_revision=$11
+			   AND p.enabled_at<=$12 AND h.triggered_at BETWEEN $12::timestamptz AND $12::timestamptz+INTERVAL '5 seconds'
+			   AND $5::timestamptz BETWEEN h.triggered_at AND ($12::timestamptz+INTERVAL '3 minutes')
 			FOR KEY SHARE OF p
 			ON CONFLICT (plan_id,history_id) DO NOTHING`
 		args = append(args, climate.VehicleID, climate.Revision, climate.FiredAt)
@@ -115,11 +119,11 @@ func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status s
 	_, err := r.db.Pool.Exec(ctx, query, args...)
 	if err != nil && query != complete {
 		// Recommendation evidence must not prevent recording an existing automation outcome.
-		_, fallbackErr := r.db.Pool.Exec(ctx, complete, args[:5]...)
+		_, fallbackErr := r.db.Pool.Exec(ctx, complete, args[:9]...)
 		err = errors.Join(err, fallbackErr)
 	}
 	if err != nil {
-		return fmt.Errorf("complete automation history %d: %w", id, err)
+		return fmt.Errorf("complete automation history %d: %w", h.ID, err)
 	}
 	return nil
 }

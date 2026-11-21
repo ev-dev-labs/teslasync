@@ -37,7 +37,7 @@ type AutomationStore interface {
 // HistoryStore provides execution history persistence.
 type HistoryStore interface {
 	Create(ctx context.Context, h *automationmodel.AutomationHistory) error
-	Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int, completedAt time.Time, climate *automationmodel.ScheduledClimateReceipt) error
+	Complete(ctx context.Context, h *automationmodel.AutomationHistory, climate *automationmodel.ScheduledClimateReceipt) error
 	CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
 }
 
@@ -239,6 +239,12 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 			Msg("skipping disabled automation")
 		return nil
 	}
+	fired, scheduled := trigger.ScheduleFireFromContext(ctx)
+	if scheduled && !matchesScheduleFire(a, fired) {
+		span.SetAttributes(attribute.String("automation.outcome", "skipped_obsolete_schedule"))
+		e.logger.Debug().Int64("automation_id", automationID).Msg("skipping obsolete registration")
+		return nil
+	}
 	triggerKind, err := validateTypedTriggers(a)
 	if err != nil {
 		span.RecordError(err)
@@ -262,7 +268,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 				Int64("automation_id", automationID).
 				Str("automation", a.Name).
 				Msg("automation blocked by loop/rapid-fire detection")
-			e.recordSkipped(ctx, a, triggerSnapshot, triggerKind, start, "loop_detected: "+err.Error())
+			e.recordSkipped(ctx, a, triggerSnapshot, nil, triggerKind, start, "loop_detected: "+err.Error())
 			return nil
 		}
 		ctx = newCtx
@@ -275,13 +281,14 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 			Int64("automation_id", automationID).
 			Str("automation", a.Name).
 			Msg("conditions not met, skipping actions")
-		e.recordSkipped(ctx, a, triggerSnapshot, triggerKind, start, "conditions_not_met")
+		e.recordSkipped(ctx, a, triggerSnapshot, conditionsSnapshot, triggerKind, start, "conditions_not_met")
 		return nil
 	}
 
 	hist := &automationmodel.AutomationHistory{
 		AutomationID:       a.ID,
 		AutomationName:     a.Name,
+		AutomationRevision: &a.UpdatedAt,
 		VehicleID:          a.VehicleID,
 		TriggeredAt:        start,
 		TriggerType:        triggerKind,
@@ -305,13 +312,15 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "invalid actions")
 		errMsg := fmt.Sprintf("invalid actions: %v", err)
-		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start, nil)
+		e.completeHistory(ctx, hist, "failed", &errMsg, nil, nil)
 		_ = e.automationRepo.IncrementExecution(ctx, automationID, false)
 		return fmt.Errorf("prepare typed actions for automation %d: %w", automationID, err)
 	}
 
 	var vehicle *vehiclemodel.Vehicle
-	// ChainExecutor handles a nil vehicle when a workflow does not need one.
+	if a.VehicleID != nil {
+		vehicle = &vehiclemodel.Vehicle{ID: *a.VehicleID}
+	}
 	// Default to fail-fast action chains until step-level policy is wired.
 	results := e.chainExecutor.Execute(ctx, actions, vehicle, true)
 
@@ -327,7 +336,9 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		msg := fmt.Sprintf("%d/%d actions failed", failed, total)
 		errStr = &msg
 	}
-	if succeeded == 0 && failed > 0 {
+	if failed == 0 && skipped > 0 {
+		status, errStr = "cancelled", nil
+	} else if succeeded == 0 && failed > 0 {
 		status = "failed"
 	}
 	span.SetAttributes(
@@ -341,14 +352,14 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		span.SetStatus(codes.Error, "all actions failed")
 	}
 
-	fired, scheduled := trigger.ScheduleFireFromContext(ctx)
 	var climate *automationmodel.ScheduledClimateReceipt
 	if scheduled {
 		climate = scheduledClimateReceipt(a, fired, results)
 	}
-	e.completeHistory(ctx, hist.ID, status, errStr, start, climate)
+	hist.ActionsTotal, hist.ActionsSucceeded, hist.ActionsFailed = total, succeeded, failed
+	e.completeHistory(ctx, hist, status, errStr, results, climate)
 
-	_ = e.automationRepo.IncrementExecution(ctx, automationID, status != "failed")
+	_ = e.automationRepo.IncrementExecution(ctx, automationID, status == "success" || status == "partial")
 
 	e.logger.Info().
 		Int64("automation_id", automationID).

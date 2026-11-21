@@ -225,6 +225,7 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	automationdb "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	daylogdb "github.com/ev-dev-labs/teslasync/internal/database/daylog"
@@ -1225,6 +1226,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	favoriteDigestsHandler := smartmediahandler.NewFavoritesHandler(smartmediasvc.NewFavoriteDigests(smartMediaRepo, time.Now),
 		cfg.Auth.ForwardAuthHeader)
 	smartChargingRepo := smartreadinessdb.NewRepository(db)
+	operators := tsauth.NewOperatorAccess(cfg.Auth.ForwardAuthHeader, cfg.Auth.OperatorSubjects)
 	smartChargingOptions := []smartreadinesssvc.Option{
 		smartreadinesssvc.WithSitePerformance(smartChargingRepo),
 		smartreadinesssvc.WithPublicFees(smartChargingRepo),
@@ -1350,6 +1352,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
 		if distributedSmartLive && smartDeliveryService.BackupDeliveryAvailable() {
 			actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithBackupCharging(backupCharging))
+	if operators.Enabled() {
+		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithAutomationFailureGroups(
+			automationdb.NewAutomationHistoryRepo(db), operators.Allows))
+	}
 		}
 	}
 	actionCenterService := actioncentersvc.New(

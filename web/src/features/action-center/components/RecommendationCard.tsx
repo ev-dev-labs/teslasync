@@ -193,7 +193,9 @@ export function RecommendationCard({
                             ? t('preconditioningEffectiveness.scheduledClimate.open', 'Review scheduled climate')
                             : recommendation.source_feature === 'subscription_renewal'
                               ? t('ownership.subscription.renewal.open', 'Open private renewal review')
-                              : t('actionCenter.action.navigate', 'Open source')}
+                              : recommendation.source_feature === 'automation_failure'
+                                ? t('actionCenter.automationFailure.open', 'Open latest execution')
+                                : t('actionCenter.action.navigate', 'Open source')}
             </Button>
           )}
         </div>

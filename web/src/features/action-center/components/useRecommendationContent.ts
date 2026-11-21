@@ -47,6 +47,20 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     : undefined;
   const scheduledClimate = recommendation.evidence.find(item => item.climate_schedule)?.climate_schedule;
   const backup = recommendation.evidence.find(item => item.kind === 'backup_charging')?.backup_charging;
+  const failure = recommendation.evidence.find(item => item.kind === 'automation_failure')?.automation_failure;
+  if (recommendation.source_feature === 'automation_failure' && failure) {
+    const basis = t('actionCenter.automationFailure.basis', 'Counts separate completed runs with a failed or partial outcome, not retries within one run.');
+    return {
+      ...recommendation,
+      title: t('actionCenter.automationFailure.title', 'Review repeated automation failures'),
+      summary: t('actionCenter.automationFailure.summary', '{{rule}} recorded {{runs}} failed or partial runs in a row.', {
+        rule: failure.name, runs: fmtInt(failure.failure_count),
+      }),
+      rationale: basis,
+      confidence: { ...recommendation.confidence, basis: [basis] },
+      evidence: recommendation.evidence.map(item => item.kind === 'automation_failure' ? { ...item, summary: basis } : item),
+    };
+  }
   if (backup) {
     const basis = t('smartCharging.backup.cardBasis', 'Your outage and circuit confirmations, two Tesla Energy meter readings, and vehicle charging telemetry.');
     const summary = t('smartCharging.backup.evidence', 'Two consistent readings after your outage confirmation show {{vehicle}} of vehicle charging and at least {{minimum}} coming from the home battery. This is a conservative estimate from the site meters, not a backup runtime forecast.', {

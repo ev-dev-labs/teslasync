@@ -80,7 +80,14 @@
       "recall_watch": "Recall watch",
       "service_case": "Service case",
       "climate_schedule": "Scheduled climate",
-      "subscription_renewal": "Subscription renewals"
+      "subscription_renewal": "Subscription renewals",
+      "automation_failure": "Automation failures"
+    },
+    "automationFailure": {
+      "basis": "Counts separate completed runs with a failed or partial outcome, not retries within one run.",
+      "title": "Review repeated automation failures",
+      "summary": "{{rule}} recorded {{runs}} failed or partial runs in a row.",
+      "open": "Open latest execution"
     },
     "state": {
       "open": "Open",

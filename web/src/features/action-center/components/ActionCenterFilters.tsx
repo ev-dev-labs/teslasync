@@ -65,6 +65,7 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
     { value: 'service_case', label: t('actionCenter.source.service_case', 'Service case') },
     { value: 'climate_schedule', label: t('actionCenter.source.climate_schedule', 'Scheduled climate') },
     { value: 'subscription_renewal', label: t('actionCenter.source.subscription_renewal', 'Subscription renewals') },
+    { value: 'automation_failure', label: t('actionCenter.source.automation_failure', 'Automation failures') },
     { value: 'system_health', label: t('actionCenter.source.system_health', 'System health') },
     {
       value: 'vehicle_readiness',

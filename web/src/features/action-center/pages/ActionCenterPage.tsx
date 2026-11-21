@@ -55,7 +55,7 @@ export default function ActionCenterPage() {
     'charging_reliability', 'drive_efficiency', 'fleet_maintenance',
     'signal_health', 'smart_charging', 'charging_site_performance', 'smart_commute', 'system_health', 'vehicle_readiness',
     'warranty_distance', 'trip_maintenance', 'cold_tire_drift', 'recall_watch', 'service_case', 'climate_schedule',
-    'subscription_renewal',
+    'subscription_renewal', 'automation_failure',
   ], '');
   const [state] = useUrlEnum('state', ['all', 'open', 'acknowledged', 'snoozed', 'dismissed'], 'open');
   const [limit] = useUrlState({

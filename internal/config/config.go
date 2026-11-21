@@ -438,6 +438,7 @@ func (r RedisConfig) Addr() string {
 
 type AuthConfig struct {
 	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
+	OperatorSubjects  string // Comma-separated exact browser subjects allowed to receive Smart Notifications operator advice.
 	// ProviderHint is operator-supplied free text surfaced verbatim by
 	// the /system/auth-mode endpoint. The SPA renders it as informative
 	// copy ("Sign in via Authentik / Authelia / oauth2-proxy / Keycloak
@@ -545,6 +546,7 @@ func Load() (*Config, error) {
 
 		Auth: AuthConfig{
 			ForwardAuthHeader: strings.TrimSpace(envStr("FORWARD_AUTH_HEADER", "")),
+			OperatorSubjects:  envStr("TESLASYNC_SMART_OPERATOR_SUBJECTS", ""),
 			ProviderHint:      envStr("TESLASYNC_AUTH_PROVIDER_HINT", ""),
 		},
 		// Legacy input preserves issued certificate signatures; it never enables browser JWT authentication.

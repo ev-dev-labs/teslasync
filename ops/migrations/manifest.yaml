@@ -1366,3 +1366,17 @@ migrations:
     irreversible_justification: Explicit down drops private outage watches and delivery attempts; they must not be reconstructed automatically.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 315
+    name: automation_history_revision
+    forward_compatible: true
+    forward_compatibility_notes: Adds nullable provenance without rewriting execution history. Older binaries ignore it; unproven runs are excluded only from the new repeated-failure card.
+    rollback_notes: Retain the column for application rollback. Explicit down drops revision provenance only, preserving outcomes and history.
+    expected_duration: A brief metadata change; waits for an exclusive lock on automation_history.
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: No backfill or new index. ALTER TABLE briefly acquires an exclusive lock.
+    reversible: false
+    irreversible_justification: A down/up round trip cannot safely reconstruct which rule revision a historical execution actually evaluated.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"

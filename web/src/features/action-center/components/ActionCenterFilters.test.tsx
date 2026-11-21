@@ -59,6 +59,7 @@ const optionGroups = [
       ['service_case', 'Service case'],
       ['climate_schedule', 'Scheduled climate'],
       ['subscription_renewal', 'Subscription renewals'],
+      ['automation_failure', 'Automation failures'],
       ['system_health', 'System health'],
       ['vehicle_readiness', 'Vehicle readiness'],
     ],

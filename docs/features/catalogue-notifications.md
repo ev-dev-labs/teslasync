@@ -1077,6 +1077,25 @@ provider or vehicle writes and no external push. Use
 PostgreSQL. Leave migration `000302` applied for application rollback.
 Its down script removes renewal settings and occurrence metadata only.
 
+### Repeated automation failures
+
+Set `TESLASYNC_SMART_OPERATOR_SUBJECTS` in Compose, or
+`config.smartOperatorSubjects` in Helm, to the comma-separated, exact
+identities emitted by your trusted ForwardAuth proxy for operators.
+An empty list disables this card. Open mode, impersonation, and app
+tokens cannot receive it. The setting does not grant other admin rights
+or change existing automation access.
+
+Action Center shows one card per enabled rule after at least two
+consecutive failed or partial outcomes in completion order in the last
+24 hours. Only runs recorded for the rule's current revision count;
+the original history is preserved without guessing revisions for past runs.
+Retrying steps inside a single run does not increase the count. The card
+links to the exact most recent execution, even outside the current
+history date filter. It does not expose action payloads or error text on
+the card, send a push, retry anything, or change the rule. A later
+completed non-failure or a rule revision clears the streak.
+
 ### Private weekly drive efficiency
 
 On **Route Efficiency → Private weekly drive efficiency**, sign in, select

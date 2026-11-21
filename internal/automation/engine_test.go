@@ -214,8 +214,9 @@ func (s *runtimeAutomationStore) IncrementExecution(context.Context, int64, bool
 }
 
 type runtimeHistoryStore struct {
-	created *automationmodel.AutomationHistory
-	climate *automationmodel.ScheduledClimateReceipt
+	created   *automationmodel.AutomationHistory
+	completed *automationmodel.AutomationHistory
+	climate   *automationmodel.ScheduledClimateReceipt
 }
 
 func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.AutomationHistory) error {
@@ -226,7 +227,12 @@ func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.Autom
 	return nil
 }
 
-func (s *runtimeHistoryStore) Complete(_ context.Context, _ int64, _ string, _ *string, _ int, _ time.Time, climate *automationmodel.ScheduledClimateReceipt) error {
+func (s *runtimeHistoryStore) Complete(ctx context.Context, h *automationmodel.AutomationHistory, climate *automationmodel.ScheduledClimateReceipt) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	copy := *h
+	s.completed = &copy
 	s.climate = climate
 	return nil
 }
@@ -259,6 +265,108 @@ func (r *typedActionRecorder) ExecuteTyped(_ context.Context, _ *int64, payload 
 	}
 	r.typedCalled = true
 	return json.RawMessage(`{"ok":true}`), nil
+}
+
+type capturedCronRegistration struct {
+	registration trigger.CronAutomation
+	fired        chan context.Context
+}
+
+func (c capturedCronRegistration) LoadEnabledScheduleTriggers(context.Context) ([]trigger.CronAutomation, error) {
+	return []trigger.CronAutomation{c.registration}, nil
+}
+
+func (c capturedCronRegistration) Evaluate(ctx context.Context, _ int64, _ json.RawMessage) error {
+	select {
+	case c.fired <- ctx:
+	default:
+	}
+	return nil
+}
+
+func TestAutomationRuntimeDoesNotDispatchAnObsoleteScheduleRegistration(t *testing.T) {
+	revision := time.Now().UTC().Add(-time.Hour)
+	schedule := models.AutomationStepTriggerSchedule{StepID: 17, CronExpr: "@every 1s", Timezone: "UTC"}
+	rule := &models.AutomationFull{
+		Automation: models.Automation{ID: 1, UpdatedAt: revision, Enabled: true},
+		Steps:      []models.AutomationStep{{ID: 17, Kind: models.AutomationStepKindTriggerSchedule}},
+		Triggers:   []any{&schedule},
+		Actions:    []any{&models.AutomationAction{CommandName: "lock"}},
+	}
+	capture := capturedCronRegistration{
+		registration: trigger.CronAutomation{Automation: rule.Automation, Trigger: schedule},
+		fired:        make(chan context.Context, 1),
+	}
+	cron := trigger.NewCronTrigger(capture, capture)
+	if err := cron.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer cron.Stop()
+	var firing context.Context
+	select {
+	case firing = <-capture.fired:
+	case <-time.After(5 * time.Second):
+		t.Fatal("registered schedule never fired")
+	}
+	history, recorder := &runtimeHistoryStore{}, &typedActionRecorder{}
+	chain := action.NewChainExecutor(nil)
+	chain.Register("command", recorder)
+	engine := NewEngine(&runtimeAutomationStore{automation: rule}, history, chain)
+	if err := engine.Evaluate(firing, rule.ID, nil); err != nil || !recorder.typedCalled || history.completed == nil {
+		t.Fatalf("matching registration did not dispatch: %v", err)
+	}
+	for _, change := range []func(){
+		func() { rule.Triggers = []any{&models.AutomationStepTriggerSchedule{StepID: 17, CronExpr: "@every 2s", Timezone: "UTC"}} },
+		func() { rule.Triggers, rule.UpdatedAt = []any{&schedule}, revision.Add(time.Minute) },
+	} {
+		change()
+		*recorder, *history = typedActionRecorder{}, runtimeHistoryStore{}
+		if err := engine.Evaluate(firing, rule.ID, nil); err != nil || recorder.typedCalled || history.created != nil {
+			t.Fatalf("obsolete registration evaluated a different snapshot: %v", err)
+		}
+	}
+}
+
+type interruptedRuntimeWait struct {
+	cancel   context.CancelFunc
+	unrelated bool
+}
+
+func (a interruptedRuntimeWait) Execute(ctx context.Context, _ *int64, _ json.RawMessage) (json.RawMessage, error) {
+	a.cancel()
+	if a.unrelated {
+		return nil, fmt.Errorf("independent failure")
+	}
+	return nil, fmt.Errorf("wait interrupted: %w", ctx.Err())
+}
+
+func TestAutomationRuntimeKeepsFailuresDistinctFromInterruptions(t *testing.T) {
+	rule := &models.AutomationFull{
+		Automation: models.Automation{ID: 1, Enabled: true},
+		Steps:      []models.AutomationStep{{ID: 21, Kind: models.AutomationStepKindTriggerSchedule}},
+		Triggers:   []any{&models.AutomationStepTriggerSchedule{StepID: 21}},
+		Actions:    []any{&models.AutomationStepActionWait{DurationS: 1}},
+	}
+	for _, tc := range []struct {
+		status    string
+		unrelated bool
+		failed    int
+	}{{"cancelled", false, 0}, {"failed", true, 1}} {
+		t.Run(tc.status, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			chain := action.NewChainExecutor(nil)
+			chain.Register("wait", interruptedRuntimeWait{cancel: cancel, unrelated: tc.unrelated})
+			history := &runtimeHistoryStore{}
+			engine := NewEngine(&runtimeAutomationStore{automation: rule}, history, chain)
+			if err := engine.Evaluate(ctx, rule.ID, nil); err != nil {
+				t.Fatal(err)
+			}
+			if h := history.completed; h == nil || h.Status != tc.status || h.ActionsFailed != tc.failed {
+				t.Fatalf("incorrect durable classification: %+v", h)
+			}
+		})
+	}
 }
 
 func TestScheduledClimateReceiptRequiresExactAcceptedOutcomeAndCurrentSchedule(t *testing.T) {

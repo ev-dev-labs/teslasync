@@ -25,7 +25,8 @@ export type ActionCenterSourceFeature =
   | 'recall_watch'
   | 'service_case'
   | 'climate_schedule'
-  | 'subscription_renewal';
+  | 'subscription_renewal'
+  | 'automation_failure';
 
 export type ActionCenterPriority = 'critical' | 'high' | 'medium' | 'low';
 export type ActionCenterSeverity = 'critical' | 'warning' | 'info';
@@ -124,6 +125,7 @@ export interface ActionCenterEvidence {
   cold_tire_drift?: ColdTireDrift;
   recall_watch_match?: RecallCampaignMatch;
   climate_schedule?: ClimateScheduleEvidence;
+  automation_failure?: { name: string; failure_count: number };
 }
 
 export interface ActionCenterProjectedImpact {

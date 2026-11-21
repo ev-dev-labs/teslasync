@@ -5,6 +5,7 @@ package action
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -251,15 +252,20 @@ func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *i
 
 	results := make([]CommandResult, 0, len(vehicles))
 	var failures int
+	var interruption error
 
 	for _, v := range vehicles {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("context cancelled during fleet command execution: %w", ctx.Err())
+		if interruption = ctx.Err(); interruption != nil {
+			break
 		}
 
-		result := e.sendToVehicle(ctx, v, cfg)
+		result, err := e.sendToVehicle(ctx, v, cfg)
 		results = append(results, result)
-		if !result.Success {
+		if ctxErr := ctx.Err(); ctxErr != nil && errors.Is(err, ctxErr) {
+			interruption = ctxErr
+			break
+		}
+		if err != nil {
 			failures++
 		}
 	}
@@ -272,13 +278,16 @@ func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *i
 	if failures > 0 {
 		return resultJSON, fmt.Errorf("%d of %d vehicle commands failed", failures, len(vehicles))
 	}
+	if interruption != nil {
+		return resultJSON, fmt.Errorf("vehicle command execution interrupted: %w", interruption)
+	}
 
 	return resultJSON, nil
 }
 
 // sendToVehicle sends a single command to one vehicle, logs it, and returns the result.
 // If the vehicle is asleep or offline it automatically attempts to wake it first.
-func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Vehicle, cfg *CommandConfig) CommandResult {
+func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Vehicle, cfg *CommandConfig) (CommandResult, error) {
 	start := time.Now()
 
 	result := CommandResult{
@@ -289,16 +298,20 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Veh
 
 	// Auto-wake: if the vehicle is not online and the command isn't wake_up itself.
 	if cfg.Command != "wake_up" {
-		wr := e.wakeIfNeeded(ctx, v)
-		if wr != nil {
-			result.WakeResult = wr
-			if !wr.Success {
-				result.DurationMs = time.Since(start).Milliseconds()
-				result.Error = fmt.Sprintf("auto-wake failed: %s", wr.Error)
-				e.logCommand(ctx, v, cfg, "failed", result.Error)
-				return result
-			}
+		wr, err := e.wakeIfNeeded(ctx, v)
+		result.WakeResult = wr
+		if err != nil {
+			result.DurationMs = time.Since(start).Milliseconds()
+			result.Error = fmt.Sprintf("auto-wake failed: %s", wr.Error)
+			e.logCommand(ctx, v, cfg, "failed", result.Error)
+			return result, err
 		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		result.DurationMs = time.Since(start).Milliseconds()
+		result.Error = err.Error()
+		return result, err
 	}
 
 	cmdErr := e.teslaClient.SendCommand(ctx, v.VIN, automationTeslaCommand(cfg.Command), cfg.Params)
@@ -324,35 +337,33 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Veh
 		Int64("duration_ms", result.DurationMs).
 		Msg("automation command executed")
 
-	return result
+	return result, cmdErr
 }
 
 // wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
-func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehicle) *WakeResult {
-	state, err := e.currentVehicleState(ctx, v)
-	if err != nil {
-		return &WakeResult{
-			Attempted: true,
-			Error:     fmt.Sprintf("read vehicle live state: %v", err),
-		}
-	}
-	if state == "online" {
-		return nil
-	}
-
+func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehicle) (*WakeResult, error) {
 	wr := &WakeResult{Attempted: true}
 	start := time.Now()
+	fail := func(err error) (*WakeResult, error) {
+		wr.Error = err.Error()
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr, err
+	}
+
+	state, err := e.currentVehicleState(ctx, v)
+	if err != nil {
+		return fail(fmt.Errorf("read vehicle live state: %w", err))
+	}
+	if state == "online" {
+		return nil, nil
+	}
 
 	pollingCfg, err := e.settingsRepo.GetPollingConfig(ctx)
 	if err != nil {
-		wr.Error = fmt.Sprintf("get polling config: %v", err)
-		wr.DurationMs = time.Since(start).Milliseconds()
-		return wr
+		return fail(fmt.Errorf("get polling config: %w", err))
 	}
 	if pollingCfg != nil && !pollingCfg.Enabled {
-		wr.Error = "wake_up endpoint is disabled"
-		wr.DurationMs = time.Since(start).Milliseconds()
-		return wr
+		return fail(errors.New("wake_up endpoint is disabled"))
 	}
 
 	e.logger.Info().
@@ -360,10 +371,11 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehi
 		Str("vehicle_name", v.DisplayName).
 		Msg("attempting auto-wake before command")
 
+	if err := ctx.Err(); err != nil {
+		return fail(err)
+	}
 	if err := e.teslaClient.WakeUp(ctx, v.VIN); err != nil {
-		wr.Error = fmt.Sprintf("wake command failed: %v", err)
-		wr.DurationMs = time.Since(start).Milliseconds()
-		return wr
+		return fail(fmt.Errorf("wake command failed: %w", err))
 	}
 
 	timer := time.NewTimer(e.wakeTimeout)
@@ -374,13 +386,9 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehi
 	for {
 		select {
 		case <-ctx.Done():
-			wr.Error = ctx.Err().Error()
-			wr.DurationMs = time.Since(start).Milliseconds()
-			return wr
+			return fail(ctx.Err())
 		case <-timer.C:
-			wr.Error = "vehicle did not wake up within timeout"
-			wr.DurationMs = time.Since(start).Milliseconds()
-			return wr
+			return fail(errors.New("vehicle did not wake up within timeout"))
 		case <-ticker.C:
 			wr.PollCount++
 			state, err := e.currentVehicleState(ctx, v)
@@ -397,7 +405,7 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehi
 					Int("poll_count", wr.PollCount).
 					Msg("auto-wake completed successfully")
 
-				return wr
+				return wr, nil
 			}
 		}
 	}

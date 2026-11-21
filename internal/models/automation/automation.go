@@ -16,6 +16,7 @@ type AutomationHistory struct {
 	ID                 int64           `json:"id" db:"id"`
 	AutomationID       int64           `json:"automation_id" db:"automation_id"`
 	AutomationName     string          `json:"automation_name" db:"automation_name"`
+	AutomationRevision *time.Time      `json:"-" db:"automation_revision"`
 	VehicleID          *int64          `json:"vehicle_id" db:"vehicle_id"`
 	TriggeredAt        time.Time       `json:"triggered_at" db:"triggered_at"`
 	CompletedAt        *time.Time      `json:"completed_at" db:"completed_at"`

@@ -31,6 +31,7 @@ const (
 	SourceServiceCase             SourceFeature = "service_case"
 	SourceClimateSchedule         SourceFeature = "climate_schedule"
 	SourceSubscriptionRenewal     SourceFeature = "subscription_renewal"
+	SourceAutomationFailure       SourceFeature = "automation_failure"
 )
 
 func (v SourceFeature) Valid() bool {
@@ -39,7 +40,7 @@ func (v SourceFeature) Valid() bool {
 		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
 		SourceSignalHealth, SourceSmartCharging, SourceChargingSitePerformance, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness,
 		SourceWarrantyDistance, SourceTripMaintenance, SourceColdTireDrift, SourceRecallWatch, SourceServiceCase, SourceClimateSchedule,
-		SourceSubscriptionRenewal:
+		SourceSubscriptionRenewal, SourceAutomationFailure:
 		return true
 	default:
 		return false
@@ -49,7 +50,8 @@ func (v SourceFeature) Valid() bool {
 func (v SourceFeature) Private() bool {
 	return v == SourceSmartCharging || v == SourceChargingSitePerformance || v == SourceSmartCommute ||
 		v == SourceWarrantyDistance || v == SourceTripMaintenance || v == SourceColdTireDrift || v == SourceRecallWatch ||
-		v == SourceServiceCase || v == SourceClimateSchedule || v == SourceSubscriptionRenewal
+		v == SourceServiceCase || v == SourceClimateSchedule || v == SourceSubscriptionRenewal ||
+		v == SourceAutomationFailure
 }
 
 type Priority string
@@ -238,6 +240,7 @@ type EvidenceItem struct {
 	ColdTireDrift     *smartreadiness.ColdTireDrift             `json:"cold_tire_drift,omitempty"`
 	RecallWatchMatch  *smartreadiness.RecallCampaignMatch       `json:"recall_watch_match,omitempty"`
 	ClimateSchedule   *smartreadiness.ClimateScheduleEvidence   `json:"climate_schedule,omitempty"`
+	AutomationFailure *AutomationFailureEvidence                `json:"automation_failure,omitempty"`
 }
 
 type ImpactRiskLevel string

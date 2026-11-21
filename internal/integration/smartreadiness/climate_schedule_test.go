@@ -48,7 +48,7 @@ func newClimateScheduleJourney(t *testing.T) *climateScheduleJourney {
 	t.Helper()
 	repo, db := testRepository(t)
 	seedCabinEvidence(t, db, nil)
-	for _, file := range []string{"000109_add_automations.up", "000223_action_center_state.up", "000284_smart_climate_schedule.up"} {
+	for _, file := range []string{"000109_add_automations.up", "000223_action_center_state.up", "000284_smart_climate_schedule.up", "000315_automation_history_revision.up"} {
 		applyWarrantyFixtureMigration(t, db, file)
 	}
 	loc, err := time.LoadLocation("America/New_York")
@@ -58,20 +58,7 @@ func newClimateScheduleJourney(t *testing.T) *climateScheduleJourney {
 	j := &climateScheduleJourney{t: t, repo: repo, db: db, monday: time.Date(2026, 11, 9, 8, 0, 0, 0, loc)}
 	j.now = j.monday.AddDate(0, 0, -15)
 	j.revision = j.now.Add(-time.Hour)
-	j.exec(`CREATE TABLE automation_steps (id bigint PRIMARY KEY, automation_id bigint REFERENCES automations(id), step_order integer NOT NULL, kind text);
-		CREATE TABLE automation_step_trigger_schedule (step_id bigint PRIMARY KEY REFERENCES automation_steps(id), cron_expr text, timezone text);
-		CREATE TABLE automation_actions (step_id bigint REFERENCES automation_steps(id), command_name text);
-		CREATE TABLE automation_step_trigger_signal (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_trigger_geofence (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_trigger_event (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_condition_signal (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_condition_time_window (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_condition_geofence (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_condition_other_automation (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_action_notify (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_action_set_setting (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_action_call_automation (step_id bigint PRIMARY KEY);
-		CREATE TABLE automation_step_action_wait (step_id bigint PRIMARY KEY)`)
+	installAutomationStepFixture(t, db)
 	j.exec(`INSERT INTO automations(id,name,vehicle_id,trigger_type,updated_at) VALUES
 		(51,'Synthetic Monday cabin',7,'cron',$1),(52,'Foreign cabin',8,'cron',$1)`, j.revision)
 	j.exec(`INSERT INTO automation_steps(id,automation_id,step_order,kind) VALUES
@@ -118,7 +105,9 @@ func (j *climateScheduleJourney) run(at time.Time, status string, receipt *autom
 	if err := store.Create(j.t.Context(), &history); err != nil {
 		j.t.Fatal(err)
 	}
-	if err := store.Complete(j.t.Context(), history.ID, status, nil, 19000, at.Add(20*time.Second), receipt); err != nil {
+	duration, completed := 19000, at.Add(20*time.Second)
+	history.Status, history.DurationMs, history.CompletedAt = status, &duration, &completed
+	if err := store.Complete(j.t.Context(), &history, receipt); err != nil {
 		j.t.Fatal(err)
 	}
 }

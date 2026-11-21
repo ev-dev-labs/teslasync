@@ -92,20 +92,22 @@ func buildTypedActionConfigs(items []any) ([]action.ActionConfig, error) {
 }
 
 // recordSkipped writes a history record for a skipped execution.
-func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, triggerKind string, start time.Time, reason string) {
+func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot, conditionsSnapshot json.RawMessage, triggerKind string, start time.Time, reason string) {
 	durationMs := int(time.Since(start).Milliseconds())
 	completedAt := time.Now().UTC()
 	hist := &automationmodel.AutomationHistory{
-		AutomationID:    a.ID,
-		AutomationName:  a.Name,
-		VehicleID:       a.VehicleID,
-		TriggeredAt:     start,
-		CompletedAt:     &completedAt,
-		DurationMs:      &durationMs,
-		TriggerType:     triggerKind,
-		TriggerSnapshot: triggerSnapshot,
-		Status:          "skipped",
-		Error:           &reason,
+		AutomationID:       a.ID,
+		AutomationName:     a.Name,
+		AutomationRevision: &a.UpdatedAt,
+		VehicleID:          a.VehicleID,
+		TriggeredAt:        start,
+		CompletedAt:        &completedAt,
+		DurationMs:         &durationMs,
+		TriggerType:        triggerKind,
+		TriggerSnapshot:    triggerSnapshot,
+		ConditionsSnapshot: conditionsSnapshot,
+		Status:             "skipped",
+		Error:              &reason,
 	}
 	if err := e.historyRepo.Create(ctx, hist); err != nil {
 		e.logger.Error().Err(err).
@@ -115,26 +117,63 @@ func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, tr
 	}
 }
 
-// completeHistory updates a running history record with final status.
-func (e *Engine) completeHistory(ctx context.Context, historyID int64, status string, errMsg *string, start time.Time, climate *automationmodel.ScheduledClimateReceipt) {
+func (e *Engine) completeHistory(ctx context.Context, h *automationmodel.AutomationHistory, status string, errMsg *string, results []action.ActionResult, climate *automationmodel.ScheduledClimateReceipt) {
 	completed := time.Now().UTC()
-	durationMs := int(completed.Sub(start).Milliseconds())
-	if err := e.historyRepo.Complete(ctx, historyID, status, errMsg, durationMs, completed, climate); err != nil {
+	durationMs := int(completed.Sub(h.TriggeredAt).Milliseconds())
+	h.Status, h.Error, h.CompletedAt, h.DurationMs = status, errMsg, &completed, &durationMs
+	h.ActionsExecuted = summarizeActionResults(results)
+	// An interrupted execution still needs a durable outcome, not a lingering running row.
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := e.historyRepo.Complete(writeCtx, h, climate); err != nil {
 		e.logger.Error().Err(err).
-			Int64("history_id", historyID).
+			Int64("history_id", h.ID).
 			Str("status", status).
 			Msg("failed to complete history record")
 	}
 }
 
-func scheduledClimateReceipt(a *models.AutomationFull, fired trigger.ScheduleFire, results []action.ActionResult) *automationmodel.ScheduledClimateReceipt {
-	if a.VehicleID == nil || *a.VehicleID <= 0 || a.ID != fired.AutomationID ||
-		fired.Revision.IsZero() || !a.UpdatedAt.Equal(fired.Revision) || fired.FiredAt.Before(fired.Revision) ||
-		len(a.Triggers) != 1 || len(results) != 1 || len(a.Actions) != 1 {
-		return nil
+func summarizeActionResults(results []action.ActionResult) json.RawMessage {
+	type outcome struct {
+		Index      int    `json:"index"`
+		ActionType string `json:"action_type"`
+		Success    bool   `json:"success"`
+		Skipped    bool   `json:"skipped"`
+		DurationMs int64  `json:"duration_ms"`
 	}
-	schedule, ok := a.Triggers[0].(*models.AutomationStepTriggerSchedule)
-	if !ok || schedule == nil || schedule.StepID <= 0 || *schedule != fired.Trigger {
+	// Provider outputs, error strings and command payloads may contain private data.
+	items := make([]outcome, 0, len(results))
+	for _, result := range results {
+		items = append(items, outcome{result.Index, result.ActionType, result.Success, result.Skipped, result.DurationMs})
+	}
+	data, _ := json.Marshal(items)
+	return data
+}
+
+func matchesScheduleFire(a *models.AutomationFull, fired trigger.ScheduleFire) bool {
+	if a.ID != fired.AutomationID || fired.Trigger.StepID <= 0 ||
+		fired.Revision.IsZero() || !a.UpdatedAt.Equal(fired.Revision) || fired.FiredAt.Before(fired.Revision) ||
+		fired.FiredAt.IsZero() {
+		return false
+	}
+	for _, item := range a.Triggers {
+		switch schedule := item.(type) {
+		case *models.AutomationStepTriggerSchedule:
+			if schedule != nil && *schedule == fired.Trigger {
+				return true
+			}
+		case models.AutomationStepTriggerSchedule:
+			if schedule == fired.Trigger {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func scheduledClimateReceipt(a *models.AutomationFull, fired trigger.ScheduleFire, results []action.ActionResult) *automationmodel.ScheduledClimateReceipt {
+	if a.VehicleID == nil || *a.VehicleID <= 0 || !matchesScheduleFire(a, fired) ||
+		len(a.Triggers) != 1 || len(results) != 1 || len(a.Actions) != 1 {
 		return nil
 	}
 	var command *models.AutomationAction
