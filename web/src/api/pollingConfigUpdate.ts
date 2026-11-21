@@ -10,10 +10,14 @@ export function pollingConfigUpdate(pc: PollingConfig): Omit<PollingConfig, 'end
   const autoEndpoints = Object.fromEntries(
     Object.entries(pc.auto_endpoints).filter(([key]) => pollableKeys.has(key)),
   )
+  const smartEndpoints = pc.smart_endpoints == null ? undefined : Object.fromEntries(
+    Object.entries(pc.smart_endpoints).filter(([key, enabled]) => catalogKeys.has(key) && fleetEndpoints[key] && enabled),
+  )
   return {
     auto_polling_enabled: pc.auto_polling_enabled,
     fleet_endpoints: fleetEndpoints,
     auto_endpoints: autoEndpoints,
+    smart_endpoints: smartEndpoints,
     vehicle_discovery: pc.vehicle_discovery,
     charge_state: pc.charge_state,
     climate_state: pc.climate_state,

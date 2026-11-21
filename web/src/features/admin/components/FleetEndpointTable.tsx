@@ -15,11 +15,13 @@ interface FleetEndpointTableProps {
   candidates: FleetEndpoint[];
   access: Record<string, boolean>;
   auto: Record<string, boolean>;
+  smart?: Record<string, boolean>;
   pollingEnabled: boolean;
   pending: boolean;
   tableId: string;
   onEnable: (endpoint: FleetEndpoint) => void;
   onAuto: (key: string) => void;
+  onSmart?: (key: string) => void;
   headerAccess?: ReactNode;
   headerAuto?: ReactNode;
   grouping?: TableProps['rowGrouping'];
@@ -28,7 +30,7 @@ interface FleetEndpointTableProps {
 }
 
 export function FleetEndpointTable({
-  endpoints, candidates, access, auto, pollingEnabled, pending, tableId, onEnable, onAuto,
+  endpoints, candidates, access, auto, smart, pollingEnabled, pending, tableId, onEnable, onAuto, onSmart,
   headerAccess, headerAuto, grouping, controls, toolbarActions,
 }: FleetEndpointTableProps) {
   const { t } = useTranslation();
@@ -105,6 +107,19 @@ export function FleetEndpointTable({
           size="sm"
           aria-label={`${t('fleetApi.controls.poll', 'Auto-poll')} ${endpoint.method} ${endpoint.path}`}
         />
+        </Tooltip>
+      ) : null} smart={smart != null && onSmart ? (
+        <Tooltip multiline content={!access[endpoint.key]
+          ? t('fleetApi.controls.allowBeforeSmart', 'Allow this endpoint before enabling it for Smart Features.')
+          : t('fleetApi.controls.smartHint', 'Permit Smart Features to call this endpoint when their own setup and consent allow it.')}>
+          <Toggle
+            checked={!!access[endpoint.key] && !!smart[endpoint.key]}
+            onChange={() => onSmart(endpoint.key)}
+            disabled={pending || !access[endpoint.key]}
+            focusableWhenDisabled
+            size="sm"
+            aria-label={t('fleetApi.controls.smartFor', 'Smart Features: {{method}} {{path}}', { method: endpoint.method, path: endpoint.path })}
+          />
         </Tooltip>
       ) : null} />,
     },

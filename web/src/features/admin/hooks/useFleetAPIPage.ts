@@ -110,6 +110,14 @@ export function useFleetAPIPage() {
     });
   };
 
+  const toggleSmart = (key: string) => {
+    if (!pollingConfig?.smart_endpoints || !pollingConfig.fleet_endpoints[key] || pollingConfigMut.isPending) return;
+    pollingConfigMut.mutate({
+      ...pollingConfig,
+      smart_endpoints: { ...pollingConfig.smart_endpoints, [key]: !pollingConfig.smart_endpoints[key] },
+    });
+  };
+
   const toggleAllAccess = () => {
     if (!pollingConfig || catalog.length === 0) return;
     const enable = !catalog.every((endpoint) => pollingConfig.fleet_endpoints[endpoint.key]);
@@ -189,6 +197,6 @@ export function useFleetAPIPage() {
 
   return {
     categories, categoryLabel, selectedCategory, setSelectedCategory,
-    fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints
+    fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleSmart, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints
   };
 }

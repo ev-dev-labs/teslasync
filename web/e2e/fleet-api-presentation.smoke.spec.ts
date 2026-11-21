@@ -56,6 +56,7 @@ for (const theme of ['light', 'dark'] as const) {
         auto_polling_enabled: false,
         fleet_endpoints: Object.fromEntries(catalog.map(endpoint => [endpoint.key, endpoint.key === 'vehicles.list'])),
         auto_endpoints: { 'vehicles.list': true, 'vehicle_data.charge_state': false },
+        smart_endpoints: {} as Record<string, boolean>,
         endpoint_catalog: catalog,
         telemetry_capture: false, telemetry_capture_retention_days: 7,
       };
@@ -118,6 +119,7 @@ for (const theme of ['light', 'dark'] as const) {
       const autoGroup = page.getByRole('switch', { name: 'Auto-poll all eligible Vehicle data' });
       const accessRow = page.getByRole('switch', { name: 'Enable GET /api/1/vehicles', exact: true });
       const autoRow = page.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles', exact: true });
+      const smartRow = page.getByRole('switch', { name: 'Smart Features: GET /api/1/vehicles', exact: true });
       await expect(autoHeader).toBeDisabled();
       await expect(autoGroup).toBeDisabled();
       await autoHeader.focus();
@@ -127,9 +129,12 @@ for (const theme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Expand Vehicle data', exact: true }).click();
       await expect(accessRow).toBeVisible();
       await expect(autoRow).toBeDisabled();
+      await expect(smartRow).toBeEnabled();
+      await expect(smartRow).not.toBeChecked();
       await expect(page.getByRole('switch', { name: /Auto-poll .*nearby_charging_sites/ })).toHaveCount(0);
       await expectAligned([accessHeader, accessGroup, accessRow]);
       await expectAligned([autoHeader, autoGroup, autoRow]);
+      await expectAligned([accessRow, autoRow, smartRow]);
       const mobileRow = page.locator('[data-mobile-table] [data-row-key="vehicles.list"]');
       if (width < 768) {
         await expect.poll(async () => (await mobileRow.boundingBox())?.height).toBeLessThanOrEqual(80);
@@ -160,11 +165,17 @@ for (const theme of ['light', 'dark'] as const) {
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('/api/1/vehicles');
       if (width < 768) await page.getByRole('dialog', { name: 'list' }).getByRole('button', { name: 'Close', exact: true }).first().click();
 
+      await smartRow.click();
+      await expect(smartRow).toBeChecked();
+      expect(config.smart_endpoints).toEqual({ 'vehicles.list': true });
+      expect(config.auto_polling_enabled).toBe(false);
       await accessRow.click();
       await expect.poll(() => config.fleet_endpoints['vehicles.list']).toBe(false);
       expect(config.auto_endpoints['vehicles.list']).toBe(false);
+      expect(config.smart_endpoints).toEqual({});
       await accessRow.click();
       await expect.poll(() => config.fleet_endpoints['vehicles.list']).toBe(true);
+      await expect(smartRow).not.toBeChecked();
       await accessGroup.click();
       await expect.poll(() => config.fleet_endpoints['vehicle_data.charge_state']).toBe(true);
       expect(config.fleet_endpoints['command.door_lock']).toBe(false);

@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
 import { PillFilterBar } from '@/components/forms';
 import { FleetEndpointTable } from '../../FleetEndpointTable';
 import { FleetEndpointControls } from '../../FleetEndpointControls';
@@ -15,11 +15,14 @@ type Props = {
 
 export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
   const { t, fmtInt, search, setSearch, groupBy, pollingConfigMut, catalog,
-    endpointGroups, groupLabel, toggleEndpoint, toggleAuto,
+    endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleSmart,
     categories, categoryLabel, selectedCategory, setSelectedCategory } = controller;
 
   return (
     <div className="min-w-0 space-y-3">
+    {pollingConfig.smart_endpoints != null && <Text as="p" size="sm" color="secondary">
+      {t('fleetApi.controls.smartDescription', 'Smart Features access is off by default and independent of auto-polling. Turning off Access also clears Smart Features permission. Allowing an endpoint does not turn on a feature.')}
+    </Text>}
     <PillFilterBar semanticMode="filters" ariaLabel={t('fleetApi.controls.categoryFilter', 'Route groups')}
       items={[{ key: 'all', label: t('fleetApi.controls.allRoutes', 'All routes') },
         ...categories.map(category => ({ key: category, label: categoryLabel(category) }))]}
@@ -30,10 +33,12 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
       candidates={catalog}
       access={pollingConfig.fleet_endpoints}
       auto={pollingConfig.auto_endpoints}
+      smart={pollingConfig.smart_endpoints}
       pollingEnabled={pollingConfig.auto_polling_enabled}
       pending={pollingConfigMut.isPending}
       onEnable={toggleEndpoint}
       onAuto={toggleAuto}
+      onSmart={toggleSmart}
       headerAccess={<FleetAPIRouteActions controller={controller} kind="access" />}
       headerAuto={<FleetAPIRouteActions controller={controller} kind="auto" />}
       toolbarActions={<FleetAPIViewOptions controller={controller} />}

@@ -20,6 +20,29 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 Open **Notifications → Smart notifications** in the sidebar. On a phone, open
 **More** or **Browse sections** first.
 
+### Fleet API permissions
+
+In **Fleet API settings** (`/fleet-api`), use each endpoint's **Smart Features**
+switch to allow Smart Features to call that specific Tesla operation. All
+routes start off for Smart Features, including on upgrades. **Access** must
+also be on; turning it off clears the Smart Features permission for that
+route. Auto-polling is independent. Suspending Fleet API actions blocks
+Smart Features requests without changing their saved permissions.
+
+| Smart Feature | Fleet API routes to allow |
+| --- | --- |
+| Smart Commute: send a destination | `GET /api/1/vehicles/{vin}` for connectivity and `POST /api/1/vehicles/{vin}/command/navigation_request` to send. Allow `POST /api/1/vehicles/{vin}/wake_up` separately if you want to offer waking a sleeping vehicle after confirmation. |
+| Solar charging opportunities | `GET /api/1/energy_sites/{site_id}/site_info` to verify the connection and read backup reserve; `GET /api/1/energy_sites/{site_id}/live_status` to sample power. |
+| Backup charging watch | `GET /api/1/energy_sites/{site_id}/live_status` for meter readings. Connecting a new Tesla Energy site also needs `site_info` for verification. |
+
+These switches do not enable a feature, grant vehicle or Energy consent, or
+change how you secure your installation. Advice that only uses existing
+telemetry does not need Fleet API permission. Opening the Vehicle Command
+Center from a reminder does not send a command; commands you choose there
+are manual.
+
+### Feature setup
+
 - **Smart Commute** (`/settings/smart-commute`): Enable local drive analysis for a
   selected vehicle, then confirm or decline suggestions in Action Center. You
   can also enter a routine without enabling history analysis. Pause or disable

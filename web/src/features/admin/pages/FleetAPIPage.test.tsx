@@ -100,6 +100,7 @@ function makePolling(overrides: Record<string, unknown> = {}) {
     auto_polling_enabled: false,
     fleet_endpoints: Object.fromEntries(CATALOG.map(({ key }) => [key, false])),
     auto_endpoints: { 'vehicles.list': false, 'vehicle_data.charge_state': false, 'vehicle_data.drive_state': false },
+    smart_endpoints: {},
     endpoint_catalog: CATALOG,
     telemetry_capture: false,
     telemetry_capture_retention_days: 7,
@@ -397,7 +398,11 @@ describe('FleetAPIPage', () => {
   });
 
   it('clears auto-poll selection when an enabled route is disabled', async () => {
-    installRequest();
+    installRequest({ polling: makePolling({
+      fleet_endpoints: { 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': true },
+      auto_endpoints: { 'vehicle_data.charge_state': true },
+      smart_endpoints: { 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': true },
+    }) });
     renderPage();
     await showVehicleData();
     const sw = await screen.findByRole('switch', { name: 'Enable GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' });
@@ -406,11 +411,45 @@ describe('FleetAPIPage', () => {
     const body = findRequestBody('/settings/polling-config', 'PUT');
     expect((body.fleet_endpoints as Record<string, boolean>)['vehicle_data.charge_state']).toBe(false);
     expect((body.auto_endpoints as Record<string, boolean>)['vehicle_data.charge_state']).toBe(false);
+    expect(body.smart_endpoints).toEqual({ 'vehicle_data.drive_state': true });
+  });
+
+  it('opts in one command independently of polling, and does not restore Smart access with base access', async () => {
+    installRequest();
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Expand Vehicle commands' }));
+    const path = '/api/1/vehicles/{vin}/command/door_lock';
+    const access = screen.getByRole('switch', { name: `Enable POST ${path}` });
+    const smart = screen.getByRole('switch', { name: `Smart Features: POST ${path}` });
+    expect(smart).not.toBeChecked();
+    expect(smart).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(smart);
+    expect(mockedRequest.mock.calls.some(([, options]) => (options as ReqOpts | undefined)?.method === 'PUT')).toBe(false);
+
+    fireEvent.click(access);
+    await waitFor(() => expect(smart).not.toHaveAttribute('aria-disabled'));
+    fireEvent.click(smart);
+    await waitFor(() => expect(smart).toBeChecked());
+    const updates = () => mockedRequest.mock.calls.filter(([, options]) => (options as ReqOpts | undefined)?.method === 'PUT')
+      .map(([, options]) => JSON.parse((options as ReqOpts).body ?? '{}') as Record<string, unknown>);
+    expect(updates().at(-1)).toMatchObject({
+      auto_polling_enabled: false,
+      smart_endpoints: { 'command.door_lock': true },
+      auto_endpoints: { 'vehicle_data.charge_state': true },
+    });
+
+    fireEvent.click(access);
+    await waitFor(() => expect(access).not.toBeChecked());
+    expect(updates().at(-1)?.smart_endpoints).toEqual({});
+    fireEvent.click(access);
+    await waitFor(() => expect(smart).not.toHaveAttribute('aria-disabled'));
+    expect(smart).not.toBeChecked();
   });
 
   it('strips response-only camelCase endpoint aliases from the strict update payload', async () => {
     installRequest({ polling: camelCaseKeys(makePolling({
       fleet_endpoints: { ...Object.fromEntries(CATALOG.map(({ key }) => [key, true])) },
+      smart_endpoints: { 'vehicle_data.drive_state': true },
     })) });
     renderPage();
     await showVehicleData();
@@ -419,6 +458,7 @@ describe('FleetAPIPage', () => {
     const body = findRequestBody('/settings/polling-config', 'PUT');
     expect(Object.keys(body.fleet_endpoints as Record<string, boolean>).sort()).toEqual(CATALOG.map(({ key }) => key).sort());
     expect(Object.keys(body.auto_endpoints as Record<string, boolean>).sort()).toEqual(CATALOG.filter(({ pollable }) => pollable).map(({ key }) => key).sort());
+    expect(body.smart_endpoints).toEqual({ 'vehicle_data.drive_state': true });
     expect(body.endpoint_catalog).toBeUndefined();
   });
 
@@ -597,6 +637,7 @@ describe('FleetAPIPage', () => {
     expect(statusCard()).toHaveAccessibleName('Tesla API');
     for (const button of screen.getAllByRole('button', { name: /^Expand / })) fireEvent.click(button);
     expect(screen.getByRole('switch', { name: 'Enable POST /api/1/vehicles/{vin}/command/door_lock' })).toBeInTheDocument();
-    expect(screen.getAllByRole('switch')).toHaveLength(18);
+    expect(screen.getAllByRole('switch', { name: /^Smart Features:/ })).toHaveLength(CATALOG.length);
+    expect(screen.getAllByRole('switch', { name: /^(?!Smart Features:)/ })).toHaveLength(18);
   });
 });

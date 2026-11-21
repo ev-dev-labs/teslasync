@@ -1,5 +1,5 @@
 /**
- * FleetAPIPage — outbound Tesla Fleet API access and polling participation.
+ * FleetAPIPage — outbound Tesla Fleet API access, polling, and Smart Features.
  *
  * Opt into automatic polling, independently allow each implemented Fleet API
  * route, and view the runtime's configured endpoints. Laid out as a
@@ -20,7 +20,7 @@ export default function FleetAPIPage() {
   return (
     <PageLayout
       title={t('fleetApi.pageTitle', 'Fleet API settings')}
-      subtitle={t('fleetApi.subtitle', 'Choose which Tesla Fleet API routes are available and which can be polled automatically')}
+      subtitle={t('fleetApi.subtitle', 'Choose which Tesla Fleet API routes are available for manual requests, automatic polling, and Smart Features')}
       query={[settingsQuery, pollingQuery, versionQuery]}
       dataSources={dataSources}
     >
