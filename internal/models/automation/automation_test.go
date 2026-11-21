@@ -558,6 +558,7 @@ func TestAutomationHistory_StructTags(t *testing.T) {
 		"ID":                 {"id", "id"},
 		"AutomationID":       {"automation_id", "automation_id"},
 		"AutomationName":     {"automation_name", "automation_name"},
+		"AutomationRevision": {"-", "automation_revision"},
 		"VehicleID":          {"vehicle_id", "vehicle_id"},
 		"TriggeredAt":        {"triggered_at", "triggered_at"},
 		"CompletedAt":        {"completed_at", "completed_at"},
