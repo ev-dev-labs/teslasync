@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page, type Request } from '@playwright/test'
 import { join } from 'node:path'
 import { assertMockApiComplete, closeMockApiFixtures, closeMockedPage, retireMockedDocument, waitForHarnessReady } from './mockApi'
+import { assertNavigationTextContained } from './widget-design-packs.acceptance'
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock'
 import { APPLICATION_DESIGNS } from '../src/components/ui/app-designs/designs'
 import { COLLECTION_DEFINITIONS } from '../src/components/layout/sidebar/collections'
@@ -8,13 +9,13 @@ import type { PackId } from '../src/features/dashboard/widgets/designPacks/types
 
 test.afterAll(async () => { await closeMockApiFixtures() })
 
-async function openNavigation(page: Page, baseURL: string, width: number, pack: PackId = 'v6', theme: 'dark' | 'light' = 'dark') {
+async function openNavigation(page: Page, baseURL: string, width: number, pack: PackId = 'v6', theme: 'dark' | 'light' = 'dark', path = '/explore') {
   const origin = new URL(baseURL).origin
   await page.setViewportSize({ width, height: 900 })
   const preference = { ...createReviewPreference(), pack_id: pack, app_wide: true }
   const mocks = await installPackReview(page, theme, width, false, [], true, preference, origin)
   await page.addInitScript(() => localStorage.setItem('teslasync-deck-panel-open', '0'))
-  await page.goto('/explore', { waitUntil: 'domcontentloaded' })
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mocks)
   return mocks
 }
@@ -233,6 +234,32 @@ test('horizontal sections page through whole tiles and the flyout switches group
   await flyout.getByRole('button', { name: 'Hide panel', exact: true }).click()
   await expect(flyout).toHaveCount(0)
   await expect(driving).toBeFocused()
+  await closeMockedPage(page, mocks)
+})
+
+test('Swiss preview contains long RTL section labels at 200% text size', async ({ page, baseURL }, testInfo) => {
+  testInfo.setTimeout(120_000)
+  const mocks = await openNavigation(page, baseURL!, 1440, 'v6', 'dark', '/settings#appearance')
+  await page.getByRole('button', { name: `Preview ${packNames.swiss}`, exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: `Preview ${packNames.swiss}`, exact: true })
+  const preview = dialog.locator('[data-preview-synthetic="true"]')
+  const sections = preview.locator('[data-horizontal-nav-trigger] > span:last-child')
+  await expect(sections.first()).toBeVisible()
+  await sections.evaluateAll(labels => {
+    for (const label of labels) label.textContent = 'مساحة عمل تجريبية — Extended local workspace review and source quality'
+  })
+  await preview.evaluate(element => element.setAttribute('dir', 'rtl'))
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('dir', 'rtl')
+    element.style.setProperty('--font-scale', '2')
+  })
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const density of ['compact', 'spacious']) {
+      await page.locator('body').evaluate((element, value) => element.setAttribute('data-density', value), density)
+      await assertNavigationTextContained(preview, `Swiss ${width}px RTL 200% ${density}`)
+    }
+  }
   await closeMockedPage(page, mocks)
 })
 

@@ -106,7 +106,7 @@ export function HorizontalSectionRail({ sections, activeSectionTitle, openSectio
             onSelect(section.title, event.currentTarget, true)
           }}>
           <span className="horizontal-nav-section-icon"><Icon className="size-5 shrink-0" aria-hidden /></span>
-          <span>{shortLabels[section.title] ?? label}</span>
+          <span className="horizontal-nav-section-label">{shortLabels[section.title] ?? label}</span>
         </Button>
       })}
     </div>

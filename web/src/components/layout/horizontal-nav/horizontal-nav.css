@@ -111,6 +111,10 @@
   overflow-wrap: anywhere;
   scroll-snap-align: start;
 }
+.horizontal-nav-section-label {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
 .horizontal-nav-section-icon {
   display: grid;
   flex: none;
