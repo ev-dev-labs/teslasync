@@ -192,7 +192,9 @@ describe('RecommendationCard expiry preferences', () => {
     expect(screen.getByText(/even the lower outbound estimate exceeds the available charge/)).toBeVisible();
     expect(screen.queryByText(/estimated return charge is/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
-    expect((await screen.findAllByText(/destination charge; it is not confirmed or guaranteed/))[0]).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getAllByText(/destination charge; it is not confirmed or guaranteed/)[0]).toBeVisible();
+    });
   });
 
   it('localizes sampled charging feasibility without describing the car as unplugged', async () => {
@@ -302,9 +304,11 @@ describe('RecommendationCard expiry preferences', () => {
     expect(screen.getByText('7 Fahrten von 07:55:00 bis 08:05:00 (America/Los_Angeles); Ziel 47.20000, -122.20000.')).toBeVisible();
     expect(screen.getByText('Ähnliche lokale Fahrten.')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
-    expect((await screen.findAllByText('Kein Name abgeleitet.'))[0]).toBeVisible();
-    expect(screen.getAllByText('Keine Befehle.')[0]).toBeVisible();
-    expect(screen.getAllByText('7 Fahrten von 07:55:00 bis 08:05:00 (America/Los_Angeles); Ziel 47.20000, -122.20000.').length).toBeGreaterThan(1);
+    await waitFor(() => {
+      expect(screen.getAllByText('Kein Name abgeleitet.')[0]).toBeVisible();
+      expect(screen.getAllByText('Keine Befehle.')[0]).toBeVisible();
+      expect(screen.getAllByText('7 Fahrten von 07:55:00 bis 08:05:00 (America/Los_Angeles); Ziel 47.20000, -122.20000.').length).toBeGreaterThan(1);
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Open source' }));
     expect(onAction).toHaveBeenCalledExactlyOnceWith(item, 'navigate');
     expect(item).toEqual(original);
