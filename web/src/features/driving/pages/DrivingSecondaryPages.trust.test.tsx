@@ -1,6 +1,7 @@
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -111,6 +112,13 @@ beforeEach(() => {
   h.source = { data: drives, isSuccess: true, error: null, refetch: h.refetch };
 });
 
+function renderPage(Component: () => ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const page = () => <QueryClientProvider client={client}><MemoryRouter><Component /></MemoryRouter></QueryClientProvider>;
+  const view = render(page());
+  return { rerender: () => view.rerender(page()) };
+}
+
 /** The logbook count caption lives in the drawer now; other surfaces keep face labels. */
 function expectMetricVisible(metric: string): void {
   if (metric === 'of 12 drives') {
@@ -125,11 +133,11 @@ function expectMetricVisible(metric: string): void {
 
 describe.each(surfaces)('$title retained source trust', ({ Component, sections, metric }) => {
   it('keeps every report body and metric through a failed refresh, with source-local recovery', () => {
-    const view = render(<MemoryRouter><Component /></MemoryRouter>);
+    const view = renderPage(Component);
     expectMetricVisible(metric);
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     h.source = { ...h.source, isError: true, error: new Error('refresh failed') };
-    view.rerender(<MemoryRouter><Component /></MemoryRouter>);
+    view.rerender();
     expectMetricVisible(metric);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
@@ -139,7 +147,7 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
 
   it('retains the report outline without claiming a successful empty result after an initial failure', () => {
     h.source = { data: undefined, isError: true, error: new Error('initial failed'), refetch: h.refetch };
-    render(<MemoryRouter><Component /></MemoryRouter>);
+    renderPage(Component);
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     if (metric === 'of 12 drives') {
@@ -154,7 +162,7 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
 
   it('preserves retained content and declares paused/offline refreshes rather than inventing an empty window', () => {
     h.source = { ...h.source, fetchStatus: 'paused' };
-    render(<MemoryRouter><Component /></MemoryRouter>);
+    renderPage(Component);
     expectMetricVisible(metric);
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
