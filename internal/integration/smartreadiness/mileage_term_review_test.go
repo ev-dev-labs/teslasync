@@ -126,7 +126,8 @@ func TestMileageTermReviewPublishesPrivateActualTerm(t *testing.T) {
 		t.Fatalf("new worker replicas published %d reviews", count)
 	}
 	current := read(mileagePath, mediaOwner)
-	if current.Settings == nil || current.Digest == nil || current.Digest.Through.Format(time.RFC3339) != "2026-04-01T04:00:00Z" {
+	through := time.Date(2026, 4, 1, 4, 0, 0, 0, time.UTC)
+	if current.Settings == nil || current.Digest == nil || !current.Digest.Through.Equal(through) {
 		t.Fatalf("private estimate missing: %+v", current)
 	}
 	p := current.Digest.Projection
@@ -274,7 +275,8 @@ func TestMileageTermReviewDoesNotRepeatLastCycleWhenExtended(t *testing.T) {
 	selection.ExpectedID, selection.EndDay = finished.Settings.ID, "2026-06-20"
 	invoiceRequest[struct{}](t, router, http.MethodPut, mileagePath, mediaOwner, "", selection, http.StatusNoContent)
 	extended := invoiceRequest[domain.Review](t, router, http.MethodGet, mileagePath, mediaOwner, "", nil, http.StatusOK)
-	if extended.Digest != nil || extended.NextCheckAt == nil || extended.NextCheckAt.Format(time.RFC3339) != "2026-05-02T13:00:00Z" {
+	next := time.Date(2026, 5, 2, 13, 0, 0, 0, time.UTC)
+	if extended.Digest != nil || extended.NextCheckAt == nil || !extended.NextCheckAt.Equal(next) {
 		t.Fatalf("term extension did not keep the monthly cadence: %+v", extended)
 	}
 	if batch, err := service.ProcessDue(t.Context(), 4); err != nil || len(batch.Outcomes) != 0 || batch.Published != 0 {
