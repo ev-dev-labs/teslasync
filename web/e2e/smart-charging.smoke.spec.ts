@@ -433,6 +433,12 @@ for (const variant of [
     let openMode: boolean = variant.open
     const scopeKey = () => openMode ? 'shared-open' : subject
     const expectedPrincipal = () => openMode ? 'open' : `subject:${subject}`
+    const switchPrincipal = async (nextSubject: string, nextOpenMode: boolean) => {
+      // The old document can still refetch while the fixture advances its clock.
+      await page.goto('about:blank')
+      subject = nextSubject
+      openMode = nextOpenMode
+    }
     let charging = false
     const plans = new Map<string, (SmartChargingPlan & { version: number })[]>()
     const writes: string[] = []
@@ -680,8 +686,7 @@ for (const variant of [
       await page.getByRole('button', { name: 'Check now' }).click()
       await expect(page.getByText(/Status: Active/)).toBeVisible()
     }
-    openMode = false
-    subject = otherSubject
+    await switchPrincipal(otherSubject, false)
     await page.goto('/action-center?vehicle_id=7')
     await waitForHarnessReady(page, api)
     await expect(card).toHaveCount(0)
@@ -691,8 +696,7 @@ for (const variant of [
     await page.goto('/settings?vehicle_id=7#smart-charging')
     await waitForHarnessReady(page, api)
     await expect(page.getByText(/No trip plan is saved/)).toBeVisible()
-    openMode = variant.open
-    subject = primarySubject
+    await switchPrincipal(primarySubject, variant.open)
     if (realBackend) {
       const fixture = await page.request.post(`${process.env.E2E_BASE_URL}/__fixture/charge`, {
         data: { state: 'Disconnected', advance_seconds: 60 },
