@@ -180,6 +180,8 @@ export const LAZY_ROUTE_IMPORTS: Array<{
 
   // Settings, onboarding, misc
   { name: 'Settings', load: () => import('../features/settings/pages/SettingsPage') },
+  { name: 'SmartCommutePage', load: () => import('../features/settings/pages/SmartCommutePage') },
+  { name: 'SmartChargingPage', load: () => import('../features/settings/pages/SmartChargingPage') },
   { name: 'Onboarding', load: () => import('../features/onboarding/pages/OnboardingPage') },
   { name: 'NotFound', load: () => import('../features/system/pages/NotFoundPage') },
   { name: 'Search', load: () => import('../features/system/pages/SearchPage') },
