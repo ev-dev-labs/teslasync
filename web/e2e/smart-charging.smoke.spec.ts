@@ -434,7 +434,7 @@ for (const variant of [
     const scopeKey = () => openMode ? 'shared-open' : subject
     const expectedPrincipal = () => openMode ? 'open' : `subject:${subject}`
     let charging = false
-    const plans = new Map<string, SmartChargingPlan[]>()
+    const plans = new Map<string, (SmartChargingPlan & { version: number })[]>()
     const writes: string[] = []
     await page.route(url => url.pathname === '/api/v1/settings/widget-design-pack' && !url.search, route => {
       if (route.request().method() !== 'GET') return route.fallback()
@@ -484,20 +484,27 @@ for (const variant of [
         writes.push(`${request.method()} ${path}`)
         if (request.method() === 'POST' && path.endsWith('/plans')) {
           const input = request.postDataJSON() as SmartChargingPlanInput
-          const item: SmartChargingPlan = { ...input, id: 8, snoozed_until: null,
+          const item = { ...input, id: 8, version: 1, snoozed_until: null,
             created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
           plans.set(scopeKey(), [item])
           return fulfillApiFixture(route, api, { json: { data: item }, status: 201 })
         }
         if (request.method() === 'PUT' && path.endsWith('/plans/8')) {
-          const input = request.postDataJSON() as SmartChargingPlanInput
-          plans.set(scopeKey(), (plans.get(scopeKey()) ?? []).map(item => ({ ...item, ...input })))
+          const { expected_version, expected_check_at, ...input } = request.postDataJSON() as SmartChargingPlanInput & {
+            expected_version: number; expected_check_at: string;
+          }
+          plans.set(scopeKey(), (plans.get(scopeKey()) ?? []).map(item => {
+            expect(expected_version).toBe(item.version)
+            expect(expected_check_at).toBe(item.notify_at)
+            return { ...item, ...input, version: expected_version + 1 }
+          }))
           return fulfillApiFixture(route, api, { json: { data: plans.get(scopeKey())?.[0] } })
         }
         if (request.method() === 'POST' && path.endsWith('/plans/8/snooze')) {
           const input = request.postDataJSON() as { duration_s: number }
           plans.set(scopeKey(), (plans.get(scopeKey()) ?? []).map(item => ({
-            ...item, snoozed_until: input.duration_s ? new Date(Date.now() + input.duration_s * 1000).toISOString() : null,
+            ...item, version: item.version + 1,
+            snoozed_until: input.duration_s ? new Date(Date.now() + input.duration_s * 1000).toISOString() : null,
           })))
           return fulfillApiFixture(route, api, { status: 204 })
         }
