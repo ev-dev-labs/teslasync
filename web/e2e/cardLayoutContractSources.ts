@@ -3,6 +3,7 @@ import type { RedisSignalsResponse } from '../src/api/devtools';
 import type { TOTPStatus, VehicleInfoEnvelope, TeslaJSONValue } from '../src/api/types';
 import type { ExportColumnsResponse } from '../src/api/hooks/useExports';
 import type { AdvancedPage, ChargingForensicsPage, FirmwareCanary, FederatedStatusPage } from '../src/types/advancedIntelligence';
+import type { PersonalDeliveryDevices } from '../src/types/personalDelivery';
 import { serviceReport, warrantyReport, catalogReport } from '../src/features/service-intelligence/pages/ServiceIntelligencePage.closure.fixtures';
 import { firmware, hazards, forensicsItem, modelCard, quality, observation, sentinel } from '../src/features/advanced-intelligence/pages/advancedIntelligenceClosure.fixtures';
 import { journeySession } from './operationalbrief-contracts/trips.fixtures';
@@ -74,6 +75,9 @@ const sources = {
   '/service-intelligence/vehicles/7': serviceReport,
   '/service-intelligence/vehicles/7/warranty': warrantyReport,
   '/admin/service-intelligence/communications/status': catalogReport,
+  '/smart-delivery/devices': {
+    data: { available: false, commute_available: false, public_key: '', devices: [] } satisfies PersonalDeliveryDevices,
+  },
   '/vehicles/7/enterprise-roles': roles,
 };
 

@@ -347,12 +347,15 @@ for (const theme of ['light', 'dark'] as const) {
         await minimum.fill('100000');
         await expect(table.getByText('No drives match these filters')).toBeVisible();
         await minimum.clear();
+        await expect(table.locator('tbody a[href^="/drives/"]').first()).toBeVisible();
+
         await table.getByRole('button', { name: 'Distance (km) filter', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Distance (km) filter' });
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole('checkbox', { name: '28.75 km' })).toBeChecked();
         await dialog.getByRole('button', { name: 'Number condition' }).click();
-        await dialog.getByRole('spinbutton').fill('100000');
+        await dialog.getByRole('spinbutton').fill('200000');
+        await expect(page).toHaveURL(/(?:\?|&)grid_distance=200000(?:&|$)/);
         await expect(table.getByText('No drives match these filters')).toBeVisible();
         await dialog.getByRole('button', { name: 'Clear', exact: true }).click();
         await expect(table.locator('tbody a[href^="/drives/"]').first()).toBeVisible();

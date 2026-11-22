@@ -142,16 +142,22 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
       await expect(dialog.getByLabel('Default cooldown (minutes)')).toBeVisible()
       await expect(dialog.getByLabel('Default cooldown (minutes)')).toHaveValue('15')
-      const controls = dialog.locator('[data-pack-default-controls]').locator('input, select, button[aria-haspopup]')
+      const defaultsGrid = dialog.locator('[data-pack-default-controls]')
+      const controls = defaultsGrid.locator('input, select, button[aria-haspopup]')
       await expect(controls).toHaveCount(6)
+      expect(await defaultsGrid.evaluate(grid => grid.scrollWidth - grid.clientWidth), 'Defaults must fit within the dialog').toBeLessThanOrEqual(1)
       const positions = await controls.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y))
-      const columns = width >= 1536 ? 6 : width >= 1024 ? 3 : width >= 640 ? 2 : 1
+      const columns = width >= 1024 ? 3 : width >= 640 ? 2 : 1
       for (let start = 0; start < positions.length; start += columns) {
         const row = positions.slice(start, start + columns)
         expect(Math.max(...row) - Math.min(...row), 'Default controls must align within each responsive row').toBeLessThanOrEqual(2)
       }
       await expect(dialog.getByLabel('Default alert behavior').getByRole('option')).toHaveText(['Re-alert until resolved', 'Notify on event'])
       if (width >= 1024) {
+        const searchBox = await dialog.getByRole('searchbox', { name: 'Search pack rules...' }).boundingBox()
+        const viewBox = await dialog.getByLabel('Show rules').boundingBox()
+        expect(Math.abs(searchBox!.y + searchBox!.height / 2 - viewBox!.y - viewBox!.height / 2),
+          'Rule search and view selector must share a vertical center').toBeLessThanOrEqual(2)
         const table = dialog.getByRole('table', { name: 'Choose rules' })
         await expect(table.getByRole('columnheader')).toHaveText([
           'Selected', 'Rule', 'Severity', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Notification message', 'Channels', 'Include title', 'Defaults',

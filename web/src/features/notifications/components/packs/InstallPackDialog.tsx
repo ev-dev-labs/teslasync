@@ -4,6 +4,7 @@ import { type AlertPack, type PackSelection, type PackTemplate, useInstallAlertP
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useNotificationChannels } from '@/api/hooks/useNotifications'
 import { Accordion, Badge, Button, Caption, Checkbox, DataTable, Input, Modal, PanelTitle, Select, Text, type Column } from '@/components/ui'
+import { Label } from '@/components/ui/Label'
 import { SearchInput, VehicleMultiSelect, type VehicleSelection } from '@/components/forms'
 import { SeverityBadge } from '@/components/data-display'
 import { AlertBanner, ErrorDisplay, Spinner, StaleRefreshWarning } from '@/components/feedback'
@@ -119,13 +120,13 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <PackRuleResetButton {...ruleProps(template)} /> },
   ]
   const settings = <div className="space-y-3">
-    <div data-pack-default-controls className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(9rem,1fr)_minmax(14rem,1.3fr)_minmax(7rem,.7fr)_minmax(14rem,1.3fr)_minmax(12rem,1.2fr)_minmax(14rem,1.3fr)]">
+    <div data-pack-default-controls className="grid min-w-0 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>[data-pack-default-field]]:rounded-shape-sm [&>[data-pack-default-field]]:border [&>[data-pack-default-field]]:border-[var(--control-border)] [&>[data-pack-default-field]]:bg-[var(--surface-1)] [&>[data-pack-default-field]]:p-2">
     <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} />
     <PackRuleChannels id="defaults" label={t('alertPacks.defaultChannels', 'Default channels')}
       value={master.channel_ids} channels={channels.data ?? []} disabled={install.isPending || !channelState.hasData}
       onChange={channel_ids => setMaster(previous => ({ ...previous, channel_ids }))} />
-    <div className="space-y-1">
-      <label data-app-part="field-label" htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
+    <div data-pack-default-field className="min-w-0 space-y-1">
+      <Label htmlFor={vehicleId} className="block text-sm font-medium text-[var(--text-secondary)]">{t('alertPacks.vehicles', 'Vehicles')}</Label>
       <StaleRefreshWarning state={state} label={t('alertPacks.vehicles', 'Vehicles')} />
       {state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} /> : !state.hasData ? (
         <div data-app-part="status" role="status" aria-label={t('alertPacks.vehicles', 'Vehicles')} className="space-y-2">
@@ -226,7 +227,8 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
                 disabled={install.isPending || filtered.length === 0} onChange={checked => setSelected(ids => checked
                   ? [...new Set([...ids, ...filtered.map(rule => rule.id)])] : ids.filter(id => !filtered.some(rule => rule.id === id)))} />
               <div className="min-w-40 flex-1">
-                <SearchInput value={search} onChange={value => { setSearch(value); setPage(0) }} placeholder={t('alertPacks.searchRules', 'Search pack rules...')} />
+                <SearchInput value={search} onChange={value => { setSearch(value); setPage(0) }} labelPresentation="compact"
+                  placeholder={t('alertPacks.searchRules', 'Search pack rules...')} />
               </div>
               <Select aria-label={t('alertPacks.showRules', 'Show rules')} value={view} onChange={event => { setView(event.target.value); setPage(0) }}
                 options={[{ value: 'all', label: t('alertPacks.allRules', 'All rules') },
