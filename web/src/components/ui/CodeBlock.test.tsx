@@ -122,12 +122,13 @@ describe('CodeBlock', () => {
     expect(writeText).not.toHaveBeenCalled();
   });
 
-  it('confines overflow and applies custom classes without wrapping by default', () => {
-    const { container } = render(<CodeBlock text={'x'.repeat(1000)} className="caller-class" />);
+  it('confines overflow and applies custom classes when wrapping is disabled', () => {
+    const { container } = render(<CodeBlock text={'x'.repeat(1000)} className="caller-class" wrap={false} />);
 
     expect(screen.getByRole('group')).toHaveClass('min-w-0', 'max-w-full', 'overflow-hidden', 'caller-class');
     expect(container.querySelector('pre')).toHaveClass('max-w-full', 'overflow-auto', 'whitespace-pre');
     expect(container.querySelector('pre')).not.toHaveClass('whitespace-pre-wrap');
+    expect(container.querySelector('[data-code-line]')).toBeNull();
   });
 
   it('wraps payload display only and leaves copied whitespace unchanged', async () => {
@@ -139,6 +140,26 @@ describe('CodeBlock', () => {
     expect(container.querySelector('code')?.textContent).toBe(text);
     await copy();
     expect(writeText).toHaveBeenCalledExactlyOnceWith(text);
+  });
+
+  it('numbers source lines including blank ones without inserting numbers into selectable text', async () => {
+    const text = '\r\n\tconst café = "🚗";\r\n\n  你好\r';
+    const { container } = render(<CodeBlock text={text} />);
+    const code = container.querySelector('pre code');
+    const markers = Array.from(code?.querySelectorAll('[data-code-line]') ?? []);
+    expect(markers.map(marker => marker.getAttribute('data-code-line'))).toEqual(['1', '2', '3', '4', '5']);
+    expect(markers.every(marker => marker.getAttribute('aria-hidden') === 'true')).toBe(true);
+    expect(code?.textContent).toBe(text);
+    await copy();
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(text);
+  });
+
+  it('leaves very large diagnostics complete even when the gutter is omitted', () => {
+    const text = 'sample\n'.repeat(500) + 'last reading';
+    const { container } = render(<CodeBlock text={text} />);
+    expect(container.querySelector('[data-code-line]')).toBeNull();
+    expect(container.querySelector('pre code')?.textContent).toBe(text);
+    expect(container.querySelector('pre')).toHaveClass('whitespace-pre-wrap');
   });
 
   it.each(['', null, undefined])('renders and copies empty runtime text %j without stringification', async (text) => {
@@ -155,7 +176,6 @@ describe('CodeBlock', () => {
     const { container } = render(<CodeBlock text={text} language="json" />);
 
     expect(container.querySelector('code')?.textContent).toBe(text);
-    expect(container.querySelector('code')?.childElementCount).toBe(0);
     expect(container.querySelector('strong, .hljs, .token')).toBeNull();
   });
 
