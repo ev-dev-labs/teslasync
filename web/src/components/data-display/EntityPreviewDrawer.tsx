@@ -84,7 +84,7 @@ export function EntityPreviewDrawer({
       }
       size="lg"
       footer={
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div data-app-part="feedback-actions" className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
           <Button type="button" variant="secondary" wrapLabel className="min-h-11" onClick={onClose}>
             {t('common.close', 'Close')}
           </Button>
@@ -103,7 +103,7 @@ export function EntityPreviewDrawer({
       }
     >
       <div data-app-part="section" className="space-y-6">
-        <div>
+        <div className="border-t border-[var(--border-subtle)] pt-4">
           <PanelTitle>{t('operations.evidence', 'Evidence')}</PanelTitle>
           <dl data-app-part="list" data-app-list="definitions" className="mt-3 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2">
             {fields.map((field) => (
