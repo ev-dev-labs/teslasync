@@ -166,17 +166,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.inline) {
         return (
-          <div data-app-part="feedback error" data-app-feedback-kind="notice" data-app-tone="danger" role="alert" className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
+          <div data-app-part="feedback error" data-app-feedback-kind="notice" data-app-tone="danger" role="alert" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--surface-1)] p-4">
             <AlertTriangle data-app-part="feedback-icon" className="h-5 w-5 text-[var(--semantic-danger)] shrink-0" aria-hidden="true" />
             <div data-app-part="feedback-content" className="flex-1 min-w-0">
-              <Text data-app-part="feedback-title" as="p" variant="bodySm">
+              <Text data-app-part="feedback-title" as="p" variant="bodySm" weight="semibold">
                 {label('errorBoundary.inlineTitle', 'Component failed to load')}
               </Text>
               <Text data-app-part="feedback-message" as="p" variant="caption" className="whitespace-pre-wrap break-words">{this.state.error?.message}</Text>
             </div>
-            <Button data-app-part="feedback-retry" variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="shrink-0 max-md:min-h-11">
-              <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {label('errorBoundary.retry', 'Retry')}
-            </Button>
+            <div data-app-part="feedback-actions" className="col-start-2 border-t border-[var(--border-subtle)] pt-2">
+              <Button data-app-part="feedback-retry" variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="max-w-full max-md:min-h-11">
+                <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {label('errorBoundary.retry', 'Retry')}
+              </Button>
+            </div>
           </div>
         )
       }
@@ -210,7 +212,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {label('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
               </Text>
             )}
-            <div data-app-part="feedback-actions" className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <div data-app-part="feedback-actions" className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--border-subtle)] pt-4">
               <Button
                 onClick={this.handleRetry}
                 variant="primary"
