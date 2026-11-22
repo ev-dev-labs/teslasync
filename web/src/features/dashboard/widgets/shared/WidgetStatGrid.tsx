@@ -88,9 +88,10 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
             // MetricValue div, then the unit span.
             '[&>div:first-child>span:first-child]:text-xs [&>div:first-child>span:first-child]:text-[var(--text-muted)]',
             '[&>div:nth-child(2)>div]:text-lg [&>div:nth-child(2)>span]:text-xs',
-            // Long values wrap at spaces instead of overflowing the
-            // minmax(0,1fr) column.
-            '[&>div:nth-child(2)]:[overflow-wrap:normal] [&>div:nth-child(2)]:[word-break:normal]',
+            'min-w-0 [overflow-wrap:anywhere] [&>[data-app-part=metric-reading]]:flex-wrap',
+            '[&_[data-app-part=metric-value]]:min-w-0',
+            '[&>[data-app-part=metric-comparison]]:max-w-full [&>[data-app-part=metric-comparison]]:whitespace-normal',
+            '[&>[data-app-part=metric-context]]:border-t [&>[data-app-part=metric-context]]:border-[var(--border-subtle)] [&>[data-app-part=metric-context]]:pt-1.5',
             '[&>div:first-child>span[aria-hidden=true]]:hidden',
             stat.valueColor,
           )}
