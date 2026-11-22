@@ -51,18 +51,19 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
           <span data-stat-unit data-app-part="metric-unit" className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
       </Text>}
     {loading && <VisuallyHidden>{t('developerReference.stats.state.loading', 'Loading measurements')}</VisuallyHidden>}
-    {!loading && reason && <span data-app-part="metric-context" className="mt-1 block text-xs text-[var(--text-secondary)]">{reason}</span>}
-    {!loading && metric.context != null && <div id={contextId} data-stat-context data-app-part="metric-context"
-      className="mt-1 text-xs text-[var(--text-secondary)]">{metric.context}</div>}
-    {!loading && metric.comparisonContent != null && <div id={specialistComparisonId} data-stat-specialist-comparison data-app-part="metric-comparison"
-      className="mt-1 text-xs">{metric.comparisonContent}</div>}
-    {!loading && delta && <span data-stat-delta data-comparison-state={delta.state} data-app-part="metric-comparison"
-      className="mt-1 block text-xs font-medium text-[var(--text-secondary)]">
-      {comparison?.label}: {deltaText} · <span data-stat-comparison-period>{comparison?.period.label}</span>
-      {comparisonPeriodReason && <span data-stat-comparison-period-reason className="mt-1 block">{comparisonPeriodReason}</span>}
-      {comparisonState && <span data-stat-comparison-state-label className="mt-1 block">{comparisonState}</span>}
-      {comparisonReason && <span data-stat-comparison-reason className="mt-1 block">{comparisonReason}</span>}
-    </span>}
+    {!loading && (reason || metric.context != null || metric.comparisonContent != null || delta) && (
+      <div className="mt-2 space-y-1 border-t border-[var(--border-subtle)] pt-2">
+        {reason && <Text data-app-part="metric-context" as="div" variant="caption" color="secondary">{reason}</Text>}
+        {metric.context != null && <Text as="div" variant="caption" color="secondary" id={contextId} data-stat-context data-app-part="metric-context">{metric.context}</Text>}
+        {metric.comparisonContent != null && <Text as="div" variant="caption" id={specialistComparisonId} data-stat-specialist-comparison data-app-part="metric-comparison">{metric.comparisonContent}</Text>}
+        {delta && <Text as="div" variant="caption" weight="medium" color="secondary" data-stat-delta data-comparison-state={delta.state} data-app-part="metric-comparison">
+          {comparison?.label}: {deltaText} · <span data-stat-comparison-period>{comparison?.period.label}</span>
+          {comparisonPeriodReason && <span data-stat-comparison-period-reason className="mt-1 block">{comparisonPeriodReason}</span>}
+          {comparisonState && <span data-stat-comparison-state-label className="mt-1 block">{comparisonState}</span>}
+          {comparisonReason && <span data-stat-comparison-reason className="mt-1 block">{comparisonReason}</span>}
+        </Text>}
+      </div>
+    )}
   </>;
   const props = {
     'data-app-part': 'metric',
