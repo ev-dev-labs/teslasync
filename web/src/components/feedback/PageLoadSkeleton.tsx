@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { cn } from '@/lib/cn';
+import { Skeleton } from './Skeleton';
 
 interface PageLoadSkeletonProps {
   /** How many GlassPanel-shaped skeleton blocks to render below the header. Defaults to 3. */
@@ -29,7 +30,7 @@ export function PageLoadSkeleton({
 
   return (
     <div
-      className={cn('space-y-5 animate-pulse', className)}
+      className={cn('min-w-0 space-y-5', className)}
       role="status"
       aria-busy="true"
       aria-label={loadingLabel}
@@ -39,10 +40,10 @@ export function PageLoadSkeleton({
       {showHeader && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-2">
-            <div data-app-part="skeleton" className="h-7 w-48 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" className="h-7 w-48 max-w-full rounded bg-[var(--surface-2)]" />
             <div data-app-part="skeleton" className="h-3 w-72 max-w-full rounded bg-[var(--surface-2)]" />
           </div>
-          <div data-app-part="skeleton" className="h-9 w-32 rounded bg-[var(--surface-2)]" />
+          <div data-app-part="skeleton" className="h-9 w-32 max-w-full rounded bg-[var(--surface-2)]" />
         </div>
       )}
 
@@ -56,7 +57,14 @@ export function PageLoadSkeleton({
               <div data-app-part="skeleton" className="h-20 rounded bg-[var(--surface-2)]" />
               <div data-app-part="skeleton" className="h-20 rounded bg-[var(--surface-2)]" />
             </div>
-            <div data-app-part="skeleton" className="h-32 rounded bg-[var(--surface-2)]" />
+            <div data-app-part="skeleton" aria-hidden="true" className="grid h-32 grid-rows-3 gap-2 rounded border border-[var(--border-subtle)] p-3">
+              {['w-3/4', 'w-2/3', 'w-4/5'].map(width => (
+                <div key={width} className="grid grid-cols-[3fr_1fr] gap-3 border-b border-[var(--border-subtle)] last:border-b-0">
+                  <Skeleton className={cn('h-2.5', width)} />
+                  <Skeleton className="h-2.5" />
+                </div>
+              ))}
+            </div>
           </div>
         </GlassPanel>
       ))}
