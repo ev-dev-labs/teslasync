@@ -31,7 +31,7 @@ describe('controlled toolbar/footer/scope ownership', () => {
   it('emits search/filter/sheet requests without changing the supplied model', () => {
     const model = referenceModel(); const callbacks = referenceCallbacks();
     render(<MobileReferenceToolbar model={model} callbacks={callbacks} />);
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'home' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Test reference' }), { target: { value: 'home' } });
     fireEvent.click(screen.getByRole('button', { name: 'Home 3' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sort' }));
     expect(callbacks.onSearch).toHaveBeenCalledWith('home');
@@ -40,6 +40,18 @@ describe('controlled toolbar/footer/scope ownership', () => {
     expect(model.query).toBe('');
     expect(model.filterKey).toBe('all');
     expect(model.overlays.sort).toBe(false);
+  });
+  it('keeps the visible search label connected when results are filtered', () => {
+    const model = referenceModel(); const callbacks = referenceCallbacks();
+    const { rerender } = render(<MobileReferenceToolbar model={model} callbacks={callbacks} />);
+    const label = screen.getByText('Search Test reference', { selector: 'label' });
+    const search = screen.getByRole('searchbox', { name: 'Search Test reference' });
+    expect(label).toBeVisible();
+    expect(label).toHaveAttribute('for', search.id);
+    rerender(<MobileReferenceToolbar model={{ ...model, query: 'home', filterKey: 'home' }} callbacks={callbacks} />);
+    expect(search).toHaveValue('home');
+    expect(label).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Home 3' })).toHaveAttribute('aria-pressed', 'true');
   });
   it('hides search only by maximum capacity, sort only by supported orders', () => {
     const model = referenceModel();
