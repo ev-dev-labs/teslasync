@@ -9,6 +9,7 @@ import (
 
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -36,10 +37,13 @@ func (r *Repository) ListChargingDevices(ctx context.Context, subject string) ([
 	return devices, nil
 }
 
+const currentChargingDecision = `smart_feature_current(p.subject,smart_charging_feature(decision.kind),
+	CASE WHEN decision.kind='departure_overlap' THEN p.feature_overlap_at ELSE p.feature_readiness_at END)`
+
 func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAttempt) (port.DispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin personal charging dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, attempt.Subject, smartfeature.ChargingDecision(string(attempt.DecisionKind)))
+	if err != nil || tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	// Both readiness decision writers lock the parent plan before updating evidence.
@@ -56,6 +60,7 @@ func (r *Repository) LockCharging(ctx context.Context, attempt domain.ChargingAt
 		  AND p.notify_at <= $7 AND p.departure_at > $7::timestamptz + INTERVAL '30 minutes'
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $7)
 		  AND decision.expires_at > $7 AND g.updated_at=$8 AND decision.kind=$9
+		  AND `+currentChargingDecision+`
 		  AND decision.interrupted_at IS NOT DISTINCT FROM $10::timestamptz
 		  AND ($9 <> 'departure_overlap' OR p.departure_overlap_push)
 		  AND ($9 <> 'early_stop' OR p.early_stop_watch)
@@ -160,6 +165,8 @@ func (r *Repository) FindDelivery(
 		  AND d.status IN ('dispatching','accepted','unknown') AND d.expires_at > $3
 		  AND decision.expires_at > $3 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 		  AND g.updated_at=d.place_updated_at AND decision.kind=d.decision_kind
+		  AND `+currentChargingDecision+`
+		  AND smart_feature_current(p.subject,smart_charging_feature(d.decision_kind),d.feature_enqueued_at)
 		  AND decision.interrupted_at IS NOT DISTINCT FROM d.interrupted_at
 		  AND (d.decision_kind <> 'departure_overlap' OR p.departure_overlap_push)
 		  AND (d.decision_kind <> 'early_stop' OR p.early_stop_watch)
@@ -184,7 +191,7 @@ func (r *Repository) ConsumeDelivery(
 	ctx context.Context, subject string, ref domain.DeliveryRef, deadline time.Time, clock func() time.Time,
 ) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.ChargingDecision(string(ref.DecisionKind)), func(tx pgx.Tx) error {
 		var planID int64
 		// Read candidate evidence in a fresh snapshot after any in-flight plan evaluation.
 		err := tx.QueryRow(ctx, `
@@ -217,6 +224,8 @@ func (r *Repository) ConsumeDelivery(
 			  AND decision.expires_at > $6 AND d.claimed_at IS NULL AND d.revoked_at IS NULL
 			  AND g.updated_at=$7 AND d.place_updated_at=$7 AND d.decision_kind=$8
 			  AND decision.kind=$8
+			  AND `+currentChargingDecision+`
+			  AND smart_feature_current(p.subject,smart_charging_feature(d.decision_kind),d.feature_enqueued_at)
 			  AND d.interrupted_at IS NOT DISTINCT FROM $9::timestamptz
 			  AND decision.interrupted_at IS NOT DISTINCT FROM d.interrupted_at
 			  AND ($8 <> 'departure_overlap' OR p.departure_overlap_push)

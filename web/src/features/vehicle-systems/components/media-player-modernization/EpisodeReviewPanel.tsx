@@ -89,6 +89,7 @@ function EpisodeReview({ scope, vehicleId, identityPending }: PrivateVehicleRevi
     off: t('media.episode.off', 'Off. Confirm a drive and one episode to check the fit.'),
     expired: t('media.episode.expired', 'This review expired. Confirm a new drive to check again.'),
     awaiting_progress: t('media.episode.awaiting', 'No authorized progress has been received.'),
+    held: t('settings.smartFeatures.reviewPaused', 'This review is paused in Smart Features.'),
     drive_unmatched: t('media.episode.unmatched', 'This upcoming drive estimate is not usable.'),
     unknown_progress: t('media.episode.unknown', 'Playback progress is unknown. A fit was not assumed.'),
     completed: t('media.episode.completed', 'This episode is already complete.'),

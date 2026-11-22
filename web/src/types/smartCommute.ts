@@ -82,6 +82,7 @@ export interface SmartCommuteTrafficDecision {
   route_energy?: SmartCommuteRouteEnergy
   route_energy_only?: boolean
   navigation_outcome?: SmartCommuteNavigationOutcome
+  navigation_paused?: boolean
 }
 
 export interface SmartCommuteRouteEnergy {

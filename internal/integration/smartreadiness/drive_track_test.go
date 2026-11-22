@@ -26,6 +26,7 @@ import (
 	mediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
 	media "github.com/ev-dev-labs/teslasync/internal/domain/smartmedia"
 	mediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
@@ -58,6 +59,7 @@ func newTrackJourney(t *testing.T) *trackJourney {
 		t.Fatal(err)
 	}
 	j.exec(string(migration))
+	smartfixture.PolicyColumns(t, j.db.Pool, "smart_drive_track_reviews")
 	cadence, subscribed := teslaconfig.IntervalFor("MediaNowPlayingElapsed")
 	if !subscribed {
 		t.Fatal("the production subscription does not request playback progress")

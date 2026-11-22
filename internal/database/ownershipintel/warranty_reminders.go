@@ -53,19 +53,21 @@ func (r *DurableRepository) WarrantyReminderSettings(
 	var recordedAt, evidenceFrom, earliestAt, latestAt, termEnd, expiresAt *time.Time
 	var observedDays *int
 	var remainingM, paceMps *float64
-	err := r.q.QueryRow(ctx, `SELECT p.warranty_id IS NOT NULL, `+warrantyStartKnown+`, `+reminderValues+`
+	var current bool
+	err := r.q.QueryRow(ctx, `SELECT p.warranty_id IS NOT NULL, `+warrantyStartKnown+`, `+reminderValues+`,
+		smart_feature_current(w.subject,'warranty_mileage',p.feature_checked_at)
 		FROM vehicle_warranties w `+warrantyVehicle+`
 		LEFT JOIN smart_warranty_reminders p ON p.warranty_id=w.id
 		WHERE `+warrantyOwner, key.WarrantyID, key.Subject, key.VehicleID).
 		Scan(&state.Enabled, &state.StartOdometerKnown, &recordedAt, &evidenceFrom, &observedDays, &remainingM, &paceMps,
-			&earliestAt, &latestAt, &termEnd, &expiresAt)
+			&earliestAt, &latestAt, &termEnd, &expiresAt, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return state, port.ErrNotFound
 	}
 	if err != nil {
 		return state, fmt.Errorf("read private warranty reminder: %w", err)
 	}
-	if state.Enabled && state.StartOdometerKnown && expiresAt != nil && expiresAt.After(now) {
+	if current && state.Enabled && state.StartOdometerKnown && expiresAt != nil && expiresAt.After(now) {
 		projected = domain.WarrantyDistanceReminder{
 			WarrantyID: key.WarrantyID, VehicleID: key.VehicleID, ObservedDays: *observedDays,
 			RecordedAt: *recordedAt, EvidenceFrom: *evidenceFrom, RemainingM: *remainingM, PaceMps: *paceMps,
@@ -84,11 +86,12 @@ func (r *DurableRepository) ClaimWarrantyReminders(
 		       w.zero_start_odometer_confirmed, w.term_s, w.term_distance_m
 		FROM smart_warranty_reminders p JOIN vehicle_warranties w ON w.id=p.warranty_id `+warrantyVehicle+`
 		WHERE v.archived_at IS NULL AND p.next_check_at <= $1 AND (p.lease_until IS NULL OR p.lease_until <= $1)
+		  AND smart_feature_allowed(w.subject,'warranty_mileage')
 		  AND w.subject <> $4 AND `+warrantyStartKnown+`
 		  AND w.start_at <= $1 AND EXTRACT(EPOCH FROM ($1::timestamptz - w.start_at)) < w.term_s
 		ORDER BY p.next_check_at, p.warranty_id LIMIT $3 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_warranty_reminders p SET lease_until=$2 FROM due
+	UPDATE smart_warranty_reminders p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due
 	WHERE p.warranty_id=due.warranty_id
 	RETURNING p.warranty_id, due.subject, due.vehicle_id, due.version, due.start_at, due.start_odometer_m,
 	          due.zero_start_odometer_confirmed, due.term_s, due.term_distance_m, p.generation, p.lease_until, p.published_at IS NOT NULL`,
@@ -119,7 +122,8 @@ func (r *DurableRepository) WarrantyReminderDrives(
 		  AND d.ended_at BETWEEN $7 AND $6 AND d.end_odometer_m IS NOT NULL
 		  AND EXISTS (SELECT 1 FROM vehicle_warranties w `+warrantyVehicle+`
 		    JOIN smart_warranty_reminders p ON p.warranty_id=w.id
-		    WHERE `+warrantyOwner+` AND `+warrantyStartKnown+` AND p.generation=$4 AND p.lease_until=$5 AND p.lease_until>$6 AND w.version=$8)
+		    WHERE `+warrantyOwner+` AND `+warrantyStartKnown+` AND p.generation=$4 AND p.lease_until=$5 AND p.lease_until>$6 AND w.version=$8
+		      AND smart_feature_current(w.subject,'warranty_mileage',p.feature_claimed_at))
 		ORDER BY d.ended_at DESC, d.id DESC LIMIT $9`, claim.Key.WarrantyID, claim.Key.Subject, claim.Key.VehicleID,
 		claim.Generation, claim.LeaseUntil, until, from, claim.Warranty.Version, maxSamples+1)
 	if err != nil {
@@ -151,12 +155,12 @@ func (r *DurableRepository) SaveWarrantyProjection(
 		claim.Warranty.Version}, values...)
 	args = append(args, update.Publish)
 	tag, err := r.q.Exec(ctx, `UPDATE smart_warranty_reminders p SET
-		lease_until=NULL, next_check_at=$7, recorded_at=$9, evidence_from=$10, observed_days=$11,
+		lease_until=NULL, next_check_at=$7, recorded_at=$9, evidence_from=$10, observed_days=$11, feature_checked_at=p.feature_claimed_at,
 		remaining_m=$12, pace_mps=$13, earliest_at=$14, latest_at=$15, term_end=$16, expires_at=$17,
 		published_at=CASE WHEN $18 THEN COALESCE(p.published_at, $6) ELSE p.published_at END
 		FROM vehicle_warranties w `+warrantyVehicle+`
 		WHERE p.warranty_id=w.id AND `+warrantyOwner+` AND `+warrantyStartKnown+` AND p.generation=$4 AND p.lease_until=$5
-		  AND p.lease_until>$6 AND w.version=$8`, args...)
+		  AND p.lease_until>$6 AND w.version=$8 AND smart_feature_current(w.subject,'warranty_mileage',p.feature_claimed_at)`, args...)
 	if err != nil {
 		return false, fmt.Errorf("save current warranty projection: %w", err)
 	}
@@ -169,6 +173,7 @@ func (r *DurableRepository) ListWarrantyReminderCandidates(
 	rows, err := r.q.Query(ctx, `SELECT w.id, w.vehicle_id, w.label, v.display_name, `+reminderValues+`
 		FROM smart_warranty_reminders p JOIN vehicle_warranties w ON w.id=p.warranty_id `+warrantyVehicle+`
 		WHERE w.subject=$1 AND ($2::bigint IS NULL OR w.vehicle_id=$2) AND v.archived_at IS NULL
+		  AND smart_feature_current(w.subject,'warranty_mileage',p.feature_checked_at)
 		  AND `+warrantyStartKnown+` AND p.published_at IS NOT NULL AND p.expires_at>$3 AND p.latest_at <= $4
 		ORDER BY p.earliest_at, w.id LIMIT $5`, subject, vehicleID, now, horizon, limit)
 	if err != nil {

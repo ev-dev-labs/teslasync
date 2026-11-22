@@ -19,10 +19,12 @@ func (r *Repository) ReadParkedUnlock(ctx context.Context, scope port.ParkedUnlo
 	var plan domain.ParkedUnlockPlan
 	var from, revision, parked, unlocked, observed, expires *time.Time
 	var risk domain.ParkedUnlockRisk
+	var current bool
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),COALESCE(p.place_id,0),p.place_revision,COALESCE(g.name,''),g.id IS NOT NULL,
 			COALESCE(p.device_id,0),d.id IS NOT NULL,p.evidence_from,COALESCE(p.paused,false),p.snoozed_until,
-			COALESCE(p.reason,''),COALESCE(p.park_id,0),p.parked_at,p.unlocked_since,p.last_observed_at,p.risk_expires_at
+			COALESCE(p.reason,''),COALESCE(p.park_id,0),p.parked_at,p.unlocked_since,p.last_observed_at,p.risk_expires_at,
+			smart_feature_current($1,'parked_unlock',p.feature_checked_at)
 		FROM vehicles v
 		LEFT JOIN smart_parked_unlock_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
@@ -30,7 +32,7 @@ func (r *Repository) ReadParkedUnlock(ctx context.Context, scope port.ParkedUnlo
 			AND g.enabled AND NOT g.needs_review AND g.archived_at IS NULL
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
 		Scan(&plan.ID, &plan.PlaceID, &revision, &plan.PlaceName, &plan.PlaceReady, &plan.DeviceID, &plan.DeviceReady, &from,
-			&plan.Paused, &plan.SnoozedUntil, &plan.Reason, &risk.DriveID, &parked, &unlocked, &observed, &expires)
+			&plan.Paused, &plan.SnoozedUntil, &plan.Reason, &risk.DriveID, &parked, &unlocked, &observed, &expires, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -41,6 +43,10 @@ func (r *Repository) ReadParkedUnlock(ctx context.Context, scope port.ParkedUnlo
 		return nil, nil
 	}
 	plan.EvidenceFrom, plan.PlaceRevision = *from, *revision
+	if !current {
+		plan.Reason = ""
+		return &plan, nil
+	}
 	if parked != nil && unlocked != nil && observed != nil && expires != nil {
 		risk.ParkedAt, risk.UnlockedSince, risk.LastObserved, risk.ActionUntil = *parked, *unlocked, *observed, *expires
 		plan.Risk = &risk
@@ -103,9 +109,10 @@ func (r *Repository) ClaimParkedUnlock(ctx context.Context, now, lease time.Time
 		JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
 		  AND NOT p.paused AND p.subject NOT IN ($3,'open-mode')
+		  AND smart_feature_allowed(p.subject,'parked_unlock')
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_parked_unlock_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_parked_unlock_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.subject,p.vehicle_id,p.place_id,p.place_revision,p.evidence_from,p.lease_until`, now, lease, personal.OpenSubject).
 		Scan(&job.Plan.ID, &job.Scope.Subject, &job.Scope.VehicleID, &job.Plan.PlaceID, &job.Plan.PlaceRevision,
 			&job.Plan.EvidenceFrom, &job.LeaseUntil)
@@ -125,9 +132,10 @@ func (r *Repository) FinishParkedUnlock(ctx context.Context, job port.ParkedUnlo
 		park, parked, unlocked, observed, expires = &risk.DriveID, &risk.ParkedAt, &risk.UnlockedSince, &risk.LastObserved, &risk.ActionUntil
 	}
 	tag, err := r.db.Pool.Exec(ctx, `UPDATE smart_parked_unlock_plans p
-		SET lease_until=NULL,reason=$4,next_check_at=CASE WHEN $4='place_changed' THEN NULL ELSE $5::timestamptz END,
+		SET lease_until=NULL,feature_checked_at=p.feature_claimed_at,reason=$4,next_check_at=CASE WHEN $4='place_changed' THEN NULL ELSE $5::timestamptz END,
 			snoozed_until=NULL,park_id=$6,parked_at=$7,unlocked_since=$8,last_observed_at=$9,risk_expires_at=$10
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3 AND NOT p.paused
+			AND smart_feature_current(p.subject,'parked_unlock',p.feature_claimed_at)
 			AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id=p.vehicle_id AND v.archived_at IS NULL)
 			AND EXISTS (SELECT 1 FROM smart_push_devices d WHERE d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at)
 			AND ($6::bigint IS NULL OR (

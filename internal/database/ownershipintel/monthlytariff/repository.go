@@ -65,14 +65,14 @@ func (r *Repository) Read(ctx context.Context, scope port.Scope, now time.Time) 
 		if settings.Paused || out.NeedsReview {
 			return nil
 		}
-		digest, err := readDigest(ctx, tx, settings, now)
+		digest, err := readDigest(ctx, tx, scope.Subject, settings, now)
 		out.Digest = digest
 		return err
 	})
 	return out, err
 }
 
-func readDigest(ctx context.Context, tx pgx.Tx, settings domain.Settings, now time.Time) (*domain.Digest, error) {
+func readDigest(ctx context.Context, tx pgx.Tx, subject string, settings domain.Settings, now time.Time) (*domain.Digest, error) {
 	var digest domain.Digest
 	c := &digest.Comparison
 	c.SwitchFeeMinor = settings.SwitchFeeMinor
@@ -80,8 +80,9 @@ func readDigest(ctx context.Context, tx pgx.Tx, settings domain.Settings, now ti
 		SELECT month_from,month_through,checked_at,expires_at,days,sessions,energy_wh,
 			current_low_minor,current_high_minor,alt_low_minor,alt_high_minor,current_fixed_minor,alt_fixed_minor,
 			saving_low_minor,saving_high_minor
-		FROM smart_monthly_tariff_digests WHERE plan_id=$1 AND dismissed_at IS NULL AND checked_at<=$2 AND expires_at>$2`,
-		settings.ID, now).Scan(&digest.From, &digest.Through, &digest.CheckedAt, &digest.ExpiresAt, &c.Days, &c.Sessions, &c.EnergyWh,
+		FROM smart_monthly_tariff_digests WHERE plan_id=$1 AND dismissed_at IS NULL AND checked_at<=$2 AND expires_at>$2
+		    AND smart_feature_current($3,'monthly_tariff',feature_checked_at)`,
+		settings.ID, now, subject).Scan(&digest.From, &digest.Through, &digest.CheckedAt, &digest.ExpiresAt, &c.Days, &c.Sessions, &c.EnergyWh,
 		&c.Current.LowerMinor, &c.Current.UpperMinor, &c.Alternative.LowerMinor, &c.Alternative.UpperMinor,
 		&c.CurrentFixedMinor, &c.AltFixedMinor, &c.NetSavings.LowerMinor, &c.NetSavings.UpperMinor)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -166,9 +167,10 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 		WITH due AS (
 			SELECT p.id FROM smart_monthly_tariff_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 			WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+				AND smart_feature_allowed(p.subject,'monthly_tariff')
 			ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_monthly_tariff_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+		UPDATE smart_monthly_tariff_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 		RETURNING p.id,p.subject,p.vehicle_id,p.site_id,p.site_revision,p.current_tariff_id,p.current_version,
 			p.alternative_tariff_id,p.alternative_version,p.time_zone,p.minimum_savings_minor,p.switch_fee_minor,p.lease_until`,
 		now, lease, personal.OpenSubject).Scan(&j.ID, &j.Subject, &j.VehicleID, &j.SiteID, &j.SiteRevision, &j.CurrentTariffID,
@@ -188,7 +190,8 @@ func (r *Repository) Finish(ctx context.Context, job port.Job, now, next time.Ti
 		tag, err := tx.Exec(ctx, `
 			UPDATE smart_monthly_tariff_plans p SET lease_until=NULL,last_checked_at=$3,next_check_at=$4,next_cycle_at=$4
 			FROM vehicles v WHERE p.id=$1 AND p.lease_until=$2 AND $3<p.lease_until
-				AND p.next_check_at IS NOT NULL AND p.vehicle_id=v.id AND v.archived_at IS NULL`,
+				AND p.next_check_at IS NOT NULL AND p.vehicle_id=v.id AND v.archived_at IS NULL
+				AND smart_feature_current(p.subject,'monthly_tariff',p.feature_claimed_at)`,
 			job.ID, job.Lease, now, next)
 		if err != nil {
 			return fmt.Errorf("finish monthly tariff check: %w", err)
@@ -206,9 +209,9 @@ func (r *Repository) Finish(ctx context.Context, job port.Job, now, next time.Ti
 		tag, err = tx.Exec(ctx, `
 			INSERT INTO smart_monthly_tariff_digests (
 				plan_id,month_from,month_through,checked_at,expires_at,days,sessions,energy_wh,current_low_minor,
-				current_high_minor,alt_low_minor,alt_high_minor,current_fixed_minor,alt_fixed_minor,saving_low_minor,saving_high_minor
+				current_high_minor,alt_low_minor,alt_high_minor,current_fixed_minor,alt_fixed_minor,saving_low_minor,saving_high_minor,feature_checked_at
 			)
-			SELECT p.id,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+			SELECT p.id,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,p.feature_claimed_at
 			FROM smart_monthly_tariff_plans p`+termsJoins+` WHERE p.id=$1 AND `+validTerms+`
 			ON CONFLICT (plan_id) DO NOTHING`, job.ID, digest.From, digest.Through, digest.CheckedAt, digest.ExpiresAt,
 			c.Days, c.Sessions, c.EnergyWh, c.Current.LowerMinor, c.Current.UpperMinor, c.Alternative.LowerMinor, c.Alternative.UpperMinor,

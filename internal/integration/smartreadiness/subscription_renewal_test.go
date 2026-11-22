@@ -11,12 +11,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	renewalsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/subscriptionrenewal"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	actiondb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
 	ownershipdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	renewaldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/subscriptionrenewal"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	actiondomain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
 	renewal "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel/subscriptionrenewal"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	ownershiphandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel/subscriptionrenewal"
@@ -157,12 +160,43 @@ func TestSubscriptionRenewalPublishesOnceWithScopedUsageAndExpires(t *testing.T)
 	if state = read(); state.Review == nil || len(inbox(renewalInbox, mediaOwner)) != 1 {
 		t.Fatal("same-date edit did not restore the checked occurrence")
 	}
+	prefs := smartfeaturesvc.New(featuredb.NewRepository(db.Pool))
+	setAllowed := func(allowed bool) {
+		t.Helper()
+		if err := prefs.Set(t.Context(), mediaOwner, smartfeature.Preference{Feature: smartfeature.RenewalReview, Allowed: allowed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	beforePause := inbox(renewalInbox, mediaOwner)[0].ID
+	setAllowed(false)
+	if state = read(); state.Plan == nil || state.Review != nil || len(inbox(renewalInbox, mediaOwner)) != 0 {
+		t.Fatal("account pause removed setup or left old advice visible")
+	}
+	if result, err := run.ProcessDue(t.Context(), 5); err != nil || len(result.Outcomes) != 0 {
+		t.Fatalf("worker checked a paused renewal: %+v %v", result, err)
+	}
+	setAllowed(true)
+	if state = read(); state.Review != nil {
+		t.Fatal("resume displayed a pre-pause decision without a fresh check")
+	}
+	if result, err := run.ProcessDue(t.Context(), 5); err != nil || result.Published != 1 {
+		t.Fatalf("a current renewal did not requalify: %+v %v", result, err)
+	}
+	if rows := inbox(renewalInbox, mediaOwner); len(rows) != 1 || rows[0].ID != beforePause {
+		t.Fatalf("resume duplicated or replaced the renewal occurrence: %+v", rows)
+	}
+	state = read()
 	dismiss := map[string]any{"expected_revision": state.Plan.Revision}
 	invoiceRequest[struct{}](t, router, http.MethodPatch, renewalPath, mediaOwner, "", dismiss, http.StatusNoContent)
 	invoiceRequest[struct{}](t, router, http.MethodPatch, renewalPath, mediaOwner, "", dismiss, http.StatusConflict)
 	state = read()
 	if !state.Dismissed || state.Review != nil || len(inbox(renewalInbox, mediaOwner)) != 0 {
 		t.Fatal("a dismissed occurrence was still actionable")
+	}
+	setAllowed(false)
+	setAllowed(true)
+	if result, err := run.ProcessDue(t.Context(), 5); err != nil || len(result.Outcomes) != 0 || !read().Dismissed {
+		t.Fatalf("resume reset the dismissal: %+v %v", result, err)
 	}
 	invoiceRequest[struct{}](t, router, http.MethodPut, renewalPath, mediaOwner, "", renewalInput(state.Plan.Revision, "2026-03-17"), http.StatusNoContent)
 	now = now.AddDate(0, 0, 1)

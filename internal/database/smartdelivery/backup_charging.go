@@ -7,6 +7,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -18,14 +19,15 @@ const backupDeliveryScope = `
 	JOIN smart_backup_charging_watches w ON d.id=w.device_id AND d.subject=w.subject
 	  AND d.verified_at=w.device_verified_at AND d.charging_enabled
 	JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL
+	  AND smart_feature_current(w.subject,'backup_charging',w.feature_checked_at)
 	JOIN geofences g ON g.id=w.place_id AND g.enabled AND NOT g.needs_review
 	  AND g.archived_at IS NULL AND g.is_charging_location AND g.updated_at=w.place_updated_at
 	JOIN smart_solar_energy_connections c ON c.subject=w.subject AND c.energy_site_id=w.energy_site_id AND c.state_hash IS NULL`
 
 func (r *Repository) LockBackupDelivery(ctx context.Context, ref port.BackupRef, now time.Time) (port.BackupLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin backup charging delivery: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.BackupCharging)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT d.subscription_ciphertext `+backupDeliveryScope+`
@@ -84,6 +86,7 @@ const backupClaimScope = backupDeliveryScope + `
 	JOIN smart_push_backup_charging_deliveries a ON a.watch_id=w.id AND a.device_id=d.id
 	  AND a.consented_at=w.consented_at AND a.outage_started_at=w.outage_started_at
 	WHERE a.token_hash=$1 AND w.subject=$2 AND a.expires_at>$3 AND w.watch_until>$3
+	  AND smart_feature_current(w.subject,'backup_charging',a.feature_enqueued_at)
 	  AND w.qualified_at >= w.qualified_from+INTERVAL '30 seconds' AND w.qualified_until>$3
 	  AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
@@ -103,7 +106,7 @@ func (r *Repository) FindBackupDelivery(ctx context.Context, subject string, has
 
 func (r *Repository) ConsumeBackupDelivery(ctx context.Context, ref port.BackupRef, hash []byte, deadline time.Time, clock func() time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, ref.Subject, smartfeature.BackupCharging, func(tx pgx.Tx) error {
 		var persistedDeadline time.Time
 		err := tx.QueryRow(ctx, `SELECT d.charging_title,d.charging_body,LEAST(a.expires_at,w.watch_until,w.qualified_until) `+backupClaimScope+`
 			AND w.id=$4 AND w.qualified_at=$5

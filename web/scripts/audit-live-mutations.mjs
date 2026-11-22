@@ -31,6 +31,7 @@ const LIVE_ONLY_MUTATIONS = {
   'hooks/useOvernightDrain.ts': ['useOvernightDrainChange'],
   'hooks/useCapacityDigest.ts': ['useCapacityDigestChange'],
   'hooks/useWindowRain.ts': ['useWindowRainChange'],
+  'hooks/useSmartFeatures.ts': ['useSetSmartFeature'],
   'hooks/useParkedClosure.ts': ['useParkedClosureChange'],
   'hooks/useParkedUnlock.ts': ['useParkedUnlockChange'],
   'hooks/useSoftwareWindow.ts': ['useSoftwareWindowChange'],

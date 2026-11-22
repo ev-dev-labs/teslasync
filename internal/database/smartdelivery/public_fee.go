@@ -7,6 +7,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -22,9 +23,9 @@ const publicFeeScope = `
 	  AND g.archived_at IS NULL AND g.is_charging_location AND g.updated_at = p.place_updated_at`
 
 func (r *Repository) LockPublicFee(ctx context.Context, ref domain.PublicFeeRef, now time.Time) (port.PublicFeeLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin public charging fee dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.PublicFee)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `
@@ -34,6 +35,7 @@ func (r *Repository) LockPublicFee(ctx context.Context, ref domain.PublicFeeRef,
 		WHERE p.subject = $1 AND p.vehicle_id = $2 AND p.place_id = $3 AND dev.id = $4
 		  AND p.place_updated_at = $6 AND p.confirmed_at = $7 AND p.valid_until > $8
 		  AND c.ended_at > p.confirmed_at AND c.ended_at <= $8
+		  AND smart_feature_current(p.subject,'public_fee',c.ended_at)
 		FOR SHARE OF p, dev, v, g, c`,
 		ref.Subject, ref.VehicleID, ref.PlaceID, ref.DeviceID, ref.SessionID, ref.PlaceUpdatedAt, ref.ConfirmedAt, now).
 		Scan(&ciphertext)
@@ -91,6 +93,7 @@ const publicFeeClaimScope = publicFeeScope + `
 	  AND a.device_id = dev.id
 	JOIN charging_sessions c ON c.id = a.session_id AND c.vehicle_id = p.vehicle_id AND c.geofence_id = p.place_id
 	WHERE a.token_hash = $1 AND a.subject = $2 AND a.expires_at > $3 AND p.valid_until > $3
+	  AND smart_feature_current(a.subject,'public_fee',a.feature_enqueued_at)
 	  AND a.claimed_at IS NULL AND a.status IN ('dispatching', 'accepted', 'unknown')
 	  AND c.ended_at > p.confirmed_at AND c.ended_at <= $3`
 
@@ -111,7 +114,7 @@ func (r *Repository) FindPublicFeeDelivery(ctx context.Context, subject string, 
 
 func (r *Repository) ConsumePublicFeeDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.PublicFee, func(tx pgx.Tx) error {
 		var vehicleID, sessionID int64
 		err := tx.QueryRow(ctx, `
 			SELECT p.vehicle_id, a.session_id, p.push_title, p.push_body

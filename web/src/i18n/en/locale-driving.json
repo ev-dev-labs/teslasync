@@ -2190,6 +2190,11 @@
       "title": "Search with natural language"
     }
   },
+  "settings": {
+    "smartFeatures": {
+      "reviewPaused": "This review is paused in Smart Features."
+    }
+  },
   "share": {
     "copy": "Copy link",
     "copyLink": "Copy link",

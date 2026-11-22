@@ -100,7 +100,7 @@ func (s *SoftwareWindows) Read(ctx context.Context, scope port.SoftwareWindowSco
 	switch {
 	case !plan.DepartureAt.After(now):
 		plan.Reason = domain.SoftwareWindowExpired
-	case plan.Paused || (plan.SnoozedUntil != nil && plan.SnoozedUntil.After(now)):
+	case plan.FeaturePaused || plan.Paused || (plan.SnoozedUntil != nil && plan.SnoozedUntil.After(now)):
 		plan.Reason = domain.SoftwareWindowHeld
 	case s.live == nil || !plan.ConfirmedAt.Add(softwareCheckLifetime).After(now):
 		plan.Reason = domain.SoftwareWindowNoEvidence
@@ -113,7 +113,7 @@ func (s *SoftwareWindows) Read(ctx context.Context, scope port.SoftwareWindowSco
 	}
 	if plan.Review != nil {
 		checkAt := s.now().UTC()
-		ok, err := s.repo.CheckSoftwareWindow(ctx, scope, plan.ID, plan.Review.ParkedAt, checkAt)
+		ok, err := s.repo.CheckSoftwareWindow(ctx, scope, plan.ID, plan.Review.ParkedAt, checkAt, plan.StartedEvaluation)
 		if err != nil {
 			return nil, err
 		}

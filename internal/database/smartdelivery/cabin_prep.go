@@ -8,6 +8,7 @@ import (
 
 	personal "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,7 +18,7 @@ var _ port.CabinPrepRepository = (*Repository)(nil)
 const cabinPrepScope = `
 	FROM smart_cabin_prep_plans p
 	JOIN smart_push_devices dev ON dev.id=p.device_id AND dev.subject=p.subject AND dev.verified_at=p.device_verified_at
-	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL`
+	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL AND smart_feature_current(p.subject,'cabin_prep',p.feature_checked_at)`
 
 func (r *Repository) ListCabinPrepDeliveries(ctx context.Context, now time.Time, limit int) ([]domain.CabinPrepRef, error) {
 	rows, err := r.db.Pool.Query(ctx, `
@@ -45,9 +46,9 @@ func (r *Repository) ListCabinPrepDeliveries(ctx context.Context, now time.Time,
 }
 
 func (r *Repository) LockCabinPrep(ctx context.Context, ref domain.CabinPrepRef, now time.Time) (port.ExpiringDispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin cabin prep dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.CabinPrep)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT dev.subscription_ciphertext `+cabinPrepScope+`
@@ -103,6 +104,7 @@ const cabinPrepClaimScope = cabinPrepScope + `
 	JOIN smart_push_cabin_prep_deliveries a ON a.plan_id=p.id AND a.subject=p.subject
 		AND a.vehicle_id=p.vehicle_id AND a.departure_at=p.departure_at AND a.device_id=dev.id
 	WHERE a.token_hash=$1 AND a.subject=$2 AND p.expires_at>$3 AND a.expires_at>$3 AND p.reason='eligible'
+		AND smart_feature_current(a.subject,'cabin_prep',a.feature_enqueued_at)
 		AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
 func (r *Repository) FindCabinPrepDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.CabinPrepRef, error) {
@@ -121,7 +123,7 @@ func (r *Repository) FindCabinPrepDelivery(ctx context.Context, subject string, 
 
 func (r *Repository) ConsumeCabinPrepDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.CabinPrep, func(tx pgx.Tx) error {
 		var vehicleID int64
 		err := tx.QueryRow(ctx, `SELECT p.vehicle_id,p.push_title,p.push_body `+cabinPrepClaimScope+` FOR SHARE OF p,dev,v`,
 			hash, subject, now).Scan(&vehicleID, &notification.Title, &notification.Body)

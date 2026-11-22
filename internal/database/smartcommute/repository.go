@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 	"github.com/jackc/pgx/v5"
 )
@@ -95,6 +97,7 @@ func (r *Repository) Read(ctx context.Context, subject string, vehicleID int64, 
 		WHERE r.subject = $1 AND r.vehicle_id = $2
 		  AND (r.status = 'confirmed' OR (
 		    r.status = 'suggested' AND s.enabled AND s.local_analysis_enabled AND NOT s.paused
+		    AND smart_feature_current(r.subject,'commute_learning',r.feature_checked_at)
 		    AND r.evidence_last_at > $3::timestamptz - INTERVAL '56 days'))
 		ORDER BY r.status, r.weekday, r.departure_s, r.id
 		LIMIT $4`, subject, vehicleID, now, maxRoutines)
@@ -175,6 +178,10 @@ func (r *Repository) SaveSettings(
 		if !settings.Enabled || !settings.LocalAnalysisEnabled || settings.Paused {
 			return nil
 		}
+		allowed, err := featuredb.HoldAllowed(ctx, tx, subject, smartfeature.CommuteLearning)
+		if err != nil || !allowed {
+			return err
+		}
 		return analyzeLocked(ctx, tx, subject, settings, now, learner)
 	})
 }
@@ -194,6 +201,13 @@ func (r *Repository) Analyze(
 			return err
 		}
 		if !settings.Enabled || !settings.LocalAnalysisEnabled || settings.Paused {
+			return port.ErrDisabled
+		}
+		allowed, err := featuredb.HoldAllowed(ctx, tx, subject, smartfeature.CommuteLearning)
+		if err != nil {
+			return err
+		}
+		if !allowed {
 			return port.ErrDisabled
 		}
 		return analyzeLocked(ctx, tx, subject, *settings, now, learner)

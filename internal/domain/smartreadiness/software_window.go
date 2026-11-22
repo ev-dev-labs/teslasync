@@ -22,6 +22,8 @@ type SoftwareWindowPlan struct {
 	Version            string                `json:"version"`
 	EstimatedDurationS int                   `json:"estimated_duration_s"`
 	Paused             bool                  `json:"paused"`
+	FeaturePaused      bool                  `json:"-"`
+	StartedEvaluation  time.Time             `json:"-"`
 	SnoozedUntil       *time.Time            `json:"snoozed_until,omitempty"`
 	Reason             SoftwareWindowReason  `json:"reason"`
 	Review             *SoftwareWindowReview `json:"review,omitempty"`

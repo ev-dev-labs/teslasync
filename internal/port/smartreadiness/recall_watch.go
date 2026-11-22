@@ -16,6 +16,7 @@ type RecallWatchScope struct {
 }
 
 type DueRecallWatch struct {
+	Subject    string
 	ID         int64
 	Setup      domain.RecallWatchSetup
 	LeaseUntil time.Time

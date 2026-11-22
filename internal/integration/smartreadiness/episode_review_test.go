@@ -18,6 +18,7 @@ import (
 	mediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
 	media "github.com/ev-dev-labs/teslasync/internal/domain/smartmedia"
 	mediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 )
 
 const episodeAPI = "/api/v1/media/episode-review?vehicle_id=7"
@@ -30,6 +31,7 @@ func newEpisodeJourney(t *testing.T) (*soundtrackJourney, *spotifyFixture) {
 		t.Fatal(err)
 	}
 	j.exec(string(migration))
+	smartfixture.PolicyColumns(t, j.db.Pool, "smart_episode_reviews")
 	fixture := &spotifyFixture{}
 	client, enc := newSpotifyFixtureClient(t, fixture)
 	router := chi.NewRouter()

@@ -22,7 +22,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	mediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	media "github.com/ev-dev-labs/teslasync/internal/domain/smartmedia"
 	mediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
 )
@@ -501,5 +503,80 @@ func TestPrivatePlaylistHoldsAndReauthorization(t *testing.T) {
 	j.check(http.MethodPost, playlistSave+fmt.Sprint(newDraft.ID), mediaOwner, chosenPlaylist(newDraft), http.StatusConflict)
 	if !slices.Equal(j.provider.paths(), []string{"POST /api/token"}) {
 		t.Fatal("held, expired, or unfenced draft reached the provider")
+	}
+}
+
+func TestPrivatePlaylistPauseFencesProviderWithoutDisconnecting(t *testing.T) {
+	j := newPlaylistJourney(t)
+	j.seed("Spotify", true)
+	j.preview(0, true, http.StatusNoContent)
+	draft := j.read(playlistRead, mediaOwner).Draft
+	if draft == nil || len(draft.Candidates) == 0 {
+		t.Fatal("expected a qualified playlist preview")
+	}
+	j.check(http.MethodGet, j.begin(), mediaOwner, nil, http.StatusSeeOther)
+	save := func(draft *media.PlaylistDraft, status int) {
+		t.Helper()
+		j.check(http.MethodPost, playlistSave+fmt.Sprint(draft.ID), mediaOwner, chosenPlaylist(draft), status)
+	}
+	prefs := featuredb.NewRepository(j.db.Pool)
+	set := func(allowed bool) error {
+		return prefs.SetPreference(t.Context(), mediaOwner, smartfeature.Preference{Feature: smartfeature.Playlist, Allowed: allowed})
+	}
+	if err := set(false); err != nil {
+		t.Fatal(err)
+	}
+	if review := j.read(playlistRead, mediaOwner); !review.Connected || review.Draft == nil ||
+		review.Draft.ID != draft.ID || len(review.Draft.Candidates) != 0 {
+		t.Fatalf("pause lost the setup or exposed paused recommendations: %+v", review)
+	}
+	j.preview(draft.ID, true, http.StatusConflict)
+	save(draft, http.StatusConflict)
+	if paths := j.provider.paths(); !slices.Equal(paths, []string{"POST /api/token"}) {
+		t.Fatalf("paused work reached the provider: %v", paths)
+	}
+	if err := set(true); err != nil {
+		t.Fatal(err)
+	}
+	j.preview(draft.ID, true, http.StatusNoContent)
+	draft = j.read(playlistRead, mediaOwner).Draft
+	if draft == nil || len(draft.Candidates) == 0 {
+		t.Fatal("fresh review did not become available")
+	}
+	cycle := func() {
+		if err := set(false); err != nil {
+			t.Error(err)
+			return
+		}
+		if err := set(true); err != nil {
+			t.Error(err)
+		}
+	}
+	j.provider.mu.Lock()
+	j.provider.onTrack = cycle
+	j.provider.mu.Unlock()
+	save(draft, http.StatusConflict)
+	if paths := j.provider.paths(); len(paths) != 2 || !strings.HasPrefix(paths[1], "GET /v1/tracks/") {
+		t.Fatalf("provider work continued after pause and resume: %v", paths)
+	}
+
+	j.preview(draft.ID, true, http.StatusNoContent)
+	draft = j.read(playlistRead, mediaOwner).Draft
+	if draft == nil || len(draft.Candidates) == 0 {
+		t.Fatal("expected a fresh preview before create")
+	}
+	j.provider.mu.Lock()
+	j.provider.onTrack, j.provider.onCreate = nil, cycle
+	j.provider.mu.Unlock()
+	save(draft, http.StatusOK)
+	review := j.read(playlistRead, mediaOwner)
+	if !review.Connected || review.Draft == nil || review.Draft.Status != media.PlaylistCreatedOnly ||
+		review.Draft.PlaylistID != mediaPlaylist {
+		t.Fatalf("pause lost consent or the result of the already-started request: %+v", review)
+	}
+	for _, path := range j.provider.paths() {
+		if strings.HasSuffix(path, "/items") {
+			t.Fatalf("playlist was populated after pause: %s", path)
+		}
 	}
 }

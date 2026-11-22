@@ -49,8 +49,10 @@ func (r *Repository) ReadFavoriteDigest(ctx context.Context, scope port.Scope, n
 		if out.NextAt == nil {
 			return nil
 		}
-		rows, err = tx.Query(ctx, `SELECT period_from,period_until,expires_at,key,title,artist,source,duration_s,observed_drives,observed_dates
-			FROM smart_favorite_digest_candidates WHERE plan_id=$1 AND expires_at>$2 ORDER BY ordinal`, planID, now)
+		rows, err = tx.Query(ctx, `SELECT c.period_from,c.period_until,c.expires_at,c.key,c.title,c.artist,c.source,c.duration_s,c.observed_drives,c.observed_dates
+			FROM smart_favorite_digest_candidates c JOIN smart_favorite_digest_plans p ON p.id=c.plan_id
+			WHERE c.plan_id=$1 AND c.expires_at>$2 AND smart_feature_current(p.subject,'favorite_digest',p.feature_checked_at)
+			ORDER BY c.ordinal`, planID, now)
 		if err != nil {
 			return fmt.Errorf("read private favorite shortlist: %w", err)
 		}
@@ -113,7 +115,8 @@ func (r *Repository) ActOnFavoriteDigest(ctx context.Context, scope port.Scope, 
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var id int64
 		var active bool
-		err := tx.QueryRow(ctx, `SELECT p.id,p.next_check_at IS NOT NULL FROM smart_favorite_digest_plans p
+		err := tx.QueryRow(ctx, `SELECT p.id,p.next_check_at IS NOT NULL
+			AND smart_feature_current(p.subject,'favorite_digest',p.feature_checked_at) FROM smart_favorite_digest_plans p
 			JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 			WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.revision=$3 FOR UPDATE OF p`,
 			scope.Subject, scope.VehicleID, action.Revision).Scan(&id, &active)
@@ -163,9 +166,10 @@ func (r *Repository) ClaimFavoriteDigest(ctx context.Context, now, lease time.Ti
 	err := r.db.Pool.QueryRow(ctx, `WITH due AS (
 		SELECT p.id FROM smart_favorite_digest_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+			AND smart_feature_allowed(p.subject,'favorite_digest')
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_favorite_digest_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_favorite_digest_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.vehicle_id,p.revision,p.time_zone,p.lease_until`, now, lease, personaldomain.OpenSubject).
 		Scan(&job.ID, &job.VehicleID, &job.Revision, &job.TimeZone, &job.Lease)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -188,7 +192,8 @@ func (r *Repository) FavoriteEvidence(ctx context.Context, job port.FavoriteDige
 		var active bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM smart_favorite_digest_plans p
 			JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
-			WHERE p.id=$1 AND p.vehicle_id=$2 AND p.revision=$3 AND p.lease_until=$4 AND p.next_check_at IS NOT NULL)`,
+			WHERE p.id=$1 AND p.vehicle_id=$2 AND p.revision=$3 AND p.lease_until=$4 AND p.next_check_at IS NOT NULL
+				AND smart_feature_current(p.subject,'favorite_digest',p.feature_claimed_at))`,
 			job.ID, job.VehicleID, job.Revision, job.Lease).Scan(&active); err != nil {
 			return fmt.Errorf("check leased private favorite plan: %w", err)
 		}
@@ -244,9 +249,10 @@ func (r *Repository) FinishFavoriteDigest(ctx context.Context, job port.Favorite
 ) (bool, error) {
 	var published bool
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `UPDATE smart_favorite_digest_plans p SET next_check_at=$5,lease_until=NULL
+		tag, err := tx.Exec(ctx, `UPDATE smart_favorite_digest_plans p SET next_check_at=$5,lease_until=NULL,feature_checked_at=p.feature_claimed_at
 			FROM vehicles v WHERE p.id=$1 AND p.revision=$2 AND p.lease_until=$3 AND $4<p.lease_until
-			AND p.next_check_at IS NOT NULL AND p.vehicle_id=v.id AND v.archived_at IS NULL`, job.ID, job.Revision, job.Lease, now, next)
+			AND p.next_check_at IS NOT NULL AND p.vehicle_id=v.id AND v.archived_at IS NULL
+			AND smart_feature_current(p.subject,'favorite_digest',p.feature_claimed_at)`, job.ID, job.Revision, job.Lease, now, next)
 		if err != nil {
 			return fmt.Errorf("finish leased private favorite digest: %w", err)
 		}

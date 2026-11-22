@@ -21,7 +21,7 @@ type SharedTripRepository interface {
 	ListSharedTripInvitations(ctx context.Context, subject string, now time.Time, limit, offset int) ([]domain.SharedTripInvitation, error)
 	ConfirmSharedTripVehicle(ctx context.Context, subject string, key domain.SharedTripEntryKey, confirmation domain.SharedTripConfirmation) error
 	WithdrawSharedTripVehicle(ctx context.Context, subject string, key domain.SharedTripEntryKey, now time.Time) error
-	ReadSharedTripComparison(ctx context.Context, subject string, tripID int64, now time.Time) (*SharedTripComparisonScope, error)
+	ReadSharedTripComparison(ctx context.Context, subject string, tripID int64, now time.Time, workAt *time.Time) (*SharedTripComparisonScope, error)
 }
 
 // SharedTripComparisonScope is an internal, consistent snapshot, available only
@@ -29,5 +29,6 @@ type SharedTripRepository interface {
 type SharedTripComparisonScope struct {
 	Trip            domain.SharedTrip
 	AccessExpiresAt time.Time
+	WorkAt          time.Time
 	Confirmed       []domain.SharedTripConfirmedVehicle
 }

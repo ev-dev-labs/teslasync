@@ -6,10 +6,11 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 )
 
 func (s *Service) loadStableSiteRates(
-	ctx context.Context, plans []domain.Plan, estimates []domain.LatestStart, capacityWh float64,
+	ctx context.Context, plans []port.LatestStartPlan, estimates []domain.LatestStart, capacityWh float64,
 ) (map[int64][]domain.SiteRateWindow, error) {
 	if !finiteBetween(capacityWh, 1, 500000) {
 		return nil, nil
@@ -48,7 +49,7 @@ func (s *Service) loadStableSiteRates(
 		if !plan.CompareSiteRates || plan.ChargingPlaceID == nil {
 			continue
 		}
-		if estimateSiteRateComparison(plan, estimates[i], capacityWh, byPlace[*plan.ChargingPlaceID], now) != nil {
+		if estimateSiteRateComparison(plan.Plan, estimates[i], capacityWh, byPlace[*plan.ChargingPlaceID], now) != nil {
 			found = true
 			break
 		}

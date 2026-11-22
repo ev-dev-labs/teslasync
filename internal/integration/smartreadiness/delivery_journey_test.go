@@ -21,8 +21,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	readiness "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
@@ -672,6 +674,51 @@ func TestDepartureOverlapCoexistsWithChargingAndFencesBothDeliveryFamilies(t *te
 	j.process()
 	if calls, _ := j.sender.last(); calls != 3 {
 		t.Fatalf("migration round trip replayed an existing conflict: %d messages", calls)
+	}
+}
+
+func TestSmartFeatureChargingPauseLeavesOverlapAndFencesOldPush(t *testing.T) {
+	j := newChargingDeliveryJourney(t, nil)
+	const owner = "subject-a"
+	j.enroll(owner, "https://push.example.invalid/device-a")
+	plan := testPlan(j.now)
+	plan.ServiceAppointment = &readiness.DepartureWindow{StartsAt: plan.DepartureAt, EndsAt: plan.DepartureAt.Add(time.Hour)}
+	if rec := j.request(http.MethodPost, "/smart-charging/plans", owner, plan); rec.Code != http.StatusCreated {
+		t.Fatalf("create charging plan: %d %s", rec.Code, rec.Body)
+	}
+	j.process()
+	token := j.claimToken()
+	setAllowed := func(allowed bool) {
+		t.Helper()
+		prefs := featuredb.NewRepository(j.db.Pool)
+		if err := prefs.SetPreference(j.ctx, owner, smartfeature.Preference{Feature: smartfeature.ChargingAdvice, Allowed: allowed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expectCandidates := func(charging bool) {
+		t.Helper()
+		rows, err := j.readiness.ListCandidates(j.ctx, owner, nil, j.now, 10)
+		want := 1
+		if charging {
+			want = 2
+		}
+		if err != nil || len(rows) != want || rows[0].Decision.Kind != readiness.DecisionDepartureOverlap ||
+			(charging && rows[1].Decision.Kind != readiness.DecisionPlugIn) {
+			t.Fatalf("unexpected candidates with charging=%t: %+v, %v", charging, rows, err)
+		}
+	}
+	expectCandidates(true)
+	setAllowed(false)
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	expectCandidates(false)
+	setAllowed(true)
+	expectCandidates(false)
+	j.advance(j.now.Add(time.Minute))
+	j.process()
+	expectCandidates(true)
+	if rec := j.claim(owner, token); rec.Code != http.StatusNotFound {
+		t.Fatalf("old push became claimable after a fresh readiness decision: %d %s", rec.Code, rec.Body)
 	}
 }
 

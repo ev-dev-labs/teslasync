@@ -3479,6 +3479,11 @@
       "source": "Open NHTSA campaign"
     }
   },
+  "settings": {
+    "smartFeatures": {
+      "reviewPaused": "This review is paused in Smart Features."
+    }
+  },
   "sharing": {
     "aiTripPostcard": {
       "badge": "Helix",

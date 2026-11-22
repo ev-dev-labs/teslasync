@@ -139,6 +139,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/settings/fleet-setup': '/settings',
   '/settings/smart-charging': '/settings',
   '/settings/smart-commute': '/settings',
+  '/settings/smart-features': '/settings',
   '/integrations/helix': '/settings',
   '/vehicle-systems/software': '/software-updates',
 

@@ -16,7 +16,8 @@ func (r *Repository) ReadEarlierCheckPlan(ctx context.Context, key domain.StopPl
 	err := scanPlanInto(r.db.Pool.QueryRow(ctx, `
 		SELECT `+planColumns+`, o.updated_at
 		FROM smart_charging_plans p `+stopPlanJoins+`
-		WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3`, key.PlanID, key.Subject, key.VehicleID),
+		WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3
+		  AND smart_feature_allowed(p.subject,'charging_readiness')`, key.PlanID, key.Subject, key.VehicleID),
 		&scoped.Plan, &scoped.PlaceUpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return scoped, port.ErrNotFound
@@ -34,6 +35,7 @@ func (r *Repository) AdvanceCheck(ctx context.Context, scoped port.EarlierCheckP
 	tag, err := r.db.Pool.Exec(ctx, `
 		UPDATE smart_charging_plans p SET notify_at=$6, next_check_at=$6, updated_at=$7
 		WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3 AND p.version=$4 AND p.notify_at=$5
+		  AND smart_feature_allowed(p.subject,'charging_readiness')
 		  AND p.enabled AND p.lease_token IS NULL AND (p.snoozed_until IS NULL OR p.snoozed_until <= $7)
 		  AND $6::timestamptz < p.notify_at AND $6 < p.departure_at - INTERVAL '30 minutes'
 		  AND $7::timestamptz < $6 AND $7 < $8::timestamptz

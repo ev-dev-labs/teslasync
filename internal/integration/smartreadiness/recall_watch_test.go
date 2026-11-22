@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/actioncentersvc"
@@ -304,6 +306,68 @@ func TestRecallWatchWithdrawalInvalidatesClaimAndInFlightResponse(t *testing.T) 
 	second := enable()
 	afterDispatch.Store(func() { revoke(second) })
 	check(watch, 1)
+}
+
+func TestSmartFeaturePauseFencesRecallWithoutRemovingWatch(t *testing.T) {
+	var calls atomic.Int32
+	var afterDispatch atomic.Value
+	repo, db, client := recallWatchFixtures(t, func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		if change, ok := afterDispatch.Load().(func()); ok {
+			change()
+		}
+		recallCatalogResponse(t, w, r, time.Now().UTC())
+	})
+	prefs := featuredb.NewRepository(db.Pool)
+	scope := port.RecallWatchScope{Subject: "synthetic-paused-watch", VehicleID: 7}
+	setAllowed := func(allowed bool) {
+		t.Helper()
+		if err := prefs.SetPreference(t.Context(), scope.Subject, smartfeature.Preference{Feature: smartfeature.RecallWatch, Allowed: allowed}); err != nil {
+			t.Error(err)
+		}
+	}
+	base := time.Now().UTC()
+	now := base
+	watch := smartreadinesssvc.NewRecallWatch(repo, client, func() time.Time { return now })
+	if err := watch.Enable(t.Context(), scope, 0, domain.RecallWatchSetup{Model: "Model Y", ModelYear: 2024}); err != nil {
+		t.Fatal(err)
+	}
+	read := func(wantMatches int) int64 {
+		t.Helper()
+		state, err := watch.Read(t.Context(), scope)
+		if err != nil || state.ID == 0 || state.Setup.Model != "Model Y" || len(state.Matches) != wantMatches {
+			t.Fatalf("unexpected watch after permission change: %+v, %v", state, err)
+		}
+		return state.ID
+	}
+	run := func(wantCalls int32, wantChanged int) {
+		t.Helper()
+		batch, err := watch.ProcessDue(t.Context(), 1)
+		if err != nil || calls.Load() != wantCalls || batch.Outcomes[domain.RecallWatchChanged] != wantChanged {
+			t.Fatalf("unexpected check: %+v, %v; calls %d", batch, err, calls.Load())
+		}
+	}
+	id := read(0)
+	setAllowed(false)
+	run(0, 0)
+	setAllowed(true)
+	now = base.Add(time.Hour)
+	run(1, 0)
+	read(1)
+	setAllowed(false)
+	read(0)
+	setAllowed(true)
+	read(0)
+	now = base.Add(26 * time.Hour)
+	afterDispatch.Store(func() { setAllowed(false); setAllowed(true) })
+	run(2, 1)
+	if read(0) != id {
+		t.Fatal("pausing replaced the existing watch")
+	}
+	afterDispatch.Store(func() {})
+	now = base.Add(28 * time.Hour)
+	run(3, 0)
+	read(1)
 }
 
 func TestPrivateRecallBrowserJourney(t *testing.T) {

@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 	"github.com/jackc/pgx/v5"
 )
@@ -23,20 +25,23 @@ func readNavigationOccurrence(
 ) (*port.NavigationOccurrence, error) {
 	var occurrence port.NavigationOccurrence
 	err := db.QueryRow(ctx, `
-		SELECT v.vin, r.origin_latitude, r.origin_longitude, d.departure_at, d.expires_at, COALESCE(a.outcome, '')
+		SELECT v.vin, r.origin_latitude, r.origin_longitude, d.departure_at, d.expires_at, COALESCE(a.outcome, ''),
+		       COALESCE($5::timestamptz, statement_timestamp())
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
 		LEFT JOIN smart_commute_navigation_attempts a ON a.routine_id = r.id AND a.departure_at = d.departure_at
 		WHERE r.subject = $1 AND r.vehicle_id = $2 AND r.id = $3
 		  AND d.observed_at <= $4 AND d.expires_at > $4 AND NOT o.skipped
+		  AND smart_feature_current(r.subject,'traffic_advice',o.feature_claimed_at)
+		  AND smart_feature_current(r.subject,'destination_dispatch',COALESCE($5::timestamptz, statement_timestamp()))
 		  AND here_estimates_usable(d.observed_at)
 		  AND d.arrival_deadline_at IS NULL AND NOT d.route_energy_only
 		  AND d.usual_s - d.alternative_s >= c.min_savings_s
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $4)
-		`+lock, scope.Subject, scope.VehicleID, scope.RoutineID, now).Scan(
+		`+lock, scope.Subject, scope.VehicleID, scope.RoutineID, now, scope.WorkAt).Scan(
 		&occurrence.VIN, &occurrence.Origin.Latitude, &occurrence.Origin.Longitude,
-		&occurrence.DepartureAt, &occurrence.ExpiresAt, &occurrence.Outcome,
+		&occurrence.DepartureAt, &occurrence.ExpiresAt, &occurrence.Outcome, &occurrence.WorkAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
@@ -58,6 +63,15 @@ func (r *Repository) ClaimNavigationAttempt(ctx context.Context, scope port.Navi
 		}
 		if _, err := lockSettings(ctx, tx, scope.Subject, scope.VehicleID); err != nil {
 			return err
+		}
+		for _, feature := range []smartfeature.Key{smartfeature.TrafficAdvice, smartfeature.Navigation} {
+			allowed, err := featuredb.HoldAllowed(ctx, tx, scope.Subject, feature)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return port.ErrNotFound
+			}
 		}
 		occurrence, err := readNavigationOccurrence(ctx, tx, scope, now, `FOR SHARE OF r, c, d, o`)
 		if err != nil || occurrence.Outcome != "" {

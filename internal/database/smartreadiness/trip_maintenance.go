@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/jackc/pgx/v5"
@@ -20,7 +22,9 @@ const maintenancePlanColumns = `p.id, p.vehicle_id, p.enabled, p.version, p.depa
 const maintenanceSetupColumns = `COALESCE(m.plan_version,0), COALESCE(m.service_label,''),
 	COALESCE(m.service_completed_at,'epoch'::timestamptz), COALESCE(m.service_odometer_m,0),
 	COALESCE(m.interval_m,0), COALESCE(m.trip_distance_low_m,0), COALESCE(m.trip_distance_high_m,0)`
-const maintenanceObservationColumns = `COALESCE(m.recorded_odometer_m,0), COALESCE(m.recorded_at,'epoch'::timestamptz)`
+const maintenanceObservationColumns = `
+	CASE WHEN smart_feature_current(p.subject,'trip_maintenance',m.feature_checked_at) THEN COALESCE(m.recorded_odometer_m,0) ELSE 0 END,
+	CASE WHEN smart_feature_current(p.subject,'trip_maintenance',m.feature_checked_at) THEN COALESCE(m.recorded_at,'epoch') ELSE 'epoch' END`
 
 func (r *Repository) ReadTripMaintenance(ctx context.Context, key domain.StopPlanKey) (port.TripMaintenanceSnapshot, error) {
 	value, err := scanTripMaintenance(r.db.Pool.QueryRow(ctx, `
@@ -90,15 +94,17 @@ func (r *Repository) CheckNextTripMaintenance(ctx context.Context, window port.T
 		var plan domain.Plan
 		var setup domain.TripMaintenanceSetup
 		var previouslyPublished bool
-		err := tx.QueryRow(ctx, `SELECT p.id,p.vehicle_id,p.enabled,p.version,p.departure_at,p.snoozed_until,
+		var subject string
+		err := tx.QueryRow(ctx, `SELECT p.id,p.vehicle_id,p.enabled,p.version,p.departure_at,p.snoozed_until,p.subject,
 			`+maintenanceSetupColumns+`, COALESCE(m.published_for_version=p.version,false)
 			FROM smart_trip_maintenance m JOIN smart_charging_plans p ON p.id=m.plan_id `+maintenanceVehicle+`
 			WHERE m.plan_version=p.version AND p.enabled AND p.subject<>$4
+				AND smart_feature_allowed(p.subject,'trip_maintenance')
 			  AND (p.snoozed_until IS NULL OR p.snoozed_until<=$1) AND m.next_check_at<=$1
 			  AND p.departure_at>$2 AND p.departure_at<=$3
 			ORDER BY m.next_check_at, m.plan_id LIMIT 1 FOR UPDATE OF p, m SKIP LOCKED`,
 			window.Now, window.EarliestDeparture, window.LatestDeparture, personaldomain.OpenSubject).
-			Scan(&plan.ID, &plan.VehicleID, &plan.Enabled, &plan.Version, &plan.DepartureAt, &plan.SnoozedUntil,
+			Scan(&plan.ID, &plan.VehicleID, &plan.Enabled, &plan.Version, &plan.DepartureAt, &plan.SnoozedUntil, &subject,
 				&setup.PlanVersion, &setup.ServiceLabel, &setup.ServiceCompletedAt, &setup.ServiceOdometerM,
 				&setup.IntervalM, &setup.TripDistanceLowM, &setup.TripDistanceHighM, &previouslyPublished)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -106,6 +112,10 @@ func (r *Repository) CheckNextTripMaintenance(ctx context.Context, window port.T
 		}
 		if err != nil {
 			return fmt.Errorf("lock next scoped trip maintenance check: %w", err)
+		}
+		allowed, err := featuredb.HoldAllowed(ctx, tx, subject, smartfeature.TripMaintenance)
+		if err != nil || !allowed {
+			return err
 		}
 		observation, err := tripMaintenanceOdometer(ctx, tx, plan.VehicleID, window.OldestObservation, window.Now)
 		if err != nil {
@@ -118,6 +128,7 @@ func (r *Repository) CheckNextTripMaintenance(ctx context.Context, window port.T
 			measuredAt, expiresAt, odometerM = &projection.RecordedAt, &projection.ExpiresAt, &projection.RecordedOdometerM
 		}
 		_, err = tx.Exec(ctx, `UPDATE smart_trip_maintenance SET next_check_at=$2, recorded_at=$3, recorded_odometer_m=$4,
+			feature_checked_at=statement_timestamp(),
 			expires_at=$5, published_for_version=CASE WHEN $3::timestamptz IS NOT NULL THEN plan_version ELSE published_for_version END
 			WHERE plan_id=$1`, plan.ID, window.NextAt, measuredAt, odometerM, expiresAt)
 		if err != nil {
@@ -161,6 +172,7 @@ func (r *Repository) ListTripMaintenance(ctx context.Context, subject string, ve
 	rows, err := r.db.Pool.Query(ctx, `SELECT `+maintenancePlanColumns+`, `+maintenanceSetupColumns+`, `+maintenanceObservationColumns+`
 		FROM smart_trip_maintenance m JOIN smart_charging_plans p ON p.id=m.plan_id `+maintenanceVehicle+`
 		WHERE p.subject=$1 AND ($2::bigint IS NULL OR p.vehicle_id=$2) AND m.plan_version=p.version AND p.enabled
+			AND smart_feature_current(p.subject,'trip_maintenance',m.feature_checked_at)
 		  AND m.expires_at>$3 AND (p.snoozed_until IS NULL OR p.snoozed_until<=$3)
 		ORDER BY p.departure_at, p.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {

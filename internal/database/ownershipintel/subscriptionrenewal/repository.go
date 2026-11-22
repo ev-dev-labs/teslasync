@@ -31,6 +31,7 @@ func (r *Repository) FindCandidates(ctx context.Context, subject string, vehicle
 		JOIN vehicle_subscriptions s ON s.id=p.subscription_id AND s.version=p.subscription_version
 		JOIN vehicles v ON v.id=s.vehicle_id AND v.archived_at IS NULL
 		WHERE s.subject=$1 AND ($2::bigint IS NULL OR v.id=$2) AND o.dismissed_at IS NULL
+		    AND smart_feature_current(s.subject,'subscription_renewal',o.feature_checked_at)
 		    AND NOT p.paused AND p.next_check_at IS NULL AND o.published_at<=$3 AND p.expires_at>$3
 		    AND s.kind='subscription' AND s.started_at<=$3 AND (s.ended_at IS NULL OR s.ended_at>p.expires_at)
 		ORDER BY p.expires_at,s.id LIMIT $4`, subject, vehicle, now, limit)
@@ -56,7 +57,8 @@ func (r *Repository) Read(ctx context.Context, scope port.Scope) (domain.Subscri
 		    s.started_at,s.ended_at,s.version,
 		    COALESCE(p.revision::text,''),COALESCE(p.subscription_version,0),COALESCE(to_char(p.renewal_day,'YYYY-MM-DD'),''),
 		    COALESCE(p.time_zone,''),COALESCE(p.lead_days,0),COALESCE(p.paused,false),p.next_check_at,
-		    o.published_at,o.dismissed_at IS NOT NULL
+		    CASE WHEN smart_feature_current(s.subject,'subscription_renewal',o.feature_checked_at) THEN o.published_at END,
+		    o.dismissed_at IS NOT NULL
 		FROM vehicle_subscriptions s JOIN vehicles v ON v.id=s.vehicle_id AND v.archived_at IS NULL
 		LEFT JOIN smart_subscription_renewal_plans p ON p.subscription_id=s.id
 		LEFT JOIN smart_subscription_renewal_occurrences o ON o.subscription_id=p.subscription_id AND o.renewal_day=p.renewal_day
@@ -165,11 +167,20 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 		        s.currency,s.usage_metric,s.started_at,s.ended_at,s.version
 		    FROM smart_subscription_renewal_plans p JOIN vehicle_subscriptions s ON s.id=p.subscription_id
 		    JOIN vehicles v ON v.id=s.vehicle_id AND v.archived_at IS NULL
-		    WHERE p.next_check_at<=$1 AND NOT p.paused AND (p.lease_until IS NULL OR p.lease_until<=$1)
+		    WHERE NOT p.paused AND (p.lease_until IS NULL OR p.lease_until<=$1)
 		        AND p.subscription_version=s.version AND s.subject NOT IN ($3,$4)
-		    ORDER BY p.next_check_at,p.subscription_id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
+		        AND smart_feature_allowed(s.subject,'subscription_renewal')
+		        AND (p.next_check_at<=$1 OR (
+		            p.next_check_at IS NULL AND p.expires_at>$1
+		            AND (p.lease_until IS NOT NULL OR NOT smart_feature_current(s.subject,'subscription_renewal',p.feature_claimed_at))
+		            AND EXISTS (SELECT 1 FROM smart_subscription_renewal_occurrences o
+		                WHERE o.subscription_id=p.subscription_id AND o.renewal_day=p.renewal_day
+		                    AND o.dismissed_at IS NULL AND o.published_at<=$1
+		                    AND NOT smart_feature_current(s.subject,'subscription_renewal',o.feature_checked_at))
+		        ))
+		    ORDER BY COALESCE(p.next_check_at,p.expires_at),p.subscription_id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_subscription_renewal_plans p SET lease_until=$2 FROM due
+		UPDATE smart_subscription_renewal_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due
 		WHERE p.subscription_id=due.subscription_id
 		RETURNING due.subscription_id,due.subject,due.vehicle_id,due.name,due.kind,due.billing_period,due.price_minor,
 		    due.currency,due.usage_metric,due.started_at,due.ended_at,due.version,p.revision::text,
@@ -197,11 +208,14 @@ func (r *Repository) Finish(ctx context.Context, j port.Job, now time.Time, read
 		    WHERE s.subject=$1 AND s.vehicle_id=$2 AND s.id=$3 AND p.subscription_id=s.id
 		        AND p.revision=$4::text::uuid AND p.subscription_version=s.version AND s.version=$5
 		        AND p.lease_until=$6 AND p.lease_until>$7 AND NOT p.paused
-		    RETURNING p.subscription_id,p.renewal_day,p.expires_at
+		        AND smart_feature_current(s.subject,'subscription_renewal',p.feature_claimed_at)
+		    RETURNING p.subscription_id,p.renewal_day,p.expires_at,p.feature_claimed_at
 		), published AS (
-		    INSERT INTO smart_subscription_renewal_occurrences(subscription_id,renewal_day,published_at)
-		    SELECT subscription_id,renewal_day,$7 FROM held WHERE $8 AND expires_at>$7
-		    ON CONFLICT (subscription_id,renewal_day) DO NOTHING RETURNING subscription_id
+		    INSERT INTO smart_subscription_renewal_occurrences AS o (subscription_id,renewal_day,published_at,feature_checked_at)
+		    SELECT subscription_id,renewal_day,$7,feature_claimed_at FROM held WHERE $8 AND expires_at>$7
+		    ON CONFLICT (subscription_id,renewal_day) DO UPDATE SET feature_checked_at=EXCLUDED.feature_checked_at
+		    WHERE o.dismissed_at IS NULL AND NOT smart_feature_current($1,'subscription_renewal',o.feature_checked_at)
+		    RETURNING subscription_id
 		)
 		SELECT EXISTS (SELECT 1 FROM published)`,
 		j.Subject, j.VehicleID, j.SubscriptionID, j.Revision, j.SubscriptionVersion, j.Lease, now, ready).Scan(&published)
@@ -222,7 +236,8 @@ func (r *Repository) Observations(ctx context.Context, scope port.Scope, p port.
 			JOIN smart_subscription_renewal_occurrences o ON o.subscription_id=p.subscription_id AND o.renewal_day=p.renewal_day
 			WHERE s.subject=$1 AND s.vehicle_id=$2 AND s.id=$3 AND p.revision=$4::text::uuid
 			    AND s.version=$5 AND p.subscription_version=s.version AND o.dismissed_at IS NULL AND NOT p.paused
-			    AND p.next_check_at IS NULL AND o.published_at<=$6 AND p.expires_at>$6`,
+			    AND p.next_check_at IS NULL AND o.published_at<=$6 AND p.expires_at>$6
+			    AND smart_feature_current(s.subject,'subscription_renewal',o.feature_checked_at)`,
 			scope.Subject, scope.VehicleID, scope.SubscriptionID, p.Revision, s.Version, now).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrChanged

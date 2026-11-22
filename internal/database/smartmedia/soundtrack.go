@@ -19,17 +19,19 @@ func (r *Repository) ReadSoundtrack(ctx context.Context, scope port.JourneyScope
 	source := &domain.SoundtrackSource{Review: domain.SoundtrackReview{
 		VehicleID: scope.VehicleID, JourneyID: scope.JourneyID, Plays: make([]domain.TrackPlay, 0),
 	}}
+	var began time.Time
 	err := pgx.BeginTxFunc(ctx, r.db.Pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
 		review := &source.Review
 		var status string
+		var allowed bool
 		var start, end, recordedStart, recordedEnd *time.Time
 		err := tx.QueryRow(ctx, `
 			SELECT j.status,j.started_at,j.ended_at,COALESCE(p.id,0),p.started_at,p.ended_at,p.expires_at,
-				COALESCE(p.paused,false),p.snoozed_until
+				COALESCE(p.paused,false),p.snoozed_until,smart_feature_allowed($1,'soundtrack'),statement_timestamp()
 			FROM journey_sessions j JOIN vehicles v ON v.id=j.vehicle_id AND v.archived_at IS NULL
 			LEFT JOIN smart_journey_soundtrack_reviews p ON p.journey_id=j.id AND p.vehicle_id=j.vehicle_id AND p.subject=$1
 			WHERE j.id=$2 AND j.vehicle_id=$3`, scope.Subject, scope.JourneyID, scope.VehicleID).
-			Scan(&status, &start, &end, &review.ID, &recordedStart, &recordedEnd, &review.ExpiresAt, &review.Paused, &review.SnoozedUntil)
+			Scan(&status, &start, &end, &review.ID, &recordedStart, &recordedEnd, &review.ExpiresAt, &review.Paused, &review.SnoozedUntil, &allowed, &began)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound
 		}
@@ -48,7 +50,7 @@ func (r *Repository) ReadSoundtrack(ctx context.Context, scope port.JourneyScope
 			review.Reason = "journey_changed"
 		case !review.ExpiresAt.After(now):
 			review.Reason = "expired"
-		case review.Paused || (review.SnoozedUntil != nil && review.SnoozedUntil.After(now)):
+		case !allowed || review.Paused || (review.SnoozedUntil != nil && review.SnoozedUntil.After(now)):
 			review.Reason = "held"
 		default:
 			review.Reason = "pending_evidence"
@@ -84,7 +86,8 @@ func (r *Repository) ReadSoundtrack(ctx context.Context, scope port.JourneyScope
 			WHERE p.subject=$1 AND p.journey_id=$2 AND p.vehicle_id=$3 AND p.id=$4 AND p.expires_at>$5 AND NOT p.paused
 				AND (p.snoozed_until IS NULL OR p.snoozed_until<=$5) AND j.status='completed' AND j.vehicle_id=p.vehicle_id
 				AND j.started_at=p.started_at AND j.ended_at=p.ended_at
-		)`, scope.Subject, scope.JourneyID, scope.VehicleID, source.Review.ID, now).Scan(&current)
+				AND smart_feature_current(p.subject,'soundtrack',$6)
+		)`, scope.Subject, scope.JourneyID, scope.VehicleID, source.Review.ID, now, began).Scan(&current)
 	if err != nil {
 		return nil, fmt.Errorf("recheck concurrent soundtrack consent: %w", err)
 	}

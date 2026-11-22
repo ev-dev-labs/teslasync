@@ -25,7 +25,8 @@ func (r *Repository) Read(ctx context.Context, scope port.Scope) (*domain.Plan, 
 	var plan domain.Plan
 	err := r.pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),COALESCE(p.revision,0),COALESCE(p.time_zone,''),COALESCE(p.paused,false),
-		    p.next_check_at,p.reviewed_through,p.dismissed_through
+		    p.next_check_at,CASE WHEN smart_feature_current($1,'trip_packet',p.feature_checked_at) THEN p.reviewed_through END,
+		    p.dismissed_through
 		FROM vehicles v LEFT JOIN smart_trip_packet_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).Scan(
 		&plan.ID, &plan.Revision, &plan.TimeZone, &plan.Paused, &plan.NextCheckAt, &plan.ReviewedThrough, &plan.DismissedThrough)
@@ -183,10 +184,13 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 	err := r.pool.QueryRow(ctx, `
 		WITH due AS (
 		    SELECT p.id FROM smart_trip_packet_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
-		    WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+		    WHERE (p.next_check_at<=$1 OR (p.reviewed_through IS NOT NULL AND p.dismissed_through IS DISTINCT FROM p.reviewed_through
+		        AND NOT smart_feature_current(p.subject,'trip_packet',p.feature_checked_at)))
+		        AND NOT p.paused AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+		        AND smart_feature_allowed(p.subject,'trip_packet')
 		    ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_trip_packet_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+		UPDATE smart_trip_packet_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 		RETURNING p.id,p.revision,p.subject,p.vehicle_id,p.time_zone,p.dismissed_through,p.lease_until`, now, lease, personal.OpenSubject).
 		Scan(&job.ID, &job.Revision, &job.Subject, &job.VehicleID, &job.TimeZone, &job.DismissedThrough, &job.Lease)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -201,14 +205,18 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 func (r *Repository) Sources(ctx context.Context, scope port.Scope, v domain.Version, window port.Window, now time.Time, lease *time.Time) ([]domain.Drive, []domain.Receipt, error) {
 	var drives []domain.Drive
 	var receipts []domain.Receipt
+	var workAt time.Time
+	const sourcePlan = `
+		FROM smart_trip_packet_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
+		WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.id=$3 AND p.revision=$4 AND NOT p.paused
+		    AND (($5::timestamptz IS NOT NULL AND p.lease_until=$5 AND p.lease_until>$6
+		            AND smart_feature_current(p.subject,'trip_packet',p.feature_claimed_at))
+		        OR ($5 IS NULL AND p.reviewed_through=$7 AND p.dismissed_through IS DISTINCT FROM $7
+		            AND smart_feature_current(p.subject,'trip_packet',p.feature_checked_at)))`
 	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
 		var id int64
-		err := tx.QueryRow(ctx, `
-			SELECT p.id FROM smart_trip_packet_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
-			WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.id=$3 AND p.revision=$4 AND NOT p.paused
-			    AND (($5::timestamptz IS NOT NULL AND p.lease_until=$5 AND p.lease_until>$6)
-			        OR ($5 IS NULL AND p.reviewed_through=$7 AND p.dismissed_through IS DISTINCT FROM $7))`,
-			scope.Subject, scope.VehicleID, v.ID, v.Revision, lease, now, window.Through).Scan(&id)
+		err := tx.QueryRow(ctx, `SELECT p.id,statement_timestamp()`+sourcePlan,
+			scope.Subject, scope.VehicleID, v.ID, v.Revision, lease, now, window.Through).Scan(&id, &workAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrChanged
 		}
@@ -241,6 +249,17 @@ func (r *Repository) Sources(ctx context.Context, scope port.Scope, v domain.Ver
 		receipts, err = readReceipts(ctx, tx, id, ids, domain.MaxReceipts+1)
 		return err
 	})
+	if err == nil && lease == nil {
+		var current bool
+		err = r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1`+sourcePlan+` AND smart_feature_current(p.subject,'trip_packet',$8))`,
+			scope.Subject, scope.VehicleID, v.ID, v.Revision, lease, now, window.Through, workAt).Scan(&current)
+		if err != nil {
+			return nil, nil, fmt.Errorf("recheck private trip packet scope: %w", err)
+		}
+		if !current {
+			return nil, nil, port.ErrChanged
+		}
+	}
 	return drives, receipts, err
 }
 
@@ -271,10 +290,11 @@ func (r *Repository) Finish(ctx context.Context, job port.Job, now, next, throug
 		        AND p.dismissed_through IS DISTINCT FROM $6) publish
 		    FROM smart_trip_packet_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		    WHERE p.id=$1 AND p.revision=$2 AND p.lease_until=$3 AND p.lease_until>$4 AND NOT p.paused
+		        AND smart_feature_current(p.subject,'trip_packet',p.feature_claimed_at)
 		    FOR UPDATE OF p
 		)
 		UPDATE smart_trip_packet_plans p SET next_check_at=$5,lease_until=NULL,checked_through=$6,
-		    reviewed_through=CASE WHEN $7 THEN $6 END,
+		    reviewed_through=CASE WHEN $7 THEN $6 END,feature_checked_at=p.feature_claimed_at,
 		    notified_through=CASE WHEN held.publish THEN $6 ELSE p.notified_through END
 		FROM held WHERE p.id=held.id RETURNING held.publish`, job.ID, job.Revision, job.Lease, now, next, through, ready).Scan(&published)
 	if errors.Is(err, pgx.ErrNoRows) {

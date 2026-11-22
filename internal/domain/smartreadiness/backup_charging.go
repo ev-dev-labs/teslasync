@@ -31,6 +31,7 @@ type BackupChargingSample struct {
 }
 
 type BackupChargingWatch struct {
+	ClaimCurrent    bool                  `json:"-"`
 	ID              int64                 `json:"id"`
 	Subject         string                `json:"-"`
 	VehicleID       int64                 `json:"vehicle_id"`

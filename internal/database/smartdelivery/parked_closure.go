@@ -8,6 +8,7 @@ import (
 
 	personal "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,7 +18,7 @@ var _ port.ParkedClosureRepository = (*Repository)(nil)
 const parkedClosureScope = `
 	FROM smart_parked_closure_plans p
 	JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
-	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL`
+	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL AND smart_feature_current(p.subject,'parked_closure',p.feature_checked_at)`
 
 func (r *Repository) ListParkedClosureDeliveries(ctx context.Context, now time.Time, limit int) ([]domain.ParkedClosureRef, error) {
 	rows, err := r.db.Pool.Query(ctx, `SELECT p.subject,p.id,p.vehicle_id,d.id,p.park_id,p.open_since,p.risk_expires_at `+parkedClosureScope+`
@@ -36,9 +37,9 @@ func (r *Repository) ListParkedClosureDeliveries(ctx context.Context, now time.T
 }
 
 func (r *Repository) LockParkedClosure(ctx context.Context, ref domain.ParkedClosureRef, now time.Time) (port.ExpiringDispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin parked closure dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.ParkedClosure)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT d.subscription_ciphertext `+parkedClosureScope+`
@@ -93,6 +94,7 @@ const parkedClosureClaimScope = parkedClosureScope + `
 	JOIN smart_push_parked_closure_deliveries a ON a.plan_id=p.id AND a.subject=p.subject
 		AND a.vehicle_id=p.vehicle_id AND a.device_id=d.id AND a.park_id=p.park_id AND a.open_since=p.open_since
 	WHERE a.token_hash=$1 AND a.subject=$2 AND a.expires_at>$3 AND p.risk_expires_at>$3
+		AND smart_feature_current(a.subject,'parked_closure',a.feature_enqueued_at)
 		AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
 func (r *Repository) FindParkedClosureDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.ParkedClosureRef, error) {
@@ -110,7 +112,7 @@ func (r *Repository) FindParkedClosureDelivery(ctx context.Context, subject stri
 
 func (r *Repository) ConsumeParkedClosureDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.ParkedClosure, func(tx pgx.Tx) error {
 		var vehicleID, planID, parkID int64
 		err := tx.QueryRow(ctx, `SELECT p.vehicle_id,p.id,p.park_id,p.push_title,p.push_body `+parkedClosureClaimScope+`
 			AND EXISTS (SELECT 1 FROM (

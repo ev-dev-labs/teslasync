@@ -17,15 +17,17 @@ var _ port.TrackReviewRepository = (*Repository)(nil)
 
 func (r *Repository) ReadDriveTrack(ctx context.Context, scope port.DriveScope, now time.Time) (*domain.DriveTrackSource, error) {
 	source := &domain.DriveTrackSource{Review: domain.DriveTrackReview{DriveID: scope.DriveID, VehicleID: scope.VehicleID}}
+	var began time.Time
 	err := pgx.BeginTxFunc(ctx, r.db.Pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
 		review := &source.Review
 		var savedStart, savedEnd *time.Time
-		var competing bool
+		var competing, allowed bool
 		err := tx.QueryRow(ctx, `
 			SELECT d.started_at,d.ended_at,COALESCE(p.id,0),p.started_at,p.ended_at,p.selected_at,p.expires_at,
 				CASE WHEN p.save_status='saving' AND p.claimed_at <= $4::timestamptz-INTERVAL '2 minutes' THEN 'unknown'
 					ELSE COALESCE(p.save_status,'') END,
-				COALESCE(p.token_expires_at>$4,false),
+				COALESCE(p.token_expires_at>$4 AND smart_feature_current($1,'drive_track',p.feature_authorized_at),false),
+				smart_feature_allowed($1,'drive_track'),statement_timestamp(),
 				EXISTS (SELECT 1 FROM drives other WHERE p.selected_at IS NOT NULL AND other.vehicle_id=d.vehicle_id
 					AND other.id<>d.id AND other.started_at<=p.selected_at AND
 					(other.ended_at>p.selected_at OR (other.ended_at IS NULL AND other.started_at>=d.started_at)))
@@ -33,7 +35,7 @@ func (r *Repository) ReadDriveTrack(ctx context.Context, scope port.DriveScope, 
 			LEFT JOIN smart_drive_track_reviews p ON p.drive_id=d.id AND p.vehicle_id=d.vehicle_id AND p.subject=$1
 			WHERE d.id=$2 AND d.vehicle_id=$3`, scope.Subject, scope.DriveID, scope.VehicleID, now).
 			Scan(&review.StartedAt, &review.EndedAt, &review.ID, &savedStart, &savedEnd, &review.SelectedAt, &review.ExpiresAt,
-				&review.Status, &review.LibraryConnected, &competing)
+				&review.Status, &review.LibraryConnected, &allowed, &began, &competing)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound
 		}
@@ -50,6 +52,8 @@ func (r *Repository) ReadDriveTrack(ctx context.Context, scope port.DriveScope, 
 			review.Reason = "drive_changed"
 		case !review.ExpiresAt.After(now):
 			review.Reason = "expired"
+		case !allowed:
+			review.Reason = "held"
 		case competing:
 			review.Reason = "drive_unmatched"
 		default:
@@ -80,23 +84,24 @@ func (r *Repository) ReadDriveTrack(ctx context.Context, scope port.DriveScope, 
 	if source.Review.Reason != "pending_evidence" {
 		return source, nil
 	}
-	if err := r.currentDriveTrack(ctx, scope, source.Review.ID, now); err != nil {
+	if err := r.currentDriveTrack(ctx, scope, source.Review.ID, now, began); err != nil {
 		return nil, err
 	}
 	return source, nil
 }
 
-func (r *Repository) currentDriveTrack(ctx context.Context, scope port.DriveScope, id int64, now time.Time) error {
+func (r *Repository) currentDriveTrack(ctx context.Context, scope port.DriveScope, id int64, now, began time.Time) error {
 	var allowed bool
 	err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1
 		FROM smart_drive_track_reviews p JOIN drives d ON d.id=p.drive_id AND d.vehicle_id=p.vehicle_id
 		JOIN vehicles v ON v.id=d.vehicle_id AND v.archived_at IS NULL
 		WHERE p.subject=$1 AND p.drive_id=$2 AND p.vehicle_id=$3 AND p.id=$4 AND p.expires_at>$5
+			AND smart_feature_current(p.subject,'drive_track',$6)
 			AND d.started_at=p.started_at AND d.ended_at=p.ended_at
 			AND NOT EXISTS (SELECT 1 FROM drives other WHERE other.vehicle_id=d.vehicle_id AND other.id<>d.id
 				AND other.started_at<=p.selected_at AND
 				(other.ended_at>p.selected_at OR (other.ended_at IS NULL AND other.started_at>=d.started_at))))`,
-		scope.Subject, scope.DriveID, scope.VehicleID, id, now).Scan(&allowed)
+		scope.Subject, scope.DriveID, scope.VehicleID, id, now, began).Scan(&allowed)
 	if err != nil {
 		return fmt.Errorf("recheck private track review consent: %w", err)
 	}

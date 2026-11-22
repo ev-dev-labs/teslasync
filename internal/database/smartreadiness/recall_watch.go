@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/jackc/pgx/v5"
@@ -22,6 +24,7 @@ func (r *Repository) ReadRecallWatch(ctx context.Context, scope port.RecallWatch
 		FROM vehicles v
 		LEFT JOIN smart_recall_watches w ON w.vehicle_id=v.id AND w.subject=$1
 		LEFT JOIN smart_recall_campaign_matches m ON m.watch_id=w.id AND m.current_match AND m.fresh_until>$3
+			AND smart_feature_current(w.subject,'recall_watch',w.feature_checked_at)
 		WHERE v.id=$2 AND v.archived_at IS NULL
 		ORDER BY m.reported_at DESC,m.campaign LIMIT 5`, scope.Subject, scope.VehicleID, now)
 	if err != nil {
@@ -98,11 +101,12 @@ func (r *Repository) ClaimRecallWatch(ctx context.Context, now, leaseUntil time.
 			JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL
 			WHERE w.next_check_at<=$1 AND (w.lease_until IS NULL OR w.lease_until<=$1)
 				AND w.subject NOT IN ($3,'open-mode')
+				AND smart_feature_allowed(w.subject,'recall_watch')
 			ORDER BY w.next_check_at,w.id LIMIT 1 FOR UPDATE OF w SKIP LOCKED
 		)
-		UPDATE smart_recall_watches w SET lease_until=$2 FROM due WHERE w.id=due.id
-		RETURNING w.id,w.model,w.model_year,w.lease_until`, now, leaseUntil, personaldomain.OpenSubject).
-		Scan(&claim.ID, &claim.Setup.Model, &claim.Setup.ModelYear, &claim.LeaseUntil)
+		UPDATE smart_recall_watches w SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE w.id=due.id
+		RETURNING w.id,w.subject,w.model,w.model_year,w.lease_until`, now, leaseUntil, personaldomain.OpenSubject).
+		Scan(&claim.ID, &claim.Subject, &claim.Setup.Model, &claim.Setup.ModelYear, &claim.LeaseUntil)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -115,7 +119,8 @@ func (r *Repository) ClaimRecallWatch(ctx context.Context, now, leaseUntil time.
 func (r *Repository) RecallWatchStillCurrent(ctx context.Context, job port.DueRecallWatch) (bool, error) {
 	var current bool
 	err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM smart_recall_watches w
-		JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL WHERE w.id=$1 AND w.lease_until=$2)`,
+		JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL WHERE w.id=$1 AND w.lease_until=$2
+		AND smart_feature_current(w.subject,'recall_watch',w.feature_claimed_at))`,
 		job.ID, job.LeaseUntil).Scan(&current)
 	if err != nil {
 		return false, fmt.Errorf("recheck recall watch consent: %w", err)
@@ -127,10 +132,16 @@ func (r *Repository) FinishRecallWatch(ctx context.Context, job port.DueRecallWa
 	applied := false
 	created := 0
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, job.Subject, smartfeature.RecallWatch)
+		if err != nil || !allowed {
+			return err
+		}
 		tag, err := tx.Exec(ctx, `UPDATE smart_recall_watches w
-			SET next_check_at=$3,lease_until=NULL,last_failed=$4,last_success=CASE WHEN $4 THEN w.last_success ELSE $5 END
+			SET next_check_at=$3,lease_until=NULL,last_failed=$4,last_success=CASE WHEN $4 THEN w.last_success ELSE $5 END,
+			    feature_checked_at=CASE WHEN $4 THEN w.feature_checked_at ELSE w.feature_claimed_at END
 			FROM vehicles v WHERE w.id=$1 AND w.lease_until=$2 AND $5<w.lease_until
-				AND v.id=w.vehicle_id AND v.archived_at IS NULL`,
+				AND v.id=w.vehicle_id AND v.archived_at IS NULL
+				AND smart_feature_current(w.subject,'recall_watch',w.feature_claimed_at)`,
 			job.ID, job.LeaseUntil, result.NextCheck, result.Failed, result.CheckedAt)
 		if err != nil {
 			return fmt.Errorf("finish private recall watch: %w", err)
@@ -186,6 +197,7 @@ func (r *Repository) ListRecallWatchMatches(ctx context.Context, subject string,
 		JOIN smart_recall_campaign_matches m ON m.watch_id=w.id AND m.current_match AND m.fresh_until>$3
 		JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL
 		WHERE w.subject=$1 AND ($2::bigint IS NULL OR w.vehicle_id=$2)
+			AND smart_feature_current(w.subject,'recall_watch',w.feature_checked_at)
 		ORDER BY m.reported_at DESC,m.campaign,w.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list private recall matches: %w", err)

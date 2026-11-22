@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { personalScope, usePersonalIdentity } from '@/api/hooks/usePersonalIdentity';
+import { useSmartFeatures } from '@/api/hooks/useSmartFeatures';
 import { DateTime } from '@/components/data-display';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
@@ -27,6 +28,9 @@ export function ClipRetentionPanel(props: Props) {
   const identity = usePersonalIdentity(props.fleetReady);
   const state = useDataState(identity);
   const scope = personalScope(state.data);
+  const permissionQuery = useSmartFeatures(scope?.mode === 'forward_auth' ? scope : null, 30_000);
+  const permission = useDataState(permissionQuery);
+  const retention = permission.data?.find(pref => pref.feature === 'dashcam_retention');
   const title = t('dashcam.retention.title', 'Private clip retention');
   return <section aria-label={title}><LayoutCard title={title}>
     <div className="space-y-3">
@@ -38,8 +42,12 @@ export function ClipRetentionPanel(props: Props) {
         : !state.hasData ? <Skeleton lines={2} />
         : scope?.mode !== 'forward_auth' ? <Text as="p" variant="bodySm">{t('dashcam.retention.signIn', 'Sign in with a personal account to keep private reminders on this browser.')}</Text>
         : state.data?.impersonating !== false ? <Text as="p" variant="bodySm">{t('dashcam.retention.ownSignIn', 'Private reminders are available only in your own verified sign-in session.')}</Text>
+        : permission.fatalError || permission.refreshError ? <QueryError error={permission.fatalError ?? permission.refreshError} onRetry={permission.retry ?? undefined} />
+        : !permission.hasData ? <Skeleton lines={2} />
+        : !retention?.allowed ? <Text as="p" variant="bodySm">{t('settings.smartFeatures.dashcam.paused', 'Retention review is paused in Smart Features. Your saved deadlines remain on this browser.')}</Text>
         : <ScopedRetention key={JSON.stringify([scope.subject, props.vehicleId])}
-          {...props} subject={scope.subject} checking={identity.isFetching || state.isRefreshBlocked} />}
+          {...props} subject={scope.subject}
+          checking={identity.isFetching || state.isRefreshBlocked || permissionQuery.isFetching || permission.isRefreshBlocked} />}
     </div>
   </LayoutCard></section>;
 }

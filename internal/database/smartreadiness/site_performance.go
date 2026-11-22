@@ -74,6 +74,7 @@ func (r *Repository) ListSitePerformanceSessions(
 		`+activeSitePerformanceScope+`
 			JOIN charging_sessions c ON c.vehicle_id = p.vehicle_id AND c.geofence_id = p.place_id
 			WHERE p.subject = $1 AND p.vehicle_id = $2 AND p.place_id = $3 AND p.enabled_at = $4
+			  AND smart_feature_allowed(p.subject,'site_performance')
 			  AND p.place_updated_at = $5 AND c.started_at >= $6::timestamptz - INTERVAL '91 days'
 			  AND c.ended_at <= $6 AND c.ended_at > c.started_at
 			ORDER BY c.ended_at DESC, c.id DESC LIMIT 32

@@ -103,6 +103,7 @@ func (r *Repository) ListServiceCaseCandidates(ctx context.Context, subject stri
 	rows, err := r.db.Pool.Query(ctx, `SELECT c.id,c.vehicle_id,v.display_name,c.updated_at
 		FROM smart_service_cases c JOIN vehicles v ON v.id=c.vehicle_id AND v.archived_at IS NULL
 		WHERE c.subject=$1 AND ($2::bigint IS NULL OR c.vehicle_id=$2) AND c.updated_at>$3
+		  AND smart_feature_allowed(c.subject,'service_case')
 		  AND EXISTS (SELECT 1 FROM smart_service_case_evidence e WHERE e.case_id=c.id)
 		ORDER BY c.updated_at DESC,c.id LIMIT $4`, subject, vehicleID, since, limit)
 	if err != nil {

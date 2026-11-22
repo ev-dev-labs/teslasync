@@ -25,7 +25,7 @@ type Job struct {
 }
 
 type EvidenceReader interface {
-	ReadCostPeriods(ctx context.Context, subject string, vehicleID int64, currency string, from, midpoint, end time.Time) (domain.Period, domain.Period, error)
+	ReadClaimedCostPeriods(ctx context.Context, job Job, from, midpoint, end time.Time) (domain.Period, domain.Period, error)
 }
 
 type Repository interface {

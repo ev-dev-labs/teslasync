@@ -18,11 +18,13 @@ func (r *Repository) ReadSoftwareWindow(ctx context.Context, scope port.Software
 	var confirmed, departure *time.Time
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),p.confirmed_at,p.departure_at,COALESCE(p.version,''),
-			COALESCE(p.estimated_duration_s,0),COALESCE(p.paused,false),p.snoozed_until
+			COALESCE(p.estimated_duration_s,0),COALESCE(p.paused,false),p.snoozed_until,
+			NOT smart_feature_allowed($1,'software_window'),statement_timestamp()
 		FROM vehicles v
 		LEFT JOIN smart_software_window_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
-		Scan(&plan.ID, &confirmed, &departure, &plan.Version, &plan.EstimatedDurationS, &plan.Paused, &plan.SnoozedUntil)
+		Scan(&plan.ID, &confirmed, &departure, &plan.Version, &plan.EstimatedDurationS, &plan.Paused, &plan.SnoozedUntil,
+			&plan.FeaturePaused, &plan.StartedEvaluation)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -89,16 +91,17 @@ func (r *Repository) DeleteSoftwareWindow(ctx context.Context, scope port.Softwa
 	return nil
 }
 
-func (r *Repository) CheckSoftwareWindow(ctx context.Context, scope port.SoftwareWindowScope, expectedID int64, parkAt, now time.Time) (bool, error) {
+func (r *Repository) CheckSoftwareWindow(ctx context.Context, scope port.SoftwareWindowScope, expectedID int64, parkAt, now, beganAt time.Time) (bool, error) {
 	var valid bool
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM smart_software_window_plans p JOIN vehicles v ON v.id=p.vehicle_id
 			WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.id=$3 AND NOT p.paused
+				AND smart_feature_current(p.subject,'software_window',$6)
 				AND v.archived_at IS NULL AND (p.snoozed_until IS NULL OR p.snoozed_until<=$5)
 				AND (SELECT ended_at FROM drives WHERE vehicle_id=v.id AND started_at<=$5
 					ORDER BY started_at DESC,id DESC LIMIT 1)=$4
-		)`, scope.Subject, scope.VehicleID, expectedID, parkAt, now).Scan(&valid)
+		)`, scope.Subject, scope.VehicleID, expectedID, parkAt, now, beganAt).Scan(&valid)
 	if err != nil {
 		return false, fmt.Errorf("check private software window revision and park: %w", err)
 	}

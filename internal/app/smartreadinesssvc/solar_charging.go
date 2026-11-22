@@ -176,7 +176,7 @@ func (s *Service) sampleSolarCharging(ctx context.Context, plan domain.SolarChar
 		return *checkErr
 	}
 	current, err := s.solarPlans.FindSolarChargingPlan(ctx, plan.Subject, plan.VehicleID)
-	if err != nil || !sameSolarConsent(&plan, current) || !current.NextCheckAt.Equal(plan.NextCheckAt) {
+	if err != nil || !sameSolarConsent(&plan, current) || !current.ClaimCurrent || !current.NextCheckAt.Equal(plan.NextCheckAt) {
 		return err
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, solarProviderLimit)
@@ -190,7 +190,7 @@ func (s *Service) sampleSolarCharging(ctx context.Context, plan domain.SolarChar
 		reserve = &reading
 	}
 	current, err = s.solarPlans.FindSolarChargingPlan(ctx, plan.Subject, plan.VehicleID)
-	if err != nil || !sameSolarConsent(&plan, current) || !current.NextCheckAt.Equal(plan.NextCheckAt) {
+	if err != nil || !sameSolarConsent(&plan, current) || !current.ClaimCurrent || !current.NextCheckAt.Equal(plan.NextCheckAt) {
 		return err
 	}
 	observation, err := s.solarEnergy.ReadObservation(requestCtx, plan.Subject, plan.EnergySiteID)

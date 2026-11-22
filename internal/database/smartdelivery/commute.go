@@ -8,6 +8,7 @@ import (
 
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -110,14 +111,15 @@ const commuteDeliveryScope = `
 	JOIN smart_commute_settings s ON s.subject=r.subject AND s.vehicle_id=r.vehicle_id
 	  AND s.updated_at=d.settings_updated_at AND s.enabled AND s.local_analysis_enabled AND NOT s.paused
 	JOIN smart_commute_traffic_occurrences o ON o.routine_id=r.id AND o.departure_at=d.departure_at AND NOT o.skipped
+	  AND smart_feature_current(r.subject,'traffic_advice',o.feature_claimed_at)
 	JOIN vehicles v ON v.id=r.vehicle_id AND v.archived_at IS NULL`
 
 func (r *Repository) LockCommute(
 	ctx context.Context, subject string, occurrence domain.CommuteOccurrence, now time.Time,
 ) (port.CommuteLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin personal commute dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, subject, smartfeature.TrafficAdvice)
+	if err != nil || tx == nil {
+		return nil, err
 	}
 	candidate := domain.CommuteDelivery{Occurrence: occurrence}
 	var deviceID int64
@@ -204,6 +206,7 @@ const commuteClaimScope = commuteDeliveryScope + `
 	JOIN smart_push_commute_deliveries a ON a.routine_id=r.id AND a.consent_id=c.id AND a.departure_at=d.departure_at
 	JOIN smart_push_devices dev ON dev.id=a.device_id
 	WHERE a.token_hash=$1 AND dev.subject=$2 AND r.subject=$2 AND dev.verified_at IS NOT NULL AND dev.commute_enabled
+	  AND smart_feature_current(r.subject,'traffic_advice',a.feature_enqueued_at)
 	  AND a.status IN ('dispatching','accepted','unknown') AND a.claimed_at IS NULL AND a.revoked_at IS NULL
 	  AND a.expires_at > $3 AND d.expires_at > $3
 	  AND here_estimates_usable(d.observed_at)
@@ -231,7 +234,7 @@ func (r *Repository) ConsumeCommuteDelivery(
 	ctx context.Context, subject string, hash []byte, now time.Time,
 ) (*domain.Notification, error) {
 	var result domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.TrafficAdvice, func(tx pgx.Tx) error {
 		var id, routineID, vehicleID int64
 		var departure time.Time
 		err := tx.QueryRow(ctx, `

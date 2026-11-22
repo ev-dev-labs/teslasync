@@ -20,5 +20,5 @@ type SoftwareWindowRepository interface {
 	ReplaceSoftwareWindow(ctx context.Context, scope SoftwareWindowScope, expectedID int64, setup domain.SoftwareWindowSetup, now time.Time) error
 	HoldSoftwareWindow(ctx context.Context, scope SoftwareWindowScope, expectedID int64, until *time.Time, now time.Time) error
 	DeleteSoftwareWindow(context.Context, SoftwareWindowScope, int64) error
-	CheckSoftwareWindow(ctx context.Context, scope SoftwareWindowScope, expectedID int64, parkAt, now time.Time) (bool, error)
+	CheckSoftwareWindow(ctx context.Context, scope SoftwareWindowScope, expectedID int64, parkAt, now, beganAt time.Time) (bool, error)
 }

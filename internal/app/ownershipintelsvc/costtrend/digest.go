@@ -121,7 +121,7 @@ func (s *Reviews) ProcessDue(ctx context.Context, limit int) (Batch, error) {
 			next = release.UTC()
 		} else {
 			from, current := through.AddDate(0, -2, 0), through.AddDate(0, -1, 0)
-			priorPeriod, currentPeriod, err := s.reader.ReadCostPeriods(ctx, job.Subject, job.VehicleID, job.Currency, from, current, through)
+			priorPeriod, currentPeriod, err := s.reader.ReadClaimedCostPeriods(ctx, *job, from, current, through)
 			if err != nil {
 				return out, err
 			}

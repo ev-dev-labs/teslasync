@@ -22,8 +22,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	deliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	delivery "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	readiness "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
@@ -352,6 +354,59 @@ func TestWindowRainSuppressionAndRevocation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWindowRainFeaturePauseRequiresFreshForecastAndPush(t *testing.T) {
+	j := newWindowRainJourney(t)
+	device := j.enroll(rainOwner, "https://fcm.googleapis.com/fcm/send/window-rain-feature")
+	j.status(http.MethodPut, rainEndpoint, rainOwner, rainSetup(device, 0), http.StatusNoContent)
+	plan := j.read(rainEndpoint, rainOwner)
+	if plan == nil {
+		t.Fatal("expected the configured watch before pausing")
+	}
+	before, _ := j.sender.last()
+	prefs := featuredb.NewRepository(j.db.Pool)
+	set := func(allowed bool) error {
+		return prefs.SetPreference(j.ctx, rainOwner, smartfeature.Preference{Feature: smartfeature.WindowRain, Allowed: allowed})
+	}
+	if err := set(false); err != nil {
+		t.Fatal(err)
+	}
+	reads := j.live.readCount()
+	j.runTick()
+	if j.calls.Load() != 0 || j.live.readCount() != reads {
+		t.Fatal("paused feature still checked vehicle signals or requested a forecast")
+	}
+	if err := set(true); err != nil {
+		t.Fatal(err)
+	}
+	j.inFlight = func() {
+		if j.calls.Load() != 1 {
+			return
+		}
+		if err := set(false); err != nil {
+			t.Error(err)
+			return
+		}
+		if err := set(true); err != nil {
+			t.Error(err)
+		}
+	}
+	j.runTick()
+	if after, _ := j.sender.last(); j.calls.Load() != 1 || after != before {
+		t.Fatalf("forecast begun before pause published a push: calls %d, push delta %d", j.calls.Load(), after-before)
+	}
+	if current := j.read(rainEndpoint, rainOwner); current == nil || current.ID != plan.ID || current.Risk != nil {
+		t.Fatalf("pause removed setup or revealed the stale forecast: %+v", current)
+	}
+	j.advance(j.start.Add(31 * time.Second))
+	j.runTick()
+	after, payload := j.sender.last()
+	var message map[string]string
+	if j.calls.Load() != 2 || after != before+1 || json.Unmarshal(payload, &message) != nil || message["token"] == "" {
+		t.Fatalf("fresh forecast did not resume delivery: calls %d, push delta %d", j.calls.Load(), after-before)
+	}
+	j.status(http.MethodPost, rainClaim, rainOwner, message, http.StatusOK)
 }
 
 func TestWindowRainRechecksAfterQuietHoursBeforeAnyAttempt(t *testing.T) {

@@ -61,8 +61,8 @@ type outageTrafficRepository struct {
 	published bool
 }
 
-func (r *outageTrafficRepository) VerifyTrafficCheck(context.Context, port.TrafficCheck, time.Time) error {
-	return nil
+func (r *outageTrafficRepository) VerifyTrafficCheck(_ context.Context, check port.TrafficCheck, _ time.Time) (port.TrafficCheckAccess, error) {
+	return port.TrafficCheckAccess{Advice: !check.AdvicePaused, Energy: check.Consent.CompareRouteEnergy}, nil
 }
 
 func (r *outageTrafficRepository) RecordTrafficDecision(context.Context, port.TrafficCheck, domain.TrafficDecision, time.Time) (bool, error) {

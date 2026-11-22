@@ -231,7 +231,14 @@ func (s *Service) ReconcileInvoice(
 	consumed := map[int64]int{}
 	lines := append([]port.InvoiceLineRecord(nil), record.Lines...)
 	sort.SliceStable(lines, func(i, j int) bool { return lines[i].OccurredAt.Before(lines[j].OccurredAt) })
-	if record.ReviewCleared {
+	allowed := true
+	if record.VarianceOptions != nil && s.varianceAllowed != nil {
+		allowed, err = s.varianceAllowed(ctx, subject)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if record.ReviewCleared || !allowed {
 		report.VarianceReview = &domain.InvoiceVarianceReview{State: "off", Findings: []domain.InvoiceVarianceFinding{}}
 		report.Quality = quality(domain.QualityInsufficient, 0, nil,
 			domain.Window{From: record.PeriodStart, To: record.PeriodEnd})
@@ -572,6 +579,15 @@ func (s *Service) CreateDispute(
 			VehicleID: request.VehicleID,
 			Version:   request.ExpectedVersion,
 			Verify: func(ctx context.Context, invoice port.InvoiceRecord, source port.ChargeReader) error {
+				if s.varianceAllowed != nil {
+					allowed, err := s.varianceAllowed(ctx, subject)
+					if err != nil {
+						return err
+					}
+					if !allowed {
+						return port.ErrInvoiceReviewChanged
+					}
+				}
 				charges, err := invoiceCharges(ctx, source, invoice)
 				if err != nil {
 					return err

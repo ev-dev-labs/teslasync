@@ -82,9 +82,9 @@ export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, 
           })}</Text>
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.')}</Text>
           {scope.mode === 'forward_auth' && !decision.route_energy_only && !decision.arrival_deadline_at &&
-            (navigationAvailable || decision.navigation_outcome) && (
+            ((navigationAvailable && !decision.navigation_paused) || decision.navigation_outcome) && (
               <SmartCommuteNavigation decision={decision} scope={scope}
-                available={navigationAvailable} disabled={navigationDisabled} />
+                available={navigationAvailable && !decision.navigation_paused} disabled={navigationDisabled} />
             )}
         </article>
         )

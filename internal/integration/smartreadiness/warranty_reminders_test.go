@@ -26,6 +26,7 @@ import (
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	ownershiphandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel"
 )
 
@@ -58,6 +59,32 @@ func applyWarrantyFixtureMigration(t *testing.T, db *database.DB, name string) {
 	}
 	if _, err := db.Pool.Exec(t.Context(), string(content)); err != nil {
 		t.Fatalf("apply disposable migration %s: %v", name, err)
+	}
+	switch name {
+	case "000280_smart_cold_tire_reviews.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_cold_tire_reviews")
+	case "000316_smart_shared_charger.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_shared_charger_swaps")
+	case "000278_smart_warranty_reminders.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_warranty_reminders")
+	case "000279_smart_trip_maintenance.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_trip_maintenance")
+	case "000281_smart_recall_watch.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_recall_watches")
+	case "000284_smart_climate_schedule.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_climate_schedule_plans")
+	case "000298_smart_charging_cost_digests.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_charging_cost_plans", "smart_charging_cost_digests")
+	case "000299_smart_monthly_tariff_reviews.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_monthly_tariff_plans", "smart_monthly_tariff_digests")
+	case "000300_smart_mileage_term_reviews.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_mileage_term_plans", "smart_mileage_term_digests")
+	case "000301_smart_trip_packets.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_trip_packet_plans")
+	case "000302_smart_subscription_renewals.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_subscription_renewal_plans", "smart_subscription_renewal_occurrences")
+	case "000303_smart_weekly_drive_efficiency.up":
+		smartfixture.PolicyColumns(t, db.Pool, "smart_weekly_drive_efficiency_plans", "smart_weekly_drive_efficiency_digests")
 	}
 }
 

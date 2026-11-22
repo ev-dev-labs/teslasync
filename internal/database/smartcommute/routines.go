@@ -73,6 +73,7 @@ func (r *Repository) ConfirmRoutine(
 			WHERE r.id = prior.id
 			  AND (prior.status = 'confirmed' OR (
 			    prior.status = 'suggested' AND r.evidence_last_at > $12::timestamptz - INTERVAL '56 days'
+			    AND smart_feature_current(r.subject,'commute_learning',r.feature_checked_at)
 			    AND EXISTS (
 			      SELECT 1 FROM smart_commute_settings s
 			      WHERE s.subject = r.subject AND s.vehicle_id = r.vehicle_id
@@ -188,6 +189,7 @@ func (r *Repository) ListSuggestions(
 		WHERE r.subject = $1 AND ($2::bigint IS NULL OR r.vehicle_id = $2)
 		  AND s.enabled AND s.local_analysis_enabled AND NOT s.paused
 		  AND r.status = 'suggested' AND r.evidence_last_at > $3::timestamptz - INTERVAL '56 days'
+		  AND smart_feature_current(r.subject,'commute_learning',r.feature_checked_at)
 		  AND (r.snoozed_until IS NULL OR r.snoozed_until <= $3::timestamptz)
 		ORDER BY r.evidence_last_at DESC, r.id DESC
 		LIMIT $4`, subject, vehicleID, now, limit)

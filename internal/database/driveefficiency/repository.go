@@ -46,8 +46,9 @@ func (r *Repository) Read(ctx context.Context, s port.Scope, now time.Time) (por
 			    e.baseline_days,e.recent_days,e.baseline_low_wh_per_m,e.baseline_high_wh_per_m,
 			    e.recent_low_wh_per_m,e.recent_high_wh_per_m,e.higher,e.dismissed_at IS NOT NULL
 			FROM smart_weekly_drive_efficiency_digests e JOIN drives d ON d.id=e.reference_drive_id
-			WHERE e.plan_revision=$1 AND d.vehicle_id=$2 AND e.expires_at>$3 AND e.published_at<=$3`,
-			plan.Revision, s.VehicleID, now).
+			WHERE e.plan_revision=$1 AND d.vehicle_id=$2 AND e.expires_at>$3 AND e.published_at<=$3
+			    AND smart_feature_current($4,'drive_efficiency',e.feature_checked_at)`,
+			plan.Revision, s.VehicleID, now, s.Subject).
 			Scan(&d.ReferenceDriveID, &d.BaselineFrom, &d.RecentFrom, &d.RecentUntil, &d.ObservedUntil, &d.ExpiresAt,
 				&d.BaselineDays, &d.RecentDays, &d.Baseline.LowWhPerM, &d.Baseline.HighWhPerM,
 				&d.Recent.LowWhPerM, &d.Recent.HighWhPerM, &d.Higher, &state.Dismissed)
@@ -135,9 +136,11 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 		    SELECT p.revision FROM smart_weekly_drive_efficiency_plans p JOIN vehicles v ON v.id=p.vehicle_id
 		    WHERE v.archived_at IS NULL AND p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
 		        AND p.subject NOT IN ($3,'open-mode')
+		        AND smart_feature_allowed(p.subject,'drive_efficiency')
 		    ORDER BY p.next_check_at,p.revision LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_weekly_drive_efficiency_plans p SET lease_until=$2 FROM due WHERE p.revision=due.revision
+		UPDATE smart_weekly_drive_efficiency_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp()
+		FROM due WHERE p.revision=due.revision
 		RETURNING p.subject,p.vehicle_id,p.revision,p.time_zone,p.lease_until,COALESCE(to_char(p.last_week,'YYYY-MM-DD'),'')`,
 		now, lease, personal.OpenSubject).
 		Scan(&job.Subject, &job.VehicleID, &job.Revision, &job.TimeZone, &job.Lease, &job.LastWeek)
@@ -152,7 +155,8 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 
 const activeLease = `FROM smart_weekly_drive_efficiency_plans p
 	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
-	WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.revision=$3 AND p.lease_until=$4 AND p.lease_until>$5`
+	WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.revision=$3 AND p.lease_until=$4 AND p.lease_until>$5
+	    AND smart_feature_current(p.subject,'drive_efficiency',p.feature_claimed_at)`
 
 func (r *Repository) Current(ctx context.Context, j port.Job, now time.Time) (bool, error) {
 	var current bool
@@ -191,7 +195,8 @@ func (r *Repository) Finish(ctx context.Context, j port.Job, now, next time.Time
 			UPDATE smart_weekly_drive_efficiency_plans p SET lease_until=NULL,next_check_at=$6,
 			    last_week=GREATEST(p.last_week,NULLIF($7,'')::date)
 			FROM vehicles v WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.revision=$3 AND p.lease_until=$4
-			    AND p.lease_until>$5 AND v.id=p.vehicle_id AND v.archived_at IS NULL`,
+			    AND p.lease_until>$5 AND v.id=p.vehicle_id AND v.archived_at IS NULL
+			    AND smart_feature_current(p.subject,'drive_efficiency',p.feature_claimed_at)`,
 			j.Subject, j.VehicleID, j.Revision, j.Lease, now, next, cycle)
 		if err != nil {
 			return fmt.Errorf("complete private efficiency lease: %w", err)
@@ -209,9 +214,10 @@ func (r *Repository) Finish(ctx context.Context, j port.Job, now, next time.Time
 		tag, err = tx.Exec(ctx, `
 			INSERT INTO smart_weekly_drive_efficiency_digests
 			    (plan_revision,reference_drive_id,baseline_from,recent_from,recent_until,observed_until,published_at,expires_at,
-			     baseline_days,recent_days,baseline_low_wh_per_m,baseline_high_wh_per_m,recent_low_wh_per_m,recent_high_wh_per_m,higher)
-			SELECT $1,id,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
-			FROM drives WHERE id=$2 AND vehicle_id=$3 AND ended_at=$7 AND ended_at<$6
+			     baseline_days,recent_days,baseline_low_wh_per_m,baseline_high_wh_per_m,recent_low_wh_per_m,recent_high_wh_per_m,higher,feature_checked_at)
+			SELECT $1,d.id,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,p.feature_claimed_at
+			FROM drives d JOIN smart_weekly_drive_efficiency_plans p ON p.revision=$1
+			WHERE d.id=$2 AND d.vehicle_id=$3 AND d.ended_at=$7 AND d.ended_at<$6
 			ON CONFLICT (plan_revision) DO NOTHING`,
 			j.Revision, d.ReferenceDriveID, j.VehicleID, d.BaselineFrom, d.RecentFrom, d.RecentUntil, d.ObservedUntil, now,
 			d.ExpiresAt, d.BaselineDays, d.RecentDays, d.Baseline.LowWhPerM, d.Baseline.HighWhPerM, d.Recent.LowWhPerM, d.Recent.HighWhPerM, d.Higher)

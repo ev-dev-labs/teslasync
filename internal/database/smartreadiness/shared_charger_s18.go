@@ -34,6 +34,8 @@ const sharedChargerRecipientAccepted = `
 	AND ((p.reminder_vehicle_id = p.vehicle_a_id AND ca.accept_reminder)
 	  OR (p.reminder_vehicle_id = p.vehicle_b_id AND cb.accept_reminder))`
 
+const sharedChargerRecipient = `CASE WHEN p.reminder_vehicle_id=p.vehicle_a_id THEN p.subject_a ELSE p.subject_b END`
+
 func (r *Repository) AuthorizeSharedCharger(ctx context.Context, operator string, expected domain.SharedChargerRef,
 	spec domain.SharedChargerAuthorization, now time.Time,
 ) (domain.SharedChargerRef, error) {
@@ -331,15 +333,19 @@ func (r *Repository) PublishDueSharedChargerReminders(ctx context.Context, now t
 		), pruned AS (
 		  DELETE FROM smart_shared_charger_plans p USING expired WHERE p.id = expired.id
 		), due AS MATERIALIZED (
-		  SELECT p.id, p.revision `+activeSharedChargerScope+sharedChargerConfirmations+sharedChargerSwapJoin+`
-		  WHERE o.published_at IS NULL AND o.swap_at <= $1 AND o.expires_at > $1
+		  SELECT p.id, p.revision, `+sharedChargerRecipient+` AS recipient
+		  `+activeSharedChargerScope+sharedChargerConfirmations+sharedChargerSwapJoin+`
+		  WHERE o.swap_at <= $1 AND o.expires_at > $1
 		    AND p.authorized_at <= $1 AND p.expires_at > $1 AND p.revoked_at IS NULL
 		  `+sharedChargerRecipientAccepted+`
+		  AND smart_feature_allowed(`+sharedChargerRecipient+`,'shared_charger')
+		  AND (o.published_at IS NULL OR NOT smart_feature_current(`+sharedChargerRecipient+`,'shared_charger',o.feature_checked_at))
 		  ORDER BY o.swap_at, p.id
 		  LIMIT $2 FOR UPDATE OF p SKIP LOCKED FOR SHARE OF g, va, vb SKIP LOCKED
 		)
-		UPDATE smart_shared_charger_swaps o SET published_at = $1 FROM due
-		WHERE o.plan_id = due.id AND o.plan_revision = due.revision AND o.published_at IS NULL`,
+		UPDATE smart_shared_charger_swaps o SET published_at=COALESCE(o.published_at,$1), feature_checked_at=statement_timestamp() FROM due
+		WHERE o.plan_id = due.id AND o.plan_revision = due.revision
+		  AND (o.published_at IS NULL OR NOT smart_feature_current(due.recipient,'shared_charger',o.feature_checked_at))`,
 		now, min(limit, 50))
 	if err != nil {
 		return 0, fmt.Errorf("publish due private shared charger swaps: %w", err)
@@ -355,6 +361,7 @@ func (r *Repository) FindSharedChargerReminder(ctx context.Context, subject stri
 		SELECT p.reminder_vehicle_id, o.swap_at, o.expires_at
 		`+activeSharedChargerScope+sharedChargerConfirmations+sharedChargerSwapJoin+sharedChargerCurrentRef+`
 		AND o.published_at <= $3 AND o.expires_at > $3
+		AND smart_feature_current($4,'shared_charger',o.feature_checked_at)
 		`+sharedChargerRecipientAccepted+`
 		AND ((p.reminder_vehicle_id = p.vehicle_a_id AND p.subject_a = $4)
 		  OR (p.reminder_vehicle_id = p.vehicle_b_id AND p.subject_b = $4))`,

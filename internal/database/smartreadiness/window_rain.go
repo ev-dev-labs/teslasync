@@ -20,17 +20,19 @@ func (r *Repository) ReadWindowRain(ctx context.Context, scope port.WindowRainSc
 	var plan domain.WindowRainPlan
 	var created, until, park, observed, forecast, start, end, expiry *time.Time
 	var risk domain.WindowRainRisk
+	var current bool
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),p.created_at,p.watch_until,COALESCE(p.paused,false),COALESCE(p.reason,''),
 			COALESCE(p.device_id,0),d.id IS NOT NULL,COALESCE(p.latitude_grid,0),COALESCE(p.longitude_grid,0),
-			p.park_observed_at,COALESCE(p.window_position,''),p.window_observed_at,p.forecast_at,p.risk_start_at,p.risk_end_at,p.risk_expires_at
+			p.park_observed_at,COALESCE(p.window_position,''),p.window_observed_at,p.forecast_at,p.risk_start_at,p.risk_end_at,p.risk_expires_at,
+			smart_feature_current($1,'window_rain',p.feature_checked_at)
 		FROM vehicles v
 		LEFT JOIN smart_window_rain_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
 		Scan(&plan.ID, &created, &until, &plan.Paused, &plan.Reason, &plan.DeviceID, &plan.DeviceReady,
 			&plan.Grid.LatitudeHundredths, &plan.Grid.LongitudeHundredths,
-			&park, &risk.Window.Position, &observed, &forecast, &start, &end, &expiry)
+			&park, &risk.Window.Position, &observed, &forecast, &start, &end, &expiry, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -43,6 +45,10 @@ func (r *Repository) ReadWindowRain(ctx context.Context, scope port.WindowRainSc
 	plan.CreatedAt, plan.WatchUntil = *created, *until
 	if park != nil {
 		plan.ParkObservedAt = *park
+	}
+	if !current {
+		plan.Reason = ""
+		return &plan, nil
 	}
 	if observed != nil && forecast != nil && start != nil && end != nil && expiry != nil {
 		risk.Window.ObservedAt, risk.ForecastAt, risk.RiskStartAt, risk.RiskEndAt, risk.ExpiresAt =
@@ -116,10 +122,11 @@ func (r *Repository) ClaimWindowRain(ctx context.Context, now, lease time.Time) 
 		JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
 		  AND p.watch_until>$1 AND NOT p.paused AND p.subject NOT IN ($3,'open-mode')
+		  AND smart_feature_allowed(p.subject,'window_rain')
 		  AND `+noWindowRainDelivery+`
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_window_rain_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_window_rain_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.subject,p.vehicle_id,p.created_at,p.watch_until,p.latitude_grid,p.longitude_grid,p.lease_until,p.park_observed_at`,
 		now, lease, personal.OpenSubject).
 		Scan(&job.Plan.ID, &job.Scope.Subject, &job.Scope.VehicleID, &job.Plan.CreatedAt, &job.Plan.WatchUntil,
@@ -155,6 +162,7 @@ func (r *Repository) WindowRainLeaseActive(ctx context.Context, job port.WindowR
 		SELECT 1 FROM smart_window_rain_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3 AND p.watch_until>$3 AND NOT p.paused
+			AND smart_feature_current(p.subject,'window_rain',p.feature_claimed_at)
 			AND `+noWindowRainDelivery+`)`,
 		job.Plan.ID, job.LeaseUntil, now).Scan(&active)
 	if err != nil {
@@ -171,12 +179,13 @@ func (r *Repository) FinishWindowRain(ctx context.Context, job port.WindowRainJo
 		start, end, expiry = &risk.RiskStartAt, &risk.RiskEndAt, &risk.ExpiresAt
 	}
 	tag, err := r.db.Pool.Exec(ctx, `UPDATE smart_window_rain_plans p
-		SET lease_until=NULL,reason=$4,next_check_at=$5,window_position=$6,window_observed_at=$7,
+		SET lease_until=NULL,feature_checked_at=p.feature_claimed_at,reason=$4,next_check_at=$5,window_position=$6,window_observed_at=$7,
 			forecast_at=$8,risk_start_at=$9,risk_end_at=$10,risk_expires_at=$11,
 			latitude_grid=CASE WHEN $4='park_changed' THEN NULL ELSE p.latitude_grid END,
 			longitude_grid=CASE WHEN $4='park_changed' THEN NULL ELSE p.longitude_grid END,
 			park_observed_at=CASE WHEN $4='park_changed' THEN NULL ELSE p.park_observed_at END
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3 AND p.watch_until>$3 AND NOT p.paused
+			AND smart_feature_current(p.subject,'window_rain',p.feature_claimed_at)
 			AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id=p.vehicle_id AND v.archived_at IS NULL)
 			AND EXISTS (SELECT 1 FROM smart_push_devices d WHERE d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at)
 			AND ($4<>'window_rain_risk' OR (

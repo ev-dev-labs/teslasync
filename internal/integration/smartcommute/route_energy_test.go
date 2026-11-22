@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	commutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/rs/zerolog"
@@ -26,12 +29,15 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 		lowCoverage bool
 		staleTemp   bool
 		revoke      bool
+		pause       smartfeature.Key
 	}{
 		{name: "consented measured tradeoff", optedIn: true},
 		{name: "no local route analysis before consent"},
 		{name: "long gap in one completed drive", optedIn: true, lowCoverage: true},
 		{name: "stale outside temperature", optedIn: true, staleTemp: true},
 		{name: "revoked while history query is in flight", optedIn: true, revoke: true},
+		{name: "traffic pause leaves energy advice", optedIn: true, pause: smartfeature.TrafficAdvice},
+		{name: "energy pause leaves traffic advice", optedIn: true, pause: smartfeature.RouteEnergy},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
@@ -74,6 +80,15 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 					t.Fatal("provider query did not use only the reviewed trace and expected comparison mode")
 				}
 				result := domain.TrafficComparison{Usual: offered[0].TrafficEstimate, Alternative: offered[1].TrafficEstimate}
+				if tt.pause != "" {
+					result.Usual.DurationS = result.Alternative.DurationS + 600
+					prefs := smartfeaturesvc.New(featuredb.NewRepository(f.db.Pool))
+					for _, allowed := range []bool{false, true} {
+						if err := prefs.Set(ctx, owner, smartfeature.Preference{Feature: tt.pause, Allowed: allowed}); err != nil {
+							return domain.TrafficComparison{}, err
+						}
+					}
+				}
 				if query.IncludeRouteGeometry {
 					result.OfferedRoutes = offered
 				}
@@ -109,12 +124,23 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 			} else if processed, err := worker.ProcessTrafficChecks(ctx, 10); err != nil || processed != 1 {
 				t.Fatalf("worker processed %d: %v", processed, err)
 			}
-			if queries != 1 || pushes != 0 || ((!tt.optedIn || tt.staleTemp) && f.spy.count.Load() != scans) {
+			wantPushes := 0
+			if tt.pause == smartfeature.RouteEnergy {
+				wantPushes = 1
+			}
+			if queries != 1 || pushes != wantPushes || ((!tt.optedIn || tt.staleTemp || tt.pause == smartfeature.RouteEnergy) && f.spy.count.Load() != scans) {
 				t.Fatalf("unexpected requests or delivery: calls=%d pushes=%d scans=%d", queries, pushes, f.spy.count.Load()-scans)
 			}
 			rows, err := worker.ListTrafficDecisions(ctx, owner, nil, f.now, 10)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if tt.pause == smartfeature.RouteEnergy {
+				if len(rows) != 1 || rows[0].RouteEnergy != nil || rows[0].RouteEnergyOnly ||
+					rows[0].UsualS-rows[0].AlternativeS != 600 {
+					t.Fatalf("expected only traffic advice after energy pause, got %+v", rows)
+				}
+				return
 			}
 			if !tt.optedIn || tt.lowCoverage || tt.staleTemp || tt.revoke {
 				if len(rows) != 0 {
@@ -126,6 +152,9 @@ func TestRouteEnergyRequiresExplicitConsentAndCompleteMeasuredHistory(t *testing
 				rows[0].RouteEnergy.Fastest.DriveCount != 4 || rows[0].RouteEnergy.Saving.DriveCount != 4 ||
 				rows[0].RouteEnergy.Fastest.MedianWh < 8_900 || rows[0].RouteEnergy.Saving.MedianWh > 6_000 {
 				t.Fatalf("expected one materially lower-energy comparison, got %+v", rows)
+			}
+			if tt.pause == smartfeature.TrafficAdvice {
+				return
 			}
 			assertRouteEnergyMigrationRoundTrip(t, f, worker, owner, *rows[0].RouteEnergy)
 			const center = "/api/v1/action-center?vehicle_id=42"

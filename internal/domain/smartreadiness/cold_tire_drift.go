@@ -29,6 +29,7 @@ type ColdTireDriftReason string
 
 const (
 	ColdTireDriftEligible             ColdTireDriftReason = "eligible"
+	ColdTireDriftPaused               ColdTireDriftReason = "paused"
 	ColdTireDriftNoRecentReading      ColdTireDriftReason = "no_recent_reading"
 	ColdTireDriftInsufficientEvidence ColdTireDriftReason = "insufficient_comparable_readings"
 	ColdTireDriftInvalidReading       ColdTireDriftReason = "invalid_reading"

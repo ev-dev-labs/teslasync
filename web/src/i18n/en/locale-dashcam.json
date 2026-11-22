@@ -899,6 +899,11 @@
     "unsetDefault": "Clear default"
   },
   "settings": {
+    "smartFeatures": {
+      "dashcam": {
+        "paused": "Retention review is paused in Smart Features. Your saved deadlines remain on this browser."
+      }
+    },
     "title": "Settings"
   },
   "shortcuts": {

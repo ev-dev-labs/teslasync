@@ -203,7 +203,7 @@ func (r *Repository) WithdrawSharedTripVehicle(
 }
 
 func (r *Repository) ReadSharedTripComparison(
-	ctx context.Context, subject string, tripID int64, now time.Time,
+	ctx context.Context, subject string, tripID int64, now time.Time, workAt *time.Time,
 ) (*port.SharedTripComparisonScope, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		WITH accepted AS MATERIALIZED (
@@ -214,6 +214,7 @@ func (r *Repository) ReadSharedTripComparison(
 			JOIN smart_shared_trip_entries e ON e.trip_id = p.id AND e.trip_revision = p.revision
 			JOIN vehicles v ON v.id = e.vehicle_id AND v.archived_at IS NULL
 			WHERE p.id = $1 AND p.cancelled_at IS NULL AND p.departure_at > $3
+				AND smart_feature_current($2,'shared_trip',COALESCE($5::timestamptz,statement_timestamp()))
 				AND e.revoked_at IS NULL AND e.confirmed_at <= $3 AND e.evidence_expires_at > $3
 			ORDER BY e.vehicle_id LIMIT $4
 		), audience AS (
@@ -221,9 +222,9 @@ func (r *Repository) ReadSharedTripComparison(
 		)
 		SELECT a.id, a.revision, a.departure_at, viewer.expires_at, a.vehicle_id, a.entry_version,
 			a.confirmed_at, a.evidence_expires_at, a.trip_use_low_pct, a.trip_use_high_pct,
-			a.reserve_pct, a.schedule_clear, a.maintenance_clear
+			a.reserve_pct, 			a.schedule_clear, a.maintenance_clear, statement_timestamp()
 		FROM accepted a CROSS JOIN audience viewer WHERE viewer.expires_at IS NOT NULL
-		ORDER BY a.vehicle_id`, tripID, subject, now, domain.MaxSharedTripVehicles+1)
+		ORDER BY a.vehicle_id`, tripID, subject, now, domain.MaxSharedTripVehicles+1, workAt)
 	if err != nil {
 		return nil, fmt.Errorf("read authorized shared trip evidence: %w", err)
 	}
@@ -233,7 +234,7 @@ func (r *Repository) ReadSharedTripComparison(
 		var e domain.SharedTripConfirmedVehicle
 		if err := rows.Scan(&scope.Trip.ID, &scope.Trip.Revision, &scope.Trip.DepartureAt,
 			&scope.AccessExpiresAt, &e.VehicleID, &e.EntryVersion, &e.ConfirmedAt, &e.ExpiresAt,
-			&e.TripUseLowPct, &e.TripUseHighPct, &e.ReservePct, &e.ScheduleClear, &e.MaintenanceClear); err != nil {
+			&e.TripUseLowPct, &e.TripUseHighPct, &e.ReservePct, &e.ScheduleClear, &e.MaintenanceClear, &scope.WorkAt); err != nil {
 			return nil, fmt.Errorf("scan authorized shared trip evidence: %w", err)
 		}
 		scope.Confirmed = append(scope.Confirmed, e)

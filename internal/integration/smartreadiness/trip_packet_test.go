@@ -10,10 +10,13 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	packetsvc "github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc/trippacket"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	ownershipdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	packetdb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel/trippacket"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel/trippacket"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	ownershiphandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel/trippacket"
 	"github.com/go-chi/chi/v5"
@@ -137,6 +140,32 @@ func TestTripPacketPublishesOnlyConfirmedBusinessAndExportsCurrentEvidence(t *te
 	if len(exported.BusinessDrives) != 1 || len(exported.MatchedReceipts) != 1 ||
 		exported.UnclassifiedDriveCount != 1 || len(exported.UnclassifiedDriveIDs) != 0 {
 		t.Fatalf("export included identifiers outside the business packet: %+v", exported)
+	}
+	prefs := smartfeaturesvc.New(featuredb.NewRepository(db.Pool))
+	setAllowed := func(allowed bool) {
+		t.Helper()
+		if err := prefs.Set(t.Context(), mediaOwner, smartfeature.Preference{Feature: smartfeature.TripPacket, Allowed: allowed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setAllowed(false)
+	if paused := read(packetPath, mediaOwner); paused.Plan == nil || paused.Packet != nil {
+		t.Fatalf("pause did not preserve setup while hiding the packet: %+v", paused)
+	}
+	invoiceRequest[struct{}](t, router, http.MethodPost, packetPath, mediaOwner, "", input, http.StatusConflict)
+	if result, err := run.ProcessDue(t.Context(), 4); err != nil || len(result.Outcomes) != 0 {
+		t.Fatalf("evaluated a paused packet: %+v, %v", result, err)
+	}
+	setAllowed(true)
+	if read(packetPath, mediaOwner).Packet != nil {
+		t.Fatal("pre-pause packet became actionable without requalification")
+	}
+	if result, err := run.ProcessDue(t.Context(), 4); err != nil || result.Published != 0 ||
+		len(result.Outcomes) != 1 || result.Outcomes[domain.Ready] != 1 {
+		t.Fatalf("requalification did not recompute the packet exactly once without publishing again: %+v, %v", result, err)
+	}
+	if renewed := read(packetPath, mediaOwner); renewed.Plan == nil || renewed.Plan.Version != got.Plan.Version || renewed.Digest != got.Digest {
+		t.Fatalf("requalification changed the packet scope or evidence: %+v", renewed)
 	}
 	if _, err := db.Pool.Exec(t.Context(), `UPDATE drives SET distance_m=12000 WHERE id=801`); err != nil {
 		t.Fatal(err)

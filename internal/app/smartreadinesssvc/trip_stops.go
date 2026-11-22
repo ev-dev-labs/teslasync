@@ -141,7 +141,7 @@ func (s *TripStops) Compare(ctx context.Context, key domain.StopPlanKey) (_ *dom
 		return nil, ErrStopCheckDeferred
 	}
 	s.observe("check_claimed")
-	authorize := func(ctx context.Context) error { return s.repo.CheckStopScope(ctx, key, scope.ID, s.now().UTC()) }
+	authorize := func(ctx context.Context) error { return s.repo.CheckStopWork(ctx, key, scope.ID, s.now().UTC()) }
 	stops, histories, err := s.stopEvidence(ctx, key, scope, now)
 	if err != nil {
 		return nil, err

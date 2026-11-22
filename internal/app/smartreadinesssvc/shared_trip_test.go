@@ -284,7 +284,7 @@ func (r *sharedTripTestRepository) lookup(subject string, key domain.SharedTripE
 }
 
 func (r *sharedTripTestRepository) ReadSharedTripComparison(
-	_ context.Context, subject string, tripID int64, now time.Time,
+	_ context.Context, subject string, tripID int64, now time.Time, _ *time.Time,
 ) (*port.SharedTripComparisonScope, error) {
 	if r.trip.ID != tripID || !now.Before(r.trip.DepartureAt) {
 		return nil, port.ErrNotFound

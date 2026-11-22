@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	personaldomain "github.com/ev-dev-labs/teslasync/internal/domain/personal"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/jackc/pgx/v5"
@@ -96,28 +98,38 @@ func (r *Repository) ListActivePlans(
 }
 
 func (r *Repository) ListLatestStartPlans(
-	ctx context.Context, subject string, vehicleID int64, now time.Time, limit int,
-) ([]domain.Plan, error) {
+	ctx context.Context, subject string, vehicleID int64, now time.Time, limit int, workAt *time.Time,
+) ([]port.LatestStartPlan, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT `+planColumns+` FROM smart_charging_plans p
+		SELECT `+planColumns+`, access.readiness, access.rates, feature_clock.work_at
+		FROM smart_charging_plans p
 		JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		JOIN geofences g ON g.id=p.charging_place_id AND g.enabled
 		  AND NOT g.needs_review AND g.archived_at IS NULL AND g.is_charging_location
+		CROSS JOIN (SELECT COALESCE($5::timestamptz, statement_timestamp()) AS work_at) feature_clock
+		CROSS JOIN LATERAL (
+		  SELECT smart_feature_current(p.subject,'charging_readiness',feature_clock.work_at) AS readiness,
+		         smart_feature_current(p.subject,'site_rates',feature_clock.work_at) AS rates
+		) access
 		WHERE p.subject=$1 AND p.vehicle_id=$2 AND p.enabled
+		  AND (access.readiness OR (p.compare_site_rates AND access.rates))
 		  AND p.departure_at > $3::timestamptz + INTERVAL '30 minutes'
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $3)
-		ORDER BY p.departure_at, p.id LIMIT $4`, subject, vehicleID, now, limit)
+		ORDER BY p.departure_at, p.id LIMIT $4`, subject, vehicleID, now, limit, workAt)
 	if err != nil {
 		return nil, fmt.Errorf("list latest-start charging plans: %w", err)
 	}
 	defer rows.Close()
-	plans := make([]domain.Plan, 0)
+	plans := make([]port.LatestStartPlan, 0)
 	for rows.Next() {
-		plan, scanErr := scanPlan(rows)
+		var plan port.LatestStartPlan
+		var ratesAllowed bool
+		scanErr := scanPlanInto(rows, &plan.Plan, &plan.ReadinessAllowed, &ratesAllowed, &plan.WorkAt)
 		if scanErr != nil {
 			return nil, fmt.Errorf("scan latest-start charging plan: %w", scanErr)
 		}
-		plans = append(plans, *plan)
+		plan.CompareSiteRates = plan.CompareSiteRates && ratesAllowed
+		plans = append(plans, plan)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate latest-start charging plans: %w", err)
@@ -320,7 +332,9 @@ func (r *Repository) ClaimDue(ctx context.Context, now time.Time, sharedOpenMode
 		return nil, fmt.Errorf("create charging readiness lease: %w", err)
 	}
 	token := hex.EncodeToString(random[:])
-	plan, err := scanPlan(r.db.Pool.QueryRow(ctx, `
+	claim := port.Claim{Token: token}
+	var earlyAllowed bool
+	err := scanPlanInto(r.db.Pool.QueryRow(ctx, `
 		WITH due AS (
 		  SELECT p.id FROM smart_charging_plans p
 		  JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
@@ -330,26 +344,39 @@ func (r *Repository) ClaimDue(ctx context.Context, now time.Time, sharedOpenMode
 		    AND ((p.subject = $3) = $4)
 		    AND (p.snoozed_until IS NULL OR p.snoozed_until <= $1)
 		    AND (p.lease_until IS NULL OR p.lease_until <= $1)
+		    AND (smart_feature_allowed(p.subject,'charging_readiness')
+		      OR (p.early_stop_watch AND NOT $4 AND smart_feature_allowed(p.subject,'early_stop'))
+		      OR ((p.service_starts_at IS NOT NULL OR p.software_starts_at IS NOT NULL)
+		          AND smart_feature_allowed(p.subject,'departure_overlap')))
 		  ORDER BY p.next_check_at, p.id
 		  LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
 		UPDATE smart_charging_plans p
-		SET lease_token=$2, lease_until=$1::timestamptz + INTERVAL '2 minutes'
+		SET lease_token=$2, lease_until=$1::timestamptz + INTERVAL '2 minutes', feature_claimed_at=statement_timestamp()
 		FROM due WHERE p.id=due.id
-		RETURNING `+planColumns, now, token, personaldomain.OpenSubject, sharedOpenMode))
+		RETURNING `+planColumns+`, NOT smart_feature_allowed(p.subject,'charging_readiness'),
+		  NOT smart_feature_allowed(p.subject,'departure_overlap'), smart_feature_allowed(p.subject,'early_stop')`,
+		now, token, personaldomain.OpenSubject, sharedOpenMode), &claim.Plan, &claim.AdvicePaused, &claim.OverlapPaused, &earlyAllowed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("claim due charging readiness plan: %w", err)
 	}
-	return &port.Claim{Plan: *plan, Token: token}, nil
+	claim.Plan.EarlyStopWatch = claim.Plan.EarlyStopWatch && earlyAllowed
+	return &claim, nil
 }
 
 func (r *Repository) FinishClaim(
 	ctx context.Context, claim port.Claim, decision, overlap domain.Decision, now time.Time,
 ) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		key := smartfeature.ChargingDecision(string(decision.Kind))
+		for _, feature := range []smartfeature.Key{key, smartfeature.DepartureClash} {
+			if _, err := featuredb.HoldAllowed(ctx, tx, claim.Plan.Subject, feature); err != nil {
+				return err
+			}
+		}
 		var next *time.Time
 		interval := time.Minute
 		if claim.Plan.EarlyStopWatch {
@@ -360,44 +387,56 @@ func (r *Repository) FinishClaim(
 			next = &checkAt
 		}
 		var id int64
+		var claimAt time.Time
+		var adviceCurrent, overlapCurrent bool
 		err := tx.QueryRow(ctx, `
-			UPDATE smart_charging_plans SET lease_token=NULL, lease_until=NULL, next_check_at=$4
-			WHERE id=$1 AND version=$2 AND lease_token=$3 AND enabled AND lease_until > $5
-			RETURNING id`, claim.Plan.ID, claim.Plan.Version, claim.Token, next, now).Scan(&id)
+			UPDATE smart_charging_plans p SET lease_token=NULL, lease_until=NULL, next_check_at=$4
+			WHERE p.id=$1 AND p.version=$2 AND p.lease_token=$3 AND p.enabled AND p.lease_until > $5
+			RETURNING p.id, p.feature_claimed_at, smart_feature_current(p.subject,$6,p.feature_claimed_at),
+			    smart_feature_current(p.subject,'departure_overlap',p.feature_claimed_at)`, claim.Plan.ID, claim.Plan.Version,
+			claim.Token, next, now, key).Scan(&id, &claimAt, &adviceCurrent, &overlapCurrent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrClaimLost
 		}
 		if err != nil {
 			return fmt.Errorf("finish charging readiness claim: %w", err)
 		}
-		if overlap.Reason == domain.ReasonEligible && now.Before(overlap.ExpiresAt) {
+		if !claim.OverlapPaused && overlapCurrent && overlap.Reason == domain.ReasonEligible && now.Before(overlap.ExpiresAt) {
 			_, err = tx.Exec(ctx, `
 				INSERT INTO smart_charging_departure_conflicts (plan_id, observed_at, expires_at, evaluated_at)
 				VALUES ($1,$2,$3,$4)
 				ON CONFLICT (plan_id) DO UPDATE SET observed_at=EXCLUDED.observed_at,
 				  expires_at=EXCLUDED.expires_at, evaluated_at=EXCLUDED.evaluated_at`,
 				id, overlap.ObservedAt, overlap.ExpiresAt, now)
-		} else {
+			if err == nil {
+				_, err = tx.Exec(ctx, `UPDATE smart_charging_plans SET feature_overlap_at=$2 WHERE id=$1`, id, claimAt)
+			}
+		} else if !claim.OverlapPaused && overlapCurrent {
 			_, err = tx.Exec(ctx, `DELETE FROM smart_charging_departure_conflicts WHERE plan_id=$1`, id)
 		}
 		if err != nil {
 			return fmt.Errorf("persist departure conflict decision: %w", err)
+		}
+		if !adviceCurrent || (claim.AdvicePaused && decision.Kind != domain.DecisionEarlyStop) {
+			return nil
 		}
 		waiting := false
 		if decision.Reason == domain.ReasonEligible && decision.Kind == domain.DecisionSlowCharging {
 			var firstSeen time.Time
 			err := tx.QueryRow(ctx, `
 				INSERT INTO smart_charging_slow_samples AS s
-				  (plan_id, plan_version, first_seen_at, last_seen_at)
-				VALUES ($1, $2, $3, $3)
+				  (plan_id, plan_version, first_seen_at, last_seen_at, feature_checked_at)
+				VALUES ($1, $2, $3, $3, $4)
 				ON CONFLICT (plan_id) DO UPDATE SET
 				  first_seen_at = CASE
 				    WHEN s.plan_version = EXCLUDED.plan_version
 				      AND EXCLUDED.last_seen_at > s.last_seen_at
 				      AND s.last_seen_at >= EXCLUDED.last_seen_at - INTERVAL '90 seconds'
+				      AND smart_feature_current($5,'charging_readiness',s.feature_checked_at)
 				    THEN s.first_seen_at ELSE EXCLUDED.first_seen_at END,
-				  plan_version = EXCLUDED.plan_version, last_seen_at = EXCLUDED.last_seen_at
-				RETURNING first_seen_at`, id, claim.Plan.Version, now).Scan(&firstSeen)
+				  plan_version = EXCLUDED.plan_version, last_seen_at = EXCLUDED.last_seen_at,
+				  feature_checked_at = EXCLUDED.feature_checked_at
+				RETURNING first_seen_at`, id, claim.Plan.Version, now, claimAt, claim.Plan.Subject).Scan(&firstSeen)
 			if err != nil {
 				return fmt.Errorf("record charging feasibility sample: %w", err)
 			}
@@ -425,6 +464,9 @@ func (r *Repository) FinishClaim(
 		if err != nil {
 			return fmt.Errorf("persist charging readiness decision: %w", err)
 		}
+		if _, err := tx.Exec(ctx, `UPDATE smart_charging_plans SET feature_readiness_at=$2 WHERE id=$1`, id, claimAt); err != nil {
+			return fmt.Errorf("stamp charging readiness decision: %w", err)
+		}
 		return nil
 	})
 }
@@ -451,7 +493,7 @@ func (r *Repository) listCandidates(
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT `+planColumns+`, d.battery_pct, d.arrival_low_pct, d.arrival_high_pct,
 		       d.observed_at, d.expires_at, v.display_name, g.name, g.updated_at,
-		       d.kind, d.interrupted_at
+		       d.kind, d.interrupted_at, smart_feature_allowed(p.subject,'early_stop')
 		FROM smart_charging_plans p
 		JOIN smart_charging_candidate_decisions d ON d.plan_id=p.id
 		LEFT JOIN smart_charging_slow_samples s ON s.plan_id=p.id AND s.plan_version=p.version
@@ -463,6 +505,8 @@ func (r *Repository) listCandidates(
 		WHERE p.subject=$1 AND p.enabled AND ($2::bigint IS NULL OR p.vehicle_id=$2)
 		  AND (p.snoozed_until IS NULL OR p.snoozed_until <= $3)
 		  AND d.expires_at > $3 AND p.departure_at > $3::timestamptz + INTERVAL '30 minutes'
+		  AND smart_feature_current(p.subject,smart_charging_feature(d.kind),
+		    CASE WHEN d.kind='departure_overlap' THEN p.feature_overlap_at ELSE p.feature_readiness_at END)
 		  AND (d.kind <> 'slow_charging' OR s.plan_id IS NOT NULL)
 		  AND ($5::bigint IS NULL OR p.id=$5) AND ($6 = '' OR d.kind=$6)
 		ORDER BY p.departure_at, p.id, d.kind LIMIT $4`, subject, vehicleID, now, limit, planID, kind)
@@ -473,15 +517,17 @@ func (r *Repository) listCandidates(
 	candidates := make([]port.Candidate, 0)
 	for rows.Next() {
 		var candidate port.Candidate
+		var earlyAllowed bool
 		err := scanPlanInto(rows, &candidate.Plan,
 			&candidate.Decision.BatteryPct, &candidate.Decision.ArrivalLowPct,
 			&candidate.Decision.ArrivalHighPct, &candidate.Decision.ObservedAt,
 			&candidate.Decision.ExpiresAt, &candidate.VehicleName, &candidate.PlaceName,
-			&candidate.PlaceUpdatedAt, &candidate.Decision.Kind, &candidate.Decision.InterruptedAt)
+			&candidate.PlaceUpdatedAt, &candidate.Decision.Kind, &candidate.Decision.InterruptedAt, &earlyAllowed)
 		if err != nil {
 			return nil, fmt.Errorf("scan charging readiness decision: %w", err)
 		}
 		candidate.Decision.Reason = domain.ReasonEligible
+		candidate.Plan.EarlyStopWatch = candidate.Plan.EarlyStopWatch && earlyAllowed
 		candidates = append(candidates, candidate)
 	}
 	if err := rows.Err(); err != nil {

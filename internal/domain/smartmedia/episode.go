@@ -45,7 +45,8 @@ type ManualEpisode struct {
 }
 
 type StoredEpisodeReview struct {
-	Review    EpisodeReview
-	EpisodeID string
-	Progress  *EpisodeProgress
+	FeaturePaused bool
+	Review        EpisodeReview
+	EpisodeID     string
+	Progress      *EpisodeProgress
 }

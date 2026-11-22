@@ -699,7 +699,7 @@ describe('private charging readiness settings', () => {
     expect(results.queryByRole('button', { name: 'Review an earlier reminder time' })).not.toBeInTheDocument()
   })
 
-  it('shows a currency-specific price comparison and removes it when live evidence expires', async () => {
+  it.each(['estimate', 'rates_only'] as const)('shows a fresh price comparison for %s and hides it on expiry', async (status) => {
     plans = [{
       id: 8, vehicle_id: 42, charging_place_id: 9, enabled: true, compare_site_rates: true,
       notify_at: '2026-03-07T12:00:00Z', departure_at: '2026-03-08T00:00:00Z',
@@ -707,7 +707,7 @@ describe('private charging readiness settings', () => {
       created_at: '2026-03-07T12:00:00Z', updated_at: '2026-03-07T12:00:00Z',
     }]
     latestStarts = [{
-      plan_id: 8, vehicle_id: 42, status: 'estimate',
+      plan_id: 8, vehicle_id: 42, status,
       required_low_pct: 15, required_high_pct: 25, charging_power_w: 10000,
       earliest_safe_start_at: '2026-03-07T18:30:00Z',
       latest_safe_start_at: '2026-03-07T20:30:00Z',
@@ -724,12 +724,17 @@ describe('private charging readiness settings', () => {
     expect(screen.getByText(/charging now is about/)).toHaveTextContent('$8.00')
     expect(screen.getByText(/charging now is about/)).toHaveTextContent('saving $6.00 (USD)')
     expect(screen.getByText(/taxes, fixed fees and charging losses are excluded/)).toBeInTheDocument()
+    if (status === 'rates_only') {
+      expect(screen.queryByRole('region', { name: 'Latest safe start estimates' })).not.toBeInTheDocument()
+      expect(screen.queryByText(/start by .* for your higher trip-use value/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/A current estimate is unavailable/)).not.toBeInTheDocument()
+    }
     const expiry = timers.mock.calls.find(([, delay]) => delay === 120_001)?.[0]
     expect(typeof expiry).toBe('function')
     vi.mocked(Date.now).mockReturnValue(Date.parse('2026-03-07T12:02:01Z'))
     act(() => { (expiry as () => void)() })
     expect(screen.getByText(/estimate expired because its live evidence is no longer fresh/)).toBeInTheDocument()
-    expect(screen.queryByText('Compare configured charging prices')).not.toBeInTheDocument()
+    expect(screen.queryByText(/charging now is about/)).not.toBeInTheDocument()
   })
 
   it('does not show a cached price comparison after its plan consent is revoked', async () => {

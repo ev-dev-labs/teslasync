@@ -10,6 +10,7 @@ const (
 	LatestStartUnachievable LatestStartStatus = "unachievable"
 	LatestStartEstimate     LatestStartStatus = "estimate"
 	LatestStartOverdue      LatestStartStatus = "overdue"
+	LatestStartRatesOnly    LatestStartStatus = "rates_only"
 )
 
 type LatestStartReason string

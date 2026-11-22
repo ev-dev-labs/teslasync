@@ -28,6 +28,16 @@ func (s *Source) ReadEvidence(ctx context.Context, job port.Job, from, through t
 	}
 	month.From, month.Through = from, through
 	err = pgx.BeginTxFunc(ctx, s.pool, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
+		var currentClaim bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM smart_monthly_tariff_plans p
+			WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3 AND p.lease_until=$4
+			  AND smart_feature_current(p.subject,'monthly_tariff',p.feature_claimed_at))`,
+			job.ID, job.Subject, job.VehicleID, job.Lease).Scan(&currentClaim); err != nil {
+			return fmt.Errorf("check monthly tariff evidence claim: %w", err)
+		}
+		if !currentClaim {
+			return nil
+		}
 		var ok bool
 		var err error
 		current, alternative, ok, err = readTerms(ctx, tx, job)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -23,6 +25,7 @@ func (r *Repository) ReadDraft(ctx context.Context, scope port.Scope) (*domain.P
 		FROM smart_media_playlist_drafts d
 		JOIN vehicles v ON v.id=d.vehicle_id AND v.archived_at IS NULL
 		LEFT JOIN smart_media_playlist_candidates c ON c.draft_id=d.id
+			AND (d.status<>'preview' OR smart_feature_current(d.subject,'playlist',d.feature_checked_at))
 		WHERE d.subject=$1 AND d.vehicle_id=$2 ORDER BY c.position`, scope.Subject, scope.VehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("query private playlist preview: %w", err)
@@ -57,6 +60,13 @@ func (r *Repository) ReadDraft(ctx context.Context, scope port.Scope) (*domain.P
 
 func (r *Repository) ReplaceDraft(ctx context.Context, scope port.Scope, expectedID int64, draft domain.PlaylistDraft) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, scope.Subject, smartfeature.Playlist)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return port.ErrChanged
+		}
 		if expectedID != 0 {
 			tag, err := tx.Exec(ctx, `
 				DELETE FROM smart_media_playlist_drafts
@@ -66,11 +76,12 @@ func (r *Repository) ReplaceDraft(ctx context.Context, scope port.Scope, expecte
 			}
 		}
 		var id int64
-		err := tx.QueryRow(ctx, `
-			INSERT INTO smart_media_playlist_drafts (subject,vehicle_id,departure_at,created_at,target_duration_s)
-			SELECT $1,v.id,$3,$4,$5 FROM vehicles v WHERE v.id=$2 AND v.archived_at IS NULL
+		err = tx.QueryRow(ctx, `
+			INSERT INTO smart_media_playlist_drafts (subject,vehicle_id,departure_at,created_at,target_duration_s,feature_checked_at)
+			SELECT $1,v.id,$3,$4,$5,$6 FROM vehicles v WHERE v.id=$2 AND v.archived_at IS NULL
+				AND smart_feature_current($1,'playlist',$6)
 			ON CONFLICT (subject,vehicle_id) DO NOTHING RETURNING id`,
-			scope.Subject, scope.VehicleID, draft.DepartureAt, draft.CreatedAt, draft.TargetDurationS).Scan(&id)
+			scope.Subject, scope.VehicleID, draft.DepartureAt, draft.CreatedAt, draft.TargetDurationS, draft.FeatureCheckedAt).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrChanged
 		}
@@ -125,6 +136,7 @@ func (r *Repository) ClaimPlaylistSave(ctx context.Context, scope port.Scope, id
 			UPDATE smart_media_playlist_drafts d SET status='saving',dispatch_at=$4
 			FROM vehicles v WHERE d.subject=$1 AND d.vehicle_id=$2 AND d.id=$3 AND d.status='preview'
 			AND NOT d.paused AND d.departure_at>$4 AND (d.snoozed_until IS NULL OR d.snoozed_until<=$4)
+			AND smart_feature_current(d.subject,'playlist',d.feature_checked_at)
 			AND v.id=d.vehicle_id AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID, id, now)
 		if err != nil {
 			return fmt.Errorf("claim private playlist save: %w", err)
@@ -135,6 +147,20 @@ func (r *Repository) ClaimPlaylistSave(ctx context.Context, scope port.Scope, id
 	return claimed, err
 }
 
+func (r *Repository) CheckPlaylistDraft(ctx context.Context, scope port.Scope, id int64) error {
+	var current bool
+	err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM smart_media_playlist_drafts d
+		WHERE d.subject=$1 AND d.vehicle_id=$2 AND d.id=$3
+		  AND smart_feature_current(d.subject,'playlist',d.feature_checked_at))`, scope.Subject, scope.VehicleID, id).Scan(&current)
+	if err != nil {
+		return fmt.Errorf("recheck private playlist permission: %w", err)
+	}
+	if !current {
+		return port.ErrChanged
+	}
+	return nil
+}
+
 func (r *Repository) CanSendPlaylistItems(ctx context.Context, scope port.Scope, id, revision int64, now time.Time) (bool, error) {
 	var allowed bool
 	err := r.db.Pool.QueryRow(ctx, `
@@ -142,6 +168,7 @@ func (r *Repository) CanSendPlaylistItems(ctx context.Context, scope port.Scope,
 			SELECT 1 FROM smart_media_playlist_drafts d JOIN vehicles v ON v.id=d.vehicle_id
 			JOIN smart_spotify_connections c ON c.subject=d.subject
 			WHERE d.subject=$1 AND d.vehicle_id=$2 AND d.id=$3 AND d.status='saving' AND d.playlist_id IS NOT NULL
+				AND smart_feature_current(d.subject,'playlist',d.feature_checked_at)
 				AND v.archived_at IS NULL AND c.revision=$4 AND c.token_expires_at>$5 AND d.departure_at>$5
 		)`, scope.Subject, scope.VehicleID, id, revision, now).Scan(&allowed)
 	if err != nil {

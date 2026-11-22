@@ -248,6 +248,7 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	smartcommutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
 	smartdeliverydb "github.com/ev-dev-labs/teslasync/internal/database/smartdelivery"
+	smartfeaturedb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	smartmediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
 	smartreadinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
@@ -255,6 +256,7 @@ import (
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	ratemw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
@@ -428,6 +430,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartcommutesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartdeliverysvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartmediasvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
@@ -445,6 +448,7 @@ import (
 	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
 	smartcommutehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
 	smartdeliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
+	smartfeaturehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartfeature"
 	smartmediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
 	smartreadinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
 	widgetdesignhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/widgetdesign"
@@ -1162,10 +1166,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 	ownershipIntelRepo := ownershipinteldb.NewDurableRepository(db)
+	smartFeatureService := smartfeaturesvc.New(smartfeaturedb.NewRepository(db.Pool))
 	ownershipIntelService := ownershipintelsvc.New(
 		ownershipinteldb.NewSourceRepository(db),
 		ownershipIntelRepo,
-	)
+	).WithInvoiceVariancePermission(func(ctx context.Context, subject string) (bool, error) {
+		return smartFeatureService.Allows(ctx, subject, smartfeature.InvoiceVariance)
+	})
 	warrantyReminders := ownershipintelsvc.NewWarrantyReminders(ownershipIntelRepo, nil)
 	subscriptionRenewals := renewalsvc.NewReviews(renewaldb.NewRepository(db.Pool), nil)
 	weeklyEfficiency := efficiencyhandler.NewHandler(
@@ -1333,6 +1340,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartreadinesshandler.WithOvernightDrain(overnightDrain),
 		smartreadinesshandler.WithCapacityTrend(capacityDigest))
 	smartDeliveryHandler := smartdeliveryhandler.NewHandler(smartDeliveryService, cfg.Auth.ForwardAuthHeader)
+	smartFeatureHandler := smartfeaturehandler.NewHandler(smartFeatureService, cfg.Auth.ForwardAuthHeader)
 	actionCenterSources := actioncenterdb.NewSourceRepository(db)
 	actionCenterOptions := []actioncentersvc.Option{
 		actioncentersvc.WithAdvancedIntelligence(advancedIntelligenceService),
@@ -1347,10 +1355,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		actioncentersvc.WithServiceCases(serviceCases, metrics.RecordServiceCaseEvent),
 		actioncentersvc.WithClimateScheduleReviews(climateScheduleReviews),
 		actioncentersvc.WithOperatorIncidentNotices(actionCenterSources, incidentRecipient),
+		actioncentersvc.WithOperatorIncidentPermission(func(ctx context.Context, subject string) (bool, error) {
+			return smartFeatureService.Allows(ctx, subject, smartfeature.HERENotice)
+		}),
 	}
 	if operators.Enabled() {
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithAutomationFailureGroups(
-			automationdb.NewAutomationHistoryRepo(db), operators.Allows))
+			automationdb.NewAutomationHistoryRepo(db), func(ctx context.Context, subject string) bool {
+				if !operators.Allows(ctx, subject) {
+					return false
+				}
+				allowed, _ := smartFeatureService.Allows(ctx, subject, smartfeature.AutomationNotice)
+				return allowed
+			}))
 	}
 	if solarConnections.CanConnect() {
 		actionCenterOptions = append(actionCenterOptions, actioncentersvc.WithSolarCharging(smartChargingService))
@@ -4079,6 +4096,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		ownershipIntelHandler.MountRoutes(r)
 		smartCommuteHandler.MountRoutes(r)
 		smartDeliveryHandler.MountRoutes(r)
+		smartFeatureHandler.MountRoutes(r)
 		smartChargingHandler.MountRoutes(r)
 		sharedChargerHandler.MountRoutes(r)
 		sharedTripHandler.MountRoutes(r)

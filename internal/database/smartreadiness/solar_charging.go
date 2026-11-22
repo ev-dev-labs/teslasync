@@ -63,15 +63,18 @@ func (r *Repository) DeleteSolarChargingPlan(ctx context.Context, subject string
 }
 
 const solarPlanColumns = `p.id, p.subject, p.vehicle_id, p.energy_site_id, p.place_id, p.place_updated_at,
-	p.consented_at, p.next_check_at, p.reserve_pct, p.reserve_read_at`
+	p.consented_at, p.next_check_at, p.reserve_pct, p.reserve_read_at,
+	smart_feature_current(p.subject,'solar_charging',p.feature_claimed_at),
+	smart_feature_current(p.subject,'solar_charging',p.reserve_read_at)`
 
 func scanSolarPlan(row pgx.Row) (domain.SolarChargingPlan, error) {
 	var plan domain.SolarChargingPlan
 	var percent *float64
 	var observedAt *time.Time
+	var reserveCurrent bool
 	err := row.Scan(&plan.ID, &plan.Subject, &plan.VehicleID, &plan.EnergySiteID, &plan.PlaceID, &plan.PlaceUpdatedAt,
-		&plan.ConsentedAt, &plan.NextCheckAt, &percent, &observedAt)
-	if percent != nil && observedAt != nil {
+		&plan.ConsentedAt, &plan.NextCheckAt, &percent, &observedAt, &plan.ClaimCurrent, &reserveCurrent)
+	if reserveCurrent && percent != nil && observedAt != nil {
 		plan.Reserve = &domain.SolarBackupReserve{SiteID: plan.EnergySiteID, Percent: *percent, ObservedAt: *observedAt}
 	}
 	return plan, err
@@ -95,6 +98,7 @@ func (r *Repository) ListSolarChargingScopes(ctx context.Context, subject string
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT p.id, p.vehicle_id, v.display_name, p.consented_at `+activeSolarChargingPlan+`
 		WHERE p.subject = $1 AND ($2::bigint IS NULL OR p.vehicle_id = $2) AND p.reserve_read_at IS NOT NULL
+		  AND smart_feature_current(p.subject,'solar_charging',p.reserve_read_at)
 		  AND EXISTS (SELECT 1 FROM smart_solar_charging_samples o
 		    WHERE o.plan_id = p.id AND o.consented_at = p.consented_at
 		      AND o.observed_at > $3 AND o.observed_at <= $4)
@@ -120,10 +124,11 @@ func (r *Repository) ClaimDueSolarChargingPlans(ctx context.Context, now, next t
 		WITH due AS (
 		  SELECT p.id `+activeSolarChargingPlan+`
 		  WHERE p.next_check_at <= $1 AND p.consented_at <= $1 AND (p.subject = $4) = $5
+		    AND smart_feature_allowed(p.subject,'solar_charging')
 		  ORDER BY p.next_check_at, p.id
 		  LIMIT $3 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_solar_charging_plans p SET next_check_at = $2 FROM due WHERE p.id = due.id
+		UPDATE smart_solar_charging_plans p SET next_check_at=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id = due.id
 		RETURNING `+solarPlanColumns, now, next, limit, personal.OpenSubject, sharedOpenMode)
 	if err != nil {
 		return nil, fmt.Errorf("claim due solar charging checks: %w", err)
@@ -153,6 +158,7 @@ func (r *Repository) SaveSolarChargingObservation(ctx context.Context, plan doma
 		WITH checked AS (
 		  SELECT p.id `+activeSolarChargingPlan+`
 		  WHERE p.id = $1 AND p.subject = $2 AND p.consented_at = $3 AND p.next_check_at = $4 AND p.next_check_at > $5
+		    AND smart_feature_current(p.subject,'solar_charging',p.feature_claimed_at)
 		  FOR UPDATE OF p
 		), refreshed AS (
 		  UPDATE smart_solar_charging_plans p SET reserve_pct = $6, reserve_read_at = $7
@@ -180,7 +186,8 @@ func (r *Repository) InvalidateSolarChargingEvidence(ctx context.Context, plan d
 	err := pgx.BeginFunc(ctx, r.db.Pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE smart_solar_charging_plans SET reserve_pct = NULL, reserve_read_at = NULL
-			WHERE id = $1 AND subject = $2 AND consented_at = $3 AND next_check_at = $4 AND next_check_at > $5`,
+			WHERE id = $1 AND subject = $2 AND consented_at = $3 AND next_check_at = $4 AND next_check_at > $5
+			  AND smart_feature_current(subject,'solar_charging',feature_claimed_at)`,
 			plan.ID, plan.Subject, plan.ConsentedAt, plan.NextCheckAt, now)
 		if err != nil || tag.RowsAffected() == 0 {
 			return err
@@ -204,6 +211,7 @@ func (r *Repository) ListSolarChargingObservations(ctx context.Context, plan dom
 		`+activeSolarChargingPlan+`
 		JOIN smart_solar_charging_samples o ON o.plan_id = p.id AND o.consented_at = p.consented_at
 		WHERE p.id = $1 AND p.subject = $2 AND p.consented_at = $3
+		  AND smart_feature_current(p.subject,'solar_charging',o.observed_at)
 		  AND o.observed_at >= GREATEST($4, p.consented_at) AND o.observed_at <= $5
 		ORDER BY o.observed_at DESC LIMIT 10`, plan.ID, plan.Subject, plan.ConsentedAt, since, now)
 	if err != nil {

@@ -50,8 +50,9 @@ func (r *Repository) Read(ctx context.Context, scope port.Scope, now time.Time) 
 		p := &digest.Projection
 		err = tx.QueryRow(ctx, `
 			SELECT month_through,checked_at,expires_at,evidence_from,observed_at,observed_days,used_m,allowed_to_date_m,lower_m,upper_m
-			FROM smart_mileage_term_digests WHERE plan_id=$1 AND dismissed_at IS NULL AND checked_at<=$2 AND expires_at>$2`,
-			plan.ID, now).Scan(&digest.Through, &digest.CheckedAt, &digest.ExpiresAt, &p.EvidenceFrom, &p.ObservedAt, &p.ObservedDays,
+			FROM smart_mileage_term_digests WHERE plan_id=$1 AND dismissed_at IS NULL AND checked_at<=$2 AND expires_at>$2
+			    AND smart_feature_current($3,'mileage_term',feature_checked_at)`,
+			plan.ID, now, scope.Subject).Scan(&digest.Through, &digest.CheckedAt, &digest.ExpiresAt, &p.EvidenceFrom, &p.ObservedAt, &p.ObservedDays,
 			&p.UsedM, &p.AllowedToDateM, &p.LowerM, &p.UpperM)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -135,9 +136,10 @@ func (r *Repository) Claim(ctx context.Context, now, lease time.Time) (*port.Job
 		WITH due AS (
 		    SELECT p.id FROM smart_mileage_term_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		    WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+		        AND smart_feature_allowed(p.subject,'mileage_term')
 		    ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_mileage_term_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+		UPDATE smart_mileage_term_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 		RETURNING p.id,p.subject,p.vehicle_id,p.time_zone,to_char(p.first_day,'YYYY-MM-DD'),to_char(p.end_day,'YYYY-MM-DD'),
 		    p.opening_odometer_m,p.allowance_m,p.minimum_overage_m,p.lease_until`, now, lease, personal.OpenSubject).
 		Scan(&job.ID, &job.Subject, &job.VehicleID, &job.TimeZone, &job.FirstDay, &job.EndDay,
@@ -165,6 +167,7 @@ func (r *Repository) ReadObservations(ctx context.Context, job port.Job, from, t
 		    ORDER BY s.ts DESC LIMIT 1
 		) observation ON true
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3 AND NOT p.paused
+		    AND smart_feature_current(p.subject,'mileage_term',p.feature_claimed_at)
 		    AND d.started_at>=$4::timestamptz-INTERVAL '1 day' AND d.started_at<$5
 		    AND d.ended_at>=$4 AND d.ended_at<$5 AND d.ended_at>d.started_at
 		ORDER BY observation.ts DESC LIMIT $6`, job.ID, job.Lease, now, from, through, domain.MaxSamples+1)
@@ -188,7 +191,8 @@ func (r *Repository) Finish(ctx context.Context, job port.Job, now, nextCycle ti
 		tag, err := tx.Exec(ctx, `
 			UPDATE smart_mileage_term_plans p SET lease_until=NULL,last_checked_at=$3,next_check_at=$4,next_cycle_at=$5
 			FROM vehicles v WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3
-			    AND NOT p.paused AND p.vehicle_id=v.id AND v.archived_at IS NULL`, job.ID, job.Lease, now, next, nextCycle)
+			    AND NOT p.paused AND p.vehicle_id=v.id AND v.archived_at IS NULL
+			    AND smart_feature_current(p.subject,'mileage_term',p.feature_claimed_at)`, job.ID, job.Lease, now, next, nextCycle)
 		if err != nil {
 			return fmt.Errorf("finish private mileage check: %w", err)
 		}
@@ -204,8 +208,9 @@ func (r *Repository) Finish(ctx context.Context, job port.Job, now, nextCycle ti
 		p := digest.Projection
 		tag, err = tx.Exec(ctx, `
 			INSERT INTO smart_mileage_term_digests (plan_id,month_through,checked_at,expires_at,evidence_from,observed_at,observed_days,
-			    used_m,allowed_to_date_m,lower_m,upper_m)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (plan_id) DO NOTHING`, job.ID, digest.Through,
+			    used_m,allowed_to_date_m,lower_m,upper_m,feature_checked_at)
+			SELECT id,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,feature_claimed_at
+			FROM smart_mileage_term_plans WHERE id=$1 ON CONFLICT (plan_id) DO NOTHING`, job.ID, digest.Through,
 			digest.CheckedAt, digest.ExpiresAt, p.EvidenceFrom, p.ObservedAt, p.ObservedDays, p.UsedM, p.AllowedToDateM, p.LowerM, p.UpperM)
 		if err != nil {
 			return fmt.Errorf("publish private mileage digest: %w", err)

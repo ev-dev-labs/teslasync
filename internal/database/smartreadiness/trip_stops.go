@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
@@ -211,8 +213,22 @@ func (r *Repository) DeleteStopSetup(ctx context.Context, key domain.StopPlanKey
 }
 
 func (r *Repository) CheckStopScope(ctx context.Context, key domain.StopPlanKey, scopeID int64, now time.Time) error {
+	return r.checkStopScope(ctx, key, scopeID, now, false)
+}
+
+const currentStopWork = ` AND smart_feature_current(p.subject,'trip_stops',s.feature_claimed_at)`
+
+func (r *Repository) CheckStopWork(ctx context.Context, key domain.StopPlanKey, scopeID int64, now time.Time) error {
+	return r.checkStopScope(ctx, key, scopeID, now, true)
+}
+
+func (r *Repository) checkStopScope(ctx context.Context, key domain.StopPlanKey, scopeID int64, now time.Time, work bool) error {
+	query := `SELECT s.id` + stopScopeFrom + stopScopeWhere + ` AND s.id = $5`
+	if work {
+		query += currentStopWork
+	}
 	var id int64
-	err := r.db.Pool.QueryRow(ctx, `SELECT s.id`+stopScopeFrom+stopScopeWhere+` AND s.id = $5`,
+	err := r.db.Pool.QueryRow(ctx, query,
 		key.PlanID, key.Subject, key.VehicleID, now, scopeID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return port.ErrNotFound
@@ -228,8 +244,15 @@ func (r *Repository) ClaimStopComparison(
 ) (bool, error) {
 	var claimed bool
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, key.Subject, smartfeature.TripStops)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return port.ErrNotFound
+		}
 		var planID int64
-		err := tx.QueryRow(ctx, `SELECT p.id`+stopScopeFrom+stopScopeWhere+` AND s.id = $5 FOR UPDATE OF p, s`,
+		err = tx.QueryRow(ctx, `SELECT p.id`+stopScopeFrom+stopScopeWhere+` AND s.id = $5 FOR UPDATE OF p, s`,
 			key.PlanID, key.Subject, key.VehicleID, now, scopeID).Scan(&planID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return port.ErrNotFound
@@ -246,7 +269,8 @@ func (r *Repository) ClaimStopComparison(
 		if tag.RowsAffected() == 0 {
 			return nil
 		}
-		if _, err := tx.Exec(ctx, `UPDATE smart_trip_stop_scopes SET last_compared_at = NULL, result_expires_at = NULL
+		if _, err := tx.Exec(ctx, `UPDATE smart_trip_stop_scopes SET last_compared_at = NULL, result_expires_at = NULL,
+			feature_claimed_at=statement_timestamp()
 			WHERE id = $1`, scopeID); err != nil {
 			return fmt.Errorf("clear expired trip stop comparison: %w", err)
 		}
@@ -266,7 +290,7 @@ func (r *Repository) ListStopChargeSessions(
 		  `+stopScopeFrom+`
 		  JOIN smart_trip_stop_places a ON a.scope_id = s.id AND a.place_id = $6
 		  JOIN charging_sessions c ON c.vehicle_id = p.vehicle_id AND c.geofence_id = a.place_id
-		  `+stopScopeWhere+` AND s.id = $5
+		  `+stopScopeWhere+currentStopWork+` AND s.id = $5
 		    AND c.started_at >= $4::timestamptz - INTERVAL '180 days' AND c.ended_at <= $4
 		    AND c.ended_at > c.started_at AND c.start_lat IS NOT NULL AND c.start_lng IS NOT NULL
 		  ORDER BY c.ended_at DESC, c.id DESC LIMIT 32
@@ -287,7 +311,7 @@ func (r *Repository) ReadStopComparison(
 		`+stopScopeFrom+`
 		JOIN smart_trip_stop_results res ON res.scope_id = s.id
 		JOIN geofences g ON g.id = res.place_id
-		`+stopScopeWhere+` AND s.id = $5 AND s.result_expires_at > $4
+		`+stopScopeWhere+currentStopWork+` AND s.id = $5 AND s.result_expires_at > $4
 		  AND here_estimates_usable(s.last_compared_at, 'here_routes')
 		ORDER BY res.rank`, key.PlanID, key.Subject, key.VehicleID, now, scopeID)
 	if err != nil {
@@ -314,12 +338,19 @@ func (r *Repository) SaveStopComparison(
 	ctx context.Context, key domain.StopPlanKey, scopeID int64, result domain.StopComparisonResult,
 ) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, key.Subject, smartfeature.TripStops)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return port.ErrNotFound
+		}
 		tag, err := tx.Exec(ctx, `UPDATE smart_trip_stop_scopes target
 			SET last_compared_at = $4, result_expires_at = $6
 			WHERE target.id = $5 AND target.last_compared_at IS NULL
 			AND here_estimates_usable($4::timestamptz, 'here_routes')
 			AND EXISTS (SELECT 1 FROM smart_trip_stop_check_limits lim WHERE lim.plan_id = target.plan_id AND lim.next_check_at > $4)
-			AND EXISTS (SELECT 1 `+stopScopeFrom+stopScopeWhere+` AND s.id = target.id)`,
+			AND EXISTS (SELECT 1 `+stopScopeFrom+stopScopeWhere+currentStopWork+` AND s.id = target.id)`,
 			key.PlanID, key.Subject, key.VehicleID, result.ComparedAt, scopeID, result.ExpiresAt)
 		if err != nil {
 			return fmt.Errorf("finalize trip stop comparison: %w", err)

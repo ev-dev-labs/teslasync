@@ -52,7 +52,7 @@ export interface SmartChargingLatestStart {
   plan_id: number
   plan_version?: number
   vehicle_id: number
-  status: 'unavailable' | 'sufficient' | 'unachievable' | 'estimate' | 'overdue'
+  status: 'unavailable' | 'sufficient' | 'unachievable' | 'estimate' | 'overdue' | 'rates_only'
   reason?: 'unknown_state' | 'not_charging' | 'unknown_location' | 'outside_site'
   required_low_pct: number
   required_high_pct: number

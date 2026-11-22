@@ -41,12 +41,16 @@ func (r *stubRepository) ListActivePlans(_ context.Context, subject string, vehi
 	}
 	return r.plansFor(subject, vehicleID), nil
 }
-func (r *stubRepository) ListLatestStartPlans(_ context.Context, subject string, vehicleID int64, _ time.Time, _ int) ([]domain.Plan, error) {
+func (r *stubRepository) ListLatestStartPlans(_ context.Context, subject string, vehicleID int64, now time.Time, _ int, _ *time.Time) ([]port.LatestStartPlan, error) {
 	r.latestCalls++
 	if r.revokeActive && r.latestCalls > 1 {
-		return []domain.Plan{}, nil
+		return nil, nil
 	}
-	return r.plansFor(subject, vehicleID), nil
+	var latest []port.LatestStartPlan
+	for _, plan := range r.plansFor(subject, vehicleID) {
+		latest = append(latest, port.LatestStartPlan{Plan: plan, ReadinessAllowed: true, WorkAt: now})
+	}
+	return latest, nil
 }
 func (*stubRepository) ReadEarlierCheckPlan(context.Context, domain.StopPlanKey) (port.EarlierCheckPlan, error) {
 	return port.EarlierCheckPlan{}, port.ErrNotFound

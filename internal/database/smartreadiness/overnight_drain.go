@@ -52,6 +52,7 @@ func (r *Repository) ReadOvernightDrain(ctx context.Context, scope port.Overnigh
 		LEFT JOIN smart_overnight_drain_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN smart_overnight_drain_reviews e ON e.plan_id=p.id AND e.expires_at>$3
 			AND e.dismissed_at IS NULL AND p.next_check_at IS NOT NULL AND e.evidence_fingerprint IS NOT NULL
+			AND smart_feature_current(p.subject,'overnight_drain',p.feature_checked_at)
 			AND `+noOvernightBaselineActivity+`
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID, now).
 		Scan(&plan.ID, &plan.TimeZone, &plan.Paused, &morning, &expiry, &start, &end,
@@ -139,10 +140,11 @@ func (r *Repository) ClaimOvernightDrain(ctx context.Context, now, lease time.Ti
 		SELECT p.id FROM smart_overnight_drain_plans p
 		JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
+			AND smart_feature_allowed(p.subject,'overnight_drain')
 		  AND p.subject NOT IN ($3,'open-mode')
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_overnight_drain_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_overnight_drain_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.vehicle_id,p.time_zone,p.lease_until`, now, lease, personaldomain.OpenSubject).
 		Scan(&job.PlanID, &job.VehicleID, &job.TimeZone, &job.Lease)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -158,7 +160,9 @@ func (r *Repository) FinishOvernightDrain(ctx context.Context, job port.DueOvern
 	var published bool
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE smart_overnight_drain_plans p SET lease_until=NULL,next_check_at=$4
+			,feature_checked_at=p.feature_claimed_at
 			FROM vehicles v WHERE p.id=$1 AND p.lease_until=$2 AND $3<p.lease_until
+				AND smart_feature_current(p.subject,'overnight_drain',p.feature_claimed_at)
 				AND p.next_check_at IS NOT NULL AND p.vehicle_id=v.id AND v.archived_at IS NULL`,
 			job.PlanID, job.Lease, checked, next)
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 
 	personal "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,7 +18,7 @@ var _ port.WindowRainRepository = (*Repository)(nil)
 const windowRainScope = `
 	FROM smart_window_rain_plans p
 	JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
-	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL`
+	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL AND smart_feature_current(p.subject,'window_rain',p.feature_checked_at)`
 
 func (r *Repository) ListWindowRainDeliveries(ctx context.Context, now time.Time, limit int) ([]domain.WindowRainRef, error) {
 	rows, err := r.db.Pool.Query(ctx, `
@@ -38,9 +39,9 @@ func (r *Repository) ListWindowRainDeliveries(ctx context.Context, now time.Time
 }
 
 func (r *Repository) LockWindowRain(ctx context.Context, ref domain.WindowRainRef, now time.Time) (port.ExpiringDispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin window rain dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.WindowRain)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT d.subscription_ciphertext `+windowRainScope+`
@@ -97,6 +98,7 @@ const windowRainClaimScope = windowRainScope + `
 	JOIN smart_push_window_rain_deliveries a ON a.plan_id=p.id AND a.subject=p.subject
 		AND a.vehicle_id=p.vehicle_id AND a.device_id=d.id AND a.expires_at=p.risk_expires_at
 	WHERE a.token_hash=$1 AND a.subject=$2 AND a.expires_at>$3 AND p.reason='window_rain_risk'
+		AND smart_feature_current(a.subject,'window_rain',a.feature_enqueued_at)
 		AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
 func (r *Repository) FindWindowRainDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.WindowRainRef, error) {
@@ -114,7 +116,7 @@ func (r *Repository) FindWindowRainDelivery(ctx context.Context, subject string,
 
 func (r *Repository) ConsumeWindowRainDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.WindowRain, func(tx pgx.Tx) error {
 		var vehicleID, planID int64
 		err := tx.QueryRow(ctx, `SELECT p.vehicle_id,p.id,p.push_title,p.push_body `+windowRainClaimScope+`
 			AND NOT EXISTS (SELECT 1 FROM drives

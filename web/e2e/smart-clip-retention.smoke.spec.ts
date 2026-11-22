@@ -44,7 +44,9 @@ for (const variant of [
     test.setTimeout(120_000);
     let subject = 'synthetic-retention-owner';
     let impersonating = false;
+    let retentionAllowed = true;
     let holdIdentity: Promise<void> | undefined;
+    let holdPermission: Promise<void> | undefined;
     const writes: string[] = [];
     page.on('request', request => {
       const { pathname, search } = new URL(request.url());
@@ -66,6 +68,10 @@ for (const variant of [
       return fulfillApiFixture(intercepted, api, {
         json: { mode: 'forward_auth', subject_header: 'X-Test-Subject', subject, impersonating },
       });
+    });
+    await page.route('**/api/v1/settings/smart-features', async intercepted => {
+      await holdPermission;
+      return fulfillApiFixture(intercepted, api, { json: [{ feature: 'dashcam_retention', allowed: retentionAllowed }] });
     });
     await page.route('**/api/v1/vehicles', intercepted => fulfillApiFixture(intercepted, api, {
       json: [7, 12].map(id => ({
@@ -126,6 +132,23 @@ for (const variant of [
     await expect(region.getByRole('button', { name: 'Edit deadline' })).toBeFocused();
     await expect(recommendation).toBeVisible();
 
+    retentionAllowed = false;
+    let releasePermission!: () => void;
+    holdPermission = new Promise<void>(resolve => { releasePermission = resolve; });
+    try {
+      const verifyingPermission = page.waitForRequest('**/api/v1/settings/smart-features');
+      await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+      await verifyingPermission;
+      await expect(recommendation).toHaveCount(0);
+      await expect(region.getByRole('button', { name: 'Edit deadline' })).toHaveCount(0);
+    } finally {
+      holdPermission = undefined;
+      releasePermission();
+    }
+    await expect(region.getByText(/Retention review is paused in Smart Features/)).toBeVisible();
+    await expect(recommendation).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'Imported clips' }).getByRole('button', { name: new RegExp(clipName) })).toBeVisible();
+    retentionAllowed = true;
     await page.reload();
     await recommendation.press('Enter');
     await expect(region.getByRole('region', { name: 'Selected clip' })).toBeFocused();

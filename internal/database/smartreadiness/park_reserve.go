@@ -21,16 +21,18 @@ func (r *Repository) ReadParkReserve(ctx context.Context, scope port.ParkReserve
 	var count, low, high *int
 	var battery, outside *float64
 	var sentry *string
+	var current bool
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),p.created_at,p.return_at,p.action_until,COALESCE(p.reserve_pct,0),
 			p.device_id,d.id IS NOT NULL,COALESCE(p.reason,''),
-			p.estimate_at,p.comparable_episodes,p.start_battery_pct,p.return_low_pct,p.return_high_pct,p.outside_c,p.sentry_mode
+			p.estimate_at,p.comparable_episodes,p.start_battery_pct,p.return_low_pct,p.return_high_pct,p.outside_c,p.sentry_mode,
+			smart_feature_current($1,'park_reserve',p.feature_checked_at)
 		FROM vehicles v
 		LEFT JOIN smart_park_reserve_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
 		Scan(&plan.ID, &created, &returns, &actionUntil, &plan.ReservePct, &plan.DeviceID, &plan.DeviceReady,
-			&plan.Reason, &observed, &count, &battery, &low, &high, &outside, &sentry)
+			&plan.Reason, &observed, &count, &battery, &low, &high, &outside, &sentry, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -41,6 +43,10 @@ func (r *Repository) ReadParkReserve(ctx context.Context, scope port.ParkReserve
 		return nil, nil
 	}
 	plan.CreatedAt, plan.ReturnAt, plan.ActionUntil = *created, *returns, *actionUntil
+	if !current {
+		plan.Reason = ""
+		return &plan, nil
+	}
 	if observed != nil && count != nil && battery != nil && low != nil && high != nil && outside != nil && sentry != nil {
 		plan.Forecast = &domain.ParkReserveForecast{
 			ParkReserveEstimate: domain.ParkReserveEstimate{
@@ -103,9 +109,10 @@ func (r *Repository) ClaimParkReserve(ctx context.Context, now, leaseUntil time.
 	err := r.db.Pool.QueryRow(ctx, `WITH due AS (
 			SELECT p.id FROM smart_park_reserve_plans p JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
 			WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1) AND p.subject NOT IN ($3,'open-mode')
+			  AND smart_feature_allowed(p.subject,'park_reserve')
 			ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 		)
-		UPDATE smart_park_reserve_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+		UPDATE smart_park_reserve_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 		RETURNING p.id,p.vehicle_id,p.created_at,p.return_at,p.action_until,p.reserve_pct,p.lease_until`,
 		now, leaseUntil, personaldomain.OpenSubject).
 		Scan(&job.Plan.ID, &job.Plan.VehicleID, &job.Plan.CreatedAt, &job.Plan.ReturnAt,
@@ -142,9 +149,10 @@ func (r *Repository) FinishParkReserve(ctx context.Context, job port.ParkReserve
 			&f.ReturnLowPct, &f.ReturnHighPct, &f.OutsideC, &f.SentryMode
 	}
 	tag, err := r.db.Pool.Exec(ctx, `UPDATE smart_park_reserve_plans p
-		SET reason=NULLIF($4,''),next_check_at=$5,lease_until=NULL,estimate_at=$6,comparable_episodes=$7,
+		SET reason=NULLIF($4,''),next_check_at=$5,lease_until=NULL,feature_checked_at=p.feature_claimed_at,estimate_at=$6,comparable_episodes=$7,
 			start_battery_pct=$8,return_low_pct=$9,return_high_pct=$10,outside_c=$11,sentry_mode=$12
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3
+			AND smart_feature_current(p.subject,'park_reserve',p.feature_claimed_at)
 			AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id=p.vehicle_id AND v.archived_at IS NULL)`,
 		job.Plan.ID, job.LeaseUntil, now, result.Reason, result.NextCheck, observed, count, battery, low, high, outside, sentry)
 	if err != nil {

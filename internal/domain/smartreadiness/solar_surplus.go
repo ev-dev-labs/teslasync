@@ -3,6 +3,7 @@ package smartreadiness
 import "time"
 
 type SolarChargingPlan struct {
+	ClaimCurrent   bool                `json:"-"`
 	ID             int64               `json:"-"`
 	Subject        string              `json:"-"`
 	VehicleID      int64               `json:"vehicle_id"`

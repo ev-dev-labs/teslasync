@@ -20,7 +20,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	commutedb "github.com/ev-dev-labs/teslasync/internal/database/smartcommute"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	commutehttp "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -320,6 +322,45 @@ func TestNavigationRechecksOutageAfterConnectivity(t *testing.T) {
 	if outcome != domain.NavigationExpired || fleet.checks.Load() != 1 || fleet.wakes.Load()+fleet.sends.Load() != 0 {
 		t.Fatalf("outage after connectivity allowed navigation: %s (%d checks, %d wakes, %d sends)",
 			outcome, fleet.checks.Load(), fleet.wakes.Load(), fleet.sends.Load())
+	}
+}
+
+func TestNavigationPauseFencesInFlightRequestButKeepsTrafficAdvice(t *testing.T) {
+	var cyclePermission func(context.Context) error
+	fleet := newNavigationFleetFixture(t, navigationFleetOptions{
+		initialState: "online", replyStatus: http.StatusOK,
+		beforeStatus: func(ctx context.Context) error { return cyclePermission(ctx) },
+	})
+	f, _, decision := newNavigationFixture(t, fleet)
+	prefs := featuredb.NewRepository(f.db.Pool)
+	set := func(ctx context.Context, allowed bool) error {
+		return prefs.SetPreference(ctx, navigationOwner, smartfeature.Preference{Feature: smartfeature.Navigation, Allowed: allowed})
+	}
+	cyclePermission = func(ctx context.Context) error {
+		if err := set(ctx, false); err != nil {
+			return err
+		}
+		return set(ctx, true)
+	}
+	send := func() domain.NavigationOutcome {
+		return navigationResult(t, navigationRequest(f.router, decision.RoutineID, navigationOwner, "subject:"+navigationOwner,
+			domain.NavigationRequest{VehicleID: 42, OccurrenceID: decision.OccurrenceID, Address: navigationAddress, Confirmed: true, WakeConfirmed: true}))
+	}
+	if err := set(t.Context(), false); err != nil {
+		t.Fatal(err)
+	}
+	if got := send(); got != domain.NavigationExpired || fleet.checks.Load() != 0 {
+		t.Fatalf("paused destination dispatch called Tesla: %s", got)
+	}
+	if err := set(t.Context(), true); err != nil {
+		t.Fatal(err)
+	}
+	if got := send(); got != domain.NavigationExpired || fleet.checks.Load() != 1 || fleet.wakes.Load()+fleet.sends.Load() != 0 {
+		t.Fatalf("pause and resume allowed an old request to send a destination: %s", got)
+	}
+	cyclePermission = func(context.Context) error { return nil }
+	if got := send(); got != domain.NavigationAccepted || fleet.sends.Load() != 1 {
+		t.Fatalf("a fresh confirmation could not use the existing traffic advice: %s", got)
 	}
 }
 

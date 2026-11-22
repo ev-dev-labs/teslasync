@@ -17,6 +17,7 @@ var _ port.BackupChargingRepository = (*Repository)(nil)
 const activeBackupWatch = `
 	FROM smart_backup_charging_watches w
 	JOIN vehicles v ON v.id=w.vehicle_id AND v.archived_at IS NULL
+	  AND smart_feature_allowed(w.subject,'backup_charging')
 	JOIN geofences g ON g.id=w.place_id AND g.enabled AND NOT g.needs_review
 	  AND g.archived_at IS NULL AND g.is_charging_location AND g.updated_at=w.place_updated_at
 	JOIN smart_solar_energy_connections c ON c.subject=w.subject AND c.energy_site_id=w.energy_site_id AND c.state_hash IS NULL
@@ -25,16 +26,19 @@ const activeBackupWatch = `
 
 const backupWatchColumns = `w.id,w.subject,w.vehicle_id,w.energy_site_id,w.place_id,w.place_updated_at,w.device_id,
 	w.consented_at,w.next_check_at,w.outage_started_at,w.watch_until,w.qualified_from,
-	w.qualified_at,w.qualified_until,w.vehicle_power_w,w.vehicle_power_at,w.minimum_battery_to_load_w`
+	w.qualified_at,w.qualified_until,w.vehicle_power_w,w.vehicle_power_at,w.minimum_battery_to_load_w,
+	smart_feature_current(w.subject,'backup_charging',w.feature_claimed_at),
+	smart_feature_current(w.subject,'backup_charging',w.feature_checked_at)`
 
 func scanBackupWatch(row pgx.Row) (domain.BackupChargingWatch, error) {
 	var watch domain.BackupChargingWatch
 	var at, until, powerAt *time.Time
 	var power, draw *float64
+	var sampleCurrent bool
 	err := row.Scan(&watch.ID, &watch.Subject, &watch.VehicleID, &watch.EnergySiteID, &watch.PlaceID, &watch.PlaceUpdatedAt,
 		&watch.DeviceID, &watch.ConsentedAt, &watch.NextCheckAt, &watch.OutageStart, &watch.WatchUntil, &watch.QualifiedFrom,
-		&at, &until, &power, &powerAt, &draw)
-	if at != nil && until != nil && power != nil && powerAt != nil && draw != nil {
+		&at, &until, &power, &powerAt, &draw, &watch.ClaimCurrent, &sampleCurrent)
+	if sampleCurrent && at != nil && until != nil && power != nil && powerAt != nil && draw != nil {
 		watch.Sample = &domain.BackupChargingSample{
 			ObservedAt: *at, ExpiresAt: *until, VehiclePowerW: *power, VehiclePowerAt: *powerAt, MinimumBatteryToLoadW: *draw,
 		}
@@ -57,6 +61,7 @@ func (r *Repository) FindBackupConnectionID(ctx context.Context, subject string)
 func (r *Repository) ListQualifiedBackupWatchVehicles(ctx context.Context, subject string, vehicleID *int64, now time.Time, limit int) ([]int64, error) {
 	rows, err := r.db.Pool.Query(ctx, `SELECT w.vehicle_id `+activeBackupWatch+`
 		WHERE w.subject=$1 AND ($2::bigint IS NULL OR w.vehicle_id=$2) AND w.watch_until>$3
+		  AND smart_feature_current(w.subject,'backup_charging',w.feature_checked_at)
 		  AND w.qualified_until>$3 AND w.qualified_at>=w.qualified_from+INTERVAL '30 seconds'
 		ORDER BY w.qualified_until,w.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {
@@ -134,7 +139,7 @@ func (r *Repository) ClaimBackupChargingWatches(ctx context.Context, now, next t
 		  WHERE w.next_check_at<=$1 AND w.watch_until>$1 AND w.subject<>$4 ORDER BY w.next_check_at,w.id
 		  LIMIT $3 FOR UPDATE OF w SKIP LOCKED
 		)
-		UPDATE smart_backup_charging_watches w SET next_check_at=$2 FROM due WHERE w.id=due.id
+		UPDATE smart_backup_charging_watches w SET next_check_at=$2,feature_claimed_at=statement_timestamp() FROM due WHERE w.id=due.id
 		RETURNING `+backupWatchColumns, now, next, limit, personal.OpenSubject)
 	if err != nil {
 		return nil, fmt.Errorf("claim backup charging checks: %w", err)
@@ -164,15 +169,18 @@ func (r *Repository) RecordBackupChargingCheck(ctx context.Context, w domain.Bac
 		WITH active AS (
 		  SELECT w.id `+activeBackupWatch+`
 		  WHERE w.id=$1 AND w.subject=$2 AND w.consented_at=$3 AND w.next_check_at=$4 AND w.next_check_at>$5 AND w.watch_until>$5
+		    AND smart_feature_current(w.subject,'backup_charging',w.feature_claimed_at)
 		    AND ($6::timestamptz IS NULL OR ($6>=w.consented_at AND $6<=$5
 		      AND (w.last_observed_at IS NULL OR $6>w.last_observed_at OR ($7 AND $6=w.last_observed_at))))
 		  FOR UPDATE OF w
 		)
 		UPDATE smart_backup_charging_watches w SET
+		  feature_checked_at=w.feature_claimed_at,
 		  last_observed_at=COALESCE($6,w.last_observed_at),
 		  watch_until=CASE WHEN $7 THEN GREATEST($5, w.outage_started_at + INTERVAL '1 microsecond') ELSE w.watch_until END,
 		  qualified_from=CASE WHEN $8::timestamptz IS NULL THEN NULL
-		    WHEN w.qualified_until>$8 AND w.vehicle_power_at<$12 THEN w.qualified_from ELSE $8 END,
+		    WHEN w.qualified_until>$8 AND w.vehicle_power_at<$12
+		      AND smart_feature_current(w.subject,'backup_charging',w.feature_checked_at) THEN w.qualified_from ELSE $8 END,
 		  qualified_at=$8,qualified_until=$9,vehicle_power_w=$10,minimum_battery_to_load_w=$11,vehicle_power_at=$12
 		FROM active WHERE w.id=active.id`,
 		w.ID, w.Subject, w.ConsentedAt, w.NextCheckAt, now, observed, endWatch,

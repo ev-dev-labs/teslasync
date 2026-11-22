@@ -79,6 +79,7 @@ function DriveTrackReview({ scope, vehicleId, identityPending, driveId }: Privat
   const labels = {
     off: t('driveDetail.trackReview.off', 'Off. Choose a moment to look up a track.'),
     drive_unmatched: t('driveDetail.trackReview.unmatched', 'This time cannot be attributed to one supported completed drive.'),
+    held: t('settings.smartFeatures.reviewPaused', 'This review is paused in Smart Features.'),
     drive_changed: t('driveDetail.trackReview.changed', 'The drive timestamps changed. Choose the time again.'),
     expired: t('driveDetail.trackReview.expired', 'This private lookup expired. Select a time to look it up again.'),
     missing_evidence: t('driveDetail.trackReview.missing', 'No track could be confirmed at that time. Nearby tracks were not substituted.'),

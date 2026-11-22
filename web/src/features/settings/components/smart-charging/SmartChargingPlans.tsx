@@ -76,6 +76,10 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
   const latestStartsQuery = useSmartChargingLatestStarts(scope, vehicleId, activePlans)
   const latestStartsState = useDataState(latestStartsQuery)
   const latestStarts = latestStartsQuery.data ?? []
+  const onlyRateComparisons = latestStarts.length > 0 && latestStarts.every(({ status }) => status === 'rates_only')
+  const latestStartsTitle = onlyRateComparisons
+    ? t('smartCharging.rateComparisonTitle', 'Compare configured charging prices')
+    : t('smartCharging.latestStartTitle', 'Latest safe start estimates')
   useEffect(() => {
     if (editing != null) formRef.current?.focus()
     else if (reminderTrigger.current) {
@@ -119,9 +123,9 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
     <section id="trip-stops" className="space-y-4" aria-label={t('smartCharging.plans', 'Your charging plans')}>
       <PanelTitle>{t('smartCharging.plans', 'Your charging plans')}</PanelTitle>
       {activePlans && (
-        <section className="space-y-3" aria-label={t('smartCharging.latestStartTitle', 'Latest safe start estimates')}>
-          <PanelTitle>{t('smartCharging.latestStartTitle', 'Latest safe start estimates')}</PanelTitle>
-          <StaleRefreshWarning state={latestStartsState} label={t('smartCharging.latestStartTitle', 'Latest safe start estimates')} />
+        <section className="space-y-3" aria-label={latestStartsTitle}>
+          <PanelTitle>{latestStartsTitle}</PanelTitle>
+          <StaleRefreshWarning state={latestStartsState} label={latestStartsTitle} />
           {latestStartsState.fatalError ? (
             <QueryError error={latestStartsState.fatalError} onRetry={() => void latestStartsQuery.refetch()} />
           ) : !latestStartsState.hasData ? (
@@ -144,16 +148,18 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
                 const expired = Number.isFinite(expiry) && expiry <= now
                 const snoozed = plan.snoozed_until != null && Date.parse(plan.snoozed_until) > now
                 const planMatches = plan.version == null || estimate.plan_version == null || plan.version === estimate.plan_version
+                const ratesOnly = estimate.status === 'rates_only'
                 const proposedReminder = latestStartsState.status === 'ok' ? earlierCheckAt(plan, estimate, now) : null
                 const comparison = planMatches && !expired && Number.isFinite(expiry) && plan.enabled && !snoozed &&
-                  plan.compare_site_rates && estimate.status === 'estimate' ? estimate.cost_comparison : undefined
-                const projection = planMatches && !expired && Number.isFinite(expiry) && plan.enabled && !snoozed &&
+                  plan.compare_site_rates && (estimate.status === 'estimate' || ratesOnly) ? estimate.cost_comparison : undefined
+                const projection = !ratesOnly && planMatches && !expired && Number.isFinite(expiry) && plan.enabled && !snoozed &&
                   estimate.trip_projection ? displayProjection(estimate.trip_projection, plan.reserve_pct) : undefined
                 const formatCost = (value: string) => comparison
                   ? formatCurrencyValue(Number(value), comparison.currency, locale,
                     currencyFractionDigits(comparison.currency, locale), { useGrouping: true }) || '—'
                   : '—'
-                let content = t('smartCharging.latestStartUnavailable', 'A current estimate is unavailable. Fresh battery and pack-capacity data are required.')
+                if (ratesOnly && !comparison && !expired) return null
+                let content = ratesOnly ? null : t('smartCharging.latestStartUnavailable', 'A current estimate is unavailable. Fresh battery and pack-capacity data are required.')
                 if (!planMatches) {
                   content = t('smartCharging.latestStartPlanChanged', 'This plan changed. Refresh its estimate before relying on it.')
                 } else if (expired) {
@@ -193,7 +199,7 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
                     <Text as="p" variant="bodySm" weight="semibold">
                       {t('smartCharging.planHeading', 'Departure {{when}}', { when: formatDateTime(plan.departure_at) })}
                     </Text>
-                    <Text as="p" variant="bodySm">{content}</Text>
+                    {content && <Text as="p" variant="bodySm">{content}</Text>}
                     {proposedReminder && (
                       <Button type="button" variant="secondary" className="min-h-11"
                         disabled={disabled || formDisabled || latestStartsState.isRefreshing || editing != null}
@@ -225,9 +231,11 @@ export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPl
                     )}
                     {comparison && (
                       <div className="space-y-1">
-                        <Text as="p" variant="bodySm" weight="semibold">
-                          {t('smartCharging.rateComparisonTitle', 'Compare configured charging prices')}
-                        </Text>
+                        {!onlyRateComparisons && (
+                          <Text as="p" variant="bodySm" weight="semibold">
+                            {t('smartCharging.rateComparisonTitle', 'Compare configured charging prices')}
+                          </Text>
+                        )}
                         <Text as="p" variant="bodySm">
                           {t('smartCharging.rateComparisonEstimate', 'For the higher trip-use estimate ({{energy}}), charging now is about {{now}}; starting at {{start}} is about {{later}}, saving {{saving}} ({{currency}}).', {
                             energy: formatEnergy(comparison.required_energy_wh),

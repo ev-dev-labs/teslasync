@@ -74,6 +74,7 @@ export {
   Telescope as telescope,
   ThermometerSnowflake as thermometerSnowflake,
   TimerOff as timerOff,
+  ToggleLeft as toggleLeft,
   Trees as trees,
   UsersRound as usersRound,
   Waypoints as waypoints,

@@ -91,6 +91,7 @@ type TrafficDecision struct {
 	RouteEnergy           *TrafficEnergyEvidence `json:"route_energy,omitempty"`
 	RouteEnergyOnly       bool                   `json:"route_energy_only,omitempty"`
 	NavigationOutcome     NavigationOutcome      `json:"navigation_outcome,omitempty"`
+	NavigationPaused      bool                   `json:"navigation_paused,omitempty"`
 	Origin                Point                  `json:"-"`
 }
 

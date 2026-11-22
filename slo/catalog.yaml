@@ -274,6 +274,16 @@ slos:
     owner: notifications
     tags: [http, notifications]
 
+  - name: smart_feature_preference_availability
+    description: "Subject-scoped Smart Feature controls must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, settings, notifications]
+
   - name: widget_design_preference_availability
     description: "Durable subject-scoped widget design reads and writes must avoid server errors."
     sli:

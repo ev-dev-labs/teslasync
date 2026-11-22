@@ -23,18 +23,19 @@ type PlaylistCandidate struct {
 }
 
 type PlaylistDraft struct {
-	ID              int64               `json:"id"`
-	VehicleID       int64               `json:"vehicle_id"`
-	DepartureAt     time.Time           `json:"departure_at"`
-	TargetDurationS int                 `json:"target_duration_s"`
-	CreatedAt       time.Time           `json:"created_at"`
-	ExpiresAt       time.Time           `json:"expires_at"`
-	Paused          bool                `json:"paused"`
-	SnoozedUntil    *time.Time          `json:"snoozed_until,omitempty"`
-	Status          PlaylistSaveStatus  `json:"status"`
-	PlaylistID      string              `json:"playlist_id,omitempty"`
-	DispatchAt      *time.Time          `json:"-"`
-	Candidates      []PlaylistCandidate `json:"candidates"`
+	FeatureCheckedAt time.Time           `json:"-"`
+	ID               int64               `json:"id"`
+	VehicleID        int64               `json:"vehicle_id"`
+	DepartureAt      time.Time           `json:"departure_at"`
+	TargetDurationS  int                 `json:"target_duration_s"`
+	CreatedAt        time.Time           `json:"created_at"`
+	ExpiresAt        time.Time           `json:"expires_at"`
+	Paused           bool                `json:"paused"`
+	SnoozedUntil     *time.Time          `json:"snoozed_until,omitempty"`
+	Status           PlaylistSaveStatus  `json:"status"`
+	PlaylistID       string              `json:"playlist_id,omitempty"`
+	DispatchAt       *time.Time          `json:"-"`
+	Candidates       []PlaylistCandidate `json:"candidates"`
 }
 
 type PlaylistSetup struct {

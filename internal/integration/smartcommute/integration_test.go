@@ -29,6 +29,7 @@ import (
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	actionhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	commutehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -130,6 +131,7 @@ func testDatabase(t *testing.T, spy *driveQueryTracer) *database.DB {
 			t.Fatalf("apply %s: %v", file, err)
 		}
 	}
+	smartfixture.Policy(t, pool, "up")
 	return &database.DB{Pool: pool}
 }
 

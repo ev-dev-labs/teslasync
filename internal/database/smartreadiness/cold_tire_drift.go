@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/jackc/pgx/v5"
@@ -17,20 +19,22 @@ func (r *Repository) ReadColdTireReview(ctx context.Context, scope port.ColdTire
 	var review domain.ColdTireReview
 	var corner *domain.TireCorner
 	var drift domain.ColdTireDrift
+	var current bool
 	err := r.db.Pool.QueryRow(ctx, `SELECT COALESCE(c.id,0),COALESCE(c.reading_count,0),c.last_reading_at,
 		c.corner,COALESCE(c.comparable_count,0),COALESCE(c.baseline_at,'epoch'::timestamptz),
-		COALESCE(c.expires_at,'epoch'::timestamptz),COALESCE(c.relative_drop_pa,0),COALESCE(c.last_gauge_pressure_pa,0)
+		COALESCE(c.expires_at,'epoch'::timestamptz),COALESCE(c.relative_drop_pa,0),COALESCE(c.last_gauge_pressure_pa,0),
+		smart_feature_current($1,'cold_tire_drift',c.feature_checked_at)
 		FROM vehicles v LEFT JOIN smart_cold_tire_reviews c ON c.vehicle_id=v.id AND c.subject=$1
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
 		Scan(&review.SeriesID, &review.ReadingCount, &review.LastReading, &corner, &drift.Count, &drift.BaselineAt,
-			&drift.ExpiresAt, &drift.RelativeDropPa, &drift.LastGaugePressurePa)
+			&drift.ExpiresAt, &drift.RelativeDropPa, &drift.LastGaugePressurePa, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return review, port.ErrNotFound
 	}
 	if err != nil {
 		return review, fmt.Errorf("read private cold tire review: %w", err)
 	}
-	if corner != nil && review.LastReading != nil && drift.ExpiresAt.After(now) {
+	if current && corner != nil && review.LastReading != nil && drift.ExpiresAt.After(now) {
 		drift.Corner, drift.ObservedAt = *corner, *review.LastReading
 		review.Drift = &drift
 	}
@@ -43,6 +47,10 @@ func (r *Repository) AppendColdTireReading(ctx context.Context, scope port.ColdT
 	var reason domain.ColdTireDriftReason
 	var published bool
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, scope.Subject, smartfeature.ColdTire)
+		if err != nil {
+			return err
+		}
 		key, err := lockColdTireSeries(ctx, tx, scope, expectedID)
 		if err != nil {
 			return err
@@ -53,12 +61,19 @@ func (r *Repository) AppendColdTireReading(ctx context.Context, scope port.ColdT
 		if err := writeColdTireReading(ctx, tx, key.id, reading, window.From); err != nil {
 			return err
 		}
+		if !allowed {
+			reason = domain.ColdTireDriftPaused
+			_, err := tx.Exec(ctx, `UPDATE smart_cold_tire_reviews c SET last_reading_at=$2,
+				reading_count=(SELECT count(*) FROM smart_cold_tire_readings WHERE review_id=c.id)
+				WHERE c.id=$1`, key.id, reading.ObservedAt)
+			return err
+		}
 		rows, err := readColdTireSeries(ctx, tx, key.id)
 		if err != nil {
 			return err
 		}
 		drift, outcome := evaluate(rows)
-		published = drift != nil && (key.corner == nil || *key.corner != drift.Corner ||
+		published = drift != nil && (!key.current || key.corner == nil || *key.corner != drift.Corner ||
 			key.expires == nil || !key.expires.After(window.Now))
 		if err := saveColdTireReview(ctx, tx, key.id, len(rows), reading.ObservedAt, drift, published); err != nil {
 			return err
@@ -77,6 +92,7 @@ type coldTireSeriesKey struct {
 	last    *time.Time
 	corner  *domain.TireCorner
 	expires *time.Time
+	current bool
 }
 
 func lockColdTireSeries(ctx context.Context, tx pgx.Tx, scope port.ColdTireScope, expectedID int64) (coldTireSeriesKey, error) {
@@ -93,10 +109,11 @@ func lockColdTireSeries(ctx context.Context, tx pgx.Tx, scope port.ColdTireScope
 		}
 		return key, nil
 	}
-	err := tx.QueryRow(ctx, `SELECT c.id,c.last_reading_at,c.corner,c.expires_at
+	err := tx.QueryRow(ctx, `SELECT c.id,c.last_reading_at,c.corner,c.expires_at,
+		smart_feature_current(c.subject,'cold_tire_drift',c.feature_checked_at)
 		FROM smart_cold_tire_reviews c JOIN vehicles v ON v.id=c.vehicle_id AND v.archived_at IS NULL
 		WHERE c.subject=$1 AND c.vehicle_id=$2 AND c.id=$3 FOR UPDATE OF c`,
-		scope.Subject, scope.VehicleID, expectedID).Scan(&key.id, &key.last, &key.corner, &key.expires)
+		scope.Subject, scope.VehicleID, expectedID).Scan(&key.id, &key.last, &key.corner, &key.expires, &key.current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return key, port.ErrColdTireSeriesChanged
 	}
@@ -151,7 +168,7 @@ func saveColdTireReview(ctx context.Context, tx pgx.Tx, seriesID int64, count in
 	}
 	_, err := tx.Exec(ctx, `UPDATE smart_cold_tire_reviews SET reading_count=$2,last_reading_at=$3,corner=$4,
 		comparable_count=$5,baseline_at=$6,expires_at=$7,relative_drop_pa=$8,last_gauge_pressure_pa=$9,
-		occurrence=occurrence+$10::bigint WHERE id=$1`,
+		occurrence=occurrence+$10::bigint,feature_checked_at=statement_timestamp() WHERE id=$1`,
 		seriesID, count, at, corner, comparable, baseline, expires, drop, gauge, next)
 	if err != nil {
 		return fmt.Errorf("persist private cold tire evaluation: %w", err)
@@ -173,6 +190,7 @@ func (r *Repository) ListColdTireDrift(ctx context.Context, subject string, vehi
 		c.baseline_at,c.last_reading_at,c.expires_at,c.relative_drop_pa,c.last_gauge_pressure_pa
 		FROM smart_cold_tire_reviews c JOIN vehicles v ON v.id=c.vehicle_id AND v.archived_at IS NULL
 		WHERE c.subject=$1 AND ($2::bigint IS NULL OR c.vehicle_id=$2) AND c.expires_at>$3
+		  AND smart_feature_current(c.subject,'cold_tire_drift',c.feature_checked_at)
 		ORDER BY c.expires_at,c.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list private cold tire decisions: %w", err)

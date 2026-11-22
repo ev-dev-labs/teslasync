@@ -8,6 +8,7 @@ import (
 
 	personal "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,7 +18,7 @@ var _ port.ParkedUnlockRepository = (*Repository)(nil)
 const parkedUnlockScope = `
 	FROM smart_parked_unlock_plans p
 	JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
-	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL
+	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL AND smart_feature_current(p.subject,'parked_unlock',p.feature_checked_at)
 	JOIN geofences g ON g.id=p.place_id AND g.updated_at=p.place_revision
 		AND g.enabled AND NOT g.needs_review AND g.archived_at IS NULL`
 
@@ -38,9 +39,9 @@ func (r *Repository) ListParkedUnlockDeliveries(ctx context.Context, now time.Ti
 }
 
 func (r *Repository) LockParkedUnlock(ctx context.Context, ref domain.ParkedUnlockRef, now time.Time) (port.ExpiringDispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin parked unlock dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.ParkedUnlock)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT d.subscription_ciphertext `+parkedUnlockScope+`
@@ -95,6 +96,7 @@ const parkedUnlockClaimScope = parkedUnlockScope + `
 	JOIN smart_push_parked_unlock_deliveries a ON a.plan_id=p.id AND a.subject=p.subject
 		AND a.vehicle_id=p.vehicle_id AND a.device_id=d.id AND a.park_id=p.park_id AND a.unlocked_since=p.unlocked_since
 	WHERE a.token_hash=$1 AND a.subject=$2 AND a.expires_at>$3 AND p.risk_expires_at>$3
+		AND smart_feature_current(a.subject,'parked_unlock',a.feature_enqueued_at)
 		AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
 func (r *Repository) FindParkedUnlockDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.ParkedUnlockRef, error) {
@@ -112,7 +114,7 @@ func (r *Repository) FindParkedUnlockDelivery(ctx context.Context, subject strin
 
 func (r *Repository) ConsumeParkedUnlockDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.ParkedUnlock, func(tx pgx.Tx) error {
 		var vehicleID, planID, parkID int64
 		err := tx.QueryRow(ctx, `SELECT p.vehicle_id,p.id,p.park_id,p.push_title,p.push_body `+parkedUnlockClaimScope+`
 			AND EXISTS (SELECT 1 FROM (

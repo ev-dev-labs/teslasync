@@ -90,9 +90,9 @@ func analyzeLocked(
 			  subject, vehicle_id, status, weekday, departure_s, time_zone,
 			  origin_latitude, origin_longitude, destination_latitude, destination_longitude,
 			  evidence_matching_days, evidence_window_start_s, evidence_window_end_s,
-			  evidence_first_at, evidence_last_at, created_at, updated_at)
+			  evidence_first_at, evidence_last_at, created_at, updated_at, feature_checked_at)
 			VALUES ($1, $2, 'suggested', $3, $4, $5, $6, $7, $8, $9,
-			        $10, $11, $12, $13, $14, $15, $15)`,
+			        $10, $11, $12, $13, $14, $15, $15, statement_timestamp())`,
 			subject, settings.VehicleID, learned.Weekday, learned.DepartureS, settings.TimeZone,
 			learned.Origin.Latitude, learned.Origin.Longitude,
 			learned.Destination.Latitude, learned.Destination.Longitude,
@@ -110,7 +110,7 @@ func analyzeLocked(
 			SET weekday = $4, departure_s = $5, origin_latitude = $6, origin_longitude = $7,
 			    destination_latitude = $8, destination_longitude = $9,
 			    evidence_matching_days = $10, evidence_window_start_s = $11, evidence_window_end_s = $12,
-			    evidence_first_at = $13, evidence_last_at = $14, updated_at = $15
+			    evidence_first_at = $13, evidence_last_at = $14, updated_at = $15, feature_checked_at = statement_timestamp()
 			WHERE subject = $1 AND vehicle_id = $2 AND id = $3 AND status = 'suggested'`,
 			subject, settings.VehicleID, refreshed.ID, learned.Weekday, learned.DepartureS,
 			learned.Origin.Latitude, learned.Origin.Longitude,

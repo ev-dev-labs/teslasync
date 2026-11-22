@@ -97,23 +97,29 @@ func readTripReview(ctx context.Context, db database.DBTX, key domain.StopPlanKe
 	var value domain.TripReviewSnapshot
 	var status string
 	var started, ended *time.Time
+	var allowed bool
+	var workAt time.Time
 	setup, baseline, journey := &value.Setup, &value.Baseline, &value.Journey
 	err := db.QueryRow(ctx, `
 		SELECT b.revision, b.journey_id, b.plan_version, b.origin_updated_at, b.destination_id,
 		  b.destination_updated_at, b.stop_place_id, b.stop_place_updated_at, b.planned_arrival_pct, b.planned_stop_s,
-		  p.vehicle_id, o.id, b.saved_at, p.departure_at, j.status, j.started_at, j.ended_at
+		  p.vehicle_id, o.id, b.saved_at, p.departure_at, j.status, j.started_at, j.ended_at,
+		  smart_feature_allowed(p.subject,'trip_review'), statement_timestamp()
 		`+reviewFrom+reviewWhere, key.PlanID, key.Subject, key.VehicleID).
 		Scan(&value.ScopedRevision, &setup.JourneyID, &setup.PlanVersion, &setup.OriginUpdatedAt, &setup.DestinationID,
 			&setup.DestinationUpdatedAt, &setup.StopPlaceID, &setup.StopPlaceUpdatedAt, &setup.PlannedArrivalPct, &setup.PlannedStopS,
-			&baseline.VehicleID, &baseline.OriginPlaceID, &baseline.SavedAt, &baseline.DepartureAt, &status, &started, &ended)
+			&baseline.VehicleID, &baseline.OriginPlaceID, &baseline.SavedAt, &baseline.DepartureAt, &status, &started, &ended, &allowed, &workAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read saved trip review: %w", err)
 	}
+	if !allowed {
+		return &value, nil
+	}
 	if status == "planned" && baseline.DepartureAt.After(now) {
-		value.SimilarAdjustment, err = readSimilarTripAdjustment(ctx, db, key, value, now)
+		value.SimilarAdjustment, err = readSimilarTripAdjustment(ctx, db, key, value, now, workAt)
 		return &value, err
 	}
 	if status != "completed" || started == nil || ended == nil ||
@@ -136,8 +142,9 @@ func readTripReview(ctx context.Context, db database.DBTX, key domain.StopPlanKe
 	err = db.QueryRow(ctx, `SELECT b.revision, a.saved_at, COALESCE(a.extra_stop_s, 0), COALESCE(a.extra_arrival_pct, 0)
 		`+reviewFrom+` LEFT JOIN smart_trip_review_adjustments a ON a.review_revision = b.revision
 		 AND a.arrival_observed_at IS NOT NULL
-		`+reviewWhere+` AND b.revision = $4 AND j.status = 'completed' AND j.started_at = $5 AND j.ended_at = $6`+unambiguousJourney,
-		key.PlanID, key.Subject, key.VehicleID, value.ScopedRevision, *started, *ended).
+		`+reviewWhere+` AND b.revision = $4 AND j.status = 'completed' AND j.started_at = $5 AND j.ended_at = $6
+		AND smart_feature_current(p.subject,'trip_review',$7)`+unambiguousJourney,
+		key.PlanID, key.Subject, key.VehicleID, value.ScopedRevision, *started, *ended, workAt).
 		Scan(&revision, &adjustmentAt, &adjustment.ExtraStopS, &adjustment.ExtraArrivalPct)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -154,12 +161,13 @@ func readTripReview(ctx context.Context, db database.DBTX, key domain.StopPlanKe
 }
 
 func readSimilarTripAdjustment(
-	ctx context.Context, db database.DBTX, key domain.StopPlanKey, current domain.TripReviewSnapshot, now time.Time,
+	ctx context.Context, db database.DBTX, key domain.StopPlanKey, current domain.TripReviewSnapshot, now, workAt time.Time,
 ) (*domain.SimilarTripReviewAdjustment, error) {
 	var adjustment domain.SimilarTripReviewAdjustment
 	err := db.QueryRow(ctx, `SELECT a.saved_at, a.extra_stop_s, a.extra_arrival_pct, j.ended_at + INTERVAL '720 hours' `+reviewFrom+`
 		JOIN smart_trip_review_adjustments a ON a.review_revision = b.revision AND a.arrival_observed_at IS NOT NULL
 		WHERE p.id <> $1 AND p.subject = $2 AND p.vehicle_id = $3 AND o.id = $4 AND d.id = $5
+		  AND smart_feature_current(p.subject,'trip_review',$9)
 		  AND (b.stop_place_id IS NULL OR c.id IS NOT NULL)
 		  AND b.stop_place_id IS NOT DISTINCT FROM $6::bigint
 		  AND j.status = 'completed' AND j.ended_at <= $7 AND j.ended_at > $7::timestamptz - INTERVAL '720 hours'
@@ -167,7 +175,7 @@ func readSimilarTripAdjustment(
 		    ON active.plan_id = ap.id AND active.plan_version = ap.version
 		    WHERE ap.id = $1 AND ap.subject = $2 AND ap.vehicle_id = $3 AND active.revision = $8)`+unambiguousJourney+`
 		ORDER BY a.saved_at DESC LIMIT 1`, key.PlanID, key.Subject, key.VehicleID, current.Baseline.OriginPlaceID,
-		current.Setup.DestinationID, current.Setup.StopPlaceID, now, current.ScopedRevision).
+		current.Setup.DestinationID, current.Setup.StopPlaceID, now, current.ScopedRevision, workAt).
 		Scan(&adjustment.SavedAt, &adjustment.ExtraStopS, &adjustment.ExtraArrivalPct, &adjustment.ExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

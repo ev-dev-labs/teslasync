@@ -260,6 +260,12 @@ export default function SettingsPage() {
                   <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
                   <div className="grid grid-cols-settings-shortcuts gap-4">
                     <SettingsActionCard
+                      href="/settings/smart-features"
+                      icon={<Icon icon={Zap} size="lg" />}
+                      title={t('settings.smartFeatures.title', 'Smart Features')}
+                      description={t('settings.smartFeatures.subtitle', 'Allow or pause individual recommendations and reminders.')}
+                    />
+                    <SettingsActionCard
                       href="/data-export"
                       iconColor="green"
                       icon={<Icon icon={Download} size="lg" />}

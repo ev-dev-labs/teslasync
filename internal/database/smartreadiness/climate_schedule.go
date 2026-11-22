@@ -63,6 +63,7 @@ func (r *Repository) ReadClimateSchedule(ctx context.Context, scope port.Climate
 		LEFT JOIN smart_climate_schedule_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN eligible a ON a.id=p.automation_id AND a.vehicle_id=p.vehicle_id AND a.updated_at=p.schedule_revision
 		LEFT JOIN smart_climate_schedule_reviews e ON e.plan_id=p.id AND e.expires_at>$3 AND a.id IS NOT NULL
+			AND smart_feature_current(p.subject,'climate_schedule',p.feature_checked_at)
 			AND `+noReviewedClimateTravel+`
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID, now).
 		Scan(&plan.ID, &plan.AutomationID, &plan.Current, &week, &expiry, &observed, &review.RunTimes)
@@ -126,10 +127,11 @@ func (r *Repository) ClaimClimateSchedule(ctx context.Context, now, lease time.T
 		SELECT p.id,a.timezone FROM smart_climate_schedule_plans p
 		JOIN eligible a ON a.id=p.automation_id AND a.vehicle_id=p.vehicle_id AND a.updated_at=p.schedule_revision
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
+		  AND smart_feature_allowed(p.subject,'climate_schedule')
 		  AND p.subject NOT IN ($3,'open-mode')
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_climate_schedule_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_climate_schedule_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.vehicle_id,due.timezone,p.lease_until`, now, lease, personaldomain.OpenSubject).
 		Scan(&job.PlanID, &job.VehicleID, &job.TimeZone, &job.Lease)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -145,6 +147,7 @@ func (r *Repository) ClimateScheduleRuns(ctx context.Context, job port.DueClimat
 	rows, err := r.db.Pool.Query(ctx, `SELECT receipt.fired_at,h.triggered_at,h.completed_at
 		FROM smart_climate_schedule_receipts receipt
 		JOIN smart_climate_schedule_plans p ON p.id=receipt.plan_id AND p.vehicle_id=$2 AND p.lease_until=$3
+		  AND smart_feature_current(p.subject,'climate_schedule',p.feature_claimed_at)
 		JOIN automation_history h ON h.id=receipt.history_id AND h.automation_id=p.automation_id
 		WHERE p.id=$1 AND receipt.fired_at BETWEEN $4 AND $5
 		  AND h.status='success' AND h.completed_at IS NOT NULL
@@ -172,8 +175,9 @@ func (r *Repository) FinishClimateSchedule(ctx context.Context, job port.DueClim
 	var out port.ClimateScheduleCompletion
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, qualifiedClimateSchedules+`
-			UPDATE smart_climate_schedule_plans p SET lease_until=NULL,next_check_at=$4
+			UPDATE smart_climate_schedule_plans p SET lease_until=NULL,next_check_at=$4,feature_checked_at=p.feature_claimed_at
 			FROM eligible a WHERE p.id=$1 AND p.lease_until=$2 AND $3<p.lease_until
+			  AND smart_feature_current(p.subject,'climate_schedule',p.feature_claimed_at)
 			  AND a.id=p.automation_id AND a.vehicle_id=p.vehicle_id AND a.updated_at=p.schedule_revision`,
 			job.PlanID, job.Lease, checked, next)
 		if err != nil {
@@ -222,7 +226,8 @@ func (r *Repository) ListClimateScheduleReviews(ctx context.Context, subject str
 		JOIN eligible a ON a.id=p.automation_id AND a.vehicle_id=p.vehicle_id AND a.updated_at=p.schedule_revision
 		JOIN vehicles v ON v.id=p.vehicle_id
 		JOIN smart_climate_schedule_reviews e ON e.plan_id=p.id AND e.expires_at>$3
-		WHERE p.subject=$1 AND ($2::bigint IS NULL OR p.vehicle_id=$2) AND `+noReviewedClimateTravel+`
+		WHERE p.subject=$1 AND ($2::bigint IS NULL OR p.vehicle_id=$2)
+			AND smart_feature_current(p.subject,'climate_schedule',p.feature_checked_at) AND `+noReviewedClimateTravel+`
 		ORDER BY e.observed_through DESC,p.id LIMIT $4`, subject, vehicleID, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list private climate schedule reviews: %w", err)

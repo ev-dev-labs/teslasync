@@ -320,6 +320,7 @@ const MyActivity = lazy(routeLoaders.MyActivity)
 const Settings = lazy(routeLoaders.Settings)
 const SmartCommutePage = lazy(routeLoaders.SmartCommutePage)
 const SmartChargingPage = lazy(routeLoaders.SmartChargingPage)
+const SmartFeaturesPage = lazy(routeLoaders.SmartFeaturesPage)
 // Phase-50 / 0054 — P3 safety setting explainer host page. Distinct
 // from /safety-settings (vehicle telemetry) — this page hosts the
 // safety-RELATED APPLICATION settings (notification quiet hours,
@@ -642,6 +643,7 @@ export default function App() {
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="settings/smart-commute" element={<SafeRoute name="SmartCommutePage"><SmartCommutePage /></SafeRoute>} />
         <Route path="settings/smart-charging" element={<SafeRoute name="SmartChargingPage"><SmartChargingPage /></SafeRoute>} />
+        <Route path="settings/smart-features" element={<SafeRoute name="SmartFeaturesPage"><SmartFeaturesPage /></SafeRoute>} />
         <Route path="settings/safety" element={<SafeRoute name="SafetySettingsPage"><SafetySettingsPage /></SafeRoute>} />
         <Route path="settings/fleet-setup" element={<SafeRoute name="FleetSetup"><FleetSetupPage /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />

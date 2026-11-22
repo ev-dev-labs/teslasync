@@ -4,6 +4,7 @@
 package ownershipintelsvc
 
 import (
+	"context"
 	"errors"
 	"math"
 	"sort"
@@ -31,9 +32,15 @@ const (
 
 // Service is the composition root for all ten ownership intelligence engines.
 type Service struct {
-	source  port.SourceRepository
-	durable port.DurableRepository
-	now     func() time.Time
+	source          port.SourceRepository
+	durable         port.DurableRepository
+	now             func() time.Time
+	varianceAllowed func(context.Context, string) (bool, error)
+}
+
+func (s *Service) WithInvoiceVariancePermission(allowed func(context.Context, string) (bool, error)) *Service {
+	s.varianceAllowed = allowed
+	return s
 }
 
 // New builds the service. Both dependencies are mandatory.
@@ -205,7 +212,6 @@ func mean(values []float64) *float64 {
 	}
 	return safeDiv(total, float64(len(values)))
 }
-
 
 // validCurrency enforces the ISO-4217 alpha-3 shape used by every money column.
 func validCurrency(code string) (string, bool) {

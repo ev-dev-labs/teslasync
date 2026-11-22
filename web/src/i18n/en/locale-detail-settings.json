@@ -1,6 +1,219 @@
 {
   "settings": {
     "title": "Settings",
+    "smartFeatures": {
+      "title": "Smart Features",
+      "subtitle": "Allow or pause individual recommendations and reminders.",
+      "explanation": "Allowing a feature does not set it up, grant Fleet API access, or enable notifications. Pausing stops new smart work and delivery without deleting your setup or history.",
+      "shared": "Without sign-in, these preferences apply to everyone using this server. Private features require sign-in.",
+      "identityRequired": "Sign in to manage your Smart Features.",
+      "feature": "Feature",
+      "permission": "Permission",
+      "allowed": "Allowed",
+      "paused": "Paused",
+      "saving": "Saving…",
+      "switchFor": "Allow {{feature}}",
+      "setup": "Setup",
+      "setupFor": "Setup for {{feature}}",
+      "openSetup": "Open setup",
+      "saveFailed": "Could not save that permission. The last verified setting is shown.",
+      "search": "Search Smart Features",
+      "unavailable": "No Smart Features are available for this account.",
+      "noMatches": "No Smart Features match these filters.",
+      "groups": {
+        "charging": "Charging",
+        "battery": "Battery",
+        "climate": "Climate",
+        "security": "Security & access",
+        "maintenance": "Maintenance",
+        "media": "Media",
+        "ownership": "Ownership",
+        "driving": "Driving",
+        "operations": "Operations"
+      },
+      "solar": {
+        "title": "Solar charging opportunities",
+        "description": "Look for sustained solar surplus at your reviewed home charger."
+      },
+      "backup": {
+        "title": "Backup charging watch",
+        "description": "Warn when charging draws on home battery backup during a confirmed outage."
+      },
+      "fee": {
+        "title": "Public charging fee reminders",
+        "description": "Warn when a completed session may begin incurring a reviewed per-minute fee."
+      },
+      "reserve": {
+        "title": "Long-park reserve",
+        "description": "Estimate whether a parked vehicle may drop below your return reserve."
+      },
+      "drain": {
+        "title": "Overnight drain review",
+        "description": "Compare an opted-in night with similar measured parks."
+      },
+      "capacity": {
+        "title": "Monthly battery capacity digest",
+        "description": "Review material capacity changes supported by comparable charging sessions."
+      },
+      "cabin": {
+        "title": "Cabin prep reminders",
+        "description": "Suggest when to precondition before an opted-in departure."
+      },
+      "scheduledClimate": {
+        "title": "Scheduled climate review",
+        "description": "Review the results of an existing climate schedule without changing it."
+      },
+      "rain": {
+        "title": "Open window rain watch",
+        "description": "Check for near-term rain while the opted-in vehicle is parked with an open window."
+      },
+      "closure": {
+        "title": "Parked closure reminders",
+        "description": "Warn if a door, trunk, or window remains open after your grace period."
+      },
+      "unlock": {
+        "title": "Parked unlock reminders",
+        "description": "Warn if your vehicle stays unlocked at a reviewed place."
+      },
+      "recall": {
+        "title": "Recall Watch",
+        "description": "Check public recall campaigns for your confirmed model and year."
+      },
+      "tripMaintenance": {
+        "title": "Trip maintenance review",
+        "description": "Flag when a planned trip may cross a recorded maintenance interval."
+      },
+      "warranty": {
+        "title": "Warranty mileage reminders",
+        "description": "Estimate when recorded driving may reach a documented warranty distance limit."
+      },
+      "favorites": {
+        "title": "Weekly favorite-track suggestions",
+        "description": "Suggest recordings heard on several completed drives without changing confirmed favorites."
+      },
+      "costDigest": {
+        "title": "Monthly charging cost breakdown",
+        "description": "Explain a material change in recorded charging spend using comparable billing evidence."
+      },
+      "tariff": {
+        "title": "Monthly tariff comparison",
+        "description": "Compare two reviewed utility tariffs against actual charging at one place."
+      },
+      "mileage": {
+        "title": "Mileage allowance review",
+        "description": "Review whether your recorded driving may exceed the allowance for a documented term."
+      },
+      "tripPacket": {
+        "title": "Monthly trip packet",
+        "description": "Prepare a private review from confirmed trip purposes and receipt references."
+      },
+      "renewal": {
+        "title": "Subscription renewal review",
+        "description": "Review price and recorded usage before a confirmed renewal date."
+      },
+      "efficiency": {
+        "title": "Weekly drive efficiency review",
+        "description": "Compare measured energy use on comparable routes and flag material changes."
+      },
+      "commute": {
+        "title": "Commute learning",
+        "description": "Suggest repeat drives from local history without changing confirmed routines."
+      },
+      "traffic": {
+        "title": "Traffic and departure advice",
+        "description": "Compare traffic on reviewed routes and flag departures that may miss an arrival deadline."
+      },
+      "routeEnergy": {
+        "title": "Commute route energy comparison",
+        "description": "Compare observed energy use on comparable routes for an opted-in commute."
+      },
+      "destination": {
+        "title": "Commute destination dispatch",
+        "description": "Allow a confirmed traffic recommendation to send a destination when you request it."
+      },
+      "readiness": {
+        "title": "Charging readiness",
+        "description": "Estimate whether your charge and planned charging are sufficient for a confirmed trip."
+      },
+      "overlap": {
+        "title": "Departure conflict reminders",
+        "description": "Flag a recorded service or software installation window that conflicts with departure."
+      },
+      "earlyStop": {
+        "title": "Unexpected charging stop watch",
+        "description": "Review an unexpected interruption that could leave a planned trip short of charge."
+      },
+      "siteRates": {
+        "title": "Charging-hour rate comparison",
+        "description": "Compare reviewed price windows that can meet the trip’s charging deadline."
+      },
+      "sitePerformance": {
+        "title": "Charging site performance",
+        "description": "Compare measured charging performance for the same vehicle at a reviewed site."
+      },
+      "tripStops": {
+        "title": "Trip charging stop comparison",
+        "description": "Compare reviewed stations using route detours and measured charging history."
+      },
+      "tripReview": {
+        "title": "Post-trip plan review",
+        "description": "Compare a completed trip with its saved plan and review allowances for a similar trip."
+      },
+      "coldTire": {
+        "title": "Cold tire drift review",
+        "description": "Compare your recorded cold gauge readings for repeated pressure changes."
+      },
+      "serviceCase": {
+        "title": "Service case review reminders",
+        "description": "Show an inbox reminder for a recorded service case without changing its evidence or exports."
+      },
+      "softwareWindow": {
+        "title": "Software update window review",
+        "description": "Check whether a recorded update could fit a confirmed parked window."
+      },
+      "sharedCharger": {
+        "title": "Shared charger swap reminders",
+        "description": "Show a swap reminder when you are the designated recipient and have accepted it."
+      },
+      "sharedTrip": {
+        "title": "Shared trip readiness comparison",
+        "description": "Compare confirmed vehicles for a shared trip without changing another participant’s settings."
+      },
+      "dashcam": {
+        "title": "Dashcam clip retention reminders",
+        "description": "Review imported clips against deadlines you saved on this browser.",
+        "paused": "Retention review is paused in Smart Features. Your saved deadlines remain on this browser."
+      },
+      "playlist": {
+        "title": "Private playlist suggestions",
+        "description": "Suggest tracks from recorded listening and allow a playlist save only when you confirm it."
+      },
+      "soundtrack": {
+        "title": "Journey soundtrack review",
+        "description": "Review recorded listening during a completed journey you select."
+      },
+      "driveTrack": {
+        "title": "Drive track lookup",
+        "description": "Identify a track heard on a selected drive and allow a library save only when you confirm it."
+      },
+      "episode": {
+        "title": "Episode fit review",
+        "description": "Compare confirmed remaining episode time with a planned drive."
+      },
+      "invoice": {
+        "title": "Charging invoice variance review",
+        "description": "Flag material differences in a reviewed charging invoice without altering invoices or past disputes."
+      },
+      "automation": {
+        "title": "Repeated automation failure notices",
+        "description": "Show eligible operators an inbox notice about repeated failures without changing automation rules or run history."
+      },
+      "here": {
+        "title": "HERE estimate incident notices",
+        "description": "Notify designated operators about estimate incidents without disabling health checks or safeguards."
+      },
+      "reviewPaused": "This review is paused in Smart Features."
+    },
     "typography": {
       "title": "Typography",
       "subtitle": "Choose fonts and tune size, spacing, and weight — applied everywhere instantly.",

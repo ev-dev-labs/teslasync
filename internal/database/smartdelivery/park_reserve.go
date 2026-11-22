@@ -8,6 +8,7 @@ import (
 
 	personal "github.com/ev-dev-labs/teslasync/internal/domain/personal"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,7 +18,7 @@ var _ port.ParkReserveRepository = (*Repository)(nil)
 const parkReserveDeliveryScope = `
 	FROM smart_park_reserve_plans p
 	JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
-	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL`
+	JOIN vehicles v ON v.id=p.vehicle_id AND v.archived_at IS NULL AND smart_feature_current(p.subject,'park_reserve',p.feature_checked_at)`
 
 func (r *Repository) ListParkReserveDeliveries(ctx context.Context, now time.Time, limit int) ([]domain.ParkReserveRef, error) {
 	rows, err := r.db.Pool.Query(ctx, `
@@ -38,9 +39,9 @@ func (r *Repository) ListParkReserveDeliveries(ctx context.Context, now time.Tim
 }
 
 func (r *Repository) LockParkReserve(ctx context.Context, ref domain.ParkReserveRef, now time.Time) (port.ExpiringDispatchLease, error) {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin park reserve dispatch: %w", err)
+	tx, err := r.beginFeatureDispatch(ctx, ref.Subject, smartfeature.ParkReserve)
+	if tx == nil {
+		return nil, err
 	}
 	var ciphertext string
 	err = tx.QueryRow(ctx, `SELECT d.subscription_ciphertext `+parkReserveDeliveryScope+`
@@ -99,6 +100,7 @@ const parkReserveClaimScope = parkReserveDeliveryScope + `
 	JOIN smart_push_park_reserve_deliveries a ON a.plan_id=p.id AND a.subject=p.subject
 		AND a.vehicle_id=p.vehicle_id AND a.return_at=p.return_at AND a.device_id=d.id
 	WHERE a.token_hash=$1 AND a.subject=$2 AND p.action_until>$3 AND a.expires_at>$3
+		AND smart_feature_current(a.subject,'park_reserve',a.feature_enqueued_at)
 		AND p.reason='estimated_reserve_crossing' AND a.claimed_at IS NULL AND a.status IN ('dispatching','accepted','unknown')`
 
 func (r *Repository) FindParkReserveDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.ParkReserveRef, error) {
@@ -117,7 +119,7 @@ func (r *Repository) FindParkReserveDelivery(ctx context.Context, subject string
 
 func (r *Repository) ConsumeParkReserveDelivery(ctx context.Context, subject string, hash []byte, now time.Time) (*domain.Notification, error) {
 	var notification domain.Notification
-	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := r.withFeatureClaim(ctx, subject, smartfeature.ParkReserve, func(tx pgx.Tx) error {
 		var vehicleID, planID int64
 		err := tx.QueryRow(ctx, `SELECT p.vehicle_id,p.id,p.push_title,p.push_body `+parkReserveClaimScope+`
 			AND NOT EXISTS (SELECT 1 FROM drives

@@ -175,7 +175,7 @@ func (s *BackupCharging) checkBackup(ctx context.Context, watch domain.BackupCha
 		return errors.Join(*placeErr, clear())
 	}
 	active, err := s.repo.FindActiveBackupChargingWatch(ctx, watch.Subject, watch.VehicleID, s.now().UTC())
-	if err != nil || active == nil || active.ID != watch.ID || !active.ConsentedAt.Equal(watch.ConsentedAt) ||
+	if err != nil || active == nil || active.ID != watch.ID || !active.ClaimCurrent || !active.ConsentedAt.Equal(watch.ConsentedAt) ||
 		!active.NextCheckAt.Equal(watch.NextCheckAt) {
 		return err
 	}

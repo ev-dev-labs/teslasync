@@ -25,17 +25,22 @@ func (r *Repository) ClaimTrafficCheck(ctx context.Context, now time.Time, share
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var check port.TrafficCheck
 		var latitudes, longitudes []float64
+		var workAt time.Time
 		routine, err := scanRoutineWithExtras(tx.QueryRow(ctx, `
 			SELECT `+routineColumns+`, c.id, r.subject, s.time_zone, s.updated_at,
 			       c.latitudes, c.longitudes, c.lead_s, c.min_savings_s, c.check_at, c.departure_at,
-			       c.arrival_deadline_s, c.compare_route_energy
+			       c.arrival_deadline_s, c.compare_route_energy AND smart_feature_allowed(r.subject,'route_energy'),
+			       NOT smart_feature_allowed(r.subject,'traffic_advice'), statement_timestamp()
 			`+trafficScope+`
 			WHERE c.check_at <= $1 AND (r.subject = $2) = $3
+			  AND (smart_feature_allowed(r.subject,'traffic_advice')
+			       OR (c.compare_route_energy AND smart_feature_allowed(r.subject,'route_energy')))
 			ORDER BY c.check_at, c.id
 			LIMIT 1 FOR UPDATE OF c SKIP LOCKED`, now, personal.OpenSubject, sharedOpenMode),
 			&check.ConsentID, &check.Subject, &check.Settings.TimeZone, &check.SettingsUpdatedAt,
 			&latitudes, &longitudes, &check.Consent.LeadS, &check.Consent.MinSavingsS,
-			&check.Consent.CheckAt, &check.Consent.DepartureAt, &check.Consent.ArrivalDeadlineS, &check.Consent.CompareRouteEnergy)
+			&check.Consent.CheckAt, &check.Consent.DepartureAt, &check.Consent.ArrivalDeadlineS, &check.Consent.CompareRouteEnergy,
+			&check.AdvicePaused, &workAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -67,11 +72,12 @@ func (r *Repository) ClaimTrafficCheck(ctx context.Context, now time.Time, share
 			return fmt.Errorf("advance commute check cursor: %w", err)
 		}
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO smart_commute_traffic_occurrences (routine_id, departure_at)
-			VALUES ($1, $2)
-			ON CONFLICT (routine_id) DO UPDATE SET departure_at = EXCLUDED.departure_at, skipped = false
+			INSERT INTO smart_commute_traffic_occurrences (routine_id, departure_at, feature_claimed_at)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (routine_id) DO UPDATE SET departure_at = EXCLUDED.departure_at, skipped = false,
+			    feature_claimed_at = EXCLUDED.feature_claimed_at
 			WHERE smart_commute_traffic_occurrences.departure_at < EXCLUDED.departure_at`,
-			check.Routine.ID, check.Consent.DepartureAt)
+			check.Routine.ID, check.Consent.DepartureAt, workAt)
 		if err != nil {
 			return fmt.Errorf("reserve commute occurrence: %w", err)
 		}
@@ -129,18 +135,26 @@ func (r *Repository) SkipTrafficToday(ctx context.Context, subject string, vehic
 	})
 }
 
-func (r *Repository) VerifyTrafficCheck(ctx context.Context, check port.TrafficCheck, now time.Time) error {
-	var allowed bool
-	if err := r.db.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 `+claimedTrafficScope+`
-		AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $7))`,
+func (r *Repository) VerifyTrafficCheck(ctx context.Context, check port.TrafficCheck, now time.Time) (port.TrafficCheckAccess, error) {
+	var access port.TrafficCheckAccess
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT $8 AND smart_feature_current(r.subject,'traffic_advice',o.feature_claimed_at),
+		       $9 AND c.compare_route_energy AND smart_feature_current(r.subject,'route_energy',o.feature_claimed_at)
+		`+claimedTrafficScope+`
+		AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $7)`,
 		check.ConsentID, check.Routine.ID, check.Subject, check.Routine.VehicleID,
-		check.SettingsUpdatedAt, check.Consent.DepartureAt, now).Scan(&allowed); err != nil {
-		return fmt.Errorf("recheck claimed commute consent: %w", err)
+		check.SettingsUpdatedAt, check.Consent.DepartureAt, now, !check.AdvicePaused, check.Consent.CompareRouteEnergy).
+		Scan(&access.Advice, &access.Energy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return access, port.ErrTrafficClaimLost
 	}
-	if !allowed {
-		return port.ErrTrafficClaimLost
+	if err != nil {
+		return access, fmt.Errorf("recheck claimed commute consent: %w", err)
 	}
-	return nil
+	if !access.Advice && !access.Energy {
+		return access, port.ErrTrafficClaimLost
+	}
+	return access, nil
 }
 
 func (r *Repository) RecordTrafficDecision(
@@ -170,6 +184,8 @@ func (r *Repository) RecordTrafficDecision(
 		SELECT c.id, o.departure_at, s.updated_at, $7, $8, $9, $10, $12, $13, $14,
 		       $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NULLIF($27, ''), NULLIF($28, '')
 		`+claimedTrafficScope+` AND $10::timestamptz > $11 AND ($15::timestamptz IS NULL OR c.compare_route_energy)
+		  AND ($14 OR smart_feature_current(r.subject,'traffic_advice',o.feature_claimed_at))
+		  AND ($15::timestamptz IS NULL OR smart_feature_current(r.subject,'route_energy',o.feature_claimed_at))
 		  AND here_estimates_usable($9::timestamptz)
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $11)
 		ON CONFLICT (consent_id) DO UPDATE SET
@@ -198,19 +214,31 @@ func (r *Repository) ListTrafficDecisions(
 ) ([]domain.TrafficDecision, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT r.id, r.vehicle_id, r.name, v.display_name, r.time_zone, d.departure_at,
-		       d.usual_s, d.alternative_s, d.observed_at, d.expires_at, r.origin_latitude, r.origin_longitude,
-		       d.arrival_deadline_at, d.latest_departure_at, d.route_energy_only, d.energy_expires_at,
+		       CASE WHEN f.advice THEN d.usual_s ELSE d.energy_fast_eta_s END,
+		       CASE WHEN f.advice THEN d.alternative_s ELSE d.energy_saving_eta_s END,
+		       d.observed_at, CASE WHEN f.advice THEN d.expires_at ELSE d.energy_expires_at END, r.origin_latitude, r.origin_longitude,
+		       CASE WHEN f.advice THEN d.arrival_deadline_at END, CASE WHEN f.advice THEN d.latest_departure_at END,
+		       NOT f.advice, CASE WHEN f.energy THEN d.energy_expires_at END,
 		       COALESCE(d.energy_outside_c, 0), COALESCE(d.energy_fast_eta_s, 0), COALESCE(d.energy_fast_count, 0),
 		       COALESCE(d.energy_fast_low_wh, 0), COALESCE(d.energy_fast_median_wh, 0), COALESCE(d.energy_fast_high_wh, 0),
 		       COALESCE(d.energy_saving_eta_s, 0), COALESCE(d.energy_saving_count, 0), COALESCE(d.energy_saving_low_wh, 0),
-		       COALESCE(d.energy_saving_median_wh, 0), 		       COALESCE(d.energy_saving_high_wh, 0), COALESCE(a.outcome, ''),
-		       COALESCE(d.usual_route_label, ''), COALESCE(d.alternative_route_label, '')
+		       COALESCE(d.energy_saving_median_wh, 0), COALESCE(d.energy_saving_high_wh, 0),
+		       CASE WHEN f.advice THEN COALESCE(a.outcome, '') ELSE '' END,
+		       NOT smart_feature_allowed(r.subject,'destination_dispatch'),
+		       CASE WHEN f.advice THEN COALESCE(d.usual_route_label, '') ELSE '' END,
+		       CASE WHEN f.advice THEN COALESCE(d.alternative_route_label, '') ELSE '' END
 		`+trafficScope+`
 		JOIN smart_commute_traffic_decisions d ON d.consent_id = c.id AND d.settings_updated_at = s.updated_at
 		JOIN smart_commute_traffic_occurrences o ON o.routine_id = r.id AND o.departure_at = d.departure_at
 		LEFT JOIN smart_commute_navigation_attempts a ON a.routine_id = r.id AND a.departure_at = d.departure_at
+		CROSS JOIN LATERAL (
+		  SELECT NOT d.route_energy_only AND d.expires_at>$3
+		    AND smart_feature_current(r.subject,'traffic_advice',o.feature_claimed_at) AS advice,
+		    COALESCE(d.energy_expires_at>$3, false)
+		    AND smart_feature_current(r.subject,'route_energy',o.feature_claimed_at) AS energy
+		) f
 		WHERE r.subject = $1 AND ($2::bigint IS NULL OR r.vehicle_id = $2)
-		  AND d.expires_at > $3 AND NOT o.skipped
+		  AND (f.advice OR f.energy) AND NOT o.skipped
 		  AND here_estimates_usable(d.observed_at)
 		  AND NOT smart_commute_drive_started(r.vehicle_id, o.departure_at - make_interval(secs => c.lead_s), $3)
 		ORDER BY d.departure_at, r.id LIMIT $4`, subject, vehicleID, now, limit)
@@ -226,7 +254,7 @@ func (r *Repository) ListTrafficDecisions(
 			&item.ArrivalDeadlineAt, &item.LatestDepartureAt, &item.RouteEnergyOnly, &energyExpiry, &energy.OutsideC,
 			&energy.Fastest.ETAS, &energy.Fastest.DriveCount, &energy.Fastest.LowWh, &energy.Fastest.MedianWh, &energy.Fastest.HighWh,
 			&energy.Saving.ETAS, &energy.Saving.DriveCount, &energy.Saving.LowWh, &energy.Saving.MedianWh, &energy.Saving.HighWh,
-			&item.NavigationOutcome, &item.UsualRouteLabel, &item.AlternativeRouteLabel)
+			&item.NavigationOutcome, &item.NavigationPaused, &item.UsualRouteLabel, &item.AlternativeRouteLabel)
 		if err == nil && energyExpiry != nil {
 			energy.ExpiresAt = *energyExpiry
 			item.RouteEnergy = &energy

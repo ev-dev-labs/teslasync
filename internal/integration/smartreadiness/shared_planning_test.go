@@ -6,8 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/auth"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -81,6 +84,14 @@ func TestSharedChargerPersistsOnePrivateSwap(t *testing.T) {
 	if n, err := service.PublishDueReminders(ctx, 10); err != nil || n != 0 {
 		t.Fatalf("reminder published before the handoff: %d, %v", n, err)
 	}
+	prefs := smartfeaturesvc.New(featuredb.NewRepository(db.Pool))
+	setAllowed := func(subject string, allowed bool) {
+		t.Helper()
+		if err := prefs.Set(ctx, subject, smartfeature.Preference{Feature: smartfeature.SharedCharger, Allowed: allowed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setAllowed("synthetic-plugged", false)
 	now = start.Add(31 * time.Minute)
 	counts := make(chan int, 2)
 	group, groupCtx := errgroup.WithContext(ctx)
@@ -106,6 +117,26 @@ func TestSharedChargerPersistsOnePrivateSwap(t *testing.T) {
 	if err != nil || reminder == nil || reminder.VehicleID != 8 || !reminder.SwapAt.Equal(card.Schedule.SwapAt) {
 		t.Fatalf("missing chosen participant's published swap: %+v, %v", reminder, err)
 	}
+	setAllowed("synthetic-arriving", false)
+	if reminder, err := service.Reminder(ctx, "synthetic-arriving", ref); err != nil || reminder != nil {
+		t.Fatalf("paused recipient received an old reminder: %+v, %v", reminder, err)
+	}
+	if n, err := service.PublishDueReminders(ctx, 10); err != nil || n != 0 {
+		t.Fatalf("paused recipient was checked: %d, %v", n, err)
+	}
+	setAllowed("synthetic-arriving", true)
+	if reminder, err := service.Reminder(ctx, "synthetic-arriving", ref); err != nil || reminder != nil {
+		t.Fatalf("resume showed a reminder before it was rechecked: %+v, %v", reminder, err)
+	}
+	if n, err := service.PublishDueReminders(ctx, 10); err != nil || n != 1 {
+		t.Fatalf("resumed recipient did not get a fresh check: %d, %v", n, err)
+	}
+	if n, err := service.PublishDueReminders(ctx, 10); err != nil || n != 0 {
+		t.Fatalf("resumed reminder was processed twice: %d, %v", n, err)
+	}
+	if reminder, err := service.Reminder(ctx, "synthetic-arriving", ref); err != nil || reminder == nil {
+		t.Fatalf("resumed recipient did not regain the current reminder: %+v, %v", reminder, err)
+	}
 	if _, err := service.Authorize(ctx, "synthetic-operator", ref, authz); !errors.Is(err, port.ErrSharedChargerSwapPublished) {
 		t.Fatalf("published occurrence was replaced: %v", err)
 	}
@@ -122,6 +153,18 @@ func TestSharedChargerPersistsOnePrivateSwap(t *testing.T) {
 		t.Fatalf("withdrawn plan republished: %d, %v", n, err)
 	}
 	applyWarrantyFixtureMigration(t, db, "000316_smart_shared_charger.down")
+}
+
+type sharedTripLiveProbe struct {
+	smartreadinesssvc.SharedTripLiveSignals
+	onRead func()
+}
+
+func (p *sharedTripLiveProbe) GetSignal(ctx context.Context, id int64, field string, preference signal.LiveSignalReadPreference) (*signal.Value, error) {
+	if p.onRead != nil {
+		p.onRead()
+	}
+	return p.SharedTripLiveSignals.GetSignal(ctx, id, field, preference)
 }
 
 func TestSharedTripComparesOnlyCurrentEligibleConsentedVehicles(t *testing.T) {
@@ -144,7 +187,8 @@ func TestSharedTripComparesOnlyCurrentEligibleConsentedVehicles(t *testing.T) {
 	}
 	seed()
 	operators := auth.NewOperatorAccess("X-Test-Subject", "synthetic-operator")
-	service := smartreadinesssvc.NewSharedTripService(repo, live, operators.Allows, func() time.Time { return now })
+	probe := &sharedTripLiveProbe{SharedTripLiveSignals: live}
+	service := smartreadinesssvc.NewSharedTripService(repo, probe, operators.Allows, func() time.Time { return now })
 	actor := func(subject string) smartreadinesssvc.SharedTripActor {
 		return smartreadinesssvc.SharedTripActor{Subject: subject, VerifiedBrowser: true}
 	}
@@ -195,6 +239,34 @@ func TestSharedTripComparesOnlyCurrentEligibleConsentedVehicles(t *testing.T) {
 	if err != nil || comparison == nil || len(comparison.Options) != 2 || comparison.Options[0].VehicleID != 8 ||
 		comparison.Options[0].ReturnLowPct != 60 || comparison.Options[1].VehicleID != 7 {
 		t.Fatalf("wrong eligible comparison: %+v, %v", comparison, err)
+	}
+	prefs := smartfeaturesvc.New(featuredb.NewRepository(db.Pool))
+	setAllowed := func(viewer smartreadinesssvc.SharedTripActor, allowed bool) {
+		t.Helper()
+		if err := prefs.Set(ctx, viewer.Subject, smartfeature.Preference{Feature: smartfeature.SharedTrip, Allowed: allowed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setAllowed(a, false)
+	probe.onRead = func() { t.Fatal("paused comparison read live charge evidence") }
+	if _, err := service.Comparison(ctx, a, trip.ID); !errors.Is(err, port.ErrNotFound) {
+		t.Fatalf("paused viewer could compare: %v", err)
+	}
+	probe.onRead = nil
+	if got, err := service.Comparison(ctx, b, trip.ID); err != nil || got == nil || len(got.Options) != 2 {
+		t.Fatalf("one viewer's pause affected another's confirmed comparison: %+v, %v", got, err)
+	}
+	setAllowed(a, true)
+	probe.onRead = func() {
+		probe.onRead = nil
+		setAllowed(a, false)
+		setAllowed(a, true)
+	}
+	if got, err := service.Comparison(ctx, a, trip.ID); got != nil || !errors.Is(err, port.ErrNotFound) {
+		t.Fatalf("resumed viewer received comparison started before the pause: %+v, %v", got, err)
+	}
+	if got, err := service.Comparison(ctx, a, trip.ID); err != nil || got == nil {
+		t.Fatalf("resumed viewer could not start a fresh comparison: %+v, %v", got, err)
 	}
 	now = now.Add(3 * time.Minute)
 	if comparison, err := service.Comparison(ctx, a, trip.ID); err != nil || comparison != nil {

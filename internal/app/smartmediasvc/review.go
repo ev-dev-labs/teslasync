@@ -105,7 +105,7 @@ func (s *Reviews) Preview(ctx context.Context, scope port.Scope, expectedID int6
 		return port.ErrChanged
 	}
 	from := now.Add(-draftHorizon)
-	samples, err := s.repo.PlaybackSamples(ctx, scope.VehicleID, from, now)
+	samples, began, err := s.repo.PlaylistSamples(ctx, scope, from, now)
 	if err != nil && !errors.Is(err, signal.ErrTimelineEventLimit) {
 		return err
 	}
@@ -116,6 +116,7 @@ func (s *Reviews) Preview(ctx context.Context, scope port.Scope, expectedID int6
 	return s.repo.ReplaceDraft(ctx, scope, expectedID, domain.PlaylistDraft{
 		DepartureAt: setup.DepartureAt.UTC(), TargetDurationS: setup.TargetDurationS, CreatedAt: now,
 		ExpiresAt: setup.DepartureAt.UTC(), Candidates: candidates,
+		FeatureCheckedAt: began,
 	})
 }
 
@@ -184,6 +185,9 @@ func (s *Reviews) Save(ctx context.Context, scope port.Scope, id int64, request 
 		!draft.ExpiresAt.After(now) || (draft.SnoozedUntil != nil && draft.SnoozedUntil.After(now)) {
 		return "", port.ErrChanged
 	}
+	if err := s.repo.CheckPlaylistDraft(ctx, scope, id); err != nil {
+		return "", err
+	}
 	ids, err := verifyPlaylistSelection(draft, request.Selection)
 	if err != nil {
 		return "", err
@@ -201,6 +205,9 @@ func (s *Reviews) Save(ctx context.Context, scope port.Scope, id int64, request 
 	}
 	resolvedDurationS := 0
 	for i, trackID := range ids {
+		if err := s.repo.CheckPlaylistDraft(ctx, scope, id); err != nil {
+			return "", err
+		}
 		current, err := s.repo.SpotifyGrant(ctx, scope.Subject, s.now().UTC())
 		if err != nil {
 			return "", err
@@ -286,6 +293,9 @@ func (s *Reviews) dispatch(ctx context.Context, scope port.Scope, id, revision i
 	}
 	finish := func(status domain.PlaylistSaveStatus) (domain.PlaylistSaveStatus, error) {
 		return status, persist(func(ctx context.Context) error { return s.repo.FinishPlaylistSave(ctx, scope, id, status) })
+	}
+	if err := s.repo.CheckPlaylistDraft(ctx, scope, id); err != nil {
+		return finish(domain.PlaylistRejected)
 	}
 	playlist, err := s.spotify.CreatePrivate(ctx, token, name)
 	if err != nil {

@@ -88,43 +88,50 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		s.recordTraffic("duplicate_or_skipped")
 		return nil
 	}
-	authorize := func(ctx context.Context) error {
+	authorize := func(ctx context.Context) (port.TrafficCheckAccess, error) {
 		now := s.now()
 		if !now.Before(check.Consent.DepartureAt) || now.Sub(check.Consent.CheckAt) > maxTrafficCheckDelay {
-			return port.ErrTrafficClaimLost
+			return port.TrafficCheckAccess{}, port.ErrTrafficClaimLost
 		}
-		if err := s.repository.VerifyTrafficCheck(ctx, check, now); err != nil {
-			return err
+		if _, err := s.repository.VerifyTrafficCheck(ctx, check, now); err != nil {
+			return port.TrafficCheckAccess{}, err
 		}
 		quiet, err := s.traffic.isQuiet(ctx, check.Subject, now)
 		if err != nil {
-			return fmt.Errorf("check private traffic quiet hours: %w", err)
+			return port.TrafficCheckAccess{}, fmt.Errorf("check private traffic quiet hours: %w", err)
 		}
 		if quiet {
-			return errTrafficQuietHours
+			return port.TrafficCheckAccess{}, errTrafficQuietHours
 		}
 		eligible, err := s.parkedAtOrigin(ctx, check.Routine.VehicleID, check.Routine.Origin, now)
 		if err != nil {
-			return err
+			return port.TrafficCheckAccess{}, err
 		}
 		if !eligible {
-			return errTrafficOriginUnknown
+			return port.TrafficCheckAccess{}, errTrafficOriginUnknown
 		}
 		return s.repository.VerifyTrafficCheck(ctx, check, s.now())
 	}
-	if err := authorize(ctx); err != nil {
+	access, err := authorize(ctx)
+	if err != nil {
 		return s.observeTrafficSuppression(err)
 	}
 	var authErr error
-	guarded := func(ctx context.Context) error {
-		authErr = authorize(ctx)
-		return authErr
+	guarded := func(adviceOnly bool) func(context.Context) error {
+		return func(ctx context.Context) error {
+			current, err := authorize(ctx)
+			if err == nil && adviceOnly && !current.Advice {
+				err = port.ErrTrafficClaimLost
+			}
+			authErr = err
+			return err
+		}
 	}
 	comparison, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
 		Trace: check.Consent.Trace, DepartureAt: check.Consent.DepartureAt,
-		RequireOfferedCoverage: check.Consent.ArrivalDeadlineS != nil,
-		IncludeRouteGeometry:   check.Consent.CompareRouteEnergy && s.traffic.energy != nil,
-	}, guarded)
+		RequireOfferedCoverage: access.Advice && check.Consent.ArrivalDeadlineS != nil,
+		IncludeRouteGeometry:   access.Energy && s.traffic.energy != nil,
+	}, guarded(false))
 	if authErr != nil {
 		return s.observeTrafficSuppression(authErr)
 	}
@@ -143,13 +150,13 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 		UsualRouteLabel: comparison.Usual.RouteLabel, AlternativeRouteLabel: comparison.Alternative.RouteLabel,
 		ObservedAt: minInstant(comparison.Usual.FlowUpdatedAt, comparison.Alternative.FlowUpdatedAt),
 	}
-	if check.Consent.ArrivalDeadlineS != nil && comparison.AlternativesQualified {
+	if access.Advice && check.Consent.ArrivalDeadlineS != nil && comparison.AlternativesQualified {
 		deadlineAt := arrivalDeadlineAt(window.departureAt, check.Routine, *check.Consent.ArrivalDeadlineS)
 		if deadline, ok := evaluateArrivalDeadline(window, deadlineAt, comparison, now); ok {
 			earlier, err := s.traffic.source.Compare(ctx, domain.TrafficQuery{
 				Trace: check.Consent.Trace, DepartureAt: deadline.latestAt,
-			}, guarded)
-			if authErr != nil {
+			}, guarded(true))
+			if authErr != nil && !errors.Is(authErr, port.ErrTrafficClaimLost) {
 				return s.observeTrafficSuppression(authErr)
 			}
 			if errors.Is(err, port.ErrEstimatesPaused) {
@@ -166,37 +173,58 @@ func (s *Service) processTrafficCheck(ctx context.Context, check port.TrafficChe
 			}
 		}
 	}
-	if decision.ArrivalDeadlineAt == nil {
+	if access.Advice && decision.ArrivalDeadlineAt == nil {
 		expiresAt, ok := trafficOpportunity(window, comparison, check.Consent.MinSavingsS, now)
 		if ok {
 			decision.ExpiresAt = expiresAt
 		}
 	}
-	energy, energyObserved, energyExpires := s.compareTrafficEnergy(ctx, check, comparison.OfferedRoutes, authorize)
-	if energy != nil {
-		decision.RouteEnergy = energy
-		if decision.ExpiresAt.IsZero() {
-			decision.RouteEnergyOnly = true
-			decision.UsualS, decision.AlternativeS = energy.Fastest.ETAS, energy.Saving.ETAS
-			decision.UsualRouteLabel, decision.AlternativeRouteLabel = "", ""
-			decision.ObservedAt, decision.ExpiresAt = energyObserved, energyExpires
+	energy, energyObserved, energyExpires := s.compareTrafficEnergy(ctx, check, comparison.OfferedRoutes, func(ctx context.Context) error {
+		current, err := authorize(ctx)
+		if err == nil && !current.Energy {
+			return port.ErrTrafficClaimLost
 		}
-	}
-	if decision.ExpiresAt.IsZero() {
+		return err
+	})
+	if decision.ExpiresAt.IsZero() && energy == nil {
 		s.recordTraffic("not_material_or_stale")
 		return nil
 	}
-	if err := authorize(ctx); err != nil {
-		return s.observeTrafficSuppression(err)
-	}
-	saved, err := s.repository.RecordTrafficDecision(ctx, check, decision, s.now())
-	if err != nil {
-		return err
-	}
-	if saved {
-		s.recordTraffic("eligible")
-		if s.traffic.notify != nil && !decision.RouteEnergyOnly {
-			return s.traffic.notify(ctx, check.Subject, check.ConsentID, check.Routine.ID, check.Consent.DepartureAt)
+	for range 2 {
+		current, err := authorize(ctx)
+		if err != nil {
+			return s.observeTrafficSuppression(err)
+		}
+		now := s.now()
+		hasAdvice := current.Advice && decision.ExpiresAt.After(now)
+		hasEnergy := current.Energy && energy != nil && energyExpires.After(now)
+		if !hasAdvice && !hasEnergy {
+			return nil
+		}
+		result := decision
+		if !hasAdvice {
+			result = domain.TrafficDecision{
+				RouteEnergyOnly: true, UsualS: energy.Fastest.ETAS, AlternativeS: energy.Saving.ETAS,
+				ObservedAt: energyObserved, ExpiresAt: energyExpires,
+			}
+		}
+		if hasEnergy {
+			result.RouteEnergy = energy
+		}
+		saved, err := s.repository.RecordTrafficDecision(ctx, check, result, now)
+		if err != nil {
+			return err
+		}
+		if saved {
+			s.recordTraffic("eligible")
+			if s.traffic.notify != nil && hasAdvice {
+				return s.traffic.notify(ctx, check.Subject, check.ConsentID, check.Routine.ID, check.Consent.DepartureAt)
+			}
+			return nil
+		}
+		// If one branch lost its fence at publication, the other may still be current.
+		if !hasAdvice || !hasEnergy {
+			return nil
 		}
 	}
 	return nil

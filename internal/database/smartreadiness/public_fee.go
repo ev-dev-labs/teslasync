@@ -124,6 +124,7 @@ func (r *Repository) ListDuePublicFeeRecipients(ctx context.Context, now time.Ti
 		  ORDER BY c.ended_at DESC LIMIT 1
 		) recent ON true
 		WHERE p.confirmed_at <= $1 AND p.valid_until > $1
+		  AND smart_feature_current(p.subject,'public_fee',recent.ended_at)
 		  AND NOT EXISTS (
 		    SELECT 1 FROM smart_push_public_fee_deliveries a
 		    WHERE a.subject = p.subject AND a.vehicle_id = p.vehicle_id AND a.session_id = recent.id
@@ -157,6 +158,7 @@ func (r *Repository) FindPublicChargeCompletion(
 		  `+activePublicFeeTerms+`
 		  JOIN charging_sessions c ON c.vehicle_id = p.vehicle_id
 		  WHERE p.subject = $1 AND p.vehicle_id = $2 AND p.place_id = $3
+		    AND smart_feature_current(p.subject,'public_fee',c.ended_at)
 		    AND p.place_updated_at = $4 AND p.confirmed_at = $5
 		    AND p.confirmed_at <= $6 AND p.valid_until > $6
 		    AND c.ended_at > $6::timestamptz - INTERVAL '2 minutes' AND c.ended_at <= $6

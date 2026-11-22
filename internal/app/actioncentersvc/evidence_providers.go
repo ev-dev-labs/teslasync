@@ -276,9 +276,22 @@ type operatorIncidentSource interface {
 const estimateNoticeLifetime = 24 * time.Hour
 
 type systemHealthProvider struct {
-	source   port.SourceReader
-	notices  operatorIncidentSource
-	operator string
+	source        port.SourceReader
+	notices       operatorIncidentSource
+	operator      string
+	noticeAllowed func(context.Context, string) (bool, error)
+}
+
+func WithOperatorIncidentPermission(allowed func(context.Context, string) (bool, error)) Option {
+	return func(s *Service) {
+		for i, provider := range s.providers {
+			if incidents, ok := provider.(systemHealthProvider); ok {
+				incidents.noticeAllowed = allowed
+				s.providers[i] = incidents
+				return
+			}
+		}
+	}
 }
 
 // WithOperatorIncidentNotices projects existing incident transitions into Action
@@ -366,6 +379,15 @@ func (p systemHealthProvider) Recommendations(
 	}
 	if p.notices != nil && !filter.ExcludePrivate && !filter.SharedOpenMode &&
 		operatorNoticesAllowed(ctx, p.operator, filter.subject) {
+		if p.noticeAllowed != nil {
+			allowed, err := p.noticeAllowed(ctx, filter.subject)
+			if err != nil {
+				return nil, err
+			}
+			if !allowed {
+				return items, nil
+			}
+		}
 		notices, err := p.notices.ListOperatorIncidentNotices(ctx, filter.subject, now.Add(-estimateNoticeLifetime), providerLimit)
 		if err == nil {
 			for _, row := range notices {

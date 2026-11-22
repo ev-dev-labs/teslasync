@@ -27,7 +27,7 @@ type TrafficRepository interface {
 	DeleteTrafficConsent(ctx context.Context, subject string, vehicleID, routineID int64) error
 	SkipTrafficToday(ctx context.Context, subject string, vehicleID, routineID int64, now time.Time) error
 	ClaimTrafficCheck(context.Context, time.Time, bool, NextTrafficCheck) (*TrafficCheck, error)
-	VerifyTrafficCheck(context.Context, TrafficCheck, time.Time) error
+	VerifyTrafficCheck(context.Context, TrafficCheck, time.Time) (TrafficCheckAccess, error)
 	RecordTrafficDecision(context.Context, TrafficCheck, domain.TrafficDecision, time.Time) (bool, error)
 	ListTrafficDecisions(context.Context, string, *int64, time.Time, int) ([]domain.TrafficDecision, error)
 }
@@ -36,10 +36,16 @@ type TrafficCheck struct {
 	ConsentID         int64
 	Subject           string
 	AlreadyChecked    bool
+	AdvicePaused      bool
 	Routine           domain.Routine
 	Settings          domain.Settings
 	SettingsUpdatedAt time.Time
 	Consent           domain.TrafficConsent
+}
+
+type TrafficCheckAccess struct {
+	Advice bool
+	Energy bool
 }
 
 type NextTrafficCheck func(check TrafficCheck) (checkAt, departureAt time.Time, ok bool)

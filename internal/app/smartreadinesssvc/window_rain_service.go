@@ -181,6 +181,13 @@ func (s *WindowRainWatches) checkWindowRain(ctx context.Context, job port.Window
 		if reason != "" || observeOpenParkedWindow(current, checkAt) == nil {
 			return port.ErrWindowRainChanged
 		}
+		active, err = s.repo.WindowRainLeaseActive(ctx, job, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		if !active {
+			return port.ErrWindowRainChanged
+		}
 		return nil
 	}
 	forecast, err := s.forecast.ForecastRain(ctx, float64(job.Plan.Grid.LatitudeHundredths)/100,

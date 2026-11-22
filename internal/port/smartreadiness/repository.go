@@ -19,8 +19,10 @@ var (
 )
 
 type Claim struct {
-	Plan  domain.Plan
-	Token string
+	Plan          domain.Plan
+	Token         string
+	AdvicePaused  bool
+	OverlapPaused bool
 }
 
 type Candidate struct {
@@ -36,6 +38,12 @@ type EarlierCheckPlan struct {
 	PlaceUpdatedAt time.Time
 }
 
+type LatestStartPlan struct {
+	domain.Plan
+	ReadinessAllowed bool
+	WorkAt           time.Time
+}
+
 type SitePerformanceRepository interface {
 	ListSitePerformanceScopes(context.Context, string, *int64, int) ([]domain.SitePerformanceScope, error)
 	SaveSitePerformanceScope(context.Context, string, int64, *int64, time.Time) error
@@ -49,6 +57,7 @@ type TripStopRepository interface {
 	DeleteStopSetup(context.Context, domain.StopPlanKey) error
 	ClaimStopComparison(context.Context, domain.StopPlanKey, int64, time.Time, time.Time) (bool, error)
 	CheckStopScope(context.Context, domain.StopPlanKey, int64, time.Time) error
+	CheckStopWork(context.Context, domain.StopPlanKey, int64, time.Time) error
 	ListStopChargeSessions(context.Context, domain.StopPlanKey, int64, int64, time.Time) ([]domain.SitePerformanceSession, error)
 	ReadStopComparison(context.Context, domain.StopPlanKey, int64, time.Time) (*domain.StopComparisonResult, error)
 	SaveStopComparison(context.Context, domain.StopPlanKey, int64, domain.StopComparisonResult) error
@@ -87,7 +96,7 @@ type SolarChargingRepository interface {
 type Repository interface {
 	ListPlans(context.Context, string, int64, int, int) ([]domain.Plan, error)
 	ListActivePlans(context.Context, string, int64, time.Time, int) ([]domain.Plan, error)
-	ListLatestStartPlans(context.Context, string, int64, time.Time, int) ([]domain.Plan, error)
+	ListLatestStartPlans(ctx context.Context, subject string, vehicleID int64, now time.Time, limit int, workAt *time.Time) ([]LatestStartPlan, error)
 	ReadEarlierCheckPlan(context.Context, domain.StopPlanKey) (EarlierCheckPlan, error)
 	AdvanceCheck(context.Context, EarlierCheckPlan, time.Time, time.Time, time.Time) error
 	ListSiteRateWindows(context.Context, []int64, time.Time, time.Time) ([]domain.SiteRateWindow, error)

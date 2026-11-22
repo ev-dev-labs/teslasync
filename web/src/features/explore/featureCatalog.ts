@@ -214,6 +214,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/notifications/health': 'Understand alert fatigue, notification delivery error budgets, and tail latency together.',
   '/settings/smart-commute': 'Recurring drives and local analysis',
   '/settings/smart-charging': 'Trip plans and charging decisions',
+  '/settings/smart-features': 'Individual recommendations and reminders',
 
   // ── Security ───────────────────────────────────────────────────────
   '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',
@@ -308,6 +309,7 @@ export function buildFeatureCatalog(t?: (key: string, fallback: string) => strin
   const localizedDescriptions: Record<string, string> = t ? {
     '/settings/smart-commute': t('smartCommute.pageSubtitle', DESCRIPTIONS['/settings/smart-commute']),
     '/settings/smart-charging': t('smartCharging.pageSubtitle', DESCRIPTIONS['/settings/smart-charging']),
+    '/settings/smart-features': t('settings.smartFeatures.subtitle', DESCRIPTIONS['/settings/smart-features']),
   } : {};
   const out: FeatureCatalogEntry[] = [];
   for (const section of navSections) {

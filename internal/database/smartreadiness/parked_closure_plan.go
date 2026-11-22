@@ -19,16 +19,18 @@ func (r *Repository) ReadParkedClosure(ctx context.Context, scope port.ParkedClo
 	var plan domain.ParkedClosurePlan
 	var from, parked, opened, observed, expires *time.Time
 	var risk domain.ParkedClosureRisk
+	var current bool
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.id,0),COALESCE(p.grace_s,0),COALESCE(p.paused,false),p.snoozed_until,COALESCE(p.reason,''),
 			COALESCE(p.device_id,0),d.id IS NOT NULL,p.evidence_from,COALESCE(p.park_id,0),
-			p.parked_at,COALESCE(p.position,''),p.open_since,p.last_observed_at,p.risk_expires_at
+			p.parked_at,COALESCE(p.position,''),p.open_since,p.last_observed_at,p.risk_expires_at,
+			smart_feature_current($1,'parked_closure',p.feature_checked_at)
 		FROM vehicles v
 		LEFT JOIN smart_parked_closure_plans p ON p.vehicle_id=v.id AND p.subject=$1
 		LEFT JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE v.id=$2 AND v.archived_at IS NULL`, scope.Subject, scope.VehicleID).
 		Scan(&plan.ID, &plan.GraceS, &plan.Paused, &plan.SnoozedUntil, &plan.Reason, &plan.DeviceID, &plan.DeviceReady,
-			&from, &risk.DriveID, &parked, &risk.Position, &opened, &observed, &expires)
+			&from, &risk.DriveID, &parked, &risk.Position, &opened, &observed, &expires, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, port.ErrNotFound
 	}
@@ -39,6 +41,10 @@ func (r *Repository) ReadParkedClosure(ctx context.Context, scope port.ParkedClo
 		return nil, nil
 	}
 	plan.EvidenceFrom = *from
+	if !current {
+		plan.Reason = ""
+		return &plan, nil
+	}
 	if parked != nil && opened != nil && observed != nil && expires != nil {
 		risk.ParkedAt, risk.OpenSince, risk.LastObserved, risk.ActionUntil = *parked, *opened, *observed, *expires
 		plan.Risk = &risk
@@ -99,9 +105,10 @@ func (r *Repository) ClaimParkedClosure(ctx context.Context, now, lease time.Tim
 		JOIN smart_push_devices d ON d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at
 		WHERE p.next_check_at<=$1 AND (p.lease_until IS NULL OR p.lease_until<=$1)
 		  AND NOT p.paused AND p.subject NOT IN ($3,'open-mode')
+		  AND smart_feature_allowed(p.subject,'parked_closure')
 		ORDER BY p.next_check_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED
 	)
-	UPDATE smart_parked_closure_plans p SET lease_until=$2 FROM due WHERE p.id=due.id
+	UPDATE smart_parked_closure_plans p SET lease_until=$2,feature_claimed_at=statement_timestamp() FROM due WHERE p.id=due.id
 	RETURNING p.id,p.subject,p.vehicle_id,p.evidence_from,p.grace_s,p.lease_until`, now, lease, personal.OpenSubject).
 		Scan(&job.Plan.ID, &job.Scope.Subject, &job.Scope.VehicleID, &job.Plan.EvidenceFrom, &job.Plan.GraceS, &job.LeaseUntil)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -122,9 +129,10 @@ func (r *Repository) FinishParkedClosure(ctx context.Context, job port.ParkedClo
 			&risk.DriveID, &risk.Position, &risk.ParkedAt, &risk.OpenSince, &risk.LastObserved, &risk.ActionUntil
 	}
 	tag, err := r.db.Pool.Exec(ctx, `UPDATE smart_parked_closure_plans p
-		SET lease_until=NULL,reason=$4,next_check_at=$5,snoozed_until=NULL,park_id=$6,position=$7,
+		SET lease_until=NULL,feature_checked_at=p.feature_claimed_at,reason=$4,next_check_at=$5,snoozed_until=NULL,park_id=$6,position=$7,
 			parked_at=$8,open_since=$9,last_observed_at=$10,risk_expires_at=$11
 		WHERE p.id=$1 AND p.lease_until=$2 AND p.lease_until>$3 AND NOT p.paused
+			AND smart_feature_current(p.subject,'parked_closure',p.feature_claimed_at)
 			AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id=p.vehicle_id AND v.archived_at IS NULL)
 			AND EXISTS (SELECT 1 FROM smart_push_devices d WHERE d.id=p.device_id AND d.subject=p.subject AND d.verified_at=p.device_verified_at)
 			AND ($6::bigint IS NULL OR EXISTS (SELECT 1 FROM (

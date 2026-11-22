@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -67,6 +68,9 @@ func applySolarMigration(t *testing.T, db *database.DB, direction string) {
 	}
 	if _, err := db.Pool.Exec(ctx, string(content)); err != nil {
 		t.Fatal(err)
+	}
+	if direction == "up" {
+		smartfixture.PolicyColumns(t, db.Pool, "smart_solar_charging_plans")
 	}
 }
 

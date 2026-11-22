@@ -41,6 +41,11 @@ func (s *EpisodeReviews) Read(ctx context.Context, scope port.Scope) (*domain.Ep
 	review := &stored.Review
 	review.SpotifyAvailable = s.available()
 	review.Reason = "off"
+	if stored.FeaturePaused {
+		review.SpotifyAvailable = false
+		review.Reason = "held"
+		return review, nil
+	}
 	if review.ID == 0 {
 		return review, nil
 	}

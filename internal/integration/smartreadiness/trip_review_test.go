@@ -14,8 +14,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/smartfeaturesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/smartreadinesssvc"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
 	readinesshandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartreadiness"
 )
@@ -172,6 +175,17 @@ func TestTripReviewUsesMatchedCompletedJourneyAndSavesPrivateAdjustment(t *testi
 		t.Fatalf("foreign subject saw completed journey: %+v", foreign)
 	}
 	pin := map[string]string{"adjustment_key": state.AdjustmentKey}
+	prefs := smartfeaturesvc.New(featuredb.NewRepository(db.Pool))
+	if err := prefs.Set(t.Context(), "owner", smartfeature.Preference{Feature: smartfeature.TripReview, Allowed: false}); err != nil {
+		t.Fatal(err)
+	}
+	if held := settings(path, "owner"); held.Setup == nil || held.Review != nil || held.AdjustmentKey != "" {
+		t.Fatalf("pause did not preserve setup while suppressing the review: %+v", held)
+	}
+	request(router, http.MethodPost, path, "owner", pin, http.StatusConflict)
+	if err := prefs.Set(t.Context(), "owner", smartfeature.Preference{Feature: smartfeature.TripReview, Allowed: true}); err != nil {
+		t.Fatal(err)
+	}
 	request(router, http.MethodPost, path, "foreign", pin, http.StatusConflict)
 	if _, err := db.Pool.Exec(t.Context(), `DELETE FROM signal_log WHERE vehicle_id=7 AND float_value=14.5`); err != nil {
 		t.Fatal(err)

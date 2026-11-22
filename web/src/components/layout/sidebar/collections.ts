@@ -114,7 +114,7 @@ const DEFINITIONS = [
   ["Command center", '/commands', '/command-history', '/command-reliability'],
   ["Alerts & automation", '/automations', '/notifications/studio', '/notifications/rules', '/notifications/packs'],
   ["Notification center", '/notifications/inbox', '/notifications/channels', '/notifications/browser', '/notifications/quiet-hours', '/notifications/health'],
-  ["Smart notifications", '/settings/smart-commute', '/settings/smart-charging'],
+  ["Smart notifications", '/settings/smart-commute', '/settings/smart-charging', '/settings/smart-features'],
   ["Safety & security", '/security-access', '/safety-settings', '/guard-mode', '/dashcam'],
   ["Tesla account & services", '/tesla-account', '/tesla-orders', '/fleet-api', '/tesla-region', '/tesla-features', '/account/2fa', '/account/sessions', '/account/privacy'],
   ["Helix tools", '/chatbot', '/integrations/helix', '/intelligence-packs'],

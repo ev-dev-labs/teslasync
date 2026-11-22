@@ -40,7 +40,8 @@ type Grant struct {
 
 type Repository interface {
 	ActiveVehicle(context.Context, int64) (bool, error)
-	PlaybackSamples(ctx context.Context, vehicleID int64, from, to time.Time) ([]domain.PlaybackSample, error)
+	PlaylistSamples(ctx context.Context, scope Scope, from, to time.Time) ([]domain.PlaybackSample, time.Time, error)
+	CheckPlaylistDraft(ctx context.Context, scope Scope, id int64) error
 	ReadDraft(context.Context, Scope) (*domain.PlaylistDraft, error)
 	ReplaceDraft(ctx context.Context, scope Scope, expectedID int64, draft domain.PlaylistDraft) error
 	HoldDraft(ctx context.Context, scope Scope, id int64, snoozedUntil *time.Time, now time.Time) error

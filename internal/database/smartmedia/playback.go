@@ -8,6 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartmedia"
+	port "github.com/ev-dev-labs/teslasync/internal/port/smartmedia"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -28,8 +29,18 @@ func (r *Repository) ActiveVehicle(ctx context.Context, vehicleID int64) (bool, 
 	return active, nil
 }
 
-func (r *Repository) PlaybackSamples(ctx context.Context, vehicleID int64, from, to time.Time) ([]domain.PlaybackSample, error) {
-	return readPlaybackSamples(ctx, r.db.Pool, vehicleID, from, to)
+func (r *Repository) PlaylistSamples(ctx context.Context, scope port.Scope, from, to time.Time) ([]domain.PlaybackSample, time.Time, error) {
+	var allowed bool
+	var began time.Time
+	if err := r.db.Pool.QueryRow(ctx, `SELECT smart_feature_allowed($1,'playlist'),statement_timestamp()`, scope.Subject).
+		Scan(&allowed, &began); err != nil {
+		return nil, began, fmt.Errorf("check private playlist permission: %w", err)
+	}
+	if !allowed {
+		return nil, began, port.ErrChanged
+	}
+	samples, err := readPlaybackSamples(ctx, r.db.Pool, scope.VehicleID, from, to)
+	return samples, began, err
 }
 
 func readPlaybackSamples(ctx context.Context, db database.DBTX, vehicleID int64, from, to time.Time) ([]domain.PlaybackSample, error) {

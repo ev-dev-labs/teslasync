@@ -12,6 +12,7 @@ type NavigationScope struct {
 	VehicleID    int64
 	RoutineID    int64
 	OccurrenceID string
+	WorkAt       *time.Time
 }
 
 type NavigationOccurrence struct {
@@ -20,6 +21,7 @@ type NavigationOccurrence struct {
 	DepartureAt time.Time
 	ExpiresAt   time.Time
 	Outcome     domain.NavigationOutcome
+	WorkAt      time.Time
 }
 
 type NavigationRepository interface {

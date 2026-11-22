@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	featuredb "github.com/ev-dev-labs/teslasync/internal/database/smartfeature"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartfeature"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/jackc/pgx/v5"
 )
@@ -23,7 +25,34 @@ func NewRepository(db *database.DB) *Repository {
 	if db == nil || db.Pool == nil {
 		panic("smartdelivery.NewRepository: db and db.Pool must not be nil")
 	}
+
 	return &Repository{db: db}
+}
+
+func (r *Repository) beginFeatureDispatch(ctx context.Context, subject string, key smartfeature.Key) (pgx.Tx, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin smart delivery dispatch: %w", err)
+	}
+	allowed, err := featuredb.HoldAllowed(ctx, tx, subject, key)
+	if !allowed || err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, err
+	}
+	return tx, nil
+}
+
+func (r *Repository) withFeatureClaim(ctx context.Context, subject string, key smartfeature.Key, claim func(pgx.Tx) error) error {
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		allowed, err := featuredb.HoldAllowed(ctx, tx, subject, key)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return port.ErrNotFound
+		}
+		return claim(tx)
+	})
 }
 
 func (r *Repository) ListDevices(ctx context.Context, subject string, limit, offset int) ([]domain.Device, error) {

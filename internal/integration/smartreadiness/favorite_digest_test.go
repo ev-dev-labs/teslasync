@@ -16,6 +16,7 @@ import (
 	mediadb "github.com/ev-dev-labs/teslasync/internal/database/smartmedia"
 	media "github.com/ev-dev-labs/teslasync/internal/domain/smartmedia"
 	mediahandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartmedia"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 )
 
 const favoriteAPI = "/api/v1/media/favorite-digest?vehicle_id=7"
@@ -28,6 +29,7 @@ func newFavoriteJourney(t *testing.T, lastSource string) (*soundtrackJourney, *s
 		t.Fatal(err)
 	}
 	j.exec(string(migration))
+	smartfixture.PolicyColumns(t, j.db.Pool, "smart_favorite_digest_plans")
 	for i, source := range []string{"Spotify", "Spotify", lastSource} {
 		at := time.Date(2026, 11, 17+i, 12, 0, 0, 0, time.UTC)
 		if i == 0 {

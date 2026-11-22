@@ -24,6 +24,7 @@ import (
 	commute "github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
 	delivery "github.com/ev-dev-labs/teslasync/internal/domain/smartdelivery"
 	deliveryhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/smartdelivery"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	commuteport "github.com/ev-dev-labs/teslasync/internal/port/smartcommute"
 	deliveryport "github.com/ev-dev-labs/teslasync/internal/port/smartdelivery"
 	"github.com/go-chi/chi/v5"
@@ -87,6 +88,7 @@ func attachCommuteDelivery(t *testing.T, f *fixture, live *trafficLiveFixture, s
 			t.Fatalf("apply %s: %v", file, err)
 		}
 	}
+	smartfixture.PolicyColumns(t, f.db.Pool, "smart_push_commute_deliveries")
 	cipher, err := crypto.New("synthetic-test-encryption-key")
 	if err != nil {
 		t.Fatal(err)

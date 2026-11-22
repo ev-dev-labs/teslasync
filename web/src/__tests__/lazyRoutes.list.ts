@@ -182,6 +182,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'Settings', load: () => import('../features/settings/pages/SettingsPage') },
   { name: 'SmartCommutePage', load: () => import('../features/settings/pages/SmartCommutePage') },
   { name: 'SmartChargingPage', load: () => import('../features/settings/pages/SmartChargingPage') },
+  { name: 'SmartFeaturesPage', load: () => import('../features/settings/pages/SmartFeaturesPage') },
   { name: 'Onboarding', load: () => import('../features/onboarding/pages/OnboardingPage') },
   { name: 'NotFound', load: () => import('../features/system/pages/NotFoundPage') },
   { name: 'Search', load: () => import('../features/system/pages/SearchPage') },

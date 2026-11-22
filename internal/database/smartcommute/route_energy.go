@@ -24,6 +24,7 @@ func (r *Repository) RouteEnergyDrives(
 		  AND EXISTS (
 			SELECT 1 `+claimedTrafficScope+`
 			  AND c.compare_route_energy
+			  AND smart_feature_current(r.subject,'route_energy',o.feature_claimed_at)
 			  AND ABS(d.start_lat - r.origin_latitude) <= 0.004
 			  AND ABS(d.end_lat - r.destination_latitude) <= 0.004
 			  AND LEAST(ABS(d.start_lng - r.origin_longitude), 360 - ABS(d.start_lng - r.origin_longitude))

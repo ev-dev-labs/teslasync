@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	readinessdb "github.com/ev-dev-labs/teslasync/internal/database/smartreadiness"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+	"github.com/ev-dev-labs/teslasync/internal/integration/smartfixture"
 	port "github.com/ev-dev-labs/teslasync/internal/port/smartreadiness"
 )
 
@@ -123,12 +124,16 @@ func applyMigration(t *testing.T, db *database.DB, direction string) {
 		"000318_here_estimate_health",
 	}
 	if direction == "down" {
+		smartfixture.Policy(t, db.Pool, direction)
 		for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {
 			names[i], names[j] = names[j], names[i]
 		}
 	}
 	for _, name := range names {
 		applyReadinessMigration(t, db, name, direction)
+	}
+	if direction == "up" {
+		smartfixture.Policy(t, db.Pool, direction)
 	}
 }
 
@@ -141,6 +146,15 @@ func applyReadinessMigration(t *testing.T, db *database.DB, name, direction stri
 	}
 	if _, err := db.Pool.Exec(context.Background(), string(content)); err != nil {
 		t.Fatalf("apply %s: %v", file, err)
+	}
+	if direction == "up" && name == "000314_smart_backup_charging" {
+		var policyExists bool
+		if err := db.Pool.QueryRow(t.Context(), `SELECT to_regclass('smart_feature_preferences') IS NOT NULL`).Scan(&policyExists); err != nil {
+			t.Fatal(err)
+		}
+		if policyExists {
+			smartfixture.PolicyColumns(t, db.Pool, "smart_backup_charging_watches", "smart_push_backup_charging_deliveries")
+		}
 	}
 }
 

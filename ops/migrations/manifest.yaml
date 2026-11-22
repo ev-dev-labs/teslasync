@@ -1422,3 +1422,17 @@ migrations:
     irreversible_justification: Explicit down drops private upstream transition history and recovery fencing; prior outages cannot be reconstructed.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-20"
+
+  - version: 319
+    name: smart_feature_preferences
+    forward_compatible: true
+    forward_compatibility_notes: Adds preferences and work fence timestamps without changing existing setup. Workers and API replicas must all be upgraded before relying on pauses.
+    rollback_notes: Keep this migration applied on binary rollback; older binaries do not enforce feature pauses. Explicit down removes the preferences and fence timestamps.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Brief access-exclusive locks for additive columns. Push timestamp columns use a stable statement-time default, so PostgreSQL can add them without data rewrites.
+    reversible: false
+    irreversible_justification: Explicit down drops account-level feature preferences.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-21"

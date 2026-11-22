@@ -74,6 +74,7 @@ func (s *Service) sendNavigation(
 	if occurrence.Outcome != "" {
 		return occurrence.Outcome, nil
 	}
+	scope.WorkAt = &occurrence.WorkAt
 	remaining := occurrence.ExpiresAt.Sub(s.now())
 	if remaining <= 0 {
 		return domain.NavigationExpired, nil
@@ -145,6 +146,7 @@ func (s *Service) currentNavigation(ctx context.Context, scope port.NavigationSc
 	if err != nil {
 		return nil, err
 	}
+	scope.WorkAt = &occurrence.WorkAt
 	parked, err := s.parkedAtOrigin(ctx, scope.VehicleID, occurrence.Origin, s.now())
 	if err != nil {
 		return nil, err

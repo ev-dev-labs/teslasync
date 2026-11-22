@@ -134,7 +134,7 @@ func (s *SharedTripService) Comparison(ctx context.Context, actor SharedTripActo
 		return nil, port.ErrNotFound
 	}
 	now := s.now().UTC()
-	initial, err := s.repository.ReadSharedTripComparison(ctx, actor.Subject, tripID, now)
+	initial, err := s.repository.ReadSharedTripComparison(ctx, actor.Subject, tripID, now, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read shared trip consent: %w", err)
 	}
@@ -182,7 +182,7 @@ func (s *SharedTripService) Comparison(ctx context.Context, actor SharedTripActo
 
 	// A confirmation can be withdrawn or superseded while fetching live
 	// evidence. Recheck the audience and avoid combining across revisions.
-	current, err := s.repository.ReadSharedTripComparison(ctx, actor.Subject, tripID, s.now().UTC())
+	current, err := s.repository.ReadSharedTripComparison(ctx, actor.Subject, tripID, s.now().UTC(), &initial.WorkAt)
 	if err != nil {
 		return nil, fmt.Errorf("recheck shared trip consent: %w", err)
 	}

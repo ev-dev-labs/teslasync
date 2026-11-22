@@ -8,6 +8,7 @@ import (
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel/costtrend"
+	port "github.com/ev-dev-labs/teslasync/internal/port/ownershipintel/costtrend"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/text/currency"
@@ -24,6 +25,16 @@ func NewSource(pool *pgxpool.Pool) *Source {
 func (s *Source) ReadCostPeriods(ctx context.Context, subject string, vehicleID int64, code string,
 	from, midpoint, end time.Time,
 ) (domain.Period, domain.Period, error) {
+	return s.readCostPeriods(ctx, subject, vehicleID, code, nil, from, midpoint, end)
+}
+
+func (s *Source) ReadClaimedCostPeriods(ctx context.Context, job port.Job, from, midpoint, end time.Time) (domain.Period, domain.Period, error) {
+	return s.readCostPeriods(ctx, job.Subject, job.VehicleID, job.Currency, &job, from, midpoint, end)
+}
+
+func (s *Source) readCostPeriods(ctx context.Context, subject string, vehicleID int64, code string, job *port.Job,
+	from, midpoint, end time.Time,
+) (domain.Period, domain.Period, error) {
 	unit, err := currency.ParseISO(code)
 	if err != nil || unit == currency.XXX || !from.Before(midpoint) || !midpoint.Before(end) ||
 		end.Sub(from) > 64*24*time.Hour {
@@ -35,6 +46,19 @@ func (s *Source) ReadCostPeriods(ctx context.Context, subject string, vehicleID 
 		return domain.Period{}, domain.Period{}, fmt.Errorf("begin charging cost evidence read: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if job != nil {
+		var current bool
+		err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM smart_charging_cost_plans p
+			WHERE p.id=$1 AND p.subject=$2 AND p.vehicle_id=$3 AND p.lease_until=$4
+			  AND smart_feature_current(p.subject,'charging_cost_digest',p.feature_claimed_at))`,
+			job.ID, subject, vehicleID, job.Lease).Scan(&current)
+		if err != nil {
+			return domain.Period{}, domain.Period{}, fmt.Errorf("check charging cost evidence claim: %w", err)
+		}
+		if !current {
+			return domain.Period{}, domain.Period{}, nil
+		}
+	}
 	multiplier := int64(math.Pow10(scale))
 	prior, err := readPeriod(ctx, tx, subject, vehicleID, code, multiplier, from, midpoint)
 	if err != nil {
