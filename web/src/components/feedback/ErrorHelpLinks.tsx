@@ -44,11 +44,11 @@ function LinkRow({ link }: { link: ErrorHelpLink }) {
     <>
       <Icon data-app-part="feedback-icon" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden />
       <span data-app-part="feedback-content" className="min-w-0 flex-1">
-        <span data-app-part="feedback-title" className="flex items-center gap-1 text-sm font-medium text-[var(--text-primary)]">
-          {label}
-          {link.href && <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />}
-        </span>
-        <Text data-app-part="feedback-message" as="span" variant="bodySm" color="muted" className="block">
+        <Text data-app-part="feedback-title" as="span" size="sm" weight="semibold" color="primary" className="flex min-w-0 items-start gap-1 [overflow-wrap:anywhere]">
+          <span className="min-w-0">{label}</span>
+          {link.href && <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />}
+        </Text>
+        <Text data-app-part="feedback-message" as="span" variant="bodySm" color="muted" className="mt-0.5 block [overflow-wrap:anywhere]">
           {reason}
         </Text>
       </span>
