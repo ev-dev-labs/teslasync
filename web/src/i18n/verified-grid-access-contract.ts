@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { expect } from 'vitest'
 import checkpoint from './__fixtures__/verified-grid-access.json'
+import { restoreUiControlsPresentationSource } from './verified-ui-controls-presentation-contract'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned grid/access delta')
@@ -12,6 +13,7 @@ export function gridAccessRemovedSource(file: string): boolean {
 }
 
 export function restoreGridAccessSource(file: string, source: string): string {
+  source = restoreUiControlsPresentationSource(file, source)
   const patch = sourcePatches.get(file)
   if (!patch) return source
   expect(hash(source), file + ': reviewed grid/access successor').toBe(patch.after)

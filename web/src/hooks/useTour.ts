@@ -3,7 +3,7 @@ import {
   markTourCompleted as markCompletedInRegistry,
   markTourSkipped as markSkippedInRegistry,
   resetAllTours as resetAllInRegistry,
-} from '@/lib/tourRegistry';
+} from '@/lib/tourState';
 import { broadcast } from '@/lib/broadcast';
 
 export interface TourStep {
@@ -36,7 +36,7 @@ interface TourState {
 
 /**
  * Optional context used by {@link useTour} to write per-tour completion
- * status into the storage layer owned by `@/lib/tourRegistry`. When omitted,
+ * status into the storage layer owned by `@/lib/tourState`. When omitted,
  * the hook still works for ad-hoc tours but does not persist any state.
  *
  * The legacy single global `teslasync-tour-completed` flag is no longer

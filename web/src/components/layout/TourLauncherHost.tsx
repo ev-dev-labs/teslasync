@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
+import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourState'
 
 const LazyTourLauncher = lazy(async () => {
   const module = await import('@/features/onboarding/TourLauncher')

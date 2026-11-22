@@ -122,9 +122,33 @@ const themePresetAdditions = {
   'slate-gray': 'Slate Gray',
 }
 
+function catalogBeforeSmartControlsAndTrendLabels<T extends Record<string, unknown>>(catalog: T): T {
+  const previous = structuredClone(catalog)
+  const settings = previous.settings as Record<string, unknown>
+  expect(createHash('sha256').update(JSON.stringify(settings.smartFeatures)).digest('hex'),
+    'settings.smartFeatures exact copy').toBe('cf6880893a3f09d1b6702f47a54d2220de83a7ec4c9a55cf613c60f938144f8a')
+  delete settings.smartFeatures
+  for (const [namespace, entries] of [
+    [(previous.nav as { items: Record<string, unknown> }).items, { 'settings_smart-features': 'Smart Features' }],
+    [previous.routes, { smartFeaturesPage: 'Smart Features' }],
+    [previous.efficiency, { perDriveTrendFirstSample: 'First sample', perDriveTrendLastSample: 'Last sample' }],
+    [previous.sparkline, {
+      value: 'Value', observation: 'Observation {{index}} / {{count}}', inspect: 'Inspect observations: {{trend}}',
+      selection: 'Observation {{index}} of {{count}}, value {{value}}',
+    }],
+  ] as const) {
+    const parent = namespace as Record<string, unknown>
+    for (const [key, value] of Object.entries(entries)) {
+      expect(parent[key], key).toBe(value)
+      delete parent[key]
+    }
+  }
+  return previous
+}
+
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const beforeSmartNotifications = catalogBeforeSmartNotifications(catalogBeforeGridAccess(catalog))
+  const beforeSmartNotifications = catalogBeforeSmartNotifications(catalogBeforeGridAccess(catalogBeforeSmartControlsAndTrendLabels(catalog)))
   const beforeExternalAuth = catalogBeforeAppDesign(catalogBeforeHorizontalNavigation(catalogBeforeCommandBoard(beforeSmartNotifications)))
   expect(beforeExternalAuth.ratelimit, 'ratelimit').toEqual({
     appTitle: 'TeslaSync request limit reached',

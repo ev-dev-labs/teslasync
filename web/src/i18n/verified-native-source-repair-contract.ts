@@ -241,7 +241,7 @@ export function restoreNativeSourceRepair(
   readDependency: (file: string) => string = actualRepairSource,
 ): string {
   expect(hash(JSON.stringify(repair)), 'pinned exact native source repair').toBe(fingerprint);
-  source = restoreSmartNotificationsSource(file, restoreGridAccessSource(file, source));
+  source = restoreSmartNotificationsSource(file, source);
   source = restoreCommandBoardSource(file, source);
   source = restoreHorizontalNavigationSource(file, source);
   source = restoreKeyIdentitySource(file, source);

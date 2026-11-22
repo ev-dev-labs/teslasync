@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import { expect } from 'vitest'
 import checkpoint from './__fixtures__/verified-smart-notifications.json'
+import { restoreGridAccessSource } from './verified-grid-access-contract'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned Smart Notifications delta')
   .toBe('e868dabddaa8bdc6d78792af17289f6a1f7d51248c1ec557939ef5b9500b7fad')
 
 export function restoreSmartNotificationsSource(file: string, source: string): string {
+  source = restoreGridAccessSource(file, source)
   const patch = checkpoint.sources.find(entry => entry.file === file)
   if (!patch) return source
   expect(hash(source), file + ': notification successor').toBe(patch.after)

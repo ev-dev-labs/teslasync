@@ -9,7 +9,7 @@ import { renderHook, act } from '@testing-library/react'
  *   1. Step navigation (start / next / prev / skip / finish) and the derived
  *      `step` / `totalSteps` / `currentStep` snapshot the overlay renders.
  *   2. Persistence — when a {@link TourPersistenceContext} is supplied,
- *      completing/skipping writes through `@/lib/tourRegistry` and announces a
+ *      completing/skipping writes through `@/lib/tourState` and announces a
  *      cross-tab broadcast so peer tabs stop re-offering the tour.
  *   3. `targetRect` resolution against the live DOM (drives the spotlight
  *      cutout and Layout's "auto-skip a missing step" timer).
@@ -19,7 +19,7 @@ import { renderHook, act } from '@testing-library/react'
  * BroadcastChannel plumbing (that is covered in lib/__tests__/broadcast).
  */
 
-vi.mock('@/lib/tourRegistry', () => ({
+vi.mock('@/lib/tourState', () => ({
   markTourCompleted: vi.fn(),
   markTourSkipped: vi.fn(),
   resetAllTours: vi.fn(),
@@ -33,7 +33,7 @@ import {
   markTourCompleted,
   markTourSkipped,
   resetAllTours,
-} from '@/lib/tourRegistry'
+} from '@/lib/tourState'
 import { broadcast } from '@/lib/broadcast'
 import {
   useTour,

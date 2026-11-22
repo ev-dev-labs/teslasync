@@ -2242,42 +2242,6 @@
       }
     }
   },
-  "tour": {
-    "tours": {
-      "alerts": {
-        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
-        "title": "Alerts & alert studio"
-      },
-      "automations": {
-        "description": "Triggers, conditions, actions, and conflict detection for rules.",
-        "title": "Automation builder"
-      },
-      "charging": {
-        "description": "Sessions, cost analysis, and the charging-curve viewer for any session.",
-        "title": "Charging insights"
-      },
-      "debugger": {
-        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks.",
-        "title": "FSM debugger"
-      },
-      "drives": {
-        "description": "Drive history, saved views, and the trip replay scrubber with markers.",
-        "title": "Drives & replay"
-      },
-      "main": {
-        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts.",
-        "title": "TeslaSync overview"
-      },
-      "settings": {
-        "description": "Theme, units, notification channels, and saved views — all in one place.",
-        "title": "Settings & preferences"
-      },
-      "vehicles": {
-        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access.",
-        "title": "Vehicles & access"
-      }
-    }
-  },
   "upstream": {
     "title": "Tesla upstream unavailable"
   },

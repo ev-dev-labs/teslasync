@@ -22,14 +22,15 @@ import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
 import { CookieConsentBannerHost } from '../feedback/CookieConsentBannerHost'
 import {
   TOUR_START_EVENT,
-  TOURS,
   dispatchTourStart,
   completedTourToken,
   seedCompletedFromServer,
   markTourCompleted,
+  type TourDefinition,
   type TourStartEventDetail,
-} from '@/lib/tourRegistry'
+} from '@/lib/tourState'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
+import { reportFrontendError } from '@/lib/errorReporter'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
@@ -687,12 +688,7 @@ export default function Layout() {
   }, [])
 
   // Onboarding tour.
-  // Only one tour can be active at a time. The launcher (or a CustomEvent
-  // dispatched from anywhere) sets `activeTourId`; we wire the matching
-  // definition into useTour so completion is persisted under the per-tour
-  // storage key. Auto-start is intentionally limited to the dashboard tour.
-  const [activeTourId, setActiveTourId] = useState<string | null>(null)
-  const activeTourDef = activeTourId ? TOURS[activeTourId] ?? null : null
+  const [activeTourDef, setActiveTourDef] = useState<TourDefinition | null>(null)
   const tour = useTour(
     activeTourDef?.steps ?? [],
     activeTourDef ? { id: activeTourDef.id, version: activeTourDef.version } : undefined,
@@ -736,13 +732,22 @@ export default function Layout() {
 
   // Listen for "start tour" events from the launcher / palette / settings.
   useEffect(() => {
+    let active = true
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<TourStartEventDetail>).detail
-      if (!detail?.id || !TOURS[detail.id]) return
-      setActiveTourId(detail.id)
+      const id = (event as CustomEvent<TourStartEventDetail>).detail?.id
+      if (!id) return
+      void import('@/lib/tourRegistry').then(({ getTour }) => {
+        const definition = getTour(id)
+        if (active && definition) setActiveTourDef(definition)
+      }).catch(error => {
+        if (active) reportFrontendError(error, 'promise')
+      })
     }
     window.addEventListener(TOUR_START_EVENT, handler)
-    return () => window.removeEventListener(TOUR_START_EVENT, handler)
+    return () => {
+      active = false
+      window.removeEventListener(TOUR_START_EVENT, handler)
+    }
   }, [])
 
   // Cross-tab replay sync. When a sibling tab calls
@@ -760,23 +765,20 @@ export default function Layout() {
         markTourCompleted(msg.tourId, msg.version)
         return
       }
-      if (msg.type !== 'tour.replay-requested') return
-      if (!msg.tourId || !TOURS[msg.tourId]) return
-      dispatchTourStart(msg.tourId)
+      if (msg.type === 'tour.replay-requested' && msg.tourId) dispatchTourStart(msg.tourId)
     })
   }, [])
 
-  // When activeTourId changes (event-triggered) start the tour.
+  // Start only once the requested definition is available.
   const tourStartRef = useRef(tour.start)
   tourStartRef.current = tour.start
   useEffect(() => {
-    if (!activeTourId) return
+    if (!activeTourDef) return
     const timer = window.setTimeout(() => tourStartRef.current(), 50)
     return () => window.clearTimeout(timer)
-  }, [activeTourId])
+  }, [activeTourDef])
 
-  // When the tour finishes / is skipped, clear activeTourId so a future
-  // launch can re-trigger the same tour.
+  // Clearing the definition lets the same tour be replayed.
   const wasTourActiveRef = useRef(false)
   useEffect(() => {
     if (wasTourActiveRef.current && !tour.isActive) {
@@ -785,7 +787,7 @@ export default function Layout() {
       // flag). Then clear so a future launch can re-trigger it.
       const def = activeTourDefRef.current
       if (def) persistTourDone(def.id, def.version)
-      setActiveTourId(null)
+      setActiveTourDef(null)
     }
     wasTourActiveRef.current = tour.isActive
   }, [tour.isActive, persistTourDone])
@@ -839,9 +841,6 @@ export default function Layout() {
   // the single inline, dismissible hint rendered by `<TaskOnboardingHost>` —
   // route-scoped, state-gated, versioned, and suppressed for experienced
   // users. See `lib/onboardingTasks.ts`.
-  //
-  // `TOURS` is still imported: the TOUR_START_EVENT listener above resolves
-  // explicitly-requested tour ids against it.
 
   // Use the durable case summary for the navigation badge. Running the direct
   // stale-session diagnostic in global chrome made every route pay for a
