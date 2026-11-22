@@ -180,10 +180,10 @@ describe('DataTableColumnMenu — visibility toggling', () => {
     ).not.toBeChecked()
   })
 
-  it('emits a layout that hides a column when its checkbox is unchecked', () => {
+  it('hides a column when its visible option label is clicked', () => {
     const { onChange } = setup()
     openMenu()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Status' }))
+    fireEvent.click(screen.getByText('Status'))
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledWith({
       order: ['name', 'status', 'detail'],

@@ -22,7 +22,7 @@ export default function RuleChannelDialog({ rule, channels, onClose }: Props) {
         <Toggle label={t('alertPacks.allChannels', 'All enabled channels, including future channels')} checked={ids === null} disabled={save.isPending}
           onChange={all => setIds(all ? null : channels.filter(channel => channel.enabled).map(channel => channel.id))} />
         {ids !== null && <div className="space-y-2">
-          {channels.map(channel => <Checkbox key={channel.id} label={`${channel.name} (${channel.kind})`}
+          {channels.map(channel => <Checkbox key={channel.id} variant="row" label={`${channel.name} (${channel.kind})`}
             checked={ids.includes(channel.id)} disabled={save.isPending}
             onChange={checked => setIds(previous => checked ? [...(previous ?? []), channel.id] : (previous ?? []).filter(id => id !== channel.id))} />)}
           {ids.length === 0 && <Caption>{t('alertPacks.noExternalHelp', 'No external channels selected. This rule still appears in the browser.')}</Caption>}

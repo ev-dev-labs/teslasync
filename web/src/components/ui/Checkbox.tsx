@@ -18,6 +18,8 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   indeterminate?: boolean;
   /** Visual size of the box. Defaults to `md`. */
   size?: CheckboxSize;
+  /** Use a full-width selection surface for list choices. Defaults to `inline`. */
+  variant?: 'inline' | 'row';
   /** Standard React-style change handler reporting the new boolean. */
   onChange?: (checked: boolean) => void;
 }
@@ -41,6 +43,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       label,
       indeterminate = false,
       size = 'md',
+      variant = 'inline',
       onChange,
       className,
       disabled,
@@ -94,8 +97,16 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         data-app-part="field"
         data-app-field-kind="choice"
         className={cn(
-          'relative inline-flex min-h-11 min-w-11 max-w-full cursor-pointer items-center gap-2 select-none md:min-h-6 md:min-w-6',
-          disabled && 'cursor-not-allowed opacity-60',
+          'relative min-h-11 min-w-11 max-w-full items-center gap-2 select-none',
+          variant === 'row'
+            ? [
+                'flex w-full rounded-shape-sm border border-[var(--control-border)] px-3 py-2',
+                'transition-colors duration-fast ease-standard motion-reduce:transition-none',
+                'has-[:is(:checked,:indeterminate)]:border-[var(--theme-primary)] has-[:is(:checked,:indeterminate)]:bg-[var(--theme-accent-soft)]',
+                'forced-colors:border-[ButtonBorder] forced-colors:has-[:is(:checked,:indeterminate)]:border-[Highlight]',
+              ]
+            : 'inline-flex md:min-h-6 md:min-w-6',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           className,
         )}
       >
@@ -113,7 +124,9 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           disabled={disabled}
           onChange={e => {
             if (disabled) return;
-            onChange?.(e.target.checked);
+            // Native activation clears mixed state before React calls onChange.
+            if (indeterminate) e.currentTarget.indeterminate = true;
+            onChange?.(e.currentTarget.checked);
           }}
           {...inputProps}
         />

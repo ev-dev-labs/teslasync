@@ -189,6 +189,7 @@ export function DataTableColumnMenu({
           {toggleable && safeColumns.length > 0 && (
             <div className="mb-1 border-b border-[var(--border-subtle)] px-2 pb-2">
               <Checkbox
+                variant="row"
                 label={t('table.columns.selectAll', 'Select all')}
                 aria-label={t('table.columns.selectAll', 'Select all')}
                 checked={allVisible}
@@ -196,7 +197,6 @@ export function DataTableColumnMenu({
                 aria-checked={allVisible ? true : visibleCount > 0 ? 'mixed' : false}
                 disabled={allVisible && (safeColumns.length === 1 || safeColumns.every(column => column.required))}
                 onChange={handleToggleAll}
-                className="min-h-11 w-full"
               />
             </div>
           )}
@@ -212,22 +212,24 @@ export function DataTableColumnMenu({
               return (
                 <li key={col.key}>
                   <div
-                    className={cn(
-                      'flex items-center gap-2 rounded-shape-sm px-2 py-2',
-                      'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)]',
-                    )}
+                    className={cn('flex min-w-0 items-center gap-2 px-2', !toggleable &&
+                      'rounded-shape-sm py-2 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)]')}
                   >
-                    {toggleable && (
+                    {toggleable ? (
                       <Checkbox
+                        variant="row"
+                        className="min-w-0 flex-1"
                         checked={checked}
                         disabled={checkboxDisabled}
                         onChange={() => handleToggle(col.key)}
                         aria-label={t('table.columns.toggleColumn', 'Show or hide {{col}}', {
                           col: col.header || col.key,
                         })}
+                        label={col.header || col.key}
                       />
+                    ) : (
+                      <Text variant="bodySm" className="min-w-0 flex-1 break-words">{col.header || col.key}</Text>
                     )}
-                    <Text variant="bodySm" className="min-w-0 flex-1 break-words">{col.header || col.key}</Text>
                     {reorderable && (
                       <div className="flex shrink-0 items-center gap-1">
                         <button

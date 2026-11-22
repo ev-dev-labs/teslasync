@@ -88,6 +88,19 @@ describe('Checkbox', () => {
     expect(input.indeterminate).toBe(false);
   });
 
+  it('reports the requested selection without losing a controlled mixed state', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<Checkbox variant="row" label="All" checked={false} indeterminate onChange={onChange} />);
+    const input = screen.getByRole('checkbox', { name: 'All' });
+    expect(input).toBePartiallyChecked();
+    fireEvent.click(screen.getByText('All'));
+    expect(onChange.mock.calls).toEqual([[true]]);
+    expect(input).toBePartiallyChecked();
+    rerender(<Checkbox variant="row" label="All" checked onChange={onChange} />);
+    expect(input).not.toBePartiallyChecked();
+    expect(input).toBeChecked();
+  });
+
   it('renders the visible label and clicking it toggles the checkbox', () => {
     const onChange = vi.fn();
     render(<Checkbox label="Notify me" onChange={onChange} />);
