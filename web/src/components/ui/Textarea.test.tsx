@@ -294,6 +294,14 @@ describe('Textarea — ref & interaction', () => {
 });
 
 describe('Textarea — restrained states and preservation', () => {
+  it('keeps the note glyph decorative without changing the textarea label or hint', () => {
+    render(<Textarea label="Trip note" hint="Visible only to you" defaultValue="Scenic route" />);
+    const note = screen.getByRole('textbox', { name: 'Trip note' });
+    expect(note.parentElement?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(note).toHaveAccessibleDescription('Visible only to you');
+    expect(note).toHaveValue('Scenic route');
+  });
+
   it('keeps implicit identity, value, focus and descriptions across translated labels', () => {
     const { rerender } = render(
       <Textarea label="Notes" defaultValue="Saved notes" hint="Description" />,

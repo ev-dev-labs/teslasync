@@ -1,4 +1,5 @@
 import { forwardRef, useId } from 'react';
+import { NotebookPen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
@@ -53,13 +54,16 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const feedbackId = error ? errorId : hint ? hintId : undefined;
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
-      <div data-app-part="field" className="min-w-0">
+      <div data-app-part="field" className={cn(
+        'min-w-0',
+        label && 'rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] p-2',
+      )}>
         {label && (
           <div className="mb-1 flex flex-wrap items-start gap-1">
             <Label
               htmlFor={textareaId}
               required={required}
-              className="block min-w-0 break-words text-xs font-medium text-[var(--text-secondary)]"
+              className="block min-w-0 break-words text-sm font-medium text-[var(--text-secondary)]"
             >
               {label}
             </Label>
@@ -74,32 +78,33 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             )}
           </div>
         )}
-        <textarea
-          ref={ref}
-          data-app-part="field-control"
-          data-app-size={size}
-          id={textareaId}
-          required={required}
-          aria-required={required ? 'true' : undefined}
-          className={cn(
-            'min-h-11 w-full min-w-0 max-w-full rounded-shape-sm border border-[var(--control-border)] bg-[var(--control-bg)] md:min-h-0',
-            // Colour base MUST precede sizeClasses: tailwind-merge classifies
-            // the custom density utility `text-d-base` in the same group as
-            // the arbitrary colour `text-[var(--text-primary)]`, so whichever
-            // comes last wins. Ordering the colour first lets the size utility
-            // survive (matching Input/Select) — otherwise size="auto" would
-            // silently drop its density font-size.
-            'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-            sizeClasses[size],
-            'focus-visible:border-[var(--focus-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
-            'resize-y transition-colors duration-fast ease-standard motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-[var(--semantic-danger)] focus-visible:border-[var(--semantic-danger)]',
-            className,
+        <div className="relative min-w-0">
+          {label && (
+            <NotebookPen aria-hidden="true" className="pointer-events-none absolute start-3 top-2.5 h-4 w-4 text-[var(--text-secondary)]" />
           )}
-          aria-invalid={error ? 'true' : undefined}
-          aria-describedby={describedBy}
-          {...props}
-        />
+          <textarea
+            ref={ref}
+            data-app-part="field-control"
+            data-app-size={size}
+            id={textareaId}
+            required={required}
+            aria-required={required ? 'true' : undefined}
+            className={cn(
+              'min-h-11 w-full min-w-0 max-w-full rounded-shape-sm border border-[var(--control-border)] bg-[var(--control-bg)] md:min-h-0',
+              // Colour before size keeps the density utility under tailwind-merge.
+              'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
+              sizeClasses[size],
+              label && 'ps-9',
+              'focus-visible:border-[var(--focus-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+              'resize-y transition-colors duration-fast ease-standard motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
+              error && 'border-[var(--semantic-danger)] focus-visible:border-[var(--semantic-danger)]',
+              className,
+            )}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={describedBy}
+            {...props}
+          />
+        </div>
         {error && (
           <p data-app-part="status" data-app-field-feedback="error" id={errorId} role="alert" className="mt-1 break-words text-xs text-[var(--semantic-danger)]">
             {error}
