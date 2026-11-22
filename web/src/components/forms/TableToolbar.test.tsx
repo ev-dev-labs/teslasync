@@ -69,6 +69,14 @@ describe('TableToolbar', () => {
     expect(screen.getByRole('searchbox', { name: 'Search query' })).toBeInTheDocument();
   });
 
+  it('keeps long search examples in the field without adding a separate toolbar row', () => {
+    const examples = 'Search charging — try "charger:home", "cost:>5", "Costco"';
+    render(<TableToolbar search={{ value: '', onChange: vi.fn(), ariaLabel: 'Search charging', placeholder: examples }} />);
+    expect(screen.getByRole('searchbox', { name: 'Search charging' })).toHaveAttribute('placeholder', examples);
+    expect(screen.queryByText(examples)).not.toBeInTheDocument();
+    expect(screen.queryByText('Search charging')).not.toBeInTheDocument();
+  });
+
   it('reuses scoped CSV/JSON actions and selection counts without creating a search', () => {
     const csv = vi.fn();
     const json = vi.fn();

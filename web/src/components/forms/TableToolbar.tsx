@@ -51,12 +51,13 @@ export function TableToolbar({ search, density, exports, heading, searchScope, a
   </>;
   const exportDescription = exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>;
   const searchControl = search && (
-    <div className="flex min-w-0 flex-1 basis-56 items-center gap-1.5" aria-busy={search.pending || undefined}>
+    <div data-grid-search-tools="" className="flex min-w-0 flex-1 basis-56 items-center gap-1.5" aria-busy={search.pending || undefined}>
       {searchScope?.picker}
       <div className="relative min-w-0 flex-1">
         {searchScope?.editor && <div className="min-w-0">{searchScope.editor}</div>}
         <div hidden={Boolean(searchScope?.editor)}>
-          <SearchInput {...search} clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />
+          <SearchInput {...search} labelPresentation="compact"
+            clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />
           {search.pending && (
             <span role="status" aria-label={t('filter.pending', 'Filtering…')}
               className="pointer-events-none absolute right-9 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin rounded-full border-2 border-status-info/40 border-t-status-info" />

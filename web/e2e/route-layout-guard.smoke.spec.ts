@@ -7,7 +7,7 @@ import { assertMockApiAfterNavigation, installApiMocks, prepareMockApiNavigation
 import { measureTz, type TzSweep } from './timezoneSweep'
 import { auditCardGeometry, measureCardGeometry, type CardGeometry, type CardLayoutViolation } from './cardLayoutGeometry'
 import { installCardLayoutFixtures } from './cardLayoutFixtures'
-import { monitorPage } from './qualityAssertions'
+import { measureGridAlignment, monitorPage } from './qualityAssertions'
 
 /**
  * Row-17 guard + gallery: every route renders a readable layout in both
@@ -18,6 +18,8 @@ import { monitorPage } from './qualityAssertions'
  * - any short text element wraps per character (its line count approaches
  *   its character count);
  * - the page overflows horizontally (document/body scrollWidth).
+ * - the grid's column selector and search field, or inline column filters,
+ *   sit on different vertical lines.
  * - neighboring cards leave a large row hole, titles/actions or sibling
  *   statistics/plot offsets disagree, or a short empty body is not centered.
  *   CSS-column masonry is measured within columns, not as equal-height rows.
@@ -37,7 +39,7 @@ import { monitorPage } from './qualityAssertions'
  * sweep across runners instead of assigning 15 giant tests to one shard.
  *
  * Route table extracted from `src/App.tsx`:
- * 277 entries. Parameterized routes use canonical mock ids (drives/412,
+ * Parameterized routes use canonical mock ids (drives/412,
  * charging/201, vehicles/7, trips/1, automations/1/edit,
  * system-status/incidents/1, year-review/2025, s/e2e-token); `*` becomes
  * one bogus path exercising the not-found page.
@@ -262,6 +264,9 @@ const ROUTES: string[] = [
   '/settings',
   '/settings/fleet-setup',
   '/settings/safety',
+  '/settings/smart-charging',
+  '/settings/smart-commute',
+  '/settings/smart-features',
   '/share-card',
   '/sharing/trips',
   '/signal-change-points',
@@ -385,6 +390,7 @@ interface RouteRecord {
   theme: 'dark' | 'light'
   geometry: CardGeometry[]
   layout: CardLayoutViolation[]
+  grids: Awaited<ReturnType<typeof measureGridAlignment>>
   networkEscapes: string[]
   unmatchedMocks: string[]
   runtimeErrors: string[]
@@ -538,7 +544,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           route, width, finalUrl: '', status: 'pass', cards: 0,
           narrow: [], perchar: [], overflow: null, error: null,
           tz: { iso: [], zones: [], dupes: [] },
-          theme, geometry: [], layout: [], networkEscapes: [], unmatchedMocks: [], runtimeErrors: [],
+          theme, geometry: [], layout: [], grids: [], networkEscapes: [], unmatchedMocks: [], runtimeErrors: [],
         }
         try {
           const previousOrigin = /^https?:/.test(page.url()) ? new URL(page.url()).origin : null
@@ -557,6 +563,13 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           )
           if (!hasContent) throw new Error('page rendered no measurable content')
           record.finalUrl = page.url()
+          record.grids = await measureGridAlignment(page)
+          for (const grid of record.grids) {
+            if (grid.toolbarOffset <= 2 && grid.inlineFilterOffset <= 1) continue
+            record.status = 'violation'
+            violations.push(`${route} @${width} ${theme}: grid <${grid.name}> `
+              + `toolbar offset ${grid.toolbarOffset}px, inline-filter offset ${grid.inlineFilterOffset}px`)
+          }
           const m = await measure(page, width)
           record.cards = m.cards
           record.narrow = m.narrow

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
-import { expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
+import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState, waitForHarnessReady } from './mockApi';
+import { expectControlsOnSameRow, expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic charging evidence');
 const route = '/charging?from=2026-08-01&to=2026-08-31&density=compact';
@@ -21,6 +21,11 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 1000 });
       await seedBrowserState(page, theme, route);
       const mocks = await installApiMocks(page, 'populated', theme);
+      if (width === 1440) {
+        await page.route('**/api/v1/settings', request => fulfillApiFixture(request, mocks, {
+          json: { ...mockAppSettings, mode: theme, font_scale: 1.25, font_leading: 1.65 },
+        }));
+      }
       await page.route('**/api/v1/charging?*', (request) => fulfillApiFixture(request, mocks, {
         json: [
           session,
@@ -63,7 +68,15 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(table.locator('tbody td[data-column-key="power"]').last()).toHaveText('—');
         await expect(table.getByRole('button', { name: / filter$/ })).toHaveCount(9);
         if (width >= 1440) {
-          const filters = table.locator('thead [data-grid-inline-filter] > button');
+          await expectControlsOnSameRow([
+            history.getByRole('combobox', { name: 'Filter by column' }),
+            history.locator('[data-grid-tools] input[type="search"]'),
+            history.getByRole('combobox', { name: 'Sort by' }),
+            history.getByRole('button', { name: 'Sort ascending' }),
+            history.getByRole('button', { name: 'Export list' }),
+            history.getByRole('button', { name: 'Reorder or hide columns' }),
+          ]);
+          const filters = table.locator('thead [data-grid-inline-filter] :is(button, select, input)');
           await expect(filters).toHaveCount(9);
           const bounds = await filters.evaluateAll(nodes => nodes.map(node => {
             const { top, bottom } = node.getBoundingClientRect();

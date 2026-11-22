@@ -72,6 +72,50 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(overflow.body.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.body.clientWidth + 1);
 }
 
+export async function expectControlsOnSameRow(controls: readonly Locator[]): Promise<void> {
+  const centers = await Promise.all(controls.map(async control => {
+    await expect(control).toBeVisible();
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    return box!.y + box!.height / 2;
+  }));
+  expect(Math.max(...centers) - Math.min(...centers), 'toolbar control centers').toBeLessThanOrEqual(2);
+}
+
+export async function measureGridAlignment(page: Page) {
+  return page.evaluate(() => {
+    const visibleBounds = (element: Element | null) => {
+      if (!element || getComputedStyle(element).visibility !== 'visible') return null;
+      const box = element.getBoundingClientRect();
+      return box.width && box.height ? box : null;
+    };
+    const spread = (coordinates: number[]) => coordinates.length < 2 ? 0
+      : Math.max(...coordinates) - Math.min(...coordinates);
+    return [...document.querySelectorAll('[data-grid-frame]')].flatMap(frame => {
+      if (!visibleBounds(frame)) return [];
+      const table = frame.querySelector(':scope > [data-grid-viewport] > table');
+      const mobile = frame.querySelector('[data-mobile-table]');
+      if (!visibleBounds(table) && !visibleBounds(mobile)) return [];
+      const searchGroup = frame.querySelector('[data-grid-search-tools]');
+      const searchAndScope = [searchGroup?.querySelector('input[type="search"]'), searchGroup?.querySelector('select')]
+        .flatMap(element => {
+          const box = visibleBounds(element ?? null);
+          return box ? [box.top + box.height / 2] : [];
+        });
+      const filters = [...(table?.querySelectorAll('thead [data-grid-inline-filter]') ?? [])]
+        .flatMap(filter => {
+          const box = visibleBounds(filter);
+          return box ? [box.bottom] : [];
+        });
+      return [{
+        name: table?.getAttribute('aria-label') ?? mobile?.getAttribute('aria-label') ?? 'Data table',
+        toolbarOffset: spread(searchAndScope),
+        inlineFilterOffset: spread(filters),
+      }];
+    });
+  });
+}
+
 export async function expectIntegratedGridFooter(table: Locator): Promise<void> {
   const frame = table.locator('xpath=ancestor::*[@data-grid-frame]');
   const footer = frame.locator('[data-grid-footer]');

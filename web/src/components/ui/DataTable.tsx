@@ -1972,7 +1972,7 @@ export function DataTable<T>({
                       colHiddenClass(col.key),
                       alignClass(col.align),
                       'whitespace-nowrap font-semibold',
-                      hasInlineFilter && 'align-top',
+                      hasInlineFilter && 'align-bottom',
                       col.groupStart && tableTokens.groupStart,
                       canSort(col) && sortKey === col.key && 'text-[var(--text-primary)]',
                       resizable && col.fixedWidth == null && 'relative group/th',

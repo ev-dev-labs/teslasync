@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockAppSettings, mockDrive, seedBrowserState, waitForHarnessReady } from './mockApi';
-import { expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
+import { expectControlsOnSameRow, expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
 import { createReviewPreference } from './widget-design-packs.mock';
 import { driveGridResponse } from './driveGridFixture';
 
@@ -118,6 +118,15 @@ for (const [theme, pack, width] of [['light', 'quiet', 390], ['dark', 'terminal'
       const table = frame.getByRole('table', { name: 'Drive evidence' });
       await expect(table).toBeVisible();
       await expect(table.getByRole('columnheader', { name: 'Route', exact: true })).toHaveAttribute('data-grid-identity', 'true');
+      const tools = frame.locator('[data-grid-tools]');
+      await expectControlsOnSameRow([
+        tools.getByRole('combobox', { name: 'Filter by column' }),
+        tools.locator('input[type="search"]'),
+        tools.getByRole('combobox', { name: 'Sort by' }),
+        tools.getByRole('button', { name: 'Saved views', exact: true }),
+        tools.getByRole('button', { name: 'Export list' }),
+        tools.getByRole('button', { name: 'Reorder or hide columns' }),
+      ]);
       await frame.getByRole('combobox', { name: 'Filter by column' }).selectOption('route');
       await frame.locator('[data-grid-tools]').getByRole('textbox', { name: 'Filter Route' }).fill('Office →');
       await expect(page).toHaveURL(/grid_route=/);
@@ -357,7 +366,7 @@ for (const theme of ['light', 'dark'] as const) {
       const footer = drawer.locator('[data-drawer-footer]');
       const footerMatchesTheme = await footer.evaluate((node) => {
         const probe = document.createElement('span');
-        probe.style.backgroundColor = 'var(--surface-1)';
+        probe.style.backgroundColor = 'var(--surface-2)';
         node.appendChild(probe);
         const expected = getComputedStyle(probe).backgroundColor;
         const actual = getComputedStyle(node).backgroundColor;

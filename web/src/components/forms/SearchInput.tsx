@@ -37,6 +37,8 @@ export interface SearchInputProps {
    * each one is distinguishable ("Search drives" vs "Search vehicles").
    */
   ariaLabel?: string;
+  /** Use the accessible name without a separate visible label in a toolbar. */
+  labelPresentation?: 'visible' | 'compact';
   /** Placeholder shown when the field is empty. */
   placeholder?: string;
   /** Debounce window in milliseconds. Defaults to 250ms. */
@@ -84,6 +86,7 @@ export function SearchInput({
   value,
   onChange,
   ariaLabel,
+  labelPresentation = 'visible',
   placeholder,
   debounceMs = 250,
   autoFocus,
@@ -254,8 +257,9 @@ export function SearchInput({
         type="search"
         value={local}
         onChange={handleInputChange}
-        label={accessibleName}
-        placeholder={placeholder}
+        label={labelPresentation === 'visible' ? accessibleName : undefined}
+        aria-label={labelPresentation === 'compact' ? accessibleName : undefined}
+        placeholder={placeholder ?? (labelPresentation === 'compact' ? accessibleName : undefined)}
         autoFocus={autoFocus}
         onFocus={historyEnabled ? handleFocus : undefined}
         onKeyDown={historyEnabled ? handleInputKeyDown : undefined}
