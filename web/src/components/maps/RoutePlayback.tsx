@@ -433,7 +433,7 @@ export function RoutePlayback({
               pathOptions={{
                 color: paint.start,
                 fillColor: paint.start,
-                fillOpacity: 1,
+                fillOpacity: 0,
                 weight: 2,
               }}
             />
@@ -482,6 +482,21 @@ export function RoutePlayback({
           </div>
         )}
       </div>
+
+      {startPos && paint.start && (
+        <ul data-app-part="map-legend" data-map-legend="route-endpoints" className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 border-t border-[var(--border-subtle)] px-3 py-2">
+          <li className="flex min-w-0 items-center gap-2">
+            <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded-full border-2 border-current text-[var(--text-primary)]" />
+            <Text variant="caption" className="[overflow-wrap:anywhere]">{t('replay.markers.start', 'Start')}</Text>
+          </li>
+          {endPos && paint.end && (
+            <li className="flex min-w-0 items-center gap-2">
+              <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded-full border-2 border-current bg-current text-[var(--text-primary)] forced-colors:bg-[CanvasText]" />
+              <Text variant="caption" className="[overflow-wrap:anywhere]">{t('replay.markers.stop', 'End')}</Text>
+            </li>
+          )}
+        </ul>
+      )}
 
       {showControls && (
         <div data-app-part="map-toolbar" data-map-control="playback" className="border-t border-[var(--border-default)] p-3">
