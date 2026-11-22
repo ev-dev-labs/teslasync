@@ -17,20 +17,24 @@ export function LockedNotice({ title, reason, items, progress }: LockedNoticePro
   const { t } = useTranslation();
   const value = progress ? progressValue(progress.current, progress.required) : null;
   return (
-    <GlassPanel data-locked-notice role="region" aria-labelledby={`${id}-title`} padding="sm" className="min-w-0 space-y-2 break-words @[640px]:p-4">
-      <Heading id={`${id}-title`} level="panel">{title}</Heading>
-      <Text as="p" variant="bodySm">{reason}</Text>
+    <GlassPanel data-locked-notice role="region" aria-labelledby={`${id}-title`} padding="sm" className="min-w-0 space-y-3 [overflow-wrap:anywhere] @[640px]:p-4">
+      <div className="space-y-1">
+        <Heading id={`${id}-title`} level="panel">{title}</Heading>
+        <Text as="p" variant="bodySm">{reason}</Text>
+      </div>
       <ul className="flex flex-wrap gap-x-6 gap-y-1">
         {(items ?? []).map(item => <Text as="li" variant="bodySm" className="min-w-0 max-w-full" key={item.id}>{item.label}</Text>)}
       </ul>
-      {progress && value != null ? (
-        <div className="space-y-1">
-          <Text as="p" variant="bodySm">{progress.label}</Text>
-          <progress aria-label={progress.label} value={value} max={1} className="h-2 w-full accent-[var(--text-secondary)]" />
-        </div>
-      ) : (
-        <Text as="p" variant="bodySm">{t('developerReference.layout.locked.unknownProgress', 'Unlock progress is unknown; no threshold has been inferred.')}</Text>
-      )}
+      <div className="space-y-1 border-t border-[var(--border-subtle)] pt-2">
+        {progress && value != null ? (
+          <>
+            <Text as="p" variant="bodySm">{progress.label}</Text>
+            <progress aria-label={progress.label} value={value} max={1} className="h-2 w-full accent-[var(--text-secondary)]" />
+          </>
+        ) : (
+          <Text as="p" variant="bodySm">{t('developerReference.layout.locked.unknownProgress', 'Unlock progress is unknown; no threshold has been inferred.')}</Text>
+        )}
+      </div>
     </GlassPanel>
   );
 }
