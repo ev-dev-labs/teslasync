@@ -104,15 +104,17 @@ describe('InlineMetric — accessibility', () => {
 });
 
 describe('InlineMetric — styling', () => {
-  it('keeps the theme-var muted colour and base layout classes by default', () => {
-    const { container } = render(<InlineMetric icon={icon} value="90" />);
+  it('lets long readings wrap and distinguishes the value from its context', () => {
+    const { container } = render(<InlineMetric icon={icon} value="90" label="km/h" />);
     expect(wrapper(container)).toHaveClass(
       'inline-flex',
-      'items-center',
-      'gap-1',
+      'min-w-0',
+      'flex-wrap',
+      'items-baseline',
       'text-xs',
-      'text-[var(--text-muted)]',
     );
+    expect(screen.getByText('90')).toHaveClass('text-[var(--text-primary)]', '[overflow-wrap:anywhere]');
+    expect(screen.getByText('km/h')).toHaveClass('text-[var(--text-secondary)]', '[overflow-wrap:anywhere]');
   });
 
   it('merges a custom className onto the wrapper alongside the base classes', () => {
