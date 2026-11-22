@@ -28,6 +28,8 @@ export interface MetricBarProps {
   size?: 'default' | 'slim'
   /** Both fills support caller-prepared CSS colors, including theme variables. */
   fill?: 'gradient' | 'solid' | 'segmented'
+  /** Caller-formatted full scale when the reading uses a custom unit or format. */
+  scaleLabel?: string
 }
 
 /**
@@ -48,7 +50,7 @@ export interface MetricBarProps {
  */
 export function MetricBar({
   value, max, color, label, ariaLabel, sublabel,
-  showHeader = true, showValue = true, size = 'default', fill = 'gradient',
+  showHeader = true, showValue = true, size = 'default', fill = 'gradient', scaleLabel,
 }: MetricBarProps) {
   const { t } = useTranslation()
   const { fmtNumber } = useNumberFormatting()
@@ -57,6 +59,9 @@ export function MetricBar({
   const hasReading = typeof value === 'number' && Number.isFinite(value)
   const safeValue = hasReading ? value : 0
   const safeMax = Number.isFinite(max) && max > 0 ? max : 0
+  const scale = fill === 'segmented' && showHeader && showValue && safeMax > 0
+    ? scaleLabel ?? (sublabel == null ? fmtNumber(safeMax) : undefined)
+    : undefined
   const pct = safeMax > 0 ? Math.min(Math.max((safeValue / safeMax) * 100, 0), 100) : 0
   const unscaledReading = hasReading && (safeMax === 0 || safeValue < 0 || safeValue > safeMax)
   const gradientStart = /^#[\da-f]{6}$/i.test(color)
@@ -81,11 +86,12 @@ export function MetricBar({
         <div className="mb-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
           {label != null && <Text data-app-part="metric-label" size="sm" weight="medium" color="secondary" className="min-w-0 flex-1 break-words">{label}</Text>}
           {showValue && (
-            <Text data-app-part="metric-value" mono size="sm" color="primary" className="min-w-0 max-w-full break-words text-end">
+            <Text data-app-part="metric-value" mono size={fill === 'segmented' ? 'lg' : 'sm'} color="primary" className="min-w-0 max-w-full break-words text-end">
               {sublabel ?? (hasReading ? fmtNumber(safeValue) : '—')}
             </Text>
           )}
         </div>
+        {scale && <Text as="div" data-app-part="metric-context" variant="caption" className="mt-1 break-words text-end tabular-nums">{scale}</Text>}
       )}
       <div data-metric-track className={cn(
         'overflow-hidden',
