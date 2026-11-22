@@ -98,6 +98,42 @@ describe('EditableText — entering edit mode', () => {
     expect(screen.getByTestId('editable-text-input')).toBeInTheDocument();
   });
 
+  it('keeps the visible label linked when typing replaces the placeholder or validation fails', () => {
+    const onSave = vi.fn();
+    const labelText = 'Rename geofence Home';
+    render(
+      <EditableText
+        value=""
+        placeholder="Untitled"
+        onSave={onSave}
+        ariaLabel={labelText}
+        validate={(next) => next.length < 3 ? 'Too short' : null}
+      />,
+    );
+    expect(screen.queryByText(labelText)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: labelText }));
+
+    const label = screen.getByText(labelText, { selector: 'label' });
+    const input = screen.getByRole<HTMLInputElement>('textbox', { name: labelText });
+    expect(label).toBeVisible();
+    expect(input.id).not.toBe('');
+    expect(label).toHaveAttribute('for', input.id);
+    expect(input).toHaveAttribute('placeholder', 'Untitled');
+
+    typeInto(input, 'Garage');
+    expect(input).toHaveValue('Garage');
+    expect(label).toBeVisible();
+    expect(input).toHaveFocus();
+    expect(fireEvent.mouseDown(label, { button: 0 })).toBe(false);
+
+    typeInto(input, 'Hi');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(label).toBeVisible();
+    expect(input).toHaveAccessibleName(labelText);
+    expect(input).toHaveAccessibleDescription('Too short');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('double-click enters edit mode', () => {
     render(<EditableText value="Home" onSave={async () => {}} ariaLabel="Rename" />);
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Rename' }));
