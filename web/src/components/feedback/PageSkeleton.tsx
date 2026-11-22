@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn';
  *
  * Each block is announced as `role="status" aria-busy="true"` so screen
  * readers can identify the loading region. Visual styling re-uses the
- * existing `<Skeleton>` primitive (animate-pulse + token-driven background).
+ * existing static, token-driven `<Skeleton>` primitive.
  */
 
 interface BlockProps {
@@ -57,7 +57,9 @@ export function StatGridSkeleton({ cards = 4, className }: StatGridSkeletonProps
       data-app-part="metric-grid loading"
     >
       {Array.from({ length: cards }).map((_, i) => (
-        <Skeleton key={i} className="h-24 rounded-xl" />
+        <div key={i} aria-hidden="true" className="flex h-24 min-w-0 flex-col justify-center gap-2 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
+          <Skeleton shape="fact" />
+        </div>
       ))}
     </div>
   );
