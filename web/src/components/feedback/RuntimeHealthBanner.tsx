@@ -67,7 +67,7 @@ export function RuntimeHealthBanner() {
       data-testid="runtime-health-banner"
       className="mx-3 mt-3 shrink-0 sm:mx-5 lg:mx-8"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 [overflow-wrap:anywhere]">
         <div className="space-y-1">
           <Text as="p" variant="caption" className="!text-inherit">
             {t('runtimeHealth.affected', 'Affected components: {{components}}.', {
@@ -87,7 +87,7 @@ export function RuntimeHealthBanner() {
                 )}
           </Text>
         </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+        <div data-app-part="feedback-actions" className="flex min-w-0 flex-col flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2 sm:flex-row">
           <Button
             size="sm"
             variant="outline"
