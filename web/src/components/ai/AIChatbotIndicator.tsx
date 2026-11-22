@@ -16,10 +16,12 @@
 // lives on the page, not here — but it remains subject to the W1-A
 // no-placeholder rule.
 
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
 import { withAiFeature } from '@/components/ai/withAiFeature'
+import { HelperText } from '@/components/ui/Typography'
 
 /**
  * InnerIndicator is the always-rendered body of the AI badge. The
@@ -29,34 +31,38 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
  * Visual contract:
  *   - One small inline-flex chip in the chatbot page header.
  *   - The selected application accent.
- *   - Title attribute carries the long-form explanation so a user
- *     hovering for a tooltip understands what AI mode means.
+ *   - Visible source context explains what AI mode means without hover.
  *   - `role="img"` + `aria-label` present the icon-and-label chip as a
  *     single labelled graphic (matching the CarAnimation / Avatar
  *     convention). Without an explicit role, `aria-label` on a
  *     roleless generic <span> is not reliably surfaced to the
  *     accessibility tree, so the decorative {@link HelixMark} could be
- *     the only thing an AT sees — and it is `aria-hidden`. The title
- *     then acts as the accessible description.
+ *     the only thing an AT sees — and it is `aria-hidden`.
  */
 function InnerIndicator() {
   const { t } = useTranslation()
+  const evidenceId = useId()
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-theme-accent/30 bg-theme-accent/10 px-2.5 py-1 text-xs font-medium text-theme-accent"
-      role="img"
-      title={t(
-        'helix.tooltip',
-        'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
-      )}
-      aria-label={t('helix.ariaLabel', 'Helix')}
-    >
-      <HelixMark
-        className="h-3.5 w-3.5 text-theme-accent"
-        aria-hidden="true"
-      />
-      {t('helix.badge', 'Helix')}
-    </span>
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1">
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border border-theme-accent/30 bg-theme-accent/10 px-2.5 py-1 text-xs font-medium text-theme-accent"
+        role="img"
+        aria-label={t('helix.ariaLabel', 'Helix')}
+        aria-describedby={evidenceId}
+      >
+        <HelixMark
+          className="h-3.5 w-3.5 text-theme-accent"
+          aria-hidden="true"
+        />
+        {t('helix.badge', 'Helix')}
+      </span>
+      <HelperText id={evidenceId} className="min-w-0 basis-48 flex-1 [overflow-wrap:anywhere]">
+        {t(
+          'helix.tooltip',
+          'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
+        )}
+      </HelperText>
+    </div>
   )
 }
 InnerIndicator.displayName = 'InnerIndicator'
